@@ -1,0 +1,276 @@
+<feature name="Messaging" product="Gamefolio" version="1.1">
+  <summary>
+    1:1 (and optional group) messaging with search, rich media, reactions, moderation, safety, notifications,
+    and robust UX flows (block, mute, delete, edit, reply, link previews, read receipts, typing, presence).
+    “New chat” always opens the existing thread if it already exists and loads history.
+  </summary>
+
+  <goals>
+    <goal>Start new chats and route to existing threads if they exist</goal>
+    <goal>View and search existing conversations with fast, reliable sync</goal>
+    <goal>Block/mute/report users; delete/recall/edit messages</goal>
+    <goal>Deliver rich messaging: replies, reactions, attachments, voice notes, GIFs</goal>
+    <goal>Provide safe, moderated, privacy-respecting communication</goal>
+    <goal>Scale to multi-device real-time messaging with low latency</goal>
+  </goals>
+
+  <scopes>
+    <scope id="S1">Direct (1:1) messages — required</scope>
+    <scope id="S2">Group chats (2–50 members) — optional, recommended</scope>
+    <scope id="S3">End-to-end encryption — optional, roadmap</scope>
+  </scopes>
+
+  <user_stories>
+    <story id="MSG-NEW-USER">Search users, select one, and land in our existing thread (or create one) with history loaded.</story>
+    <story id="MSG-INBOX">See my inbox with unread counts, last message previews, and pin/archive controls.</story>
+    <story id="MSG-SEND">Send text, emoji, stickers, GIFs, images, video, files, and voice notes.</story>
+    <story id="MSG-REPLY">Reply to a specific message with quoted context; deep-link to original.</story>
+    <story id="MSG-REACTION">Add/remove reactions (emoji) without sending a new message.</story>
+    <story id="MSG-EDIT">Edit my last N messages within a grace window; show edited indicator and history (optional).</story>
+    <story id="MSG-DELETE">Delete for me or for everyone (time-boxed recall); show placeholder “Message deleted”.</story>
+    <story id="MSG-READ">See delivery state (sent, delivered, read) and per-user read receipts (toggleable privacy).</story>
+    <story id="MSG-TYPING">See typing indicators and presence (online/last seen) with privacy controls.</story>
+    <story id="MSG-MUTE">Mute a user or thread (duration: 1h/8h/24h/always); notifications suppressed.</story>
+    <story id="MSG-BLOCK">Block/unblock users; prevent send/receive, hide composer, show banner.</story>
+    <story id="MSG-REPORT">Report a user or specific message with reason and evidence; trigger moderation workflow.</story>
+    <story id="MSG-SEARCH">Search across threads and within a thread (text, user, has:media, date range).</story>
+    <story id="MSG-NOTIFS">Receive push/desktop notifications with per-thread overrides and mentions-only mode.</story>
+    <story id="MSG-REQUESTS">Message requests for non-connections; accept/decline without notifying sender until accepted.</story>
+    <story id="MSG-PIN">Pin important threads/messages; star/bookmark for quick access.</story>
+    <story id="MSG-ARCHIVE">Archive threads to declutter inbox; unarchive on new activity.</story>
+    <story id="MSG-ACCESS">Accessible messaging (screen reader labels, alt text, keyboard nav).</story>
+    <story id="MSG-EXPORT">Export my conversation data; honour deletion requests (GDPR/DSAR).</story>
+    <story id="GRP-ADMIN" optional="true">Create group chats, invite via handle/link, assign admins, set name/avatar.</story>
+  </user_stories>
+
+  <data_models>
+    <model name="User">
+      <field name="id" type="uuid"/>
+      <field name="handle" type="string" unique="true"/>
+      <field name="settings" type="json">{ readReceipts:bool, lastSeen:enum(off,friends,all), notifications:json }</field>
+      <field name="blockedUserIds" type="uuid[]"/>
+      <field name="mutedUserIds" type="uuid[]"/>
+    </model>
+
+    <model name="Thread">
+      <field name="id" type="uuid"/>
+      <field name="type" type="enum" values="direct,group" default="direct"/>
+      <field name="participantIds" type="uuid[]"/>
+      <field name="title" type="string" nullable="true"/> <!-- for groups -->
+      <field name="avatar" type="url" nullable="true"/>
+      <field name="createdAt" type="datetime"/>
+      <field name="lastMessageAt" type="datetime" index="true"/>
+      <field name="mutedBy" type="uuid[]"/>
+      <field name="archivedBy" type="uuid[]"/>
+      <field name="pinnedBy" type="uuid[]"/>
+      <index>UNIQUE(sorted(participantIds)) WHERE type='direct'</index>
+    </model>
+
+    <model name="Message">
+      <field name="id" type="uuid"/>
+      <field name="threadId" type="uuid" index="true"/>
+      <field name="senderId" type="uuid"/>
+      <field name="kind" type="enum" values="text,media,voice,system"/>
+      <field name="body" type="text" nullable="true"/> <!-- markdown-safe subset -->
+      <field name="attachments" type="json[]" nullable="true"/> <!-- {type:mime,url,thumbUrl,size,duration} -->
+      <field name="replyTo" type="uuid" nullable="true"/>
+      <field name="reactions" type="json" default="{}"/> <!-- {emoji:[userId,...]} -->
+      <field name="editedAt" type="datetime" nullable="true"/>
+      <field name="deletedFor" type="uuid[]" default="[]"/>
+      <field name="deletedForEveryoneAt" type="datetime" nullable="true"/>
+      <field name="createdAt" type="datetime" index="true"/>
+      <field name="deliveries" type="json"/> <!-- {userId:{sentAt,deliveredAt,readAt}} -->
+    </model>
+
+    <model name="MessageRequest">
+      <field name="id" type="uuid"/>
+      <field name="fromUserId" type="uuid"/>
+      <field name="toUserId" type="uuid"/>
+      <field name="threadId" type="uuid"/> <!-- hidden until accepted -->
+      <field name="status" type="enum" values="pending,accepted,declined,blocked"/>
+      <field name="createdAt" type="datetime"/>
+    </model>
+
+    <model name="ModerationQueue">
+      <field name="id" type="uuid"/>
+      <field name="target" type="enum" values="message,user"/>
+      <field name="targetId" type="uuid"/>
+      <field name="reporterId" type="uuid"/>
+      <field name="reason" type="string"/>
+      <field name="status" type="enum" values="open,reviewing,actioned,dismissed"/>
+      <field name="createdAt" type="datetime"/>
+    </model>
+  </data_models>
+
+  <capabilities>
+    <capability>Rich text (basic markdown: bold/italic/code, links with preview)</capability>
+    <capability>Link previews (server-side unfurl with safety/OG scraping)</capability>
+    <capability>Media pipeline (image/video/file) with virus scan, size limits, CDN, thumbnails</capability>
+    <capability>GIF/sticker search (provider SDK) with content filters</capability>
+    <capability>Voice notes (Opus/WebM), waveform preview</capability>
+    <capability>Location share (static map preview) — optional</capability>
+    <capability>Ephemeral messages (auto-delete after X) — optional</capability>
+    <capability>Message forward with attribution — optional</capability>
+  </capabilities>
+
+  <api transport="HTTP+WebSocket">
+    <!-- Inbox & discovery -->
+    <endpoint method="GET" path="/api/messages/threads?cursor&limit&q&archived=bool&pinned=bool"/>
+    <endpoint method="POST" path="/api/messages/threads">{ participantId | participantIds[] }</endpoint>
+    <endpoint method="PATCH" path="/api/messages/threads/:threadId">{ title, avatar }  <!-- groups --> </endpoint>
+    <endpoint method="POST" path="/api/messages/threads/:threadId/pin"/>
+    <endpoint method="DELETE" path="/api/messages/threads/:threadId/pin"/>
+    <endpoint method="POST" path="/api/messages/threads/:threadId/archive"/>
+    <endpoint method="DELETE" path="/api/messages/threads/:threadId/archive"/>
+
+    <!-- Messages -->
+    <endpoint method="GET" path="/api/messages/threads/:threadId/messages?cursor&limit&before&after"/>
+    <endpoint method="POST" path="/api/messages/threads/:threadId/messages">{ body, attachments[], replyTo }</endpoint>
+    <endpoint method="PATCH" path="/api/messages/:messageId">{ body }</endpoint>
+    <endpoint method="DELETE" path="/api/messages/:messageId?scope=me|everyone"/>
+    <endpoint method="POST" path="/api/messages/:messageId/reactions">{ emoji }</endpoint>
+    <endpoint method="DELETE" path="/api/messages/:messageId/reactions/:emoji"/>
+    <endpoint method="POST" path="/api/messages/threads/:threadId/read-receipts">{ lastReadMessageId }</endpoint>
+
+    <!-- Realtime -->
+    <websocket path="/ws">
+      <event name="thread.updated"/>
+      <event name="message.created"/>
+      <event name="message.updated"/>
+      <event name="message.deleted"/>
+      <event name="receipts.updated"/>
+      <event name="user.typing"/>
+      <event name="presence.updated"/>
+    </websocket>
+
+    <!-- Safety -->
+    <endpoint method="POST" path="/api/users/:userId/block"/>
+    <endpoint method="DELETE" path="/api/users/:userId/block"/>
+    <endpoint method="POST" path="/api/messages/threads/:threadId/mute?duration"/>
+    <endpoint method="DELETE" path="/api/messages/threads/:threadId/mute"/>
+    <endpoint method="POST" path="/api/messages/:messageId/report">{ reason, notes }</endpoint>
+
+    <!-- Message requests (non-connections) -->
+    <endpoint method="POST" path="/api/message-requests">{ toUserId }</endpoint>
+    <endpoint method="PATCH" path="/api/message-requests/:id">{ status }</endpoint>
+
+    <!-- Search -->
+    <endpoint method="GET" path="/api/messages/search?q&userId&has=media|link|file&from=iso&to=iso"/>
+  </api>
+
+  <client_behaviour>
+    <behaviour id="B1">“New chat” → create-or-get direct thread, then navigate to ThreadView with the last 50 messages preloaded.</behaviour>
+    <behaviour id="B2">Optimistic UI for send/edit/react/delete; reconcile on server ACK.</behaviour>
+    <behaviour id="B3">Offline queue: queue outbound messages and flush on reconnect.</behaviour>
+    <behaviour id="B4">Typing/presence throttled and debounced to reduce chatter.</behaviour>
+    <behaviour id="B5">Respect privacy settings: hide read receipts/last seen if disabled.</behaviour>
+    <behaviour id="B6">Lazy-load media; generate local thumbnails; defer full download on mobile data.</behaviour>
+  </client_behaviour>
+
+  <notifications>
+    <rule>Per-thread overrides (all, mentions only, none); global DND schedule.</rule>
+    <rule>Include sender, snippet (no media contents), and thread title in push payload.</rule>
+    <rule>Suppress for muted/blocked; collapse multiple notifications.</rule>
+  </notifications>
+
+  <security_privacy>
+    <requirement>AuthN via session/JWT; AuthZ: only participants can read/send in a thread.</requirement>
+    <requirement>Server-side content validation, MIME/size caps, AV scanning, hash-list blocking (CSAM/known bad).</requirement>
+    <requirement>Rate limits for send/search/report; abuse heuristics and shadow-limits.</requirement>
+    <requirement>Privacy toggles: read receipts, last seen, typing, message requests.</requirement>
+    <requirement>Data retention controls and per-user deletion; audit trail for moderation actions.</requirement>
+    <requirement optional="true">End-to-end encryption for 1:1 with per-device keys and safety-number verification.</requirement>
+  </security_privacy>
+
+  <performance_reliability>
+    <target>p50 send→deliver &lt; 200ms (same region), p95 &lt; 800ms.</target>
+    <target>WebSocket reconnect with exponential backoff; fallback to SSE/long-poll.</target>
+    <target>Pagination: cursor by (createdAt,id); infinite scroll upwards.</target>
+    <target>Images auto-transcode to web-friendly formats; capped resolutions/bitrates.</target>
+  </performance_reliability>
+
+  <telemetry>
+    <event name="thread_opened" props="threadId"/>
+    <event name="message_sent" props="threadId,kind,bytes"/>
+    <event name="message_deleted" props="scope"/>
+    <event name="message_edited" props="ageSecs"/>
+    <event name="reaction_added" props="emoji"/>
+    <event name="muted" props="duration"/>
+    <event name="blocked" props="targetId"/>
+    <kpi>DAU messaging %, messages/user/day, median reply time, mute/block/report rates, deliver latency.</kpi>
+  </telemetry>
+
+  <ui>
+    <screen name="Inbox">
+      <components>
+        <searchBar placeholder="Search messages or users"/>
+        <threadList columns="avatar,title,preview,unread,time,pin,archive"/>
+        <button id="newChatBtn" label="New chat"/>
+        <filters values="All,Unread,Pinned,Archived,Requests"/>
+      </components>
+      <actions>
+        <onClick target="newChatBtn">Open NewChatModal</onClick>
+        <onSelect item="ThreadListItem">ThreadView(threadId)</onSelect>
+      </actions>
+    </screen>
+
+    <modal name="NewChatModal">
+      <components>
+        <searchInput placeholder="Search users"/>
+        <resultsList shows="avatar,handle,mutuals"/>
+      </components>
+      <flow>
+        <step>POST /api/messages/threads { participantId }</step>
+        <step>Navigate to ThreadView(threadId) and preload history</step>
+      </flow>
+    </modal>
+
+    <screen name="ThreadView">
+      <header shows="avatar,title,presence,actions: Mute, Block, Search, Pin"/>
+      <messageList features="virtualised, reply, reactions, edit, delete, link-preview, media-grid"/>
+      <composer tools="emoji, gif, attach, mic" shortcuts="Shift+Enter newline, Ctrl/Cmd+K link"/>
+      <footers shows="typingIndicator, readReceipts"/>
+    </screen>
+  </ui>
+
+  <rules>
+    <rule id="R1">Direct thread uniqueness: never duplicate; always return existing.</rule>
+    <rule id="R2">Block is bilateral for delivery; composer hidden; show informative banner.</rule>
+    <rule id="R3">Mute suppresses notifications only; messages still arrive.</rule>
+    <rule id="R4">Recall (delete for everyone) allowed only for sender within configurable window (e.g., 2 minutes).</rule>
+    <rule id="R5">Large files rejected with guidance; stream uploads with resumable protocol.</rule>
+    <rule id="R6">Message requests: sender not notified of read until accepted.</rule>
+    <rule id="R7">Respect accessibility: alt text for images, focus order, ARIA labels.</rule>
+  </rules>
+
+  <acceptance_criteria>
+    <criterion id="AC-1">“New chat” with prior history opens the existing thread and shows past messages within 300ms after WS connect.</criterion>
+    <criterion id="AC-2">Blocking immediately prevents further sends; composer hidden on both sides within 1s.</criterion>
+    <criterion id="AC-3">Muting a thread stops push notifications but shows in-app unread badges.</criterion>
+    <criterion id="AC-4">Delete(me) hides the message only for requester; Delete(everyone) shows a placeholder to all participants.</criterion>
+    <criterion id="AC-5">Search returns results &lt; 500ms for inbox, &lt; 800ms for global (p95).</criterion>
+    <criterion id="AC-6">Read receipts honour privacy toggle; if disabled, never send read events.</criterion>
+    <criterion id="AC-7">Media upload enforces size caps and AV scan before share.</criterion>
+    <criterion id="AC-8">Message requests keep sender unaware until accepted; accepting moves thread to inbox.</criterion>
+  </acceptance_criteria>
+
+  <persistence_notes>
+    <note>Indexes: (threadId, createdAt, id), (participantIds HASH), (senderId, createdAt), full-text on body.</note>
+    <note>Attachment store: signed URLs, short-lived; thumbnails generated asynchronously.</note>
+    <note>Soft delete fields retained for audit; hard delete on legal request.</note>
+    <note>Shard messages by threadId prefix for scale.</note>
+  </persistence_notes>
+
+  <migration_plan>
+    <step>Backfill unique index for direct threads; write-through read model for inbox summaries.</step>
+    <step>Add moderation queue and admin tooling before enabling “Report”.</step>
+    <step>Roll out read receipts/presence behind per-user feature flags.</step>
+  </migration_plan>
+
+  <roadmap optional="true">
+    <item>E2EE for 1:1 with safety-number verification and key backup.</item>
+    <item>Scheduled send and message drafts synced across devices.</item>
+    <item>Threads inside threads (message-level sub-threads).</item>
+    <item>Auto-translate messages (user-initiated).</item>
+  </roadmap>
+</feature>

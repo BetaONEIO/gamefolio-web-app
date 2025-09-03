@@ -1,0 +1,189 @@
+{
+  "feature_name": "Delete Account",
+  "product": "Gamefolio",
+  "requestor": "Replit Feature Request for app.gamefolio.com",
+  "status": "proposed",
+  "version": "1.0",
+  "summary": "Allow a user to permanently delete their Gamefolio account (and all associated content) from Account Settings → Security, with explicit username verification and a final confirmation dialog.",
+  "problem_statement": "Users need a clear, self-service way to permanently remove their account and all content (clips, reels, screenshots). Currently there is no in-product flow to do this safely and irreversibly.",
+  "goals": [
+    "Provide an intuitive, secure, two-step Delete Account flow.",
+    "Ensure the user understands that deletion is permanent and includes all content.",
+    "Guarantee complete removal of user data from primary databases and object storage."
+  ],
+  "non_goals": [
+    "Soft-delete or account deactivation.",
+    "Content anonymisation; the requirement is full removal."
+  ],
+  "user_story": "As a Gamefolio user, I want to permanently delete my account from Account Settings → Security so that all my data and uploaded media are removed from the service.",
+  "entry_point": {
+    "menu_path": ["Account Settings", "Security"],
+    "control_label": "Delete Account",
+    "control_type": "Button",
+    "control_style": "destructive"
+  },
+  "ux_flow": {
+    "step_1_modal": {
+      "title": "Delete your account?",
+      "body": "This will permanently delete your Gamefolio account and ALL your content (clips, reels, screenshots). This action cannot be undone.",
+      "requirements_bullets": [
+        "Type your username exactly to confirm.",
+        "You’ll be asked to confirm once more."
+      ],
+      "form": {
+        "field_label": "Type your username to confirm",
+        "field_id": "confirm_username",
+        "validation": "Must exactly match the current user’s username (case-sensitive)."
+      },
+      "actions": [
+        {"label": "Cancel", "variant": "secondary"},
+        {"label": "Continue", "variant": "destructive", "disabled_until_username_matches": true}
+      ]
+    },
+    "step_2_modal": {
+      "title": "Are you absolutely sure?",
+      "body": "Deleting your account is permanent. Your profile and ALL associated content (clips, reels, screenshots) will be removed and cannot be recovered.",
+      "acknowledgements": [
+        "I understand this cannot be undone.",
+        "I understand all my content will be removed."
+      ],
+      "actions": [
+        {"label": "Back", "variant": "secondary"},
+        {"label": "Delete Account", "variant": "destructive", "id": "confirm_final"}
+      ]
+    },
+    "success_state": {
+      "title": "Account deletion in progress",
+      "body": "We’re deleting your account and all associated content. You’ll be signed out now."
+    },
+    "error_states": [
+      {
+        "code": "USERNAME_MISMATCH",
+        "message": "The username you entered doesn’t match your account."
+      },
+      {
+        "code": "REAUTH_REQUIRED",
+        "message": "For your security, please re-authenticate and try again."
+      },
+      {
+        "code": "DELETE_FAILED",
+        "message": "We couldn’t complete deletion. Please try again or contact support."
+      }
+    ]
+  },
+  "functional_requirements": {
+    "verification": "User must type exact username and then confirm in a second dialog.",
+    "irreversibility": "Deletion is permanent; no recovery route.",
+    "scope_of_deletion": [
+      "User record/profile",
+      "Auth credentials & sessions/tokens",
+      "User settings and preferences",
+      "All user-generated content: clips, reels, screenshots, comments, likes, messages",
+      "All related search indexes/caches",
+      "All associated media files in object/blob storage"
+    ],
+    "sign_out": "Terminate active sessions and sign the user out immediately after triggering deletion.",
+    "notifications": "Optional: send a final email confirming deletion has been initiated/completed (without recovery links).",
+    "rate_limits": "Protect endpoint against abuse; require recent re-auth (<10 minutes) for high-risk action."
+  },
+  "data_deletion_contract": {
+    "primary_db": "Hard delete user and all relational entities (cascade).",
+    "object_storage": "Permanently delete all media keys owned by user.",
+    "search_index": "Remove all indexed documents for user.",
+    "caches": "Purge CDN/object cache for user media paths.",
+    "logs_and_audit": "Retain only the minimal security/audit logs required by law/policy; do not retain content.",
+    "third_parties": "Propagate deletion to any integrated processors holding user data."
+  },
+  "api_design": {
+    "security": "Require fresh auth + CSRF; verify username matches on server; enforce rate limit.",
+    "endpoints": [
+      {
+        "method": "POST",
+        "path": "/v1/users/me/delete/initiate",
+        "body": {"confirm_username": "string"},
+        "responses": {
+          "200": {"status": "ok", "requires_final_confirm": true},
+          "400": {"error": "USERNAME_MISMATCH"},
+          "401": {"error": "REAUTH_REQUIRED"}
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/v1/users/me/delete/confirm",
+        "body": {"confirmed": true},
+        "responses": {
+          "202": {"status": "deletion_started"},
+          "409": {"error": "ALREADY_DELETING"},
+          "401": {"error": "REAUTH_REQUIRED"}
+        }
+      }
+    ],
+    "background_job": "Queue a secure, idempotent deletion worker to purge DB rows, storage objects, indexes and caches. Report completion."
+  },
+  "frontend_tasks": [
+    "Add Delete Account button in Account Settings → Security (destructive style).",
+    "Implement two-step modal flow with exact-match username input.",
+    "Handle re-auth requirement and error states gracefully.",
+    "On success, show ‘in progress’ message and sign out user."
+  ],
+  "backend_tasks": [
+    "Create deletion initiation and confirmation endpoints with auth & CSRF safeguards.",
+    "Implement cascading hard-delete in DB within a single transactional boundary per table group.",
+    "Implement storage purger for media (clips, reels, screenshots).",
+    "Invalidate CDN/cache and remove search index documents.",
+    "Emit audit event: USER_DELETION_COMPLETED (no content retained)."
+  ],
+  "copy_requirements": {
+    "must_include": [
+      "Permanent and irreversible.",
+      "All content (clips, reels, screenshots) will be deleted.",
+      "You will be signed out.",
+      "No recovery after deletion."
+    ],
+    "tone": "Clear, plain UK English; avoid euphemisms."
+  },
+  "acceptance_criteria": [
+    "The Delete Account control is visible under Account Settings → Security.",
+    "User cannot proceed unless the typed username exactly matches their username.",
+    "A second confirmation dialog is required before deletion proceeds.",
+    "Triggering deletion signs the user out immediately.",
+    "After completion, user record and all content are absent from DB, storage, search and caches.",
+    "API rejects requests without fresh re-auth or with mismatched username.",
+    "Analytics reflect a ‘delete_account’ event without retaining PII beyond what is legally required."
+  ],
+  "security_privacy": {
+    "reauthentication": "Require recent password/OAuth re-auth before final confirmation.",
+    "csrf": "Protect POST routes with CSRF tokens.",
+    "rate_limiting": "Apply per-user limits.",
+    "auditing": "Log delete request + completion (no content data).",
+    "privacy_notice": "Link to Privacy Policy detailing deletion scope."
+  },
+  "i18n_accessibility": {
+    "localisation": "Strings prepared for translation; default UK English.",
+    "a11y": "All modals keyboard-navigable; clearly labelled destructive actions; focus states."
+  },
+  "telemetry": {
+    "events": [
+      "delete_account_initiated",
+      "delete_account_confirmed",
+      "delete_account_completed",
+      "delete_account_failed"
+    ],
+    "constraints": "No media/content payloads in telemetry."
+  },
+  "rollout_plan": {
+    "phase_1": "Internal QA behind feature flag.",
+    "phase_2": "Limited beta (5%).",
+    "phase_3": "100% rollout with monitoring."
+  },
+  "risks": [
+    "Accidental deletion: mitigated by username verification + second confirm + re-auth.",
+    "Partial deletion: mitigated by idempotent background worker with retries and audits."
+  ],
+  "dependencies": [
+    "Auth service (re-auth tokens).",
+    "Object storage service for media purge.",
+    "Search/index service for content removal.",
+    "CDN/cache invalidation hooks."
+  ]
+}

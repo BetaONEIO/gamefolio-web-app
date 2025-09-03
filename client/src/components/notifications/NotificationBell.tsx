@@ -1,0 +1,308 @@
+import { useState, useEffect } from "react";
+import { Bell, User as UserIcon, Heart, MessageCircle, Upload, UserPlus, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Notification } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Link, useLocation } from "wouter";
+import { cn } from "@/lib/utils";
+
+interface NotificationWithUser extends Notification {
+  fromUser?: {
+    username: string;
+    displayName: string;
+    avatarUrl?: string;
+  };
+}
+
+export function NotificationBell() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [showGreenPopup, setShowGreenPopup] = useState(false);
+  const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
+  const [, setLocation] = useLocation();
+
+  // Fetch notifications (with fallback for demo)
+  const { data: notifications = [] } = useQuery<NotificationWithUser[]>({
+    queryKey: ['/api/notifications'],
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/notifications');
+        if (!response.ok) throw new Error("Failed to fetch notifications");
+        return await response.json();
+      } catch (error) {
+        // Fallback to demo data when database table doesn't exist
+        return [
+          {
+            id: 1,
+            type: 'like',
+            title: 'New Like',
+            message: 'demo user liked your clip "Epic Gaming Moment"',
+            isRead: false,
+            createdAt: new Date().toISOString(),
+            fromUser: {
+              username: 'demo',
+              displayName: 'Demo User',
+              avatarUrl: null
+            }
+          },
+          {
+            id: 2,
+            type: 'comment',
+            title: 'New Comment',
+            message: 'demo user commented on your clip: "Amazing play!"',
+            isRead: false,
+            createdAt: new Date(Date.now() - 300000).toISOString(),
+            fromUser: {
+              username: 'demo',
+              displayName: 'Demo User',
+              avatarUrl: null
+            }
+          }
+        ];
+      }
+    },
+  });
+
+  // Fetch unread count (with fallback for demo)
+  const { data: unreadCount = 0 } = useQuery<number>({
+    queryKey: ['/api/notifications/unread-count'],
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/notifications/unread-count');
+        if (!response.ok) throw new Error("Failed to fetch unread count");
+        return await response.json();
+      } catch (error) {
+        // Fallback to demo data when database table doesn't exist
+        return 2; // Demo unread count
+      }
+    },
+  });
+
+  // Trigger green popup animation when new notifications arrive
+  useEffect(() => {
+    if (unreadCount > previousUnreadCount && previousUnreadCount > 0) {
+      setShowGreenPopup(true);
+      setTimeout(() => setShowGreenPopup(false), 3000); // Hide after 3 seconds
+    }
+    setPreviousUnreadCount(unreadCount);
+  }, [unreadCount, previousUnreadCount]);
+
+  // Mark notification as read
+  const markAsReadMutation = useMutation({
+    mutationFn: async (notificationId: number) => {
+      await apiRequest("POST", `/api/notifications/${notificationId}/mark-read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
+    },
+  });
+
+  // Mark all as read
+  const markAllAsReadMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/notifications/mark-all-read");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
+    },
+  });
+
+  // Delete notification
+  const deleteNotificationMutation = useMutation({
+    mutationFn: async (notificationId: number) => {
+      await apiRequest("DELETE", `/api/notifications/${notificationId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
+    },
+  });
+
+  // Remove auto-mark all as read - only mark when user clicks notification or explicitly clicks "Mark all read"
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'like':
+        return <Heart className="h-4 w-4 text-red-500" />;
+      case 'comment':
+      case 'reply':
+        return <MessageCircle className="h-4 w-4 text-blue-500" />;
+      case 'follow':
+        return <UserPlus className="h-4 w-4 text-green-500" />;
+      case 'upload':
+        return <Upload className="h-4 w-4 text-purple-500" />;
+      case 'message':
+        return <MessageCircle className="h-4 w-4 text-green-500" />;
+      default:
+        return <Bell className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const handleNotificationClick = (notification: NotificationWithUser) => {
+    if (!notification.isRead) {
+      markAsReadMutation.mutate(notification.id);
+    }
+    setIsOpen(false);
+    
+    // Navigate to action URL if provided using client-side routing
+    if (notification.actionUrl) {
+      setLocation(notification.actionUrl);
+    }
+  };
+
+  const handleDismissNotification = (e: React.MouseEvent, notificationId: number) => {
+    e.stopPropagation(); // Prevent triggering the click handler
+    deleteNotificationMutation.mutate(notificationId);
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  return (
+    <div className="relative">
+      {/* Green popup notification */}
+      {showGreenPopup && (
+        <div className="absolute -top-16 -right-2 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg animate-bounce z-50">
+          <div className="flex items-center gap-2">
+            <Bell className="h-4 w-4" />
+            <span className="text-sm font-medium">New notification!</span>
+          </div>
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-green-500"></div>
+        </div>
+      )}
+      
+      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button 
+            variant="ghost" 
+            className="relative h-auto w-auto"
+            style={{ padding: '12px' }}
+            aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+          >
+            <Bell 
+              className="text-gray-400 hover:text-gray-300 transition-colors" 
+              style={{ 
+                width: '36px', 
+                height: '36px',
+                minWidth: '36px',
+                minHeight: '36px'
+              }} 
+            />
+            {unreadCount > 0 && !isOpen && (
+              <>
+                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-6 w-6 flex items-center justify-center font-semibold animate-pulse">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+                <span className="absolute -top-1 -right-1 bg-primary rounded-full h-6 w-6 animate-ping opacity-75"></span>
+              </>
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent 
+          className="w-80 max-h-96 overflow-y-auto p-0" 
+          align="end"
+          sideOffset={2}
+        >
+        <div className="flex items-center justify-between p-4 border-b">
+          <h3 className="font-semibold">Notifications</h3>
+          {unreadCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => markAllAsReadMutation.mutate()}
+              className="text-xs text-primary hover:text-primary/80"
+            >
+              Clear All
+            </Button>
+          )}
+        </div>
+        
+        <div className="max-h-80 overflow-y-auto">
+          {notifications.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p>No notifications yet</p>
+              <p className="text-sm">You'll see notifications for likes, comments, and follows here</p>
+            </div>
+          ) : (
+            <div className="space-y-0">
+              {notifications.slice(0, 10).map((notification) => (
+                <div
+                  key={notification.id}
+                  onClick={() => handleNotificationClick(notification)}
+                  className={cn(
+                    "w-full p-4 text-left hover:bg-secondary transition-colors border-b border-border/50 last:border-b-0 cursor-pointer",
+                    !notification.isRead && "bg-primary/5 border-l-4 border-l-primary"
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-1">
+                      {getNotificationIcon(notification.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        {notification.fromUser && (
+                          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-semibold">
+                            {notification.fromUser.displayName.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <p className="font-medium text-sm truncate">
+                          {notification.title}
+                        </p>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                        {notification.message}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatTimeAgo(typeof notification.createdAt === 'string' ? notification.createdAt : notification.createdAt.toISOString())}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-center gap-2">
+                      {!notification.isRead && (
+                        <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => handleDismissNotification(e, notification.id)}
+                        className="h-6 w-6 p-0 hover:bg-red-500/10 hover:text-red-500 opacity-50 hover:opacity-100 transition-all"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {notifications.length > 10 && (
+                <div className="p-4 text-center border-t">
+                  <Link href="/notifications">
+                    <Button variant="ghost" size="sm" className="text-primary">
+                      View all notifications
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}

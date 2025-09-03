@@ -1,0 +1,674 @@
+import { useState, useRef, useEffect } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Game } from "@shared/schema";
+import GameSelector from "@/components/clips/GameSelector";
+import TagInput from "@/components/clips/TagInput";
+import { formatDuration } from "@/lib/constants";
+import { 
+  Upload, 
+  Video, 
+  AlertCircle, 
+  Info, 
+  Scissors,
+  Image,
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward
+} from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+
+const UploadPage = () => {
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  
+  // Video editing states
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [trimRange, setTrimRange] = useState<[number, number]>([0, 100]);
+  const [trimStart, setTrimStart] = useState(0);
+  const [trimEnd, setTrimEnd] = useState(0);
+  const [selectedFilter, setSelectedFilter] = useState("none");
+  const [showEditingTools, setShowEditingTools] = useState(false);
+
+  // Maximum file size: 100MB
+  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB in bytes
+  
+  // Video editing handlers
+  const handlePlayPause = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+  
+  const handleSkipForward = () => {
+    if (videoRef.current) {
+      const newTime = Math.min(videoRef.current.currentTime + 5, videoDuration);
+      videoRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
+  };
+  
+  const handleSkipBackward = () => {
+    if (videoRef.current) {
+      const newTime = Math.max(videoRef.current.currentTime - 5, 0);
+      videoRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
+  };
+  
+  const handleResetToStart = () => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = trimStart;
+      setCurrentTime(trimStart);
+    }
+  };
+  
+  const handleTrimChange = (values: number[]) => {
+    setTrimRange(values as [number, number]);
+    
+    // Calculate actual trim times based on the percentage values
+    const startSeconds = (values[0] / 100) * videoDuration;
+    const endSeconds = (values[1] / 100) * videoDuration;
+    
+    setTrimStart(startSeconds);
+    setTrimEnd(endSeconds);
+    
+    // Update video position to visualize trim
+    if (videoRef.current) {
+      videoRef.current.currentTime = startSeconds;
+      setCurrentTime(startSeconds);
+    }
+  };
+  
+  // User ID from auth context
+  const userId = user?.id;
+  
+  // Define filter options
+  const FILTERS = [
+    { id: "none", name: "Original", className: "" },
+    { id: "grayscale", name: "Grayscale", className: "filter-grayscale" },
+    { id: "sepia", name: "Sepia", className: "filter-sepia" },
+    { id: "invert", name: "Invert", className: "filter-invert" },
+    { id: "brightness", name: "Bright", className: "filter-brightness" },
+    { id: "contrast", name: "Contrast", className: "filter-contrast" },
+    { id: "saturate", name: "Vibrant", className: "filter-saturate" },
+    { id: "blur", name: "Blur", className: "filter-blur" },
+    { id: "hue-rotate", name: "Hue Shift", className: "filter-hue-rotate" },
+  ];
+
+  // Get games for dropdown
+  const { data: games } = useQuery<Game[]>({
+    queryKey: ["/api/games"],
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: async () => {
+      if (!file) {
+        throw new Error("Please select a video file");
+      }
+
+      if (!title) {
+        throw new Error("Please enter a title");
+      }
+      
+      if (!userId) {
+        throw new Error("You must be logged in to upload clips");
+      }
+
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("description", description);
+      formData.append("userId", String(userId));
+      
+      if (selectedGame) {
+        formData.append("gameId", String(selectedGame.id));
+      }
+      
+      // Add tags if available
+      if (tags.length > 0) {
+        // Ensure we don't exceed the maximum tag count
+        const processedTags = tags.slice(0, 5).map(tag => tag.trim()).filter(Boolean);
+        formData.append("tags", JSON.stringify(processedTags));
+      }
+      
+      formData.append("thumbnailUrl", thumbnailUrl || "");
+      formData.append("duration", String(Math.round(videoDuration)));
+      
+      // Add editing parameters
+      formData.append("filter", selectedFilter);
+      formData.append("trimStart", String(Math.round(trimStart)));
+      formData.append("trimEnd", trimEnd > 0 ? String(Math.round(trimEnd)) : String(Math.round(videoDuration)));
+      
+      formData.append("video", file);
+
+      // Simulate upload progress (in a real app this would use XMLHttpRequest)
+      setIsUploading(true);
+      
+      const interval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 95) {
+            clearInterval(interval);
+            return 95;
+          }
+          return prev + 5;
+        });
+      }, 300);
+
+      try {
+        const response = await fetch("/api/clips", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+          headers: {
+            "X-User-Id": String(userId),
+          },
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Upload failed");
+        }
+        
+        clearInterval(interval);
+        setUploadProgress(100);
+        
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        clearInterval(interval);
+        throw error;
+      }
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Success!",
+        description: "Your clip has been uploaded successfully.",
+        duration: 3000,
+      });
+      
+      // Invalidate relevant queries to refresh data automatically
+      if (user) {
+        // Invalidate user clips query to refresh the profile page
+        queryClient.invalidateQueries({
+          queryKey: [`/api/users/${user.username}/clips`]
+        });
+        
+        // Invalidate user stats to update clip count
+        queryClient.invalidateQueries({
+          queryKey: [`/api/users/${user.username}`]
+        });
+      }
+      
+      // Also invalidate feed clips in case the user navigates there
+      queryClient.invalidateQueries({
+        queryKey: ['/api/clips/feed']
+      });
+      
+      // Navigate to the profile page after a short delay to show success message
+      setTimeout(() => {
+        if (user) {
+          navigate(`/profile/${user.username}`);
+        } else {
+          navigate(`/clips/${data.id}`);
+        }
+      }, 1500);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      setIsUploading(false);
+      setUploadProgress(0);
+    },
+  });
+
+  // All video player control functions are defined earlier
+
+  // Video time update event handler
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !file) return;
+
+    const handleTimeUpdate = () => {
+      setCurrentTime(video.currentTime);
+      
+      // Stop playback if we reach trim end
+      if (trimEnd > 0 && video.currentTime >= trimEnd) {
+        video.pause();
+        setIsPlaying(false);
+      }
+    };
+    
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    
+    video.addEventListener("timeupdate", handleTimeUpdate);
+    video.addEventListener("play", handlePlay);
+    video.addEventListener("pause", handlePause);
+
+    return () => {
+      video.removeEventListener("timeupdate", handleTimeUpdate);
+      video.removeEventListener("play", handlePlay);
+      video.removeEventListener("pause", handlePause);
+    };
+  }, [file, trimEnd]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+    
+    // Reset previous errors and editing state
+    setFileError(null);
+    setShowEditingTools(false);
+    setSelectedFilter("none");
+    setTrimRange([0, 100]);
+    setTrimStart(0);
+    setTrimEnd(0);
+
+    // Check if it's a video file
+    if (!selectedFile.type.startsWith("video/")) {
+      setFileError("Please select a video file (MP4, WebM, or MOV).");
+      toast({
+        title: "Invalid file type",
+        description: "Please select a video file (MP4, WebM, or MOV).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check file size limit
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      const sizeMB = (selectedFile.size / (1024 * 1024)).toFixed(2);
+      setFileError(`File size (${sizeMB}MB) exceeds the 100MB limit.`);
+      toast({
+        title: "File too large",
+        description: `File size (${sizeMB}MB) exceeds the 100MB limit.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setFile(selectedFile);
+
+    // Use videoRef or create a temporary video element to get duration
+    if (videoRef.current) {
+      videoRef.current.src = URL.createObjectURL(selectedFile);
+      videoRef.current.onloadedmetadata = () => {
+        if (videoRef.current) {
+          const duration = videoRef.current.duration;
+          setVideoDuration(duration);
+          setTrimEnd(duration);
+          
+          // Enable editing tools after upload
+          setShowEditingTools(true);
+          
+          // In a real application, we would generate a proper thumbnail here
+          // For now we'll create a placeholder thumbnail
+          setThumbnailUrl(`https://placehold.co/600x340/222/444?text=${encodeURIComponent(selectedFile.name)}`);
+          
+          // Create a snapshot from the video as thumbnail (basic implementation)
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 600;
+            canvas.height = 340;
+            setTimeout(() => {
+              if (videoRef.current) {
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+                const thumbnail = canvas.toDataURL('image/jpeg');
+                setThumbnailUrl(thumbnail);
+              }
+            }, 500); // Delay to ensure video has loaded enough frames
+          } catch (e) {
+            console.error("Could not generate thumbnail", e);
+          }
+        }
+      };
+    } else {
+      // Fallback if videoRef is not available
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.onloadedmetadata = () => {
+        setVideoDuration(video.duration);
+        setTrimEnd(video.duration);
+        setShowEditingTools(true);
+        setThumbnailUrl(`https://placehold.co/600x340/222/444?text=${encodeURIComponent(selectedFile.name)}`);
+      };
+      video.src = URL.createObjectURL(selectedFile);
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    uploadMutation.mutate();
+  };
+
+  return (
+    <div className="py-6">
+      <h1 className="text-2xl font-bold mb-6">Upload a New Clip</h1>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Share your gaming moment</CardTitle>
+          <CardDescription>
+            Upload a video clip to share with the Gamefolio community
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="video">Video File</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center text-xs text-muted-foreground">
+                        <Info className="h-3 w-3 mr-1" />
+                        <span>Maximum 100MB</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Supports MP4, WebM, or MOV formats</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              
+              <div 
+                className={`border-2 border-dashed ${fileError ? 'border-destructive' : 'border-muted'} rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors`}
+                onClick={triggerFileInput}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  id="video"
+                  accept="video/mp4,video/webm,video/quicktime"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                
+                {file ? (
+                  <div className="space-y-4">
+                    <div className="relative w-full max-w-3xl mx-auto mb-4 aspect-video rounded-md overflow-hidden">
+                      <video 
+                        ref={videoRef}
+                        src={URL.createObjectURL(file)} 
+                        className={cn(
+                          "w-full h-full object-contain bg-black",
+                          selectedFilter !== "none" && selectedFilter && `filter-${selectedFilter}`
+                        )}
+                        muted
+                      />
+                      
+                      {/* Custom playback controls */}
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-white text-sm">
+                            {formatDuration(currentTime)} / {formatDuration(videoDuration)}
+                          </span>
+                          <div className="flex items-center space-x-2">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={handleSkipBackward}
+                              className="h-8 w-8 text-white"
+                            >
+                              <SkipBack className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={handlePlayPause}
+                              className="h-8 w-8 text-white"
+                            >
+                              {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={handleSkipForward}
+                              className="h-8 w-8 text-white"
+                            >
+                              <SkipForward className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={handleResetToStart}
+                              className="h-8 w-8 text-white"
+                            >
+                              <SkipBack className="h-4 w-4 text-primary" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-medium text-foreground mb-1">{file.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {(file.size / (1024 * 1024)).toFixed(2)} MB • 
+                          {videoDuration > 0 && ` ${formatDuration(videoDuration)} •`}
+                          {" " + file.type}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Video Editing Tools */}
+                    {showEditingTools && (
+                      <div className="mt-6 border-t border-muted pt-4">
+                        <h3 className="text-lg font-medium mb-4">Edit Your Clip</h3>
+                        
+                        <Tabs defaultValue="trim" className="w-full">
+                          <TabsList className="grid w-full grid-cols-2 mb-4">
+                            <TabsTrigger value="trim" className="flex items-center">
+                              <Scissors className="mr-2 h-4 w-4" /> Trim
+                            </TabsTrigger>
+                            <TabsTrigger value="filters" className="flex items-center">
+                              <Image className="mr-2 h-4 w-4" /> Filters
+                            </TabsTrigger>
+                          </TabsList>
+                          
+                          {/* Trim tab */}
+                          <TabsContent value="trim" className="space-y-4 py-2">
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <Label>Trim Video</Label>
+                                <div className="flex space-x-2 text-sm font-medium">
+                                  <span>Start: {formatDuration(trimStart)}</span>
+                                  <span>End: {trimEnd > 0 ? formatDuration(trimEnd) : formatDuration(videoDuration)}</span>
+                                </div>
+                              </div>
+                              
+                              <Slider
+                                defaultValue={[0, 100]}
+                                value={trimRange}
+                                max={100}
+                                step={0.1}
+                                onValueChange={handleTrimChange}
+                                className="my-6"
+                              />
+                              
+                              <p className="text-sm text-muted-foreground mt-2">
+                                Drag the handles to select the portion of the video you want to keep.
+                              </p>
+                            </div>
+                          </TabsContent>
+                          
+                          {/* Filters tab */}
+                          <TabsContent value="filters" className="py-2">
+                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                              {FILTERS.map((filterOption) => (
+                                <div
+                                  key={filterOption.id}
+                                  className={`
+                                    cursor-pointer text-center rounded-md p-2 transition-all
+                                    ${selectedFilter === filterOption.id ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-secondary'}
+                                  `}
+                                  onClick={() => setSelectedFilter(filterOption.id)}
+                                >
+                                  <div 
+                                    className={`mx-auto w-12 h-12 mb-1 rounded overflow-hidden ${filterOption.className}`}
+                                    style={{
+                                      backgroundImage: `url(${thumbnailUrl || '/assets/video-placeholder.svg'})`,
+                                      backgroundSize: 'cover',
+                                      backgroundPosition: 'center'
+                                    }}
+                                  />
+                                  <span className="text-xs font-medium block truncate">{filterOption.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </TabsContent>
+                        </Tabs>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
+                    <p className="font-medium">Drag and drop your video or click to browse</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      MP4, WebM, or MOV up to 100MB
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              {fileError && (
+                <Alert variant="destructive" className="mt-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{fileError}</AlertDescription>
+                </Alert>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                placeholder="Add a title to your clip"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description (optional)</Label>
+              <Textarea
+                id="description"
+                placeholder="Tell viewers about your clip"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="game">Game (optional)</Label>
+              <GameSelector
+                games={games || []}
+                selectedGame={selectedGame}
+                onSelect={setSelectedGame}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="tags">Tags (optional)</Label>
+                <span className="text-xs text-muted-foreground">
+                  {tags.length}/5 tags
+                </span>
+              </div>
+              <TagInput
+                tags={tags}
+                setTags={setTags}
+                placeholder="Add tags (press Space, Enter, or comma to add)..."
+                maxTags={5}
+              />
+              <p className="text-xs text-muted-foreground">
+                Add tags to help others discover your clip. Tags like gameplay type, achievement, character, etc.
+              </p>
+            </div>
+
+            {isUploading && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Uploading...</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <div className="w-full bg-secondary rounded-full h-2.5">
+                  <div 
+                    className="bg-primary h-2.5 rounded-full transition-all" 
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
+          </form>
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          <Button variant="outline" onClick={() => navigate("/")}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSubmit}
+            disabled={!file || !title || isUploading}
+          >
+            {isUploading ? "Uploading..." : "Upload Clip"}
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+};
+
+export default UploadPage;

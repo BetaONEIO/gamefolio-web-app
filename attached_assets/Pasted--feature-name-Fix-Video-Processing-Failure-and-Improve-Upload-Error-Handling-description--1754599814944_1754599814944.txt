@@ -1,0 +1,65 @@
+<feature name="Fix Video Processing Failure and Improve Upload Error Handling">
+  <description>
+    Resolve the video processing error occurring during upload and enhance error feedback to the user.
+  </description>
+
+  <issue>
+    <log>
+      <message>Processing error: Error: Video processing failed</message>
+      <location>UploadPage.tsx:453</location>
+    </log>
+    <log>
+      <message>Upload mutation error: Error: Video processing failed</message>
+      <location>UploadPage.tsx:453</location>
+    </log>
+  </issue>
+
+  <requirements>
+    <requirement>
+      <id>1</id>
+      <title>Identify and Fix Root Cause of Processing Failure</title>
+      <details>
+        Investigate the video processing pipeline (e.g. transcoding, resizing, storage) to determine why uploaded videos fail at the processing step.
+        Validate:
+        <check>Supported file types (e.g. mp4, webm, mov)</check>
+        <check>File size limits</check>
+        <check>MIME type validation consistency</check>
+        <check>Third-party API or FFmpeg failures</check>
+      </details>
+    </requirement>
+
+    <requirement>
+      <id>2</id>
+      <title>Improve Error Handling in UploadPage.tsx</title>
+      <details>
+        Catch processing failures gracefully and show a user-friendly error message instead of a raw stack trace.
+        <message>“There was a problem processing your video. Please try again or contact support.”</message>
+      </details>
+    </requirement>
+
+    <requirement>
+      <id>3</id>
+      <title>Retry Mechanism or Fallback</title>
+      <details>
+        Allow the user to retry processing the video automatically or via a “Retry” button if the first attempt fails.
+      </details>
+    </requirement>
+
+    <requirement>
+      <id>4</id>
+      <title>Detailed Logging for Debugging</title>
+      <details>
+        Enhance internal logging to capture details like:
+        <logDetail>Video file name and size</logDetail>
+        <logDetail>MIME type detected</logDetail>
+        <logDetail>Time of failure</logDetail>
+        <logDetail>API or system errors during processing</logDetail>
+      </details>
+    </requirement>
+  </requirements>
+
+  <notes>
+    <note>Consider integrating a third-party service like Mux or Cloudflare Stream if in-house processing is inconsistent.</note>
+    <note>Ensure errors don't block the rest of the app functionality (e.g. prevent UI lockups).</note>
+  </notes>
+</feature>

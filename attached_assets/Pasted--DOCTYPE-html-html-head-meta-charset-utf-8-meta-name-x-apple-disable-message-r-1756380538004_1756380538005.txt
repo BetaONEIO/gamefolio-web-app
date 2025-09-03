@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="x-apple-disable-message-reformatting">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Welcome to Gamefolio</title>
+  </head>
+  <body style="margin:0;padding:0;background:#000000;color:#ffffff;">
+    <!-- Full-width wrapper -->
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#000000;">
+      <tr>
+        <td align="center">
+          <!-- 600px container -->
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:600px;max-width:100%;">
+            <!-- Hero image -->
+            <tr>
+              <td style="padding:0;">
+                <img src="https://i.imgur.com/j713xSq.png" width="600" alt="Welcome to Gamefolio"
+                     style="display:block;width:100%;height:auto;border:0;line-height:0;outline:none;text-decoration:none;">
+              </td>
+            </tr>
+
+            <!-- Content -->
+            <tr>
+              <td align="center" style="padding:12px 20px 24px;">
+                <h1 style="margin:8px 0 10px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:28px;line-height:1.25;font-weight:800;color:#ffffff;">
+                  Welcome to Gamefolio
+                </h1>
+                <p style="margin:0 0 18px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:16px;line-height:1.5;color:#d6d6d6;">
+                  Thanks for joining our gaming community. We’re excited to have you on board.
+                </p>
+
+                <!-- Button -->
+                <a href="https://app.gamefolio.com/explore"
+                   style="display:inline-block;background:#00FF66;color:#ffffff;text-decoration:none;
+                          font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+                          font-weight:700;font-size:16px;line-height:20px;padding:14px 28px;border-radius:6px;">
+                  Explore Gamefolio
+                </a>
+
+                <!-- Footer note -->
+                <p style="margin:22px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:12px;line-height:1.6;color:#8a8a8a;">
+                  If you didn’t create this account, you can safely ignore this email.
+                </p>
+              </td>
+            </tr>
+          </table>
+          <!-- /container -->
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

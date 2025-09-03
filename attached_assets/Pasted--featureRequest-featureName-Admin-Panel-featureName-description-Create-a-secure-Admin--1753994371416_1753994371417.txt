@@ -1,0 +1,68 @@
+<featureRequest>
+  <featureName>Admin Panel</featureName>
+  <description>
+    Create a secure Admin Panel that allows designated admin users to manage the platform.
+    The primary super admin account should be assigned to the username: mod_tom.
+  </description>
+
+  <accessControl>
+    <superAdmin>mod_tom</superAdmin>
+    <permissions>
+      <canDeleteUsers>true</canDeleteUsers>
+      <canMuteUsers>true</canMuteUsers>
+      <canDeleteContent>true</canDeleteContent>
+      <canDeleteComments>true</canDeleteComments>
+      <canControlTrending>true</canControlTrending>
+      <canSendPasswordReset>true</canSendPasswordReset>
+      <canViewUserData>true</canViewUserData>
+      <canForceOnboarding>true</canForceOnboarding>
+    </permissions>
+  </accessControl>
+
+  <adminFunctions>
+    <function>
+      <name>Delete Users</name>
+      <description>Allow admin to permanently delete user accounts from the platform.</description>
+    </function>
+
+    <function>
+      <name>Force Mute Users</name>
+      <description>Allow admin to mute users so they cannot send messages to others.</description>
+    </function>
+
+    <function>
+      <name>Delete Content</name>
+      <contentTypes>
+        <type>Clip</type>
+        <type>Screenshot</type>
+        <type>Reel</type>
+      </contentTypes>
+      <description>Admin can delete any piece of content uploaded by users.</description>
+    </function>
+
+    <function>
+      <name>Delete Comments</name>
+      <description>Allow admin to delete user comments from content.</description>
+    </function>
+
+    <function>
+      <name>Control Trending</name>
+      <description>Admin can override or adjust what appears on the trending page.</description>
+    </function>
+
+    <function>
+      <name>Send Password Reset Emails</name>
+      <description>Admin can manually trigger password reset emails to users.</description>
+    </function>
+
+    <function>
+      <name>View User Info</name>
+      <description>Admin can see a user's username and their registered email address (if present).</description>
+    </function>
+
+    <function>
+      <name>Force Re-onboarding</name>
+      <description>Admin can force a user to re-enter the onboarding flow on next login.</description>
+    </function>
+  </adminFunctions>
+</featureRequest>

@@ -1,0 +1,972 @@
+import React, { useState } from 'react';
+import { useAuth } from '@/hooks/use-auth';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useUpdateProfile } from '@/hooks/use-profile';
+import { z } from 'zod';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest, getQueryFn } from '@/lib/queryClient';
+import { useQuery } from '@tanstack/react-query';
+import { Redirect } from 'wouter';
+import { Loader2 } from 'lucide-react';
+
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
+import { 
+  Form, 
+  FormControl, 
+  FormDescription, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { HexColorPicker } from "react-colorful";
+import { FaSteam, FaXbox, FaPlaystation, FaTwitter, FaYoutube } from 'react-icons/fa';
+
+// Form validation schemas
+const profileFormSchema = z.object({
+  displayName: z.string().min(2, 'Display name must be at least 2 characters'),
+  avatarUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  bio: z.string().max(500, 'Bio cannot exceed 500 characters').optional().or(z.literal('')),
+  email: z.string().email('Invalid email address').optional().or(z.literal('')),
+});
+
+const platformsFormSchema = z.object({
+  steamUsername: z.string().optional().or(z.literal('')),
+  xboxUsername: z.string().optional().or(z.literal('')),
+  playstationUsername: z.string().optional().or(z.literal('')),
+  twitterUsername: z.string().optional().or(z.literal('')),
+  youtubeUsername: z.string().optional().or(z.literal('')),
+});
+
+const securityFormSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .optional()
+    .or(z.literal('')),
+  confirmPassword: z.string().optional().or(z.literal('')),
+}).refine(data => 
+  !data.newPassword || data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+const appearanceFormSchema = z.object({
+  accentColor: z.string().min(1, 'Accent color is required'),
+  primaryColor: z.string().min(1, 'Primary color is required'),
+  layoutStyle: z.enum(['grid', 'masonry', 'classic']),
+  bannerUrl: z.string().optional().or(z.literal('')),
+});
+
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
+type PlatformFormValues = z.infer<typeof platformsFormSchema>;
+type SecurityFormValues = z.infer<typeof securityFormSchema>;
+type AppearanceFormValues = z.infer<typeof appearanceFormSchema>;
+
+const AccountSettingsPage: React.FC = () => {
+  const { user, isLoading } = useAuth();
+  const { toast } = useToast();
+  const updateProfile = useUpdateProfile();
+  const [changePasswordStatus, setChangePasswordStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [selectedBannerUrl, setSelectedBannerUrl] = useState<string>('');
+  
+  // Define ProfileBanner type
+  type ProfileBanner = {
+    id: number;
+    name: string;
+    category: string;
+    imageUrl: string;
+    createdAt: string;
+  };
+
+  // Fetch profile banners
+  const { data: profileBanners = [] } = useQuery<ProfileBanner[]>({
+    queryKey: ['/api/profile-banners'],
+    queryFn: async () => {
+      const response = await fetch('/api/profile-banners');
+      if (!response.ok) return [];
+      return response.json();
+    }
+  });
+  
+  // Profile form setup
+  const profileForm = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      displayName: user?.displayName || '',
+      avatarUrl: user?.avatarUrl || '',
+      bio: user?.bio || '',
+      email: '',  // We currently don't have email in our schema, this is a placeholder
+    }
+  });
+  
+  // Platforms form setup
+  const platformsForm = useForm<PlatformFormValues>({
+    resolver: zodResolver(platformsFormSchema),
+    defaultValues: {
+      steamUsername: user?.steamUsername || '',
+      xboxUsername: user?.xboxUsername || '',
+      playstationUsername: user?.playstationUsername || '',
+      twitterUsername: user?.twitterUsername || '',
+      youtubeUsername: user?.youtubeUsername || '',
+    }
+  });
+  
+  // Security form setup
+  const securityForm = useForm<SecurityFormValues>({
+    resolver: zodResolver(securityFormSchema),
+    defaultValues: {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    }
+  });
+  
+  // Appearance form setup
+  const appearanceForm = useForm<AppearanceFormValues>({
+    resolver: zodResolver(appearanceFormSchema),
+    defaultValues: {
+      accentColor: user?.accentColor || '#4C8',
+      primaryColor: user?.primaryColor || '#02172C',
+      layoutStyle: (user?.layoutStyle as 'grid' | 'masonry' | 'classic') || 'grid',
+      bannerUrl: user?.bannerUrl || '',
+    }
+  });
+  
+  // Handle profile form submission
+  const onProfileSubmit = async (values: ProfileFormValues) => {
+    if (!user) return;
+    
+    try {
+      await updateProfile.mutateAsync({
+        userId: user.id,
+        userData: {
+          displayName: values.displayName,
+          avatarUrl: values.avatarUrl,
+          bio: values.bio,
+        }
+      });
+      
+      toast({
+        title: "Profile updated",
+        description: "Your account settings have been updated successfully.",
+        duration: 3000,
+      });
+    } catch (error) {
+      toast({
+        title: "Update failed",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Handle platforms form submission
+  // Note: This is now handled by the Connect/Disconnect buttons for each platform
+  const onPlatformsSubmit = async (values: PlatformFormValues) => {
+    // No longer needed as each platform has its own connect/disconnect functionality
+    toast({
+      title: "Platform connections",
+      description: "Please use the Connect/Disconnect buttons for each platform.",
+      duration: 3000,
+    });
+  };
+  
+  // Handle appearance form submission
+  const onAppearanceSubmit = async (values: AppearanceFormValues) => {
+    if (!user) return;
+    
+    try {
+      await updateProfile.mutateAsync({
+        userId: user.id,
+        userData: {
+          accentColor: values.accentColor,
+          primaryColor: values.primaryColor,
+          layoutStyle: values.layoutStyle,
+          bannerUrl: values.bannerUrl,
+        }
+      });
+      
+      toast({
+        title: "Appearance updated",
+        description: "Your profile appearance has been updated successfully.",
+        duration: 3000,
+      });
+    } catch (error) {
+      toast({
+        title: "Update failed",
+        description: "Failed to update appearance. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Handle security form submission (password change)
+  const onSecuritySubmit = async (values: SecurityFormValues) => {
+    if (!user) return;
+    
+    try {
+      await apiRequest("POST", "/api/users/change-password", {
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword
+      });
+      
+      setChangePasswordStatus('success');
+      toast({
+        title: "Password changed",
+        description: "Your password has been changed successfully.",
+        duration: 3000,
+      });
+      
+      securityForm.reset({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+    } catch (error) {
+      setChangePasswordStatus('error');
+      toast({
+        title: "Password change failed",
+        description: error instanceof Error ? error.message : "Failed to change password. Please check your current password and try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
+    }
+  };
+  
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
+  // Redirect if not logged in
+  if (!user) {
+    return <Redirect to="/auth" />;
+  }
+  
+  return (
+    <div className="container max-w-5xl py-8">
+      <h1 className="text-3xl font-bold mb-8">Account Settings</h1>
+      
+      <Tabs defaultValue="profile" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 mb-8">
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="appearance">Appearance</TabsTrigger>
+          <TabsTrigger value="platforms">Platforms</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
+        </TabsList>
+        
+        {/* Profile Settings */}
+        <TabsContent value="profile">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Settings</CardTitle>
+              <CardDescription>
+                Manage your basic account details and profile information.
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent className="space-y-6">
+              <div className="flex items-center space-x-4">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={user?.avatarUrl || ''} alt={user?.displayName} />
+                  <AvatarFallback>{user?.displayName?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                
+                <div>
+                  <h3 className="text-lg font-medium">Profile Picture</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Your profile picture is visible to other users.
+                  </p>
+                </div>
+              </div>
+              
+              <Form {...profileForm}>
+                <form id="profile-form" onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6">
+                  <FormField
+                    control={profileForm.control}
+                    name="displayName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Display Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your display name" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          This is your public display name.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={profileForm.control}
+                    name="avatarUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Avatar URL</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://example.com/avatar.jpg" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Enter a direct URL to an image for your profile picture.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={profileForm.control}
+                    name="bio"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bio</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Tell others a bit about yourself" 
+                            className="min-h-32"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Your bio is displayed on your Gamefolio profile.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={profileForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="your.email@example.com" {...field} disabled />
+                        </FormControl>
+                        <FormDescription>
+                          Email functionality coming soon.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </form>
+              </Form>
+            </CardContent>
+            
+            <CardFooter>
+              <Button 
+                type="submit" 
+                form="profile-form"
+                disabled={updateProfile.isPending || !profileForm.formState.isDirty}
+              >
+                {updateProfile.isPending ? 'Saving...' : 'Save Profile'}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+        
+        {/* Platform Connections */}
+        <TabsContent value="platforms">
+          <Card>
+            <CardHeader>
+              <CardTitle>Platform Connections</CardTitle>
+              <CardDescription>
+                Connect your gaming accounts and social media profiles.
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent className="space-y-6">
+              <Form {...platformsForm}>
+                <form id="platforms-form" onSubmit={platformsForm.handleSubmit(onPlatformsSubmit)} className="space-y-6">
+                  <div className="grid gap-4">
+                    <h3 className="text-lg font-medium">Gaming Platforms</h3>
+                    
+                    <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
+                      <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
+                        <FaSteam className="w-6 h-6 text-[#1B2838] dark:text-[#66c0f4]" />
+                      </div>
+                      <div className="flex-grow space-y-1">
+                        <FormLabel>Steam</FormLabel>
+                        <div className="flex items-center gap-2">
+                          {user?.steamUsername ? (
+                            <>
+                              <div className="flex-1 bg-muted p-2 rounded-md border overflow-hidden text-ellipsis">
+                                <span className="text-muted-foreground mr-1">Connected:</span> 
+                                {user.steamUsername}
+                              </div>
+                              <Button 
+                                variant="destructive" 
+                                size="sm"
+                                type="button"
+                                onClick={() => {
+                                  if (confirm("Are you sure you want to disconnect your Steam account?")) {
+                                    updateProfile.mutate({
+                                      userId: user.id,
+                                      userData: { steamUsername: null }
+                                    });
+                                  }
+                                }}
+                              >
+                                Disconnect
+                              </Button>
+                            </>
+                          ) : (
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              className="w-full" 
+                              onClick={() => window.location.href = "/api/auth/steam"}
+                            >
+                              Connect with Steam
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </FormItem>
+                    
+                    <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
+                      <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
+                        <FaXbox className="w-6 h-6 text-[#107C10]" />
+                      </div>
+                      <div className="flex-grow space-y-1">
+                        <FormLabel>Xbox</FormLabel>
+                        <div className="flex items-center gap-2">
+                          {user?.xboxUsername ? (
+                            <>
+                              <div className="flex-1 bg-muted p-2 rounded-md border overflow-hidden text-ellipsis">
+                                <span className="text-muted-foreground mr-1">Connected:</span> 
+                                {user.xboxUsername}
+                              </div>
+                              <Button 
+                                variant="destructive" 
+                                size="sm"
+                                type="button"
+                                onClick={() => {
+                                  if (confirm("Are you sure you want to disconnect your Xbox account?")) {
+                                    updateProfile.mutate({
+                                      userId: user.id,
+                                      userData: { xboxUsername: null }
+                                    });
+                                  }
+                                }}
+                              >
+                                Disconnect
+                              </Button>
+                            </>
+                          ) : (
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              className="w-full" 
+                              onClick={() => window.location.href = "/api/auth/xbox"}
+                            >
+                              Connect with Xbox
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </FormItem>
+                    
+                    <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
+                      <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
+                        <FaPlaystation className="w-6 h-6 text-[#003791]" />
+                      </div>
+                      <div className="flex-grow space-y-1">
+                        <FormLabel>PlayStation</FormLabel>
+                        <div className="flex items-center gap-2">
+                          {user?.playstationUsername ? (
+                            <>
+                              <div className="flex-1 bg-muted p-2 rounded-md border overflow-hidden text-ellipsis">
+                                <span className="text-muted-foreground mr-1">Connected:</span> 
+                                {user.playstationUsername}
+                              </div>
+                              <Button 
+                                variant="destructive" 
+                                size="sm"
+                                type="button"
+                                onClick={() => {
+                                  if (confirm("Are you sure you want to disconnect your PlayStation account?")) {
+                                    updateProfile.mutate({
+                                      userId: user.id,
+                                      userData: { playstationUsername: null }
+                                    });
+                                  }
+                                }}
+                              >
+                                Disconnect
+                              </Button>
+                            </>
+                          ) : (
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              className="w-full" 
+                              onClick={() => window.location.href = "/api/auth/playstation"}
+                            >
+                              Connect with PlayStation
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </FormItem>
+                    
+                    <h3 className="text-lg font-medium mt-4">Social Media</h3>
+                    
+                    <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
+                      <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
+                        <FaTwitter className="w-6 h-6 text-[#1DA1F2]" />
+                      </div>
+                      <div className="flex-grow space-y-1">
+                        <FormLabel>Twitter / X</FormLabel>
+                        <div className="flex items-center gap-2">
+                          {user?.twitterUsername ? (
+                            <>
+                              <div className="flex-1 bg-muted p-2 rounded-md border overflow-hidden text-ellipsis">
+                                <span className="text-muted-foreground mr-1">Connected:</span> 
+                                @{user.twitterUsername}
+                              </div>
+                              <Button 
+                                variant="destructive" 
+                                size="sm"
+                                type="button"
+                                onClick={() => {
+                                  if (confirm("Are you sure you want to disconnect your Twitter account?")) {
+                                    updateProfile.mutate({
+                                      userId: user.id,
+                                      userData: { twitterUsername: null }
+                                    });
+                                  }
+                                }}
+                              >
+                                Disconnect
+                              </Button>
+                            </>
+                          ) : (
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              className="w-full" 
+                              onClick={() => window.location.href = "/api/auth/twitter"}
+                            >
+                              Connect with Twitter
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </FormItem>
+                    
+                    <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
+                      <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
+                        <FaYoutube className="w-6 h-6 text-[#FF0000]" />
+                      </div>
+                      <div className="flex-grow space-y-1">
+                        <FormLabel>YouTube</FormLabel>
+                        <div className="flex items-center gap-2">
+                          {user?.youtubeUsername ? (
+                            <>
+                              <div className="flex-1 bg-muted p-2 rounded-md border overflow-hidden text-ellipsis">
+                                <span className="text-muted-foreground mr-1">Connected:</span> 
+                                @{user.youtubeUsername}
+                              </div>
+                              <Button 
+                                variant="destructive" 
+                                size="sm"
+                                type="button"
+                                onClick={() => {
+                                  if (confirm("Are you sure you want to disconnect your YouTube account?")) {
+                                    updateProfile.mutate({
+                                      userId: user.id,
+                                      userData: { youtubeUsername: null }
+                                    });
+                                  }
+                                }}
+                              >
+                                Disconnect
+                              </Button>
+                            </>
+                          ) : (
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              className="w-full" 
+                              onClick={() => window.location.href = "/api/auth/youtube"}
+                            >
+                              Connect with YouTube
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </FormItem>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+            
+            <CardFooter>
+              <div className="text-sm text-muted-foreground">
+                Use the Connect/Disconnect buttons above to manage your platform connections.
+              </div>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+        
+        {/* Security Settings */}
+        <TabsContent value="security">
+          <Card>
+            <CardHeader>
+              <CardTitle>Security Settings</CardTitle>
+              <CardDescription>
+                Update your password and manage account security.
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent className="space-y-6">
+              {changePasswordStatus === 'success' && (
+                <Alert className="bg-green-50 text-green-800 border-green-200">
+                  <AlertTitle>Password Changed</AlertTitle>
+                  <AlertDescription>
+                    Your password has been successfully changed.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {changePasswordStatus === 'error' && (
+                <Alert className="bg-red-50 text-red-800 border-red-200">
+                  <AlertTitle>Password Change Failed</AlertTitle>
+                  <AlertDescription>
+                    Failed to change password. Please check your current password and try again.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              <Form {...securityForm}>
+                <form id="security-form" onSubmit={securityForm.handleSubmit(onSecuritySubmit)} className="space-y-6">
+                  <FormField
+                    control={securityForm.control}
+                    name="currentPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Current Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={securityForm.control}
+                    name="newPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>New Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Use at least 8 characters with a mix of letters, numbers and symbols.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={securityForm.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm New Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </form>
+              </Form>
+            </CardContent>
+            
+            <CardFooter>
+              <Button 
+                type="submit" 
+                form="security-form"
+                disabled={!securityForm.formState.isDirty}
+              >
+                Change Password
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
+        {/* Appearance Settings */}
+        <TabsContent value="appearance">
+          <Card>
+            <CardHeader>
+              <CardTitle>Appearance Settings</CardTitle>
+              <CardDescription>
+                Customize your profile appearance with colors and banners.
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent className="space-y-6">
+              <Form {...appearanceForm}>
+                <form id="appearance-form" onSubmit={appearanceForm.handleSubmit(onAppearanceSubmit)} className="space-y-6">
+                  {/* Accent Color */}
+                  <FormField
+                    control={appearanceForm.control}
+                    name="accentColor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Accent Color</FormLabel>
+                        <div className="space-y-3">
+                          <FormControl>
+                            <div className="flex gap-4">
+                              <HexColorPicker color={field.value} onChange={field.onChange} />
+                              <div className="space-y-2">
+                                <div 
+                                  className="h-10 w-20 rounded-md border border-input" 
+                                  style={{ backgroundColor: field.value }} 
+                                />
+                                <Input 
+                                  value={field.value} 
+                                  onChange={field.onChange} 
+                                  className="w-20" 
+                                />
+                              </div>
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            This color will be used for buttons, links, and other accent elements.
+                          </FormDescription>
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Primary Color */}
+                  <FormField
+                    control={appearanceForm.control}
+                    name="primaryColor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Primary Color</FormLabel>
+                        <div className="space-y-3">
+                          <FormControl>
+                            <div className="flex gap-4">
+                              <HexColorPicker color={field.value} onChange={field.onChange} />
+                              <div className="space-y-2">
+                                <div 
+                                  className="h-10 w-20 rounded-md border border-input" 
+                                  style={{ backgroundColor: field.value }} 
+                                />
+                                <Input 
+                                  value={field.value} 
+                                  onChange={field.onChange} 
+                                  className="w-20" 
+                                />
+                              </div>
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            This color will be used for background elements.
+                          </FormDescription>
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Layout Style */}
+                  <FormField
+                    control={appearanceForm.control}
+                    name="layoutStyle"
+                    render={({ field }) => (
+                      <FormItem className="space-y-3">
+                        <FormLabel>Layout Style</FormLabel>
+                        <FormControl>
+                          <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="flex flex-col space-y-1"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="grid" id="grid" />
+                              <label htmlFor="grid" className="cursor-pointer">Grid (Default)</label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="masonry" id="masonry" />
+                              <label htmlFor="masonry" className="cursor-pointer">Masonry</label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="classic" id="classic" />
+                              <label htmlFor="classic" className="cursor-pointer">Classic</label>
+                            </div>
+                          </RadioGroup>
+                        </FormControl>
+                        <FormDescription>
+                          Select how your clips will be displayed on your profile.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Profile Banner */}
+                  <FormField
+                    control={appearanceForm.control}
+                    name="bannerUrl"
+                    render={({ field }) => (
+                      <FormItem className="space-y-3">
+                        <FormLabel>Profile Banner</FormLabel>
+                        <FormControl>
+                          <div className="space-y-3">
+                            <div className="w-full h-32 overflow-hidden rounded-lg border border-border">
+                              {field.value ? (
+                                <img 
+                                  src={field.value} 
+                                  alt="Profile banner" 
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">
+                                  No banner selected
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Banner Categories */}
+                            <div className="space-y-4">
+                              {/* Gaming Banners */}
+                              <div>
+                                <h4 className="text-sm font-medium mb-2">Gaming Banners</h4>
+                                <div className="grid grid-cols-3 gap-2">
+                                  {profileBanners
+                                    .filter(banner => banner.category === 'gaming')
+                                    .map((banner: ProfileBanner) => (
+                                    <div 
+                                      key={banner.id}
+                                      className={`
+                                        cursor-pointer rounded-md overflow-hidden border-2 h-16
+                                        ${field.value === banner.imageUrl ? 'border-primary' : 'border-transparent'}
+                                        hover:border-primary/70 transition-all
+                                      `}
+                                      onClick={() => {
+                                        field.onChange(banner.imageUrl);
+                                        setSelectedBannerUrl(banner.imageUrl);
+                                      }}
+                                    >
+                                      <img 
+                                        src={banner.imageUrl} 
+                                        alt={banner.name}
+                                        className="w-full h-full object-cover" 
+                                      />
+                                      <div className="p-1 bg-black/60 text-white text-[10px] absolute bottom-0 left-0 right-0">
+                                        {banner.name}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              
+                              {/* Abstract Banners */}
+                              <div>
+                                <h4 className="text-sm font-medium mb-2">Abstract Banners</h4>
+                                <div className="grid grid-cols-3 gap-2">
+                                  {profileBanners
+                                    .filter(banner => banner.category === 'abstract')
+                                    .map((banner: ProfileBanner) => (
+                                    <div 
+                                      key={banner.id}
+                                      className={`
+                                        cursor-pointer rounded-md overflow-hidden border-2 h-16 relative
+                                        ${field.value === banner.imageUrl ? 'border-primary' : 'border-transparent'}
+                                        hover:border-primary/70 transition-all
+                                      `}
+                                      onClick={() => {
+                                        field.onChange(banner.imageUrl);
+                                        setSelectedBannerUrl(banner.imageUrl);
+                                      }}
+                                    >
+                                      <img 
+                                        src={banner.imageUrl} 
+                                        alt={banner.name}
+                                        className="w-full h-full object-cover" 
+                                      />
+                                      <div className="p-1 bg-black/60 text-white text-[10px] absolute bottom-0 left-0 right-0">
+                                        {banner.name}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </FormControl>
+                        <FormDescription>
+                          Select a banner image for your profile page.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </form>
+              </Form>
+            </CardContent>
+            
+            <CardFooter>
+              <Button 
+                type="submit" 
+                form="appearance-form"
+                disabled={!appearanceForm.formState.isDirty}
+              >
+                Save Appearance
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default AccountSettingsPage;

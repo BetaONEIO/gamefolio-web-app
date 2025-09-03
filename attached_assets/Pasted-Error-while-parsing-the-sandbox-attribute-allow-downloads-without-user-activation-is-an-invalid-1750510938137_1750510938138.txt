@@ -1,0 +1,178 @@
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+/graphql:1 
+            
+            
+            Failed to load resource: the server responded with a status of 500 ()
+/graphql:1 
+            
+            
+            Failed to load resource: the server responded with a status of 500 ()
+/graphql:1 
+            
+            
+            Failed to load resource: the server responded with a status of 500 ()
+/graphql:1 
+            
+            
+            Failed to load resource: net::ERR_NETWORK_CHANGED
+/graphql:1 
+            
+            
+            Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+/graphql:1 
+            
+            
+            Failed to load resource: net::ERR_NETWORK_CHANGED
+_app-a8cfc5f2c83e0a85.js:6  Uncaught (in promise) ApolloError: Failed to fetch
+    at new t (_app-a8cfc5f2c83e0a85.js:6:197650)
+    at Object.error (_app-a8cfc5f2c83e0a85.js:11:256660)
+    at v (_app-a8cfc5f2c83e0a85.js:14:3367)
+    at y (_app-a8cfc5f2c83e0a85.js:14:3849)
+    at t.error (_app-a8cfc5f2c83e0a85.js:14:4402)
+    at Object.error (_app-a8cfc5f2c83e0a85.js:11:240234)
+    at v (_app-a8cfc5f2c83e0a85.js:14:3367)
+    at y (_app-a8cfc5f2c83e0a85.js:14:3849)
+    at t.error (_app-a8cfc5f2c83e0a85.js:14:4402)
+    at _app-a8cfc5f2c83e0a85.js:14:207935
+    at Array.forEach (<anonymous>)
+    at n (_app-a8cfc5f2c83e0a85.js:14:207904)
+    at Object.error (_app-a8cfc5f2c83e0a85.js:11:241382)
+    at v (_app-a8cfc5f2c83e0a85.js:14:3367)
+    at y (_app-a8cfc5f2c83e0a85.js:14:3849)
+    at t.error (_app-a8cfc5f2c83e0a85.js:14:4402)
+    at e.<anonymous> (_app-a8cfc5f2c83e0a85.js:25:68206)
+    at Object.next (_app-a8cfc5f2c83e0a85.js:11:118242)
+    at a (_app-a8cfc5f2c83e0a85.js:11:117080)
+o1151714.ingest.sentry.io/api/6318792/envelope/?sentry_key=8aa91189a4274b5a8c9b7b01d46ea360&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.112.0:1 
+            
+            
+            Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+o1151714.ingest.sentry.io/api/6318792/envelope/?sentry_key=8aa91189a4274b5a8c9b7b01d46ea360&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.112.0:1 
+            
+            
+            Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+/graphql:1 
+            
+            
+            Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Afetch%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3A074974a2&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=03c3e910-3a42-4e64-8740-bd8ca86ce099:1 
+            
+            
+            Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+sp.replit.com/v1/m:1 
+            
+            
+            Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+_app-a8cfc5f2c83e0a85.js:38  Error sending segment performance metrics TypeError: Failed to fetch
+    at _app-a8cfc5f2c83e0a85.js:38:9046
+    at o (sdk.min.js:1:23763)
+    at t.<anonymous> (remote-metrics.ts:138:12)
+    at tslib.es6.js:103:23
+    at Object.next (tslib.es6.js:108:37)
+    at tslib.es6.js:80:8
+    at new Promise (<anonymous>)
+    at u (tslib.es6.js:72:27)
+    at t.send (sdk.min.js:1:22021)
+    at t.<anonymous> (remote-metrics.ts:125:16)
+    at tslib.es6.js:103:23
+    at Object.next (tslib.es6.js:108:37)
+    at tslib.es6.js:80:8
+    at new Promise (<anonymous>)
+    at u (tslib.es6.js:72:27)
+    at t.flush (sdk.min.js:1:21754)
+    at l (remote-metrics.ts:83:14)
+    at n (_app-a8cfc5f2c83e0a85.js:38:2959)
+(anonymous) @ _app-a8cfc5f2c83e0a85.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3A074974a2&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=11eb1d45-1c92-4186-aafb-95c591be0beb:1 
+            
+            
+            Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Afetch%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3A074974a2%2Cretry_count%3A1%2Cretry_after%3A0&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=f7769f14-9e24-44cc-97f7-5d977fb76063:1 
+            
+            
+            Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3A074974a2%2Cretry_count%3A1%2Cretry_after%3A0&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=76fed248-bc4b-4c9e-92eb-0d968631d9fc:1 
+            
+            
+            Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Afetch%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3A074974a2%2Cretry_count%3A2%2Cretry_after%3A0&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=0fba30fb-0215-42c0-ab90-ff16f330b1c5:1 
+            
+            
+            Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3A074974a2%2Cretry_count%3A2%2Cretry_after%3A0&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=7559923b-68b2-4291-8e75-535479d1d405:1 
+            
+            
+            Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Afetch%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3A074974a2%2Cretry_count%3A3%2Cretry_after%3A0&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=02f91ffb-e1cc-4125-85ae-406d2a0ac5d2:1 
+            
+            
+            Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3A074974a2%2Cretry_count%3A3%2Cretry_after%3A0&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=a3119a30-a510-4e22-9ab7-41e8e2d1e3ee:1 
+            
+            
+            Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Afetch%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3A074974a2%2Cretry_count%3A4%2Cretry_after%3A0&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=2c4d7aa0-4837-4df4-a520-4dc9fec8fbc2:1 
+            
+            
+            Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3A074974a2%2Cretry_count%3A4%2Cretry_after%3A0&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=9ef76b88-72a6-4661-b71c-bd9297618cfa:1 
+            
+            
+            Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+/graphql:1 
+            
+            
+            Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+/graphql:1 
+            
+            
+            Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+/graphql:1 
+            
+            
+            Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Afetch%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3A074974a2%2Cretry_count%3A5%2Cretry_after%3A0&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=4f71ee61-b4b5-4d29-bd7b-0d2bc6d14074:1 
+            
+            
+            Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3A074974a2%2Cretry_count%3A5%2Cretry_after%3A0&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=aa1bf8dc-f30c-4163-8729-a2f417cde9c0:1 
+            
+            
+            Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+_app-a8cfc5f2c83e0a85.js:25  WebSocket connection to 'wss://replit.com/graphql_subscriptions' failed: 
+(anonymous) @ _app-a8cfc5f2c83e0a85.js:25
+_app-a8cfc5f2c83e0a85.js:25  WebSocket connection to 'wss://replit.com/graphql_subscriptions' failed: 
+(anonymous) @ _app-a8cfc5f2c83e0a85.js:25
+_app-a8cfc5f2c83e0a85.js:25  WebSocket connection to 'wss://replit.com/graphql_subscriptions' failed: 
+(anonymous) @ _app-a8cfc5f2c83e0a85.js:25
+/graphql:1 
+            
+            
+            Failed to load resource: net::ERR_CONNECTION_RESET
+/data/repls/9c8f60ee-187d-4f0d-bc56-cff16b2839ae/get_connection_metadata:1 
+            
+            
+            Failed to load resource: net::ERR_CONNECTION_RESET
+_app-a8cfc5f2c83e0a85.js:38  Uncaught TypeError: Cannot read properties of undefined (reading 'dimensions')
+    at get dimensions (1c7fb644.026e24943db865f7.js:3:88240)
+    at t.Viewport.syncScrollArea (1c7fb644.026e24943db865f7.js:3:30815)
+    at 1c7fb644.026e24943db865f7.js:3:29461
+    at n (_app-a8cfc5f2c83e0a85.js:38:2959)

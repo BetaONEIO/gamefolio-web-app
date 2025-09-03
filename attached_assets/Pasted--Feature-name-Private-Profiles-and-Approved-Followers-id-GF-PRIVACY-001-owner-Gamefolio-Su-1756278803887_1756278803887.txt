@@ -1,0 +1,223 @@
+<Feature name="Private Profiles and Approved Followers" id="GF-PRIVACY-001" owner="Gamefolio">
+  <Summary>
+    Allow any user to set their profile to private. Private accounts must approve follow requests. Only approved followers can message or watch content. When viewing a private profile without approval the viewer sees the profile picture and username only. All content tiles and feed items remain hidden.
+  </Summary>
+
+  <Goals>
+    <Goal id="G1">User can set profile to private and revert to public at any time.</Goal>
+    <Goal id="G2">Follow requests are required and must be approved by the private account.</Goal>
+    <Goal id="G3">Only approved followers can start or continue direct messages with a private account.</Goal>
+    <Goal id="G4">Only approved followers can view any content owned by a private account including clips reels screenshots stories and live.</Goal>
+    <Goal id="G5">Unauthorised viewers of a private profile see picture and username only with a clear request to follow call to action.</Goal>
+  </Goals>
+
+  <UserStories>
+    <Story id="U1">As a user I can toggle Private Account in Settings Privacy so that only people I approve can follow message and view my content.</Story>
+    <Story id="U2">As a viewer I can send a follow request to a private account and see pending status until approved or declined.</Story>
+    <Story id="U3">As a private user I can approve or decline follow requests individually or in bulk and I am notified when new requests arrive.</Story>
+    <Story id="U4">As a non approved viewer I cannot open chat with a private account and I cannot view their content in profile pages feeds search results or deep links.</Story>
+    <Story id="U5">As an approved follower I can message the private account and watch their content as normal.</Story>
+  </UserStories>
+
+  <States>
+    <AccountPrivacy>
+      <State name="PUBLIC" default="true"/>
+      <State name="PRIVATE"/>
+    </AccountPrivacy>
+    <FollowStatus>
+      <State name="NONE"/>
+      <State name="PENDING"/>
+      <State name="APPROVED"/>
+      <State name="REJECTED"/>
+      <State name="BLOCKED"/>
+    </FollowStatus>
+  </States>
+
+  <Permissions>
+    <Rule id="P1">can_view_profile_header viewer_any target_any returns true.</Rule>
+    <Rule id="P2">can_view_profile_content viewer target returns true if target is PUBLIC or if viewer follow status to target is APPROVED.</Rule>
+    <Rule id="P3">can_message viewer target returns true if target is PUBLIC and allows messages from anyone or if target is PRIVATE and viewer follow status is APPROVED. Existing open chats from non approved users become read only with an info banner.</Rule>
+    <Rule id="P4">can_follow viewer target returns true unless viewer is BLOCKED by target.</Rule>
+  </Permissions>
+
+  <DataModel>
+    <Table name="user_settings">
+      <Col name="user_id" type="uuid" pk="true"/>
+      <Col name="is_private" type="boolean" default="false" index="true"/>
+      <Col name="messages_policy" type="enum(APPROVED_FOLLOWERS ANYONE NONE)" default="APPROVED_FOLLOWERS"/>
+      <Col name="created_at" type="timestamptz"/>
+      <Col name="updated_at" type="timestamptz"/>
+    </Table>
+
+    <Table name="follows">
+      <Col name="follower_id" type="uuid" index="true"/>
+      <Col name="followee_id" type="uuid" index="true"/>
+      <Col name="status" type="enum(PENDING APPROVED REJECTED BLOCKED)" index="true"/>
+      <Col name="created_at" type="timestamptz"/>
+      <Col name="updated_at" type="timestamptz"/>
+      <PK>follower_id followee_id</PK>
+    </Table>
+
+    <View name="approved_followers_v">
+      <Sql>select follower_id followee_id from follows where status = 'APPROVED'</Sql>
+    </View>
+
+    <Index name="idx_content_owner_privacy">content.owner_id joined with user_settings.is_private</Index>
+  </DataModel>
+
+  <API style="REST">
+    <Endpoint method="PATCH" path="/v1/users/me/privacy">
+      <Auth>user</Auth>
+      <Body>{"is_private": boolean, "messages_policy": "APPROVED_FOLLOWERS"|"ANYONE"|"NONE"}</Body>
+      <Effects>
+        <Effect>Flip privacy bit in user_settings.</Effect>
+        <Effect>Invalidate caches for profile header and content lists.</Effect>
+        <Effect>If switching to PRIVATE set messages_policy to APPROVED_FOLLOWERS unless user explicitly selects another policy.</Effect>
+      </Effects>
+      <Responses>
+        <Ok code="200">{"is_private": boolean}</Ok>
+      </Responses>
+    </Endpoint>
+
+    <Endpoint method="POST" path="/v1/follow_requests">
+      <Auth>user</Auth>
+      <Body>{"target_user_id": uuid}</Body>
+      <Logic>
+        <Case when="target.is_private = false">create follows status APPROVED</Case>
+        <Case when="target.is_private = true">create follows status PENDING and notify target</Case>
+      </Logic>
+      <Responses>
+        <Ok code="201">{"status":"PENDING"|"APPROVED"}</Ok>
+        <Error code="403" reason="BLOCKED"/>
+      </Responses>
+    </Endpoint>
+
+    <Endpoint method="POST" path="/v1/follow_requests/:follower_id/approve">
+      <Auth>user_is_target</Auth>
+      <Effect>update follows set status = APPROVED</Effect>
+      <Effect>notify follower of approval</Effect>
+    </Endpoint>
+
+    <Endpoint method="POST" path="/v1/follow_requests/:follower_id/reject">
+      <Auth>user_is_target</Auth>
+      <Effect>update follows set status = REJECTED</Effect>
+      <Effect>optional auto expire after 30 days</Effect>
+    </Endpoint>
+
+    <Endpoint method="GET" path="/v1/users/:username/profile">
+      <Auth>optional</Auth>
+      <Response>
+        <When target_private_and_viewer_not_approved>
+          {"username": "...", "avatar_url": "...", "is_private": true, "summary": null, "counts": null, "content_preview": []}
+        </When>
+        <When allowed>
+          full profile payload
+        </When>
+      </Response>
+    </Endpoint>
+
+    <Endpoint method="GET" path="/v1/users/:user_id/content">
+      <Auth>optional</Auth>
+      <Guard>enforce P2</Guard>
+      <Errors>
+        <Error code="403" reason="PRIVATE_ACCOUNT_APPROVAL_REQUIRED"/>
+      </Errors>
+    </Endpoint>
+
+    <Endpoint method="POST" path="/v1/messages/open">
+      <Auth>user</Auth>
+      <Body>{"recipient_id": uuid}</Body>
+      <Guard>enforce P3</Guard>
+      <Errors>
+        <Error code="403" reason="MESSAGING_REQUIRES_APPROVAL"/>
+      </Errors>
+    </Endpoint>
+  </API>
+
+  <UI>
+    <SettingsPrivacy>
+      <Toggle id="private_account" label="Private account" help="Only approved followers can follow message and view your content."/>
+      <Select id="messages_policy" label="Who can message you" options="Approved followers Anyone No one" default="Approved followers"/>
+      <NavLink id="manage_requests" label="Follow requests" badge="count_pending"/>
+    </SettingsPrivacy>
+
+    <ProfileHeader>
+      <Badge visible_when="is_private">Lock icon with text Private</Badge>
+      <Button visible_when="viewer_is_self" action="open_manage_requests">Manage requests</Button>
+      <Button visible_when="viewer_not_following_and_target_private" action="send_follow_request">Request to follow</Button>
+      <State visible_when="request_pending">Request sent</State>
+    </ProfileHeader>
+
+    <ProfileContent>
+      <State visible_when="target_private_and_viewer_not_approved">
+        <EmptyState title="This account is private" body="Follow to see their content after approval." cta="Request to follow"/>
+        <Grid placeholders="blur blocks" count="12"/>
+      </State>
+      <State visible_when="allowed">
+        normal content grid
+      </State>
+    </ProfileContent>
+
+    <Messaging>
+      <ComposerGuard when="target_private_and_viewer_not_approved">
+        <Banner text="You need approval to message this account." cta="Request to follow"/>
+        <Composer disabled="true"/>
+      </ComposerGuard>
+    </Messaging>
+  </UI>
+
+  <Notifications>
+    <Event id="N1" trigger="follow_request_created" to="target">
+      <Title>New follow request</Title>
+      <Actions>Approve Reject View profile</Actions>
+    </Event>
+    <Event id="N2" trigger="follow_request_approved" to="follower">
+      <Title>Your follow request was approved</Title>
+      <Actions>Send a message View content</Actions>
+    </Event>
+    <Event id="N3" trigger="follow_request_rejected" to="follower">
+      <Title>Your follow request was declined</Title>
+    </Event>
+  </Notifications>
+
+  <SearchAndDiscovery>
+    <Rule id="S1">Private accounts appear in user search with avatar and username only. No content snippets. No follower counts unless viewer is approved.</Rule>
+    <Rule id="S2">Content from private accounts is excluded from global feeds and discovery for non approved viewers. Deep links to content return approval required screen.</Rule>
+  </SearchAndDiscovery>
+
+  <Security>
+    <Checks>
+      <Check>All media fetch endpoints verify permission before returning signed URLs.</Check>
+      <Check>Signed URL lifetime kept short and bound to viewer session when possible.</Check>
+      <Check>Rate limits on follow requests per viewer per target and per day to reduce spam.</Check>
+      <Check>Block list enforcement denies new requests and hides profile entirely if target chooses Hide from blocked users.</Check>
+      <Check>Audit log on status changes and privacy toggles for moderation.</Check>
+    </Checks>
+  </Security>
+
+  <EdgeCases>
+    <Case>When a user switches from public to private existing followers remain approved. Pending requests remain pending.</Case>
+    <Case>Existing chats from non approved users become read only until approval. The banner explains the reason and offers to send a follow request.</Case>
+    <Case>Shares or embeds of private content show a private content card without media. If viewer is approved the link resolves normally.</Case>
+    <Case>If a private account goes public all pending requests auto convert to approved and content becomes visible to all.</Case>
+  </EdgeCases>
+
+  <Analytics>
+    <Event name="privacy_toggle" props="is_private from_state to_state"/>
+    <Event name="follow_request_sent" props="target_id source entry_point"/>
+    <Event name="follow_request_approved" props="follower_id latency_seconds"/>
+    <Event name="blocked_message_attempt" props="target_id"/>
+    <Metric name="approval_rate" formula="approved divided by sent per private account"/>
+    <Metric name="privacy_adoption" formula="count_private divided by total_users"/>
+  </Analytics>
+
+  <QA>
+    <Acceptance id="A1">Private toggle hides all content for non approved viewers across web app mobile app and unauthenticated sessions.</Acceptance>
+    <Acceptance id="A2">Follow request flow shows pending state then approved or declined with correct notifications.</Acceptance>
+    <Acceptance id="A3">Messaging is blocked for non approved viewers of private accounts including API access and existing threads become read only.</Acceptance>
+    <Acceptance id="A4">Feeds search and deep links do not leak private media or metadata for non approved viewers.</Acceptance>
+    <Acceptance id="A5">Viewing a private profile as non approved shows only avatar and username with clear call to action.</Acceptance>
+
+    <TestMatrix>
+      <Case>Viewer not signed in viewing private profile</Case>
+     

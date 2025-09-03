@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Banner Upload</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .test-area { 
+            border: 2px dashed #ccc; 
+            padding: 20px; 
+            margin: 20px 0; 
+            text-align: center;
+            border-radius: 8px;
+        }
+        .upload-btn { 
+            background: #4ADE80; 
+            color: white; 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .upload-btn:hover { background: #3bbf6e; }
+        .status { 
+            margin-top: 10px; 
+            padding: 10px; 
+            border-radius: 5px;
+            background: #f0f0f0;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Banner Upload Test</h1>
+        <p>This will test the Facebook-style banner upload with positioning.</p>
+        
+        <div class="test-area">
+            <h3>Upload Test Banner</h3>
+            <input type="file" id="bannerFile" accept="image/*" style="display: none;">
+            <button class="upload-btn" onclick="selectFile()">Choose Banner Image</button>
+            <p style="margin-top: 10px; font-size: 14px; color: #666;">
+                Select an image to test the positioning feature
+            </p>
+            <div id="status" class="status" style="display: none;"></div>
+        </div>
+        
+        <div class="test-area">
+            <h3>Test Instructions</h3>
+            <ol style="text-align: left; max-width: 600px; margin: 0 auto;">
+                <li>Select a banner image using the button above</li>
+                <li>The image will be uploaded to the server with positioning data</li>
+                <li>You can drag the image to reposition it</li>
+                <li>Use zoom controls (+/-) to scale the image</li>
+                <li>Click "Upload Banner" to save with your positioning</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function selectFile() {
+            document.getElementById('bannerFile').click();
+        }
+        
+        document.getElementById('bannerFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                uploadBanner(file);
+            }
+        });
+        
+        function uploadBanner(file) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'status';
+            statusDiv.textContent = 'Uploading banner...';
+            
+            const formData = new FormData();
+            formData.append('banner', file);
+            formData.append('positionX', '0');
+            formData.append('positionY', '0');
+            formData.append('scale', '1');
+            
+            fetch('/api/upload/banner', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.url) {
+                    statusDiv.className = 'status success';
+                    statusDiv.innerHTML = `✓ Banner uploaded successfully!<br>URL: ${data.url}`;
+                } else {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'Upload failed: ' + (data.message || 'Unknown error');
+                }
+            })
+            .catch(error => {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = 'Upload failed: ' + error.message;
+            });
+        }
+    </script>
+</body>
+</html>
