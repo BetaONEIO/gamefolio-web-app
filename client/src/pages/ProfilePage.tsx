@@ -516,12 +516,16 @@ const ProfilePage = () => {
         });
       }
     },
-    onSettled: () => {
-      // Refetch to ensure the UI is in sync with the server state
+    onSettled: async () => {
+      // Invalidate the target user's profile and follow status immediately
       queryClient.invalidateQueries({ queryKey: [`/api/users/${username}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${username}/follow-status`] });
+      
+      // Delay invalidating current user's profile to allow database aggregation to complete
       if (currentUser?.username) {
-        queryClient.invalidateQueries({ queryKey: [`/api/users/${currentUser.username}`] });
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: [`/api/users/${currentUser.username}`] });
+        }, 100);
       }
     }
   });
