@@ -226,7 +226,13 @@ const ProfilePage = () => {
       }
       
       // For regular users, use server response
-      setFollowRequestStatus(followStatus as any); 
+      if (followStatus.following) {
+        setFollowRequestStatus('following');
+      } else if (followStatus.requested) {
+        setFollowRequestStatus('requested');
+      } else {
+        setFollowRequestStatus('not_following');
+      } 
     }
   }, [followStatus, isOwnProfile, currentUser?.id, profile?.id]);
 
@@ -530,21 +536,22 @@ const ProfilePage = () => {
     },
     onSuccess: (result) => {
       console.log('Follow mutation successful. Result:', result);
+      
       // Update followRequestStatus based on the API response
-      setFollowRequestStatus(result.status);
-
-      // Show success toast based on the action
       if (result.action === 'unfollowed') {
+        setFollowRequestStatus('not_following');
         toast({
-          description: `You unfollowed ${profile?.displayName}.`,
+          description: `Follow request cancelled.`,
           variant: 'gamefolioSuccess'
         });
       } else if (result.status === 'following') {
+        setFollowRequestStatus('following');
         toast({
           description: `You are now following ${profile?.displayName}!`,
           variant: 'gamefolioSuccess'
         });
       } else if (result.status === 'requested') {
+        setFollowRequestStatus('requested');
         toast({
           description: `Follow request sent to ${profile?.displayName}.`,
           variant: 'gamefolioSuccess'
