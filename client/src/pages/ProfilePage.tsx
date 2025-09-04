@@ -399,9 +399,9 @@ const ProfilePage = () => {
 
   // Follow mutation
   const followMutation = useMutation({
-    mutationFn: async () => {
-      console.log('Follow mutation triggered. Current followRequestStatus:', followRequestStatus);
-      if (isFollowing || followRequestStatus === 'requested') {
+    mutationFn: async ({ currentFollowStatus }: { currentFollowStatus: 'following' | 'requested' | 'not_following' }) => {
+      console.log('Follow mutation triggered. Using passed followRequestStatus:', currentFollowStatus);
+      if (currentFollowStatus === 'following' || currentFollowStatus === 'requested') {
         console.log('User is currently following or has a pending request, sending DELETE request to unfollow/cancel');
         const response = await fetch(`/api/users/${username}/follow`, {
           method: 'DELETE',
@@ -563,7 +563,8 @@ const ProfilePage = () => {
       });
       return;
     }
-    followMutation.mutate();
+    // Pass the current follow status before optimistic updates
+    followMutation.mutate({ currentFollowStatus: followRequestStatus });
   };
 
   // Remove game from favorites mutation
