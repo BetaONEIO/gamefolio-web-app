@@ -373,6 +373,30 @@ const ProfilePage = () => {
     }
   }, [profile, currentUser?.id, username]);
 
+  // Add window focus listener to refresh follower count when someone might have followed the user
+  useEffect(() => {
+    const handleFocus = () => {
+      // Only refresh if viewing your own profile and you're logged in
+      if (currentUser?.username === username) {
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${username}`] });
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [currentUser?.username, username, queryClient]);
+
+  // Add periodic polling to check for follower count updates when viewing your own profile
+  useEffect(() => {
+    if (currentUser?.username === username) {
+      const interval = setInterval(() => {
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${username}`] });
+      }, 30000); // Poll every 30 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [currentUser?.username, username, queryClient]);
+
   // Follow mutation
   const followMutation = useMutation({
     mutationFn: async () => {
