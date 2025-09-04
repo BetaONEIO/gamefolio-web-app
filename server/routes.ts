@@ -3658,10 +3658,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "You cannot follow yourself" });
       }
 
-      // Demo user handling - still return proper response format
-      if (followerId === 999 || followingId === 999) {
-        return res.json({ status: 'following', message: 'User followed (demo mode)' });
-      }
+      // Allow demo users to participate in normal follow operations
+      // The frontend handles demo user state with localStorage for persistence
 
       // Check if already following
       const isAlreadyFollowing = await storage.isFollowing(followerId, followingId);
@@ -3707,10 +3705,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const followingId = followingUser.id;
 
-      // Demo user handling
-      if (followerId === 999 || followingId === 999) {
-        return res.json({ message: `User unfollowed (demo mode)` });
-      }
+      // Allow demo users to participate in normal unfollow operations
+      // The frontend handles demo user state with localStorage for persistence
 
       // Check if currently following
       const isFollowing = await storage.isFollowing(followerId, followingId);
@@ -3746,10 +3742,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "You cannot follow yourself" });
       }
 
-      // Handle demo user
-      if (followerId === 999 || followingId === 999) {
-        return res.status(200).json({ message: "User followed (demo)" });
-      }
+      // Allow demo users to participate in normal follow operations
+      // The frontend handles demo user state with localStorage for persistence
 
       // Check if the user to follow exists
       const followingUser = await storage.getUser(followingId);
@@ -3787,10 +3781,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "You cannot unfollow yourself" });
       }
 
-      // Handle demo user
-      if (followerId === 999 || followingId === 999) {
-        return res.status(200).json({ message: "User unfollowed (demo)" });
-      }
+      // Allow demo users to participate in normal unfollow operations
+      // The frontend handles demo user state with localStorage for persistence
 
       // Check if actually following
       const isFollowing = await storage.isFollowing(followerId, followingId);
