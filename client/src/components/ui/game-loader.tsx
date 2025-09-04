@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Gamepad2, Zap, Target, Trophy, Star, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
+import gamefolioLogo from '@assets/gamefolio social logo 3d circle web.png';
 
 interface GameLoaderProps {
   isLoading: boolean;
@@ -144,35 +145,41 @@ export const GameLoader = ({
 
           {/* Main Loading Content */}
           <div className="relative z-10 flex flex-col items-center space-y-6">
-            {/* Rotating Icon */}
+            {/* Gamefolio Logo with Rotating Ring */}
             <motion.div
               className={cn(
                 "relative flex items-center justify-center",
                 config.icon
               )}
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
             >
+              {/* Gamefolio Logo */}
               <motion.div
-                key={currentIcon}
-                initial={{ scale: 0, rotate: -180 }}
-                animate={{ scale: 1, rotate: 0 }}
-                exit={{ scale: 0, rotate: 180 }}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.5 }}
-                className="absolute"
+                className="relative z-10"
               >
-                <CurrentIcon className={cn(config.icon, "text-primary")} />
+                <img 
+                  src={gamefolioLogo} 
+                  alt="Gamefolio Logo" 
+                  className={cn(
+                    "object-contain",
+                    size === "sm" ? "w-10 h-10" : 
+                    size === "md" ? "w-14 h-14" :
+                    size === "lg" ? "w-18 h-18" : "w-20 h-20"
+                  )}
+                />
               </motion.div>
               
               {/* Outer Ring */}
               <motion.div
                 className={cn(
                   "absolute border-2 border-primary/30 rounded-full",
-                  size === "sm" ? "w-12 h-12" : 
-                  size === "md" ? "w-16 h-16" :
-                  size === "lg" ? "w-20 h-20" : "w-24 h-24"
+                  size === "sm" ? "w-16 h-16" : 
+                  size === "md" ? "w-20 h-20" :
+                  size === "lg" ? "w-24 h-24" : "w-28 h-28"
                 )}
-                animate={{ rotate: -360 }}
+                animate={{ rotate: 360 }}
                 transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
               />
             </motion.div>
