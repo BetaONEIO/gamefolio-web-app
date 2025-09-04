@@ -6,6 +6,7 @@ import {
   Comment, InsertComment,
   UserGameFavorite, InsertUserGameFavorite,
   Follow, InsertFollow,
+  FollowRequest, InsertFollowRequest,
   ProfileBanner,
   Screenshot, InsertScreenshot, ScreenshotLike,
   ClipReaction, InsertClipReaction,
@@ -33,6 +34,7 @@ import {
   comments,
   userGameFavorites,
   follows,
+  followRequests,
   profileBanners,
   screenshots,
   screenshotLikes,
@@ -864,6 +866,70 @@ export class DatabaseStorage implements IStorage {
       .from(follows)
       .where(eq(follows.followerId, userId));
     return result[0].count || 0;
+  }
+
+  // Follow request operations
+  async createFollowRequest(requesterId: number, requestedId: number): Promise<void> {
+    await db.insert(followRequests).values({
+      requesterId,
+      addresseeId: requestedId,
+      status: 'pending'
+    });
+  }
+
+  async getPendingFollowRequests(userId: number) {
+    const requests = await db
+      .select()
+      .from(followRequests)
+      .where(
+        and(
+          eq(followRequests.addresseeId, userId),
+          eq(followRequests.status, 'pending')
+        )
+      );
+    return requests;
+  }
+
+  async hasFollowRequest(requesterId: number, requestedId: number): Promise<string | null> {
+    const [request] = await db
+      .select()
+      .from(followRequests)
+      .where(
+        and(
+          eq(followRequests.requesterId, requesterId),
+          eq(followRequests.addresseeId, requestedId)
+        )
+      );
+    return request ? request.status : null;
+  }
+
+  async acceptFollowRequest(requestId: number): Promise<boolean> {
+    const result = await db
+      .update(followRequests)
+      .set({ status: 'accepted' })
+      .where(eq(followRequests.id, requestId))
+      .returning();
+    return result.length > 0;
+  }
+
+  async declineFollowRequest(requestId: number): Promise<boolean> {
+    const result = await db
+      .update(followRequests)
+      .set({ status: 'declined' })
+      .where(eq(followRequests.id, requestId))
+      .returning();
+    return result.length > 0;
+  }
+
+  async removeFollowRequest(requesterId: number, requestedId: number): Promise<void> {
+    await db
+      .delete(followRequests)
+      .where(
+        and(
+          eq(followRequests.requesterId, requesterId),
+          eq(followRequests.addresseeId, requestedId)
+        )
+      );
   }
 
   // Search operations
