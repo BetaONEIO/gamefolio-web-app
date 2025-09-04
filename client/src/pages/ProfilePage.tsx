@@ -964,11 +964,14 @@ const ProfilePage = () => {
                 <div className="flex gap-2 flex-shrink-0">
                   <Button 
                     onClick={handleFollowClick}
-                    variant={followRequestStatus === 'following' ? "outline" : "default"}
+                    variant={followRequestStatus === 'following' ? "outline" : (followRequestStatus === 'requested' ? "outline" : "default")}
                     size="sm"
                     disabled={followMutation.isPending}
                     className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
                     style={followRequestStatus === 'following' ? {
+                      borderColor: accentColor,
+                      color: accentColor,
+                    } : followRequestStatus === 'requested' ? {
                       borderColor: accentColor,
                       color: accentColor,
                     } : {
@@ -976,6 +979,8 @@ const ProfilePage = () => {
                       borderColor: accentColor,
                       boxShadow: `0 4px 15px ${accentColor}40`,
                     }}
+                    data-testid="follow-button"
+                    data-following={followRequestStatus === 'following'}
                   >
                     {followMutation.isPending ? (
                       <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-current animate-spin mr-2"></div>
@@ -987,7 +992,7 @@ const ProfilePage = () => {
                       <UserPlus className="mr-1 h-4 w-4" />
                     )}
                     {followRequestStatus === 'following' ? "Following" : 
-                     followRequestStatus === 'requested' ? "Requested" : 
+                     followRequestStatus === 'requested' ? "Pending" : 
                      "Follow"}
                   </Button>
 
@@ -1194,9 +1199,16 @@ const ProfilePage = () => {
                   {currentUser && (
                     <Button 
                       onClick={handleFollowClick}
+                      variant={followRequestStatus === 'following' ? "outline" : (followRequestStatus === 'requested' ? "outline" : "default")}
                       disabled={followMutation.isPending}
                       className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                      style={{ 
+                      style={followRequestStatus === 'following' ? {
+                        borderColor: accentColor,
+                        color: accentColor,
+                      } : followRequestStatus === 'requested' ? {
+                        borderColor: accentColor,
+                        color: accentColor,
+                      } : {
                         backgroundColor: accentColor,
                         borderColor: accentColor,
                         boxShadow: `0 4px 15px ${accentColor}40`,
@@ -1204,10 +1216,16 @@ const ProfilePage = () => {
                     >
                       {followMutation.isPending ? (
                         <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-current animate-spin mr-2"></div>
+                      ) : followRequestStatus === 'following' ? (
+                        <UserCheck className="mr-1 h-4 w-4" />
+                      ) : followRequestStatus === 'requested' ? (
+                        <Clock className="mr-1 h-4 w-4" />
                       ) : (
                         <UserPlus className="mr-1 h-4 w-4" />
                       )}
-                      {isFollowing ? "Following" : "Follow"}
+                      {followRequestStatus === 'following' ? "Following" : 
+                       followRequestStatus === 'requested' ? "Pending" : 
+                       "Follow"}
                     </Button>
                   )}
                 </div>
@@ -1278,9 +1296,16 @@ const ProfilePage = () => {
                   {currentUser && (
                     <Button 
                       onClick={handleFollowClick}
+                      variant={followRequestStatus === 'following' ? "outline" : (followRequestStatus === 'requested' ? "outline" : "default")}
                       disabled={followMutation.isPending}
                       className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                      style={{ 
+                      style={followRequestStatus === 'following' ? {
+                        borderColor: accentColor,
+                        color: accentColor,
+                      } : followRequestStatus === 'requested' ? {
+                        borderColor: accentColor,
+                        color: accentColor,
+                      } : {
                         backgroundColor: accentColor,
                         borderColor: accentColor,
                         boxShadow: `0 4px 15px ${accentColor}40`,
@@ -1288,10 +1313,16 @@ const ProfilePage = () => {
                     >
                       {followMutation.isPending ? (
                         <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-current animate-spin mr-2"></div>
+                      ) : followRequestStatus === 'following' ? (
+                        <UserCheck className="mr-1 h-4 w-4" />
+                      ) : followRequestStatus === 'requested' ? (
+                        <Clock className="mr-1 h-4 w-4" />
                       ) : (
                         <UserPlus className="mr-1 h-4 w-4" />
                       )}
-                      {isFollowing ? "Following" : "Follow"}
+                      {followRequestStatus === 'following' ? "Following" : 
+                       followRequestStatus === 'requested' ? "Pending" : 
+                       "Follow"}
                     </Button>
                   )}
                 </div>
@@ -1363,9 +1394,16 @@ const ProfilePage = () => {
                   {currentUser && (
                     <Button 
                       onClick={handleFollowClick}
+                      variant={followRequestStatus === 'following' ? "outline" : (followRequestStatus === 'requested' ? "outline" : "default")}
                       disabled={followMutation.isPending}
                       className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                      style={{ 
+                      style={followRequestStatus === 'following' ? {
+                        borderColor: accentColor,
+                        color: accentColor,
+                      } : followRequestStatus === 'requested' ? {
+                        borderColor: accentColor,
+                        color: accentColor,
+                      } : {
                         backgroundColor: accentColor,
                         borderColor: accentColor,
                         boxShadow: `0 4px 15px ${accentColor}40`,
@@ -1373,10 +1411,16 @@ const ProfilePage = () => {
                     >
                       {followMutation.isPending ? (
                         <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-current animate-spin mr-2"></div>
+                      ) : followRequestStatus === 'following' ? (
+                        <UserCheck className="mr-1 h-4 w-4" />
+                      ) : followRequestStatus === 'requested' ? (
+                        <Clock className="mr-1 h-4 w-4" />
                       ) : (
                         <UserPlus className="mr-1 h-4 w-4" />
                       )}
-                      {isFollowing ? "Following" : "Follow"}
+                      {followRequestStatus === 'following' ? "Following" : 
+                       followRequestStatus === 'requested' ? "Pending" : 
+                       "Follow"}
                     </Button>
                   )}
                 </div>
@@ -1442,9 +1486,16 @@ const ProfilePage = () => {
                   {currentUser && (
                     <Button 
                       onClick={handleFollowClick}
+                      variant={followRequestStatus === 'following' ? "outline" : (followRequestStatus === 'requested' ? "outline" : "default")}
                       disabled={followMutation.isPending}
                       className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                      style={{ 
+                      style={followRequestStatus === 'following' ? {
+                        borderColor: accentColor,
+                        color: accentColor,
+                      } : followRequestStatus === 'requested' ? {
+                        borderColor: accentColor,
+                        color: accentColor,
+                      } : {
                         backgroundColor: accentColor,
                         borderColor: accentColor,
                         boxShadow: `0 4px 15px ${accentColor}40`,
@@ -1452,10 +1503,16 @@ const ProfilePage = () => {
                     >
                       {followMutation.isPending ? (
                         <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-current animate-spin mr-2"></div>
+                      ) : followRequestStatus === 'following' ? (
+                        <UserCheck className="mr-1 h-4 w-4" />
+                      ) : followRequestStatus === 'requested' ? (
+                        <Clock className="mr-1 h-4 w-4" />
                       ) : (
                         <UserPlus className="mr-1 h-4 w-4" />
                       )}
-                      {isFollowing ? "Following" : "Follow"}
+                      {followRequestStatus === 'following' ? "Following" : 
+                       followRequestStatus === 'requested' ? "Pending" : 
+                       "Follow"}
                     </Button>
                   )}
                 </div>
