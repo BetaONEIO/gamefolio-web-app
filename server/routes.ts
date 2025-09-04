@@ -3615,8 +3615,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Demo user handling
+      // For demo users, check localStorage-based follow state from frontend
+      // Let the frontend handle demo user follow state via localStorage
       if (followerId === 999 || followingUser.id === 999) {
+        // Return false to let frontend handle demo state via localStorage  
         return res.json({ following: false, requested: false });
       }
 
@@ -3656,9 +3658,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "You cannot follow yourself" });
       }
 
-      // Demo user handling
+      // Demo user handling - still return proper response format
       if (followerId === 999 || followingId === 999) {
-        return res.json(true);
+        return res.json({ status: 'following', message: 'User followed (demo mode)' });
       }
 
       // Check if already following

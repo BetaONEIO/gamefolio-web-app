@@ -210,14 +210,25 @@ const ProfilePage = () => {
     refetchOnWindowFocus: false,
   });
 
-  // Sync followRequestStatus state with server data
+  // Sync followRequestStatus state with server data (but prioritize localStorage for demo users)
   useEffect(() => {
     if (followStatus !== undefined && !isOwnProfile) {
       console.log('🔄 Syncing follow status. followStatus from server:', followStatus);
-      // The API should return 'following', 'requested', or 'not_following'
+      
+      // For demo users, prioritize localStorage state over server response
+      if (currentUser?.id === 999 || profile?.id === 999) {
+        const storageKey = getStorageKey();
+        const storedState = localStorage.getItem(storageKey);
+        if (storedState) {
+          setFollowRequestStatus(storedState as 'following' | 'requested' | 'not_following');
+          return;
+        }
+      }
+      
+      // For regular users, use server response
       setFollowRequestStatus(followStatus as any); 
     }
-  }, [followStatus, isOwnProfile]);
+  }, [followStatus, isOwnProfile, currentUser?.id, profile?.id]);
 
   // Determine if content should be hidden due to privacy settings
   const isPrivateProfile = profile?.isPrivate && !isOwnProfile;
