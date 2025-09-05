@@ -1,24 +1,23 @@
-import { Router, Request, Response } from 'express';
-import { twitchApi } from '../services/twitch-api';
+import express from 'express';
 import { storage } from '../storage';
-import { InsertGame } from '@shared/schema';
+import { twitchApi } from '../services/twitch-api';
 
-const router = Router();
+const router = express.Router();
 
 // Get top games from Twitch
-router.get('/twitch/games/top', async (req: Request, res: Response) => {
+router.get('/twitch/games/top', async (req: express.Request, res: express.Response) => {
   try {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
     const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
     const games = await twitchApi.getTopGames(limit, offset);
-    
+
     res.json(games);
   } catch (error) {
     console.error('Error fetching top games from Twitch:', error);
-    
+
     // Return a user-friendly error with fallback suggestion
     if (error instanceof Error && error.message.includes('credentials not configured')) {
-      res.status(503).json({ 
+      res.status(503).json({
         message: 'Twitch API integration is not configured. Please set TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET environment variables.',
         fallback: 'You can still browse existing games in the database.'
       });
@@ -29,14 +28,14 @@ router.get('/twitch/games/top', async (req: Request, res: Response) => {
 });
 
 // Search for games on Twitch
-router.get('/twitch/games/search', async (req: Request, res: Response) => {
+router.get('/twitch/games/search', async (req: express.Request, res: express.Response) => {
   try {
     const query = req.query.q as string;
-    
+
     if (!query) {
       return res.status(400).json({ message: 'Query parameter (q) is required' });
     }
-    
+
     const games = await twitchApi.searchGames(query);
     res.json(games);
   } catch (error) {
@@ -46,15 +45,15 @@ router.get('/twitch/games/search', async (req: Request, res: Response) => {
 });
 
 // Get game by ID from Twitch
-router.get('/twitch/games/:id', async (req: Request, res: Response) => {
+router.get('/twitch/games/:id', async (req: express.Request, res: express.Response) => {
   try {
     const gameId = req.params.id;
     const game = await twitchApi.getGameById(gameId);
-    
+
     if (!game) {
       return res.status(404).json({ message: 'Game not found' });
     }
-    
+
     res.json(game);
   } catch (error) {
     console.error('Error fetching game from Twitch:', error);
@@ -63,33 +62,33 @@ router.get('/twitch/games/:id', async (req: Request, res: Response) => {
 });
 
 // Add a Twitch game to our database
-router.post('/twitch/games/add', async (req: Request, res: Response) => {
+router.post('/twitch/games/add', async (req: express.Request, res: express.Response) => {
   try {
     const { gameId } = req.body;
-    
+
     if (!gameId) {
       return res.status(400).json({ message: 'Game ID is required' });
     }
-    
+
     // Fetch the game from Twitch first
     const twitchGame = await twitchApi.getGameById(gameId);
-    
+
     if (!twitchGame) {
       return res.status(404).json({ message: 'Game not found on Twitch' });
     }
-    
+
     // Check if the game already exists in our database by name
     const existingGame = await storage.getGameByName(twitchGame.name);
     if (existingGame) {
       return res.json(existingGame);
     }
-    
+
     // Add the game to our database
     const newGame: InsertGame = {
       name: twitchGame.name,
       imageUrl: twitchGame.box_art_url?.replace('{width}', '200').replace('{height}', '266'),
     };
-    
+
     const createdGame = await storage.createGame(newGame);
     res.status(201).json(createdGame);
   } catch (error) {
@@ -99,36 +98,36 @@ router.post('/twitch/games/add', async (req: Request, res: Response) => {
 });
 
 // Get game by slug from local database
-router.get('/games/slug/:slug', async (req: Request, res: Response) => {
+router.get('/games/slug/:slug', async (req: express.Request, res: express.Response) => {
   try {
     const slug = req.params.slug;
-    
+
     if (!slug) {
       console.error('ERROR: No slug provided');
       return res.status(400).json({ message: 'Game slug is required' });
     }
-    
+
     console.error(`\n=== GAME SLUG SEARCH START: ${slug} ===`);
     console.log(`Looking for game with slug: ${slug}`);
-    
+
     // First try to get game by exact name match (treating slug as name)
     let game = await storage.getGameByName(slug);
     console.log(`Direct name search result:`, game ? game.name : 'not found');
-    
+
     // If not found, try to get game by a name that would generate this slug
     if (!game) {
       // Convert slug back to potential game name (replace hyphens with spaces, title case, etc.)
       const potentialNames = [
         slug.replace(/-/g, ' '), // "call-of-duty" -> "call of duty"
-        slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // "call-of-duty" -> "Call Of Duty"  
+        slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // "call-of-duty" -> "Call Of Duty"
         slug.replace(/-/g, ' ').toLowerCase(), // "call-of-duty" -> "call of duty"
         slug.replace(/-/g, ': '), // "call-of-duty-warzone" -> "call: of: duty: warzone"
         slug.replace(/-/g, ': ').replace(/\b\w/g, l => l.toUpperCase()), // "Call: Of: Duty: Warzone"
         slug, // exact slug match
       ];
-      
+
       console.log(`Trying potential names:`, potentialNames);
-      
+
       // Try each potential name
       for (const name of potentialNames) {
         game = await storage.getGameByName(name);
@@ -138,33 +137,33 @@ router.get('/games/slug/:slug', async (req: Request, res: Response) => {
         }
       }
     }
-    
+
     // If still not found, try searching all games for a partial match
     if (!game) {
       console.log(`Searching all games for partial matches...`);
       const allGames = await storage.getAllGames();
       const searchTerm = slug.replace(/-/g, ' ').toLowerCase();
-      
+
       console.log(`Searching ${allGames.length} games for term: "${searchTerm}"`);
-      
+
       game = allGames.find(g => {
         const gameName = g.name.toLowerCase();
         const gameSlug = gameName.replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-');
         const gameSlugNoSpaces = gameName.replace(/[^a-z0-9]/g, '');
-        
+
         return gameName.includes(searchTerm) ||
                gameSlug === slug.toLowerCase() ||
                gameSlugNoSpaces === slug.toLowerCase() ||
                slug.toLowerCase().includes(gameName.replace(/[^a-z0-9]/g, ''));
       });
-      
+
       if (game) {
         console.log(`Found partial match:`, game.name);
       } else {
         console.log(`No partial matches found`);
       }
     }
-    
+
     // If still not found in local database, try to find it on Twitch and add it
     if (!game) {
       try {
@@ -175,17 +174,17 @@ router.get('/games/slug/:slug', async (req: Request, res: Response) => {
           slug.replace(/([a-z])([A-Z])/g, '$1 $2'), // camelCase to words
           slug
         ];
-        
+
         console.log(`Searching Twitch for game slug: ${slug}, terms:`, searchTerms);
-        
+
         let twitchGame = null;
-        
+
         // Try searching Twitch with different search terms
         for (const searchTerm of searchTerms) {
           console.log(`Searching Twitch with term: "${searchTerm}"`);
           const searchResults = await twitchApi.searchGames(searchTerm);
           console.log(`Found ${searchResults.length} results for "${searchTerm}":`, searchResults.map(g => g.name));
-          
+
           // Look for exact matches or close matches
           twitchGame = searchResults.find(g => {
             const gameSlug = g.name
@@ -194,17 +193,17 @@ router.get('/games/slug/:slug', async (req: Request, res: Response) => {
               .replace(/\s+/g, '-')
               .replace(/^-+|-+$/g, '');
             const gameSlugNoSpaces = g.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-            
+
             console.log(`Comparing "${slug}" with game "${g.name}" (slug: "${gameSlug}", nospaces: "${gameSlugNoSpaces}")`);
-            
-            return gameSlug === slug.toLowerCase() || 
+
+            return gameSlug === slug.toLowerCase() ||
                    gameSlugNoSpaces === slug.toLowerCase() ||
                    g.name.toLowerCase().replace(/[^a-z0-9]/g, '') === slug.toLowerCase();
           });
-          
+
           if (twitchGame) break;
         }
-        
+
         // If found on Twitch, add it to our database (if it doesn't already exist)
         if (twitchGame) {
           // Check if the game already exists by name before creating
@@ -218,7 +217,7 @@ router.get('/games/slug/:slug', async (req: Request, res: Response) => {
                 name: twitchGame.name,
                 imageUrl: twitchGame.box_art_url?.replace('{width}', '200').replace('{height}', '266'),
               };
-              
+
               game = await storage.createGame(newGame);
               console.log(`Auto-added game from Twitch: ${twitchGame.name}`);
             } catch (createError: any) {
@@ -237,11 +236,11 @@ router.get('/games/slug/:slug', async (req: Request, res: Response) => {
         // Continue to return 404 if Twitch search fails
       }
     }
-    
+
     if (!game) {
       return res.status(404).json({ message: 'Game not found' });
     }
-    
+
     res.json(game);
   } catch (error) {
     console.error('Error fetching game by slug:', error);
