@@ -107,6 +107,19 @@ export default function ExplorePage() {
         
         if (clips.length === 0) {
           setShowNoClipsMessage(true);
+          // Add the searched game to the trending games list if not already present
+          setAllLoadedGames(prev => {
+            const existingIds = new Set(prev.map(g => g.id));
+            if (!existingIds.has(game.id)) {
+              const gameToAdd: Game = {
+                id: game.id,
+                name: game.name,
+                box_art_url: game.box_art_url
+              };
+              return [gameToAdd, ...prev];
+            }
+            return prev;
+          });
         } else {
           // Navigate to the game's clips page
           setLocation(`/games/${game.id}/clips`);
@@ -114,10 +127,36 @@ export default function ExplorePage() {
       } else {
         // If the API returns 404, it means the game doesn't exist in our database yet
         setShowNoClipsMessage(true);
+        // Add the searched game to the trending games list
+        setAllLoadedGames(prev => {
+          const existingIds = new Set(prev.map(g => g.id));
+          if (!existingIds.has(game.id)) {
+            const gameToAdd: Game = {
+              id: game.id,
+              name: game.name,
+              box_art_url: game.box_art_url
+            };
+            return [gameToAdd, ...prev];
+          }
+          return prev;
+        });
       }
     } catch (error) {
       console.error("Failed to check clips for game:", error);
       setShowNoClipsMessage(true);
+      // Add the searched game to the trending games list even on error
+      setAllLoadedGames(prev => {
+        const existingIds = new Set(prev.map(g => g.id));
+        if (!existingIds.has(game.id)) {
+          const gameToAdd: Game = {
+            id: game.id,
+            name: game.name,
+            box_art_url: game.box_art_url
+          };
+          return [gameToAdd, ...prev];
+        }
+        return prev;
+      });
     } finally {
       setIsCheckingClips(false);
     }
