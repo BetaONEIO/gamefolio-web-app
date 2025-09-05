@@ -24,7 +24,7 @@ export default function ExplorePage() {
   const [allLoadedGames, setAllLoadedGames] = useState<Game[]>([]);
   const [hasMore, setHasMore] = useState(true);
   const loadingRef = useRef<HTMLDivElement>(null);
-  
+
 
 
   // Fetch games with pagination
@@ -52,7 +52,7 @@ export default function ExplorePage() {
         const newGames = games.filter(g => !existingIds.has(g.id));
         return [...prev, ...newGames];
       });
-      
+
       // Check if we have more games to load
       if (games.length < gamesPerPage) {
         setHasMore(false);
@@ -85,11 +85,12 @@ export default function ExplorePage() {
     };
   }, [hasMore, isLoadingGames]);
 
-  const handleGameClick = async (gameId: string, gameName: string) => {
-    // Create a URL-safe slug from the game name
-    const gameSlug = gameName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    
-    // Navigate to the individual game page (using slug for Twitch games)
+  const handleGameClick = (gameId: string, gameName: string) => {
+    const gameSlug = gameName
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/^-+|-+$/g, '');
     setLocation(`/games/${gameSlug}`);
   };
 
@@ -97,14 +98,14 @@ export default function ExplorePage() {
     setSelectedGame(game);
     setIsCheckingClips(true);
     setShowNoClipsMessage(false);
-    
+
     try {
       // Check if this game has clips
       const clipsResponse = await fetch(`/api/games/${game.id}/clips`);
-      
+
       if (clipsResponse.ok) {
         const clips = await clipsResponse.json();
-        
+
         if (clips.length === 0) {
           setShowNoClipsMessage(true);
           // Add the searched game to the trending games list if not already present
@@ -197,7 +198,7 @@ export default function ExplorePage() {
           <p className="text-muted-foreground text-lg mb-6">
             Browse trending games and discover amazing clips from the community
           </p>
-          
+
           {/* Game Search Dropdown */}
           <div className="max-w-md">
             <TwitchGameSearch
@@ -269,7 +270,7 @@ export default function ExplorePage() {
                         </span>
                       </div>
                     )}
-                    
+
                     {/* Hover Overlay */}
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                       <Badge className="bg-primary text-primary-foreground font-semibold px-4 py-2">
@@ -299,7 +300,7 @@ export default function ExplorePage() {
               </div>
             )}
           </div>
-          
+
           {/* Loading trigger for infinite scroll */}
           {hasMore && (
             <div ref={loadingRef} className="flex justify-center py-8">
@@ -309,7 +310,7 @@ export default function ExplorePage() {
               </div>
             </div>
           )}
-          
+
           {/* End of Results */}
           {!hasMore && allLoadedGames.length > 0 && (
             <div className="flex justify-center py-8">
