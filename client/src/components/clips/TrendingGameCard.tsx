@@ -62,10 +62,6 @@ const TrendingGameCard = ({ game }: TrendingGameCardProps) => {
             }}
           />
           
-          <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
-          <div className="absolute bottom-0 left-0 w-full p-1 flex flex-col">
-            <h3 className="text-xs font-medium text-white line-clamp-1">{game.name}</h3>
-          </div>
         </div>
       </Card>
     </Link>
