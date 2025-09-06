@@ -109,6 +109,236 @@ export default function GameClipsPage() {
     setLocation("/explore");
   };
 
+  // Helper components
+  const ClipGridItem = ({ clip, onClipClick }: { clip: Clip; onClipClick: (id: number) => void }) => (
+    <Card
+      className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30"
+      onClick={() => onClipClick(clip.id)}
+      data-testid={`clip-card-${clip.id}`}
+    >
+      <CardContent className="p-0">
+        <div className="aspect-video relative overflow-hidden rounded-t-lg bg-gray-900">
+          {clip.thumbnailUrl ? (
+            <img
+              src={clip.thumbnailUrl}
+              alt={clip.title}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = "/api/placeholder/320x180?text=No+Thumbnail";
+              }}
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+              <Play className="h-12 w-12 text-primary/50" />
+            </div>
+          )}
+          
+          {(clip.trimEnd || clip.duration) && (
+            <Badge className="absolute bottom-2 right-2 bg-black/80 text-white text-xs">
+              {formatDuration(
+                clip.trimEnd && clip.trimEnd > 0 
+                  ? clip.trimEnd - (clip.trimStart || 0)
+                  : clip.duration || 0
+              )}
+            </Badge>
+          )}
+
+          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+            <div className="bg-primary rounded-full p-3">
+              <Play className="h-6 w-6 text-primary-foreground fill-current" />
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4">
+          <div className="flex items-start gap-3 mb-3">
+            {clip.user.avatarUrl ? (
+              <img
+                src={clip.user.avatarUrl}
+                alt={clip.user.displayName}
+                className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-bold text-primary">
+                  {clip.user.displayName.charAt(0)}
+                </span>
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-sm mb-1 line-clamp-2 text-foreground group-hover:text-primary transition-colors">
+                {clip.title}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                <Link href={`/profile/${clip.user.username}`} onClick={(e) => e.stopPropagation()}>
+                  <span className="hover:text-foreground transition-colors cursor-pointer">{clip.user.displayName}</span>
+                </Link>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Eye className="h-3 w-3" />
+              {formatViews(clip.views)}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const ReelGridItem = ({ reel, onReelClick }: { reel: Clip; onReelClick: (id: number) => void }) => (
+    <Card
+      className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30"
+      onClick={() => onReelClick(reel.id)}
+      data-testid={`reel-card-${reel.id}`}
+    >
+      <CardContent className="p-0">
+        <div className="aspect-[9/16] relative overflow-hidden rounded-t-lg bg-gray-900">
+          {reel.thumbnailUrl ? (
+            <img
+              src={reel.thumbnailUrl}
+              alt={reel.title}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = "/api/placeholder/180x320?text=No+Thumbnail";
+              }}
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+              <Play className="h-8 w-8 text-primary/50" />
+            </div>
+          )}
+          
+          {(reel.trimEnd || reel.duration) && (
+            <Badge className="absolute bottom-2 right-2 bg-black/80 text-white text-xs">
+              {formatDuration(
+                reel.trimEnd && reel.trimEnd > 0 
+                  ? reel.trimEnd - (reel.trimStart || 0)
+                  : reel.duration || 0
+              )}
+            </Badge>
+          )}
+
+          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+            <div className="bg-primary rounded-full p-2">
+              <Play className="h-4 w-4 text-primary-foreground fill-current" />
+            </div>
+          </div>
+        </div>
+
+        <div className="p-2">
+          <h3 className="font-semibold text-xs mb-1 line-clamp-1 text-foreground group-hover:text-primary transition-colors">
+            {reel.title}
+          </h3>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Eye className="h-2 w-2" />
+              {formatViews(reel.views)}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const ScreenshotGridItem = ({ screenshot, onScreenshotClick }: { screenshot: Screenshot; onScreenshotClick: (id: number) => void }) => (
+    <Card
+      className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30"
+      onClick={() => onScreenshotClick(screenshot.id)}
+      data-testid={`screenshot-card-${screenshot.id}`}
+    >
+      <CardContent className="p-0">
+        <div className="aspect-video relative overflow-hidden rounded-t-lg bg-gray-900">
+          {screenshot.imageUrl ? (
+            <img
+              src={screenshot.imageUrl}
+              alt={screenshot.title}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = "/api/placeholder/320x180?text=No+Image";
+              }}
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+              <Eye className="h-12 w-12 text-primary/50" />
+            </div>
+          )}
+
+          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+            <div className="bg-primary rounded-full p-3">
+              <Eye className="h-6 w-6 text-primary-foreground" />
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4">
+          <div className="flex items-start gap-3 mb-3">
+            {screenshot.user.avatarUrl ? (
+              <img
+                src={screenshot.user.avatarUrl}
+                alt={screenshot.user.displayName}
+                className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-bold text-primary">
+                  {screenshot.user.displayName.charAt(0)}
+                </span>
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-sm mb-1 line-clamp-2 text-foreground group-hover:text-primary transition-colors">
+                {screenshot.title}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                <Link href={`/profile/${screenshot.user.username}`} onClick={(e) => e.stopPropagation()}>
+                  <span className="hover:text-foreground transition-colors cursor-pointer">{screenshot.user.displayName}</span>
+                </Link>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Eye className="h-3 w-3" />
+              {formatViews(screenshot.views)}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const EmptyState = ({ 
+    icon: Icon, 
+    title, 
+    description, 
+    actionText, 
+    onAction 
+  }: { 
+    icon: any; 
+    title: string; 
+    description: string; 
+    actionText: string; 
+    onAction: () => void; 
+  }) => (
+    <div className="text-center py-16">
+      <div className="mb-4">
+        <Icon className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+      </div>
+      <h3 className="text-xl font-semibold mb-2">{title}</h3>
+      <p className="text-muted-foreground mb-6">{description}</p>
+      <Button onClick={onAction} className="bg-primary hover:bg-primary/90">
+        {actionText}
+      </Button>
+    </div>
+  );
+
   if (gameLoading || clipsLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -199,108 +429,77 @@ export default function GameClipsPage() {
           </div>
         </div>
 
-        {/* Clips Grid */}
-        {clips && clips.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {clips.map((clip) => (
-              <Card
-                key={clip.id}
-                className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30"
-                onClick={() => handleClipClick(clip.id)}
-              >
-                <CardContent className="p-0">
-                  {/* Clip Thumbnail */}
-                  <div className="aspect-video relative overflow-hidden rounded-t-lg bg-gray-900">
-                    {clip.thumbnailUrl ? (
-                      <img
-                        src={clip.thumbnailUrl}
-                        alt={clip.title}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = "/api/placeholder/320x180?text=No+Thumbnail";
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                        <Play className="h-12 w-12 text-primary/50" />
-                      </div>
-                    )}
-                    
-                    {/* Duration Badge */}
-                    {(clip.trimEnd || clip.duration) && (
-                      <Badge className="absolute bottom-2 right-2 bg-black/80 text-white text-xs">
-                        {formatDuration(
-                          clip.trimEnd && clip.trimEnd > 0 
-                            ? clip.trimEnd - (clip.trimStart || 0)
-                            : clip.duration || 0
-                        )}
-                      </Badge>
-                    )}
+        {/* Content Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-8">
+            <TabsTrigger value="clips" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Clips ({normalClips?.length || 0})
+            </TabsTrigger>
+            <TabsTrigger value="reels" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Reels ({reels?.length || 0})
+            </TabsTrigger>
+            <TabsTrigger value="screenshots" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Screenshots ({screenshots?.length || 0})
+            </TabsTrigger>
+          </TabsList>
 
-                    {/* Hover Play Button */}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                      <div className="bg-primary rounded-full p-3">
-                        <Play className="h-6 w-6 text-primary-foreground fill-current" />
-                      </div>
-                    </div>
-                  </div>
+          {/* Clips Tab */}
+          <TabsContent value="clips" className="mt-0">
+            {normalClips && normalClips.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {normalClips.map((clip) => (
+                  <ClipGridItem key={clip.id} clip={clip} onClipClick={handleClipClick} />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                icon={Play}
+                title="No clips found"
+                description={`Be the first to upload a clip for ${game?.name || 'this game'}!`}
+                actionText="Upload First Clip"
+                onAction={() => setLocation("/upload")}
+              />
+            )}
+          </TabsContent>
 
-                  {/* Clip Info */}
-                  <div className="p-4">
-                    <div className="flex items-start gap-3 mb-3">
-                      {clip.user.avatarUrl ? (
-                        <img
-                          src={clip.user.avatarUrl}
-                          alt={clip.user.displayName}
-                          className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                          <span className="text-xs font-bold text-primary">
-                            {clip.user.displayName.charAt(0)}
-                          </span>
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-sm mb-1 line-clamp-2 text-foreground group-hover:text-primary transition-colors">
-                          {clip.title}
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          <Link href={`/profile/${clip.user.username}`} onClick={(e) => e.stopPropagation()}>
-                            <span className="hover:text-foreground transition-colors cursor-pointer">{clip.user.displayName}</span>
-                          </Link>
-                        </p>
-                      </div>
-                    </div>
+          {/* Reels Tab */}
+          <TabsContent value="reels" className="mt-0">
+            {reels && reels.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                {reels.map((reel) => (
+                  <ReelGridItem key={reel.id} reel={reel} onReelClick={handleClipClick} />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                icon={Play}
+                title="No reels found"
+                description={`Be the first to upload a reel for ${game?.name || 'this game'}!`}
+                actionText="Upload First Reel"
+                onAction={() => setLocation("/upload")}
+              />
+            )}
+          </TabsContent>
 
-                    {/* Stats */}
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
-                        {formatViews(clip.views)}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          /* Empty State */
-          <div className="text-center py-16">
-            <div className="mb-4">
-              <Play className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
-            </div>
-            <h3 className="text-xl font-semibold mb-2">No clips found</h3>
-            <p className="text-muted-foreground mb-6">
-              Be the first to upload a clip for {game?.name || 'this game'}!
-            </p>
-            <Button onClick={() => setLocation("/upload")} className="bg-primary hover:bg-primary/90">
-              Upload First Clip
-            </Button>
-          </div>
-        )}
+          {/* Screenshots Tab */}
+          <TabsContent value="screenshots" className="mt-0">
+            {screenshots && screenshots.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {screenshots.map((screenshot) => (
+                  <ScreenshotGridItem key={screenshot.id} screenshot={screenshot} onScreenshotClick={(id) => setLocation(`/screenshots/${id}`)} />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                icon={Eye}
+                title="No screenshots found"
+                description={`Be the first to upload a screenshot for ${game?.name || 'this game'}!`}
+                actionText="Upload First Screenshot"
+                onAction={() => setLocation("/upload")}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
