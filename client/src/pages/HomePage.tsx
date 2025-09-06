@@ -257,9 +257,11 @@ const HomePage = () => {
   const latestClips = useMemo(() => {
     if (!userClips) return [];
     // Sort by newest first, but don't limit here - let tabs do their own filtering
-    return [...userClips].sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    return [...userClips].sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
   }, [userClips]);
   
   const popularClips = useMemo(() => {
