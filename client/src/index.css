@@ -521,12 +521,3 @@ video:focus {
   }
 }
 
-/* Hide any extra text that might appear under game thumbnails */
-.group .text-\[9px\] {
-  display: none !important;
-}
-
-/* Ensure only game names show in game cards */
-.group > * > * > div:last-child > *:not(h3) {
-  display: none !important;
-}
