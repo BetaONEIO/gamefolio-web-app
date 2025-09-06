@@ -200,7 +200,7 @@ const HomePage = () => {
   });
 
   // Query latest clips (all clips sorted by creation date, newest first)
-  const { data: latestClips, isLoading: isLoadingLatestClips } = useQuery<ClipWithUser[]>({
+  const { data: latestClipsData, isLoading: isLoadingLatestClips } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/clips', { latest: true }],
     queryFn: async () => {
       const response = await fetch('/api/clips?limit=12');
@@ -210,6 +210,11 @@ const HomePage = () => {
       return response.json();
     }
   });
+
+  // Ensure latestClipsData is an array and filter out reels
+  const latestClips = Array.isArray(latestClipsData) 
+    ? latestClipsData.filter(clip => clip.videoType !== 'reel')
+    : [];
 
   // Query to check if user has uploaded any content (clips or screenshots)
   const { data: userHasContent, isLoading: isLoadingUserContent } = useQuery<boolean>({
