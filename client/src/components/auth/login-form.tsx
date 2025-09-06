@@ -52,7 +52,10 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
           // Handle login errors contextually
           const errorMessage = error.message.toLowerCase();
           
-          if (errorMessage.includes('incorrect username') || errorMessage.includes('not found')) {
+          // Check for specific "incorrect username or password" message first
+          if (errorMessage.includes('incorrect username or password')) {
+            setFieldErrors({ password: "Incorrect password" });
+          } else if (errorMessage.includes('not found') || errorMessage.includes('user not found')) {
             setFieldErrors({ usernameOrEmail: "Username or email not found" });
           } else if (errorMessage.includes('incorrect password') || errorMessage.includes('password')) {
             setFieldErrors({ password: "Incorrect password" });
