@@ -199,6 +199,18 @@ const HomePage = () => {
     }
   });
 
+  // Query latest clips (all clips sorted by creation date, newest first)
+  const { data: latestClips, isLoading: isLoadingLatestClips } = useQuery<ClipWithUser[]>({
+    queryKey: ['/api/clips', { latest: true }],
+    queryFn: async () => {
+      const response = await fetch('/api/clips?limit=12');
+      if (!response.ok) {
+        throw new Error('Failed to fetch latest clips');
+      }
+      return response.json();
+    }
+  });
+
   // Query to check if user has uploaded any content (clips or screenshots)
   const { data: userHasContent, isLoading: isLoadingUserContent } = useQuery<boolean>({
     queryKey: ['/api/user/has-content', userId],
@@ -309,12 +321,12 @@ const HomePage = () => {
         </div>
 
         <TrendingContentCarousel 
-          clips={trendingClips} 
-          isLoading={isLoadingTrendingClips}
+          clips={latestClips} 
+          isLoading={isLoadingLatestClips}
           userId={userId}
         />
         
-        {(!trendingClips || trendingClips.length === 0) && !isLoadingTrendingClips && (
+        {(!latestClips || latestClips.length === 0) && !isLoadingLatestClips && (
           <div className="text-center py-8 sm:py-12 bg-card/50 rounded-xl border border-border/50 mx-2">
             <Video className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
             <h3 className="text-base sm:text-lg font-semibold mb-2">No clips yet</h3>
