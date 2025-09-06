@@ -370,13 +370,13 @@ const HomePage = () => {
           <TabsContent value="clips" className="space-y-6" data-content-tab="clips">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
               {isLoadingClips ? (
-                Array(4).fill(0).map((_, i) => (
+                Array(8).fill(0).map((_, i) => (
                   <div key={`clips-skeleton-${i}`} className="aspect-video rounded-lg overflow-hidden">
                     <Skeleton className="w-full h-full" />
                   </div>
                 ))
               ) : (
-                latestClips?.filter(clip => clip.videoType === 'clip')?.slice(0, 6).map((clip: ClipWithUser) => (
+                latestClips?.filter(clip => clip.videoType === 'clip')?.slice(0, 12).map((clip: ClipWithUser) => (
                   <VideoClipGridItem 
                     key={`clip-${clip.id}`}
                     clip={clip}
@@ -404,14 +404,14 @@ const HomePage = () => {
             <div className="overflow-x-auto pb-2 -mx-4 px-4" ref={reelsContainerRef} style={{ scrollbarWidth: 'thin' }}>
               <div className="flex gap-4" style={{ minWidth: "100%", width: "max-content" }}>
               {isLoadingClips ? (
-                Array(6).fill(0).map((_, i) => (
+                Array(5).fill(0).map((_, i) => (
                   <div key={`reels-skeleton-${i}`} className="aspect-[9/16] rounded-lg overflow-hidden">
                     <Skeleton className="w-full h-full" />
                   </div>
                 ))
               ) : (
-                latestClips?.filter(clip => clip.videoType === 'reel')?.slice(0, 8).map((clip: ClipWithUser) => (
-                  <div key={`reel-${clip.id}`} className="flex-shrink-0 w-48">
+                latestClips?.filter(clip => clip.videoType === 'reel')?.slice(0, 5).map((clip: ClipWithUser) => (
+                  <div key={`reel-${clip.id}`} className="flex-shrink-0 w-64">
                     <VideoClipGridItem 
                       clip={clip}
                       userId={userId}
