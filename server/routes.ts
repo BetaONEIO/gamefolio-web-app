@@ -439,7 +439,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const isMatch = await comparePasswords(password, user.password);
         if (!isMatch) {
-          return done(null, false, { message: "Incorrect password" });
+          return done(null, false, { message: "Incorrect username or password" });
         }
 
         return done(null, user);

@@ -191,30 +191,13 @@ const HomePage = () => {
   const { data: latestReels, isLoading: isLoadingReels } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/reels/latest'],
     queryFn: async () => {
-      const response = await fetch('/api/reels/latest?limit=5');
+      const response = await fetch('/api/reels/latest?limit=6');
       if (!response.ok) {
         throw new Error('Failed to fetch latest reels');
       }
       return response.json();
     }
   });
-
-  // Query latest clips (all clips sorted by creation date, newest first)
-  const { data: latestClipsData, isLoading: isLoadingLatestClips } = useQuery<ClipWithUser[]>({
-    queryKey: ['/api/clips', { latest: true }],
-    queryFn: async () => {
-      const response = await fetch('/api/clips?limit=12');
-      if (!response.ok) {
-        throw new Error('Failed to fetch latest clips');
-      }
-      return response.json();
-    }
-  });
-
-  // Ensure latestClipsData is an array and filter out reels
-  const latestClips = Array.isArray(latestClipsData) 
-    ? latestClipsData.filter(clip => clip.videoType !== 'reel')
-    : [];
 
   // Query to check if user has uploaded any content (clips or screenshots)
   const { data: userHasContent, isLoading: isLoadingUserContent } = useQuery<boolean>({
@@ -326,12 +309,12 @@ const HomePage = () => {
         </div>
 
         <TrendingContentCarousel 
-          clips={latestClips} 
-          isLoading={isLoadingLatestClips}
+          clips={trendingClips} 
+          isLoading={isLoadingTrendingClips}
           userId={userId}
         />
         
-        {(!latestClips || latestClips.length === 0) && !isLoadingLatestClips && (
+        {(!trendingClips || trendingClips.length === 0) && !isLoadingTrendingClips && (
           <div className="text-center py-8 sm:py-12 bg-card/50 rounded-xl border border-border/50 mx-2">
             <Video className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
             <h3 className="text-base sm:text-lg font-semibold mb-2">No clips yet</h3>

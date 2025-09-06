@@ -13,11 +13,23 @@ interface LatestReelsCarouselProps {
 export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCarouselProps) {
   if (isLoading) {
     return (
-      <div className="space-y-4 pt-4">
-        {/* Optimized skeleton for 5 reels */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-5 gap-4 md:gap-6">
-          {Array.from({ length: 5 }).map((_, i) => (
+      <div className="space-y-4 pt-6">
+        {/* First row skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="aspect-[9/16] bg-muted rounded-xl animate-pulse" />
+          ))}
+        </div>
+        {/* Second row skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={`row2-${i}`} className="aspect-[9/16] bg-muted rounded-xl animate-pulse" />
+          ))}
+        </div>
+        {/* Third row skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={`row3-${i}`} className="aspect-[9/16] bg-muted rounded-xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -39,50 +51,48 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
     );
   }
 
-  // Optimize layout to fit 5 reels better with fewer rows
+  // Simple approach: always show 3 rows with responsive columns
   const getItemsPerRow = () => {
     if (typeof window !== 'undefined') {
-      if (window.innerWidth >= 1536) return 5; // 2xl: 5 items in 1 row
-      if (window.innerWidth >= 1280) return 5; // xl: 5 items in 1 row  
-      if (window.innerWidth >= 1024) return 3; // lg: 3+2 in 2 rows
-      if (window.innerWidth >= 640) return 3; // sm: 3+2 in 2 rows
-      return 2; // mobile: 2+2+1 in 3 rows
+      if (window.innerWidth >= 1536) return 6; // 2xl
+      if (window.innerWidth >= 1280) return 5; // xl
+      if (window.innerWidth >= 1024) return 4; // lg
+      if (window.innerWidth >= 640) return 3; // sm
+      return 2; // default
     }
     return 3; // fallback for SSR
   };
 
   const itemsPerRow = getItemsPerRow();
-  
-  // Limit to 5 reels and calculate optimal rows
-  const reelsToShow = reelsArray.slice(0, 5);
-  const totalReels = reelsToShow.length;
-  
-  // Calculate rows based on available reels and screen size
-  const rows = [];
-  if (itemsPerRow >= 5) {
-    // Single row for larger screens
-    rows.push(reelsToShow);
-  } else if (itemsPerRow === 3) {
-    // Two rows: 3 + 2
-    rows.push(reelsToShow.slice(0, 3));
-    if (totalReels > 3) rows.push(reelsToShow.slice(3, 5));
-  } else {
-    // Mobile: distribute across multiple rows
-    for (let i = 0; i < totalReels; i += itemsPerRow) {
-      rows.push(reelsToShow.slice(i, i + itemsPerRow));
-    }
-  }
+
+  // Take first set of reels for display (3 rows total)
+  const reelsToShow = reelsArray.slice(0, itemsPerRow * 3);
+
+  // Split into three rows
+  const firstRow = reelsToShow.slice(0, itemsPerRow);
+  const secondRow = reelsToShow.slice(itemsPerRow, itemsPerRow * 2);
+  const thirdRow = reelsToShow.slice(itemsPerRow * 2, itemsPerRow * 3);
 
   return (
     <div className="pt-4">
       <div className="space-y-4">
-        {/* Dynamically render optimized rows */}
-        {rows.map((row, rowIndex) => (
-          <div 
-            key={rowIndex}
-            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-5 gap-4 md:gap-6"
-          >
-            {row.map((reel) => (
+        {/* First Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
+          {firstRow.map((reel) => (
+            <VideoClipGridItem
+              key={reel.id}
+              clip={reel}
+              userId={userId}
+              compact={false}
+              reelsList={reelsArray}
+            />
+          ))}
+        </div>
+
+        {/* Second Row */}
+        {secondRow.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
+            {secondRow.map((reel) => (
               <VideoClipGridItem
                 key={reel.id}
                 clip={reel}
@@ -92,7 +102,22 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
               />
             ))}
           </div>
-        ))}
+        )}
+
+        {/* Third Row */}
+        {thirdRow.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
+            {thirdRow.map((reel) => (
+              <VideoClipGridItem
+                key={reel.id}
+                clip={reel}
+                userId={userId}
+                compact={false}
+                reelsList={reelsArray}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

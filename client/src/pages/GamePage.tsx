@@ -4,7 +4,7 @@ import { useParams } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Clock, Calendar, CalendarDays, Play, Users, TrendingUp } from "lucide-react";
+import { ArrowLeft, Clock, Calendar, CalendarDays, Play, Users, TrendingUp, Camera } from "lucide-react";
 import { Link } from "wouter";
 import VideoClipCard from "@/components/clips/VideoClipCard";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,7 +15,7 @@ export default function GamePage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const [timePeriod, setTimePeriod] = useState<'day' | 'week' | 'month'>('day');
-  const [contentType, setContentType] = useState<'clips' | 'reels'>('clips');
+  const [contentType, setContentType] = useState<'clips' | 'reels' | 'screenshots'>('clips');
   
   const gameId = parseInt(id || '0');
 
@@ -61,10 +61,26 @@ export default function GamePage() {
     enabled: contentType === 'reels',
   });
 
+  // Fetch screenshots for this game
+  const { data: screenshots, isLoading: isLoadingScreenshots } = useQuery<ClipWithUser[]>({
+    queryKey: ['/api/screenshots', timePeriod, gameId],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        period: timePeriod,
+        limit: '20',
+        gameId: gameId.toString(),
+      });
+      const response = await fetch(`/api/screenshots?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch screenshots');
+      return response.json();
+    },
+    enabled: contentType === 'screenshots',
+  });
+
   // Fetch all clips for this game (fallback)
   const { data: allClips, isLoading: isLoadingAllClips } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/games/${gameId}/clips`],
-    enabled: !trendingClips?.length && !trendingReels?.length,
+    enabled: !trendingClips?.length && !trendingReels?.length && contentType !== 'screenshots',
   });
 
   const getPeriodIcon = (period: string) => {
@@ -85,9 +101,11 @@ export default function GamePage() {
     }
   };
 
-  const currentData = contentType === 'clips' ? trendingClips : trendingReels;
-  const isLoading = contentType === 'clips' ? isLoadingClips : isLoadingReels;
-  const fallbackData = allClips;
+  const currentData = contentType === 'clips' ? trendingClips : 
+                    contentType === 'reels' ? trendingReels : screenshots;
+  const isLoading = contentType === 'clips' ? isLoadingClips : 
+                   contentType === 'reels' ? isLoadingReels : isLoadingScreenshots;
+  const fallbackData = contentType === 'screenshots' ? [] : allClips;
 
   const displayData = currentData?.length ? currentData : fallbackData;
 
@@ -182,8 +200,8 @@ export default function GamePage() {
           </div>
 
           {/* Content Type Tabs */}
-          <Tabs value={contentType} onValueChange={(value) => setContentType(value as 'clips' | 'reels')}>
-            <TabsList className="grid w-full grid-cols-2 lg:w-[300px]">
+          <Tabs value={contentType} onValueChange={(value) => setContentType(value as 'clips' | 'reels' | 'screenshots')}>
+            <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
               <TabsTrigger value="clips" className="flex items-center gap-2">
                 <Play className="h-4 w-4" />
                 Clips
@@ -191,6 +209,10 @@ export default function GamePage() {
               <TabsTrigger value="reels" className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
                 Reels
+              </TabsTrigger>
+              <TabsTrigger value="screenshots" className="flex items-center gap-2">
+                <Camera className="h-4 w-4" />
+                Screenshots
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -202,7 +224,11 @@ export default function GamePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array(6).fill(0).map((_, i) => (
                 <div key={i} className="space-y-4">
-                  <Skeleton className={contentType === 'reels' ? "aspect-[9/16] rounded-lg" : "aspect-video rounded-lg"} />
+                  <Skeleton className={
+                    contentType === 'reels' ? "aspect-[9/16] rounded-lg" : 
+                    contentType === 'screenshots' ? "aspect-video rounded-lg" : 
+                    "aspect-video rounded-lg"
+                  } />
                   <div className="space-y-2">
                     <Skeleton className="h-4 w-3/4" />
                     <Skeleton className="h-3 w-1/2" />
@@ -246,7 +272,7 @@ export default function GamePage() {
               </p>
               <Link href="/upload">
                 <Button>
-                  Upload First {contentType === 'clips' ? 'Clip' : 'Reel'}
+                  Upload First {contentType === 'clips' ? 'Clip' : contentType === 'reels' ? 'Reel' : 'Screenshot'}
                 </Button>
               </Link>
             </div>
