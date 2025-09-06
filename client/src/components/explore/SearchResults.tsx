@@ -211,7 +211,7 @@ const UserResultCard = ({ user }: UserResultCardProps) => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries([`/api/users/${user.id}/following/check`]);
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user.id}/following/check`] });
       toast({
         description: isFollowing ? `Unfollowed ${user.displayName}` : `Following ${user.displayName}`,
         variant: "gamefolioSuccess",
