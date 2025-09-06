@@ -253,15 +253,13 @@ const HomePage = () => {
     return userClips;
   }, [userClips, selectedGameFilter]);
   
-  // Process user clips for different sections - keep all data for filtering
+  // Process user clips for different sections
   const latestClips = useMemo(() => {
     if (!userClips) return [];
-    // Sort by newest first, but don't limit here - let tabs do their own filtering
-    return [...userClips].sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return dateB - dateA;
-    });
+    // Sort by newest first
+    return [...userClips].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    ).slice(0, 4);
   }, [userClips]);
   
   const popularClips = useMemo(() => {
@@ -372,13 +370,13 @@ const HomePage = () => {
           <TabsContent value="clips" className="space-y-6" data-content-tab="clips">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
               {isLoadingClips ? (
-                Array(8).fill(0).map((_, i) => (
+                Array(4).fill(0).map((_, i) => (
                   <div key={`clips-skeleton-${i}`} className="aspect-video rounded-lg overflow-hidden">
                     <Skeleton className="w-full h-full" />
                   </div>
                 ))
               ) : (
-                userClips?.filter(clip => clip.videoType === 'clip')?.slice(0, 12).map((clip: ClipWithUser) => (
+                latestClips?.filter(clip => clip.videoType === 'clip')?.slice(0, 6).map((clip: ClipWithUser) => (
                   <VideoClipGridItem 
                     key={`clip-${clip.id}`}
                     clip={clip}
@@ -388,7 +386,7 @@ const HomePage = () => {
                 ))
               )}
             </div>
-            {(!userClips || userClips.filter(clip => clip.videoType === 'clip').length === 0) && !isLoadingClips && (
+            {(!latestClips || latestClips.filter(clip => clip.videoType === 'clip').length === 0) && !isLoadingClips && (
               <div className="text-center py-12">
                 <Video className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No clips yet</h3>
@@ -406,26 +404,26 @@ const HomePage = () => {
             <div className="overflow-x-auto pb-2 -mx-4 px-4" ref={reelsContainerRef} style={{ scrollbarWidth: 'thin' }}>
               <div className="flex gap-4" style={{ minWidth: "100%", width: "max-content" }}>
               {isLoadingClips ? (
-                Array(5).fill(0).map((_, i) => (
+                Array(6).fill(0).map((_, i) => (
                   <div key={`reels-skeleton-${i}`} className="aspect-[9/16] rounded-lg overflow-hidden">
                     <Skeleton className="w-full h-full" />
                   </div>
                 ))
               ) : (
-                userClips?.filter(clip => clip.videoType === 'reel')?.slice(0, 5).map((clip: ClipWithUser) => (
-                  <div key={`reel-${clip.id}`} className="flex-shrink-0 w-64">
+                latestClips?.filter(clip => clip.videoType === 'reel')?.slice(0, 8).map((clip: ClipWithUser) => (
+                  <div key={`reel-${clip.id}`} className="flex-shrink-0 w-48">
                     <VideoClipGridItem 
                       clip={clip}
                       userId={userId}
                       compact={true}
-                      reelsList={userClips?.filter(c => c.videoType === 'reel')}
+                      reelsList={latestClips?.filter(c => c.videoType === 'reel')}
                     />
                   </div>
                 ))
               )}
               </div>
             </div>
-            {(!userClips || userClips.filter(clip => clip.videoType === 'reel').length === 0) && !isLoadingClips && (
+            {(!latestClips || latestClips.filter(clip => clip.videoType === 'reel').length === 0) && !isLoadingClips && (
               <div className="text-center py-12">
                 <Camera className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No reels yet</h3>
@@ -441,7 +439,7 @@ const HomePage = () => {
           {/* Screenshots Tab Content */}
           <TabsContent value="screenshots" className="space-y-6" data-content-tab="screenshots">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
-              {userClips?.filter(clip => clip.thumbnailUrl && !clip.videoUrl)?.slice(0, 12).map((screenshot, i) => (
+              {latestClips?.filter(clip => clip.thumbnailUrl && !clip.videoUrl)?.slice(0, 12).map((screenshot, i) => (
                 <div 
                   key={`screenshot-${screenshot.id}`} 
                   className="relative overflow-hidden rounded-xl cursor-pointer group shadow-lg transition-all duration-500 border aspect-video"
@@ -475,7 +473,7 @@ const HomePage = () => {
                 </div>
               ))}
             </div>
-            {(!userClips || userClips.filter(clip => clip.thumbnailUrl && !clip.videoUrl).length === 0) && (
+            {(!latestClips || latestClips.filter(clip => clip.thumbnailUrl && !clip.videoUrl).length === 0) && (
               <div className="text-center py-12">
                 <Image className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No screenshots yet</h3>
