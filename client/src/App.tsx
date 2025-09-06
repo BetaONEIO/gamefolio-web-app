@@ -21,7 +21,7 @@ import MobileMenu from "./components/layout/MobileMenu";
 // Page components
 import HomePage from "./pages/HomePageSimple";
 import ProfilePage from "./pages/ProfilePage";
-import ExplorePage from "./pages/explore-page";
+import ExplorePage from "./pages/ExplorePage";
 import TrendingPage from "./pages/TrendingPage";
 import GameClipsPage from "./pages/game-clips-page";
 import GamePage from "./pages/game-page";
