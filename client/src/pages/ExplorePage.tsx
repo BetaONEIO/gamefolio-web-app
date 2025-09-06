@@ -255,7 +255,6 @@ const ExplorePage = () => {
           </TabsList>
         </div>
         
-        <GameCategoryTags onCategorySelect={handleCategorySelect} />
         
         <TabsContent value="all">
           <div className="space-y-4">
