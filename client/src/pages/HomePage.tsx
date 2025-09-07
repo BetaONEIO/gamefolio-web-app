@@ -222,8 +222,13 @@ const HomePage = () => {
     queryKey: [`/api/clips`],
     queryFn: async () => {
       const response = await fetch(`/api/clips`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       return response.json();
-    }
+    },
+    staleTime: 0, // Force fresh data
+    refetchOnMount: true
   });
   
   // Filter user clips by game name instead of ID
@@ -255,13 +260,19 @@ const HomePage = () => {
   
   // Process user clips for different sections
   const latestClips = useMemo(() => {
-    if (!userClips) return [];
+    if (!userClips) {
+      console.log('HomePage: No userClips data');
+      return [];
+    }
+    console.log('HomePage: Processing userClips:', userClips.length, 'clips');
     // Sort by newest first, handle null dates
-    return [...userClips].sort((a, b) => {
+    const sorted = [...userClips].sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA;
     }).slice(0, 10);
+    console.log('HomePage: Latest clips after sorting:', sorted.length);
+    return sorted;
   }, [userClips]);
   
   const popularClips = useMemo(() => {
