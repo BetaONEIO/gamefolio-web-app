@@ -15,20 +15,20 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
     return (
       <div className="space-y-4 pt-6">
         {/* First row skeleton */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 gap-4 md:gap-6">
+          {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="aspect-[9/16] bg-muted rounded-xl animate-pulse" />
           ))}
         </div>
         {/* Second row skeleton */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 gap-4 md:gap-6">
+          {Array.from({ length: 5 }).map((_, i) => (
             <div key={`row2-${i}`} className="aspect-[9/16] bg-muted rounded-xl animate-pulse" />
           ))}
         </div>
         {/* Third row skeleton */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 gap-4 md:gap-6">
+          {Array.from({ length: 5 }).map((_, i) => (
             <div key={`row3-${i}`} className="aspect-[9/16] bg-muted rounded-xl animate-pulse" />
           ))}
         </div>
@@ -51,10 +51,10 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
     );
   }
 
-  // Simple approach: always show 3 rows with responsive columns
+  // Simple approach: always show 3 rows with responsive columns - max 5 per row
   const getItemsPerRow = () => {
     if (typeof window !== 'undefined') {
-      if (window.innerWidth >= 1536) return 6; // 2xl
+      if (window.innerWidth >= 1536) return 5; // 2xl (changed from 6 to 5)
       if (window.innerWidth >= 1280) return 5; // xl
       if (window.innerWidth >= 1024) return 4; // lg
       if (window.innerWidth >= 640) return 3; // sm
@@ -77,7 +77,7 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
     <div className="pt-4">
       <div className="space-y-4">
         {/* First Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 gap-4 md:gap-6">
           {firstRow.map((reel) => (
             <VideoClipGridItem
               key={reel.id}
@@ -91,7 +91,7 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
 
         {/* Second Row */}
         {secondRow.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 gap-4 md:gap-6">
             {secondRow.map((reel) => (
               <VideoClipGridItem
                 key={reel.id}
@@ -106,7 +106,7 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
 
         {/* Third Row */}
         {thirdRow.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 gap-4 md:gap-6">
             {thirdRow.map((reel) => (
               <VideoClipGridItem
                 key={reel.id}
