@@ -373,14 +373,14 @@ export default function GameClipsPage() {
                 <img
                   src={game.imageUrl}
                   alt={game.name}
-                  className="w-48 h-64 rounded-lg object-cover shadow-lg"
+                  className="w-40 h-56 rounded-lg object-cover shadow-lg"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.style.display = 'none';
                   }}
                 />
               ) : (
-                <div className="w-48 h-64 rounded-lg bg-muted flex items-center justify-center">
+                <div className="w-40 h-56 rounded-lg bg-muted flex items-center justify-center">
                   <Play className="h-16 w-16 text-muted-foreground" />
                 </div>
               )}
@@ -418,11 +418,11 @@ export default function GameClipsPage() {
                 )}
               </div>
 
-              {/* Follow Button */}
+              {/* Favorite Button */}
               <div className="pt-2">
                 <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90">
-                  <UserPlus className="h-4 w-4" />
-                  Follow
+                  <Heart className="h-4 w-4" />
+                  Favorite
                 </Button>
               </div>
             </div>
