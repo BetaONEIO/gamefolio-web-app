@@ -431,16 +431,27 @@ export default function GameClipsPage() {
 
         {/* Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
-            <TabsTrigger value="clips" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              Clips ({normalClips?.length || 0})
-            </TabsTrigger>
-            <TabsTrigger value="reels" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              Reels ({reels?.length || 0})
-            </TabsTrigger>
-            <TabsTrigger value="screenshots" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              Screenshots ({screenshots?.length || 0})
-            </TabsTrigger>
+          <TabsList className="h-auto p-0 bg-transparent border-b border-border mb-8">
+            <div className="flex gap-8">
+              <TabsTrigger 
+                value="clips" 
+                className="bg-transparent px-0 pb-4 pt-0 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none font-semibold"
+              >
+                Clips
+              </TabsTrigger>
+              <TabsTrigger 
+                value="reels" 
+                className="bg-transparent px-0 pb-4 pt-0 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none font-semibold"
+              >
+                Reels
+              </TabsTrigger>
+              <TabsTrigger 
+                value="screenshots" 
+                className="bg-transparent px-0 pb-4 pt-0 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none font-semibold"
+              >
+                Screenshots
+              </TabsTrigger>
+            </div>
           </TabsList>
 
           {/* Clips Tab */}
