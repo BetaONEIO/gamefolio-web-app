@@ -407,7 +407,7 @@ const HomePage = () => {
               <div className="flex gap-4" style={{ minWidth: "100%", width: "max-content" }}>
               {isLoadingClips ? (
                 Array(5).fill(0).map((_, i) => (
-                  <div key={`reels-skeleton-${i}`} className="aspect-[9/16] rounded-lg overflow-hidden">
+                  <div key={`reels-skeleton-${i}`} className="aspect-[9/16] rounded-lg overflow-hidden flex-shrink-0 w-56">
                     <Skeleton className="w-full h-full" />
                   </div>
                 ))
