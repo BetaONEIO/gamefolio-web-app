@@ -260,19 +260,13 @@ const HomePage = () => {
   
   // Process user clips for different sections
   const latestClips = useMemo(() => {
-    if (!userClips) {
-      console.log('HomePage: No userClips data');
-      return [];
-    }
-    console.log('HomePage: Processing userClips:', userClips.length, 'clips');
+    if (!userClips) return [];
     // Sort by newest first, handle null dates
-    const sorted = [...userClips].sort((a, b) => {
+    return [...userClips].sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA;
-    }).slice(0, 10);
-    console.log('HomePage: Latest clips after sorting:', sorted.length);
-    return sorted;
+    }).slice(0, 20); // Increase to 20 clips to have more content
   }, [userClips]);
   
   const popularClips = useMemo(() => {
@@ -381,7 +375,7 @@ const HomePage = () => {
 
           {/* Clips Tab Content */}
           <TabsContent value="clips" className="space-y-6" data-content-tab="clips">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-4">
               {isLoadingClips ? (
                 Array(6).fill(0).map((_, i) => (
                   <div key={`clips-skeleton-${i}`} className="aspect-video rounded-lg overflow-hidden">
@@ -399,7 +393,7 @@ const HomePage = () => {
                 ))
               )}
             </div>
-            {(!latestClips || latestClips.filter(clip => !clip.videoType || clip.videoType === 'clip').length === 0) && !isLoadingClips && (
+            {!isLoadingClips && (!latestClips || latestClips.filter(clip => !clip.videoType || clip.videoType === 'clip').length === 0) && (
               <div className="text-center py-12">
                 <Video className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No clips yet</h3>
