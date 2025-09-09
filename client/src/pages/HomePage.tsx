@@ -219,8 +219,9 @@ const HomePage = () => {
 
   // Query all clips to show in latest clips section
   const { data: userClips, isLoading: isLoadingUserClips } = useQuery<ClipWithUser[]>({
-    queryKey: [`/api/clips`],
-    staleTime: 30000, // Cache for 30 seconds
+    queryKey: [`/api/clips`, Date.now()], // Force new query every time
+    staleTime: 0,
+    gcTime: 0, // Don't cache at all
   });
   
   // Filter user clips by game name instead of ID
@@ -391,7 +392,7 @@ const HomePage = () => {
                 ))
               )}
             </div>
-            {!isLoadingClips && (!latestClips || latestClips.filter(clip => !clip.videoType || clip.videoType === 'clip').length === 0) && (
+            {!isLoadingClips && (!latestClips || latestClips.length === 0) && (
               <div className="text-center py-12">
                 <Video className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No clips yet</h3>
