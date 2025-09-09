@@ -158,7 +158,7 @@ export const followRequests = pgTable("follow_requests", {
   id: serial("id").primaryKey(),
   requesterId: integer("requester_id").notNull().references(() => users.id),
   addresseeId: integer("addressee_id").notNull().references(() => users.id),
-  status: text("status").default("pending").notNull(), // "pending", "accepted", "declined"
+  status: text("status").default("pending").notNull(), // "pending", "approved", "rejected"
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
