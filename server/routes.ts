@@ -3751,7 +3751,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User to follow not found" });
       }
 
-      // Check if already following
+      // Check if already following (double-check to prevent race conditions)
       const isFollowing = await storage.isFollowing(followerId, followingId);
       if (isFollowing) {
         return res.status(400).json({ message: "You are already following this user" });
@@ -3766,7 +3766,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.createFollow(followData);
       res.status(201).json({ message: "User followed successfully" });
     } catch (err) {
-      return handleValidationError(err, res);
+      console.error("Error following user:", err);
+      
+      // Handle specific database errors
+      if (err instanceof Error) {
+        // Handle unique constraint violations (duplicate follows)
+        if (err.message.includes('duplicate key value') || err.message.includes('unique constraint')) {
+          return res.status(400).json({ message: "You are already following this user" });
+        }
+        
+        // Handle foreign key constraint violations
+        if (err.message.includes('foreign key constraint')) {
+          return res.status(404).json({ message: "User to follow not found" });
+        }
+        
+        // Handle validation errors
+        if (err.name === 'ZodError' || err.message.includes('validation')) {
+          return res.status(400).json({ message: err.message });
+        }
+      }
+      
+      // Generic database error
+      return res.status(500).json({ message: "Failed to follow user. Please try again." });
     }
   });
 

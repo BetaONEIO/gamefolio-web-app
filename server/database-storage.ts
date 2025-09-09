@@ -798,8 +798,26 @@ export class DatabaseStorage implements IStorage {
 
   // Follow operations
   async createFollow(followData: InsertFollow): Promise<Follow> {
-    const [follow] = await db.insert(follows).values(followData).returning();
-    return follow;
+    try {
+      const [follow] = await db.insert(follows).values(followData).returning();
+      return follow;
+    } catch (error) {
+      // Log the error for debugging
+      console.error("Database error in createFollow:", error);
+      
+      // Re-throw the error with more context if needed
+      if (error instanceof Error) {
+        if (error.message.includes('duplicate key value') || error.message.includes('unique constraint')) {
+          throw new Error("Follow relationship already exists");
+        }
+        if (error.message.includes('foreign key constraint')) {
+          throw new Error("Invalid user ID for follow relationship");
+        }
+      }
+      
+      // Re-throw the original error for other cases
+      throw error;
+    }
   }
 
   async deleteFollow(followerId: number, followingId: number): Promise<boolean> {

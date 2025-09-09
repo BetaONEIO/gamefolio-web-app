@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -148,7 +148,10 @@ export const follows = pgTable("follows", {
   followerId: integer("follower_id").notNull().references(() => users.id),
   followingId: integer("following_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  // Prevent duplicate follows between the same two users
+  uniqueFollow: unique().on(table.followerId, table.followingId),
+}));
 
 // Follow Requests table
 export const followRequests = pgTable("follow_requests", {
