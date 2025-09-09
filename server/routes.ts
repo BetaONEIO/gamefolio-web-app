@@ -3826,6 +3826,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==========================================
+  // Follow Request Management Routes
+  // ==========================================
+
+  // Get pending follow requests for the current user
+  app.get("/api/follow-requests", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id ?? 0;
+      const followRequests = await storage.getPendingFollowRequests(userId);
+      res.json(followRequests);
+    } catch (err) {
+      console.error("Error fetching follow requests:", err);
+      return res.status(500).json({ message: "Error fetching follow requests" });
+    }
+  });
+
+  // Approve a follow request
+  app.post("/api/follow-requests/:requestId/approve", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id ?? 0;
+      const requestId = parseInt(req.params.requestId);
+
+      // Get the follow request to verify ownership
+      const request = await storage.getFollowRequest(requestId);
+      if (!request) {
+        return res.status(404).json({ message: "Follow request not found" });
+      }
+
+      // Verify the current user is the addressee
+      if (request.addresseeId !== userId) {
+        return res.status(403).json({ message: "You can only approve requests sent to you" });
+      }
+
+      // Verify the request is still pending
+      if (request.status !== 'pending') {
+        return res.status(400).json({ message: "This request has already been processed" });
+      }
+
+      // Approve the request (create follow relationship and update request status)
+      await storage.acceptFollowRequest(requestId);
+      
+      // Create follow notification
+      await NotificationService.createFollowNotification(request.addresseeId, request.requesterId);
+
+      res.json({ message: "Follow request approved successfully" });
+    } catch (err) {
+      console.error("Error approving follow request:", err);
+      return res.status(500).json({ message: "Error approving follow request" });
+    }
+  });
+
+  // Reject a follow request
+  app.post("/api/follow-requests/:requestId/reject", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id ?? 0;
+      const requestId = parseInt(req.params.requestId);
+
+      // Get the follow request to verify ownership
+      const request = await storage.getFollowRequest(requestId);
+      if (!request) {
+        return res.status(404).json({ message: "Follow request not found" });
+      }
+
+      // Verify the current user is the addressee
+      if (request.addresseeId !== userId) {
+        return res.status(403).json({ message: "You can only reject requests sent to you" });
+      }
+
+      // Verify the request is still pending
+      if (request.status !== 'pending') {
+        return res.status(400).json({ message: "This request has already been processed" });
+      }
+
+      // Reject the request (update status to rejected)
+      await storage.declineFollowRequest(requestId);
+
+      res.json({ message: "Follow request rejected successfully" });
+    } catch (err) {
+      console.error("Error rejecting follow request:", err);
+      return res.status(500).json({ message: "Error rejecting follow request" });
+    }
+  });
+
+  // ==========================================
   // Search Routes
   // ==========================================
 

@@ -908,6 +908,14 @@ export class DatabaseStorage implements IStorage {
     return requests;
   }
 
+  async getFollowRequest(requestId: number): Promise<any> {
+    const [request] = await db
+      .select()
+      .from(followRequests)
+      .where(eq(followRequests.id, requestId));
+    return request;
+  }
+
   async hasFollowRequest(requesterId: number, requestedId: number): Promise<string | null> {
     const [request] = await db
       .select()
@@ -922,18 +930,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   async acceptFollowRequest(requestId: number): Promise<boolean> {
+    // Get the follow request details first
+    const [request] = await db
+      .select()
+      .from(followRequests)
+      .where(eq(followRequests.id, requestId));
+    
+    if (!request) {
+      return false;
+    }
+
+    // Create the follow relationship
+    await db.insert(follows).values({
+      followerId: request.requesterId,
+      followingId: request.addresseeId
+    });
+
+    // Update the request status to approved
     const result = await db
       .update(followRequests)
-      .set({ status: 'accepted' })
+      .set({ status: 'approved' })
       .where(eq(followRequests.id, requestId))
       .returning();
+      
     return result.length > 0;
   }
 
   async declineFollowRequest(requestId: number): Promise<boolean> {
     const result = await db
       .update(followRequests)
-      .set({ status: 'declined' })
+      .set({ status: 'rejected' })
       .where(eq(followRequests.id, requestId))
       .returning();
     return result.length > 0;

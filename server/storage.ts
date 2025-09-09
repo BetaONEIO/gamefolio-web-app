@@ -110,6 +110,7 @@ export interface IStorage {
   // Follow request operations
   createFollowRequest(requesterId: number, requestedId: number): Promise<void>;
   getPendingFollowRequests(userId: number);
+  getFollowRequest(requestId: number): Promise<any>;
   hasFollowRequest(requesterId: number, requestedId: number): Promise<string | null>;
   acceptFollowRequest(requestId: number): Promise<boolean>;
   declineFollowRequest(requestId: number): Promise<boolean>;
