@@ -217,18 +217,10 @@ const HomePage = () => {
     };
   }, []);
 
-  // Query latest clips from all users - this will show the actual uploaded clips in the system
+  // Use trending clips for now since that endpoint is working
   const { data: userClips, isLoading: isLoadingUserClips } = useQuery<ClipWithUser[]>({
-    queryKey: [`/api/clips`],
-    queryFn: async () => {
-      const response = await fetch(`/api/clips`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.json();
-    },
-    staleTime: 0, // Force fresh data
-    refetchOnMount: true
+    queryKey: [`/api/clips/trending`],
+    staleTime: 0,
   });
   
   // Filter user clips by game name instead of ID
@@ -260,13 +252,19 @@ const HomePage = () => {
   
   // Process user clips for different sections
   const latestClips = useMemo(() => {
-    if (!userClips) return [];
+    if (!userClips) {
+      console.log('HomePage: No userClips data');
+      return [];
+    }
+    console.log('HomePage: Processing', userClips.length, 'clips');
     // Sort by newest first, handle null dates
-    return [...userClips].sort((a, b) => {
+    const sorted = [...userClips].sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA;
     }).slice(0, 20); // Increase to 20 clips to have more content
+    console.log('HomePage: Sorted clips:', sorted.length);
+    return sorted;
   }, [userClips]);
   
   const popularClips = useMemo(() => {
