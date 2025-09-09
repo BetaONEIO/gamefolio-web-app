@@ -258,7 +258,7 @@ export function NotificationBell() {
                 className="text-xs text-red-600 hover:text-red-700"
                 disabled={deleteAllNotificationsMutation.isPending}
               >
-                {deleteAllNotificationsMutation.isPending ? "Deleting..." : "Delete All"}
+                {deleteAllNotificationsMutation.isPending ? "Clearing..." : "Clear All"}
               </Button>
             )}
           </div>
