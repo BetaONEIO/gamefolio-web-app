@@ -146,12 +146,15 @@ const Header = () => {
 
         {/* Logo */}
         <Link href="/">
-          <div className="flex items-center">
+          <div className="flex flex-col items-center">
             <img
               src="/attached_assets/Gamefolio logo copy.png"
               alt="Gamefolio"
               className="h-8 sm:h-10 md:h-12 xl:h-16 w-auto"
             />
+            <div className="mt-1 px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded-full shadow-sm">
+              Alpha 1.0 • Sep 9, 2025
+            </div>
           </div>
         </Link>
 
