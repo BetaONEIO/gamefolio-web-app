@@ -1544,6 +1544,16 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async deleteAllNotifications(userId: number): Promise<boolean> {
+    try {
+      await db.delete(notifications).where(eq(notifications.userId, userId));
+      return true;
+    } catch (error) {
+      console.error("Error deleting all notifications:", error);
+      return false;
+    }
+  }
+
   // Message operations
   async createMessage(messageData: InsertMessage): Promise<Message> {
     const [message] = await db.insert(messages).values(messageData).returning();

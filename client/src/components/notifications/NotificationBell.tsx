@@ -119,6 +119,17 @@ export function NotificationBell() {
     },
   });
 
+  // Delete all notifications
+  const deleteAllNotificationsMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("DELETE", "/api/notifications/delete-all");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
+    },
+  });
+
   // Delete notification
   const deleteNotificationMutation = useMutation({
     mutationFn: async (notificationId: number) => {
@@ -228,16 +239,29 @@ export function NotificationBell() {
         >
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="font-semibold">Notifications</h3>
-          {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => markAllAsReadMutation.mutate()}
-              className="text-xs text-primary hover:text-primary/80"
-            >
-              Clear All
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {unreadCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => markAllAsReadMutation.mutate()}
+                className="text-xs text-primary hover:text-primary/80"
+              >
+                Mark Read
+              </Button>
+            )}
+            {notifications.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => deleteAllNotificationsMutation.mutate()}
+                className="text-xs text-red-600 hover:text-red-700"
+                disabled={deleteAllNotificationsMutation.isPending}
+              >
+                {deleteAllNotificationsMutation.isPending ? "Deleting..." : "Delete All"}
+              </Button>
+            )}
+          </div>
         </div>
         
         <div className="max-h-80 overflow-y-auto">

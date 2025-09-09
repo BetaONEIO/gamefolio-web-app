@@ -5104,6 +5104,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete all notifications for the authenticated user
+  app.delete("/api/notifications/delete-all", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id ?? 0;
+
+      const success = await storage.deleteAllNotifications(userId);
+
+      if (!success) {
+        return res.status(500).json({ message: "Failed to delete all notifications" });
+      }
+
+      res.json({ message: "All notifications deleted" });
+    } catch (err) {
+      console.error("Error deleting all notifications:", err);
+      return res.status(500).json({ message: "Error deleting all notifications" });
+    }
+  });
+
   // ===== SCREENSHOT ENGAGEMENT ENDPOINTS =====
 
   // Get screenshot comments

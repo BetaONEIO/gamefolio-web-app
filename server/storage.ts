@@ -154,6 +154,7 @@ export interface IStorage {
   markNotificationAsRead(id: number): Promise<boolean>;
   markAllNotificationsAsRead(userId: number): Promise<boolean>;
   deleteNotification(id: number): Promise<boolean>;
+  deleteAllNotifications(userId: number): Promise<boolean>;
 
   // Badge operations
   createUserBadge(badge: InsertUserBadge): Promise<UserBadge>;
