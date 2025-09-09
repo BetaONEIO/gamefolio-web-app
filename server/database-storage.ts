@@ -1554,6 +1554,28 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getNotification(id: number): Promise<any> {
+    const [notification] = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.id, id));
+    return notification;
+  }
+
+  async getFollowRequestByUsers(requesterId: number, addresseeId: number): Promise<any> {
+    const [request] = await db
+      .select()
+      .from(followRequests)
+      .where(
+        and(
+          eq(followRequests.requesterId, requesterId),
+          eq(followRequests.addresseeId, addresseeId),
+          eq(followRequests.status, 'pending')
+        )
+      );
+    return request;
+  }
+
   // Message operations
   async createMessage(messageData: InsertMessage): Promise<Message> {
     const [message] = await db.insert(messages).values(messageData).returning();

@@ -3921,6 +3921,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Approve follow request via notification ID (for notification buttons)
+  app.post("/api/notifications/:notificationId/approve-follow", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id ?? 0;
+      const notificationId = parseInt(req.params.notificationId);
+
+      // Get the notification to find the requester
+      const notification = await storage.getNotification(notificationId);
+      if (!notification) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+
+      // Verify this is a follow request notification for the current user
+      if (notification.type !== 'follow_request' || notification.userId !== userId) {
+        return res.status(403).json({ message: "Invalid notification" });
+      }
+
+      // Find the corresponding follow request
+      const followRequest = await storage.getFollowRequestByUsers(notification.fromUserId!, userId);
+      if (!followRequest) {
+        return res.status(404).json({ message: "Follow request not found" });
+      }
+
+      // Verify the request is still pending
+      if (followRequest.status !== 'pending') {
+        return res.status(400).json({ message: "This request has already been processed" });
+      }
+
+      // Approve the request
+      await storage.acceptFollowRequest(followRequest.id);
+      
+      // Mark the notification as read
+      await storage.markNotificationAsRead(notificationId);
+      
+      // Create follow notification
+      await NotificationService.createFollowNotification(followRequest.addresseeId, followRequest.requesterId);
+
+      res.json({ message: "Follow request approved successfully" });
+    } catch (err) {
+      console.error("Error approving follow request via notification:", err);
+      return res.status(500).json({ message: "Error approving follow request" });
+    }
+  });
+
+  // Reject follow request via notification ID (for notification buttons)
+  app.post("/api/notifications/:notificationId/reject-follow", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id ?? 0;
+      const notificationId = parseInt(req.params.notificationId);
+
+      // Get the notification to find the requester
+      const notification = await storage.getNotification(notificationId);
+      if (!notification) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+
+      // Verify this is a follow request notification for the current user
+      if (notification.type !== 'follow_request' || notification.userId !== userId) {
+        return res.status(403).json({ message: "Invalid notification" });
+      }
+
+      // Find the corresponding follow request
+      const followRequest = await storage.getFollowRequestByUsers(notification.fromUserId!, userId);
+      if (!followRequest) {
+        return res.status(404).json({ message: "Follow request not found" });
+      }
+
+      // Verify the request is still pending
+      if (followRequest.status !== 'pending') {
+        return res.status(400).json({ message: "This request has already been processed" });
+      }
+
+      // Reject the request
+      await storage.declineFollowRequest(followRequest.id);
+      
+      // Mark the notification as read
+      await storage.markNotificationAsRead(notificationId);
+
+      res.json({ message: "Follow request rejected successfully" });
+    } catch (err) {
+      console.error("Error rejecting follow request via notification:", err);
+      return res.status(500).json({ message: "Error rejecting follow request" });
+    }
+  });
+
   // ==========================================
   // Search Routes
   // ==========================================

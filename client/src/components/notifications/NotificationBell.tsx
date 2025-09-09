@@ -11,7 +11,7 @@ import { Notification } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { useApproveFollowRequest, useRejectFollowRequest } from "@/hooks/use-follow-requests";
+import { useToast } from "@/hooks/use-toast";
 
 interface NotificationWithUser extends Notification {
   fromUser?: {
@@ -26,10 +26,52 @@ export function NotificationBell() {
   const [showGreenPopup, setShowGreenPopup] = useState(false);
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   
-  // Follow request mutations
-  const approveRequestMutation = useApproveFollowRequest();
-  const rejectRequestMutation = useRejectFollowRequest();
+  // Follow request mutations (for notifications)
+  const approveRequestMutation = useMutation({
+    mutationFn: async (notificationId: number) => {
+      return apiRequest("POST", `/api/notifications/${notificationId}/approve-follow`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/follow-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
+      toast({
+        title: "Follow request approved",
+        description: "You have a new follower!",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to approve request",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const rejectRequestMutation = useMutation({
+    mutationFn: async (notificationId: number) => {
+      return apiRequest("POST", `/api/notifications/${notificationId}/reject-follow`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/follow-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
+      toast({
+        title: "Follow request rejected",
+        description: "The follow request has been declined.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to reject request",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Fetch notifications (with fallback for demo)
   const { data: notifications = [] } = useQuery<NotificationWithUser[]>({
