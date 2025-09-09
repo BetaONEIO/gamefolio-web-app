@@ -1014,6 +1014,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       createdAt: userWithoutPassword.createdAt,
       userType: userWithoutPassword.userType,
       ageRange: userWithoutPassword.ageRange,
+      role: userWithoutPassword.role,
       isAdmin: userWithoutPassword.isAdmin || false,
       messagingEnabled: userWithoutPassword.messagingEnabled || false,
       isPrivate: userWithoutPassword.isPrivate || false,
