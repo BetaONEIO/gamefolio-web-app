@@ -217,10 +217,10 @@ const HomePage = () => {
     };
   }, []);
 
-  // Use trending clips for now since that endpoint is working
+  // Query all clips to show in latest clips section
   const { data: userClips, isLoading: isLoadingUserClips } = useQuery<ClipWithUser[]>({
-    queryKey: [`/api/clips/trending`],
-    staleTime: 0,
+    queryKey: [`/api/clips`],
+    staleTime: 30000, // Cache for 30 seconds
   });
   
   // Filter user clips by game name instead of ID
