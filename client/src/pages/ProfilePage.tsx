@@ -30,7 +30,12 @@ import {
   Share2,
   User as UserIcon,
   MessageSquare,
-  Flag
+  Flag,
+  Home,
+  Search,
+  User,
+  UserClock,
+  Loader2
 } from "lucide-react";
 import { 
   SiSteam,
@@ -187,9 +192,16 @@ const ProfilePage = () => {
   }, [location, isOwnProfile]);
 
   // Fetch user profile data with stats
-  const { data: profile, isLoading: isLoadingProfile } = useQuery<UserWithStats>({
+  const { data: profile, isLoading: isLoadingProfile, error: profileError } = useQuery<UserWithStats>({
     queryKey: [`/api/users/${username}`],
     enabled: !!username,
+    retry: (failureCount, error: any) => {
+      // Don't retry on 404 (user not found) or 403 (private profile)
+      if (error?.status === 404 || error?.status === 403) {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 
   // Follow state management with localStorage persistence for demo users
@@ -707,6 +719,133 @@ const ProfilePage = () => {
         </div>
       </div>
     );
+  }
+
+  // Handle error states
+  if (profileError) {
+    const errorStatus = (profileError as any)?.status;
+    
+    if (errorStatus === 404) {
+      // User not found
+      return (
+        <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-secondary/20">
+          <div className="max-w-2xl w-full text-center space-y-8">
+            <div className="flex justify-center mb-8">
+              <img
+                src="/attached_assets/Gamefolio logo copy.png"
+                alt="Gamefolio"
+                className="h-24 w-auto drop-shadow-lg"
+              />
+            </div>
+            <div className="space-y-4">
+              <h1 className="text-6xl font-bold text-primary tracking-tight">404</h1>
+              <h2 className="text-3xl font-semibold text-foreground">User Not Found</h2>
+              <p className="text-lg text-muted-foreground max-w-md mx-auto leading-relaxed">
+                The user "{username}" doesn't exist on Gamefolio. They may have changed their username or deleted their account.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
+              <Button
+                onClick={() => setLocation("/")}
+                className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 py-3"
+                data-testid="button-home"
+              >
+                <Home className="mr-2 h-5 w-5" />
+                Go Home
+              </Button>
+              <Button
+                onClick={() => setLocation("/explore")}
+                variant="outline"
+                className="w-full sm:w-auto border-primary/20 hover:bg-primary/10 font-semibold px-6 py-3"
+                data-testid="button-explore"
+              >
+                <Search className="mr-2 h-5 w-5" />
+                Explore
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    } else if (errorStatus === 403) {
+      // Private profile - show limited profile info with follow button
+      return (
+        <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-secondary/20">
+          <div className="max-w-2xl w-full text-center space-y-8">
+            <div className="flex justify-center mb-8">
+              <img
+                src="/attached_assets/Gamefolio logo copy.png"
+                alt="Gamefolio"
+                className="h-16 w-auto drop-shadow-lg"
+              />
+            </div>
+            <div className="space-y-4">
+              <div className="flex justify-center mb-4">
+                <div className="h-24 w-24 rounded-full bg-muted flex items-center justify-center">
+                  <User className="h-12 w-12 text-muted-foreground" />
+                </div>
+              </div>
+              <h1 className="text-4xl font-bold text-foreground">@{username}</h1>
+              <h2 className="text-xl font-semibold text-muted-foreground">Private Profile</h2>
+              <p className="text-lg text-muted-foreground max-w-md mx-auto leading-relaxed">
+                This profile is private. Follow {username} to see their gaming content and activity.
+              </p>
+            </div>
+            {currentUser && (
+              <div className="flex justify-center pt-4">
+                <Button
+                  onClick={() => followMutation.mutate({ currentFollowStatus: followRequestStatus })}
+                  disabled={followMutation.isPending}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 py-3"
+                  data-testid="button-follow"
+                >
+                  {followMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading...
+                    </>
+                  ) : followRequestStatus === 'following' ? (
+                    <>
+                      <UserCheck className="mr-2 h-4 w-4" />
+                      Following
+                    </>
+                  ) : followRequestStatus === 'requested' ? (
+                    <>
+                      <UserClock className="mr-2 h-4 w-4" />
+                      Pending
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Follow
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
+              <Button
+                onClick={() => setLocation("/")}
+                variant="outline"
+                className="w-full sm:w-auto border-primary/20 hover:bg-primary/10 font-semibold px-6 py-3"
+                data-testid="button-home"
+              >
+                <Home className="mr-2 h-5 w-5" />
+                Go Home
+              </Button>
+              <Button
+                onClick={() => setLocation("/explore")}
+                variant="outline"
+                className="w-full sm:w-auto border-primary/20 hover:bg-primary/10 font-semibold px-6 py-3"
+                data-testid="button-explore"
+              >
+                <Search className="mr-2 h-5 w-5" />
+                Explore
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
   }
 
   if (!profile) {
