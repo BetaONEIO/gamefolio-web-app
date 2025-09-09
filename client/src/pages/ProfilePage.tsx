@@ -721,9 +721,11 @@ const ProfilePage = () => {
 
   // Handle error states
   if (profileError) {
-    const errorStatus = (profileError as any)?.status;
+    const errorMessage = (profileError as Error)?.message || '';
+    const is404Error = errorMessage.includes('404:') || errorMessage.includes('User not found');
+    const is403Error = errorMessage.includes('403:') || errorMessage.includes('private');
     
-    if (errorStatus === 404) {
+    if (is404Error) {
       // User not found
       return (
         <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-secondary/20">
@@ -764,7 +766,7 @@ const ProfilePage = () => {
           </div>
         </div>
       );
-    } else if (errorStatus === 403) {
+    } else if (is403Error) {
       // Private profile - show limited profile info with follow button
       return (
         <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-secondary/20">
