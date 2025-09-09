@@ -86,7 +86,7 @@ router.get('/auth/verify-email', async (req: Request, res: Response) => {
     if (!token || typeof token !== 'string') {
       console.log('❌ No token provided in verification request');
       // Redirect to frontend with error
-      return res.redirect(`/verify-email?status=invalid`);
+      return res.redirect(302, `/verify-email?status=invalid`);
     }
 
     console.log(`🔍 Attempting to verify token: ${token.substring(0, 10)}...`);
@@ -111,10 +111,10 @@ router.get('/auth/verify-email', async (req: Request, res: Response) => {
       
       if (recentlyVerifiedUsers.length > 0) {
         console.log(`✅ Found ${recentlyVerifiedUsers.length} recently verified users - showing success instead of expired`);
-        return res.redirect(`/verify-email?status=success`);
+        return res.redirect(302, `/verify-email?status=success`);
       }
       
-      return res.redirect(`/verify-email?status=expired`);
+      return res.redirect(302, `/verify-email?status=expired`);
     }
 
     console.log(`🔍 Found token for user ${existingToken.userId}`);
@@ -127,14 +127,14 @@ router.get('/auth/verify-email', async (req: Request, res: Response) => {
 
     if (!user) {
       console.log('❌ User not found during verification');
-      return res.redirect(`/verify-email?status=error`);
+      return res.redirect(302, `/verify-email?status=error`);
     }
 
     if (user.emailVerified) {
       console.log(`✅ User ${existingToken.userId} is already verified - showing success instead of expired`);
       // Clean up the token since user is already verified
       await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.id, existingToken.id));
-      return res.redirect(`/verify-email?status=success`);
+      return res.redirect(302, `/verify-email?status=success`);
     }
 
     // Now verify the token (this will also delete it)
@@ -143,7 +143,7 @@ router.get('/auth/verify-email', async (req: Request, res: Response) => {
     if (!userId) {
       console.log('❌ Token verification failed - token invalid or expired');
       // Redirect to frontend with error
-      return res.redirect(`/verify-email?status=expired`);
+      return res.redirect(302, `/verify-email?status=expired`);
     }
 
     console.log(`✅ Token verified successfully for user ID: ${userId}`);
@@ -173,12 +173,12 @@ router.get('/auth/verify-email', async (req: Request, res: Response) => {
     }
 
     // Redirect to frontend with success
-    return res.redirect(`/verify-email?status=success`);
+    return res.redirect(302, `/verify-email?status=success`);
 
   } catch (error) {
     console.error('❌ Error verifying email:', error);
     // Redirect to frontend with error
-    return res.redirect(`/verify-email?status=error`);
+    return res.redirect(302, `/verify-email?status=error`);
   }
 });
 

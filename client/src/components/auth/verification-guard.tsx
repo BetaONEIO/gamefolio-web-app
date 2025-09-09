@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -74,11 +74,50 @@ export function VerificationGuard({
 
 function EmailVerificationRequired({ user }: { user: any }) {
   const [, setLocation] = useLocation();
+  const [redirectFailed, setRedirectFailed] = useState(false);
   
-  // Automatically redirect to verify-code page
+  // Automatically redirect to verify-code page with timeout
   useEffect(() => {
-    setLocation('/verify-code');
+    const redirectTimer = setTimeout(() => {
+      setLocation('/verify-code');
+    }, 100); // Small delay to prevent immediate redirect issues
+
+    // Fallback in case redirect doesn't work
+    const fallbackTimer = setTimeout(() => {
+      setRedirectFailed(true);
+    }, 3000); // If still here after 3 seconds, show manual option
+
+    return () => {
+      clearTimeout(redirectTimer);
+      clearTimeout(fallbackTimer);
+    };
   }, [setLocation]);
+
+  // If redirect failed, show manual option
+  if (redirectFailed) {
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader className="text-center">
+          <Mail className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+          <CardTitle>Email Verification Required</CardTitle>
+          <CardDescription>
+            Please verify your email address to continue
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground text-center">
+            We've sent a verification code to {user.email}
+          </p>
+          <Button 
+            onClick={() => setLocation('/verify-code')} 
+            className="w-full"
+          >
+            Enter Verification Code
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // Show loading while redirecting
   return (
@@ -92,7 +131,7 @@ function EmailVerificationRequired({ user }: { user: any }) {
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-center py-4">
-          <div className="text-muted-foreground">Loading...</div>
+          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       </CardContent>
     </Card>

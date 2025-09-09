@@ -52,8 +52,20 @@ export default function VerifyEmailPage() {
     // Instead of making a POST request, redirect to the GET endpoint
     if (token) {
       console.log('🔗 Direct token link detected, redirecting to server verification');
-      // Redirect to the server GET endpoint which will handle verification and redirect back
-      window.location.href = `/api/auth/verify-email?token=${encodeURIComponent(token)}`;
+      
+      // Add a timeout to prevent infinite hanging
+      setTimeout(() => {
+        // Redirect to the server GET endpoint which will handle verification and redirect back
+        window.location.href = `/api/auth/verify-email?token=${encodeURIComponent(token)}`;
+      }, 500);
+      
+      // Set a fallback timeout in case redirect fails
+      setTimeout(() => {
+        console.warn('Redirect may have failed, trying alternate approach');
+        setVerificationStatus('error');
+        setMessage('Verification is taking longer than expected. Please try refreshing the page or contact support.');
+      }, 10000); // 10 seconds fallback
+      
       return;
     }
 
