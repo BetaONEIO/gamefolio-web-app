@@ -3,15 +3,23 @@ import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, ArrowLeft, Play } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Upload, ArrowLeft, Play, TrendingUp, Camera, Users, Clock, Calendar, CalendarDays } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { ClipWithUser, Game } from "@shared/schema";
 import { formatDuration } from "@/lib/constants";
+import VideoClipCard from "@/components/clips/VideoClipCard";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/hooks/use-auth";
 
 const GamePage = () => {
   const [, navigate] = useLocation();
   const [match, params] = useRoute("/games/:gameSlug");
   const gameSlug = params?.gameSlug;
+  const [timePeriod, setTimePeriod] = useState<'day' | 'week' | 'month'>('day');
+  const [contentType, setContentType] = useState<'clips' | 'reels' | 'screenshots'>('clips');
+  const { user } = useAuth();
 
   // Get game data by slug (will create from Twitch if doesn't exist)
   const { data: game, isLoading: gameLoading } = useQuery<Game>({
