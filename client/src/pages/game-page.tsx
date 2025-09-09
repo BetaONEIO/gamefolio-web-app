@@ -85,6 +85,31 @@ const GamePage = () => {
     navigate("/upload");
   };
 
+  // Helper functions for time period
+  const getPeriodIcon = (period: 'day' | 'week' | 'month') => {
+    switch (period) {
+      case 'day': return <Clock className="h-3 w-3" />;
+      case 'week': return <Calendar className="h-3 w-3" />;
+      case 'month': return <CalendarDays className="h-3 w-3" />;
+    }
+  };
+
+  const getPeriodLabel = (period: 'day' | 'week' | 'month') => {
+    switch (period) {
+      case 'day': return 'Today';
+      case 'week': return 'This Week';
+      case 'month': return 'This Month';
+    }
+  };
+
+  // Data processing for display
+  const currentData = contentType === 'clips' ? trendingClips : 
+                     contentType === 'reels' ? trendingReels : screenshots;
+  const isLoadingCurrent = contentType === 'clips' ? isLoadingClips : 
+                          contentType === 'reels' ? isLoadingReels : isLoadingScreenshots;
+  const fallbackData = contentType === 'screenshots' ? [] : clips;
+  const displayData = currentData?.length ? currentData : fallbackData;
+
   if (!match || !gameSlug) {
     return <div>Game not found</div>;
   }
