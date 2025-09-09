@@ -381,7 +381,7 @@ const HomePage = () => {
                   </div>
                 ))
               ) : (
-                latestClips?.filter(clip => !clip.videoType || clip.videoType === 'clip')?.slice(0, 6).map((clip: ClipWithUser) => (
+                latestClips?.slice(0, 6).map((clip: ClipWithUser) => (
                   <VideoClipGridItem 
                     key={`clip-${clip.id}`}
                     clip={clip}
