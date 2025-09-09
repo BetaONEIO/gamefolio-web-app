@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, User as UserIcon, Heart, MessageCircle, Upload, UserPlus, X } from "lucide-react";
+import { Bell, User as UserIcon, Heart, MessageCircle, Upload, UserPlus, X, UserCheck, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,6 +11,7 @@ import { Notification } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { useApproveFollowRequest, useRejectFollowRequest } from "@/hooks/use-follow-requests";
 
 interface NotificationWithUser extends Notification {
   fromUser?: {
@@ -25,6 +26,10 @@ export function NotificationBell() {
   const [showGreenPopup, setShowGreenPopup] = useState(false);
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
   const [, setLocation] = useLocation();
+  
+  // Follow request mutations
+  const approveRequestMutation = useApproveFollowRequest();
+  const rejectRequestMutation = useRejectFollowRequest();
 
   // Fetch notifications (with fallback for demo)
   const { data: notifications = [] } = useQuery<NotificationWithUser[]>({
@@ -136,6 +141,8 @@ export function NotificationBell() {
         return <MessageCircle className="h-4 w-4 text-blue-500" />;
       case 'follow':
         return <UserPlus className="h-4 w-4 text-green-500" />;
+      case 'follow_request':
+        return <UserPlus className="h-4 w-4 text-orange-500" />;
       case 'upload':
         return <Upload className="h-4 w-4 text-purple-500" />;
       case 'message':
@@ -269,6 +276,43 @@ export function NotificationBell() {
                       <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
                         {notification.message}
                       </p>
+                      
+                      {/* Show approve/reject buttons for follow requests */}
+                      {notification.type === 'follow_request' && (
+                        <div className="flex gap-2 mb-2">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Extract request ID from actionUrl or use a different approach
+                              // For now, we'll use the notification ID as a fallback
+                              const requestId = notification.id; // This should be the follow request ID
+                              approveRequestMutation.mutate(requestId);
+                            }}
+                            disabled={approveRequestMutation.isPending}
+                            className="h-7 px-3 text-xs bg-green-600 hover:bg-green-700"
+                          >
+                            <UserCheck className="h-3 w-3 mr-1" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const requestId = notification.id; // This should be the follow request ID
+                              rejectRequestMutation.mutate(requestId);
+                            }}
+                            disabled={rejectRequestMutation.isPending}
+                            className="h-7 px-3 text-xs border-red-200 text-red-600 hover:bg-red-50"
+                          >
+                            <UserX className="h-3 w-3 mr-1" />
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                      
                       <p className="text-xs text-muted-foreground">
                         {formatTimeAgo(typeof notification.createdAt === 'string' ? notification.createdAt : notification.createdAt.toISOString())}
                       </p>
