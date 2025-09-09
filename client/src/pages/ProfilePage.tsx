@@ -33,8 +33,6 @@ import {
   Flag,
   Home,
   Search,
-  User,
-  UserClock,
   Loader2
 } from "lucide-react";
 import { 
@@ -781,7 +779,7 @@ const ProfilePage = () => {
             <div className="space-y-4">
               <div className="flex justify-center mb-4">
                 <div className="h-24 w-24 rounded-full bg-muted flex items-center justify-center">
-                  <User className="h-12 w-12 text-muted-foreground" />
+                  <UserIcon className="h-12 w-12 text-muted-foreground" />
                 </div>
               </div>
               <h1 className="text-4xl font-bold text-foreground">@{username}</h1>
@@ -810,7 +808,7 @@ const ProfilePage = () => {
                     </>
                   ) : followRequestStatus === 'requested' ? (
                     <>
-                      <UserClock className="mr-2 h-4 w-4" />
+                      <Clock className="mr-2 h-4 w-4" />
                       Pending
                     </>
                   ) : (
