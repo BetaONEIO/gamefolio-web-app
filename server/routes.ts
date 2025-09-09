@@ -1235,6 +1235,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
+      // Check privacy controls for private profiles
+      const requesterId = req.user?.id;
+      const isOwnProfile = requesterId === user.id;
+
+      if (user.isPrivate && !isOwnProfile && requesterId) {
+        const isFollowing = await storage.isFollowing(requesterId, user.id);
+        if (!isFollowing) {
+          return res.status(403).json({ message: "This profile is private. Follow the user to see their content." });
+        }
+      } else if (user.isPrivate && !isOwnProfile && !requesterId) {
+        return res.status(403).json({ message: "This profile is private. Please log in and follow the user to see their content." });
+      }
+
       // Get additional user stats
       const userWithStats = await storage.getUserWithStats(user.id);
       if (!userWithStats) {
