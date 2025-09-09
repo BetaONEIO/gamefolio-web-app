@@ -257,14 +257,16 @@ const HomePage = () => {
       console.log('HomePage: No userClips data');
       return [];
     }
-    console.log('HomePage: Processing', userClips.length, 'clips');
+    console.log('HomePage: Processing', userClips.length, 'clips for latest section');
+    console.log('HomePage: First few clips:', userClips.slice(0, 3).map(c => ({ id: c.id, title: c.title, createdAt: c.createdAt })));
     // Sort by newest first, handle null dates
     const sorted = [...userClips].sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA;
     }).slice(0, 20); // Increase to 20 clips to have more content
-    console.log('HomePage: Sorted clips:', sorted.length);
+    console.log('HomePage: Sorted clips for latest section:', sorted.length, 'clips');
+    console.log('HomePage: Latest clips titles:', sorted.slice(0, 6).map(c => c.title));
     return sorted;
   }, [userClips]);
   
