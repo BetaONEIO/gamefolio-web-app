@@ -33,6 +33,54 @@ const GamePage = () => {
     enabled: !!game?.id,
   });
 
+  // Fetch trending clips for this game
+  const { data: trendingClips, isLoading: isLoadingClips } = useQuery<ClipWithUser[]>({
+    queryKey: ['/api/clips/trending', timePeriod, game?.id],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        period: timePeriod,
+        limit: '20',
+        gameId: game?.id?.toString() || '',
+      });
+      const response = await fetch(`/api/clips/trending?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch trending clips');
+      return response.json();
+    },
+    enabled: contentType === 'clips' && !!game?.id,
+  });
+
+  // Fetch trending reels for this game
+  const { data: trendingReels, isLoading: isLoadingReels } = useQuery<ClipWithUser[]>({
+    queryKey: ['/api/reels/trending', timePeriod, game?.id],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        period: timePeriod,
+        limit: '20',
+        gameId: game?.id?.toString() || '',
+      });
+      const response = await fetch(`/api/reels/trending?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch trending reels');
+      return response.json();
+    },
+    enabled: contentType === 'reels' && !!game?.id,
+  });
+
+  // Fetch screenshots for this game
+  const { data: screenshots, isLoading: isLoadingScreenshots } = useQuery<ClipWithUser[]>({
+    queryKey: ['/api/screenshots', timePeriod, game?.id],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        period: timePeriod,
+        limit: '20',
+        gameId: game?.id?.toString() || '',
+      });
+      const response = await fetch(`/api/screenshots?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch screenshots');
+      return response.json();
+    },
+    enabled: contentType === 'screenshots' && !!game?.id,
+  });
+
   const handleUploadClick = () => {
     navigate("/upload");
   };
