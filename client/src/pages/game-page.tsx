@@ -174,10 +174,48 @@ const GamePage = () => {
           </p>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">
-              {clips?.length || 0} clips available
+              {displayData?.length || 0} {contentType} available
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Controls */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        {/* Time Period Filter */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">Time Period:</span>
+          {(['day', 'week', 'month'] as const).map((period) => (
+            <Button
+              key={period}
+              variant={timePeriod === period ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTimePeriod(period)}
+              className="flex items-center gap-2"
+            >
+              {getPeriodIcon(period)}
+              {getPeriodLabel(period)}
+            </Button>
+          ))}
+        </div>
+
+        {/* Content Type Tabs */}
+        <Tabs value={contentType} onValueChange={(value) => setContentType(value as 'clips' | 'reels' | 'screenshots')}>
+          <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+            <TabsTrigger value="clips" className="flex items-center gap-2">
+              <Play className="h-4 w-4" />
+              Clips
+            </TabsTrigger>
+            <TabsTrigger value="reels" className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Reels
+            </TabsTrigger>
+            <TabsTrigger value="screenshots" className="flex items-center gap-2">
+              <Camera className="h-4 w-4" />
+              Screenshots
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       {/* Clips Grid */}
