@@ -1,24 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Home, ArrowLeft, Search } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { useAuth } from "@/hooks/use-auth";
-import { useEffect } from "react";
 
-export default function NotFound() {
+export default function NotFoundPage() {
   const [, setLocation] = useLocation();
-  const { user, isLoading } = useAuth();
-
-  // Enforce onboarding completion even on 404 pages
-  useEffect(() => {
-    if (!isLoading && user && (!user.userType || !user.ageRange)) {
-      setLocation("/onboarding");
-    }
-  }, [user, isLoading, setLocation]);
-
-  // If user needs onboarding, don't show 404 page
-  if (user && (!user.userType || !user.ageRange)) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-secondary/20">
