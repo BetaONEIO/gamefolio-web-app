@@ -343,8 +343,8 @@ export function NotificationBell() {
                         {notification.message}
                       </p>
                       
-                      {/* Show approve/reject buttons for follow requests */}
-                      {notification.type === 'follow_request' && (
+                      {/* Show approve/reject buttons for unread follow requests only */}
+                      {notification.type === 'follow_request' && !notification.isRead && (
                         <div className="flex gap-2 mb-2">
                           <Button
                             size="sm"
