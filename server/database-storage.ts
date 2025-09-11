@@ -564,7 +564,7 @@ export class DatabaseStorage implements IStorage {
             currentUserId ? eq(users.id, currentUserId) : sql`false`, // User's own content
             currentUserId ? and(
               eq(users.isPrivate, true),
-              isNotNull(follows.id) // Current user follows this private account
+              eq(follows.followerId, currentUserId) // Current user follows this private account
             ) : sql`false` // If no current user, don't show any private content
           )
         )
@@ -646,7 +646,7 @@ export class DatabaseStorage implements IStorage {
             currentUserId ? eq(users.id, currentUserId) : sql`false`, // User's own content
             currentUserId ? and(
               eq(users.isPrivate, true),
-              isNotNull(follows.id) // Current user follows this private account
+              eq(follows.followerId, currentUserId) // Current user follows this private account
             ) : sql`false` // If no current user, don't show any private content
           )
         )
@@ -708,7 +708,7 @@ export class DatabaseStorage implements IStorage {
             currentUserId ? eq(users.id, currentUserId) : sql`false`, // User's own content
             currentUserId ? and(
               eq(users.isPrivate, true),
-              isNotNull(follows.id) // Current user follows this private account
+              eq(follows.followerId, currentUserId) // Current user follows this private account
             ) : sql`false` // If no current user, don't show any private content
           )
         )
