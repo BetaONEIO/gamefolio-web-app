@@ -2041,10 +2041,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clips/trending", async (req, res) => {
     try {
       const { period = 'day', limit = 10, gameId } = req.query;
+      const currentUserId = (req.user as any)?.id;
       const clips = await storage.getTrendingClips(
         period as string,
         parseInt(limit as string) || 10,
-        gameId ? parseInt(gameId as string) : undefined
+        gameId ? parseInt(gameId as string) : undefined,
+        currentUserId
       );
       res.json(clips);
     } catch (err) {
@@ -2057,10 +2059,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clips/reels/trending", async (req, res) => {
     try {
       const { period = 'day', limit = 10, gameId } = req.query;
+      const currentUserId = (req.user as any)?.id;
       const reels = await storage.getTrendingReels(
         period as string,
         parseInt(limit as string) || 10,
-        gameId ? parseInt(gameId as string) : undefined
+        gameId ? parseInt(gameId as string) : undefined,
+        currentUserId
       );
       res.json(reels);
     } catch (err) {
@@ -2073,7 +2077,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reels/latest", async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 6;
-      const reels = await storage.getLatestReels(limit);
+      const currentUserId = (req.user as any)?.id;
+      const reels = await storage.getLatestReels(limit, currentUserId);
       res.json(reels);
     } catch (err) {
       console.error("Error fetching latest reels:", err);
@@ -2085,10 +2090,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reels/trending", async (req, res) => {
     try {
       const { period = 'day', limit = 10, gameId } = req.query;
+      const currentUserId = (req.user as any)?.id;
       const reels = await storage.getTrendingReels(
         period as string,
         parseInt(limit as string) || 10,
-        gameId ? parseInt(gameId as string) : undefined
+        gameId ? parseInt(gameId as string) : undefined,
+        currentUserId
       );
       res.json(reels);
     } catch (err) {

@@ -56,7 +56,7 @@ import {
   heroTextSettings
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray } from "drizzle-orm";
+import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, isNotNull } from "drizzle-orm";
 import session from "express-session";
 import MemoryStore from "memorystore";
 import { IStorage } from "./storage";
@@ -521,7 +521,7 @@ export class DatabaseStorage implements IStorage {
     return clipsWithDetails;
   }
 
-  async getTrendingClips(period: string = 'day', limit: number = 10, gameId?: number): Promise<ClipWithUser[]> {
+  async getTrendingClips(period: string = 'day', limit: number = 10, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]> {
     let dateFilter;
     const now = new Date();
 
@@ -539,20 +539,34 @@ export class DatabaseStorage implements IStorage {
         dateFilter = new Date(0);
     }
 
-    // Get clips based on engagement (likes + comments)
+    // Get clips based on engagement (likes + comments) with privacy filtering
     const clipEngagementQuery = db
       .select({
         clipId: clips.id,
         engagement: sql<number>`cast(count(distinct ${likes.id}) + count(distinct ${comments.id}) as integer)`.as('engagement')
       })
       .from(clips)
+      .leftJoin(users, eq(clips.userId, users.id))
       .leftJoin(likes, eq(clips.id, likes.clipId))
       .leftJoin(comments, eq(clips.id, comments.clipId))
+      .leftJoin(follows, and(
+        eq(follows.followingId, users.id),
+        currentUserId ? eq(follows.followerId, currentUserId) : sql`false`
+      ))
       .where(
         and(
           gt(clips.createdAt, dateFilter),
           eq(clips.videoType, 'clip'),
-          gameId ? eq(clips.gameId, gameId) : undefined
+          gameId ? eq(clips.gameId, gameId) : undefined,
+          // Only show clips from public accounts OR private accounts that current user follows OR user's own content
+          or(
+            eq(users.isPrivate, false), // Public accounts
+            currentUserId ? eq(users.id, currentUserId) : sql`false`, // User's own content
+            currentUserId ? and(
+              eq(users.isPrivate, true),
+              isNotNull(follows.id) // Current user follows this private account
+            ) : sql`false` // If no current user, don't show any private content
+          )
         )
       )
       .groupBy(clips.id)
@@ -572,7 +586,7 @@ export class DatabaseStorage implements IStorage {
     return clipsWithDetails;
   }
 
-  async getTrendingReels(period: string = 'day', limit: number = 10, gameId?: number): Promise<ClipWithUser[]> {
+  async getTrendingReels(period: string = 'day', limit: number = 10, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]> {
     let dateFilter;
     const now = new Date();
 
@@ -617,11 +631,24 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(games, eq(clips.gameId, games.id))
       .leftJoin(likes, eq(clips.id, likes.clipId))
       .leftJoin(comments, eq(clips.id, comments.clipId))
+      .leftJoin(follows, and(
+        eq(follows.followingId, users.id),
+        currentUserId ? eq(follows.followerId, currentUserId) : sql`false`
+      ))
       .where(
         and(
           gt(clips.createdAt, dateFilter),
           eq(clips.videoType, 'reel'),
-          gameId ? eq(clips.gameId, gameId) : undefined
+          gameId ? eq(clips.gameId, gameId) : undefined,
+          // Only show reels from public accounts OR private accounts that current user follows OR user's own content
+          or(
+            eq(users.isPrivate, false), // Public accounts
+            currentUserId ? eq(users.id, currentUserId) : sql`false`, // User's own content
+            currentUserId ? and(
+              eq(users.isPrivate, true),
+              isNotNull(follows.id) // Current user follows this private account
+            ) : sql`false` // If no current user, don't show any private content
+          )
         )
       )
       .groupBy(clips.id, users.id, games.id)
@@ -641,7 +668,7 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getLatestReels(limit: number): Promise<ClipWithUser[]> {
+  async getLatestReels(limit: number, currentUserId?: number): Promise<ClipWithUser[]> {
     // Get latest reels by creation date (newest first) with engagement counts
     const latestReelsQuery = db
       .select({
@@ -668,7 +695,24 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(games, eq(clips.gameId, games.id))
       .leftJoin(likes, eq(clips.id, likes.clipId))
       .leftJoin(comments, eq(clips.id, comments.clipId))
-      .where(eq(clips.videoType, 'reel'))
+      .leftJoin(follows, and(
+        eq(follows.followingId, users.id),
+        currentUserId ? eq(follows.followerId, currentUserId) : sql`false`
+      ))
+      .where(
+        and(
+          eq(clips.videoType, 'reel'),
+          // Only show reels from public accounts OR private accounts that current user follows OR user's own content
+          or(
+            eq(users.isPrivate, false), // Public accounts
+            currentUserId ? eq(users.id, currentUserId) : sql`false`, // User's own content
+            currentUserId ? and(
+              eq(users.isPrivate, true),
+              isNotNull(follows.id) // Current user follows this private account
+            ) : sql`false` // If no current user, don't show any private content
+          )
+        )
+      )
       .groupBy(clips.id, users.id, games.id)
       .orderBy(desc(clips.createdAt))
       .limit(limit);
