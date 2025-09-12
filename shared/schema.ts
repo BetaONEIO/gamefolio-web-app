@@ -595,7 +595,30 @@ export const insertHeroTextSettingsSchema = createInsertSchema(heroTextSettings)
   updatedAt: true,
 });
 
+// API Keys table for desktop app authentication
+export const apiKeys = pgTable("api_keys", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  keyName: text("key_name").notNull(), // User-defined name for the key (e.g., "My Gaming Setup", "Streaming PC")
+  keyHash: text("key_hash").notNull(), // Hashed version of the API key for security
+  keyPrefix: text("key_prefix").notNull(), // First few characters for display (e.g., "gf_abc...")
+  permissions: text("permissions").array().default(["upload", "read"]).notNull(), // What the key can do
+  lastUsedAt: timestamp("last_used_at"), // Track when key was last used
+  isActive: boolean("is_active").default(true).notNull(), // Allow users to disable keys
+  expiresAt: timestamp("expires_at"), // Optional expiration date
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 
+// Schema for inserting API keys
+export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
+  id: true,
+  keyHash: true, // Generated server-side
+  keyPrefix: true, // Generated server-side
+  lastUsedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
 
 // Extended types for frontend use
 export type User = typeof users.$inferSelect;
@@ -660,6 +683,9 @@ export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
 
 export type HeroTextSettings = typeof heroTextSettings.$inferSelect;
 export type InsertHeroTextSettings = z.infer<typeof insertHeroTextSettingsSchema>;
+
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
