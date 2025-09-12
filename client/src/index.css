@@ -12,8 +12,9 @@ html, body {
 /* Full-bleed utility */
 .full-bleed {
   width: 100vw;
-  margin-left: 50%;
-  transform: translateX(-50%);
+  margin-left: -50vw;
+  left: 50%;
+  position: relative;
 }
 
 /* Custom animations for upload progress */
