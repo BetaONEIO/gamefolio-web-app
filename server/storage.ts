@@ -1,7 +1,7 @@
 import {
   users, games, clips, likes, comments, userGameFavorites, follows, messages, profileBanners,
   monthlyLeaderboard, userPointsHistory, notifications, userBadges, contentFilterSettings, bannedWords,
-  heroTextSettings,
+  heroTextSettings, apiKeys,
   type User, type InsertUser,
   type Game, type InsertGame,
   type Clip, type InsertClip,
@@ -19,6 +19,7 @@ import {
   type ContentFilterSettings, type InsertContentFilterSettings,
   type BannedWord, type InsertBannedWord,
   type HeroTextSettings, type InsertHeroTextSettings,
+  type ApiKey, type InsertApiKey,
   type ClipWithUser,
   type CommentWithUser,
   type UserWithStats,
@@ -129,6 +130,15 @@ export interface IStorage {
   unblockUser(blockerId: number, blockedId: number): Promise<boolean>;
   getBlockedUsers(userId: number): Promise<User[]>;
   isUserBlocked(userId1: number, userId2: number): Promise<boolean>;
+
+  // API Key operations
+  createApiKey(apiKey: InsertApiKey): Promise<ApiKey>;
+  getApiKeysByUserId(userId: number): Promise<ApiKey[]>;
+  getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined>;
+  updateApiKeyLastUsed(id: number): Promise<void>;
+  updateApiKey(id: number, updates: Partial<ApiKey>): Promise<ApiKey | undefined>;
+  deleteApiKey(id: number): Promise<boolean>;
+  revokeApiKey(id: number, userId: number): Promise<boolean>;
 
   // Search operations
   searchUsers(query: string): Promise<User[]>;

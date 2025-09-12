@@ -23,6 +23,7 @@ import {
   UserPointsHistory, InsertUserPointsHistory,
   ContentFilterSettings, InsertContentFilterSettings,
   BannedWord, InsertBannedWord,
+  ApiKey, InsertApiKey,
   ClipWithUser,
   CommentWithUser,
   ScreenshotCommentWithUser,
@@ -53,7 +54,8 @@ import {
   emailVerificationTokens,
   contentFilterSettings,
   bannedWords,
-  heroTextSettings
+  heroTextSettings,
+  apiKeys
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, isNotNull } from "drizzle-orm";
@@ -1870,6 +1872,119 @@ export class DatabaseStorage implements IStorage {
       return block.length > 0;
     } catch (error) {
       console.error("Error checking if user is blocked:", error);
+      return false;
+    }
+  }
+
+  // API Key operations
+  async createApiKey(apiKeyData: InsertApiKey): Promise<ApiKey> {
+    try {
+      const [apiKey] = await db
+        .insert(apiKeys)
+        .values({
+          ...apiKeyData,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      return apiKey;
+    } catch (error) {
+      console.error("Error creating API key:", error);
+      throw error;
+    }
+  }
+
+  async getApiKeysByUserId(userId: number): Promise<ApiKey[]> {
+    try {
+      const userApiKeys = await db
+        .select()
+        .from(apiKeys)
+        .where(eq(apiKeys.userId, userId))
+        .orderBy(desc(apiKeys.createdAt));
+      return userApiKeys;
+    } catch (error) {
+      console.error("Error fetching API keys for user:", error);
+      return [];
+    }
+  }
+
+  async getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined> {
+    try {
+      const [apiKey] = await db
+        .select()
+        .from(apiKeys)
+        .where(and(
+          eq(apiKeys.keyHash, keyHash),
+          eq(apiKeys.isActive, true)
+        ))
+        .limit(1);
+      
+      return apiKey;
+    } catch (error) {
+      console.error("Error fetching API key by hash:", error);
+      return undefined;
+    }
+  }
+
+  async updateApiKeyLastUsed(id: number): Promise<void> {
+    try {
+      await db
+        .update(apiKeys)
+        .set({ 
+          lastUsedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(apiKeys.id, id));
+    } catch (error) {
+      console.error("Error updating API key last used:", error);
+    }
+  }
+
+  async updateApiKey(id: number, updates: Partial<ApiKey>): Promise<ApiKey | undefined> {
+    try {
+      const [updatedApiKey] = await db
+        .update(apiKeys)
+        .set({ 
+          ...updates, 
+          updatedAt: new Date() 
+        })
+        .where(eq(apiKeys.id, id))
+        .returning();
+      return updatedApiKey;
+    } catch (error) {
+      console.error("Error updating API key:", error);
+      return undefined;
+    }
+  }
+
+  async deleteApiKey(id: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(apiKeys)
+        .where(eq(apiKeys.id, id));
+      return result.rowCount !== null && result.rowCount > 0;
+    } catch (error) {
+      console.error("Error deleting API key:", error);
+      return false;
+    }
+  }
+
+  async revokeApiKey(id: number, userId: number): Promise<boolean> {
+    try {
+      const [updatedApiKey] = await db
+        .update(apiKeys)
+        .set({ 
+          isActive: false,
+          updatedAt: new Date()
+        })
+        .where(and(
+          eq(apiKeys.id, id),
+          eq(apiKeys.userId, userId)
+        ))
+        .returning();
+      return !!updatedApiKey;
+    } catch (error) {
+      console.error("Error revoking API key:", error);
       return false;
     }
   }
