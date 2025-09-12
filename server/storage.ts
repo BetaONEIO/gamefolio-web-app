@@ -47,7 +47,7 @@ export interface IStorage {
   getAdminCount(): Promise<number>;
   getClipCount(): Promise<number>;
   getGameCount(): Promise<number>;
-  getAllClips(limit?: number, offset?: number): Promise<ClipWithUser[]>;
+  getAllClips(limit?: number, offset?: number, currentUserId?: number): Promise<ClipWithUser[]>;
   getUserTypeDistribution(): Promise<{type: string, count: number}[]>;
   getAgeRangeDistribution(): Promise<{range: string, count: number}[]>;
   getTopGames(limit?: number): Promise<Game[]>;

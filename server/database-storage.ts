@@ -1154,10 +1154,21 @@ export class DatabaseStorage implements IStorage {
     return Number(result.count);
   }
 
-  async getAllClips(limit: number = 10, offset: number = 0): Promise<ClipWithUser[]> {
+  async getAllClips(limit: number = 10, offset: number = 0, currentUserId?: number): Promise<ClipWithUser[]> {
+    console.log('getAllClips: currentUserId =', currentUserId);
+    
     const clipIds = await db
       .select({ id: clips.id })
       .from(clips)
+      .leftJoin(users, eq(clips.userId, users.id))
+      .where(
+        // Only show clips from public accounts OR private accounts that current user follows OR user's own content
+        or(
+          eq(users.isPrivate, false), // Public accounts
+          currentUserId ? eq(users.id, currentUserId) : sql`false`, // User's own content
+          currentUserId ? sql`exists (select 1 from follows f where f.following_id = ${users.id} and f.follower_id = ${currentUserId})` : sql`false` // Current user follows this private account
+        )
+      )
       .orderBy(desc(clips.createdAt))
       .limit(limit)
       .offset(offset);

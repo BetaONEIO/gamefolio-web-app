@@ -1990,7 +1990,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
       const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
-      const clips = await storage.getAllClips(limit, offset);
+      const currentUserId = (req.user as any)?.id;
+      console.log('🔍 Latest clips API: currentUserId =', currentUserId);
+      
+      // Force no caching for privacy-sensitive content
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
+      const clips = await storage.getAllClips(limit, offset, currentUserId);
       res.json(clips);
     } catch (err) {
       console.error("Error fetching clips:", err);
