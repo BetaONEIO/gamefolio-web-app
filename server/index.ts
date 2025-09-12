@@ -87,13 +87,6 @@ app.use((req, res, next) => {
   try {
     const server = await registerRoutes(app);
 
-    // Temporary session debugging middleware (AFTER session setup)
-    app.use((req, res, next) => {
-      if (req.path.startsWith('/api')) {
-        console.log(`🔍 Session Debug: ${req.method} ${req.path} - SessionID: ${req.sessionID || 'none'}, User: ${(req.user as any)?.id || 'none'}, Username: ${(req.user as any)?.username || 'none'}`);
-      }
-      next();
-    });
 
     // Serve static email assets
     app.use('/static/email-assets', express.static(path.join(__dirname, 'static/email-assets')));

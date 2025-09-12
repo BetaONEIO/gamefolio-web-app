@@ -241,6 +241,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // Temporary session debugging middleware (AFTER session setup)
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      console.log(`🔍 Session Debug: ${req.method} ${req.path} - SessionID: ${req.sessionID || 'none'}, User: ${(req.user as any)?.id || 'none'}, Username: ${(req.user as any)?.username || 'none'}`);
+    }
+    next();
+  });
+
   // URGENT FIX: Blocked users route override - MUST be first before any conflicting routes
   console.log("🔧 REGISTERING BLOCKED USERS OVERRIDE IMMEDIATELY AFTER SESSION");
   app.get("/api/users/blocked", async (req: any, res: any) => {
