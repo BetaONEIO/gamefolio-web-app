@@ -320,7 +320,7 @@ const HomePage = () => {
             <h3 className="text-base sm:text-lg font-semibold mb-2">No clips yet</h3>
             <p className="text-sm sm:text-base text-muted-foreground mb-4 px-4">Upload your first gaming clip to get started!</p>
             <Button 
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 mx-auto"
               onClick={() => setLocation('/upload')}
             >
               <Upload className="h-4 w-4" />
