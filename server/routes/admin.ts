@@ -417,6 +417,73 @@ adminRouter.delete("/clips/:id", async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/admin/screenshots - Get all screenshots with pagination  
+adminRouter.get("/screenshots", async (req: Request, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
+
+    const screenshots = await storage.getAllScreenshots(limit, offset);
+    const total = await storage.getScreenshotCount();
+
+    res.json({
+      screenshots,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (err) {
+    console.error("Error fetching screenshots:", err);
+    res.status(500).json({ message: "Error fetching screenshots" });
+  }
+});
+
+// DELETE /api/admin/screenshots/:id - Delete screenshot
+adminRouter.delete("/screenshots/:id", async (req: Request, res: Response) => {
+  try {
+    const screenshotId = parseInt(req.params.id);
+    const success = await storage.deleteScreenshot(screenshotId);
+
+    if (!success) {
+      return res.status(404).json({ message: "Screenshot not found" });
+    }
+
+    res.json({ message: "Screenshot deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting screenshot:", err);
+    res.status(500).json({ message: "Error deleting screenshot" });
+  }
+});
+
+// GET /api/admin/recent-content - Get recent content (clips, reels, screenshots) in chronological order
+adminRouter.get("/recent-content", async (req: Request, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const contentType = req.query.contentType as string;
+    
+    const recentContent = await storage.getRecentContent(limit, (page - 1) * limit, contentType);
+    const total = await storage.getRecentContentCount(contentType);
+
+    res.json({
+      content: recentContent,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (err) {
+    console.error("Error fetching recent content:", err);
+    res.status(500).json({ message: "Error fetching recent content" });
+  }
+});
+
 // Badge management routes
 
 // GET /api/admin/users/:id/badges - Get user badges

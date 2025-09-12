@@ -2638,4 +2638,180 @@ export class DatabaseStorage implements IStorage {
       return this.getTrendingClips(limit);
     }
   }
+
+  // Screenshot admin operations
+  async getAllScreenshots(limit: number = 10, offset: number = 0): Promise<Screenshot[]> {
+    try {
+      const screenshots = await db
+        .select()
+        .from(screenshots)
+        .orderBy(desc(screenshots.createdAt))
+        .limit(limit)
+        .offset(offset);
+      return screenshots;
+    } catch (error) {
+      console.error('Error getting all screenshots:', error);
+      return [];
+    }
+  }
+
+  async getScreenshotCount(): Promise<number> {
+    try {
+      const [result] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(screenshots);
+      return result?.count || 0;
+    } catch (error) {
+      console.error('Error getting screenshot count:', error);
+      return 0;
+    }
+  }
+
+  // Unified content moderation operations
+  async getRecentContent(limit: number = 20, offset: number = 0, contentType?: string): Promise<Array<{
+    id: number;
+    type: 'clip' | 'reel' | 'screenshot';
+    title: string;
+    description?: string | null;
+    user: { id: number; username: string; displayName: string };
+    game?: { id: number; name: string };
+    createdAt: Date;
+    url: string;
+    thumbnailUrl?: string | null;
+    views: number;
+  }>> {
+    try {
+      const content: any[] = [];
+
+      if (!contentType || contentType === 'clip' || contentType === 'reel') {
+        // Get clips and reels
+        const clipsData = await db
+          .select({
+            id: clips.id,
+            title: clips.title,
+            description: clips.description,
+            videoType: clips.videoType,
+            videoUrl: clips.videoUrl,
+            thumbnailUrl: clips.thumbnailUrl,
+            views: clips.views,
+            createdAt: clips.createdAt,
+            user: {
+              id: users.id,
+              username: users.username,
+              displayName: users.displayName
+            },
+            game: {
+              id: games.id,
+              name: games.name
+            }
+          })
+          .from(clips)
+          .innerJoin(users, eq(clips.userId, users.id))
+          .leftJoin(games, eq(clips.gameId, games.id))
+          .where(contentType === 'clip' ? eq(clips.videoType, 'clip') :
+                 contentType === 'reel' ? eq(clips.videoType, 'reel') :
+                 undefined)
+          .orderBy(desc(clips.createdAt))
+          .limit(contentType ? limit : Math.ceil(limit * 0.6))
+          .offset(contentType ? offset : 0);
+
+        // Transform clips to unified format
+        content.push(...clipsData.map(clip => ({
+          id: clip.id,
+          type: (clip.videoType || 'clip') as 'clip' | 'reel',
+          title: clip.title,
+          description: clip.description,
+          user: clip.user,
+          game: clip.game,
+          createdAt: clip.createdAt,
+          url: clip.videoUrl,
+          thumbnailUrl: clip.thumbnailUrl,
+          views: clip.views
+        })));
+      }
+
+      if (!contentType || contentType === 'screenshot') {
+        // Get screenshots
+        const screenshotsData = await db
+          .select({
+            id: screenshots.id,
+            title: screenshots.title,
+            description: screenshots.description,
+            imageUrl: screenshots.imageUrl,
+            thumbnailUrl: screenshots.thumbnailUrl,
+            views: screenshots.views,
+            createdAt: screenshots.createdAt,
+            user: {
+              id: users.id,
+              username: users.username,
+              displayName: users.displayName
+            },
+            game: {
+              id: games.id,
+              name: games.name
+            }
+          })
+          .from(screenshots)
+          .innerJoin(users, eq(screenshots.userId, users.id))
+          .leftJoin(games, eq(screenshots.gameId, games.id))
+          .orderBy(desc(screenshots.createdAt))
+          .limit(contentType === 'screenshot' ? limit : Math.ceil(limit * 0.4))
+          .offset(contentType === 'screenshot' ? offset : 0);
+
+        // Transform screenshots to unified format
+        content.push(...screenshotsData.map(screenshot => ({
+          id: screenshot.id,
+          type: 'screenshot' as const,
+          title: screenshot.title,
+          description: screenshot.description,
+          user: screenshot.user,
+          game: screenshot.game,
+          createdAt: screenshot.createdAt,
+          url: screenshot.imageUrl,
+          thumbnailUrl: screenshot.thumbnailUrl,
+          views: screenshot.views
+        })));
+      }
+
+      // Sort all content by creation date and apply pagination if not filtered by type
+      const sortedContent = content.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+      if (contentType) {
+        return sortedContent;
+      } else {
+        return sortedContent.slice(offset, offset + limit);
+      }
+    } catch (error) {
+      console.error('Error getting recent content:', error);
+      return [];
+    }
+  }
+
+  async getRecentContentCount(contentType?: string): Promise<number> {
+    try {
+      let count = 0;
+
+      if (!contentType || contentType === 'clip' || contentType === 'reel') {
+        const [clipResult] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(clips)
+          .where(contentType === 'clip' ? eq(clips.videoType, 'clip') :
+                 contentType === 'reel' ? eq(clips.videoType, 'reel') :
+                 undefined);
+        count += clipResult?.count || 0;
+      }
+
+      if (!contentType || contentType === 'screenshot') {
+        const [screenshotResult] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(screenshots);
+        count += screenshotResult?.count || 0;
+      }
+
+      return count;
+    } catch (error) {
+      console.error('Error getting recent content count:', error);
+      return 0;
+    }
+  }
 }

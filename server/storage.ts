@@ -23,8 +23,7 @@ import {
   type CommentWithUser,
   type UserWithStats,
   type Screenshot, type InsertScreenshot,
-  type InsertClipData,
-  type InsertScreenshotData
+  type InsertScreenshot as InsertScreenshotData
 } from "@shared/schema";
 
 export interface IStorage {
@@ -64,8 +63,8 @@ export interface IStorage {
   // Clip operations
   getClip(id: number): Promise<Clip | undefined>;
   getClipWithUser(id: number): Promise<ClipWithUser | undefined>;
-  createClip(clipData: InsertClipData): Promise<Clip>;
-  createClipWithId(clipData: InsertClipData & { id: number }): Promise<Clip>;
+  createClip(clipData: InsertClip): Promise<Clip>;
+  createClipWithId(clipData: InsertClip & { id: number }): Promise<Clip>;
   updateClip(id: number, clip: Partial<Clip>): Promise<Clip | undefined>;
   updateClipDuration(id: number, duration: number): Promise<boolean>;
   deleteClip(id: number): Promise<boolean>;
@@ -109,7 +108,7 @@ export interface IStorage {
 
   // Follow request operations
   createFollowRequest(requesterId: number, requestedId: number): Promise<void>;
-  getPendingFollowRequests(userId: number);
+  getPendingFollowRequests(userId: number): Promise<any[]>;
   getFollowRequest(requestId: number): Promise<any>;
   hasFollowRequest(requesterId: number, requestedId: number): Promise<string | null>;
   acceptFollowRequest(requestId: number): Promise<boolean>;
@@ -183,6 +182,8 @@ export interface IStorage {
 
   // Screenshot operations
   getScreenshot(id: number): Promise<Screenshot | undefined>;
+  getAllScreenshots(limit?: number, offset?: number): Promise<Screenshot[]>;
+  getScreenshotCount(): Promise<number>;
   createScreenshot(screenshotData: InsertScreenshotData): Promise<Screenshot>;
   createScreenshotWithId(screenshotData: InsertScreenshotData & { id: number }): Promise<Screenshot>;
   updateScreenshot(id: number, screenshot: Partial<Screenshot>): Promise<Screenshot | undefined>;
@@ -216,6 +217,21 @@ export interface IStorage {
 
   // Recommendation operations
   getRecommendedClips(userId: number, limit?: number): Promise<ClipWithUser[]>;
+
+  // Unified content moderation operations  
+  getRecentContent(limit?: number, offset?: number, contentType?: string): Promise<Array<{
+    id: number;
+    type: 'clip' | 'reel' | 'screenshot';
+    title: string;
+    description?: string | null;
+    user: { id: number; username: string; displayName: string };
+    game?: { id: number; name: string };
+    createdAt: Date;
+    url: string;
+    thumbnailUrl?: string | null;
+    views: number;
+  }>>;
+  getRecentContentCount(contentType?: string): Promise<number>;
 }
 
 // Use DatabaseStorage with Supabase - no fallback to in-memory storage
