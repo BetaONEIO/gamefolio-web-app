@@ -2026,19 +2026,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get trending clips - most popular clips on the platform
-  app.get("/api/clips/trending", async (req, res) => {
-    try {
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 16;
-      const period = req.query.period as string || 'week'; // day, week, month, all
-
-      const trendingClips = await storage.getFeedClips(period, limit);
-      res.json(trendingClips);
-    } catch (err) {
-      console.error("Error fetching trending clips:", err);
-      return res.status(500).json({ message: "Error fetching trending clips" });
-    }
-  });
 
   // Get all clips feed
   app.get("/api/clips/feed", async (req, res) => {
