@@ -258,10 +258,10 @@ export function NotificationBell() {
             <Bell 
               className="text-gray-400 hover:text-gray-300 transition-colors" 
               style={{ 
-                width: '36px', 
-                height: '36px',
-                minWidth: '36px',
-                minHeight: '36px'
+                width: '20px', 
+                height: '20px',
+                minWidth: '20px',
+                minHeight: '20px'
               }} 
             />
             {unreadCount > 0 && !isOpen && (
