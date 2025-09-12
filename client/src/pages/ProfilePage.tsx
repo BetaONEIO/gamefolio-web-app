@@ -874,7 +874,7 @@ const ProfilePage = () => {
 
   return (
     <div 
-      className="min-h-screen pb-12 sm:pb-12 relative profile-theme-scope" 
+      className="min-h-screen pb-12 relative profile-theme-scope" 
       ref={profileThemeScopeRef}
       style={{ 
         background: '#101D27',
@@ -883,14 +883,13 @@ const ProfilePage = () => {
       }}
     >
       {/* Enhanced Banner with user's theme colors integrated throughout */}
-      <section className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-[100vw] sm:w-[100svw]">
-        <div 
-          className="h-64 sm:h-80 md:h-96 bg-cover bg-center overflow-hidden profile-banner relative border-b-4"
-          style={{
-            ...bannerStyle,
-            borderBottomColor: profile?.accentColor || '#4ADE80',
-          }}
-        >
+      <div 
+        className="h-64 sm:h-80 md:h-96 bg-cover bg-center overflow-hidden profile-banner relative -mx-4 md:-mx-8 border-b-4"
+        style={{
+          ...bannerStyle,
+          borderBottomColor: profile?.accentColor || '#4ADE80',
+        }}
+      >
         {/* Dynamic theme-based gradient overlay */}
         <div 
           className="absolute inset-0 opacity-60" 
@@ -970,13 +969,12 @@ const ProfilePage = () => {
         ></div>
         </>
         )}
-        </div>
-      </section>
+      </div>
 
       {/* Profile Info - positioned below banner with overlapping profile picture */}
       <div className="container mx-auto px-4 relative z-20">
 
-        <div className="flex items-start gap-2 sm:gap-4 md:gap-8 pb-6" style={{ marginTop: '-56px', paddingTop: '24px' }}>
+        <div className="flex items-start gap-4 md:gap-8 pb-6" style={{ marginTop: '-56px', paddingTop: '24px' }}>
           {/* Profile Picture positioned to overlap banner */}
           <div className="relative flex-shrink-0" style={{ transform: 'translateY(-28px)' }}>
             <div 

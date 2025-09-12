@@ -2,21 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* CSS Reset for full-bleed layout */
-html, body {
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-}
-
-/* Full-bleed utility */
-.full-bleed {
-  width: 100vw;
-  margin-left: -50vw;
-  left: 50%;
-  position: relative;
-}
-
 /* Custom animations for upload progress */
 @keyframes slide-right {
   0% {
