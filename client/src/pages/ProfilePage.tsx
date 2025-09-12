@@ -879,12 +879,15 @@ const ProfilePage = () => {
       style={{ 
         background: '#101D27',
         position: 'relative',
-        zIndex: 1
+        zIndex: 1,
+        width: '100vw',
+        marginLeft: '50%',
+        transform: 'translateX(-50%)'
       }}
     >
       {/* Enhanced Banner with user's theme colors integrated throughout */}
       <div 
-        className="h-64 sm:h-80 md:h-96 bg-cover bg-center overflow-hidden profile-banner relative -mx-0 sm:-mx-4 md:-mx-8 border-b-4"
+        className="h-64 sm:h-80 md:h-96 bg-cover bg-center overflow-hidden profile-banner relative border-b-4"
         style={{
           ...bannerStyle,
           borderBottomColor: profile?.accentColor || '#4ADE80',
