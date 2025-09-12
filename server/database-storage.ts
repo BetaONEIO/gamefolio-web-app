@@ -540,6 +540,8 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Get clips based on engagement (likes + comments) with privacy filtering
+    console.log('getTrendingClips: currentUserId =', currentUserId);
+    
     const clipEngagementQuery = db
       .select({
         clipId: clips.id,
@@ -549,10 +551,6 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(clips.userId, users.id))
       .leftJoin(likes, eq(clips.id, likes.clipId))
       .leftJoin(comments, eq(clips.id, comments.clipId))
-      .leftJoin(follows, and(
-        eq(follows.followingId, users.id),
-        currentUserId ? eq(follows.followerId, currentUserId) : sql`false`
-      ))
       .where(
         and(
           gt(clips.createdAt, dateFilter),
@@ -562,10 +560,7 @@ export class DatabaseStorage implements IStorage {
           or(
             eq(users.isPrivate, false), // Public accounts
             currentUserId ? eq(users.id, currentUserId) : sql`false`, // User's own content
-            currentUserId ? and(
-              eq(users.isPrivate, true),
-              eq(follows.followerId, currentUserId) // Current user follows this private account
-            ) : sql`false` // If no current user, don't show any private content
+            currentUserId ? sql`exists (select 1 from follows f where f.following_id = ${users.id} and f.follower_id = ${currentUserId})` : sql`false` // Current user follows this private account
           )
         )
       )

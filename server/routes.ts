@@ -2042,12 +2042,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { period = 'day', limit = 10, gameId } = req.query;
       const currentUserId = (req.user as any)?.id;
+      console.log('🔍 Trending clips API: currentUserId =', currentUserId, 'period =', period);
       const clips = await storage.getTrendingClips(
         period as string,
         parseInt(limit as string) || 10,
         gameId ? parseInt(gameId as string) : undefined,
         currentUserId
       );
+      res.setHeader('Cache-Control', 'no-store');
       res.json(clips);
     } catch (err) {
       console.error("Error fetching trending clips:", err);
