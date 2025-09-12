@@ -256,13 +256,7 @@ export function NotificationBell() {
             aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
           >
             <Bell 
-              className="text-gray-400 hover:text-gray-300 transition-colors" 
-              style={{ 
-                width: '20px', 
-                height: '20px',
-                minWidth: '20px',
-                minHeight: '20px'
-              }} 
+              className="text-gray-400 hover:text-gray-300 transition-colors w-5 h-5 sm:w-9 sm:h-9" 
             />
             {unreadCount > 0 && !isOpen && (
               <>

@@ -314,14 +314,14 @@ const Header = () => {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="ml-2 sm:ml-4 p-1 h-auto hover:bg-transparent">
                       <Avatar 
-                        className="w-4 h-4 sm:w-6 sm:h-6 border-2 transition-all duration-300"
+                        className="w-4 h-4 sm:w-6 sm:h-6 md:w-8 md:h-8 lg:w-10 lg:h-10 xl:w-12 xl:h-12 border-2 transition-all duration-300"
                         style={{
                           borderColor: user.avatarBorderColor || user.accentColor || '#4ADE80',
                           boxShadow: `0 0 0 2px ${(user.avatarBorderColor || user.accentColor || '#4ADE80')}66, 0 0 15px ${(user.avatarBorderColor || user.accentColor || '#4ADE80')}33`
                         }}
                       >
                         <AvatarImage src={user.avatarUrl || undefined} alt={user.displayName} />
-                        <AvatarFallback className="text-xs">
+                        <AvatarFallback className="text-xs sm:text-sm">
                           {getInitials(user.displayName)}
                         </AvatarFallback>
                       </Avatar>
