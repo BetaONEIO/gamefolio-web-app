@@ -50,6 +50,14 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Temporary session debugging middleware
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    console.log(`🔍 Session Debug: ${req.method} ${req.path} - SessionID: ${req.sessionID || 'none'}, User: ${(req.user as any)?.id || 'none'}, Username: ${(req.user as any)?.username || 'none'}`);
+  }
+  next();
+});
+
 // Serve attached assets (including videos) as static files
 app.use('/attached_assets', express.static('attached_assets'));
 
