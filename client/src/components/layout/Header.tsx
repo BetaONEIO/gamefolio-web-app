@@ -131,8 +131,23 @@ const Header = () => {
   return (
     <header className="bg-card shadow-md sticky top-0 z-50 w-full">
       <div className="w-full px-3 sm:px-4 lg:px-8 py-3 sm:py-4 md:py-6 flex items-center justify-between">
-        {/* Logo - positioned leftmost */}
+        {/* Header left section */}
         <div className="flex items-center">
+          {/* Mobile Menu Button - positioned before logo */}
+          {isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="mr-2 p-2"
+              onClick={toggle}
+              aria-label="Menu"
+              data-testid="mobile-menu-button"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
+          
+          {/* Logo */}
           <Link href="/">
             <div className="flex items-center">
               <img
@@ -142,20 +157,6 @@ const Header = () => {
               />
             </div>
           </Link>
-          
-          {/* Mobile Menu Button - positioned after logo */}
-          {isMobile && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="ml-2 p-2"
-              onClick={toggle}
-              aria-label="Menu"
-              data-testid="mobile-menu-button"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-          )}
         </div>
 
         {/* Search Bar with Dropdown */}
@@ -314,7 +315,7 @@ const Header = () => {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="ml-2 sm:ml-4 p-1 h-auto hover:bg-transparent">
                       <Avatar 
-                        className="w-8 h-8 sm:w-10 sm:h-10 md:w-8 md:h-8 lg:w-10 lg:h-10 xl:w-12 xl:h-12 border-2 transition-all duration-300"
+                        className="w-10 h-10 sm:w-12 sm:h-12 md:w-8 md:h-8 lg:w-10 lg:h-10 xl:w-12 xl:h-12 border-2 transition-all duration-300"
                         style={{
                           borderColor: user.avatarBorderColor || user.accentColor || '#4ADE80',
                           boxShadow: `0 0 0 2px ${(user.avatarBorderColor || user.accentColor || '#4ADE80')}66, 0 0 15px ${(user.avatarBorderColor || user.accentColor || '#4ADE80')}33`
