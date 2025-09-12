@@ -972,9 +972,9 @@ const ProfilePage = () => {
       </div>
 
       {/* Profile Info - positioned below banner with overlapping profile picture */}
-      <div className="container mx-auto px-0 sm:px-4 relative z-20">
+      <div className="w-full px-2 sm:container sm:mx-auto sm:px-4 relative z-20">
 
-        <div className="flex items-start gap-4 md:gap-8 pb-6" style={{ marginTop: '-56px', paddingTop: '24px' }}>
+        <div className="flex items-start gap-2 sm:gap-4 md:gap-8 pb-6" style={{ marginTop: '-56px', paddingTop: '24px' }}>
           {/* Profile Picture positioned to overlap banner */}
           <div className="relative flex-shrink-0" style={{ transform: 'translateY(-28px)' }}>
             <div 
