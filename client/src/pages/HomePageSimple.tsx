@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ClipWithUser, Game } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
-import { ChevronRight, Video, Plus, ChevronLeft } from "lucide-react";
+import { ChevronRight, Video, Plus, ChevronLeft, Upload } from "lucide-react";
 import BannerImage from "@assets/Untitled (1920 x 1080 px).png";
 import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
 import { useLocation, Link } from "wouter";
@@ -320,11 +320,11 @@ const HomePage = () => {
             <h3 className="text-base sm:text-lg font-semibold mb-2">No clips yet</h3>
             <p className="text-sm sm:text-base text-muted-foreground mb-4 px-4">Upload your first gaming clip to get started!</p>
             <Button 
-              className="w-auto px-6"
+              className="flex items-center gap-2"
               onClick={() => setLocation('/upload')}
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Upload Clip
+              <Upload className="h-4 w-4" />
+              Upload
             </Button>
           </div>
         )}
