@@ -31,13 +31,13 @@ export interface IStorage {
   sessionStore: any;
 
   // User operations
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
+  getUser(id: number): Promise<User | null>;
+  getUserByUsername(username: string): Promise<User | null>;
+  getUserByEmail(email: string): Promise<User | null>;
   createUser(user: InsertUser): Promise<User>;
-  updateUser(id: number, user: Partial<User>): Promise<User | undefined>;
+  updateUser(id: number, user: Partial<User>): Promise<User | null>;
   deleteUser(id: number): Promise<boolean>;
-  getUserWithStats(id: number): Promise<UserWithStats | undefined>;
+  getUserWithStats(id: number): Promise<UserWithStats | null>;
   getFeaturedUsers(limit?: number): Promise<User[]>;
 
   // Admin operations
@@ -53,19 +53,19 @@ export interface IStorage {
   getRecentClips(limit?: number): Promise<ClipWithUser[]>;
 
   // Game operations
-  getGame(id: number): Promise<Game | undefined>;
-  getGameByName(name: string): Promise<Game | undefined>;
-  getGameByTwitchId(twitchId: string): Promise<Game | undefined>;
+  getGame(id: number): Promise<Game | null>;
+  getGameByName(name: string): Promise<Game | null>;
+  getGameByTwitchId(twitchId: string): Promise<Game | null>;
   createGame(game: InsertGame): Promise<Game>;
   getAllGames(): Promise<Game[]>;
   getTrendingGames(limit?: number): Promise<Game[]>;
 
   // Clip operations
-  getClip(id: number): Promise<Clip | undefined>;
-  getClipWithUser(id: number): Promise<ClipWithUser | undefined>;
+  getClip(id: number): Promise<Clip | null>;
+  getClipWithUser(id: number): Promise<ClipWithUser | null>;
   createClip(clipData: InsertClip): Promise<Clip>;
   createClipWithId(clipData: InsertClip & { id: number }): Promise<Clip>;
-  updateClip(id: number, clip: Partial<Clip>): Promise<Clip | undefined>;
+  updateClip(id: number, clip: Partial<Clip>): Promise<Clip | null>;
   updateClipDuration(id: number, duration: number): Promise<boolean>;
   deleteClip(id: number): Promise<boolean>;
   incrementClipViews(id: number): Promise<void>;
@@ -87,7 +87,7 @@ export interface IStorage {
   hasUserLikedClip(userId: number, clipId: number): Promise<boolean>;
 
   // Comment operations
-  getComment(id: number): Promise<Comment | undefined>;
+  getComment(id: number): Promise<Comment | null>;
   createComment(comment: InsertComment): Promise<Comment>;
   getCommentsByClipId(clipId: number): Promise<CommentWithUser[]>;
   deleteComment(id: number): Promise<boolean>;
@@ -140,9 +140,9 @@ export interface IStorage {
 
   // Leaderboard operations
   addUserPointsHistory(pointsHistory: InsertUserPointsHistory): Promise<UserPointsHistory>;
-  getMonthlyLeaderboardEntry(userId: number, month: string, year: number): Promise<MonthlyLeaderboard | undefined>;
+  getMonthlyLeaderboardEntry(userId: number, month: string, year: number): Promise<MonthlyLeaderboard | null>;
   createMonthlyLeaderboardEntry(entry: InsertMonthlyLeaderboard): Promise<MonthlyLeaderboard>;
-  updateMonthlyLeaderboardEntry(id: number, updates: Partial<MonthlyLeaderboard>): Promise<MonthlyLeaderboard | undefined>;
+  updateMonthlyLeaderboardEntry(id: number, updates: Partial<MonthlyLeaderboard>): Promise<MonthlyLeaderboard | null>;
   getMonthlyLeaderboard(month: string, year: number, limit?: number): Promise<(MonthlyLeaderboard & { user: User })[]>;
   recalculateMonthlyRankings(month: string, year: number): Promise<void>;
 
@@ -168,7 +168,7 @@ export interface IStorage {
 
   // Content filtering operations
   getContentFilterSettings(fieldName?: string): Promise<ContentFilterSettings[]>;
-  updateContentFilterSettings(fieldName: string, settings: Partial<ContentFilterSettings>): Promise<ContentFilterSettings | undefined>;
+  updateContentFilterSettings(fieldName: string, settings: Partial<ContentFilterSettings>): Promise<ContentFilterSettings | null>;
   createContentFilterSettings(settings: InsertContentFilterSettings): Promise<ContentFilterSettings>;
 
   // Banned words operations
@@ -178,15 +178,28 @@ export interface IStorage {
   removeBannedWord(word: string): Promise<boolean>;
   deactivateBannedWord(word: string): Promise<boolean>;
   reactivateBannedWord(word: string): Promise<boolean>;
-  getBannedWord(word: string): Promise<BannedWord | undefined>;
+  getBannedWord(word: string): Promise<BannedWord | null>;
 
   // Screenshot operations
-  getScreenshot(id: number): Promise<Screenshot | undefined>;
-  getAllScreenshots(limit?: number, offset?: number): Promise<Screenshot[]>;
+  getScreenshot(id: number): Promise<Screenshot | null>;
+  getAllScreenshots(limit?: number, offset?: number): Promise<Array<{
+    id: number;
+    title: string;
+    description?: string | null;
+    imageUrl: string;
+    thumbnailUrl?: string | null;
+    views: number;
+    createdAt: Date;
+    updatedAt: Date;
+    userId: number;
+    gameId?: number | null;
+    user: { id: number; username: string; displayName: string; avatarUrl?: string | null } | null;
+    game?: { id: number; name: string; boxArtUrl?: string | null } | null;
+  }>>;
   getScreenshotCount(): Promise<number>;
   createScreenshot(screenshotData: InsertScreenshotData): Promise<Screenshot>;
   createScreenshotWithId(screenshotData: InsertScreenshotData & { id: number }): Promise<Screenshot>;
-  updateScreenshot(id: number, screenshot: Partial<Screenshot>): Promise<Screenshot | undefined>;
+  updateScreenshot(id: number, screenshot: Partial<Screenshot>): Promise<Screenshot | null>;
   deleteScreenshot(id: number): Promise<boolean>;
   getScreenshotsByClipId(clipId: number): Promise<Screenshot[]>;
 
@@ -202,7 +215,7 @@ export interface IStorage {
   updateCommentReportStatus(id: number, status: string, reviewedBy?: number): Promise<any>;
 
   // Hero text settings operations
-  getHeroTextSettings(textType: string): Promise<HeroTextSettings | undefined>;
+  getHeroTextSettings(textType: string): Promise<HeroTextSettings | null>;
   updateHeroTextSettings(textType: string, settings: { title: string; subtitle: string; updatedBy: number }): Promise<HeroTextSettings>;
 
   // Leaderboard operations

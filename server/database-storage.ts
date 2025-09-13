@@ -58,59 +58,115 @@ import {
 import { db } from "./db";
 import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, isNotNull } from "drizzle-orm";
 import session from "express-session";
-import MemoryStore from "memorystore";
+import connectPgSimple from "connect-pg-simple";
 import { IStorage } from "./storage";
+import { promisify } from "util";
+import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 
-const MemoryStoreSession = MemoryStore(session);
+const PgSession = connectPgSimple(session);
+
+// Password hashing utilities - CRITICAL SECURITY
+const scryptAsync = promisify(scrypt);
+
+async function hashPassword(password: string): Promise<string> {
+  const salt = randomBytes(16).toString('hex');
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString('hex')}.${salt}`;
+}
+
+async function comparePasswords(password: string, hashedPassword: string | null | undefined): Promise<boolean> {
+  if (!hashedPassword) {
+    return false;
+  }
+  
+  const [hash, salt] = hashedPassword.split('.');
+  if (!hash || !salt) {
+    return false;
+  }
+  
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return timingSafeEqual(Buffer.from(hash, 'hex'), buf);
+}
 
 export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    // Use MemoryStore for now to ensure sessions work properly
-    // This will be replaced with PostgreSQL session store once the connection issue is resolved
-    this.sessionStore = new MemoryStoreSession({
-      checkPeriod: 86400000 // Prune expired entries every 24h
+    // PRODUCTION-GRADE SESSION STORE using PostgreSQL connection string
+    // This ensures session persistence across server restarts and supports clustering
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error('🚨 CRITICAL: DATABASE_URL not configured for session store');
+    }
+    
+    this.sessionStore = new PgSession({
+      conString: connectionString, // Use DATABASE_URL connection string
+      tableName: 'session', // Session table name
+      createTableIfMissing: true, // Auto-create session table
+      pruneSessionInterval: 60 * 15, // Prune expired sessions every 15 minutes
+      errorLog: (error: Error) => {
+        console.error('🚨 SESSION STORE ERROR:', error);
+      }
     });
+    console.log('✅ PRODUCTION SESSION STORE: PostgreSQL connect-pg-simple initialized with DATABASE_URL');
   }
 
   // User operations
-  async getUser(id: number): Promise<User | undefined> {
+  async getUser(id: number): Promise<User | null> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    return user || null;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
+  async getUserByUsername(username: string): Promise<User | null> {
     const [user] = await db.select().from(users).where(ilike(users.username, username));
-    return user;
+    return user || null;
   }
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
+  async getUserByEmail(email: string): Promise<User | null> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user;
+    return user || null;
   }
 
   async createUser(userData: InsertUser): Promise<User> {
-    const userWithDefaults = {
-      ...userData,
-      avatarUrl: userData.avatarUrl || "/attached_assets/gamefolio social logo 3d circle web.png",
-      bannerUrl: userData.bannerUrl || "/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg"
-    };
-    const [user] = await db.insert(users).values(userWithDefaults).returning();
-    return user;
+    try {
+      // CRITICAL SECURITY: Hash password before storing
+      const safeUserData = { ...userData };
+      if (safeUserData.password) {
+        console.log(`🔐 SECURITY: Hashing password for new user`);
+        safeUserData.password = await hashPassword(safeUserData.password);
+      }
+      
+      const userWithDefaults = {
+        ...safeUserData,
+        avatarUrl: safeUserData.avatarUrl || "/attached_assets/gamefolio social logo 3d circle web.png",
+        bannerUrl: safeUserData.bannerUrl || "/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg"
+      };
+      const [user] = await db.insert(users).values(userWithDefaults).returning();
+      return user;
+    } catch (error) {
+      console.error("Error creating user:", error);
+      throw error;
+    }
   }
 
-  async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
+  async updateUser(id: number, userData: Partial<User>): Promise<User | null> {
     try {
+      // CRITICAL SECURITY: Hash password if it's being updated
+      const safeUserData = { ...userData };
+      if (safeUserData.password) {
+        console.log(`🔐 SECURITY: Hashing password for user ${id}`);
+        safeUserData.password = await hashPassword(safeUserData.password);
+      }
+      
       const [updatedUser] = await db
         .update(users)
-        .set({ ...userData, updatedAt: new Date() })
+        .set({ ...safeUserData, updatedAt: new Date() })
         .where(eq(users.id, id))
         .returning();
       return updatedUser;
     } catch (error) {
       console.error("Error updating user:", error);
-      return undefined;
+      return null;
     }
   }
 
@@ -196,9 +252,9 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getUserWithStats(id: number): Promise<UserWithStats | undefined> {
+  async getUserWithStats(id: number): Promise<UserWithStats | null> {
     const user = await this.getUser(id);
-    if (!user) return undefined;
+    if (!user) return null;
 
     // Get followers count
     const followersCount = await db
@@ -247,7 +303,7 @@ export class DatabaseStorage implements IStorage {
       const featuredUsers = await db
         .select()
         .from(users)
-        .orderBy(users.id)
+        .orderBy(desc(users.createdAt), desc(users.id))
         .limit(limit);
 
       return featuredUsers;
@@ -258,19 +314,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Game operations
-  async getGame(id: number): Promise<Game | undefined> {
+  async getGame(id: number): Promise<Game | null> {
     const [game] = await db.select().from(games).where(eq(games.id, id));
-    return game;
+    return game || null;
   }
 
-  async getGameByName(name: string): Promise<Game | undefined> {
+  async getGameByName(name: string): Promise<Game | null> {
     const [game] = await db.select().from(games).where(eq(games.name, name));
-    return game;
+    return game || null;
   }
 
-  async getGameByTwitchId(twitchId: string): Promise<Game | undefined> {
+  async getGameByTwitchId(twitchId: string): Promise<Game | null> {
     const [game] = await db.select().from(games).where(eq(games.twitchId, twitchId));
-    return game;
+    return game || null;
   }
 
   async createGame(gameData: InsertGame): Promise<Game> {
@@ -294,12 +350,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Clip operations
-  async getClip(id: number): Promise<Clip | undefined> {
+  async getClip(id: number): Promise<Clip | null> {
     const [clip] = await db.select().from(clips).where(eq(clips.id, id));
-    return clip;
+    return clip || null;
   }
 
-  async getClipWithUser(id: number): Promise<ClipWithUser | undefined> {
+  async getClipWithUser(id: number): Promise<ClipWithUser | null> {
     try {
       const result = await db
         .select({
@@ -325,7 +381,7 @@ export class DatabaseStorage implements IStorage {
         .where(eq(clips.id, id))
         .limit(1);
 
-      if (result.length === 0) return undefined;
+      if (result.length === 0) return null;
 
       const { clip, user, game } = result[0];
 
@@ -338,8 +394,8 @@ export class DatabaseStorage implements IStorage {
 
       return {
         ...clip,
-        user: user || undefined,
-        game: game && game.id ? game : undefined,
+        user: user?.id ? { ...user } : null,
+        game: game?.id ? { ...game } : null,
         _count: {
           likes: parseInt(likesResult[0]?.count.toString() || '0'),
           comments: parseInt(commentsResult[0]?.count.toString() || '0')
@@ -347,7 +403,7 @@ export class DatabaseStorage implements IStorage {
       };
     } catch (error) {
       console.error('Error getting clip with user:', error);
-      return undefined;
+      return null;
     }
   }
 
@@ -361,13 +417,13 @@ export class DatabaseStorage implements IStorage {
     return clip;
   }
 
-  async updateClip(id: number, clipData: Partial<Clip>): Promise<Clip | undefined> {
+  async updateClip(id: number, clipData: Partial<Clip>): Promise<Clip | null> {
     const [updatedClip] = await db
       .update(clips)
       .set(clipData)
       .where(eq(clips.id, id))
       .returning();
-    return updatedClip;
+    return updatedClip || null;
   }
 
   async updateClipDuration(id: number, duration: number): Promise<boolean> {
@@ -421,7 +477,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(clips)
       .where(eq(clips.userId, userId))
-      .orderBy(desc(clips.createdAt));
+      .orderBy(desc(clips.createdAt), desc(clips.id));
 
     const clipsWithDetails: ClipWithUser[] = [];
     for (const clip of userClips) {
@@ -434,14 +490,14 @@ export class DatabaseStorage implements IStorage {
     return clipsWithDetails;
   }
 
-  async getClipByShareCode(shareCode: string): Promise<Clip | undefined> {
+  async getClipByShareCode(shareCode: string): Promise<Clip | null> {
     const [clip] = await db.select().from(clips).where(eq(clips.shareCode, shareCode));
-    return clip;
+    return clip || null;
   }
 
-  async getScreenshotByShareCode(shareCode: string): Promise<Screenshot | undefined> {
+  async getScreenshotByShareCode(shareCode: string): Promise<Screenshot | null> {
     const [screenshot] = await db.select().from(screenshots).where(eq(screenshots.shareCode, shareCode));
-    return screenshot;
+    return screenshot || null;
   }
 
   async getClipsByGameId(gameId: number, limit: number = 4): Promise<ClipWithUser[]> {
@@ -450,7 +506,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(clips)
       .where(eq(clips.gameId, gameId))
-      .orderBy(desc(clips.views))
+      .orderBy(desc(clips.views), desc(clips.createdAt), desc(clips.id))
       .limit(limit);
 
     // Get full clip details with user info
@@ -471,7 +527,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(clips)
       .where(sql`${hashtag} = ANY(${clips.tags})`)
-      .orderBy(desc(clips.createdAt));
+      .orderBy(desc(clips.createdAt), desc(clips.id));
 
     // Get full clip details with user info
     const clipsWithDetails: ClipWithUser[] = [];
@@ -507,7 +563,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(clips)
       .where(gt(clips.createdAt, dateFilter))
-      .orderBy(desc(clips.views))
+      .orderBy(desc(clips.views), desc(clips.createdAt), desc(clips.id))
       .limit(limit);
 
     const clipsWithDetails: ClipWithUser[] = [];
@@ -565,7 +621,7 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .groupBy(clips.id)
-      .orderBy(sql`engagement desc`, desc(clips.createdAt))
+      .orderBy(sql`engagement desc`, desc(clips.createdAt), desc(clips.id))
       .limit(limit);
 
     const engagementResults = await clipEngagementQuery;
@@ -647,15 +703,15 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .groupBy(clips.id, users.id, games.id)
-      .orderBy(sql`engagement desc`, desc(clips.createdAt))
+      .orderBy(sql`engagement desc`, desc(clips.createdAt), desc(clips.id))
       .limit(limit);
 
     const results = await reelEngagementQuery;
 
     return results.map(row => ({
       ...row.clip,
-      user: row.user || undefined,
-      game: row.game && row.game.id ? row.game : undefined,
+      user: row.user?.id ? { ...row.user } : null,
+      game: row.game?.id ? { ...row.game } : null,
       _count: {
         likes: parseInt(row.likesCount?.toString() || '0'),
         comments: parseInt(row.commentsCount?.toString() || '0')
@@ -709,15 +765,15 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .groupBy(clips.id, users.id, games.id)
-      .orderBy(desc(clips.createdAt))
+      .orderBy(desc(clips.createdAt), desc(clips.id))
       .limit(limit);
 
     const results = await latestReelsQuery;
 
     return results.map(row => ({
       ...row.clip,
-      user: row.user || undefined,
-      game: row.game && row.game.id ? row.game : undefined,
+      user: row.user?.id ? { ...row.user } : null,
+      game: row.game?.id ? { ...row.game } : null,
       _count: {
         likes: parseInt(row.likesCount?.toString() || '0'),
         comments: parseInt(row.commentsCount?.toString() || '0')
@@ -772,9 +828,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Comment operations
-  async getComment(id: number): Promise<Comment | undefined> {
+  async getComment(id: number): Promise<Comment | null> {
     const [comment] = await db.select().from(comments).where(eq(comments.id, id));
-    return comment;
+    return comment || null;
   }
 
   async createComment(commentData: InsertComment): Promise<Comment> {
@@ -789,13 +845,13 @@ export class DatabaseStorage implements IStorage {
         user: users
       })
       .from(comments)
-      .innerJoin(users, eq(comments.userId, users.id))
+      .leftJoin(users, eq(comments.userId, users.id))
       .where(eq(comments.clipId, clipId))
-      .orderBy(desc(comments.createdAt));
+      .orderBy(desc(comments.createdAt), desc(comments.id));
 
     return commentsWithUsers.map(row => ({
       ...row.comment,
-      user: row.user
+      user: row.user?.id ? row.user : null  // null for orphaned comments
     }));
   }
 
@@ -1032,6 +1088,7 @@ export class DatabaseStorage implements IStorage {
           ilike(users.displayName, `%${query}%`)
         )
       )
+      .orderBy(desc(users.createdAt), desc(users.id))
       .limit(10);
 
     return searchResults;
@@ -1042,6 +1099,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(games)
       .where(ilike(games.name, `%${query}%`))
+      .orderBy(desc(games.createdAt), desc(games.id))
       .limit(10);
   }
 
@@ -1114,7 +1172,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     return query
-      .orderBy(desc(users.id))
+      .orderBy(desc(users.createdAt), desc(users.id))
       .limit(limit)
       .offset(offset);
   }
@@ -1133,7 +1191,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     const [result] = await query;
-    return Number((result as any).count);
+    return Number(result.count || 0);
   }
 
   async getAdminCount(): Promise<number> {
@@ -1157,31 +1215,42 @@ export class DatabaseStorage implements IStorage {
   async getAllClips(limit: number = 10, offset: number = 0, currentUserId?: number): Promise<ClipWithUser[]> {
     console.log('getAllClips: currentUserId =', currentUserId);
     
-    const clipIds = await db
-      .select({ id: clips.id })
+    // CRITICAL FIX: Show ALL clips including orphaned ones for admin moderation
+    const allClipsData = await db
+      .select({
+        clip: clips,
+        user: {
+          id: users.id,
+          username: users.username,
+          displayName: users.displayName,
+          avatarUrl: users.avatarUrl,
+          emailVerified: users.emailVerified,
+        },
+        game: {
+          id: games.id,
+          name: games.name,
+          imageUrl: games.imageUrl,
+          twitchId: games.twitchId,
+          createdAt: games.createdAt,
+        }
+      })
       .from(clips)
       .leftJoin(users, eq(clips.userId, users.id))
-      .where(
-        // Only show clips from public accounts OR private accounts that current user follows OR user's own content
-        or(
-          eq(users.isPrivate, false), // Public accounts
-          currentUserId ? eq(users.id, currentUserId) : sql`false`, // User's own content
-          currentUserId ? sql`exists (select 1 from follows f where f.following_id = ${users.id} and f.follower_id = ${currentUserId})` : sql`false` // Current user follows this private account
-        )
-      )
-      .orderBy(desc(clips.createdAt))
+      .leftJoin(games, eq(clips.gameId, games.id))
+      .orderBy(desc(clips.createdAt), desc(clips.id))
       .limit(limit)
       .offset(offset);
 
-    const clipsWithDetails: ClipWithUser[] = [];
-    for (const clip of clipIds) {
-      const clipWithUser = await this.getClipWithUser(clip.id);
-      if (clipWithUser) {
-        clipsWithDetails.push(clipWithUser);
+    // Map to ClipWithUser format, preserving ALL records including orphaned ones
+    return allClipsData.map(row => ({
+      ...row.clip,
+      user: row.user?.id ? { ...row.user } : null,  // null for orphaned clips
+      game: row.game?.id ? { ...row.game } : null,  // null for missing games
+      _count: {
+        likes: 0,  // Will be calculated separately if needed
+        comments: 0
       }
-    }
-
-    return clipsWithDetails;
+    }));
   }
 
   async getUserTypeDistribution(): Promise<{type: string, count: number}[]> {
@@ -1233,9 +1302,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Screenshot operations
-  async getScreenshot(id: number): Promise<Screenshot | undefined> {
+  async getScreenshot(id: number): Promise<Screenshot | null> {
     const [screenshot] = await db.select().from(screenshots).where(eq(screenshots.id, id));
-    return screenshot;
+    return screenshot || null;
   }
 
   async createScreenshot(screenshotData: InsertScreenshot): Promise<Screenshot> {
@@ -1251,7 +1320,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(screenshots)
       .where(eq(screenshots.userId, userId))
-      .orderBy(desc(screenshots.createdAt));
+      .orderBy(desc(screenshots.createdAt), desc(screenshots.id));
   }
 
   async getScreenshotsByGameId(gameId: number, limit: number = 20): Promise<Screenshot[]> {
@@ -1259,7 +1328,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(screenshots)
       .where(eq(screenshots.gameId, gameId))
-      .orderBy(desc(screenshots.createdAt))
+      .orderBy(desc(screenshots.createdAt), desc(screenshots.id))
       .limit(limit);
   }
 
@@ -1340,9 +1409,9 @@ export class DatabaseStorage implements IStorage {
         }
       })
       .from(screenshotComments)
-      .innerJoin(users, eq(screenshotComments.userId, users.id))
+      .leftJoin(users, eq(screenshotComments.userId, users.id))
       .where(eq(screenshotComments.screenshotId, screenshotId))
-      .orderBy(asc(screenshotComments.createdAt));
+      .orderBy(desc(screenshotComments.createdAt), desc(screenshotComments.id));
 
     return results as any;
   }
@@ -1535,12 +1604,12 @@ export class DatabaseStorage implements IStorage {
       .from(notifications)
       .leftJoin(users, eq(notifications.fromUserId, users.id))
       .where(eq(notifications.userId, userId))
-      .orderBy(desc(notifications.createdAt))
+      .orderBy(desc(notifications.createdAt), desc(notifications.id))
       .limit(50);
 
     return results.map(result => ({
       ...result,
-      fromUser: result.fromUser?.id ? result.fromUser : undefined
+      fromUser: result.fromUser?.id ? result.fromUser : null
     }));
   }
 
@@ -1679,7 +1748,7 @@ export class DatabaseStorage implements IStorage {
             and(eq(messages.senderId, userId2), eq(messages.receiverId, userId1))
           )
         )
-        .orderBy(asc(messages.createdAt));
+        .orderBy(asc(messages.createdAt), asc(messages.id));
 
       return messageList;
     } catch (error) {
@@ -1719,7 +1788,7 @@ export class DatabaseStorage implements IStorage {
               and(eq(messages.senderId, partner.otherUserId), eq(messages.receiverId, userId))
             )
           )
-          .orderBy(desc(messages.createdAt))
+          .orderBy(desc(messages.createdAt), desc(messages.id))
           .limit(1);
 
         // Get the other user's details
@@ -1909,7 +1978,7 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .groupBy(clips.id)
-      .orderBy(sql`likesCount desc`, desc(clips.createdAt))
+      .orderBy(sql`likesCount desc`, desc(clips.createdAt), desc(clips.id))
       .limit(limit);
 
     const likesResults = await clipLikesQuery;
@@ -1959,7 +2028,7 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .groupBy(clips.id)
-      .orderBy(sql`commentsCount desc`, desc(clips.createdAt))
+      .orderBy(sql`commentsCount desc`, desc(clips.createdAt), desc(clips.id))
       .limit(limit);
 
     const commentsResults = await clipCommentsQuery;
@@ -2009,7 +2078,7 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .groupBy(clips.id)
-      .orderBy(sql`likesCount desc`, desc(clips.createdAt))
+      .orderBy(sql`likesCount desc`, desc(clips.createdAt), desc(clips.id))
       .limit(limit);
 
     const likesResults = await reelLikesQuery;
@@ -2059,7 +2128,7 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .groupBy(clips.id)
-      .orderBy(sql`commentsCount desc`, desc(clips.createdAt))
+      .orderBy(sql`commentsCount desc`, desc(clips.createdAt), desc(clips.id))
       .limit(limit);
 
     const commentsResults = await reelCommentsQuery;
@@ -2085,13 +2154,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(screenshots.id, screenshotId))
       .limit(1);
 
-    if (result.length === 0) return undefined;
+    if (result.length === 0) return null;
 
     const row = result[0];
     return {
       ...row.screenshots,
-      user: row.users!,
-      game: row.games || undefined
+      user: row.users?.id ? { ...row.users } : null,
+      game: row.games?.id ? { ...row.games } : null
     };
   }
 
@@ -2125,16 +2194,16 @@ export class DatabaseStorage implements IStorage {
           gameId ? eq(screenshots.gameId, gameId) : undefined
         )
       )
-      .orderBy(desc(screenshots.views), desc(screenshots.createdAt))
+      .orderBy(desc(screenshots.views), desc(screenshots.createdAt), desc(screenshots.id))
       .limit(limit);
 
     const results = await screenshotsQuery;
 
     return results.map(row => ({
       ...row.screenshots,
-      user: row.users!,
-      game: row.games || undefined
-    }));
+      user: row.users?.id ? { ...row.users } : null,
+      game: row.games?.id ? { ...row.games } : null
+    })) as (Screenshot & { user: User | null; game?: Game | null })[];
   }
 
   // Badge operations
@@ -2234,7 +2303,7 @@ export class DatabaseStorage implements IStorage {
         eq(monthlyLeaderboard.month, month),
         eq(monthlyLeaderboard.year, year)
       ));
-    return entry;
+    return entry || null;
   }
 
   async createMonthlyLeaderboardEntry(entry: InsertMonthlyLeaderboard): Promise<MonthlyLeaderboard> {
@@ -2421,12 +2490,12 @@ export class DatabaseStorage implements IStorage {
     return !!updated;
   }
 
-  async getBannedWord(word: string): Promise<BannedWord | undefined> {
+  async getBannedWord(word: string): Promise<BannedWord | null> {
     const [found] = await db
       .select()
       .from(bannedWords)
       .where(eq(bannedWords.word, word.toLowerCase()));
-    return found;
+    return found || null;
   }
 
   // Content reporting operations
@@ -2445,7 +2514,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(clipReports)
       .where(eq(clipReports.clipId, clipId))
-      .orderBy(desc(clipReports.createdAt));
+      .orderBy(desc(clipReports.createdAt), desc(clipReports.id));
   }
 
   async getScreenshotReportsByScreenshotId(screenshotId: number): Promise<ScreenshotReport[]> {
@@ -2453,7 +2522,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(screenshotReports)
       .where(eq(screenshotReports.screenshotId, screenshotId))
-      .orderBy(desc(screenshotReports.createdAt));
+      .orderBy(desc(screenshotReports.createdAt), desc(screenshotReports.id));
   }
 
   async getAllReports(status?: string): Promise<(ClipReport | ScreenshotReport | CommentReport)[]> {
@@ -2468,9 +2537,9 @@ export class DatabaseStorage implements IStorage {
     }
 
     const [clipResults, screenshotResults, commentResults] = await Promise.all([
-      clipReportsQuery.orderBy(desc(clipReports.createdAt)),
-      screenshotReportsQuery.orderBy(desc(screenshotReports.createdAt)),
-      commentReportsQuery.orderBy(desc(commentReports.createdAt))
+      clipReportsQuery.orderBy(desc(clipReports.createdAt), desc(clipReports.id)),
+      screenshotReportsQuery.orderBy(desc(screenshotReports.createdAt), desc(screenshotReports.id)),
+      commentReportsQuery.orderBy(desc(commentReports.createdAt), desc(commentReports.id))
     ]);
 
     return [...clipResults, ...screenshotResults, ...commentResults]
@@ -2517,13 +2586,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Hero text settings operations
-  async getHeroTextSettings(textType: string): Promise<HeroTextSettings | undefined> {
+  async getHeroTextSettings(textType: string): Promise<HeroTextSettings | null> {
     const [result] = await db
       .select()
       .from(heroTextSettings)
       .where(and(eq(heroTextSettings.textType, textType), eq(heroTextSettings.isActive, true)))
       .limit(1);
-    return result;
+    return result || null;
   }
 
   async updateHeroTextSettings(textType: string, settings: { title: string; subtitle: string; updatedBy: number }): Promise<HeroTextSettings> {
@@ -2614,7 +2683,7 @@ export class DatabaseStorage implements IStorage {
             ne(clips.userId, userId) // Exclude user's own clips
           )
         )
-        .orderBy(desc(clips.views), desc(clips.createdAt))
+        .orderBy(desc(clips.views), desc(clips.createdAt), desc(clips.id))
         .limit(limit);
       
       // If not enough clips from favorite games, supplement with trending clips
@@ -2640,15 +2709,66 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Screenshot admin operations
-  async getAllScreenshots(limit: number = 10, offset: number = 0): Promise<Screenshot[]> {
+  async getAllScreenshots(limit: number = 10, offset: number = 0): Promise<Array<{
+    id: number;
+    title: string;
+    description?: string | null;
+    imageUrl: string;
+    thumbnailUrl?: string | null;
+    views: number;
+    createdAt: Date;
+    updatedAt: Date;
+    userId: number;
+    gameId?: number | null;
+    user: { id: number; username: string; displayName: string; avatarUrl?: string | null } | null;
+    game?: { id: number; name: string; boxArtUrl?: string | null } | null;
+  }>> {
     try {
       const screenshots = await db
-        .select()
+        .select({
+          id: screenshots.id,
+          title: screenshots.title,
+          description: screenshots.description,
+          imageUrl: screenshots.imageUrl,
+          thumbnailUrl: screenshots.thumbnailUrl,
+          views: screenshots.views,
+          createdAt: screenshots.createdAt,
+          updatedAt: screenshots.updatedAt,
+          userId: screenshots.userId,
+          gameId: screenshots.gameId,
+          user: {
+            id: users.id,
+            username: users.username,
+            displayName: users.displayName,
+            avatarUrl: users.avatarUrl
+          },
+          game: {
+            id: games.id,
+            name: games.name,
+            boxArtUrl: games.boxArtUrl
+          }
+        })
         .from(screenshots)
-        .orderBy(desc(screenshots.createdAt))
+        .leftJoin(users, eq(screenshots.userId, users.id))
+        .leftJoin(games, eq(screenshots.gameId, games.id))
+        .orderBy(desc(screenshots.createdAt), desc(screenshots.id)) // Stable pagination with tie-breaker
         .limit(limit)
         .offset(offset);
-      return screenshots;
+      
+      return screenshots.map(row => ({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        imageUrl: row.imageUrl,
+        thumbnailUrl: row.thumbnailUrl,
+        views: row.views,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        userId: row.userId,
+        gameId: row.gameId,
+        user: row.user?.id ? { ...row.user } : null,
+        game: row.game?.id ? { ...row.game } : null
+      }));
     } catch (error) {
       console.error('Error getting all screenshots:', error);
       return [];
@@ -2673,7 +2793,7 @@ export class DatabaseStorage implements IStorage {
     type: 'clip' | 'reel' | 'screenshot';
     title: string;
     description?: string | null;
-    user: { id: number; username: string; displayName: string };
+    user: { id: number; username: string; displayName: string } | null;
     game?: { id: number; name: string };
     createdAt: Date;
     url: string;
@@ -2681,10 +2801,8 @@ export class DatabaseStorage implements IStorage {
     views: number;
   }>> {
     try {
-      const content: any[] = [];
-
-      if (!contentType || contentType === 'clip' || contentType === 'reel') {
-        // Get clips and reels
+      // Optimize: when contentType is specified, run only the matching SELECT
+      if (contentType === 'clip') {
         const clipsData = await db
           .select({
             id: clips.id,
@@ -2706,32 +2824,71 @@ export class DatabaseStorage implements IStorage {
             }
           })
           .from(clips)
-          .innerJoin(users, eq(clips.userId, users.id))
+          .leftJoin(users, eq(clips.userId, users.id))
           .leftJoin(games, eq(clips.gameId, games.id))
-          .where(contentType === 'clip' ? eq(clips.videoType, 'clip') :
-                 contentType === 'reel' ? eq(clips.videoType, 'reel') :
-                 undefined)
-          .orderBy(desc(clips.createdAt))
-          .limit(contentType ? limit : Math.ceil(limit * 0.6))
-          .offset(contentType ? offset : 0);
+          .where(eq(clips.videoType, 'clip'))
+          .orderBy(desc(clips.createdAt), desc(clips.id))
+          .limit(limit)
+          .offset(offset);
 
-        // Transform clips to unified format
-        content.push(...clipsData.map(clip => ({
+        return clipsData.map(clip => ({
           id: clip.id,
-          type: (clip.videoType || 'clip') as 'clip' | 'reel',
+          type: 'clip' as const,
           title: clip.title,
           description: clip.description,
-          user: clip.user,
-          game: clip.game,
+          user: clip.user?.id ? { ...clip.user } : null,
+          game: clip.game?.id ? { ...clip.game } : null,
           createdAt: clip.createdAt,
           url: clip.videoUrl,
           thumbnailUrl: clip.thumbnailUrl,
           views: clip.views
-        })));
+        }));
       }
 
-      if (!contentType || contentType === 'screenshot') {
-        // Get screenshots
+      if (contentType === 'reel') {
+        const reelsData = await db
+          .select({
+            id: clips.id,
+            title: clips.title,
+            description: clips.description,
+            videoType: clips.videoType,
+            videoUrl: clips.videoUrl,
+            thumbnailUrl: clips.thumbnailUrl,
+            views: clips.views,
+            createdAt: clips.createdAt,
+            user: {
+              id: users.id,
+              username: users.username,
+              displayName: users.displayName
+            },
+            game: {
+              id: games.id,
+              name: games.name
+            }
+          })
+          .from(clips)
+          .leftJoin(users, eq(clips.userId, users.id))
+          .leftJoin(games, eq(clips.gameId, games.id))
+          .where(eq(clips.videoType, 'reel'))
+          .orderBy(desc(clips.createdAt), desc(clips.id))
+          .limit(limit)
+          .offset(offset);
+
+        return reelsData.map(reel => ({
+          id: reel.id,
+          type: 'reel' as const,
+          title: reel.title,
+          description: reel.description,
+          user: reel.user?.id ? { ...reel.user } : null,
+          game: reel.game?.id ? { ...reel.game } : null,
+          createdAt: reel.createdAt,
+          url: reel.videoUrl,
+          thumbnailUrl: reel.thumbnailUrl,
+          views: reel.views
+        }));
+      }
+
+      if (contentType === 'screenshot') {
         const screenshotsData = await db
           .select({
             id: screenshots.id,
@@ -2752,35 +2909,130 @@ export class DatabaseStorage implements IStorage {
             }
           })
           .from(screenshots)
-          .innerJoin(users, eq(screenshots.userId, users.id))
+          .leftJoin(users, eq(screenshots.userId, users.id))
           .leftJoin(games, eq(screenshots.gameId, games.id))
-          .orderBy(desc(screenshots.createdAt))
-          .limit(contentType === 'screenshot' ? limit : Math.ceil(limit * 0.4))
-          .offset(contentType === 'screenshot' ? offset : 0);
+          .orderBy(desc(screenshots.createdAt), desc(screenshots.id))
+          .limit(limit)
+          .offset(offset);
 
-        // Transform screenshots to unified format
-        content.push(...screenshotsData.map(screenshot => ({
+        return screenshotsData.map(screenshot => ({
           id: screenshot.id,
           type: 'screenshot' as const,
           title: screenshot.title,
           description: screenshot.description,
-          user: screenshot.user,
-          game: screenshot.game,
+          user: screenshot.user?.id ? { ...screenshot.user } : null,
+          game: screenshot.game?.id ? { ...screenshot.game } : null,
           createdAt: screenshot.createdAt,
           url: screenshot.imageUrl,
           thumbnailUrl: screenshot.thumbnailUrl,
           views: screenshot.views
-        })));
+        }));
       }
 
-      // Sort all content by creation date and apply pagination if not filtered by type
-      const sortedContent = content.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      // For unified view (no contentType filter), get all content types and merge
+      const [clipsData, screenshotsData] = await Promise.all([
+        // Get clips and reels
+        db
+          .select({
+            id: clips.id,
+            title: clips.title,
+            description: clips.description,
+            videoType: clips.videoType,
+            videoUrl: clips.videoUrl,
+            thumbnailUrl: clips.thumbnailUrl,
+            views: clips.views,
+            createdAt: clips.createdAt,
+            user: {
+              id: users.id,
+              username: users.username,
+              displayName: users.displayName
+            },
+            game: {
+              id: games.id,
+              name: games.name
+            }
+          })
+          .from(clips)
+          .leftJoin(users, eq(clips.userId, users.id))
+          .leftJoin(games, eq(clips.gameId, games.id))
+          .orderBy(desc(clips.createdAt), desc(clips.id))
+          .limit(Math.ceil(limit * 1.5)), // Get more to ensure we have enough after merging
 
-      if (contentType) {
-        return sortedContent;
-      } else {
-        return sortedContent.slice(offset, offset + limit);
-      }
+        // Get screenshots
+        db
+          .select({
+            id: screenshots.id,
+            title: screenshots.title,
+            description: screenshots.description,
+            imageUrl: screenshots.imageUrl,
+            thumbnailUrl: screenshots.thumbnailUrl,
+            views: screenshots.views,
+            createdAt: screenshots.createdAt,
+            user: {
+              id: users.id,
+              username: users.username,
+              displayName: users.displayName
+            },
+            game: {
+              id: games.id,
+              name: games.name
+            }
+          })
+          .from(screenshots)
+          .leftJoin(users, eq(screenshots.userId, users.id))
+          .leftJoin(games, eq(screenshots.gameId, games.id))
+          .orderBy(desc(screenshots.createdAt), desc(screenshots.id))
+          .limit(Math.ceil(limit * 1.5)) // Get more to ensure we have enough after merging
+      ]);
+
+      // Transform and merge all content
+      const allContent: Array<{
+        id: number;
+        type: 'clip' | 'reel' | 'screenshot';
+        title: string;
+        description?: string | null;
+        user: { id: number; username: string; displayName: string };
+        game?: { id: number; name: string };
+        createdAt: Date;
+        url: string;
+        thumbnailUrl?: string | null;
+        views: number;
+      }> = [];
+
+      // Add clips and reels
+      allContent.push(...clipsData.map(clip => ({
+        id: clip.id,
+        type: (clip.videoType || 'clip') as 'clip' | 'reel',
+        title: clip.title,
+        description: clip.description,
+        user: clip.user?.id ? { ...clip.user } : null,
+        game: clip.game?.id ? { ...clip.game } : null,
+        createdAt: clip.createdAt,
+        url: clip.videoUrl,
+        thumbnailUrl: clip.thumbnailUrl,
+        views: clip.views
+      })));
+
+      // Add screenshots
+      allContent.push(...screenshotsData.map(screenshot => ({
+        id: screenshot.id,
+        type: 'screenshot' as const,
+        title: screenshot.title,
+        description: screenshot.description,
+        user: screenshot.user?.id ? { ...screenshot.user } : null,
+        game: screenshot.game?.id ? { ...screenshot.game } : null,
+        createdAt: screenshot.createdAt,
+        url: screenshot.imageUrl,
+        thumbnailUrl: screenshot.thumbnailUrl,
+        views: screenshot.views
+      })));
+
+      // Sort by creation date and apply pagination
+      const sortedContent = allContent
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .slice(offset, offset + limit);
+
+      return sortedContent;
     } catch (error) {
       console.error('Error getting recent content:', error);
       return [];
@@ -2789,26 +3041,37 @@ export class DatabaseStorage implements IStorage {
 
   async getRecentContentCount(contentType?: string): Promise<number> {
     try {
-      let count = 0;
-
-      if (!contentType || contentType === 'clip' || contentType === 'reel') {
-        const [clipResult] = await db
+      // Optimize: when contentType is specified, run only the matching COUNT
+      if (contentType === 'clip') {
+        const [result] = await db
           .select({ count: sql<number>`count(*)` })
           .from(clips)
-          .where(contentType === 'clip' ? eq(clips.videoType, 'clip') :
-                 contentType === 'reel' ? eq(clips.videoType, 'reel') :
-                 undefined);
-        count += clipResult?.count || 0;
+          .where(eq(clips.videoType, 'clip'));
+        return result?.count || 0;
       }
 
-      if (!contentType || contentType === 'screenshot') {
-        const [screenshotResult] = await db
+      if (contentType === 'reel') {
+        const [result] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(clips)
+          .where(eq(clips.videoType, 'reel'));
+        return result?.count || 0;
+      }
+
+      if (contentType === 'screenshot') {
+        const [result] = await db
           .select({ count: sql<number>`count(*)` })
           .from(screenshots);
-        count += screenshotResult?.count || 0;
+        return result?.count || 0;
       }
 
-      return count;
+      // For unified count (no contentType filter), sum all content types
+      const [clipResult, screenshotResult] = await Promise.all([
+        db.select({ count: sql<number>`count(*)` }).from(clips),
+        db.select({ count: sql<number>`count(*)` }).from(screenshots)
+      ]);
+
+      return (clipResult[0]?.count || 0) + (screenshotResult[0]?.count || 0);
     } catch (error) {
       console.error('Error getting recent content count:', error);
       return 0;
