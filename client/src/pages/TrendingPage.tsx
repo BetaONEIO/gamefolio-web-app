@@ -365,31 +365,18 @@ const TrendingPage: React.FC = () => {
     }
   };
 
-  // Combine all content types for mobile viewer
-  const getAllContent = () => {
-    const allContent: (ClipWithUser | ScreenshotWithUser)[] = [];
-    
-    // Add clips
-    if (trendingClips && trendingClips.length > 0) {
-      allContent.push(...trendingClips);
+  // Get content for active tab only
+  const getActiveTabContent = (): (ClipWithUser | ScreenshotWithUser)[] => {
+    switch (activeTab) {
+      case 'clips':
+        return trendingClips || [];
+      case 'reels':
+        return trendingReels || [];
+      case 'screenshots':
+        return trendingScreenshots || [];
+      default:
+        return [];
     }
-    
-    // Add reels
-    if (trendingReels && trendingReels.length > 0) {
-      allContent.push(...trendingReels);
-    }
-    
-    // Add screenshots
-    if (trendingScreenshots && trendingScreenshots.length > 0) {
-      allContent.push(...trendingScreenshots);
-    }
-    
-    // Sort by creation date or other criteria
-    return allContent.sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return dateB - dateA;
-    });
   };
 
   const renderContent = () => {
@@ -474,30 +461,19 @@ const TrendingPage: React.FC = () => {
     );
   };
 
-  const allContent = getAllContent();
+  const activeTabContent = getActiveTabContent();
 
-  // Auto-open mobile viewer when on mobile and content is available
+  // Auto-open mobile viewer when on mobile and switching tabs with content
   useEffect(() => {
-    if (isMobile && !showMobileViewer && allContent.length > 0) {
+    if (isMobile && activeTabContent.length > 0) {
       setShowMobileViewer(true);
     }
-  }, [isMobile, allContent.length, showMobileViewer]);
-
-  // Show mobile viewer if on mobile and viewer is enabled
-  if (isMobile && showMobileViewer && allContent.length > 0) {
-    return (
-      <MobileTrendingViewer
-        content={allContent}
-        initialIndex={0}
-        onClose={() => setShowMobileViewer(false)}
-      />
-    );
-  }
+  }, [isMobile, activeTab, activeTabContent.length]);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       {/* Mobile trigger button when viewer is closed */}
-      {isMobile && !showMobileViewer && allContent.length > 0 && (
+      {isMobile && !showMobileViewer && activeTabContent.length > 0 && (
         <div className="fixed bottom-20 right-4 z-40">
           <Button
             onClick={() => setShowMobileViewer(true)}
@@ -548,18 +524,31 @@ const TrendingPage: React.FC = () => {
           {/* Note: Filter dropdown temporarily disabled while fixing database queries */}
         </div>
 
-        {/* Content */}
-        <TabsContent value="clips" className="mt-0">
-          {renderContent()}
-        </TabsContent>
+        {/* Mobile viewer or regular content */}
+        {isMobile && showMobileViewer && activeTabContent.length > 0 ? (
+          <div className="mt-0">
+            <MobileTrendingViewer
+              content={activeTabContent}
+              initialIndex={0}
+              onClose={() => setShowMobileViewer(false)}
+            />
+          </div>
+        ) : (
+          <>
+            {/* Content */}
+            <TabsContent value="clips" className="mt-0">
+              {renderContent()}
+            </TabsContent>
 
-        <TabsContent value="reels" className="mt-0">
-          {renderContent()}
-        </TabsContent>
+            <TabsContent value="reels" className="mt-0">
+              {renderContent()}
+            </TabsContent>
 
-        <TabsContent value="screenshots" className="mt-0">
-          {renderContent()}
-        </TabsContent>
+            <TabsContent value="screenshots" className="mt-0">
+              {renderContent()}
+            </TabsContent>
+          </>
+        )}
       </Tabs>
     </div>
   );
