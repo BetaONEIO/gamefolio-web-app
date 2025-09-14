@@ -204,7 +204,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose }: Mob
       className="fixed inset-0 z-50 bg-black flex items-center justify-center"
       data-testid="mobile-trending-viewer"
     >
-      {/* Content */}
+      {/* Content - Full mobile screen 9:16 format */}
       <div className="relative w-full h-full">
         {renderContent()}
 
