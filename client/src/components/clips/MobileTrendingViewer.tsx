@@ -47,6 +47,13 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose }: Mob
   const [showComments, setShowComments] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
+
+  // Reset overlay states when switching between content items
+  useEffect(() => {
+    setShowComments(false);
+    setShowShare(false);
+    setIsPlaying(true);
+  }, [currentIndex]);
   const containerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
 
@@ -120,6 +127,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose }: Mob
   const isVideoContent = (item: ContentItem): item is ClipWithUser => {
     return 'videoUrl' in item;
   };
+
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
@@ -224,7 +232,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose }: Mob
               </h3>
 
               {/* Game info */}
-              {currentItem.game && (
+              {currentItem.game?.name && (
                 <div className="text-white/80 text-xs mb-2">
                   <span>#{currentItem.game.name}</span>
                 </div>

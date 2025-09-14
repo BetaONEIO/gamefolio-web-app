@@ -320,7 +320,7 @@ const TrendingPage: React.FC = () => {
       if (!response.ok) throw new Error('Failed to fetch trending clips');
       return response.json();
     },
-    enabled: activeTab === 'clips',
+    enabled: activeTab === 'clips' || (isMobile && showMobileViewer),
   });
 
   // Fetch trending reels using the latest reels endpoint (working)
@@ -334,7 +334,7 @@ const TrendingPage: React.FC = () => {
       if (!response.ok) throw new Error('Failed to fetch trending reels');
       return response.json();
     },
-    enabled: activeTab === 'reels',
+    enabled: activeTab === 'reels' || (isMobile && showMobileViewer),
   });
 
   // For now, disable screenshots until the endpoint is fixed
@@ -344,7 +344,7 @@ const TrendingPage: React.FC = () => {
       // Return empty array for now since screenshots endpoint is broken
       return [];
     },
-    enabled: activeTab === 'screenshots',
+    enabled: activeTab === 'screenshots' || (isMobile && showMobileViewer),
   });
 
   const getPeriodIcon = (period: TimePeriod) => {
