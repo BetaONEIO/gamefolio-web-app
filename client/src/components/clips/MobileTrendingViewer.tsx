@@ -163,17 +163,19 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose }: Mob
 
   const renderContent = () => {
     if (isVideoContent(currentItem)) {
-      // Render video content (clips/reels)
+      // Render video content (clips/reels) - Force full screen for mobile
       return (
-        <VideoPlayer
-          videoUrl={currentItem.videoUrl || ''}
-          thumbnailUrl={currentItem.thumbnailUrl || undefined}
-          autoPlay={isPlaying}
-          className="w-full h-full object-cover"
-          clipId={currentItem.id}
-          objectFit="cover"
-          data-testid={`video-player-${currentItem.id}`}
-        />
+        <div className="absolute inset-0 w-full h-full">
+          <VideoPlayer
+            videoUrl={currentItem.videoUrl || ''}
+            thumbnailUrl={currentItem.thumbnailUrl || undefined}
+            autoPlay={isPlaying}
+            className="w-full h-full"
+            clipId={currentItem.id}
+            objectFit="cover"
+            data-testid={`video-player-${currentItem.id}`}
+          />
+        </div>
       );
     } else {
       // Render screenshot content
