@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLikeScreenshot } from '@/hooks/use-clips';
 import { useToast } from '@/hooks/use-toast';
 import { ClipWithUser } from '@shared/schema';
-import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Share2, Heart } from 'lucide-react';
+import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Share2, Heart, Play } from 'lucide-react';
 import { formatDuration } from '@/lib/constants';
 import { useClipDialog } from '@/hooks/use-clip-dialog';
 import { Button } from '@/components/ui/button';
@@ -13,9 +13,11 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import TrendingVideoCard from '@/components/clips/TrendingVideoCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
+import { useMobile } from '@/hooks/use-mobile';
 import { LikeButton } from '@/components/engagement/LikeButton';
 import { FireButton } from '@/components/engagement/FireButton';
 import { ReportButton } from '@/components/reporting/ReportButton';
+import { MobileTrendingViewer } from '@/components/clips/MobileTrendingViewer';
 
 type ContentType = 'clips' | 'reels' | 'screenshots';
 type FilterType = 'likes' | 'comments';
@@ -201,7 +203,7 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
 
   const handleReelClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    openClipDialog(reel.id, reelsList, true); // Enable fullscreen mode for reels
+    openClipDialog(reel.id, reelsList); // Enable fullscreen mode for reels
   };
 
   const formatNumber = (num: number) => {
@@ -275,7 +277,7 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
             <div className="flex items-center gap-3 text-white/80 text-xs">
               <span className="flex items-center gap-1">
                 <Eye className="h-3 w-3" />
-                {formatNumber(reel.views)}
+                {formatNumber(reel.views || 0)}
               </span>
               <span className="flex items-center gap-1">
                 ♥ {formatNumber(parseInt(reel._count?.likes?.toString() || '0'))}
@@ -300,9 +302,11 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
 
 const TrendingPage: React.FC = () => {
   const { user } = useAuth();
+  const isMobile = useMobile();
   const [activeTab, setActiveTab] = useState<ContentType>('clips');
   const [filter, setFilter] = useState<FilterType>('likes');
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('today');
+  const [showMobileViewer, setShowMobileViewer] = useState(false);
 
   // Fetch trending clips using the working endpoint
   const { data: trendingClips, isLoading: isLoadingClips } = useQuery<ClipWithUser[]>({
@@ -359,6 +363,33 @@ const TrendingPage: React.FC = () => {
       case 'ever': return 'Ever';
       default: return 'Today';
     }
+  };
+
+  // Combine all content types for mobile viewer
+  const getAllContent = () => {
+    const allContent: (ClipWithUser | ScreenshotWithUser)[] = [];
+    
+    // Add clips
+    if (trendingClips && trendingClips.length > 0) {
+      allContent.push(...trendingClips);
+    }
+    
+    // Add reels
+    if (trendingReels && trendingReels.length > 0) {
+      allContent.push(...trendingReels);
+    }
+    
+    // Add screenshots
+    if (trendingScreenshots && trendingScreenshots.length > 0) {
+      allContent.push(...trendingScreenshots);
+    }
+    
+    // Sort by creation date or other criteria
+    return allContent.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
   };
 
   const renderContent = () => {
@@ -443,8 +474,41 @@ const TrendingPage: React.FC = () => {
     );
   };
 
+  const allContent = getAllContent();
+
+  // Auto-open mobile viewer when on mobile and content is available
+  useEffect(() => {
+    if (isMobile && !showMobileViewer && allContent.length > 0) {
+      setShowMobileViewer(true);
+    }
+  }, [isMobile, allContent.length, showMobileViewer]);
+
+  // Show mobile viewer if on mobile and viewer is enabled
+  if (isMobile && showMobileViewer && allContent.length > 0) {
+    return (
+      <MobileTrendingViewer
+        content={allContent}
+        initialIndex={0}
+        onClose={() => setShowMobileViewer(false)}
+      />
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
+      {/* Mobile trigger button when viewer is closed */}
+      {isMobile && !showMobileViewer && allContent.length > 0 && (
+        <div className="fixed bottom-20 right-4 z-40">
+          <Button
+            onClick={() => setShowMobileViewer(true)}
+            className="rounded-full w-14 h-14 bg-primary hover:bg-primary/90 text-white shadow-lg"
+            data-testid="button-open-mobile-viewer"
+          >
+            <Play className="h-6 w-6" />
+          </Button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div className="flex items-center gap-3">
