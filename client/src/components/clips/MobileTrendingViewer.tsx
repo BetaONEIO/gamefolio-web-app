@@ -54,6 +54,14 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose }: Mob
     setShowShare(false);
     setIsPlaying(true);
   }, [currentIndex]);
+
+  // Prevent body scroll when mobile viewer is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, []);
   const containerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
 
@@ -175,7 +183,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose }: Mob
   return (
     <div 
       ref={containerRef}
-      className="fixed inset-0 bg-black z-50 flex items-center justify-center"
+      className="relative w-full h-[calc(100vh-12rem)] bg-black rounded-lg flex items-center justify-center"
       data-testid="mobile-trending-viewer"
     >
       {/* Content */}
