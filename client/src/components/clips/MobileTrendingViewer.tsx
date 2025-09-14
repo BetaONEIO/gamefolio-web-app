@@ -67,6 +67,24 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose }: Mob
 
   const currentItem = content[currentIndex];
 
+  // Early return if no content or invalid index
+  if (!currentItem || currentIndex < 0 || currentIndex >= content.length) {
+    return (
+      <div className="relative w-full h-[calc(100vh-12rem)] bg-black rounded-lg flex items-center justify-center">
+        <div className="text-white text-center">
+          <p className="text-lg">No content available</p>
+          <Button 
+            onClick={onClose} 
+            variant="outline" 
+            className="mt-4 text-white border-white hover:bg-white/20"
+          >
+            Close
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   // Touch handling for mobile
   const [touchStartY, setTouchStartY] = useState(0);
   const [touchStartTime, setTouchStartTime] = useState(0);
