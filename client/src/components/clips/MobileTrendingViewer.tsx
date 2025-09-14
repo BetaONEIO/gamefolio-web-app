@@ -70,7 +70,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose }: Mob
   // Early return if no content or invalid index
   if (!currentItem || currentIndex < 0 || currentIndex >= content.length) {
     return (
-      <div className="relative w-full h-[calc(100vh-12rem)] bg-black rounded-lg flex items-center justify-center">
+      <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
         <div className="text-white text-center">
           <p className="text-lg">No content available</p>
           <Button 
@@ -201,7 +201,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose }: Mob
   return (
     <div 
       ref={containerRef}
-      className="relative w-full h-[calc(100vh-12rem)] bg-black rounded-lg flex items-center justify-center"
+      className="fixed inset-0 z-50 bg-black flex items-center justify-center"
       data-testid="mobile-trending-viewer"
     >
       {/* Content */}
