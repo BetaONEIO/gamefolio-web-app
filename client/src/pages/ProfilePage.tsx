@@ -60,6 +60,7 @@ import { GamefolioShareDialog } from "@/components/profile/GamefolioShareDialog"
 import { ReportDialog } from "@/components/content/ReportDialog";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { ProfilePictureLightbox, useProfilePictureLightbox } from "@/components/ui/profile-picture-lightbox";
+import { LoginPromptModal } from "@/components/auth/LoginPromptModal";
 import { formatDistance } from "date-fns";
 import { cn } from "@/lib/utils";
 import NotFound from "./not-found";
@@ -90,14 +91,15 @@ const ProfilePage = () => {
   const [isScreenshotFire, setIsScreenshotFire] = useState(false);
   const [isScreenshotAnimating, setIsScreenshotAnimating] = useState(false);
 
+  // Login prompt modal state
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
+  const [loginPromptAction, setLoginPromptAction] = useState<"like" | "follow" | "message" | "comment" | "fire" | "interact">("interact");
+
   // Screenshot action handlers
   const handleScreenshotLike = () => {
     if (!currentUser) {
-      toast({
-        title: "Not logged in",
-        description: "You need to be logged in to like screenshots",
-        variant: "default"
-      });
+      setLoginPromptAction("like");
+      setLoginPromptOpen(true);
       return;
     }
 
@@ -118,7 +120,11 @@ const ProfilePage = () => {
   };
 
   const handleScreenshotFire = () => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      setLoginPromptAction("fire");
+      setLoginPromptOpen(true);
+      return;
+    }
 
     setIsScreenshotFire(!isScreenshotFire);
     toast({
@@ -584,11 +590,8 @@ const ProfilePage = () => {
 
   const handleFollowClick = () => {
     if (!currentUser) {
-      toast({
-        title: "Not logged in",
-        description: "You need to be logged in to follow users.",
-        variant: "default"
-      });
+      setLoginPromptAction("follow");
+      setLoginPromptOpen(true);
       return;
     }
     // Pass the current follow status before optimistic updates
@@ -2061,6 +2064,13 @@ const ProfilePage = () => {
         avatarUrl={lightboxData.avatarUrl}
         displayName={lightboxData.displayName}
         username={lightboxData.username}
+      />
+
+      {/* Login Prompt Modal for Guest Users */}
+      <LoginPromptModal
+        isOpen={loginPromptOpen}
+        onOpenChange={setLoginPromptOpen}
+        actionType={loginPromptAction}
       />
     </div>
   );
