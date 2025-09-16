@@ -1,0 +1,65 @@
+{
+  "featureRequest": {
+    "title": "Guest Access, Public Profiles & Onboarding Enforcement",
+    "description": "Allow non-logged-in users to view public content while restricting interactions, and enforce onboarding completion before full account usage.",
+    "userStories": [
+      {
+        "asA": "guest (not logged in)",
+        "iWant": "to access the Gamefolio homepage",
+        "soThat": "I can browse the platform before registering"
+      },
+      {
+        "asA": "guest (not logged in)",
+        "iWant": "to view public user profiles and their clips, reels, and screenshots",
+        "soThat": "I can explore content without logging in"
+      },
+      {
+        "asA": "guest (not logged in)",
+        "iWant": "to be prompted to log in or register when I try to follow, message, like, fire, or comment",
+        "soThat": "interactions are limited to registered users only"
+      },
+      {
+        "asA": "newly registered user",
+        "iWant": "to complete the full onboarding flow before gaining full access",
+        "soThat": "my account is properly set up and personalised"
+      },
+      {
+        "asA": "partially onboarded user",
+        "iWant": "to be blocked from using the app until onboarding is completed",
+        "soThat": "all users complete the required setup"
+      }
+    ],
+    "acceptanceCriteria": {
+      "guestAccess": [
+        "Guests can see homepage and public clips/reels/screenshots",
+        "Guests can view public user profiles",
+        "Any attempt to interact with content (follow, message, like, fire, comment) triggers a login/register modal"
+      ],
+      "onboardingEnforcement": [
+        "New users enter onboarding immediately after registration",
+        "Onboarding must be 100% complete before account becomes active",
+        "If a user abandons onboarding, logging back in should resume onboarding where they left off",
+        "Blocked users (who haven’t finished onboarding) cannot bypass via direct URLs or API calls"
+      ]
+    },
+    "flows": {
+      "guestFlow": {
+        "viewHomepage": "Allowed",
+        "viewPublicProfile": "Allowed",
+        "interactWithContent": "Prompt login/register modal"
+      },
+      "onboardingFlow": {
+        "registration": "Triggers onboarding immediately",
+        "incompleteOnboarding": "Restricts user actions, only shows onboarding UI",
+        "resumeOnboarding": "User re-login resumes onboarding at last step",
+        "completeOnboarding": "Grants full access to app features"
+      }
+    },
+    "priority": "high",
+    "dependencies": [
+      "Public/private profile settings",
+      "Authentication & registration system",
+      "Onboarding flow system"
+    ]
+  }
+}
