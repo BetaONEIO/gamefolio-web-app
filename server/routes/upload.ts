@@ -11,16 +11,9 @@ import { VideoProcessor } from '../video-processor';
 import sharp from 'sharp';
 import { nanoid } from 'nanoid';
 import QRCode from 'qrcode';
+import { fullAccessMiddleware } from '../middleware/full-access';
 
 const router = express.Router();
-
-// Authentication middleware - ensure user is logged in
-const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  if (!req.user) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-  next();
-};
 
 // Temporary directory for processing
 const tempDir = path.join(process.cwd(), "temp");
@@ -151,7 +144,7 @@ const tusServer = new TusServer({
 });
 
 // Direct video upload endpoint (bypassing TUS for now)
-router.post('/video-direct', requireAuth, upload.single('file'), async (req, res) => {
+router.post('/video-direct', fullAccessMiddleware, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No video file provided' });
@@ -215,16 +208,16 @@ router.post('/video-direct', requireAuth, upload.single('file'), async (req, res
 });
 
 // TUS endpoints (keep for future use)
-router.all('/tus/*', requireAuth, (req, res) => {
+router.all('/tus/*', fullAccessMiddleware, (req, res) => {
   return tusServer.handle(req, res);
 });
 
-router.all('/tus', requireAuth, (req, res) => {
+router.all('/tus', fullAccessMiddleware, (req, res) => {
   return tusServer.handle(req, res);
 });
 
 // Screenshot upload endpoint (standard upload)
-router.post('/screenshot', requireAuth, screenshotUpload.single('screenshot'), async (req, res) => {
+router.post('/screenshot', fullAccessMiddleware, screenshotUpload.single('screenshot'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No screenshot file provided' });
@@ -392,7 +385,7 @@ router.post('/screenshot', requireAuth, screenshotUpload.single('screenshot'), a
 });
 
 // Video/Reel processing endpoint (called after TUS upload completes)
-router.post('/process-video', requireAuth, async (req, res) => {
+router.post('/process-video', fullAccessMiddleware, async (req, res) => {
   try {
     const { uploadResult, title, description, gameId, tags, videoType = 'clip' } = req.body;
 
@@ -663,7 +656,7 @@ router.post('/process-video', requireAuth, async (req, res) => {
 });
 
 // Admin utility: Fix existing clips with incorrect durations
-router.post('/fix-durations', requireAuth, async (req, res) => {
+router.post('/fix-durations', fullAccessMiddleware, async (req, res) => {
   try {
     // Check if user is admin (add admin check here if needed)
     const user = await storage.getUser(req.user!.id);
@@ -730,7 +723,7 @@ router.post('/fix-durations', requireAuth, async (req, res) => {
 });
 
 // Get upload limits and configuration
-router.get('/config', requireAuth, (req, res) => {
+router.get('/config', fullAccessMiddleware, (req, res) => {
   res.json({
     limits: {
       video: {
@@ -755,7 +748,7 @@ router.get('/config', requireAuth, (req, res) => {
 });
 
 // Avatar upload endpoint
-router.post('/avatar', requireAuth, avatarUpload.single('file'), async (req, res) => {
+router.post('/avatar', fullAccessMiddleware, avatarUpload.single('file'), async (req, res) => {
   try {
     console.log('Avatar upload request received');
     console.log('File received:', req.file);

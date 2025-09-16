@@ -510,6 +510,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     const user = req.user as User;
+    
+    // Admin users bypass onboarding requirements
+    if (user.role === "admin") {
+      return next();
+    }
+    
+    // Demo user bypasses onboarding requirements (use secure ID check)
+    if (user.id === 999) {
+      return next();
+    }
+
     const needsOnboarding = !user.userType || !user.ageRange;
 
     if (needsOnboarding) {
