@@ -999,10 +999,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Get current user
+  // Get current user (supports guest access)
   app.get("/api/user", (req, res) => {
     if (!req.user) {
-      return res.status(401).json({ message: "Not authenticated" });
+      // Return null for guest users instead of 401 error
+      return res.json(null);
     }
 
     // Remove password from response
