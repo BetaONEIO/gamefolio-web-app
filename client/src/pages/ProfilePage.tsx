@@ -60,7 +60,8 @@ import { GamefolioShareDialog } from "@/components/profile/GamefolioShareDialog"
 import { ReportDialog } from "@/components/content/ReportDialog";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { ProfilePictureLightbox, useProfilePictureLightbox } from "@/components/ui/profile-picture-lightbox";
-import { LoginPromptModal } from "@/components/auth/LoginPromptModal";
+import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { formatDistance } from "date-fns";
 import { cn } from "@/lib/utils";
 import NotFound from "./not-found";
@@ -91,15 +92,13 @@ const ProfilePage = () => {
   const [isScreenshotFire, setIsScreenshotFire] = useState(false);
   const [isScreenshotAnimating, setIsScreenshotAnimating] = useState(false);
 
-  // Login prompt modal state
-  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
-  const [loginPromptAction, setLoginPromptAction] = useState<"like" | "follow" | "message" | "comment" | "fire" | "interact">("interact");
+  // Join dialog for guest interactions
+  const { isOpen, actionType, openDialog, closeDialog } = useJoinDialog();
 
   // Screenshot action handlers
   const handleScreenshotLike = () => {
     if (!currentUser) {
-      setLoginPromptAction("like");
-      setLoginPromptOpen(true);
+      openDialog("like");
       return;
     }
 
@@ -121,8 +120,7 @@ const ProfilePage = () => {
 
   const handleScreenshotFire = () => {
     if (!currentUser) {
-      setLoginPromptAction("fire");
-      setLoginPromptOpen(true);
+      openDialog("like");  // Using 'like' as it's similar to fire reaction
       return;
     }
 
@@ -590,8 +588,7 @@ const ProfilePage = () => {
 
   const handleFollowClick = () => {
     if (!currentUser) {
-      setLoginPromptAction("follow");
-      setLoginPromptOpen(true);
+      openDialog("follow");
       return;
     }
     // Pass the current follow status before optimistic updates
@@ -2066,11 +2063,11 @@ const ProfilePage = () => {
         username={lightboxData.username}
       />
 
-      {/* Login Prompt Modal for Guest Users */}
-      <LoginPromptModal
-        isOpen={loginPromptOpen}
-        onOpenChange={setLoginPromptOpen}
-        actionType={loginPromptAction}
+      {/* Join Dialog for Guest Users */}
+      <JoinGamefolioDialog
+        open={isOpen}
+        onOpenChange={closeDialog}
+        actionType={actionType}
       />
     </div>
   );
