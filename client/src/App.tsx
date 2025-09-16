@@ -109,16 +109,8 @@ function Router() {
     <PageTransition>
       <OnboardingGuard>
         <Switch>
-          <ProtectedRoute path="/" component={HomePage} />
-          <ProtectedRoute path="/explore" component={ExplorePage} />
-          <ProtectedRoute path="/trending" component={TrendingPage} />
-          <ProtectedRoute path="/games/:gameSlug" component={GamePage} />
-          <ProtectedRoute path="/games/:gameId/clips" component={GameClipsPage} />
-          <ProtectedRoute path="/hashtag/:hashtag" component={HashtagPage} />
-          <ProtectedRoute path="/upload" component={UploadPage} />
-          <ProtectedRoute path="/upload/screenshots" component={ScreenshotUploadPage} />
-          <ProtectedRoute path="/upload-success" component={PostUploadSuccessPage} />
-          <ProtectedRoute path="/upload-success/:contentType/:contentId" component={PostUploadSuccessPage} />
+          {/* Public routes accessible to guests */}
+          <Route path="/" component={HomePage} />
           <Route path="/clip/:id" component={ClipPage} />
           <Route path="/clips/:id" component={ClipPage} />
           <Route path="/reel/:id" component={ClipPage} />
@@ -130,6 +122,17 @@ function Router() {
           <Route path="/screenshots/:id" component={ScreenshotUploadPage} />
           <Route path="/@:username/screenshots/:screenshotId" component={ProfilePage} />
           <Route path="/profile/:username" component={ProfilePage} />
+
+          {/* Protected routes requiring authentication */}
+          <ProtectedRoute path="/explore" component={ExplorePage} />
+          <ProtectedRoute path="/trending" component={TrendingPage} />
+          <ProtectedRoute path="/games/:gameSlug" component={GamePage} />
+          <ProtectedRoute path="/games/:gameId/clips" component={GameClipsPage} />
+          <ProtectedRoute path="/hashtag/:hashtag" component={HashtagPage} />
+          <ProtectedRoute path="/upload" component={UploadPage} />
+          <ProtectedRoute path="/upload/screenshots" component={ScreenshotUploadPage} />
+          <ProtectedRoute path="/upload-success" component={PostUploadSuccessPage} />
+          <ProtectedRoute path="/upload-success/:contentType/:contentId" component={PostUploadSuccessPage} />
           <ProtectedRoute path="/account/settings" component={AccountSettingsPage} />
           <ProtectedRoute path="/settings/profile" component={SettingsPage} />
           <ProtectedRoute path="/settings/appearance" component={AppearanceSettingsPage} />

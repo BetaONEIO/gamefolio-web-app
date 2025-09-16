@@ -14,7 +14,7 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
   // Check if user needs onboarding
   const needsOnboarding = user && (!user.userType || !user.ageRange);
 
-  // Routes that should bypass onboarding checks
+  // Routes that should bypass onboarding checks (including guest-accessible routes)
   const bypassRoutes = [
     '/auth', 
     '/onboarding', 
@@ -28,13 +28,27 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
     '/view/',  // Prefix for view routes
     '/admin'   // Prefix for admin routes - admins can access without completing onboarding
   ];
+
+  // Guest-accessible routes (public routes that don't require authentication)
+  const guestAccessibleRoutes = [
+    '/', // Homepage
+    '/clip/', '/clips/', '/reel/', '/reels/', // Content viewing
+    '/screenshots/', 
+    '/profile/', '/@', // Public profiles
+  ];
   
   const shouldBypass = bypassRoutes.some(route => 
     route.endsWith('/') ? location.startsWith(route) : location === route
   );
 
+  // Check if current location is a guest-accessible route
+  const isGuestAccessible = guestAccessibleRoutes.some(route => {
+    if (route === '/') return location === '/';
+    return location.startsWith(route);
+  }) || location.match(/^\/[^\/]+$/); // Match username routes like /username
+
   useEffect(() => {
-    if (!isLoading && user && needsOnboarding && !shouldBypass) {
+    if (!isLoading && user && needsOnboarding && !shouldBypass && !isGuestAccessible) {
       // Redirect to onboarding if user hasn't completed it
       if (location !== "/onboarding") {
         // Replace history entry to prevent back navigation
@@ -42,15 +56,15 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
         setLocation("/onboarding");
       }
     }
-  }, [user, isLoading, needsOnboarding, shouldBypass, location, setLocation]);
+  }, [user, isLoading, needsOnboarding, shouldBypass, isGuestAccessible, location, setLocation]);
 
   // Show loading while auth is checking
   if (isLoading) {
     return <FullScreenLoader isLoading={true} />;
   }
 
-  // If user needs onboarding and we're not on a bypass route, redirect
-  if (needsOnboarding && !shouldBypass) {
+  // If user needs onboarding and we're not on a bypass route or guest-accessible route, redirect
+  if (needsOnboarding && !shouldBypass && !isGuestAccessible) {
     return <FullScreenLoader isLoading={true} />;
   }
 
