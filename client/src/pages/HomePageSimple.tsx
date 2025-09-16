@@ -227,17 +227,24 @@ const HomePage = () => {
     enabled: !!userHasContent, // Only fetch if user has content
   });
 
-  // Determine which hero text to display
+  // Determine which hero text to display based on user authentication status
+  const guestHeroText = {
+    title: "Discover Amazing\nGaming Moments",
+    subtitle: "Join the gaming community to upload, discover, and share epic gaming clips. Connect with fellow gamers worldwide."
+  };
+
   const defaultHeroText = {
     title: "Share Your Gaming\nMoments",
     subtitle: "Upload, discover, and share epic gaming clips with the community. Build your gaming portfolio and connect with fellow gamers."
   };
 
-  // Prevent showing any text until we know the user's content status
-  const isStillLoading = isLoadingUserContent || (userHasContent && isLoadingExperiencedText);
+  // Handle hero text logic for both guests and authenticated users
+  const isStillLoading = user && (isLoadingUserContent || (userHasContent && isLoadingExperiencedText));
   
   const heroText = isStillLoading 
     ? null // Show loading state while determining user status or fetching experienced text
+    : !user
+    ? guestHeroText // Show guest text for non-authenticated users
     : userHasContent && experiencedHeroText
     ? experiencedHeroText
     : defaultHeroText;
@@ -245,10 +252,12 @@ const HomePage = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 md:space-y-8 pb-16 md:pb-8">
-      {/* Email Verification Banner */}
-      <div className="mx-2 sm:mx-4 md:mx-6">
-        <EmailVerificationBanner />
-      </div>
+      {/* Email Verification Banner - Only for authenticated users */}
+      {user && (
+        <div className="mx-2 sm:mx-4 md:mx-6">
+          <EmailVerificationBanner />
+        </div>
+      )}
       
       {/* Hero Section */}
       <section className="relative overflow-hidden rounded-2xl mx-2 md:mx-6">
@@ -273,11 +282,20 @@ const HomePage = () => {
                   <p className="text-sm sm:text-base md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-2">
                     {heroText.subtitle}
                   </p>
-                  {/* Only show "Start Building Now" button if user hasn't uploaded any content yet */}
-                  {!userHasContent && (
+                  {/* Show appropriate call-to-action button based on user authentication status */}
+                  {!user ? (
+                    <Button 
+                      className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                      onClick={() => setLocation('/auth')}
+                      data-testid="button-join-community"
+                    >
+                      Join Community
+                    </Button>
+                  ) : !userHasContent && (
                     <Button 
                       className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
                       onClick={() => setLocation('/upload')}
+                      data-testid="button-start-building"
                     >
                       Start Building Now
                     </Button>
