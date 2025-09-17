@@ -431,24 +431,24 @@ export default function GameClipsPage() {
 
         {/* Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="bg-transparent border-b border-border mb-8 h-auto p-0 gap-8 justify-start">
+          <TabsList className="bg-transparent mb-8 h-auto p-0 gap-8 justify-start">
             <TabsTrigger 
               value="clips" 
-              className="bg-transparent px-1 py-2 rounded-none text-sm font-medium data-[state=inactive]:text-muted-foreground data-[state=active]:text-primary sm:data-[state=active]:[&>span]:border-b-2 sm:data-[state=active]:[&>span]:border-primary"
+              className="group bg-transparent px-1 py-2 rounded-none text-sm font-medium data-[state=inactive]:text-muted-foreground data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent"
             >
-              <span className="inline-block leading-none">Clips</span>
+              <span className="relative inline-block leading-none sm:after:absolute sm:after:left-0 sm:after:right-0 sm:after:-bottom-1 sm:after:h-0.5 sm:after:bg-primary sm:after:content-[''] sm:group-data-[state=inactive]:after:hidden sm:group-data-[state=active]:after:block">Clips</span>
             </TabsTrigger>
             <TabsTrigger 
               value="reels" 
-              className="bg-transparent px-1 py-2 rounded-none text-sm font-medium data-[state=inactive]:text-muted-foreground data-[state=active]:text-primary sm:data-[state=active]:[&>span]:border-b-2 sm:data-[state=active]:[&>span]:border-primary"
+              className="group bg-transparent px-1 py-2 rounded-none text-sm font-medium data-[state=inactive]:text-muted-foreground data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent"
             >
-              <span className="inline-block leading-none">Reels</span>
+              <span className="relative inline-block leading-none sm:after:absolute sm:after:left-0 sm:after:right-0 sm:after:-bottom-1 sm:after:h-0.5 sm:after:bg-primary sm:after:content-[''] sm:group-data-[state=inactive]:after:hidden sm:group-data-[state=active]:after:block">Reels</span>
             </TabsTrigger>
             <TabsTrigger 
               value="screenshots" 
-              className="bg-transparent px-1 py-2 rounded-none text-sm font-medium data-[state=inactive]:text-muted-foreground data-[state=active]:text-primary sm:data-[state=active]:[&>span]:border-b-2 sm:data-[state=active]:[&>span]:border-primary"
+              className="group bg-transparent px-1 py-2 rounded-none text-sm font-medium data-[state=inactive]:text-muted-foreground data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent"
             >
-              <span className="inline-block leading-none">Screenshots</span>
+              <span className="relative inline-block leading-none sm:after:absolute sm:after:left-0 sm:after:right-0 sm:after:-bottom-1 sm:after:h-0.5 sm:after:bg-primary sm:after:content-[''] sm:group-data-[state=inactive]:after:hidden sm:group-data-[state=active]:after:block">Screenshots</span>
             </TabsTrigger>
           </TabsList>
 
