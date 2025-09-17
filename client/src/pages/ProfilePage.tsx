@@ -874,7 +874,7 @@ const ProfilePage = () => {
 
   return (
     <div 
-      className="min-h-screen pb-12 relative profile-theme-scope" 
+      className="gamefolio-page min-h-screen pb-12 relative profile-theme-scope" 
       ref={profileThemeScopeRef}
       style={{ 
         background: '#101D27',
@@ -884,7 +884,7 @@ const ProfilePage = () => {
     >
       {/* Enhanced Banner with user's theme colors integrated throughout */}
       <div 
-        className="h-64 sm:h-80 md:h-96 bg-cover bg-center overflow-hidden profile-banner relative -mx-4 md:-mx-8 border-b-4"
+        className="gf-chart h-64 sm:h-80 md:h-96 bg-cover bg-center overflow-hidden profile-banner relative -mx-4 md:-mx-8 border-b-4"
         style={{
           ...bannerStyle,
           borderBottomColor: profile?.accentColor || '#4ADE80',
@@ -972,7 +972,7 @@ const ProfilePage = () => {
       </div>
 
       {/* Profile Info - positioned below banner with overlapping profile picture */}
-      <div className="container mx-auto px-4 relative z-20">
+      <div className="gf-header container mx-auto px-4 relative z-20">
 
         <div className="flex items-start gap-4 md:gap-8 pb-6" style={{ marginTop: '-56px', paddingTop: '24px' }}>
           {/* Profile Picture positioned to overlap banner */}
@@ -1036,7 +1036,7 @@ const ProfilePage = () => {
                 </div>
 
                 {/* Stats positioned directly below username */}
-                <div className="flex gap-6 items-center mt-2">
+                <div className="gf-stats flex gap-6 items-center mt-2">
                   <div className="flex items-center gap-1">
                     <span className="font-semibold">{Number(profile._count?.clips || 0)}</span>
                     <span className="text-muted-foreground">Clips</span>
@@ -1053,14 +1053,14 @@ const ProfilePage = () => {
 
                 {/* Bio/description with increased text size (30% larger) */}
                 {profile.bio && (
-                  <p className="mt-3 text-base text-foreground/90 max-w-2xl">{profile.bio}</p>
+                  <p className="gf-bio mt-3 text-base text-foreground/90 max-w-2xl">{profile.bio}</p>
                 )}
 
                 {/* Thin dividing line above gaming social links */}
                 <div className="w-full h-px bg-border/60 mt-4 mb-3"></div>
 
                 {/* Platform Connections under description */}
-                <div className="flex flex-wrap gap-2 mt-3">
+                <div className="gf-platforms flex flex-wrap gap-2 mt-3">
                   {profile.steamUsername && (
                     <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#1B2838', color: '#FFFFFF' }}>
                       <SiSteam className="w-3 h-3" />
@@ -1230,7 +1230,7 @@ const ProfilePage = () => {
           className="w-full"
         >
           <TabsList 
-            className="border-b w-full justify-start rounded-none h-12 md:h-14 p-0 relative overflow-x-auto overflow-y-hidden flex md:grid md:grid-cols-4"
+            className="gf-tabs profile-tabs border-b w-full justify-start rounded-none h-12 md:h-14 p-0 relative overflow-x-auto overflow-y-hidden flex md:grid md:grid-cols-4"
             style={{ 
               backgroundColor: `var(--profile-primary-color, #0B2232)40`,
               borderBottomColor: `var(--profile-accent-color, #4ADE80)60`
