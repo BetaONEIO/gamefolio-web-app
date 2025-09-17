@@ -103,10 +103,26 @@ export function LoginPromptModal({
           </Button>
         </div>
         
-        <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+        {/* Enhanced Close Button - More Visible */}
+        <button
+          onClick={() => onOpenChange(false)}
+          data-testid="button-close-modal"
+          className="absolute top-3 right-3 z-50 bg-gray-700 hover:bg-red-600 text-white rounded-full p-2 transition-all duration-200 hover:scale-110 opacity-100"
+          title="Close"
+        >
           <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </DialogClose>
+        </button>
+
+        {/* Additional Cancel Button at Bottom */}
+        <div className="mt-6 text-center">
+          <button
+            onClick={() => onOpenChange(false)}
+            data-testid="button-cancel-modal"
+            className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+          >
+            Maybe later
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   );
