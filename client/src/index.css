@@ -2,111 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
-/* MOBILE GAMEFOLIO PAGE LAYOUT */
+/* HIDE ALL TAB UNDERLINES ON MOBILE */
 @media (max-width: 639px) {
-  /* Main page layout */
-  .gamefolio-page {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+  .tabs-trigger,
+  .tabs-trigger[data-state="active"],
+  .tabs-trigger[data-state="active"] *,
+  [role="tablist"],
+  [role="tablist"] *,
+  [data-radix-tabs-trigger],
+  [data-radix-tabs-trigger][data-state="active"] {
+    border-bottom: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    text-decoration: none !important;
   }
   
-  /* Chart/banner takes more space and positioned first */
-  .gamefolio-page .gf-chart {
-    order: 1;
-    height: 240px !important;
-    margin-bottom: 8px;
-  }
-  
-  /* Profile header - horizontal layout with avatar and name */
-  .gamefolio-page .gf-header {
-    order: 2;
-  }
-  
-  .gamefolio-page .gf-header > div:first-child {
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 16px !important;
-    margin-top: -32px !important;
-    padding-top: 16px !important;
-  }
-  
-  /* Avatar smaller on mobile */
-  .gamefolio-page .gf-header .relative.flex-shrink-0 {
-    transform: none !important;
-  }
-  
-  .gamefolio-page .gf-header .relative.flex-shrink-0 > div:last-child {
-    width: 80px !important;
-    height: 80px !important;
-  }
-  
-  /* Username and verification horizontal */
-  .gamefolio-page .gf-header .flex-1 {
-    padding-top: 0 !important;
-  }
-  
-  .gamefolio-page .gf-header h1 {
-    font-size: 1.5rem !important;
-  }
-  
-  /* Stats as 3-column grid */
-  .gamefolio-page .gf-stats {
-    order: 3;
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 16px !important;
-    margin-top: 16px !important;
-    text-align: center;
-  }
-  
-  /* Bio positioned after stats */
-  .gamefolio-page .gf-bio {
-    order: 4;
-    font-size: 0.9rem !important;
-    line-height: 1.4 !important;
-    margin-top: 16px !important;
-  }
-  
-  /* Platform badges as 2x3 grid (3 columns, 2 rows) */
-  .gamefolio-page .gf-platforms {
-    order: 5;
-    display: grid !important;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 8px !important;
-    margin-top: 16px !important;
-  }
-  
-  /* Tabs at bottom */
-  .gamefolio-page .gf-tabs {
-    order: 6;
-    margin-top: 20px !important;
-  }
-}
-
-/* SCOPED PURPLE TAB UNDERLINES FOR MOBILE GAMEFOLIO PAGE */
-@media (max-width: 639px) {
-  .gamefolio-page .profile-tabs {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-    gap: 16px !important;
-    background: transparent !important;
-  }
-  
-  .gamefolio-page .profile-tabs [data-state="active"] {
-    color: #a855f7 !important;
-    border-bottom: 2px solid #a855f7 !important;
-    border-radius: 0 !important;
-    padding-bottom: 8px !important;
-  }
-  
-  .gamefolio-page .profile-tabs [data-state="inactive"] {
-    border-bottom: 2px solid transparent !important;
-    border-radius: 0 !important;
-    padding-bottom: 8px !important;
-  }
-  
-  /* Hide the animated indicator on mobile */
-  .gamefolio-page .profile-tab-indicator {
+  .tabs-trigger[data-state="active"] > .tab-label::after,
+  .tabs-trigger[data-state="active"] > .tab-label::before,
+  .tabs-trigger::after,
+  .tabs-trigger::before {
     display: none !important;
   }
 }
