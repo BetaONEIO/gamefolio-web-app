@@ -118,7 +118,6 @@ export function JoinGamefolioDialog({
         username: formData.username,
         displayName: formData.username, // Use username as display name initially
         password: formData.password,
-        confirmPassword: formData.confirmPassword,
       },
       {
         onSuccess: () => {
@@ -201,9 +200,11 @@ export function JoinGamefolioDialog({
           {/* Close button */}
           <button
             onClick={handleClose}
-            className="absolute top-4 right-4 z-10 text-gray-400 hover:text-white transition-colors"
+            data-testid="button-close-signup"
+            className="absolute top-3 right-3 z-50 bg-gray-700 hover:bg-red-600 text-white rounded-full p-2 transition-all duration-200 hover:scale-110"
+            title="Close"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
 
           <div className="p-8 text-center">
@@ -323,9 +324,11 @@ export function JoinGamefolioDialog({
           {/* Close button */}
           <button
             onClick={handleClose}
-            className="absolute top-4 right-4 z-10 text-gray-400 hover:text-white transition-colors"
+            data-testid="button-close-signup"
+            className="absolute top-3 right-3 z-50 bg-gray-700 hover:bg-red-600 text-white rounded-full p-2 transition-all duration-200 hover:scale-110"
+            title="Close"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
 
           <div className="p-8 text-center">
@@ -408,9 +411,11 @@ export function JoinGamefolioDialog({
         {/* Close button */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 z-10 text-gray-400 hover:text-white transition-colors"
+          data-testid="button-close-main"
+          className="absolute top-3 right-3 z-50 bg-gray-700 hover:bg-red-600 text-white rounded-full p-2 transition-all duration-200 hover:scale-110"
+          title="Close"
         >
-          <X className="h-5 w-5" />
+          <X className="h-4 w-4" />
         </button>
 
         <div className="p-8 text-center">
