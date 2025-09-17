@@ -434,21 +434,21 @@ export default function GameClipsPage() {
           <TabsList className="bg-transparent border-b border-border mb-8 h-auto p-0 gap-8 justify-start">
             <TabsTrigger 
               value="clips" 
-              className="inline-flex items-center justify-center bg-transparent px-3 py-1.5 pb-4 text-sm font-medium data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary border-b-2 border-transparent transition-colors"
+              className="bg-transparent px-1 py-2 rounded-none text-sm font-medium data-[state=inactive]:text-muted-foreground data-[state=active]:text-primary sm:data-[state=active]:[&>span]:border-b-2 sm:data-[state=active]:[&>span]:border-primary"
             >
-              Clips
+              <span className="inline-block leading-none">Clips</span>
             </TabsTrigger>
             <TabsTrigger 
               value="reels" 
-              className="inline-flex items-center justify-center bg-transparent px-3 py-1.5 pb-4 text-sm font-medium data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary border-b-2 border-transparent transition-colors"
+              className="bg-transparent px-1 py-2 rounded-none text-sm font-medium data-[state=inactive]:text-muted-foreground data-[state=active]:text-primary sm:data-[state=active]:[&>span]:border-b-2 sm:data-[state=active]:[&>span]:border-primary"
             >
-              Reels
+              <span className="inline-block leading-none">Reels</span>
             </TabsTrigger>
             <TabsTrigger 
               value="screenshots" 
-              className="inline-flex items-center justify-center bg-transparent px-3 py-1.5 pb-4 text-sm font-medium data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary border-b-2 border-transparent transition-colors"
+              className="bg-transparent px-1 py-2 rounded-none text-sm font-medium data-[state=inactive]:text-muted-foreground data-[state=active]:text-primary sm:data-[state=active]:[&>span]:border-b-2 sm:data-[state=active]:[&>span]:border-primary"
             >
-              Screenshots
+              <span className="inline-block leading-none">Screenshots</span>
             </TabsTrigger>
           </TabsList>
 
