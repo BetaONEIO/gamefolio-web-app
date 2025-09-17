@@ -2,26 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Tab underlines - hide all on mobile, only show properly sized ones on desktop/tablet */
-.tabs-trigger {
-  border-bottom: none !important;
-  box-shadow: none !important;
-}
-
-.tabs-trigger[data-state="active"] {
-  border-bottom: none !important;
-  box-shadow: none !important;
-}
-
-/* Only show custom underlines on desktop/tablet (640px+) */
-@media (min-width: 640px) {
-  .tabs-trigger[data-state="active"] > .tab-label::after {
-    content: "";
-    display: block;
-    width: 100%;
-    height: 2px;
-    background: hsl(var(--primary));
-    margin-top: 4px;
+/* HIDE ALL TAB UNDERLINES ON MOBILE */
+@media (max-width: 639px) {
+  .tabs-trigger,
+  .tabs-trigger[data-state="active"],
+  .tabs-trigger[data-state="active"] *,
+  [role="tablist"],
+  [role="tablist"] *,
+  [data-radix-tabs-trigger],
+  [data-radix-tabs-trigger][data-state="active"] {
+    border-bottom: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    text-decoration: none !important;
+  }
+  
+  .tabs-trigger[data-state="active"] > .tab-label::after,
+  .tabs-trigger[data-state="active"] > .tab-label::before,
+  .tabs-trigger::after,
+  .tabs-trigger::before {
+    display: none !important;
   }
 }
 
