@@ -2,7 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Tab underlines - only show on desktop/tablet, properly sized to text */
+/* Tab underlines - hide all on mobile, only show properly sized ones on desktop/tablet */
+.tabs-trigger {
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+
+.tabs-trigger[data-state="active"] {
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+
+/* Only show custom underlines on desktop/tablet (640px+) */
 @media (min-width: 640px) {
   .tabs-trigger[data-state="active"] > .tab-label::after {
     content: "";
