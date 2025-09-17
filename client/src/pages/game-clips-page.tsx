@@ -434,21 +434,21 @@ export default function GameClipsPage() {
           <TabsList className="bg-transparent mb-8 h-auto p-0 gap-8 justify-start">
             <TabsTrigger 
               value="clips" 
-              className="group bg-transparent px-1 py-2 rounded-none text-sm font-medium data-[state=inactive]:text-muted-foreground data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent"
+              className="tabs-trigger bg-transparent px-1 py-2 rounded-none text-sm font-medium data-[state=inactive]:text-muted-foreground data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent"
             >
-              <span className="relative inline-block leading-none sm:after:absolute sm:after:left-0 sm:after:right-0 sm:after:-bottom-1 sm:after:h-0.5 sm:after:bg-primary sm:after:content-[''] sm:group-data-[state=inactive]:after:hidden sm:group-data-[state=active]:after:block">Clips</span>
+              <span className="tab-label inline-block">Clips</span>
             </TabsTrigger>
             <TabsTrigger 
               value="reels" 
-              className="group bg-transparent px-1 py-2 rounded-none text-sm font-medium data-[state=inactive]:text-muted-foreground data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent"
+              className="tabs-trigger bg-transparent px-1 py-2 rounded-none text-sm font-medium data-[state=inactive]:text-muted-foreground data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent"
             >
-              <span className="relative inline-block leading-none sm:after:absolute sm:after:left-0 sm:after:right-0 sm:after:-bottom-1 sm:after:h-0.5 sm:after:bg-primary sm:after:content-[''] sm:group-data-[state=inactive]:after:hidden sm:group-data-[state=active]:after:block">Reels</span>
+              <span className="tab-label inline-block">Reels</span>
             </TabsTrigger>
             <TabsTrigger 
               value="screenshots" 
-              className="group bg-transparent px-1 py-2 rounded-none text-sm font-medium data-[state=inactive]:text-muted-foreground data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent"
+              className="tabs-trigger bg-transparent px-1 py-2 rounded-none text-sm font-medium data-[state=inactive]:text-muted-foreground data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent"
             >
-              <span className="relative inline-block leading-none sm:after:absolute sm:after:left-0 sm:after:right-0 sm:after:-bottom-1 sm:after:h-0.5 sm:after:bg-primary sm:after:content-[''] sm:group-data-[state=inactive]:after:hidden sm:group-data-[state=active]:after:block">Screenshots</span>
+              <span className="tab-label inline-block">Screenshots</span>
             </TabsTrigger>
           </TabsList>
 

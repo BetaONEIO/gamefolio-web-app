@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Tab underlines - only show on desktop/tablet, properly sized to text */
+@media (min-width: 640px) {
+  .tabs-trigger[data-state="active"] > .tab-label::after {
+    content: "";
+    display: block;
+    width: 100%;
+    height: 2px;
+    background: hsl(var(--primary));
+    margin-top: 4px;
+  }
+}
+
 /* Custom animations for upload progress */
 @keyframes slide-right {
   0% {
