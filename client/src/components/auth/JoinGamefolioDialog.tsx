@@ -284,17 +284,28 @@ export function JoinGamefolioDialog({
             <Button 
               onClick={handleEmailSignup}
               disabled={isLoading}
+              data-testid="button-create-account"
               className="w-full mt-6 bg-primary hover:bg-primary/90 text-white py-3 text-base font-medium"
             >
               {isLoading ? 'Creating Account...' : 'Create Account'}
             </Button>
 
-            <button
-              onClick={() => setShowEmailForm(false)}
-              className="w-full mt-4 text-sm text-gray-400 hover:text-white transition-colors"
-            >
-              ← Back to sign up options
-            </button>
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setShowEmailForm(false)}
+                data-testid="button-back-signup"
+                className="flex-1 text-sm text-gray-400 hover:text-white transition-colors py-2"
+              >
+                ← Back
+              </button>
+              <button
+                onClick={handleClose}
+                data-testid="button-cancel-signup"
+                className="flex-1 text-sm text-gray-400 hover:text-white transition-colors py-2"
+              >
+                Cancel
+              </button>
+            </div>
 
             <p className="text-xs text-gray-500 mt-6">
               By registering, you agree to Gamefolio's Terms of Service and Privacy Policy
@@ -363,17 +374,28 @@ export function JoinGamefolioDialog({
             <Button 
               onClick={handleLogin}
               disabled={isLoading}
+              data-testid="button-sign-in"
               className="w-full mt-6 bg-primary hover:bg-primary/90 text-white py-3 text-base font-medium"
             >
               {isLoading ? 'Signing In...' : 'Sign In'}
             </Button>
 
-            <button
-              onClick={() => setShowLoginForm(false)}
-              className="w-full mt-4 text-sm text-gray-400 hover:text-white transition-colors"
-            >
-              ← Back to sign up options
-            </button>
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setShowLoginForm(false)}
+                data-testid="button-back-login"
+                className="flex-1 text-sm text-gray-400 hover:text-white transition-colors py-2"
+              >
+                ← Back
+              </button>
+              <button
+                onClick={handleClose}
+                data-testid="button-cancel-login"
+                className="flex-1 text-sm text-gray-400 hover:text-white transition-colors py-2"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -434,11 +456,23 @@ export function JoinGamefolioDialog({
               Already have an account?{' '}
               <button
                 onClick={() => setShowLoginForm(true)}
+                data-testid="button-show-login"
                 className="text-green-400 hover:text-green-300 font-medium transition-colors"
               >
                 Log In here
               </button>
             </p>
+          </div>
+
+          {/* Cancel button */}
+          <div className="mt-6">
+            <button
+              onClick={handleClose}
+              data-testid="button-cancel-main"
+              className="text-sm text-gray-400 hover:text-white transition-colors"
+            >
+              Maybe later
+            </button>
           </div>
 
           {/* Terms */}
