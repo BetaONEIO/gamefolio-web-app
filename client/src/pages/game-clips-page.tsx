@@ -435,19 +435,19 @@ export default function GameClipsPage() {
             <div className="flex gap-8">
               <TabsTrigger 
                 value="clips" 
-                className="bg-transparent px-0 pb-4 pt-0 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none rounded-none font-semibold relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-1/2 data-[state=active]:after:-translate-x-1/2 data-[state=active]:after:w-8 data-[state=active]:after:h-px data-[state=active]:after:bg-primary"
+                className="bg-transparent px-2 pb-3 pt-0 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none rounded-none font-semibold data-[state=active]:border-b data-[state=active]:border-primary border-b border-transparent"
               >
                 Clips
               </TabsTrigger>
               <TabsTrigger 
                 value="reels" 
-                className="bg-transparent px-0 pb-4 pt-0 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none rounded-none font-semibold relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-1/2 data-[state=active]:after:-translate-x-1/2 data-[state=active]:after:w-8 data-[state=active]:after:h-px data-[state=active]:after:bg-primary"
+                className="bg-transparent px-2 pb-3 pt-0 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none rounded-none font-semibold data-[state=active]:border-b data-[state=active]:border-primary border-b border-transparent"
               >
                 Reels
               </TabsTrigger>
               <TabsTrigger 
                 value="screenshots" 
-                className="bg-transparent px-0 pb-4 pt-0 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none rounded-none font-semibold relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-1/2 data-[state=active]:after:-translate-x-1/2 data-[state=active]:after:w-12 data-[state=active]:after:h-px data-[state=active]:after:bg-primary"
+                className="bg-transparent px-2 pb-3 pt-0 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none rounded-none font-semibold data-[state=active]:border-b data-[state=active]:border-primary border-b border-transparent"
               >
                 Screenshots
               </TabsTrigger>
