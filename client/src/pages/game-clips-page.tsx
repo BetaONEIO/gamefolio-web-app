@@ -431,27 +431,25 @@ export default function GameClipsPage() {
 
         {/* Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="h-auto p-0 bg-transparent border-b border-border mb-8">
-            <div className="flex gap-8">
-              <TabsTrigger 
-                value="clips" 
-                className="bg-transparent px-2 pb-3 pt-0 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none rounded-none font-semibold data-[state=active]:border-b data-[state=active]:border-primary border-b border-transparent"
-              >
-                Clips
-              </TabsTrigger>
-              <TabsTrigger 
-                value="reels" 
-                className="bg-transparent px-2 pb-3 pt-0 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none rounded-none font-semibold data-[state=active]:border-b data-[state=active]:border-primary border-b border-transparent"
-              >
-                Reels
-              </TabsTrigger>
-              <TabsTrigger 
-                value="screenshots" 
-                className="bg-transparent px-2 pb-3 pt-0 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none rounded-none font-semibold data-[state=active]:border-b data-[state=active]:border-primary border-b border-transparent"
-              >
-                Screenshots
-              </TabsTrigger>
-            </div>
+          <TabsList className="bg-transparent border-b border-border mb-8 h-auto p-0 gap-8 justify-start">
+            <TabsTrigger 
+              value="clips" 
+              className="inline-flex items-center justify-center bg-transparent px-3 py-1.5 pb-4 text-sm font-medium data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary border-b-2 border-transparent transition-colors"
+            >
+              Clips
+            </TabsTrigger>
+            <TabsTrigger 
+              value="reels" 
+              className="inline-flex items-center justify-center bg-transparent px-3 py-1.5 pb-4 text-sm font-medium data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary border-b-2 border-transparent transition-colors"
+            >
+              Reels
+            </TabsTrigger>
+            <TabsTrigger 
+              value="screenshots" 
+              className="inline-flex items-center justify-center bg-transparent px-3 py-1.5 pb-4 text-sm font-medium data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary border-b-2 border-transparent transition-colors"
+            >
+              Screenshots
+            </TabsTrigger>
           </TabsList>
 
           {/* Clips Tab */}
