@@ -320,14 +320,16 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         {/* Right side action buttons */}
                         <div className="absolute right-6 bottom-32 flex flex-col items-center space-y-4 z-50 pointer-events-auto">
                           <div className="flex flex-col items-center">
-                            <FireButton 
-                              contentId={clip.id}
-                              contentType="clip"
-                              initialFired={false}
-                              initialCount={0}
-                              size="lg"
-                              onUnauthenticatedAction={() => openDialog('general')}
-                            />
+                            <div className="text-white">
+                              <FireButton 
+                                contentId={clip.id}
+                                contentType="clip"
+                                initialFired={false}
+                                initialCount={0}
+                                size="lg"
+                                onUnauthenticatedAction={() => openDialog('general')}
+                              />
+                            </div>
                             <span className="text-white text-xs mt-1">0</span>
                           </div>
                           
