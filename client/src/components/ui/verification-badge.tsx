@@ -16,7 +16,7 @@ export function VerificationBadge({ isVerified, size = "md" }: VerificationBadge
 
   return (
     <div className={`${sizeClasses[size]} bg-primary rounded-full flex items-center justify-center ml-1 relative`}>
-      <div className="absolute inset-0 bg-white rounded-full flex items-center justify-center">
+      <div className="absolute inset-0 bg-white dark:bg-gray-900 rounded-full flex items-center justify-center">
         <span className="text-primary font-bold text-[0.6em]">G</span>
       </div>
       <Check className="w-2/3 h-2/3 text-white z-10" strokeWidth={3} />
