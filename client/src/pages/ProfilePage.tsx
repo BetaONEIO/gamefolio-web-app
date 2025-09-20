@@ -908,19 +908,18 @@ const ProfilePage = () => {
         zIndex: 1
       }}
     >
-      {/* Enhanced Banner with user's theme colors integrated throughout */}
+      {/* Enhanced Banner with global theme colors */}
       <div 
-        className="h-64 sm:h-80 md:h-96 bg-cover bg-center overflow-hidden profile-banner relative -mx-4 md:-mx-8 border-b-4"
+        className="h-64 sm:h-80 md:h-96 bg-cover bg-center overflow-hidden profile-banner relative -mx-4 md:-mx-8 border-b-4 border-primary"
         style={{
           ...bannerStyle,
-          borderBottomColor: profile?.accentColor || '#4ADE80',
         }}
       >
         {/* Dynamic theme-based gradient overlay */}
         <div 
           className="absolute inset-0 opacity-60" 
           style={{
-            background: `linear-gradient(135deg, var(--profile-primary-color, #0B2232)CC, var(--profile-accent-color, #4ADE80)88, transparent 70%)`,
+            background: `linear-gradient(135deg, hsl(var(--background))CC, hsl(var(--primary))88, transparent 70%)`,
           }}
         />
 
@@ -928,7 +927,7 @@ const ProfilePage = () => {
         <div 
           className="absolute inset-0 opacity-30" 
           style={{
-            background: `linear-gradient(45deg, transparent 30%, var(--profile-accent-color, #4ADE80)20, transparent 70%)`,
+            background: `linear-gradient(45deg, transparent 30%, hsl(var(--primary))20, transparent 70%)`,
             backgroundSize: '200% 200%',
             animation: 'theme-shimmer 6s ease-in-out infinite',
           }}
@@ -938,36 +937,32 @@ const ProfilePage = () => {
         {!profile?.bannerUrl && (
         <div className="absolute inset-0 overflow-hidden opacity-25">
           <div 
-            className="absolute w-4 h-4 rounded-full animate-float-1" 
+            className="absolute w-4 h-4 rounded-full animate-float-1 bg-primary" 
             style={{
-              backgroundColor: 'var(--profile-accent-color, #4ADE80)',
               top: '20%',
               left: '10%',
               animationDuration: '8s'
             }}
           ></div>
           <div 
-            className="absolute w-6 h-6 rounded-full animate-float-2" 
+            className="absolute w-6 h-6 rounded-full animate-float-2 bg-primary" 
             style={{
-              backgroundColor: 'var(--profile-accent-color, #4ADE80)',
               top: '50%',
               right: '20%',
               animationDuration: '12s'
             }}
           ></div>
           <div 
-            className="absolute w-3 h-3 rounded-full animate-float-3" 
+            className="absolute w-3 h-3 rounded-full animate-float-3 bg-primary" 
             style={{
-              backgroundColor: 'var(--profile-accent-color, #4ADE80)',
               bottom: '30%',
               left: '70%',
               animationDuration: '10s'
             }}
           ></div>
           <div 
-            className="absolute w-5 h-5 rounded-full animate-pulse" 
+            className="absolute w-5 h-5 rounded-full animate-pulse bg-background" 
             style={{
-              backgroundColor: 'var(--profile-primary-color, #0B2232)',
               top: '30%',
               right: '40%',
               animationDuration: '4s'
@@ -982,14 +977,14 @@ const ProfilePage = () => {
         <div 
           className="absolute top-4 left-4 w-16 h-16 rounded-full opacity-20 animate-pulse"
           style={{
-            background: `radial-gradient(circle, ${accentColor}, transparent 70%)`,
+            background: `radial-gradient(circle, hsl(var(--primary)), transparent 70%)`,
             animationDuration: '3s'
           }}
         ></div>
         <div 
           className="absolute top-8 right-16 w-12 h-12 rounded-full opacity-15 animate-bounce"
           style={{
-            background: `radial-gradient(circle, ${cardColor}, transparent 70%)`,
+            background: `radial-gradient(circle, hsl(var(--card)), transparent 70%)`,
             animationDuration: '4s'
           }}
         ></div>
