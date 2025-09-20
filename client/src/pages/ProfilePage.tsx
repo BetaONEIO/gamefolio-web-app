@@ -1041,12 +1041,9 @@ const ProfilePage = () => {
                   <span className="text-lg md:text-xl text-white/70 font-normal">@{profile.username}</span>
                   {profile.emailVerified && (
                     <span 
-                      className="text-[10px] rounded-full px-2 py-0.5 font-medium border animate-pulse whitespace-nowrap"
+                      className="text-[10px] rounded-full px-2 py-0.5 font-medium border animate-pulse whitespace-nowrap bg-primary/20 text-primary border-primary/60"
                       style={{ 
-                        backgroundColor: `${accentColor}20`,
-                        color: accentColor,
-                        borderColor: `${accentColor}60`,
-                        boxShadow: `0 0 15px ${accentColor}30`
+                        boxShadow: `0 0 15px hsl(var(--primary) / 0.3)`
                       }}
                     >
                       ✓ Verified
@@ -1132,17 +1129,9 @@ const ProfilePage = () => {
                     variant={followRequestStatus === 'following' ? "outline" : (followRequestStatus === 'requested' ? "outline" : "default")}
                     size="sm"
                     disabled={followMutation.isPending}
-                    className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                    style={followRequestStatus === 'following' ? {
-                      borderColor: accentColor,
-                      color: accentColor,
-                    } : followRequestStatus === 'requested' ? {
-                      borderColor: accentColor,
-                      color: accentColor,
-                    } : {
-                      backgroundColor: accentColor,
-                      borderColor: accentColor,
-                      boxShadow: `0 4px 15px ${accentColor}40`,
+                    className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
+                    style={followRequestStatus === 'following' || followRequestStatus === 'requested' ? {} : {
+                      boxShadow: `0 4px 15px hsl(var(--primary) / 0.4)`,
                     }}
                     data-testid="follow-button"
                     data-following={followRequestStatus === 'following'}
@@ -1168,11 +1157,7 @@ const ProfilePage = () => {
                     }}
                     variant="outline"
                     size="sm"
-                    className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                    style={{
-                      borderColor: accentColor,
-                      color: accentColor,
-                    }}
+                    className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
                   >
                     <MessageSquare className="mr-1 h-4 w-4" /> Message
                   </Button>
@@ -1189,11 +1174,7 @@ const ProfilePage = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                        style={{
-                          borderColor: accentColor,
-                          color: accentColor,
-                        }}
+                        className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
                       >
                         <Share2 className="mr-1 h-4 w-4" /> Share
                       </Button>
@@ -1217,11 +1198,7 @@ const ProfilePage = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                        style={{
-                          borderColor: accentColor,
-                          color: accentColor,
-                        }}
+                        className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
                       >
                         <Share2 className="mr-1 h-4 w-4" /> Share
                       </Button>
