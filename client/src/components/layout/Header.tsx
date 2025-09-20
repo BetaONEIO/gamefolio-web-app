@@ -300,9 +300,9 @@ const Header = () => {
                 <Button 
                   className="ml-2 sm:ml-4 flex items-center px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300"
                   style={{
-                    backgroundColor: user.accentColor || '#4ADE80',
-                    borderColor: user.accentColor || '#4ADE80',
-                    boxShadow: `0 0 0 1px ${user.accentColor || '#4ADE80'}66, 0 2px 8px ${user.accentColor || '#4ADE80'}22`
+                    backgroundColor: user.accentColor || 'hsl(var(--primary))',
+                    borderColor: user.accentColor || 'hsl(var(--primary))',
+                    boxShadow: `0 0 0 1px ${user.accentColor || 'hsl(var(--primary))'}66, 0 2px 8px ${user.accentColor || 'hsl(var(--primary))'}22`
                   }}
                 >
                   <Plus className="mr-1 sm:mr-3 h-4 w-4 sm:h-6 sm:w-6" />
@@ -317,8 +317,8 @@ const Header = () => {
                       <Avatar 
                         className="w-10 h-10 sm:w-12 sm:h-12 md:w-8 md:h-8 lg:w-10 lg:h-10 xl:w-12 xl:h-12 border-2 transition-all duration-300"
                         style={{
-                          borderColor: user.avatarBorderColor || user.accentColor || '#4ADE80',
-                          boxShadow: `0 0 0 2px ${(user.avatarBorderColor || user.accentColor || '#4ADE80')}66, 0 0 15px ${(user.avatarBorderColor || user.accentColor || '#4ADE80')}33`
+                          borderColor: user.avatarBorderColor || user.accentColor || 'hsl(var(--primary))',
+                          boxShadow: `0 0 0 2px ${(user.avatarBorderColor || user.accentColor || 'hsl(var(--primary))')}66, 0 0 15px ${(user.avatarBorderColor || user.accentColor || 'hsl(var(--primary))')}33`
                         }}
                       >
                         <AvatarImage src={user.avatarUrl || undefined} alt={user.displayName} />

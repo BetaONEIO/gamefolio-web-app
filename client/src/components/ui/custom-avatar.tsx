@@ -29,7 +29,7 @@ export const CustomAvatar = ({
   showBorder = true,
   borderIntensity = "normal" 
 }: CustomAvatarProps) => {
-  const borderColor = user.avatarBorderColor || '#4ADE80';
+  const borderColor = user.avatarBorderColor || 'hsl(var(--primary))';
   
   return (
     <Avatar 
