@@ -83,16 +83,34 @@ const ProfileHeader = ({
         
         {/* Profile Image - Positioned halfway on banner */}
         <div className="absolute left-8 bottom-0 transform translate-y-1/2">
-          <img 
-            src={profile.avatarUrl || `/attached_assets/gamefolio social logo 3d circle web.png`} 
-            alt={profile.displayName} 
-            className="w-32 h-32 rounded-lg object-cover border-4 shadow-lg bg-background"
-            style={{ borderColor: profile.avatarBorderColor || '#4ADE80' }}
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.src = "/attached_assets/gamefolio social logo 3d circle web.png";
-            }}
-          />
+          <div className="flex flex-col items-center">
+            <img 
+              src={profile.avatarUrl || `/attached_assets/gamefolio social logo 3d circle web.png`} 
+              alt={profile.displayName} 
+              className="w-32 h-32 rounded-lg object-cover border-4 shadow-lg bg-background"
+              style={{ borderColor: profile.avatarBorderColor || '#4ADE80' }}
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = "/attached_assets/gamefolio social logo 3d circle web.png";
+              }}
+            />
+            
+            {/* Profile Stats underneath profile picture */}
+            <div className="flex space-x-4 text-xs mt-3 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 border">
+              <div className="text-center">
+                <span className="font-bold block">{profile._count?.clips || 0}</span>
+                <span className="text-muted-foreground">Clips</span>
+              </div>
+              <div className="text-center">
+                <span className="font-bold block">{profile._count?.followers || 0}</span>
+                <span className="text-muted-foreground">Followers</span>
+              </div>
+              <div className="text-center">
+                <span className="font-bold block">{profile._count?.following || 0}</span>
+                <span className="text-muted-foreground">Following</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -127,22 +145,6 @@ const ProfileHeader = ({
 
               {/* Handle */}
               <p className="text-sm text-muted-foreground">@{profile.username}</p>
-
-              {/* Profile Stats */}
-              <div className="flex space-x-6 text-sm">
-                <div>
-                  <span className="font-bold mr-1">{profile._count?.clips || 0}</span>
-                  <span className="text-muted-foreground">Clips</span>
-                </div>
-                <div>
-                  <span className="font-bold mr-1">{profile._count?.followers || 0}</span>
-                  <span className="text-muted-foreground">Followers</span>
-                </div>
-                <div>
-                  <span className="font-bold mr-1">{profile._count?.following || 0}</span>
-                  <span className="text-muted-foreground">Following</span>
-                </div>
-              </div>
 
               {/* Bio */}
               <div>
