@@ -360,23 +360,23 @@ export default function SettingsPage() {
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1">
             <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <User className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Profile</span>
-              <span className="xs:hidden">Pro</span>
+              <span className="hidden sm:inline">Profile</span>
+              <span className="sm:hidden">Profile</span>
             </TabsTrigger>
             <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Appearance</span>
-              <span className="xs:hidden">App</span>
+              <span className="hidden sm:inline">Appearance</span>
+              <span className="sm:hidden">Appearance</span>
             </TabsTrigger>
             <TabsTrigger value="banners" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Banner Images</span>
-              <span className="xs:hidden">Ban</span>
+              <span className="hidden sm:inline">Banner Images</span>
+              <span className="sm:hidden">Banner</span>
             </TabsTrigger>
             <TabsTrigger value="privacy" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Privacy & Safety</span>
-              <span className="xs:hidden">Pri</span>
+              <span className="hidden sm:inline">Privacy & Safety</span>
+              <span className="sm:hidden">Privacy</span>
             </TabsTrigger>
           </TabsList>
 
