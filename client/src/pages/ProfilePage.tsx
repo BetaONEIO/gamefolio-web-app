@@ -1001,19 +1001,18 @@ const ProfilePage = () => {
             <div 
               className="absolute inset-0 rounded-full animate-pulse"
               style={{
-                background: `linear-gradient(45deg, ${accentColor}, ${cardColor})`,
+                background: `linear-gradient(45deg, hsl(var(--primary)), hsl(var(--card)))`,
                 padding: '4px',
-                filter: `drop-shadow(0 0 20px ${accentColor}40)`,
+                filter: `drop-shadow(0 0 20px hsl(var(--primary) / 0.4))`,
               }}
             >
-              <div className="w-full h-full rounded-full" style={{ backgroundColor: backgroundColor }}></div>
+              <div className="w-full h-full rounded-full bg-background"></div>
             </div>
             <div 
-              className="relative z-10 border-4 shadow-2xl cursor-pointer hover:opacity-90 transition-opacity w-32 h-32 md:w-56 md:h-56"
+              className="relative z-10 border-4 border-primary shadow-2xl cursor-pointer hover:opacity-90 transition-opacity w-32 h-32 md:w-56 md:h-56"
               style={{ 
                 borderRadius: '8px',
-                borderColor: accentColor,
-                boxShadow: `0 0 30px ${accentColor}50, 0 0 60px ${accentColor}20`
+                boxShadow: `0 0 30px hsl(var(--primary) / 0.5), 0 0 60px hsl(var(--primary) / 0.2)`
               }}
               onClick={() => profile.avatarUrl && openLightbox(profile.avatarUrl, profile.displayName, profile.username)}
             >
@@ -1025,8 +1024,7 @@ const ProfilePage = () => {
               >
                 <AvatarImage src={profile.avatarUrl || undefined} alt={profile.displayName} />
                 <AvatarFallback
-                  style={{ backgroundColor: accentColor }}
-                  className="text-3xl text-primary-foreground font-bold"
+                  className="text-3xl text-primary-foreground font-bold bg-primary"
                 >
                   {profile.displayName.charAt(0)}
                 </AvatarFallback>
