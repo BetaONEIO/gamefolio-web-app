@@ -1242,10 +1242,14 @@ const ProfilePage = () => {
               style={{
                 backgroundColor: 'var(--profile-accent-color, #4ADE80)',
                 boxShadow: `0 0 20px var(--profile-accent-color-alpha, rgba(74, 222, 128, 0.2))`,
-                width: `${tabPosition.widthPercent}%`,
-                left: `${tabPosition.leftPercent}%`,
+                // Make underline narrower on mobile by reducing width and centering it
+                width: window.innerWidth < 768 ? '40px' : `${Math.max(40, tabPosition.widthPercent * 0.6)}%`,
+                left: window.innerWidth < 768 
+                  ? `calc(${tabPosition.leftPercent}% + ${tabPosition.widthPercent / 2}% - 20px)`
+                  : `calc(${tabPosition.leftPercent}% + ${tabPosition.widthPercent * 0.2}%)`,
                 border: 'none',
-                outline: 'none'
+                outline: 'none',
+                borderRadius: '2px'
               } as React.CSSProperties}
             ></div>
 
