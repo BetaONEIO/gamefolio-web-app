@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
+import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -55,6 +56,7 @@ export default function SettingsPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { setAccentColor } = useTheme();
 
   const [profileData, setProfileData] = useState({
     displayName: user?.displayName || "",
@@ -297,6 +299,7 @@ export default function SettingsPage() {
     console.log('🎨 THEME PRESET APPLIED:', theme.name);
     console.log('🛡️ Banner URL before theme change:', profileData.bannerUrl);
     
+    // Update local profile data (for user's profile customization)
     setProfileData(prev => {
       console.log('✅ Theme only updating colors, banner preserved:', prev.bannerUrl);
       return {
@@ -306,7 +309,14 @@ export default function SettingsPage() {
       };
     });
     
-    // Remove global styling - theme changes only affect profile pages
+    // Update global theme (affects entire app)
+    setAccentColor(theme.accentColor);
+    
+    toast({
+      title: "Theme Applied!",
+      description: `${theme.name} theme has been applied to the entire app.`,
+      variant: "gamefolioSuccess",
+    });
   };
 
   if (!user) {
