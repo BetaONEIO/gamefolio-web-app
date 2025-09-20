@@ -681,43 +681,43 @@ const ProfilePage = () => {
     boxShadow: 'inset 0 -10px 20px rgba(0, 0, 0, 0.2)',
   }), [profile?.bannerUrl, profile?.primaryColor, profile?.accentColor]);
 
-  // Apply profile-scoped theme colors STRICTLY to this profile page only
-  useEffect(() => {
-    if (profile && profileThemeScopeRef.current) {
-      const scope = profileThemeScopeRef.current;
+  // DISABLED: Profile-scoped theme colors - now using global theme system
+  // useEffect(() => {
+  //   if (profile && profileThemeScopeRef.current) {
+  //     const scope = profileThemeScopeRef.current;
 
-      // Enhance isolation to prevent any global leakage
-      scope.style.setProperty('contain', 'layout style paint');
-      scope.style.setProperty('isolation', 'isolate');
+  //     // Enhance isolation to prevent any global leakage
+  //     scope.style.setProperty('contain', 'layout style paint');
+  //     scope.style.setProperty('isolation', 'isolate');
 
-      // Use requestAnimationFrame to batch updates and prevent visual flashing
-      requestAnimationFrame(() => {
-        // Ensure complete isolation - set CSS custom properties only on this element
-        scope.style.setProperty('--user-accent-color', profile.accentColor || '#4ADE80');
-        scope.style.setProperty('--user-primary-color', profile.primaryColor || '#02172C');
-        scope.style.setProperty('--user-avatar-border-color', profile.avatarBorderColor || '#4ADE80');
+  //     // Use requestAnimationFrame to batch updates and prevent visual flashing
+  //     requestAnimationFrame(() => {
+  //       // Ensure complete isolation - set CSS custom properties only on this element
+  //       scope.style.setProperty('--user-accent-color', profile.accentColor || '#4ADE80');
+  //       scope.style.setProperty('--user-primary-color', profile.primaryColor || '#02172C');
+  //       scope.style.setProperty('--user-avatar-border-color', profile.avatarBorderColor || '#4ADE80');
 
-        // Calculate alpha version of accent color for subtle effects
-        const accentColor = profile.accentColor || '#4ADE80';
-        const alpha = `${accentColor}33`;
-        scope.style.setProperty('--user-accent-color-alpha', alpha);
-      });
+  //       // Calculate alpha version of accent color for subtle effects
+  //       const accentColor = profile.accentColor || '#4ADE80';
+  //       const alpha = `${accentColor}33`;
+  //       scope.style.setProperty('--user-accent-color-alpha', alpha);
+  //     });
 
-      // Cleanup function to remove custom properties when component unmounts
-      return () => {
-        if (scope) {
-          requestAnimationFrame(() => {
-            scope.style.removeProperty('--user-accent-color');
-            scope.style.removeProperty('--user-primary-color');
-            scope.style.removeProperty('--user-avatar-border-color');
-            scope.style.removeProperty('--user-accent-color-alpha');
-            scope.style.removeProperty('contain');
-            scope.style.removeProperty('isolation');
-          });
-        }
-      };
-    }
-  }, [profile?.accentColor, profile?.primaryColor, profile?.avatarBorderColor]);
+  //     // Cleanup function to remove custom properties when component unmounts
+  //     return () => {
+  //       if (scope) {
+  //         requestAnimationFrame(() => {
+  //           scope.style.removeProperty('--user-accent-color');
+  //           scope.style.removeProperty('--user-primary-color');
+  //           scope.style.removeProperty('--user-avatar-border-color');
+  //           scope.style.removeProperty('--user-accent-color-alpha');
+  //           scope.style.removeProperty('contain');
+  //           scope.style.removeProperty('isolation');
+  //         });
+  //       }
+  //     };
+  //   }
+  // }, [profile?.accentColor, profile?.primaryColor, profile?.avatarBorderColor]);
 
   // Remove global body styling - keep theming scoped to profile only
 
