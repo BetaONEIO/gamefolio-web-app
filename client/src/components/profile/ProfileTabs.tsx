@@ -117,11 +117,14 @@ const ProfileTabs = ({ username }: ProfileTabsProps) => {
       <div className="border-t border-border">
         <div className="flex justify-center">
           <button
-            className={`flex items-center justify-center px-6 py-3 gap-2 font-medium text-xs uppercase tracking-wider ${
+            className={cn(
+              "flex items-center justify-center px-3 md:px-6 py-3 gap-1 md:gap-2 font-medium text-xs uppercase tracking-wider relative",
               activeTab === "clips" 
-                ? "text-primary border-t-2 border-primary -mt-[2px]" 
-                : "text-muted-foreground"
-            }`}
+                ? "text-primary" 
+                : "text-muted-foreground",
+              // Mobile-friendly underline using pseudo-element
+              activeTab === "clips" && "after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-6 md:after:w-8 after:h-0.5 after:bg-primary after:rounded-full"
+            )}
             onClick={() => setActiveTab("clips")}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -130,11 +133,14 @@ const ProfileTabs = ({ username }: ProfileTabsProps) => {
             Clips
           </button>
           <button
-            className={`flex items-center justify-center px-6 py-3 gap-2 font-medium text-xs uppercase tracking-wider ${
+            className={cn(
+              "flex items-center justify-center px-3 md:px-6 py-3 gap-1 md:gap-2 font-medium text-xs uppercase tracking-wider relative",
               activeTab === "gaming-stats" 
-                ? "text-primary border-t-2 border-primary -mt-[2px]" 
-                : "text-muted-foreground"
-            }`}
+                ? "text-primary" 
+                : "text-muted-foreground",
+              // Mobile-friendly underline using pseudo-element
+              activeTab === "gaming-stats" && "after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-6 md:after:w-8 after:h-0.5 after:bg-primary after:rounded-full"
+            )}
             onClick={() => setActiveTab("gaming-stats")}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -143,11 +149,14 @@ const ProfileTabs = ({ username }: ProfileTabsProps) => {
             Stats
           </button>
           <button
-            className={`flex items-center justify-center px-6 py-3 gap-2 font-medium text-xs uppercase tracking-wider ${
+            className={cn(
+              "flex items-center justify-center px-3 md:px-6 py-3 gap-1 md:gap-2 font-medium text-xs uppercase tracking-wider relative",
               activeTab === "saved" 
-                ? "text-primary border-t-2 border-primary -mt-[2px]" 
-                : "text-muted-foreground"
-            }`}
+                ? "text-primary" 
+                : "text-muted-foreground",
+              // Mobile-friendly underline using pseudo-element
+              activeTab === "saved" && "after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-6 md:after:w-8 after:h-0.5 after:bg-primary after:rounded-full"
+            )}
             onClick={() => setActiveTab("saved")}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
