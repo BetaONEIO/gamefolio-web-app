@@ -85,7 +85,7 @@ export function ShareDialog({
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
-            <Share2 className="h-5 w-5" style={{ color: '#4ADE80' }} />
+            <Share2 className="h-5 w-5 text-primary" />
             Share your gamefolio
           </DialogTitle>
           <DialogDescription className="text-gray-400">
@@ -107,8 +107,8 @@ export function ShareDialog({
               onClick={handleCopyLink}
               className="px-4"
               style={{ 
-                borderColor: '#4ADE80 !important', 
-                color: copied ? '#166534' : '#4ADE80',
+                borderColor: 'hsl(var(--primary)) !important', 
+                color: copied ? '#166534' : 'hsl(var(--primary))',
                 backgroundColor: copied ? '#dcfce7' : '#101821'
               }}
             >
@@ -121,8 +121,8 @@ export function ShareDialog({
               onClick={() => handleSocialShare('twitter', socialMediaLinks.twitter)}
               className="px-4"
               style={{ 
-                backgroundColor: '#4ADE80 !important', 
-                borderColor: '#4ADE80 !important', 
+                backgroundColor: 'hsl(var(--primary)) !important', 
+                borderColor: 'hsl(var(--primary)) !important', 
                 color: 'white !important' 
               }}
             >

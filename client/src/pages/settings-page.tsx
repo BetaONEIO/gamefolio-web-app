@@ -63,7 +63,8 @@ export default function SettingsPage() {
     bio: user?.bio || "",
     backgroundColor: user?.backgroundColor || "#0B2232",
     accentColor: user?.accentColor || "#4ADE80",
-    bannerUrl: user?.bannerUrl || ""
+    bannerUrl: user?.bannerUrl || "",
+    avatarUrl: user?.avatarUrl || ""
   });
   
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
