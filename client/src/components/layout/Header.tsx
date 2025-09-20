@@ -298,12 +298,7 @@ const Header = () => {
               <NotificationBell />
               <Link href="/upload">
                 <Button 
-                  className="ml-2 sm:ml-4 flex items-center px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300"
-                  style={{
-                    backgroundColor: user.accentColor || 'hsl(var(--primary))',
-                    borderColor: user.accentColor || 'hsl(var(--primary))',
-                    boxShadow: `0 0 0 1px ${user.accentColor || 'hsl(var(--primary))'}66, 0 2px 8px ${user.accentColor || 'hsl(var(--primary))'}22`
-                  }}
+                  className="ml-2 sm:ml-4 flex items-center px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300 bg-primary hover:bg-primary/90 border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_hsl(var(--primary)/0.13)]"
                 >
                   <Plus className="mr-1 sm:mr-3 h-4 w-4 sm:h-6 sm:w-6" />
                   <span className="hidden sm:inline">Upload</span>
@@ -315,11 +310,7 @@ const Header = () => {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="ml-2 sm:ml-4 p-1 h-auto hover:bg-transparent">
                       <Avatar 
-                        className="w-10 h-10 sm:w-12 sm:h-12 md:w-8 md:h-8 lg:w-10 lg:h-10 xl:w-12 xl:h-12 border-2 transition-all duration-300"
-                        style={{
-                          borderColor: user.avatarBorderColor || user.accentColor || 'hsl(var(--primary))',
-                          boxShadow: `0 0 0 2px ${(user.avatarBorderColor || user.accentColor || 'hsl(var(--primary))')}66, 0 0 15px ${(user.avatarBorderColor || user.accentColor || 'hsl(var(--primary))')}33`
-                        }}
+                        className="w-10 h-10 sm:w-12 sm:h-12 md:w-8 md:h-8 lg:w-10 lg:h-10 xl:w-12 xl:h-12 border-2 transition-all duration-300 border-primary shadow-[0_0_0_2px_hsl(var(--primary)/0.4),0_0_15px_hsl(var(--primary)/0.2)]"
                       >
                         <AvatarImage src={user.avatarUrl || undefined} alt={user.displayName} />
                         <AvatarFallback className="text-xs sm:text-sm">
