@@ -229,7 +229,12 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
         ref={dialogRef}
-        className="max-w-[95vw] w-[95vw] p-0 bg-background text-foreground max-h-[95vh] h-[95vh] overflow-hidden clip-dialog-content"
+        className={cn(
+          "p-0 bg-background text-foreground overflow-hidden clip-dialog-content",
+          isMobile && clip?.videoType === 'reel' 
+            ? "w-screen h-screen max-w-none max-h-none" // Full screen on mobile for reels
+            : "max-w-[95vw] w-[95vw] max-h-[95vh] h-[95vh]" // Regular size for desktop or clips
+        )}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -313,7 +318,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         </div>
                         
                         {/* Right side action buttons */}
-                        <div className="absolute right-4 bottom-24 flex flex-col items-center space-y-6 z-50 pointer-events-auto">
+                        <div className="absolute right-2 bottom-32 flex flex-col items-center space-y-4 z-50 pointer-events-auto">
                           <div className="flex flex-col items-center">
                             <LikeButton 
                               contentId={clip.id}
@@ -351,7 +356,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         </div>
                         
                         {/* Bottom overlay with title and description */}
-                        <div className="absolute bottom-4 left-4 right-16 z-40">
+                        <div className="absolute bottom-4 left-4 right-20 z-40">
                           <h2 className="text-white font-semibold text-lg mb-1">{clip.title}</h2>
                           {clip.description && (
                             <p className="text-white/80 text-sm">{clip.description}</p>
