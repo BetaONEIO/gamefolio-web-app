@@ -318,7 +318,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         </div>
                         
                         {/* Right side action buttons */}
-                        <div className="absolute right-2 bottom-32 flex flex-col items-center space-y-4 z-50 pointer-events-auto">
+                        <div className="absolute right-6 bottom-32 flex flex-col items-center space-y-4 z-50 pointer-events-auto">
                           <div className="flex flex-col items-center">
                             <LikeButton 
                               contentId={clip.id}
@@ -356,7 +356,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         </div>
                         
                         {/* Bottom overlay with title and description */}
-                        <div className="absolute bottom-4 left-4 right-20 z-40">
+                        <div className="absolute bottom-4 left-4 right-24 z-40">
                           <h2 className="text-white font-semibold text-lg mb-1">{clip.title}</h2>
                           {clip.description && (
                             <p className="text-white/80 text-sm">{clip.description}</p>
