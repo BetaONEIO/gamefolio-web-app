@@ -1234,8 +1234,9 @@ const ProfilePage = () => {
           >
             {/* Animated background indicator */}
             <div 
-              className="absolute bottom-0 h-1 transition-all duration-300 ease-out z-50 profile-tab-indicator bg-primary"
+              className="absolute bottom-0 h-1 transition-all duration-300 ease-out z-50 profile-tab-indicator"
               style={{
+                backgroundColor: `hsl(var(--primary))`,
                 boxShadow: `0 0 20px hsl(var(--primary) / 0.2)`,
                 width: `${tabPosition.widthPercent}%`,
                 left: `${tabPosition.leftPercent}%`,
