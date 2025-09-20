@@ -1,0 +1,92 @@
+import { useState } from 'react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+interface BannerLightboxProps {
+  isOpen: boolean;
+  onClose: () => void;
+  bannerUrl?: string;
+  displayName: string;
+  username: string;
+}
+
+export function BannerLightbox({ 
+  isOpen, 
+  onClose, 
+  bannerUrl, 
+  displayName, 
+  username 
+}: BannerLightboxProps) {
+  if (!bannerUrl) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl p-0 bg-black/95 border-none">
+        {/* Close button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute right-4 top-4 z-50 text-white/70 hover:text-white hover:bg-white/10"
+          onClick={onClose}
+        >
+          <X className="h-5 w-5" />
+        </Button>
+        
+        {/* Banner image */}
+        <div className="relative flex flex-col items-center justify-center p-8">
+          <div className="relative max-w-full max-h-[80vh]">
+            <img
+              src={bannerUrl}
+              alt={`${displayName}'s banner`}
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+              style={{ maxWidth: '1024px', maxHeight: '80vh' }}
+            />
+          </div>
+          
+          {/* Username below image */}
+          <div className="text-center text-white/80 text-lg font-medium mt-6">
+            @{username}'s banner
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Hook for managing banner lightbox state
+export function useBannerLightbox() {
+  const [lightboxData, setLightboxData] = useState<{
+    isOpen: boolean;
+    bannerUrl?: string;
+    displayName: string;
+    username: string;
+  }>({
+    isOpen: false,
+    bannerUrl: '',
+    displayName: '',
+    username: '',
+  });
+
+  const openLightbox = (bannerUrl: string, displayName: string, username: string) => {
+    setLightboxData({
+      isOpen: true,
+      bannerUrl,
+      displayName,
+      username,
+    });
+  };
+
+  const closeLightbox = () => {
+    setLightboxData(prev => ({
+      ...prev,
+      isOpen: false,
+    }));
+  };
+
+  return {
+    lightboxData,
+    openLightbox,
+    closeLightbox,
+  };
+}
