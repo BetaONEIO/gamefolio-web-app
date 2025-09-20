@@ -182,7 +182,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-lg bg-gray-900 border-2 border-gray-700 text-white" aria-describedby="clip-share-description">
+      <DialogContent className="sm:max-w-2xl max-w-[90vw] mx-4 my-8 bg-gray-900 border-2 border-gray-700 text-white" aria-describedby="clip-share-description">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
             <Share2 className="w-5 h-5 text-white" />
@@ -217,10 +217,10 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
             </Button>
           </div>
         ) : shareData ? (
-          <div className="space-y-6">
+          <div className="space-y-6 px-2">
             {/* Clip Thumbnail - Made bigger */}
             <div className="flex justify-center">
-              <div className="relative w-72 h-40 bg-gray-800 rounded-lg overflow-hidden border border-gray-600">
+              <div className="relative w-96 h-56 bg-gray-800 rounded-lg overflow-hidden border border-gray-600">
                 {/* Use a query to fetch clip data to get the thumbnail URL */}
                 <ClipThumbnail clipId={clipId} shareUrl={shareData.clipUrl} />
                 <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center">
@@ -231,7 +231,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
               </div>
             </div>
             {/* Share Link Section */}
-            <div className="space-y-2">
+            <div className="space-y-2 px-2">
               <h4 className="font-medium text-white">Share Link</h4>
               <div className="flex items-center gap-2">
                 <Input
@@ -271,9 +271,9 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
             <Separator />
 
             {/* Social Media Platforms Grid */}
-            <div className="space-y-3">
+            <div className="space-y-3 px-2">
               <h4 className="font-medium text-white">Share on social media</h4>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-4 gap-3">
                 {SOCIAL_PLATFORMS.map((platform) => {
                   const Icon = platform.icon;
                   const shareUrl = shareData.socialMediaLinks?.[platform.key as keyof typeof shareData.socialMediaLinks];
