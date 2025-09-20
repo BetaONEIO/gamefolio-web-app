@@ -31,7 +31,7 @@ const PRESET_THEMES = [
   },
   {
     name: "Golden Yellow",
-    backgroundColor: "#451a03",
+    backgroundColor: "#713f12",
     accentColor: "#facc15"
   },
   {
@@ -357,22 +357,26 @@ export default function SettingsPage() {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="profile" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Profile
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1">
+            <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <User className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Profile</span>
+              <span className="xs:hidden">Pro</span>
             </TabsTrigger>
-            <TabsTrigger value="appearance" className="flex items-center gap-2">
-              <Palette className="h-4 w-4" />
-              Appearance
+            <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Appearance</span>
+              <span className="xs:hidden">App</span>
             </TabsTrigger>
-            <TabsTrigger value="banners" className="flex items-center gap-2">
-              <Palette className="h-4 w-4" />
-              Banner Images
+            <TabsTrigger value="banners" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Banner Images</span>
+              <span className="xs:hidden">Ban</span>
             </TabsTrigger>
-            <TabsTrigger value="privacy" className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Privacy & Safety
+            <TabsTrigger value="privacy" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Privacy & Safety</span>
+              <span className="xs:hidden">Pri</span>
             </TabsTrigger>
           </TabsList>
 
