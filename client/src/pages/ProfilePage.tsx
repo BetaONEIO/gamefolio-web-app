@@ -60,6 +60,7 @@ import { GamefolioShareDialog } from "@/components/profile/GamefolioShareDialog"
 import { ReportDialog } from "@/components/content/ReportDialog";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { ProfilePictureLightbox, useProfilePictureLightbox } from "@/components/ui/profile-picture-lightbox";
+import { BannerLightbox, useBannerLightbox } from "@/components/ui/banner-lightbox";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { formatDistance } from "date-fns";
@@ -72,6 +73,7 @@ const ProfilePage = () => {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const { lightboxData, openLightbox, closeLightbox } = useProfilePictureLightbox();
+  const { lightboxData: bannerLightboxData, openLightbox: openBannerLightbox, closeLightbox: closeBannerLightbox } = useBannerLightbox();
   const isOwnProfile = currentUser?.username === username;
 
   // Handle highlighting content from share links
@@ -910,10 +912,16 @@ const ProfilePage = () => {
     >
       {/* Enhanced Banner with global theme colors */}
       <div 
-        className="h-64 sm:h-80 md:h-96 bg-cover bg-center overflow-hidden profile-banner relative -mx-4 md:-mx-8 border-b-4 border-primary"
+        className={`h-64 sm:h-80 md:h-96 bg-cover bg-center overflow-hidden profile-banner relative -mx-4 md:-mx-8 border-b-4 border-primary ${profile?.bannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
         style={{
           ...bannerStyle,
         }}
+        onClick={() => {
+          if (profile?.bannerUrl && profile?.displayName && profile?.username) {
+            openBannerLightbox(profile.bannerUrl, profile.displayName, profile.username);
+          }
+        }}
+        data-testid="banner-image"
       >
         {/* Dynamic theme-based gradient overlay */}
         <div 
@@ -2057,6 +2065,15 @@ const ProfilePage = () => {
         avatarUrl={lightboxData.avatarUrl}
         displayName={lightboxData.displayName}
         username={lightboxData.username}
+      />
+
+      {/* Banner Lightbox */}
+      <BannerLightbox
+        isOpen={bannerLightboxData.isOpen}
+        onClose={closeBannerLightbox}
+        bannerUrl={bannerLightboxData.bannerUrl}
+        displayName={bannerLightboxData.displayName}
+        username={bannerLightboxData.username}
       />
 
       {/* Join Dialog for Guest Users */}
