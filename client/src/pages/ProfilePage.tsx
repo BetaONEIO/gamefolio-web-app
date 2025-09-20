@@ -628,12 +628,27 @@ const ProfilePage = () => {
   // Calculate tab positions using percentage-based approach
   const getTabPosition = (tabName: string) => {
     const tabIndex = ['clips', 'reels', 'screenshots', 'favorites'].indexOf(tabName);
-
-    // Each tab is exactly 25% width, positioned at 0%, 25%, 50%, 75%
-    return {
-      leftPercent: tabIndex * 25,
-      widthPercent: 25
-    };
+    
+    // Check if mobile (simplified check for component)
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    
+    if (isMobile) {
+      // On mobile: narrower underlines (60% of tab width) centered within each 25% tab
+      const tabWidthPercent = 25;
+      const underlineWidthPercent = tabWidthPercent * 0.6; // 15%
+      const centerOffset = (tabWidthPercent - underlineWidthPercent) / 2; // 5%
+      
+      return {
+        leftPercent: tabIndex * tabWidthPercent + centerOffset,
+        widthPercent: underlineWidthPercent
+      };
+    } else {
+      // Desktop: full width underlines
+      return {
+        leftPercent: tabIndex * 25,
+        widthPercent: 25
+      };
+    }
   };
 
   const [tabPosition, setTabPosition] = useState(() => getTabPosition(activeTab));
@@ -642,6 +657,17 @@ const ProfilePage = () => {
   useEffect(() => {
     const position = getTabPosition(activeTab);
     setTabPosition(position);
+  }, [activeTab]);
+
+  // Update tab position on window resize for responsive behavior
+  useEffect(() => {
+    const handleResize = () => {
+      const position = getTabPosition(activeTab);
+      setTabPosition(position);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, [activeTab]);
 
   // Memoize banner style to prevent unnecessary re-renders
@@ -1242,14 +1268,10 @@ const ProfilePage = () => {
               style={{
                 backgroundColor: 'var(--profile-accent-color, #4ADE80)',
                 boxShadow: `0 0 20px var(--profile-accent-color-alpha, rgba(74, 222, 128, 0.2))`,
-                // Make underline narrower on mobile by reducing width and centering it
-                width: window.innerWidth < 768 ? '40px' : `${Math.max(40, tabPosition.widthPercent * 0.6)}%`,
-                left: window.innerWidth < 768 
-                  ? `calc(${tabPosition.leftPercent}% + ${tabPosition.widthPercent / 2}% - 20px)`
-                  : `calc(${tabPosition.leftPercent}% + ${tabPosition.widthPercent * 0.2}%)`,
+                width: `${tabPosition.widthPercent}%`,
+                left: `${tabPosition.leftPercent}%`,
                 border: 'none',
-                outline: 'none',
-                borderRadius: '2px'
+                outline: 'none'
               } as React.CSSProperties}
             ></div>
 
