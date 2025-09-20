@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { ClipWithUser } from "@shared/schema";
+import { ClipWithUser, CommentWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
 import { 
   Dialog,
@@ -22,7 +22,10 @@ import {
   Flame,
   Share2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Heart,
+  Send,
+  ChevronDown
 } from "lucide-react";
 import { formatDistance } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -53,7 +56,8 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   const { toast } = useToast();
   const { user } = useAuth();
   const { isOpen: joinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
-  const [showComments, setShowComments] = useState(true); // Set to true to show comments by default
+  const [showComments, setShowComments] = useState(false); // Start with comments hidden for Instagram-like behavior
+  const [isMobile, setIsMobile] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
   const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
@@ -63,10 +67,21 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   // Access closeClipDialog from useClipDialog
   const { closeClipDialog } = useClipDialog();
 
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
   // Reset state when dialog is closed
   useEffect(() => {
     if (!isOpen) {
-      // Don't reset showComments as we want to keep it visible by default
+      setShowComments(false); // Reset comments visibility when dialog closes
     }
   }, [isOpen]);
 
@@ -140,6 +155,12 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
     enabled: isOpen && clipId !== null,
   });
 
+  // Fetch comments for mobile overlay
+  const { data: comments } = useQuery<CommentWithUser[]>({
+    queryKey: [`/api/clips/${clipId}/comments`],
+    enabled: isOpen && clipId !== null,
+  });
+
   // Share functionality replaced by ShareMenu component
 
   // Record view when dialog opens
@@ -156,20 +177,20 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
 
   // Touch navigation for mobile
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (!showNavigation) return;
+    if (!showNavigation || (clip?.videoType === 'reel' && isMobile && showComments)) return;
     const touch = e.touches[0];
     setTouchStart({ x: touch.clientX, y: touch.clientY });
     setTouchEnd(null);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!showNavigation || !touchStart) return;
+    if (!showNavigation || !touchStart || (clip?.videoType === 'reel' && isMobile && showComments)) return;
     const touch = e.touches[0];
     setTouchEnd({ x: touch.clientX, y: touch.clientY });
   };
 
   const handleTouchEnd = () => {
-    if (!showNavigation || !touchStart || !touchEnd) return;
+    if (!showNavigation || !touchStart || !touchEnd || (clip?.videoType === 'reel' && isMobile && showComments)) return;
 
     const deltaX = touchEnd.x - touchStart.x;
     const deltaY = touchEnd.y - touchStart.y;
@@ -243,12 +264,15 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             "flex flex-col lg:flex-row h-full transition-opacity duration-300",
             isTransitioning ? "opacity-60" : "opacity-100"
           )}>
-            {/* Left side - Video player */}
+            {/* Video player area */}
             <div className={cn(
-              "bg-black flex items-center justify-center transition-transform duration-200",
-              clip.videoType === 'reel' 
-                ? "w-full lg:w-[65%] h-[60vh] lg:h-full" // Larger area for reels
-                : "w-full lg:w-[75%] h-[60vh] lg:h-full",  // Full width for clips
+              "bg-black flex items-center justify-center transition-transform duration-200 relative",
+              // Mobile Instagram-like behavior for reels
+              clip.videoType === 'reel' && isMobile
+                ? "w-full h-full" // Full screen on mobile for reels
+                : clip.videoType === 'reel' 
+                  ? "w-full lg:w-[65%] h-[60vh] lg:h-full" // Larger area for reels on desktop
+                  : "w-full lg:w-[75%] h-[60vh] lg:h-full",  // Full width for clips
               isTransitioning ? "scale-95" : "scale-100"
             )}>
               {clip.videoType === 'reel' ? (
@@ -263,10 +287,91 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       objectFit="contain"
                       clipId={clip.id}
                     />
-                    {/* Reel-specific overlay to ensure controls visibility */}
-                    <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-md pointer-events-none z-50">
-                      Reel
-                    </div>
+                    {/* Mobile Instagram-like overlay for reels */}
+                    {isMobile && clip.videoType === 'reel' && (
+                      <div className="absolute inset-0 pointer-events-none">
+                        {/* Top overlay with user info */}
+                        <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-50 pointer-events-auto">
+                          <div className="flex items-center">
+                            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3">
+                              {clip.user?.avatarUrl ? (
+                                <img 
+                                  src={clip.user.avatarUrl} 
+                                  alt={clip.user?.displayName || clip.user?.username || 'User'} 
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <UserIcon className="h-5 w-5 text-muted-foreground" />
+                              )}
+                            </div>
+                            {clip.user?.username && (
+                              <div className="text-white font-medium text-sm">
+                                @{clip.user.username}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Right side action buttons */}
+                        <div className="absolute right-4 bottom-24 flex flex-col items-center space-y-6 z-50 pointer-events-auto">
+                          <div className="flex flex-col items-center">
+                            <LikeButton 
+                              contentId={clip.id}
+                              contentType="clip"
+                              initialLiked={false}
+                              initialCount={clip._count?.likes || 0}
+                              size="lg"
+                              onUnauthenticatedAction={() => openDialog('like')}
+                            />
+                            <span className="text-white text-xs mt-1">{clip._count?.likes || 0}</span>
+                          </div>
+                          
+                          <div className="flex flex-col items-center">
+                            <button 
+                              onClick={() => setShowComments(true)}
+                              className="p-3 rounded-full bg-black/30 backdrop-blur-sm"
+                              data-testid="button-comments"
+                            >
+                              <MessageSquare className="h-6 w-6 text-white" />
+                            </button>
+                            <span className="text-white text-xs mt-1">{comments?.length || 0}</span>
+                          </div>
+                          
+                          <div className="flex flex-col items-center">
+                            <ClipShareDialog 
+                              clipId={clip.id} 
+                              isOwnContent={user?.id === clip.userId}
+                              trigger={
+                                <button className="p-3 rounded-full bg-black/30 backdrop-blur-sm">
+                                  <Send className="h-6 w-6 text-white" />
+                                </button>
+                              } 
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Bottom overlay with title and description */}
+                        <div className="absolute bottom-4 left-4 right-16 z-40">
+                          <h2 className="text-white font-semibold text-lg mb-1">{clip.title}</h2>
+                          {clip.description && (
+                            <p className="text-white/80 text-sm">{clip.description}</p>
+                          )}
+                          {clip.game && (
+                            <div className="mt-2">
+                              <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold">
+                                {clip.game.name}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {/* Desktop reel overlay */}
+                    {!isMobile && (
+                      <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-md pointer-events-none z-50">
+                        Reel
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -282,15 +387,47 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               )}
             </div>
 
-            {/* Right side - Info and comments */}
+            {/* Backdrop for mobile comments */}
+            {clip.videoType === 'reel' && isMobile && showComments && (
+              <div 
+                className="fixed inset-0 bg-black/20 z-40" 
+                onClick={() => setShowComments(false)}
+                data-testid="backdrop-comments"
+              />
+            )}
+
+            {/* Right side - Info and comments (hidden on mobile for reels when comments not shown) */}
             <div className={cn(
               "h-full flex flex-col",
-              clip.videoType === 'reel' 
-                ? "w-full lg:w-[35%]" // Adjusted sidebar for reels
-                : "w-full lg:w-[25%]"  // Standard sidebar for clips
+              clip.videoType === 'reel' && isMobile && !showComments
+                ? "hidden" // Hide sidebar on mobile for reels when comments not shown
+                : clip.videoType === 'reel' 
+                  ? "w-full lg:w-[35%]" // Adjusted sidebar for reels
+                  : "w-full lg:w-[25%]",  // Standard sidebar for clips
+              // Show comments as slide-up overlay on mobile for reels
+              clip.videoType === 'reel' && isMobile && showComments
+                ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out" 
+                : ""
             )}>
-              {/* Header with username */}
-              <div className="border-b border-border p-4 flex items-center justify-between">
+              {/* Header with username (mobile comments header or regular header) */}
+              <div className={cn(
+                "border-b border-border p-4 flex items-center justify-between",
+                clip.videoType === 'reel' && isMobile && showComments 
+                  ? "relative" // Add relative positioning for mobile comments header
+                  : ""
+              )}>                
+                {/* Close button for mobile comments - larger grab area */}
+                {clip.videoType === 'reel' && isMobile && showComments && (
+                  <div className="absolute -top-4 left-0 right-0 h-8 flex justify-center items-center">
+                    <button 
+                      onClick={() => setShowComments(false)}
+                      className="p-3 bg-muted rounded-full hover:bg-muted/80 transition-colors"
+                      data-testid="button-close-comments"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
                 <div className="flex items-center">
                   <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3">
                     {clip.user?.avatarUrl ? (
