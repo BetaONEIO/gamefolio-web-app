@@ -20,7 +20,7 @@ import { BlockedUsersSection } from "@/components/settings/blocked-users-section
 
 const PRESET_THEMES = [
   {
-    name: "Ocean Blue",
+    name: "Basic",
     backgroundColor: "#0B2232",
     accentColor: "#4ADE80"
   },
@@ -30,9 +30,9 @@ const PRESET_THEMES = [
     accentColor: "#a855f7"
   },
   {
-    name: "Forest Green",
-    backgroundColor: "#064e3b",
-    accentColor: "#10b981"
+    name: "Golden Yellow",
+    backgroundColor: "#451a03",
+    accentColor: "#facc15"
   },
   {
     name: "Rose Gold",
