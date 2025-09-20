@@ -320,14 +320,28 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         {/* Right side action buttons */}
                         <div className="absolute right-6 bottom-32 flex flex-col items-center space-y-4 z-50 pointer-events-auto">
                           <div className="flex flex-col items-center">
-                            <LikeButton 
+                            <FireButton 
                               contentId={clip.id}
                               contentType="clip"
-                              initialLiked={false}
-                              initialCount={clip._count?.likes || 0}
+                              initialFired={false}
+                              initialCount={0}
                               size="lg"
-                              onUnauthenticatedAction={() => openDialog('like')}
+                              onUnauthenticatedAction={() => openDialog('general')}
                             />
+                            <span className="text-white text-xs mt-1">0</span>
+                          </div>
+                          
+                          <div className="flex flex-col items-center">
+                            <div className="text-white">
+                              <LikeButton 
+                                contentId={clip.id}
+                                contentType="clip"
+                                initialLiked={false}
+                                initialCount={clip._count?.likes || 0}
+                                size="lg"
+                                onUnauthenticatedAction={() => openDialog('like')}
+                              />
+                            </div>
                             <span className="text-white text-xs mt-1">{clip._count?.likes || 0}</span>
                           </div>
                           
