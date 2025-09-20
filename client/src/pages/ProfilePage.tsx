@@ -1228,16 +1228,15 @@ const ProfilePage = () => {
           <TabsList 
             className="border-b w-full justify-start rounded-none h-12 md:h-14 p-0 relative overflow-x-auto overflow-y-hidden grid grid-cols-4"
             style={{ 
-              backgroundColor: `var(--profile-primary-color, #0B2232)40`,
-              borderBottomColor: `var(--profile-accent-color, #4ADE80)60`
+              backgroundColor: `hsl(var(--background) / 0.4)`,
+              borderBottomColor: `hsl(var(--primary) / 0.6)`
             }}
           >
             {/* Animated background indicator */}
             <div 
-              className="absolute bottom-0 h-1 transition-all duration-300 ease-out z-50 profile-tab-indicator"
+              className="absolute bottom-0 h-1 transition-all duration-300 ease-out z-50 profile-tab-indicator bg-primary"
               style={{
-                backgroundColor: 'var(--profile-accent-color, #4ADE80)',
-                boxShadow: `0 0 20px var(--profile-accent-color-alpha, rgba(74, 222, 128, 0.2))`,
+                boxShadow: `0 0 20px hsl(var(--primary) / 0.2)`,
                 width: `${tabPosition.widthPercent}%`,
                 left: `${tabPosition.leftPercent}%`,
                 border: 'none',
@@ -1250,7 +1249,7 @@ const ProfilePage = () => {
               value="clips" 
               className="relative rounded-none h-12 md:h-14 font-medium transition-all duration-300 hover:scale-105 flex-shrink-0 px-4 md:px-6"
               style={{ 
-                color: activeTab === 'clips' ? 'var(--profile-accent-color, #4ADE80)' : '#9CA3AF',
+                color: activeTab === 'clips' ? 'hsl(var(--primary))' : '#9CA3AF',
                 backgroundColor: 'transparent',
               }}
             >
@@ -1259,7 +1258,7 @@ const ProfilePage = () => {
                 <div 
                   className="absolute inset-0 opacity-20 animate-pulse"
                   style={{
-                    background: `linear-gradient(135deg, ${accentColor}20, transparent)`
+                    background: `linear-gradient(135deg, hsl(var(--primary) / 0.2), transparent)`
                   }}
                 ></div>
               )}
@@ -1270,8 +1269,8 @@ const ProfilePage = () => {
               value="reels" 
               className="relative rounded-none h-12 md:h-14 font-medium transition-all duration-300 hover:scale-105 flex-shrink-0 px-4 md:px-6"
               style={{ 
-                color: activeTab === 'reels' ? accentColor : '#9CA3AF',
-                backgroundColor: activeTab === 'reels' ? `${accentColor}10` : 'transparent',
+                color: activeTab === 'reels' ? 'hsl(var(--primary))' : '#9CA3AF',
+                backgroundColor: activeTab === 'reels' ? 'hsl(var(--primary) / 0.1)' : 'transparent',
               }}
             >
               <span className="relative z-10">Reels</span>
@@ -1279,7 +1278,7 @@ const ProfilePage = () => {
                 <div 
                   className="absolute inset-0 opacity-20 animate-pulse"
                   style={{
-                    background: `linear-gradient(135deg, ${accentColor}20, transparent)`
+                    background: `linear-gradient(135deg, hsl(var(--primary) / 0.2), transparent)`
                   }}
                 ></div>
               )}
@@ -1290,8 +1289,8 @@ const ProfilePage = () => {
               value="screenshots" 
               className="relative rounded-none h-12 md:h-14 font-medium transition-all duration-300 hover:scale-105 flex-shrink-0 px-4 md:px-6"
               style={{ 
-                color: activeTab === 'screenshots' ? accentColor : '#9CA3AF',
-                backgroundColor: activeTab === 'screenshots' ? `${accentColor}10` : 'transparent',
+                color: activeTab === 'screenshots' ? 'hsl(var(--primary))' : '#9CA3AF',
+                backgroundColor: activeTab === 'screenshots' ? 'hsl(var(--primary) / 0.1)' : 'transparent',
               }}
             >
               <span className="relative z-10">Screenshots</span>
@@ -1299,7 +1298,7 @@ const ProfilePage = () => {
                 <div 
                   className="absolute inset-0 opacity-20 animate-pulse"
                   style={{
-                    background: `linear-gradient(135deg, ${accentColor}20, transparent)`
+                    background: `linear-gradient(135deg, hsl(var(--primary) / 0.2), transparent)`
                   }}
                 ></div>
               )}
@@ -1310,8 +1309,8 @@ const ProfilePage = () => {
               value="favorites" 
               className="relative rounded-none h-12 md:h-14 font-medium transition-all duration-300 hover:scale-105 flex-shrink-0 px-4 md:px-6"
               style={{ 
-                color: activeTab === 'favorites' ? accentColor : '#9CA3AF',
-                backgroundColor: activeTab === 'favorites' ? `${accentColor}10` : 'transparent',
+                color: activeTab === 'favorites' ? 'hsl(var(--primary))' : '#9CA3AF',
+                backgroundColor: activeTab === 'favorites' ? 'hsl(var(--primary) / 0.1)' : 'transparent',
               }}
             >
               <span className="relative z-10">Favorites</span>
@@ -1319,7 +1318,7 @@ const ProfilePage = () => {
                 <div 
                   className="absolute inset-0 opacity-20 animate-pulse"
                   style={{
-                    background: `linear-gradient(135deg, ${accentColor}20, transparent)`
+                    background: `linear-gradient(135deg, hsl(var(--primary) / 0.2), transparent)`
                   }}
                 ></div>
               )}
