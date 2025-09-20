@@ -633,10 +633,10 @@ const ProfilePage = () => {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     
     if (isMobile) {
-      // On mobile: narrower underlines (60% of tab width) centered within each 25% tab
+      // On mobile: narrower underlines (40% of tab width) centered within each 25% tab
       const tabWidthPercent = 25;
-      const underlineWidthPercent = tabWidthPercent * 0.6; // 15%
-      const centerOffset = (tabWidthPercent - underlineWidthPercent) / 2; // 5%
+      const underlineWidthPercent = tabWidthPercent * 0.4; // 10%
+      const centerOffset = (tabWidthPercent - underlineWidthPercent) / 2; // 7.5%
       
       return {
         leftPercent: tabIndex * tabWidthPercent + centerOffset,
@@ -1256,7 +1256,7 @@ const ProfilePage = () => {
           className="w-full"
         >
           <TabsList 
-            className="border-b w-full justify-start rounded-none h-12 md:h-14 p-0 relative overflow-x-auto overflow-y-hidden flex md:grid md:grid-cols-4"
+            className="border-b w-full justify-start rounded-none h-12 md:h-14 p-0 relative overflow-x-auto overflow-y-hidden grid grid-cols-4"
             style={{ 
               backgroundColor: `var(--profile-primary-color, #0B2232)40`,
               borderBottomColor: `var(--profile-accent-color, #4ADE80)60`
