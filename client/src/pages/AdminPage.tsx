@@ -394,6 +394,14 @@ const AdminPage = () => {
     }
   };
 
+  // Helper function to count badges by type
+  const getBadgeCount = (badgeType: string): number => {
+    if (!usersData?.users) return 0;
+    return usersData.users.reduce((count, user) => {
+      return count + (user.badges?.filter(badge => badge.badgeType === badgeType).length || 0);
+    }, 0);
+  };
+
   // Handle hero text update
   const handleUpdateHeroText = async () => {
     try {
@@ -1131,15 +1139,26 @@ const AdminPage = () => {
                                 </Badge>
                               </TableCell>
                               <TableCell>
-                                <div className="flex gap-1">
-                                  {/* Show automatic badges based on user properties */}
-                                  {user.role === 'admin' && (
-                                    <Badge className={`${getBadgeColor('admin')} text-white`}>
-                                      {getBadgeIcon('admin')}
-                                      <span className="ml-1">Admin</span>
+                                <div className="flex gap-1 flex-wrap">
+                                  {/* Display actual user badges */}
+                                  {user.badges?.map((badge) => (
+                                    <Badge key={badge.id} className={`${getBadgeColor(badge.badgeType)} text-white`}>
+                                      {getBadgeIcon(badge.badgeType)}
+                                      <span className="ml-1 capitalize">{badge.badgeType}</span>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="ml-2 h-4 w-4 p-0 text-white hover:bg-red-500"
+                                        onClick={() => handleRemoveBadge(user.id, badge.badgeType)}
+                                        data-testid={`button-remove-badge-${badge.badgeType}-${user.id}`}
+                                      >
+                                        <Minus className="h-3 w-3" />
+                                      </Button>
                                     </Badge>
+                                  ))}
+                                  {user.badges?.length === 0 && (
+                                    <span className="text-sm text-muted-foreground">No badges</span>
                                   )}
-                                  {/* Note: Real badges would come from user.badges array */}
                                 </div>
                               </TableCell>
                               <TableCell className="text-right">
@@ -1174,8 +1193,7 @@ const AdminPage = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {/* This would show real count from API */}
-                        0
+                        {getBadgeCount('newcomer')}
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Automatically assigned
@@ -1190,8 +1208,7 @@ const AdminPage = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {/* This would show real count from API */}
-                        0
+                        {getBadgeCount('founder')}
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Manually assigned
@@ -1206,8 +1223,7 @@ const AdminPage = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {/* This would show real count from API */}
-                        {stats?.overview?.totalUsers ? usersData?.users?.filter((u: any) => u.role === 'admin')?.length || 0 : 0}
+                        {getBadgeCount('admin')}
                       </div>
                       <p className="text-xs text-muted-foreground">
                         System assigned
