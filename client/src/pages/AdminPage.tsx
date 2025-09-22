@@ -3,6 +3,47 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
 import AdminContentFilter from "./AdminContentFilter";
+import { UserWithBadges } from "@shared/schema";
+
+// Admin data types
+interface AdminStats {
+  overview: {
+    totalUsers: number;
+    totalClips: number;
+    totalGames: number;
+  };
+  analytics: {
+    userTypeDistribution: Array<{ type: string; count: number }>;
+    ageRangeDistribution: Array<{ range: string; count: number }>;
+    topGames: Array<{ id: number; name: string }>;
+    recentClips: Array<{ id: number; title: string; user: { username: string } }>;
+  };
+}
+
+interface UsersData {
+  users: UserWithBadges[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+interface ClipsData {
+  clips: Array<{ id: number; title: string; user: { username: string } }>;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+interface HeroTextData {
+  title: string;
+  subtitle: string;
+}
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
