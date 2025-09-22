@@ -604,6 +604,157 @@ adminRouter.post("/badges/cleanup", async (req: Request, res: Response) => {
   }
 });
 
+// ==========================================
+// Badge Definition Management Routes
+// ==========================================
+
+// GET /api/admin/badges - Get all badge definitions
+adminRouter.get("/badges", async (req: Request, res: Response) => {
+  try {
+    const badges = await storage.getAllBadges();
+    res.json(badges);
+  } catch (err) {
+    console.error("Error fetching badges:", err);
+    res.status(500).json({ message: "Error fetching badges" });
+  }
+});
+
+// GET /api/admin/badges/active - Get active badge definitions
+adminRouter.get("/badges/active", async (req: Request, res: Response) => {
+  try {
+    const badges = await storage.getActiveBadges();
+    res.json(badges);
+  } catch (err) {
+    console.error("Error fetching active badges:", err);
+    res.status(500).json({ message: "Error fetching active badges" });
+  }
+});
+
+// GET /api/admin/badges/stats - Get badges with usage statistics
+adminRouter.get("/badges/stats", async (req: Request, res: Response) => {
+  try {
+    const badgesWithStats = await storage.getBadgesWithStats();
+    res.json(badgesWithStats);
+  } catch (err) {
+    console.error("Error fetching badge stats:", err);
+    res.status(500).json({ message: "Error fetching badge stats" });
+  }
+});
+
+// GET /api/admin/badges/:id - Get badge by ID
+adminRouter.get("/badges/:id", async (req: Request, res: Response) => {
+  try {
+    const badgeId = parseInt(req.params.id);
+    const badge = await storage.getBadge(badgeId);
+    
+    if (!badge) {
+      return res.status(404).json({ message: "Badge not found" });
+    }
+    
+    res.json(badge);
+  } catch (err) {
+    console.error("Error fetching badge:", err);
+    res.status(500).json({ message: "Error fetching badge" });
+  }
+});
+
+// POST /api/admin/badges - Create new badge definition
+adminRouter.post("/badges", async (req: Request, res: Response) => {
+  try {
+    const { name, description, imageUrl, textColor, backgroundColor, isActive } = req.body;
+    const adminUser = req.user;
+    
+    if (!name) {
+      return res.status(400).json({ message: "Badge name is required" });
+    }
+    
+    // Check if badge name already exists
+    const existingBadge = await storage.getBadgeByName(name);
+    if (existingBadge) {
+      return res.status(400).json({ message: "Badge with this name already exists" });
+    }
+    
+    const badgeData = {
+      name,
+      description: description || null,
+      imageUrl: imageUrl || null,
+      textColor: textColor || '#FFFFFF',
+      backgroundColor: backgroundColor || '#6B7280',
+      isActive: isActive !== undefined ? isActive : true,
+      isSystemBadge: false,
+      createdBy: adminUser?.id || null
+    };
+    
+    const badge = await storage.createBadge(badgeData);
+    res.status(201).json(badge);
+  } catch (err) {
+    console.error("Error creating badge:", err);
+    res.status(500).json({ message: "Error creating badge" });
+  }
+});
+
+// PATCH /api/admin/badges/:id - Update badge definition
+adminRouter.patch("/badges/:id", async (req: Request, res: Response) => {
+  try {
+    const badgeId = parseInt(req.params.id);
+    const updateData = req.body;
+    
+    // Check if badge exists
+    const existingBadge = await storage.getBadge(badgeId);
+    if (!existingBadge) {
+      return res.status(404).json({ message: "Badge not found" });
+    }
+    
+    // If updating name, check for duplicates
+    if (updateData.name && updateData.name !== existingBadge.name) {
+      const nameExists = await storage.getBadgeByName(updateData.name);
+      if (nameExists) {
+        return res.status(400).json({ message: "Badge with this name already exists" });
+      }
+    }
+    
+    const updatedBadge = await storage.updateBadge(badgeId, updateData);
+    
+    if (!updatedBadge) {
+      return res.status(500).json({ message: "Failed to update badge" });
+    }
+    
+    res.json(updatedBadge);
+  } catch (err) {
+    console.error("Error updating badge:", err);
+    res.status(500).json({ message: "Error updating badge" });
+  }
+});
+
+// DELETE /api/admin/badges/:id - Delete badge definition
+adminRouter.delete("/badges/:id", async (req: Request, res: Response) => {
+  try {
+    const badgeId = parseInt(req.params.id);
+    
+    // Check if badge exists
+    const badge = await storage.getBadge(badgeId);
+    if (!badge) {
+      return res.status(404).json({ message: "Badge not found" });
+    }
+    
+    // Prevent deletion of system badges
+    if (badge.isSystemBadge) {
+      return res.status(403).json({ message: "Cannot delete system badges" });
+    }
+    
+    const success = await storage.deleteBadge(badgeId);
+    
+    if (!success) {
+      return res.status(400).json({ message: "Cannot delete badge - it may be assigned to users" });
+    }
+    
+    res.json({ message: "Badge deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting badge:", err);
+    res.status(500).json({ message: "Error deleting badge" });
+  }
+});
+
 // Regenerate thumbnail for a clip or reel
 adminRouter.post("/regenerate-thumbnail/:clipId", async (req: Request, res: Response) => {
   try {
