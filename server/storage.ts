@@ -22,6 +22,7 @@ import {
   type ClipWithUser,
   type CommentWithUser,
   type UserWithStats,
+  type UserWithBadges,
   type Screenshot, type InsertScreenshot,
   type InsertScreenshot as InsertScreenshotData
 } from "@shared/schema";
@@ -41,7 +42,7 @@ export interface IStorage {
   getFeaturedUsers(limit?: number): Promise<User[]>;
 
   // Admin operations
-  getAllUsers(limit?: number, offset?: number, search?: string): Promise<User[]>;
+  getAllUsers(limit?: number, offset?: number, search?: string): Promise<UserWithBadges[]>;
   getUserCount(search?: string): Promise<number>;
   getAdminCount(): Promise<number>;
   getClipCount(): Promise<number>;

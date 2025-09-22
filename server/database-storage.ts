@@ -27,6 +27,7 @@ import {
   CommentWithUser,
   ScreenshotCommentWithUser,
   UserWithStats,
+  UserWithBadges,
   users,
   games,
   clips,
@@ -1158,11 +1159,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Admin operations
-  async getAllUsers(limit: number = 10, offset: number = 0, search?: string): Promise<User[]> {
-    let query = db.select().from(users);
+  async getAllUsers(limit: number = 10, offset: number = 0, search?: string): Promise<UserWithBadges[]> {
+    let userQuery = db.select().from(users);
 
     if (search) {
-      query = query.where(
+      userQuery = userQuery.where(
         or(
           ilike(users.username, `%${search}%`),
           ilike(users.displayName, `%${search}%`),
@@ -1171,10 +1172,33 @@ export class DatabaseStorage implements IStorage {
       ) as any;
     }
 
-    return query
+    const usersResults = await userQuery
       .orderBy(desc(users.createdAt), desc(users.id))
       .limit(limit)
       .offset(offset);
+
+    // Bulk fetch badges for all users to avoid N+1 queries
+    const userIds = usersResults.map(user => user.id);
+    const allBadges = userIds.length > 0 
+      ? await db.select().from(userBadges).where(inArray(userBadges.userId, userIds))
+      : [];
+
+    // Group badges by user ID
+    const badgesByUserId = allBadges.reduce((acc, badge) => {
+      if (!acc[badge.userId]) {
+        acc[badge.userId] = [];
+      }
+      acc[badge.userId].push(badge);
+      return acc;
+    }, {} as Record<number, UserBadge[]>);
+
+    // Combine users with their badges
+    const usersWithBadges: UserWithBadges[] = usersResults.map(user => ({
+      ...user,
+      badges: badgesByUserId[user.id] || []
+    }));
+
+    return usersWithBadges;
   }
 
   async getUserCount(search?: string): Promise<number> {

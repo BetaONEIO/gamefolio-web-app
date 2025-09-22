@@ -694,3 +694,7 @@ export type UserWithStats = User & {
   };
   favoriteGames?: Game[];
 };
+
+export type UserWithBadges = User & {
+  badges: UserBadge[];
+};
