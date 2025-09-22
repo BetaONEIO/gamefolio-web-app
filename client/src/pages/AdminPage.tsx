@@ -141,32 +141,32 @@ const AdminPage = () => {
   // Access check is now handled by AdminProtectedRoute
 
   // Fetch admin stats
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery<AdminStats>({
     queryKey: ["/api/admin/stats"],
     refetchInterval: 60000, // Refresh every minute
   });
 
   // Fetch users with pagination
-  const { data: usersData, isLoading: usersLoading } = useQuery({
+  const { data: usersData, isLoading: usersLoading } = useQuery<UsersData>({
     queryKey: ["/api/admin/users", { page: userPage, search: userSearch }],
     placeholderData: keepPreviousData,
   });
 
   // Fetch users for badge assignment search
-  const { data: badgeUsersData, isLoading: badgeUsersLoading } = useQuery({
+  const { data: badgeUsersData, isLoading: badgeUsersLoading } = useQuery<UsersData>({
     queryKey: ["/api/admin/users", { page: 1, search: badgeUserSearch, limit: 10 }],
     enabled: badgeUserSearch.length >= 2,
     placeholderData: keepPreviousData,
   });
 
   // Fetch clips with pagination
-  const { data: clipsData, isLoading: clipsLoading } = useQuery({
+  const { data: clipsData, isLoading: clipsLoading } = useQuery<ClipsData>({
     queryKey: ["/api/admin/clips", { page: clipPage }],
     placeholderData: keepPreviousData,
   });
 
   // Fetch current hero text settings
-  const { data: currentHeroText, isLoading: heroTextLoading } = useQuery({
+  const { data: currentHeroText, isLoading: heroTextLoading } = useQuery<HeroTextData>({
     queryKey: ["/api/hero-text/experienced"],
   });
 
