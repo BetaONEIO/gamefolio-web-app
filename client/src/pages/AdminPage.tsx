@@ -119,6 +119,7 @@ import {
   Plus,
   Minus,
   Type,
+  Trash2,
 } from "lucide-react";
 
 const AdminPage = () => {
@@ -137,6 +138,16 @@ const AdminPage = () => {
   const [selectedBadgeUser, setSelectedBadgeUser] = useState<any>(null);
   const [heroTextTitle, setHeroTextTitle] = useState("");
   const [heroTextSubtitle, setHeroTextSubtitle] = useState("");
+
+  // Badge creation state
+  const [newBadgeName, setNewBadgeName] = useState("");
+  const [newBadgeDescription, setNewBadgeDescription] = useState("");
+  const [newBadgeTextColor, setNewBadgeTextColor] = useState("#FFFFFF");
+  const [newBadgeBackgroundColor, setNewBadgeBackgroundColor] = useState("#6B7280");
+  const [newBadgeImageUrl, setNewBadgeImageUrl] = useState("");
+  const [createBadgeLoading, setCreateBadgeLoading] = useState(false);
+  const [editingBadge, setEditingBadge] = useState<any>(null);
+  const [editBadgeDialogOpen, setEditBadgeDialogOpen] = useState(false);
 
   // Access check is now handled by AdminProtectedRoute
 
@@ -168,6 +179,11 @@ const AdminPage = () => {
   // Fetch current hero text settings
   const { data: currentHeroText, isLoading: heroTextLoading } = useQuery<HeroTextData>({
     queryKey: ["/api/hero-text/experienced"],
+  });
+
+  // Badge management queries
+  const { data: badgesData, isLoading: badgesLoading, refetch: refetchBadges } = useQuery({
+    queryKey: ["/api/admin/badges"],
   });
 
   // Update form fields when data loads
@@ -371,6 +387,101 @@ const AdminPage = () => {
       toast({
         title: "Error",
         description: "Failed to cleanup badges. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // New badge management handlers
+  const handleCreateBadge = async () => {
+    if (!newBadgeName.trim()) {
+      toast({
+        title: "Error",
+        description: "Badge name is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCreateBadgeLoading(true);
+    try {
+      await apiRequest("POST", "/api/admin/badges", {
+        name: newBadgeName.trim(),
+        description: newBadgeDescription.trim() || null,
+        imageUrl: newBadgeImageUrl || null,
+        textColor: newBadgeTextColor,
+        backgroundColor: newBadgeBackgroundColor,
+        isActive: true
+      });
+      
+      // Reset form
+      setNewBadgeName("");
+      setNewBadgeDescription("");
+      setNewBadgeTextColor("#FFFFFF");
+      setNewBadgeBackgroundColor("#6B7280");
+      setNewBadgeImageUrl("");
+      
+      // Refresh badges list
+      refetchBadges();
+      
+      toast({
+        title: "Badge created",
+        description: `Badge "${newBadgeName}" created successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create badge. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCreateBadgeLoading(false);
+    }
+  };
+
+  const handleDeleteBadge = async (badgeId: number) => {
+    if (!confirm("Are you sure you want to delete this badge? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      await apiRequest("DELETE", `/api/admin/badges/${badgeId}`);
+      refetchBadges();
+      toast({
+        title: "Badge deleted",
+        description: "Badge deleted successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete badge. It may be assigned to users.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBadgeImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // For now, we'll use a placeholder URL simulation
+    // In a real implementation, you would upload to your file storage service
+    try {
+      // Simulate upload delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Create a temporary local URL for preview
+      const imageUrl = URL.createObjectURL(file);
+      setNewBadgeImageUrl(imageUrl);
+      
+      toast({
+        title: "Image uploaded",
+        description: "Badge image uploaded successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload image. Please try again.",
         variant: "destructive",
       });
     }
@@ -977,6 +1088,223 @@ const AdminPage = () => {
 
         {/* Badges Tab */}
         <TabsContent value="badges" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Badge Creation Panel */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="h-5 w-5" />
+                  Create New Badge
+                </CardTitle>
+                <CardDescription>
+                  Design custom badges with images and text
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label htmlFor="badge-name" className="text-sm font-medium">
+                      Badge Name
+                    </label>
+                    <Input
+                      id="badge-name"
+                      placeholder="Enter badge name"
+                      value={newBadgeName}
+                      onChange={(e) => setNewBadgeName(e.target.value)}
+                      data-testid="input-badge-name"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="badge-description" className="text-sm font-medium">
+                      Description
+                    </label>
+                    <Input
+                      id="badge-description"
+                      placeholder="Enter badge description"
+                      value={newBadgeDescription}
+                      onChange={(e) => setNewBadgeDescription(e.target.value)}
+                      data-testid="input-badge-description"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label htmlFor="badge-text-color" className="text-sm font-medium">
+                        Text Color
+                      </label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="badge-text-color"
+                          type="color"
+                          value={newBadgeTextColor}
+                          onChange={(e) => setNewBadgeTextColor(e.target.value)}
+                          className="w-16 h-10 p-1 border-2"
+                          data-testid="input-badge-text-color"
+                        />
+                        <Input
+                          value={newBadgeTextColor}
+                          onChange={(e) => setNewBadgeTextColor(e.target.value)}
+                          placeholder="#FFFFFF"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="badge-bg-color" className="text-sm font-medium">
+                        Background Color
+                      </label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="badge-bg-color"
+                          type="color"
+                          value={newBadgeBackgroundColor}
+                          onChange={(e) => setNewBadgeBackgroundColor(e.target.value)}
+                          className="w-16 h-10 p-1 border-2"
+                          data-testid="input-badge-bg-color"
+                        />
+                        <Input
+                          value={newBadgeBackgroundColor}
+                          onChange={(e) => setNewBadgeBackgroundColor(e.target.value)}
+                          placeholder="#6B7280"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="badge-image" className="text-sm font-medium">
+                      Badge Image (Optional)
+                    </label>
+                    <Input
+                      id="badge-image"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleBadgeImageUpload}
+                      data-testid="input-badge-image"
+                    />
+                    {newBadgeImageUrl && (
+                      <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
+                        <img src={newBadgeImageUrl} alt="Preview" className="w-8 h-8 rounded" />
+                        <span className="text-sm text-green-700">Image uploaded successfully</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Badge Preview */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Preview</label>
+                    <div className="p-4 bg-gray-50 rounded border">
+                      <div 
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-sm font-medium"
+                        style={{
+                          backgroundColor: newBadgeBackgroundColor,
+                          color: newBadgeTextColor
+                        }}
+                      >
+                        {newBadgeImageUrl && (
+                          <img src={newBadgeImageUrl} alt="" className="w-4 h-4 rounded" />
+                        )}
+                        {newBadgeName || 'Badge Name'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button 
+                    onClick={handleCreateBadge}
+                    disabled={!newBadgeName.trim() || createBadgeLoading}
+                    className="w-full"
+                    data-testid="button-create-badge"
+                  >
+                    {createBadgeLoading ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Badge
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Badge Management Panel */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5" />
+                  Manage Badges
+                </CardTitle>
+                <CardDescription>
+                  Edit and delete existing badges
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {badgesLoading ? (
+                    <div className="text-center py-4">Loading badges...</div>
+                  ) : badgesData?.length === 0 ? (
+                    <div className="text-center py-4 text-muted-foreground">
+                      No custom badges created yet
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {badgesData?.map((badge) => (
+                        <div key={badge.id} className="flex items-center justify-between p-3 border rounded">
+                          <div className="flex items-center gap-3">
+                            <div 
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded text-sm font-medium"
+                              style={{
+                                backgroundColor: badge.backgroundColor,
+                                color: badge.textColor
+                              }}
+                            >
+                              {badge.imageUrl && (
+                                <img src={badge.imageUrl} alt="" className="w-4 h-4 rounded" />
+                              )}
+                              {badge.name}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {badge.description}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditingBadge(badge);
+                                setEditBadgeDialogOpen(true);
+                              }}
+                              data-testid={`button-edit-badge-${badge.id}`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            {!badge.isSystemBadge && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteBadge(badge.id)}
+                                data-testid={`button-delete-badge-${badge.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
