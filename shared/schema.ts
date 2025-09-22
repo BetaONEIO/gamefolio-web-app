@@ -559,15 +559,37 @@ export const insertScreenshotReportSchema = createInsertSchema(screenshotReports
   createdAt: true,
 });
 
-// User badges table
+// Badges definition table - stores custom badge types
+export const badges = pgTable("badges", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(), // Badge name like "Newcomer", "Founder", etc.
+  description: text("description"), // Optional description
+  imageUrl: text("image_url"), // Badge image/icon URL
+  textColor: text("text_color").default("#FFFFFF").notNull(), // Text color for badge
+  backgroundColor: text("background_color").default("#6B7280").notNull(), // Background color
+  isActive: boolean("is_active").default(true).notNull(), // Whether badge can be assigned
+  isSystemBadge: boolean("is_system_badge").default(false).notNull(), // System badges vs custom badges
+  createdBy: integer("created_by").references(() => users.id), // Admin who created the badge
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// User badges table - links users to their badges
 export const userBadges = pgTable("user_badges", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  badgeType: text("badge_type").notNull(), // "newcomer", "founder", "admin"
+  badgeId: integer("badge_id").notNull().references(() => badges.id, { onDelete: "cascade" }),
   assignedBy: text("assigned_by").notNull(), // "system" or "admin"
   assignedById: integer("assigned_by_id").references(() => users.id), // ID of admin who assigned (if manually assigned)
   expiresAt: timestamp("expires_at"), // For automatic expiration (e.g., newcomer badge)
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Schema for inserting badges
+export const insertBadgeSchema = createInsertSchema(badges).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 // Schema for inserting user badges
@@ -655,6 +677,9 @@ export type InsertProfileBanner = z.infer<typeof insertProfileBannerSchema>;
 export type Screenshot = typeof screenshots.$inferSelect;
 export type InsertScreenshot = z.infer<typeof insertScreenshotSchema>;
 
+export type Badge = typeof badges.$inferSelect;
+export type InsertBadge = z.infer<typeof insertBadgeSchema>;
+
 export type UserBadge = typeof userBadges.$inferSelect;
 export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
 
@@ -696,5 +721,11 @@ export type UserWithStats = User & {
 };
 
 export type UserWithBadges = User & {
-  badges: UserBadge[];
+  badges: (UserBadge & { badge: Badge })[];
+};
+
+export type BadgeWithStats = Badge & {
+  _count: {
+    users: number;
+  };
 };

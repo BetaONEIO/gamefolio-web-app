@@ -23,6 +23,8 @@ import {
   type CommentWithUser,
   type UserWithStats,
   type UserWithBadges,
+  type Badge, type InsertBadge,
+  type BadgeWithStats,
   type Screenshot, type InsertScreenshot,
   type InsertScreenshot as InsertScreenshotData
 } from "@shared/schema";
@@ -158,7 +160,17 @@ export interface IStorage {
   deleteNotification(id: number): Promise<boolean>;
   deleteAllNotifications(userId: number): Promise<boolean>;
 
-  // Badge operations
+  // Badge definition operations
+  createBadge(badge: InsertBadge): Promise<Badge>;
+  getAllBadges(): Promise<Badge[]>;
+  getActiveBadges(): Promise<Badge[]>;
+  getBadge(id: number): Promise<Badge | null>;
+  getBadgeByName(name: string): Promise<Badge | null>;
+  updateBadge(id: number, badge: Partial<Badge>): Promise<Badge | null>;
+  deleteBadge(id: number): Promise<boolean>;
+  getBadgesWithStats(): Promise<BadgeWithStats[]>;
+
+  // User badge operations
   createUserBadge(badge: InsertUserBadge): Promise<UserBadge>;
   getUserBadges(userId: number): Promise<UserBadge[]>;
   deleteBadgesByType(userId: number, badgeType: string): Promise<boolean>;

@@ -28,6 +28,8 @@ import {
   ScreenshotCommentWithUser,
   UserWithStats,
   UserWithBadges,
+  Badge, InsertBadge,
+  BadgeWithStats,
   users,
   games,
   clips,
@@ -49,6 +51,7 @@ import {
   messages,
   userBlocks,
   userBadges,
+  badges,
   monthlyLeaderboard,
   userPointsHistory,
   emailVerificationTokens,
@@ -2230,7 +2233,90 @@ export class DatabaseStorage implements IStorage {
     })) as (Screenshot & { user: User | null; game?: Game | null })[];
   }
 
-  // Badge operations
+  // Badge definition operations
+  async createBadge(badgeData: InsertBadge): Promise<Badge> {
+    const [badge] = await db.insert(badges).values(badgeData).returning();
+    return badge;
+  }
+
+  async getAllBadges(): Promise<Badge[]> {
+    return db.select().from(badges).orderBy(desc(badges.createdAt));
+  }
+
+  async getActiveBadges(): Promise<Badge[]> {
+    return db.select().from(badges)
+      .where(eq(badges.isActive, true))
+      .orderBy(asc(badges.name));
+  }
+
+  async getBadge(id: number): Promise<Badge | null> {
+    const [badge] = await db.select().from(badges).where(eq(badges.id, id));
+    return badge || null;
+  }
+
+  async getBadgeByName(name: string): Promise<Badge | null> {
+    const [badge] = await db.select().from(badges).where(eq(badges.name, name));
+    return badge || null;
+  }
+
+  async updateBadge(id: number, badgeData: Partial<Badge>): Promise<Badge | null> {
+    try {
+      const [updatedBadge] = await db
+        .update(badges)
+        .set({ ...badgeData, updatedAt: new Date() })
+        .where(eq(badges.id, id))
+        .returning();
+      return updatedBadge;
+    } catch (error) {
+      console.error("Error updating badge:", error);
+      return null;
+    }
+  }
+
+  async deleteBadge(id: number): Promise<boolean> {
+    try {
+      // Check if badge is in use
+      const badgeInUse = await db.select().from(userBadges).where(eq(userBadges.badgeId, id)).limit(1);
+      if (badgeInUse.length > 0) {
+        console.log(`Cannot delete badge ${id}: still in use by users`);
+        return false;
+      }
+
+      const result = await db.delete(badges).where(eq(badges.id, id)).returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting badge:", error);
+      return false;
+    }
+  }
+
+  async getBadgesWithStats(): Promise<BadgeWithStats[]> {
+    try {
+      const allBadges = await this.getAllBadges();
+      const badgesWithStats: BadgeWithStats[] = [];
+
+      for (const badge of allBadges) {
+        const userCount = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(userBadges)
+          .where(eq(userBadges.badgeId, badge.id));
+
+        badgesWithStats.push({
+          ...badge,
+          _count: {
+            users: Number(userCount[0]?.count || 0)
+          }
+        });
+      }
+
+      return badgesWithStats;
+    } catch (error) {
+      console.error("Error getting badges with stats:", error);
+      return [];
+    }
+  }
+
+  // User badge operations
   async createUserBadge(badge: InsertUserBadge): Promise<UserBadge> {
     const [userBadge] = await db.insert(userBadges).values(badge).returning();
     return userBadge;
