@@ -134,6 +134,7 @@ function Router() {
         <Switch>
           {/* Public routes accessible to guests */}
           <Route path="/" component={HomePage} />
+          <Route path="/trending" component={TrendingPage} />
           <Route path="/clip/:id" component={ClipPage} />
           <Route path="/clips/:id" component={ClipPage} />
           <Route path="/reel/:id" component={ClipPage} />
@@ -148,7 +149,6 @@ function Router() {
 
           {/* Protected routes requiring authentication */}
           <ProtectedRoute path="/explore" component={ExplorePage} />
-          <ProtectedRoute path="/trending" component={TrendingPage} />
           <ProtectedRoute path="/games/:gameSlug" component={GamePage} />
           <ProtectedRoute path="/games/:gameId/clips" component={GameClipsPage} />
           <ProtectedRoute path="/hashtag/:hashtag" component={HashtagPage} />
