@@ -7,6 +7,8 @@ import { useMobile } from "@/hooks/use-mobile";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ClipDialogProvider } from "@/hooks/use-clip-dialog";
 import { ThemeProvider } from "@/hooks/use-theme";
+import { AuthModalProvider, useAuthModal } from "@/hooks/use-auth-modal";
+import AuthModal from "@/components/auth/auth-modal";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AdminProtectedRoute } from "@/components/auth/admin-protected-route";
 import { OnboardingGuard } from "@/components/auth/onboarding-guard";
@@ -58,15 +60,29 @@ import PrivacyPage from "./pages/privacy-page";
 import ContactPage from "./pages/contact-page";
 import HelpPage from "./pages/help-page";
 import { DiscordCallback } from "./components/auth/DiscordCallback";
+import React from 'react';
+
+// Component to handle /auth route redirect to modal
+function AuthRedirect() {
+  const { openModal } = useAuthModal();
+  
+  React.useEffect(() => {
+    openModal();
+    // Redirect to home to avoid URL confusion
+    window.history.replaceState({}, '', '/');
+  }, [openModal]);
+  
+  return null;
+}
 
 function MainLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useMobile();
   const { user } = useAuth();
   const [location] = useLocation();
+  const { isOpen, closeModal, defaultTab } = useAuthModal();
 
-  // Don't render layout for auth, onboarding, verification, password reset, and public view pages
-  const isAuthOrOnboarding = location.startsWith("/auth") ||
-                           location.startsWith("/onboarding") ||
+  // Don't render layout for onboarding, verification, password reset, and public view pages
+  const isAuthOrOnboarding = location.startsWith("/onboarding") ||
                            location.startsWith("/verify-email") ||
                            location.startsWith("/verify-code") ||
                            location.startsWith("/reset-password") ||
@@ -99,6 +115,13 @@ function MainLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {isMobile && <MobileNav />}
+      
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={isOpen} 
+        onClose={closeModal} 
+        defaultTab={defaultTab} 
+      />
     </div>
   );
 }
@@ -149,7 +172,7 @@ function Router() {
           <ProtectedRoute path="/test/content-filter" component={ContentFilterTest} />
 
           {/* Routes that bypass onboarding guard */}
-          <Route path="/auth" component={AuthPage} />
+          <Route path="/auth" component={AuthRedirect} />
           <Route path="/auth/discord/callback" component={DiscordCallback} />
           <Route path="/onboarding" component={OnboardingPage} />
           <Route path="/verify-email" component={VerifyEmailPage} />
@@ -181,12 +204,14 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <AuthProvider>
-            <ClipDialogProvider>
-              <MainLayout>
-                <Router />
-              </MainLayout>
+            <AuthModalProvider>
+              <ClipDialogProvider>
+                <MainLayout>
+                  <Router />
+                </MainLayout>
+              </ClipDialogProvider>
               <Toaster />
-            </ClipDialogProvider>
+            </AuthModalProvider>
           </AuthProvider>
         </TooltipProvider>
       </QueryClientProvider>

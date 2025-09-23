@@ -208,7 +208,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "gamefolioSuccess",
       });
 
-      setLocation("/auth");
+      // Navigate to home page after logout
+      setLocation("/");
     },
     onError: (error: Error) => {
       toast({
