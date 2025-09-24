@@ -3543,7 +3543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if already favorited
       const existingFavorites = currentFavorites.find(g => g.id === gameId);
       if (existingFavorites) {
-        return res.status(400).json({ message: "Game is already in your favorites" });
+        return res.status(200).json({ message: "Game is already in your favorites" });
       }
 
       // Add to favorites
