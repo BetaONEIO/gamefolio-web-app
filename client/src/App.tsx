@@ -148,7 +148,7 @@ function Router() {
           <Route path="/profile/:username" component={ProfilePage} />
 
           {/* Protected routes requiring authentication */}
-          <ProtectedRoute path="/explore" component={ExplorePage} />
+          <Route path="/explore" component={ExplorePage} />
           <ProtectedRoute path="/games/:gameSlug" component={GamePage} />
           <ProtectedRoute path="/games/:gameId/clips" component={GameClipsPage} />
           <ProtectedRoute path="/hashtag/:hashtag" component={HashtagPage} />
@@ -162,7 +162,7 @@ function Router() {
           <ProtectedRoute path="/customize" component={CustomizePage} />
           <ProtectedRoute path="/browse/games/:category" component={GameCategoriesPage} />
           <ProtectedRoute path="/browse/games/categories" component={GameCategoriesPage} />
-          <ProtectedRoute path="/leaderboard" component={LeaderboardPage} />
+          <Route path="/leaderboard" component={LeaderboardPage} />
           <ProtectedRoute path="/messages" component={MessagesPage} />
           <ProtectedRoute path="/latest-reels" component={LatestReelsPage} />
           <ProtectedRoute path="/latest-clips" component={LatestClipsPage} />

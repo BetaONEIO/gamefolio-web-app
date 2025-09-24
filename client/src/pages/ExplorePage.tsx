@@ -23,6 +23,7 @@ interface ExtendedGame extends Game {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 const ExplorePage = () => {
   const [location, setLocation] = useLocation();
@@ -37,7 +38,8 @@ const ExplorePage = () => {
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Current user ID for like functionality
-  const userId = 1; // Would come from auth context in a real app
+  const { user } = useAuth();
+  const userId = user?.id;
 
   // Parse query parameters
   useEffect(() => {
