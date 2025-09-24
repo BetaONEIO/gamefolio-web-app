@@ -132,7 +132,6 @@ const Sidebar = () => {
     onSuccess: async (addedGames) => {
       // Force refetch to ensure UI updates immediately
       await queryClient.invalidateQueries({ queryKey: ["/api/user-game-favorites"] });
-      await refetchFavorites();
       if (user?.username) {
         await queryClient.invalidateQueries({ queryKey: [`/api/users/${user.username}/games/favorites`] });
       }
@@ -164,7 +163,6 @@ const Sidebar = () => {
     onSuccess: async () => {
       // Force refetch to ensure UI updates immediately
       await queryClient.invalidateQueries({ queryKey: ["/api/user-game-favorites"] });
-      await refetchFavorites();
       if (user?.username) {
         await queryClient.invalidateQueries({ queryKey: [`/api/users/${user.username}/games/favorites`] });
       }
