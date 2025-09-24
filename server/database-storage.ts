@@ -2746,7 +2746,7 @@ export class DatabaseStorage implements IStorage {
       
       if (!favoriteGames || favoriteGames.length === 0) {
         // If user has no favorite games, return trending clips
-        return this.getTrendingClips(limit);
+        return this.getTrendingClips('day', limit, undefined, userId);
       }
       
       // Get game IDs from favorite games, filtering out any null/undefined values
@@ -2756,7 +2756,7 @@ export class DatabaseStorage implements IStorage {
       
       // If no valid game IDs, fallback to trending clips
       if (gameIds.length === 0) {
-        return this.getTrendingClips(limit);
+        return this.getTrendingClips('day', limit, undefined, userId);
       }
       
       // Find clips from those games, excluding the user's own clips
@@ -2774,22 +2774,18 @@ export class DatabaseStorage implements IStorage {
           videoType: clips.videoType,
           createdAt: clips.createdAt,
           updatedAt: clips.updatedAt,
-          user: {
-            id: users.id,
-            username: users.username,
-            displayName: users.displayName,
-            avatarUrl: users.avatarUrl,
-            avatarBorderColor: users.avatarBorderColor,
-            accentColor: users.accentColor,
-            primaryColor: users.primaryColor,
-            backgroundColor: users.backgroundColor,
-            cardColor: users.cardColor,
-          },
-          game: {
-            id: games.id,
-            name: games.name,
-            boxArtUrl: games.boxArtUrl,
-          }
+          // User fields with aliases
+          userUsername: users.username,
+          userDisplayName: users.displayName,
+          userAvatarUrl: users.avatarUrl,
+          userAvatarBorderColor: users.avatarBorderColor,
+          userAccentColor: users.accentColor,
+          userPrimaryColor: users.primaryColor,
+          userBackgroundColor: users.backgroundColor,
+          userCardColor: users.cardColor,
+          // Game fields with aliases
+          gameName: games.name,
+          gameBoxArtUrl: games.boxArtUrl,
         })
         .from(clips)
         .innerJoin(users, eq(clips.userId, users.id))
@@ -2803,25 +2799,57 @@ export class DatabaseStorage implements IStorage {
         .orderBy(desc(clips.views), desc(clips.createdAt), desc(clips.id))
         .limit(limit);
       
+      // Transform the flat result into the expected nested structure
+      const transformedClips = recommendedClips.map(clip => ({
+        id: clip.id,
+        title: clip.title,
+        description: clip.description,
+        videoUrl: clip.videoUrl,
+        thumbnailUrl: clip.thumbnailUrl,
+        userId: clip.userId,
+        gameId: clip.gameId,
+        views: clip.views,
+        duration: clip.duration,
+        videoType: clip.videoType,
+        createdAt: clip.createdAt,
+        updatedAt: clip.updatedAt,
+        user: {
+          id: clip.userId,
+          username: clip.userUsername,
+          displayName: clip.userDisplayName,
+          avatarUrl: clip.userAvatarUrl,
+          avatarBorderColor: clip.userAvatarBorderColor,
+          accentColor: clip.userAccentColor,
+          primaryColor: clip.userPrimaryColor,
+          backgroundColor: clip.userBackgroundColor,
+          cardColor: clip.userCardColor,
+        },
+        game: clip.gameId ? {
+          id: clip.gameId,
+          name: clip.gameName,
+          boxArtUrl: clip.gameBoxArtUrl,
+        } : null
+      }));
+      
       // If not enough clips from favorite games, supplement with trending clips
-      if (recommendedClips.length < limit) {
-        const remainingLimit = limit - recommendedClips.length;
-        const trendingClips = await this.getTrendingClips(remainingLimit);
+      if (transformedClips.length < limit) {
+        const remainingLimit = limit - transformedClips.length;
+        const trendingClips = await this.getTrendingClips('day', remainingLimit, undefined, userId);
         
         // Filter out clips already in recommendations and user's own clips
-        const existingClipIds = new Set(recommendedClips.map(clip => clip.id));
+        const existingClipIds = new Set(transformedClips.map(clip => clip.id));
         const additionalClips = trendingClips.filter(
           clip => !existingClipIds.has(clip.id) && clip.userId !== userId
         );
         
-        recommendedClips.push(...additionalClips.slice(0, remainingLimit));
+        transformedClips.push(...additionalClips.slice(0, remainingLimit));
       }
       
-      return recommendedClips;
+      return transformedClips;
     } catch (error) {
       console.error('Error getting recommended clips:', error);
       // Fallback to trending clips if recommendations fail
-      return this.getTrendingClips(limit);
+      return this.getTrendingClips('day', limit, undefined, userId);
     }
   }
 
