@@ -2749,8 +2749,15 @@ export class DatabaseStorage implements IStorage {
         return this.getTrendingClips(limit);
       }
       
-      // Get game IDs from favorite games
-      const gameIds = favoriteGames.map(game => game.id);
+      // Get game IDs from favorite games, filtering out any null/undefined values
+      const gameIds = favoriteGames
+        .map(game => game.id)
+        .filter(id => id != null && id !== undefined);
+      
+      // If no valid game IDs, fallback to trending clips
+      if (gameIds.length === 0) {
+        return this.getTrendingClips(limit);
+      }
       
       // Find clips from those games, excluding the user's own clips
       const recommendedClips = await db
