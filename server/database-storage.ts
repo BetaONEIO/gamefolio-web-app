@@ -2785,7 +2785,7 @@ export class DatabaseStorage implements IStorage {
           userCardColor: users.cardColor,
           // Game fields with aliases
           gameName: games.name,
-          gameBoxArtUrl: games.boxArtUrl,
+          gameImageUrl: games.imageUrl,
         })
         .from(clips)
         .innerJoin(users, eq(clips.userId, users.id))
@@ -2827,7 +2827,7 @@ export class DatabaseStorage implements IStorage {
         game: clip.gameId ? {
           id: clip.gameId,
           name: clip.gameName,
-          boxArtUrl: clip.gameBoxArtUrl,
+          imageUrl: clip.gameImageUrl,
         } : null
       }));
       
@@ -2866,7 +2866,7 @@ export class DatabaseStorage implements IStorage {
     userId: number;
     gameId?: number | null;
     user: { id: number; username: string; displayName: string; avatarUrl?: string | null } | null;
-    game?: { id: number; name: string; boxArtUrl?: string | null } | null;
+    game?: { id: number; name: string; imageUrl?: string | null } | null;
   }>> {
     try {
       const screenshots = await db
@@ -2890,7 +2890,7 @@ export class DatabaseStorage implements IStorage {
           game: {
             id: games.id,
             name: games.name,
-            boxArtUrl: games.boxArtUrl
+            imageUrl: games.imageUrl
           }
         })
         .from(screenshots)
