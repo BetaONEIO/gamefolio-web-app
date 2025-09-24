@@ -130,10 +130,9 @@ const Sidebar = () => {
       return results;
     },
     onSuccess: async (addedGames) => {
-      // Force refetch to ensure UI updates immediately
-      await queryClient.invalidateQueries({ queryKey: ["/api/user-game-favorites"] });
-      if (user?.username) {
-        await queryClient.invalidateQueries({ queryKey: [`/api/users/${user.username}/games/favorites`] });
+      // Force refetch to ensure UI updates immediately - using the correct query key
+      if (user?.id) {
+        await queryClient.invalidateQueries({ queryKey: [`/api/users/${user.id}/favorites`] });
       }
 
       // Reset state and close dialog
@@ -161,10 +160,9 @@ const Sidebar = () => {
       await apiRequest("DELETE", `/api/users/${user?.id}/favorites/${gameId}`);
     },
     onSuccess: async () => {
-      // Force refetch to ensure UI updates immediately
-      await queryClient.invalidateQueries({ queryKey: ["/api/user-game-favorites"] });
-      if (user?.username) {
-        await queryClient.invalidateQueries({ queryKey: [`/api/users/${user.username}/games/favorites`] });
+      // Force refetch to ensure UI updates immediately - using the correct query key
+      if (user?.id) {
+        await queryClient.invalidateQueries({ queryKey: [`/api/users/${user.id}/favorites`] });
       }
 
       toast({
