@@ -93,6 +93,7 @@ const MessagesPage: React.FC = () => {
   const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [processedUrlParam, setProcessedUrlParam] = useState<string | null>(null);
+  const [showMobileConversationList, setShowMobileConversationList] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch conversations with auto-refresh
@@ -588,7 +589,10 @@ const MessagesPage: React.FC = () => {
     <VerificationGuard requireEmailVerification={true} requireOnboarding={false}>
       <div className="flex h-[calc(100vh-80px)] bg-background">
       {/* Conversations Sidebar */}
-      <div className="w-80 border-r bg-card flex flex-col">
+      <div className={`
+        ${showMobileConversationList || !selectedConversation ? 'flex' : 'hidden'} 
+        md:flex w-full md:w-80 border-r bg-card flex-col
+      `}>
         {/* Header */}
         <div className="p-4 border-b">
           <div className="flex items-center justify-between mb-4">
@@ -660,6 +664,7 @@ const MessagesPage: React.FC = () => {
                         onClick={() => {
                           setSelectedConversation(conversation.userId);
                           setSelectedUserInfo(null); // Clear stored user info for existing conversations
+                          setShowMobileConversationList(false); // Hide conversation list on mobile when chat is selected
                         }}
                       >
                         <Avatar className="h-10 w-10">
@@ -739,12 +744,29 @@ const MessagesPage: React.FC = () => {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className={`
+        ${!showMobileConversationList && selectedConversation ? 'flex' : 'hidden'} 
+        md:flex flex-1 flex-col
+      `}>
         {selectedConversation ? (
           <>
             {/* Chat Header */}
             <div className="p-4 border-b bg-card">
-              {(() => {
+              <div className="flex items-center gap-3">
+                {/* Mobile Back Button */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowMobileConversationList(true)}
+                  className="md:hidden"
+                  data-testid="button-back-to-conversations"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                
+                {/* User Info */}
+                <div className="flex-1">
+                  {(() => {
                 const conversation = Array.isArray(conversations)
                   ? conversations.find((c: any) => c.userId === selectedConversation)
                   : null;
@@ -959,6 +981,8 @@ const MessagesPage: React.FC = () => {
                   </div>
                 );
               })()}
+                </div>
+              </div>
             </div>
 
             {/* Messages */}
