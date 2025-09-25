@@ -2499,9 +2499,8 @@ export class DatabaseStorage implements IStorage {
         .leftJoin(clips, eq(users.id, clips.userId))
         .leftJoin(likes, eq(clips.id, likes.clipId))
         .leftJoin(comments, eq(clips.id, comments.clipId))
-        .where(eq(users.status, 'active'))
         .groupBy(users.id, users.username, users.displayName, users.avatarUrl, users.bio, users.role)
-        .orderBy(sql`totalScore DESC`)
+        .orderBy(sql`cast(count(distinct ${clips.id}) + count(distinct ${likes.id}) + count(distinct ${comments.id}) as integer) DESC`)
         .limit(limit);
 
       // Add ranking to results
