@@ -303,12 +303,18 @@ const Sidebar = () => {
                   onMouseLeave={() => setHoveredGameId(null)}
                 >
                   <div className="w-6 h-8 mr-3 flex-shrink-0 relative">
-                    {game.imageUrl ? (
+                    {(game.imageUrl || (game as any).box_art_url) ? (
                       <>
                         <img
-                          src={game.imageUrl.includes('{width}')
-                            ? game.imageUrl.replace('{width}', '40').replace('{height}', '53')
-                            : game.imageUrl.replace('285x380', '40x53')}
+                          src={(() => {
+                            const imageUrl = (game as any).box_art_url || game.imageUrl;
+                            if (imageUrl?.includes('{width}')) {
+                              return imageUrl.replace('{width}', '40').replace('{height}', '53');
+                            } else if (imageUrl?.includes('285x380')) {
+                              return imageUrl.replace('285x380', '40x53');
+                            }
+                            return imageUrl;
+                          })()}
                           alt={game.name}
                           className="w-full h-full rounded object-cover"
                           onError={(e) => {
