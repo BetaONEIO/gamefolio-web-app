@@ -87,10 +87,11 @@ const LeaderboardPage = () => {
             {data.map((entry) => (
               <div 
                 key={entry.user.id}
-                className={`flex items-center gap-4 p-4 rounded-lg border transition-all hover:shadow-md ${
+                className={`flex items-center gap-4 p-4 rounded-lg border transition-all hover:shadow-md cursor-pointer hover:scale-[1.02] ${
                   user?.id === entry.user.id ? 'bg-primary/5 border-primary/20' : 'bg-muted/30'
                 }`}
                 data-testid={`leaderboard-entry-${entry.user.id}`}
+                onClick={() => window.location.href = `/profile/${entry.user.username}`}
               >
                 <div className="flex items-center justify-center w-12 h-12">
                   {getRankIcon(entry.rank)}
