@@ -1,15 +1,120 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { EmailService } from '../email-service';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { supabaseStorage } from '../supabase-storage';
 
 const router = Router();
+
+// Configure multer for support attachments
+const tempDir = path.join(process.cwd(), 'temp');
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
+}
+
+const supportStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, tempDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueId = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'support-' + uniqueId + path.extname(file.originalname));
+  }
+});
+
+const supportUpload = multer({
+  storage: supportStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB for support attachments
+    files: 5 // Maximum 5 files
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed for support attachments'));
+    }
+  }
+});
 
 // Support form submission schema
 const supportFormSchema = z.object({
   username: z.string().optional(),
+  email: z.string().email().optional(),
   category: z.enum(['Tech Support', 'Business Enquiry', 'Partnership Enquiry', 'Other']),
   subject: z.string().min(1, 'Subject is required'),
-  message: z.string().min(10, 'Message must be at least 10 characters long')
+  message: z.string().min(10, 'Message must be at least 10 characters long'),
+  attachmentUrls: z.array(z.string()).optional() // Array of screenshot URLs
+});
+
+// Upload support attachments
+router.post('/upload-attachments', supportUpload.array('attachments', 5), async (req: Request, res: Response) => {
+  try {
+    if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
+      return res.status(400).json({ error: 'No attachment files provided' });
+    }
+
+    const uploadedUrls: string[] = [];
+
+    for (const file of req.files) {
+      try {
+        // Read the uploaded file
+        const fileBuffer = fs.readFileSync(file.path);
+
+        // Generate unique filename
+        const timestamp = Date.now();
+        const randomId = Math.round(Math.random() * 1E9);
+        const fileName = `support-attachments/${timestamp}-${randomId}${path.extname(file.originalname)}`;
+
+        // Upload to Supabase
+        const uploadResult = await supabaseStorage.uploadBuffer(
+          fileBuffer,
+          fileName,
+          file.mimetype,
+          'image',
+          0 // Use 0 for support attachments (no specific user)
+        );
+
+        uploadedUrls.push(uploadResult.url);
+
+        // Clean up temp file
+        fs.unlink(file.path, (err) => {
+          if (err) console.warn('Could not delete temp support file:', err);
+        });
+
+      } catch (error) {
+        console.error('Error uploading support attachment:', error);
+        // Clean up temp file on error
+        fs.unlink(file.path, (err) => {
+          if (err) console.warn('Could not delete temp support file:', err);
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      attachmentUrls: uploadedUrls,
+      message: `${uploadedUrls.length} attachment(s) uploaded successfully`
+    });
+
+  } catch (error) {
+    console.error('Support attachment upload error:', error);
+
+    // Clean up temp files on error
+    if (req.files && Array.isArray(req.files)) {
+      req.files.forEach((file) => {
+        fs.unlink(file.path, (err) => {
+          if (err) console.warn('Could not delete temp support file:', err);
+        });
+      });
+    }
+
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Attachment upload failed'
+    });
+  }
 });
 
 // Submit support form
@@ -60,6 +165,7 @@ router.post('/', async (req: Request, res: Response) => {
               <div class="support-details">
                 <h3>Request Information</h3>
                 ${validatedData.username ? `<p><strong>Username:</strong> ${validatedData.username}</p>` : '<p><strong>Username:</strong> Not provided</p>'}
+                ${validatedData.email ? `<p><strong>Email:</strong> ${validatedData.email}</p>` : '<p><strong>Email:</strong> Not provided</p>'}
                 <p><strong>Category:</strong> ${categoryLabels[validatedData.category]}</p>
                 <p><strong>Subject:</strong> ${validatedData.subject}</p>
                 <p><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
@@ -67,6 +173,19 @@ router.post('/', async (req: Request, res: Response) => {
 
               <h3>Message:</h3>
               <div class="message-content">${validatedData.message}</div>
+
+              ${validatedData.attachmentUrls && validatedData.attachmentUrls.length > 0 ? `
+              <h3>Attachments:</h3>
+              <div style="margin: 20px 0;">
+                ${validatedData.attachmentUrls.map((url, index) => `
+                  <div style="margin-bottom: 15px; padding: 10px; background-color: #f3f4f6; border-radius: 6px;">
+                    <p><strong>Screenshot ${index + 1}:</strong></p>
+                    <img src="${url}" alt="Support Screenshot ${index + 1}" style="max-width: 100%; height: auto; border-radius: 6px; margin-top: 10px;" />
+                    <p style="font-size: 12px; color: #6b7280; margin-top: 5px;"><a href="${url}" target="_blank">View Full Size</a></p>
+                  </div>
+                `).join('')}
+              </div>
+              ` : ''}
 
               <div style="margin-top: 30px; padding: 20px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px;">
                 <p style="margin: 0;"><strong>🔔 Action Required:</strong> Please respond to this support request promptly via your support system.</p>
