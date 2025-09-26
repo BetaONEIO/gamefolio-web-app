@@ -63,6 +63,7 @@ import TermsPage from "./pages/terms-page";
 import PrivacyPage from "./pages/privacy-page";
 import ContactPage from "./pages/contact-page";
 import HelpPage from "./pages/help-page";
+import LeaderboardEmbedPage from "./pages/LeaderboardEmbedPage";
 import { DiscordCallback } from "./components/auth/DiscordCallback";
 import React from 'react';
 
@@ -100,11 +101,13 @@ function MainLayout({ children }: { children: React.ReactNode }) {
     localStorage.setItem('alpha-banner-dismissed', 'true');
   };
 
-  // Don't render layout for onboarding, verification, password reset, and public view pages
+  // Don't render layout for onboarding, verification, password reset, embed pages, and public view pages
   const isAuthOrOnboarding = location.startsWith("/onboarding") ||
                            location.startsWith("/verify-email") ||
                            location.startsWith("/verify-code") ||
                            location.startsWith("/reset-password") ||
+                           location.startsWith("/embed/") ||
+                           location.startsWith("/leaderboard/embed") ||
                            location.startsWith("/view/") ||
                            location.startsWith("/@"); // Also exclude shared content pages from layout
 
@@ -231,6 +234,7 @@ function Router() {
           <Route path="/privacy" component={PrivacyPage} />
           <Route path="/contact" component={ContactPage} />
           <Route path="/help" component={HelpPage} />
+          <Route path="/leaderboard/embed" component={LeaderboardEmbedPage} />
 
           {/* Public view routes for shareable content */}
           <Route path="/view/screenshot/:id" component={ViewContentPage} />
