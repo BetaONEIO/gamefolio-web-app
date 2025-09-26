@@ -20,8 +20,9 @@ import Sidebar from "./components/layout/Sidebar";
 import MobileNav from "./components/layout/MobileNav";
 import MobileMenu from "./components/layout/MobileMenu";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, X } from "lucide-react";
 import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
 
 // Page components
 import HomePage from "./pages/HomePageSimple";
@@ -83,6 +84,21 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [location] = useLocation();
   const { isOpen, closeModal, defaultTab } = useAuthModal();
+  
+  // Alpha banner state
+  const [isAlphaBannerDismissed, setIsAlphaBannerDismissed] = React.useState(false);
+  
+  // Load banner dismissal state from localStorage on mount
+  React.useEffect(() => {
+    const dismissed = localStorage.getItem('alpha-banner-dismissed');
+    setIsAlphaBannerDismissed(dismissed === 'true');
+  }, []);
+  
+  // Handle banner dismissal
+  const dismissAlphaBanner = () => {
+    setIsAlphaBannerDismissed(true);
+    localStorage.setItem('alpha-banner-dismissed', 'true');
+  };
 
   // Don't render layout for onboarding, verification, password reset, and public view pages
   const isAuthOrOnboarding = location.startsWith("/onboarding") ||
@@ -105,17 +121,34 @@ function MainLayout({ children }: { children: React.ReactNode }) {
       <Header />
 
       {/* Alpha Stage Banner */}
-      <Alert className="mx-4 mt-2 border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/50 relative z-20">
-        <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-        <AlertDescription className="text-orange-800 dark:text-orange-200">
-          <strong>Alpha Stage:</strong> This app is currently in Alpha. You may encounter issues while using it. 
-          If you experience any problems, please {" "}
-          <Link href="/contact" className="underline hover:no-underline font-medium">
-            report a bug
-          </Link>
-          !
-        </AlertDescription>
-      </Alert>
+      {!isAlphaBannerDismissed && (
+        <Alert className="mx-4 mt-2 border-primary/30 bg-primary/10 backdrop-blur-sm relative z-20">
+          <AlertTriangle className="h-4 w-4 text-primary" />
+          <AlertDescription className="text-foreground flex items-center justify-between">
+            <span>
+              <strong className="text-primary">Alpha Stage:</strong> This app is currently in Alpha. You may encounter issues while using it. 
+              If you experience any problems, please {" "}
+              <Link 
+                href="/contact" 
+                className="text-primary underline hover:no-underline font-medium hover:text-primary/80 transition-colors"
+                data-testid="link-bug-report"
+              >
+                report a bug
+              </Link>
+              !
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={dismissAlphaBanner}
+              className="ml-4 h-6 w-6 p-0 text-primary hover:text-primary/80 hover:bg-primary/20"
+              data-testid="button-dismiss-banner"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Mobile Menu Overlay */}
       <MobileMenu />
