@@ -93,6 +93,41 @@ export const verifyEmailCode = async (userId: number, code: string): Promise<boo
 };
 
 /**
+ * Verify email verification token and return user ID
+ */
+export const verifyEmailToken = async (token: string): Promise<number | null> => {
+  // Find the token
+  const [verificationToken] = await db
+    .select()
+    .from(emailVerificationTokens)
+    .where(eq(emailVerificationTokens.token, token));
+  
+  if (!verificationToken) {
+    console.log(`❌ Verification token not found: ${token.substring(0, 10)}...`);
+    return null;
+  }
+  
+  const now = new Date();
+  const expiresAt = new Date(verificationToken.expiresAt);
+  
+  console.log(`🔍 Token verification - Now: ${now.toISOString()}, Expires: ${expiresAt.toISOString()}`);
+  
+  // Check if the token has expired
+  if (now > expiresAt) {
+    // Delete the expired token
+    await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.id, verificationToken.id));
+    console.log(`🕒 Verification token expired for user ${verificationToken.userId}. Expired at: ${expiresAt.toISOString()}, Current time: ${now.toISOString()}`);
+    return null;
+  }
+  
+  // Delete the token (one-time use)
+  await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.id, verificationToken.id));
+  
+  console.log(`✅ Token verified successfully for user ${verificationToken.userId}`);
+  return verificationToken.userId;
+};
+
+/**
  * Create a new password reset token
  */
 export const createPasswordResetToken = async (userId: number): Promise<string> => {

@@ -8,6 +8,7 @@ import { scrypt, randomBytes } from 'crypto';
 import {
   createVerificationCode,
   verifyEmailCode,
+  verifyEmailToken,
   createPasswordResetToken,
   verifyPasswordResetToken,
   deletePasswordResetToken
@@ -55,6 +56,9 @@ router.post('/auth/request-verification', async (req: Request, res: Response) =>
     const code = await createVerificationCode(user.id);
 
     // Send verification email with the code
+    if (!user.email) {
+      return res.status(400).json({ message: 'User email is required for verification' });
+    }
     const emailSent = await EmailService.sendVerificationEmail(user.email, code);
 
     return res.status(200).json({
@@ -158,13 +162,17 @@ router.get('/auth/verify-email', async (req: Request, res: Response) => {
 
     // Send welcome email after successful verification
     try {
-      console.log(`📧 Attempting to send welcome email to ${user.email} with name: ${user.displayName || user.username}`);
-      const emailResult = await EmailService.sendWelcomeEmail(user.email, user.displayName || user.username || '');
-
-      if (emailResult) {
-        console.log(`✅ Welcome email sent successfully to ${user.email} after verification`);
+      if (!user.email) {
+        console.log('⚠️ Cannot send welcome email - user email is null');
       } else {
-        console.log(`⚠️ Welcome email sending returned false for ${user.email}`);
+        console.log(`📧 Attempting to send welcome email to ${user.email} with name: ${user.displayName || user.username}`);
+        const emailResult = await EmailService.sendWelcomeEmail(user.email, user.displayName || user.username || '');
+
+        if (emailResult) {
+          console.log(`✅ Welcome email sent successfully to ${user.email} after verification`);
+        } else {
+          console.log(`⚠️ Welcome email sending returned false for ${user.email}`);
+        }
       }
     } catch (error) {
       console.error('❌ Failed to send welcome email after verification:', error);
@@ -221,13 +229,17 @@ router.post('/auth/verify-email', async (req: Request, res: Response) => {
 
     // Send welcome email after successful verification
     try {
-      console.log(`📧 Attempting to send welcome email to ${user.email} with name: ${user.displayName || user.username}`);
-      const emailResult = await EmailService.sendWelcomeEmail(user.email, user.displayName || user.username || '');
-
-      if (emailResult) {
-        console.log(`✅ Welcome email sent successfully to ${user.email} after verification`);
+      if (!user.email) {
+        console.log('⚠️ Cannot send welcome email - user email is null');
       } else {
-        console.log(`⚠️ Welcome email sending returned false for ${user.email}`);
+        console.log(`📧 Attempting to send welcome email to ${user.email} with name: ${user.displayName || user.username}`);
+        const emailResult = await EmailService.sendWelcomeEmail(user.email, user.displayName || user.username || '');
+
+        if (emailResult) {
+          console.log(`✅ Welcome email sent successfully to ${user.email} after verification`);
+        } else {
+          console.log(`⚠️ Welcome email sending returned false for ${user.email}`);
+        }
       }
     } catch (error) {
       console.error('❌ Failed to send welcome email after verification:', error);

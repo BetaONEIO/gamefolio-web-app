@@ -105,17 +105,14 @@ async function sendEmail(params: EmailParams): Promise<boolean> {
 }
 
 export class EmailService {
-  static async sendVerificationEmail(email: string, token: string): Promise<boolean> {
-    // Use the correct client-side route for email verification
-    const verificationUrl = `${SITE_URL}/verify-email?token=${token}`;
-
-    console.log(`Email verification URL: ${verificationUrl}`);
+  static async sendVerificationEmail(email: string, code: string): Promise<boolean> {
+    console.log(`📧 Sending verification email to: ${email} with code: ${code}`);
     console.log(`Base URL detected as: ${SITE_URL}`);
     console.log(`Image Base URL: ${IMAGE_BASE_URL}`);
 
     try {
       const html = await loadTemplate('verification', {
-        verificationUrl,
+        verificationCode: code,
         siteUrl: SITE_URL
       });
 
@@ -181,7 +178,7 @@ export class EmailService {
       return result;
     } catch (error) {
       console.error('❌ Failed to send welcome email:', error);
-      console.error('❌ Error stack:', error.stack);
+      console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace available');
       return false;
     }
   }
