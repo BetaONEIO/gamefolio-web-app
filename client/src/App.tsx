@@ -19,6 +19,9 @@ import Header from "./components/layout/Header";
 import Sidebar from "./components/layout/Sidebar";
 import MobileNav from "./components/layout/MobileNav";
 import MobileMenu from "./components/layout/MobileMenu";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
+import { Link } from "wouter";
 
 // Page components
 import HomePage from "./pages/HomePageSimple";
@@ -100,6 +103,19 @@ function MainLayout({ children }: { children: React.ReactNode }) {
       <div className="fixed bottom-0 left-0 w-full h-full bg-gradient-to-tr from-transparent via-transparent to-primary/5 pointer-events-none"></div>
 
       <Header />
+
+      {/* Alpha Stage Banner */}
+      <Alert className="mx-4 mt-2 border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/50 relative z-20">
+        <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+        <AlertDescription className="text-orange-800 dark:text-orange-200">
+          <strong>Alpha Stage:</strong> This app is currently in Alpha. You may encounter issues while using it. 
+          If you experience any problems, please {" "}
+          <Link href="/contact" className="underline hover:no-underline font-medium">
+            report a bug
+          </Link>
+          !
+        </AlertDescription>
+      </Alert>
 
       {/* Mobile Menu Overlay */}
       <MobileMenu />
