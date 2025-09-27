@@ -231,8 +231,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         registerMutation,
         refreshUser: async () => {
           try {
+            console.log('🔄 refreshUser: Starting user data refresh...');
             const userData = await apiRequest("GET", "/api/user");
+            console.log('🔄 refreshUser: Got user data from API:', userData);
             queryClient.setQueryData(["/api/user"], userData);
+            console.log('🔄 refreshUser: Updated query cache with new data');
+            
+            // Also invalidate to trigger a fresh fetch
+            await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+            console.log('🔄 refreshUser: Invalidated user query cache');
           } catch (error) {
             console.error("Failed to refresh user data:", error);
             queryClient.setQueryData(["/api/user"], null);
