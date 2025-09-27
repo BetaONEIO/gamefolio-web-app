@@ -1985,6 +1985,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get screenshot by shareCode
+  app.get("/api/screenshots/share/:shareCode", async (req, res) => {
+    try {
+      const { shareCode } = req.params;
+      if (!shareCode) {
+        return res.status(400).json({ message: "Invalid share code" });
+      }
+
+      const screenshot = await storage.getScreenshotByShareCode(shareCode);
+      if (!screenshot) {
+        return res.status(404).json({ message: "Screenshot not found" });
+      }
+
+      // Get user data for the screenshot
+      const user = await storage.getUser(screenshot.userId);
+      if (user) {
+        const { password, ...userWithoutPassword } = user;
+        screenshot.user = userWithoutPassword;
+      }
+
+      res.json(screenshot);
+    } catch (err) {
+      console.error("Error fetching screenshot by shareCode:", err);
+      return res.status(500).json({ message: "Error fetching screenshot" });
+    }
+  });
+
   // Get clips for a game (supports both internal IDs and Twitch IDs)
   app.get("/api/games/:id/clips", async (req, res) => {
     try {
