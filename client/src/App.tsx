@@ -211,6 +211,8 @@ function Router() {
           <Route path="/screenshots/:id" component={ScreenshotUploadPage} />
           <Route path="/@:username/screenshot/:shareCode" component={ProfilePage} />
           <Route path="/@:username/screenshots/:screenshotId" component={ProfilePage} />
+          {/* Temporary test route without @ symbol */}
+          <Route path="/:username/screenshot/:shareCode" component={ProfilePage} />
           <Route path="/profile/:username" component={ProfilePage} />
           {/* General profile routes - support multiple URL patterns */}
           <Route path="/@:username" component={ProfilePage} />
