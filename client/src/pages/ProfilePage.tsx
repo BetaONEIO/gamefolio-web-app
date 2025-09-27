@@ -53,7 +53,7 @@ import CommentSection from "@/components/clips/CommentSection";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
-import { VerificationBadge } from "@/components/ui/verification-badge";
+import { VerifiedIcon } from "@/components/ui/verified-icon";
 import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import { ScreenshotShareDialog } from "@/components/screenshot/ScreenshotShareDialog";
 import { GamefolioShareDialog } from "@/components/profile/GamefolioShareDialog";
@@ -1927,10 +1927,9 @@ const ProfilePage = () => {
                     }}>
                       <div className="text-muted-foreground flex items-center hover:text-primary transition-colors cursor-pointer">
                         @{profile?.username}
-                        <VerificationBadge 
-                          isVerified={!!profile?.emailVerified} 
-                          size="sm" 
-                        />
+                        {profile?.emailVerified && (
+                          <VerifiedIcon size={16} className="ml-1" />
+                        )}
                       </div>
                     </Link>
                   </div>
