@@ -561,6 +561,28 @@ router.post('/auth/resend-verification', async (req: Request, res: Response) => 
       });
     }
 
+    // Check for existing recent token (cooldown)
+    const COOLDOWN_SECONDS = 60;
+    const [existingToken] = await db
+      .select()
+      .from(emailVerificationTokens)
+      .where(eq(emailVerificationTokens.userId, userId))
+      .limit(1);
+
+    if (existingToken) {
+      const now = new Date();
+      const tokenCreated = new Date(existingToken.createdAt);
+      const timeSinceCreated = (now.getTime() - tokenCreated.getTime()) / 1000;
+
+      if (timeSinceCreated < COOLDOWN_SECONDS) {
+        const retryAfterSeconds = Math.ceil(COOLDOWN_SECONDS - timeSinceCreated);
+        return res.status(429).json({
+          message: `Please wait ${retryAfterSeconds} seconds before requesting another code`,
+          retryAfterSeconds
+        });
+      }
+    }
+
     // Generate a new verification code
     const code = await createVerificationCode(user.id);
 
