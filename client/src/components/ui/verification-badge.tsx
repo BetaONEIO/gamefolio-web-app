@@ -1,4 +1,5 @@
 import greenBadgeIcon from "@assets/green_badge_128_1758978841463.png";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface VerificationBadgeProps {
   isVerified: boolean;
@@ -16,11 +17,20 @@ export function VerificationBadge({ isVerified, size = "md" }: VerificationBadge
   };
 
   return (
-    <img 
-      src={greenBadgeIcon} 
-      alt="Verified" 
-      className={`${sizeClasses[size]} ml-1`}
-    />
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger>
+          <img 
+            src={greenBadgeIcon} 
+            alt="Verified" 
+            className={`${sizeClasses[size]} ml-1`}
+          />
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="text-xs">This user is email verified</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
