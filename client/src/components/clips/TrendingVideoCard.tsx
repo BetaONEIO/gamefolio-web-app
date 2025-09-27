@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useState } from "react";
+import { VerifiedIcon } from "@/components/ui/verified-icon";
 
 interface TrendingVideoCardProps {
   clip: ClipWithUser;
@@ -92,8 +93,11 @@ const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) 
                     {clip.user.displayName?.[0] || clip.user.username[0]}
                   </AvatarFallback>
                 </Avatar>
-                <span className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <span className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
                   {clip.user.displayName || clip.user.username}
+                  {clip.user.emailVerified && (
+                    <VerifiedIcon size={14} className="flex-shrink-0" />
+                  )}
                 </span>
               </div>
             </Link>
