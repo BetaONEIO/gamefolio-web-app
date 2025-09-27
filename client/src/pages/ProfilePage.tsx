@@ -70,6 +70,7 @@ import NotFound from "./not-found";
 
 const ProfilePage = () => {
   const { username, screenshotId, shareCode } = useParams();
+  console.log('ProfilePage params:', { username, screenshotId, shareCode, location: window.location.href });
   const [location, setLocation] = useLocation();
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
