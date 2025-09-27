@@ -255,8 +255,7 @@ function Router() {
           <Route path="/view/:id" component={ViewContentPage} />
 
           {/* Custom profile link route - matches gamefolio.gg/username pattern */}
-          {/* This should be last to avoid conflicts with other routes */}
-          <Route path="/:username" component={ProfilePage} />
+          {/* Catch-all route removed - it was interfering with @username routes */}
 
           <Route component={NotFound} />
         </Switch>
