@@ -1307,7 +1307,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const user = await storage.getUserByUsername(req.params.username);
+      // Remove leading @ from username if present
+      const username = req.params.username.startsWith('@') ? req.params.username.slice(1) : req.params.username;
+      const user = await storage.getUserByUsername(username);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -1831,7 +1833,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user's clips
   app.get("/api/users/:username/clips", async (req, res) => {
     try {
-      const user = await storage.getUserByUsername(req.params.username);
+      // Remove leading @ from username if present
+      const username = req.params.username.startsWith('@') ? req.params.username.slice(1) : req.params.username;
+      const user = await storage.getUserByUsername(username);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -3533,7 +3537,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user's favorite games by username (for profile page)
   app.get("/api/users/:username/games/favorites", async (req, res) => {
     try {
-      const { username } = req.params;
+      // Remove leading @ from username if present
+      const username = req.params.username.startsWith('@') ? req.params.username.slice(1) : req.params.username;
 
       // Handle demo user
       if (username === "demo") {
