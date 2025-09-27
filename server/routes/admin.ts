@@ -6,6 +6,8 @@ import { VideoProcessor } from '../video-processor';
 import path from 'path';
 import fs from 'fs';
 import { ContentFilterService } from '../services/content-filter';
+import { insertBannerSettingsSchema } from '@shared/schema';
+import { z } from 'zod';
 
 // Create admin router
 const adminRouter = Router();
@@ -930,6 +932,128 @@ adminRouter.post("/content-filter/validate", async (req: Request, res: Response)
   } catch (err) {
     console.error("Error validating content:", err);
     res.status(500).json({ message: "Error validating content" });
+  }
+});
+
+// GET /api/admin/banner-settings - Get current banner settings
+adminRouter.get("/banner-settings", async (req: Request, res: Response) => {
+  try {
+    const bannerSettings = await storage.getBannerSettings();
+    
+    // If no settings exist, return default settings
+    if (!bannerSettings) {
+      return res.json({
+        id: null,
+        isEnabled: true,
+        title: "Alpha Stage",
+        message: "This app is currently in Alpha. You may encounter issues while using it.",
+        linkText: "report a bug",
+        linkUrl: "/contact",
+        variant: "primary",
+        showIcon: true,
+        isDismissible: true,
+        updatedBy: null,
+        updatedAt: null,
+        createdAt: null
+      });
+    }
+    
+    res.json(bannerSettings);
+  } catch (err) {
+    console.error("Error fetching banner settings:", err);
+    res.status(500).json({ message: "Error fetching banner settings" });
+  }
+});
+
+// PUT /api/admin/banner-settings - Update banner settings
+adminRouter.put("/banner-settings", async (req: Request, res: Response) => {
+  try {
+    // Validate request body
+    const updateSchema = z.object({
+      isEnabled: z.boolean().optional(),
+      title: z.string().min(1).max(100).optional(),
+      message: z.string().min(1).max(500).optional(),
+      linkText: z.string().max(50).optional(),
+      linkUrl: z.string().max(200).optional(),
+      variant: z.enum(["primary", "warning", "info", "danger"]).optional(),
+      showIcon: z.boolean().optional(),
+      isDismissible: z.boolean().optional(),
+    });
+    
+    const validatedData = updateSchema.parse(req.body);
+    
+    // Add updatedBy from authenticated user
+    const updateData = {
+      ...validatedData,
+      updatedBy: req.user!.id,
+    };
+    
+    // Check if settings exist
+    const existingSettings = await storage.getBannerSettings();
+    
+    let bannerSettings;
+    if (existingSettings) {
+      // Update existing settings
+      bannerSettings = await storage.updateBannerSettings(updateData);
+    } else {
+      // Create new settings
+      const createData = {
+        isEnabled: true,
+        title: "Alpha Stage",
+        message: "This app is currently in Alpha. You may encounter issues while using it.",
+        linkText: "report a bug",
+        linkUrl: "/contact",
+        variant: "primary" as const,
+        showIcon: true,
+        isDismissible: true,
+        updatedBy: req.user!.id,
+        ...validatedData,
+      };
+      bannerSettings = await storage.createBannerSettings(createData);
+    }
+    
+    res.json(bannerSettings);
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ 
+        message: "Invalid input", 
+        errors: err.errors 
+      });
+    }
+    console.error("Error updating banner settings:", err);
+    res.status(500).json({ message: "Error updating banner settings" });
+  }
+});
+
+// POST /api/admin/banner-settings/reset - Reset banner settings to defaults
+adminRouter.post("/banner-settings/reset", async (req: Request, res: Response) => {
+  try {
+    const defaultSettings = {
+      isEnabled: true,
+      title: "Alpha Stage",
+      message: "This app is currently in Alpha. You may encounter issues while using it.",
+      linkText: "report a bug",
+      linkUrl: "/contact",
+      variant: "primary" as const,
+      showIcon: true,
+      isDismissible: true,
+      updatedBy: req.user!.id,
+    };
+    
+    // Check if settings exist
+    const existingSettings = await storage.getBannerSettings();
+    
+    let bannerSettings;
+    if (existingSettings) {
+      bannerSettings = await storage.updateBannerSettings(defaultSettings);
+    } else {
+      bannerSettings = await storage.createBannerSettings(defaultSettings);
+    }
+    
+    res.json(bannerSettings);
+  } catch (err) {
+    console.error("Error resetting banner settings:", err);
+    res.status(500).json({ message: "Error resetting banner settings" });
   }
 });
 
