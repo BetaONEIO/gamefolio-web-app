@@ -255,61 +255,6 @@ router.post('/auth/verify-email', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * Resend email verification
- * This route is used to resend the verification email
- */
-router.post('/auth/resend-verification', async (req: Request, res: Response) => {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ message: 'Email is required' });
-    }
-
-    // Find the user by email
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email));
-
-    if (!user) {
-      // For security reasons, don't reveal if the email exists or not
-      return res.status(200).json({
-        message: 'If your email is registered, a verification email has been sent'
-      });
-    }
-
-    // If the email is already verified, don't send another verification email
-    if (user.emailVerified) {
-      return res.status(200).json({
-        message: 'Your email is already verified'
-      });
-    }
-
-    // Generate a new verification code
-    const code = await createVerificationCode(user.id);
-
-    // Send verification email using Brevo
-    try {
-      await EmailService.sendVerificationEmail(user.email, code);
-      console.log(`✅ Verification email resent to ${user.email}`);
-
-      return res.status(200).json({
-        message: 'Verification email sent successfully'
-      });
-    } catch (error) {
-      console.error('Failed to send verification email:', error);
-      return res.status(500).json({
-        message: 'Failed to send verification email. Please try again.'
-      });
-    }
-
-  } catch (error) {
-    console.error('Error resending verification email:', error);
-    return res.status(500).json({ message: 'Failed to send verification email' });
-  }
-});
 
 /**
  * Request password reset
