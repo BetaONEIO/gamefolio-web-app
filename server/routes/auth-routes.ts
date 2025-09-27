@@ -495,6 +495,23 @@ router.post('/auth/verify-code', async (req: Request, res: Response) => {
 
     console.log(`✅ Email verified successfully for user ${userId}`);
 
+    // Update the session user object with the new emailVerified status
+    if (req.user) {
+      (req.user as any).emailVerified = true;
+      
+      // Update the serialized user in the session to persist the change
+      if (req.session && (req.session as any).passport?.user) {
+        (req.session as any).passport.user.emailVerified = true;
+        
+        // Save the session to ensure persistence
+        req.session.save((err) => {
+          if (err) {
+            console.error('Error saving session after email verification:', err);
+          }
+        });
+      }
+    }
+
     return res.status(200).json({ 
       message: 'Email verified successfully'
     });
