@@ -79,10 +79,8 @@ export default function VerifyCodePage() {
         });
         
         // Refetch user to get updated emailVerified status
+        // The useEffect will handle the redirect automatically when user data updates
         await refreshUser();
-        
-        // Redirect to onboarding
-        setLocation('/onboarding');
       } else {
         toast({
           title: "Verification Failed",
