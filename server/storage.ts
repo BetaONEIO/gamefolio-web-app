@@ -1,7 +1,7 @@
 import {
   users, games, clips, likes, comments, userGameFavorites, follows, messages, profileBanners,
   monthlyLeaderboard, userPointsHistory, notifications, userBadges, contentFilterSettings, bannedWords,
-  heroTextSettings,
+  heroTextSettings, bannerSettings,
   type User, type InsertUser,
   type Game, type InsertGame,
   type Clip, type InsertClip,
@@ -19,6 +19,7 @@ import {
   type ContentFilterSettings, type InsertContentFilterSettings,
   type BannedWord, type InsertBannedWord,
   type HeroTextSettings, type InsertHeroTextSettings,
+  type BannerSettings, type InsertBannerSettings,
   type ClipWithUser,
   type CommentWithUser,
   type UserWithStats,
@@ -192,6 +193,11 @@ export interface IStorage {
   deactivateBannedWord(word: string): Promise<boolean>;
   reactivateBannedWord(word: string): Promise<boolean>;
   getBannedWord(word: string): Promise<BannedWord | null>;
+
+  // Banner settings operations
+  getBannerSettings(): Promise<BannerSettings | null>;
+  updateBannerSettings(settings: Partial<BannerSettings>): Promise<BannerSettings | null>;
+  createBannerSettings(settings: InsertBannerSettings): Promise<BannerSettings>;
 
   // Screenshot operations
   getScreenshot(id: number): Promise<Screenshot | null>;
