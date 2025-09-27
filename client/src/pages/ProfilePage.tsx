@@ -69,7 +69,7 @@ import { cn } from "@/lib/utils";
 import NotFound from "./not-found";
 
 const ProfilePage = () => {
-  const { username, screenshotId } = useParams();
+  const { username, screenshotId, shareCode } = useParams();
   const [location, setLocation] = useLocation();
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
@@ -281,6 +281,12 @@ const ProfilePage = () => {
     enabled: !!profile?.id && canViewContent,
   });
 
+  // Fetch screenshot by shareCode (when shareCode is present in URL)
+  const { data: screenshotByShareCode, isLoading: isLoadingScreenshotByShareCode } = useQuery<Screenshot>({
+    queryKey: [`/api/screenshots/share/${shareCode}`],
+    enabled: !!shareCode,
+  });
+
   // Delete clip mutation
   const deleteClipMutation = useMutation({
     mutationFn: async (clipId: number) => {
@@ -342,30 +348,38 @@ const ProfilePage = () => {
   // Game selection dialog state
   const [showGameSelection, setShowGameSelection] = useState(false);
 
-  // Handle screenshot URL parameters for automatic modal opening
+  // Handle screenshot URL parameters for automatic modal opening (both ID and shareCode)
   useEffect(() => {
+    let screenshot: Screenshot | undefined = undefined;
+    
+    // Handle screenshotId-based URLs (/@username/screenshots/:screenshotId)
     if (screenshotId && screenshots && Array.isArray(screenshots) && screenshots.length > 0) {
       const screenshotIdNum = parseInt(screenshotId, 10);
-      const screenshot = screenshots.find(s => s.id === screenshotIdNum);
+      screenshot = screenshots.find(s => s.id === screenshotIdNum);
+    }
+    
+    // Handle shareCode-based URLs (/@username/screenshot/:shareCode)
+    if (shareCode && screenshotByShareCode) {
+      screenshot = screenshotByShareCode;
+    }
+    
+    if (screenshot) {
+      // Open the screenshot modal
+      setSelectedScreenshot(screenshot);
       
-      if (screenshot) {
-        // Open the screenshot modal
-        setSelectedScreenshot(screenshot);
-        
-        // Check for comment-related query parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        
-        // Switch to screenshots tab
-        setActiveTab('screenshots');
-        
-        // Handle auto-opening comments if specified
-        if (urlParams.get('openComments') === 'true') {
-          // Comments will be handled in the screenshot modal - no additional state needed here
-          // The CommentSection component will handle highlighting if highlightComment is present
-        }
+      // Check for comment-related query parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      // Switch to screenshots tab
+      setActiveTab('screenshots');
+      
+      // Handle auto-opening comments if specified
+      if (urlParams.get('openComments') === 'true') {
+        // Comments will be handled in the screenshot modal - no additional state needed here
+        // The CommentSection component will handle highlighting if highlightComment is present
       }
     }
-  }, [screenshotId, screenshots, setActiveTab]);
+  }, [screenshotId, shareCode, screenshots, screenshotByShareCode, setActiveTab]);
 
   // Initialize follower/following counts from localStorage for demo users
   useEffect(() => {
