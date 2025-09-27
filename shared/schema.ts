@@ -323,6 +323,22 @@ export const bannedWords = pgTable("banned_words", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Site-wide banner settings table
+export const bannerSettings = pgTable("banner_settings", {
+  id: serial("id").primaryKey(),
+  isEnabled: boolean("is_enabled").default(true).notNull(),
+  title: text("title").default("Alpha Stage").notNull(),
+  message: text("message").default("This app is currently in Alpha. You may encounter issues while using it.").notNull(),
+  linkText: text("link_text").default("report a bug"),
+  linkUrl: text("link_url").default("/contact"),
+  variant: text("variant").default("primary").notNull(), // "primary", "warning", "info", "danger"
+  showIcon: boolean("show_icon").default(true).notNull(),
+  isDismissible: boolean("is_dismissible").default(true).notNull(),
+  updatedBy: integer("updated_by").references(() => users.id), // Admin who last updated
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Schema for inserting a user
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -460,11 +476,22 @@ export const insertBannedWordSchema = createInsertSchema(bannedWords).omit({
   updatedAt: true,
 });
 
+// Schema for inserting banner settings
+export const insertBannerSettingsSchema = createInsertSchema(bannerSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types for content filtering
 export type ContentFilterSettings = typeof contentFilterSettings.$inferSelect;
 export type InsertContentFilterSettings = typeof contentFilterSettings.$inferInsert;
 export type BannedWord = typeof bannedWords.$inferSelect;
 export type InsertBannedWord = typeof bannedWords.$inferInsert;
+
+// Types for banner settings
+export type BannerSettings = typeof bannerSettings.$inferSelect;
+export type InsertBannerSettings = typeof bannerSettings.$inferInsert;
 
 
 
