@@ -508,9 +508,9 @@ router.post('/auth/verify-code', async (req: Request, res: Response) => {
         const { password, ...userWithoutPassword } = updatedUser;
         (req as any).user = userWithoutPassword;
         
-        // Update the serialized user in the session to persist the change
+        // Keep passport serialization pattern: only store user ID in session
         if (req.session && (req.session as any).passport?.user) {
-          (req.session as any).passport.user = userWithoutPassword;
+          (req.session as any).passport.user = userId; // Store only the ID, not the full object
           
           // Save the session to ensure persistence
           req.session.save((err) => {
