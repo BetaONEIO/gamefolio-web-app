@@ -461,16 +461,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     done(null, user.id);
   });
 
-  passport.deserializeUser(async (id: number, done) => {
+  passport.deserializeUser(async (id: any, done) => {
     try {
+      // Handle corrupted session data where user objects were stored instead of IDs
+      let userId: number;
+      
+      if (typeof id === 'object' && id !== null) {
+        // If id is an object, try to extract the user ID from it
+        userId = id.id || id.userId;
+        console.log(`🔧 Fixed corrupted session data: extracted user ID ${userId} from object`);
+      } else if (typeof id === 'string') {
+        // If id is a string, parse it as a number
+        userId = parseInt(id, 10);
+      } else if (typeof id === 'number') {
+        // If id is already a number, use it directly
+        userId = id;
+      } else {
+        // Invalid session data - return no user
+        console.log(`❌ Invalid session data type: ${typeof id}, clearing session`);
+        return done(null, false);
+      }
+
+      // Validate that we have a valid user ID
+      if (!userId || isNaN(userId)) {
+        console.log(`❌ Invalid user ID: ${userId}, clearing session`);
+        return done(null, false);
+      }
+
       // Special handling for demo user
-      if (id === 999) {
+      if (userId === 999) {
         return done(null, getDemoUser());
       }
 
-      const user = await storage.getUser(id);
+      const user = await storage.getUser(userId);
       done(null, user);
     } catch (error) {
+      console.error('Error in passport deserializeUser:', error);
       done(error);
     }
   });
