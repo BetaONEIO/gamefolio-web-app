@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import greenBadgeIcon from "@assets/green_badge_128_1758978841463.png";
 
 interface VerificationBadgeProps {
   isVerified: boolean;
@@ -9,15 +9,17 @@ export function VerificationBadge({ isVerified, size = "md" }: VerificationBadge
   if (!isVerified) return null;
 
   const sizeClasses = {
-    sm: "w-4 h-4 text-xs",
-    md: "w-5 h-5 text-sm", 
-    lg: "w-6 h-6 text-base"
+    sm: "w-4 h-4",
+    md: "w-5 h-5", 
+    lg: "w-6 h-6"
   };
 
   return (
-    <div className={`${sizeClasses[size]} bg-green-500 rounded-full flex items-center justify-center ml-1 relative`}>
-      <Check className="w-2/3 h-2/3 text-white" strokeWidth={3} />
-    </div>
+    <img 
+      src={greenBadgeIcon} 
+      alt="Verified" 
+      className={`${sizeClasses[size]} ml-1`}
+    />
   );
 }
 
