@@ -212,6 +212,8 @@ function Router() {
           <Route path="/@:username/screenshot/:shareCode" component={ProfilePage} />
           <Route path="/@:username/screenshots/:screenshotId" component={ProfilePage} />
           <Route path="/profile/:username" component={ProfilePage} />
+          {/* General profile route - must come after specific @username routes */}
+          <Route path="/@:username" component={ProfilePage} />
 
           {/* Protected routes requiring authentication */}
           <Route path="/explore" component={ExplorePage} />
