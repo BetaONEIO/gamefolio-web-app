@@ -537,23 +537,21 @@ router.post('/auth/verify-code', async (req: Request, res: Response) => {
  */
 router.post('/auth/resend-verification', async (req: Request, res: Response) => {
   try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ message: 'Email is required' });
+    // Check if user is authenticated
+    if (!req.user) {
+      return res.status(401).json({ message: 'User not authenticated' });
     }
 
-    // Find the user by email
+    const userId = (req.user as any).id;
+    
+    // Get the user from the database to ensure we have the latest data
     const [user] = await db
       .select()
       .from(users)
-      .where(eq(users.email, email));
+      .where(eq(users.id, userId));
 
     if (!user) {
-      // For security reasons, don't reveal if the email exists or not
-      return res.status(200).json({
-        message: 'If your email is registered, a verification code has been sent'
-      });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     // If the email is already verified, don't send another verification code
