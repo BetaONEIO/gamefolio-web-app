@@ -157,4 +157,52 @@ router.get('/screenshot/:id', async (req, res) => {
   }
 });
 
+// Handle shared screenshot URLs with shareCode: /@username/screenshot/shareCode
+router.get('/@:username/screenshot/:shareCode', async (req, res) => {
+  try {
+    const { username, shareCode } = req.params;
+    console.log(`🔗 Profile screenshot share route: Attempting to load screenshot with shareCode ${shareCode} from user ${username}`);
+    
+    if (!shareCode || !username) {
+      console.log(`❌ Profile screenshot share route: Missing username or shareCode`);
+      return res.redirect('/trending');
+    }
+
+    // Look up the screenshot by shareCode
+    const screenshot = await storage.getScreenshotByShareCode(shareCode);
+    
+    if (!screenshot) {
+      console.log(`❌ Profile screenshot share route: Screenshot with shareCode ${shareCode} not found`);
+      return res.redirect('/trending');
+    }
+
+    // Get the user who owns this screenshot
+    const user = await storage.getUser(screenshot.userId);
+    
+    if (!user || user.username !== username) {
+      console.log(`❌ Profile screenshot share route: Username mismatch or user not found. Expected: ${username}, Found: ${user?.username || 'none'}`);
+      return res.redirect('/trending');
+    }
+
+    try {
+      // Increment view count (don't fail if this errors)
+      await storage.incrementScreenshotViews(screenshot.id);
+    } catch (viewError) {
+      console.log(`⚠️ Warning: Could not increment view count for screenshot ${screenshot.id}:`, viewError);
+    }
+
+    // Redirect to the profile page with screenshot ID
+    const redirectUrl = `/@${username}/screenshots/${screenshot.id}`;
+    console.log(`✅ Profile screenshot share route: Redirecting to ${redirectUrl}`);
+    
+    res.redirect(redirectUrl);
+    
+  } catch (error) {
+    console.error('❌ Profile screenshot share route error:', error);
+    // Graceful fallback
+    console.log('🔄 Redirecting to trending page as fallback');
+    res.redirect('/trending');
+  }
+});
+
 export default router;

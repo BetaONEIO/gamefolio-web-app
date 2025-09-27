@@ -201,6 +201,7 @@ export interface IStorage {
 
   // Screenshot operations
   getScreenshot(id: number): Promise<Screenshot | null>;
+  getScreenshotByShareCode(shareCode: string): Promise<Screenshot | null>;
   getAllScreenshots(limit?: number, offset?: number): Promise<Array<{
     id: number;
     title: string;
