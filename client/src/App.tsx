@@ -1,6 +1,6 @@
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useMobile } from "@/hooks/use-mobile";
@@ -13,6 +13,7 @@ import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AdminProtectedRoute } from "@/components/auth/admin-protected-route";
 import { OnboardingGuard } from "@/components/auth/onboarding-guard";
 import { PageTransition } from "@/components/ui/page-transition";
+import { BannerSettings } from "@shared/schema";
 
 // Layout components
 import Header from "./components/layout/Header";
@@ -86,19 +87,25 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { isOpen, closeModal, defaultTab } = useAuthModal();
   
-  // Alpha banner state
-  const [isAlphaBannerDismissed, setIsAlphaBannerDismissed] = React.useState(false);
+  // Banner state
+  const [isBannerDismissed, setIsBannerDismissed] = React.useState(false);
+  
+  // Fetch banner settings from API
+  const { data: bannerSettings, isLoading: isLoadingBanner } = useQuery<BannerSettings>({
+    queryKey: ['/api/admin/banner-settings'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
   
   // Load banner dismissal state from localStorage on mount
   React.useEffect(() => {
-    const dismissed = localStorage.getItem('alpha-banner-dismissed');
-    setIsAlphaBannerDismissed(dismissed === 'true');
+    const dismissed = localStorage.getItem('banner-dismissed');
+    setIsBannerDismissed(dismissed === 'true');
   }, []);
   
   // Handle banner dismissal
-  const dismissAlphaBanner = () => {
-    setIsAlphaBannerDismissed(true);
-    localStorage.setItem('alpha-banner-dismissed', 'true');
+  const dismissBanner = () => {
+    setIsBannerDismissed(true);
+    localStorage.setItem('banner-dismissed', 'true');
   };
 
   // Don't render layout for onboarding, verification, password reset, embed pages, and public view pages
@@ -123,32 +130,38 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
       <Header />
 
-      {/* Alpha Stage Banner */}
-      {!isAlphaBannerDismissed && (
+      {/* Dynamic Banner */}
+      {!isLoadingBanner && bannerSettings && bannerSettings.isEnabled && !isBannerDismissed && (
         <Alert className="mx-4 mt-2 border-primary/30 bg-primary/10 backdrop-blur-sm relative z-20">
-          <AlertTriangle className="h-4 w-4 text-primary" />
+          {bannerSettings.showIcon && <AlertTriangle className="h-4 w-4 text-primary" />}
           <AlertDescription className="text-foreground flex items-center justify-between">
             <span>
-              <strong className="text-primary">Alpha Stage:</strong> This app is currently in Alpha. You may encounter issues while using it. 
-              If you experience any problems, please {" "}
-              <Link 
-                href="/contact" 
-                className="text-primary underline hover:no-underline font-medium hover:text-primary/80 transition-colors"
-                data-testid="link-bug-report"
-              >
-                report a bug
-              </Link>
-              !
+              <strong className="text-primary">{bannerSettings.title}:</strong> {bannerSettings.message}
+              {bannerSettings.linkText && bannerSettings.linkUrl && (
+                <>
+                  {" "}If you experience any problems, please {" "}
+                  <Link 
+                    href={bannerSettings.linkUrl} 
+                    className="text-primary underline hover:no-underline font-medium hover:text-primary/80 transition-colors"
+                    data-testid="link-bug-report"
+                  >
+                    {bannerSettings.linkText}
+                  </Link>
+                  !
+                </>
+              )}
             </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={dismissAlphaBanner}
-              className="ml-4 h-6 w-6 p-0 text-primary hover:text-primary/80 hover:bg-primary/20"
-              data-testid="button-dismiss-banner"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            {bannerSettings.isDismissible && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={dismissBanner}
+                className="ml-4 h-6 w-6 p-0 text-primary hover:text-primary/80 hover:bg-primary/20"
+                data-testid="button-dismiss-banner"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
           </AlertDescription>
         </Alert>
       )}
