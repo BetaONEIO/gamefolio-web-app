@@ -123,10 +123,22 @@ export default function VerifyCodePage() {
           variant: 'gamefolioSuccess',
         });
 
-        // Start 30-second cooldown
+        // Start 60-second cooldown to match server
         setCanResend(false);
-        setCooldownTime(30);
+        setCooldownTime(60);
         setCode(''); // Clear the input
+      } else if (response.status === 429) {
+        // Handle cooldown response from server
+        const retryAfterSeconds = data.retryAfterSeconds || 60;
+        toast({
+          title: "Please wait",
+          description: data.message || `Please wait ${retryAfterSeconds} seconds before requesting another code.`,
+          variant: "destructive",
+        });
+        
+        // Set cooldown based on server response
+        setCanResend(false);
+        setCooldownTime(retryAfterSeconds);
       } else {
         toast({
           title: "Failed to send code",
