@@ -5,8 +5,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
 
 export default function NotFound() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, isLoading } = useAuth();
+  
 
   // Enforce onboarding completion even on 404 pages
   useEffect(() => {

@@ -71,6 +71,7 @@ import NotFound from "./not-found";
 const ProfilePage = () => {
   const { username, screenshotId, shareCode } = useParams();
   const [location, setLocation] = useLocation();
+  
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const { lightboxData, openLightbox, closeLightbox } = useProfilePictureLightbox();

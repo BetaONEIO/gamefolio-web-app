@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, useLocation, useParams } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -212,7 +212,7 @@ function Router() {
           <Route path="/@:username/screenshot/:shareCode" component={ProfilePage} />
           <Route path="/@:username/screenshots/:screenshotId" component={ProfilePage} />
           <Route path="/profile/:username" component={ProfilePage} />
-          {/* General profile route - must come after specific @username routes */}
+          {/* General profile route - restored @ symbol pattern */}
           <Route path="/@:username" component={ProfilePage} />
 
           {/* Protected routes requiring authentication */}
