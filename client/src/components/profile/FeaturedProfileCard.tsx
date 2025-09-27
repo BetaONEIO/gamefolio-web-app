@@ -1,8 +1,8 @@
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Game, User } from "@shared/schema";
-import { CheckCircle2 } from "lucide-react";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
+import { VerifiedIcon } from "@/components/ui/verified-icon";
 
 interface FeaturedProfileCardProps {
   user: User & { 
@@ -37,9 +37,9 @@ const FeaturedProfileCard = ({ user }: FeaturedProfileCardProps) => {
             <h3 className="text-lg font-semibold text-foreground hover:text-primary transition-colors duration-300">
               {user.username}
             </h3>
-            {/* Show verified icon for specific users - in a real app this would be based on a DB field */}
-            {(user.id === 1 || user.id === 2 || user.id === 4) && (
-              <CheckCircle2 className="h-4 w-4 ml-1 text-primary fill-primary" />
+            {/* Show verified icon for email-verified users */}
+            {user.emailVerified && (
+              <VerifiedIcon size={16} className="ml-1" />
             )}
           </Link>
         </div>
