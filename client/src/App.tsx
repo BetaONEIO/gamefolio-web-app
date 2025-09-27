@@ -92,7 +92,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   
   // Fetch banner settings from API
   const { data: bannerSettings, isLoading: isLoadingBanner } = useQuery<BannerSettings>({
-    queryKey: ['/api/admin/banner-settings'],
+    queryKey: ['/api/banner-settings'],
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
   

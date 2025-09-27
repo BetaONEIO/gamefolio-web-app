@@ -1251,6 +1251,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get public banner settings endpoint
+  app.get("/api/banner-settings", async (req, res) => {
+    try {
+      const bannerSettings = await storage.getBannerSettings();
+      
+      // If no settings exist, return default settings
+      if (!bannerSettings) {
+        return res.json({
+          id: null,
+          isEnabled: true,
+          title: "Alpha Stage",
+          message: "This app is currently in Alpha. You may encounter issues while using it.",
+          linkText: "report a bug",
+          linkUrl: "/contact",
+          variant: "primary",
+          showIcon: true,
+          isDismissible: true,
+          updatedBy: null,
+          updatedAt: null,
+          createdAt: null
+        });
+      }
+      
+      res.json(bannerSettings);
+    } catch (err) {
+      console.error("Error fetching banner settings:", err);
+      res.status(500).json({ message: "Error fetching banner settings" });
+    }
+  });
+
   // Get engagement leaderboard endpoint
   app.get("/api/leaderboard", async (req, res) => {
     try {

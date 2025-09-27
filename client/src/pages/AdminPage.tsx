@@ -3,7 +3,10 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
 import AdminContentFilter from "./AdminContentFilter";
-import { UserWithBadges } from "@shared/schema";
+import { UserWithBadges, BannerSettings } from "@shared/schema";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 // Admin data types
 interface AdminStats {
@@ -43,6 +46,284 @@ interface ClipsData {
 interface HeroTextData {
   title: string;
   subtitle: string;
+}
+
+// Banner Management Component
+function BannerManagement() {
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch current banner settings
+  const { data: bannerSettings, isLoading: isLoadingBanner, refetch: refetchBanner } = useQuery<BannerSettings>({
+    queryKey: ['/api/admin/banner-settings'],
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Form state
+  const [formData, setFormData] = useState({
+    isEnabled: true,
+    title: "Alpha Stage",
+    message: "This app is currently in Alpha. You may encounter issues while using it.",
+    linkText: "report a bug",
+    linkUrl: "/contact",
+    variant: "primary" as const,
+    showIcon: true,
+    isDismissible: true,
+  });
+
+  // Update form data when banner settings load
+  React.useEffect(() => {
+    if (bannerSettings) {
+      setFormData({
+        isEnabled: bannerSettings.isEnabled,
+        title: bannerSettings.title,
+        message: bannerSettings.message,
+        linkText: bannerSettings.linkText || "",
+        linkUrl: bannerSettings.linkUrl || "",
+        variant: bannerSettings.variant as any,
+        showIcon: bannerSettings.showIcon,
+        isDismissible: bannerSettings.isDismissible,
+      });
+    }
+  }, [bannerSettings]);
+
+  const handleSave = async () => {
+    setIsLoading(true);
+    try {
+      await apiRequest('/api/admin/banner-settings', {
+        method: 'PUT',
+        body: formData,
+      });
+
+      toast({
+        title: "Banner updated",
+        description: "Banner settings have been saved successfully.",
+        variant: "gamefolioSuccess",
+      });
+
+      await refetchBanner();
+      
+      // Also invalidate the public banner settings
+      queryClient.invalidateQueries({ queryKey: ['/api/banner-settings'] });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update banner settings.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReset = async () => {
+    setIsLoading(true);
+    try {
+      await apiRequest('/api/admin/banner-settings/reset', {
+        method: 'POST',
+      });
+
+      toast({
+        title: "Banner reset",
+        description: "Banner settings have been reset to defaults.",
+        variant: "gamefolioSuccess",
+      });
+
+      await refetchBanner();
+      queryClient.invalidateQueries({ queryKey: ['/api/banner-settings'] });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reset banner settings.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoadingBanner) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div>Loading banner settings...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Banner Settings Form */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Banner Settings</CardTitle>
+          <CardDescription>
+            Manage the site-wide banner displayed to all users
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Enable/Disable Banner */}
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="banner-enabled"
+              checked={formData.isEnabled}
+              onCheckedChange={(checked) => 
+                setFormData(prev => ({ ...prev, isEnabled: checked }))
+              }
+              data-testid="switch-banner-enabled"
+            />
+            <Label htmlFor="banner-enabled">Enable Banner</Label>
+          </div>
+
+          {/* Banner Title */}
+          <div className="space-y-2">
+            <Label htmlFor="banner-title">Title</Label>
+            <Input
+              id="banner-title"
+              value={formData.title}
+              onChange={(e) => 
+                setFormData(prev => ({ ...prev, title: e.target.value }))
+              }
+              placeholder="Enter banner title"
+              data-testid="input-banner-title"
+            />
+          </div>
+
+          {/* Banner Message */}
+          <div className="space-y-2">
+            <Label htmlFor="banner-message">Message</Label>
+            <Textarea
+              id="banner-message"
+              value={formData.message}
+              onChange={(e) => 
+                setFormData(prev => ({ ...prev, message: e.target.value }))
+              }
+              placeholder="Enter banner message"
+              rows={3}
+              data-testid="textarea-banner-message"
+            />
+          </div>
+
+          {/* Link Text */}
+          <div className="space-y-2">
+            <Label htmlFor="banner-link-text">Link Text (optional)</Label>
+            <Input
+              id="banner-link-text"
+              value={formData.linkText}
+              onChange={(e) => 
+                setFormData(prev => ({ ...prev, linkText: e.target.value }))
+              }
+              placeholder="e.g., report a bug"
+              data-testid="input-banner-link-text"
+            />
+          </div>
+
+          {/* Link URL */}
+          <div className="space-y-2">
+            <Label htmlFor="banner-link-url">Link URL (optional)</Label>
+            <Input
+              id="banner-link-url"
+              value={formData.linkUrl}
+              onChange={(e) => 
+                setFormData(prev => ({ ...prev, linkUrl: e.target.value }))
+              }
+              placeholder="e.g., /contact"
+              data-testid="input-banner-link-url"
+            />
+          </div>
+
+          {/* Show Icon */}
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="banner-show-icon"
+              checked={formData.showIcon}
+              onCheckedChange={(checked) => 
+                setFormData(prev => ({ ...prev, showIcon: checked }))
+              }
+              data-testid="switch-banner-show-icon"
+            />
+            <Label htmlFor="banner-show-icon">Show Icon</Label>
+          </div>
+
+          {/* Is Dismissible */}
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="banner-dismissible"
+              checked={formData.isDismissible}
+              onCheckedChange={(checked) => 
+                setFormData(prev => ({ ...prev, isDismissible: checked }))
+              }
+              data-testid="switch-banner-dismissible"
+            />
+            <Label htmlFor="banner-dismissible">Allow Dismissal</Label>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 pt-4">
+            <Button
+              onClick={handleSave}
+              disabled={isLoading}
+              data-testid="button-save-banner"
+            >
+              {isLoading ? "Saving..." : "Save Changes"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleReset}
+              disabled={isLoading}
+              data-testid="button-reset-banner"
+            >
+              Reset to Defaults
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Banner Preview */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Preview</CardTitle>
+          <CardDescription>
+            See how the banner will appear to users
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {formData.isEnabled ? (
+            <div className="border border-primary/30 bg-primary/10 backdrop-blur-sm p-4 rounded-lg">
+              <div className="flex items-center justify-between">
+                <span>
+                  <strong className="text-primary">{formData.title}:</strong> {formData.message}
+                  {formData.linkText && formData.linkUrl && (
+                    <>
+                      {" "}If you experience any problems, please {" "}
+                      <span className="text-primary underline font-medium">
+                        {formData.linkText}
+                      </span>
+                      !
+                    </>
+                  )}
+                </span>
+                {formData.isDismissible && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="ml-4 h-6 w-6 p-0 text-primary hover:text-primary/80 hover:bg-primary/20"
+                  >
+                    ×
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="text-muted-foreground text-center py-8">
+              Banner is disabled
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -570,11 +851,12 @@ const AdminPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
           <TabsTrigger value="content-filter">Content Filter</TabsTrigger>
+          <TabsTrigger value="banner">Banner</TabsTrigger>
           <TabsTrigger value="badges">Badges</TabsTrigger>
           <TabsTrigger value="hero-text">Hero Text</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
@@ -1084,6 +1366,11 @@ const AdminPage = () => {
         {/* Content Filter Tab */}
         <TabsContent value="content-filter" className="space-y-4">
           <AdminContentFilter />
+        </TabsContent>
+
+        {/* Banner Management Tab */}
+        <TabsContent value="banner" className="space-y-4">
+          <BannerManagement />
         </TabsContent>
 
         {/* Badges Tab */}
