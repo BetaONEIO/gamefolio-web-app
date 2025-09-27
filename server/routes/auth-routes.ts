@@ -497,18 +497,28 @@ router.post('/auth/verify-code', async (req: Request, res: Response) => {
 
     // Update the session user object with the new emailVerified status
     if (req.user) {
-      (req.user as any).emailVerified = true;
-      
-      // Update the serialized user in the session to persist the change
-      if (req.session && (req.session as any).passport?.user) {
-        (req.session as any).passport.user.emailVerified = true;
+      // Get the updated user from the database
+      const [updatedUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId));
+
+      if (updatedUser) {
+        // Update req.user with the full updated user object (excluding password)
+        const { password, ...userWithoutPassword } = updatedUser;
+        (req as any).user = userWithoutPassword;
         
-        // Save the session to ensure persistence
-        req.session.save((err) => {
-          if (err) {
-            console.error('Error saving session after email verification:', err);
-          }
-        });
+        // Update the serialized user in the session to persist the change
+        if (req.session && (req.session as any).passport?.user) {
+          (req.session as any).passport.user = userWithoutPassword;
+          
+          // Save the session to ensure persistence
+          req.session.save((err) => {
+            if (err) {
+              console.error('Error saving session after email verification:', err);
+            }
+          });
+        }
       }
     }
 
