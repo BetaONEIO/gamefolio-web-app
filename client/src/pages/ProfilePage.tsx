@@ -350,20 +350,30 @@ const ProfilePage = () => {
 
   // Handle screenshot URL parameters for automatic modal opening (both ID and shareCode)
   useEffect(() => {
+    console.log('Screenshot URL effect triggered:', { 
+      screenshotId, 
+      shareCode, 
+      hasScreenshots: !!screenshots, 
+      hasScreenshotByShareCode: !!screenshotByShareCode 
+    });
+    
     let screenshot: Screenshot | undefined = undefined;
     
     // Handle screenshotId-based URLs (/@username/screenshots/:screenshotId)
     if (screenshotId && screenshots && Array.isArray(screenshots) && screenshots.length > 0) {
       const screenshotIdNum = parseInt(screenshotId, 10);
       screenshot = screenshots.find(s => s.id === screenshotIdNum);
+      console.log('Found screenshot by ID:', screenshot);
     }
     
     // Handle shareCode-based URLs (/@username/screenshot/:shareCode)
     if (shareCode && screenshotByShareCode) {
       screenshot = screenshotByShareCode;
+      console.log('Found screenshot by shareCode:', screenshot);
     }
     
     if (screenshot) {
+      console.log('Opening screenshot modal for:', screenshot);
       // Open the screenshot modal
       setSelectedScreenshot(screenshot);
       
