@@ -54,6 +54,7 @@ import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import { VerifiedIcon } from "@/components/ui/verified-icon";
+import { ModeratorIcon } from "@/components/ui/moderator-icon";
 import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import { ScreenshotShareDialog } from "@/components/screenshot/ScreenshotShareDialog";
 import { GamefolioShareDialog } from "@/components/profile/GamefolioShareDialog";
@@ -1047,7 +1048,17 @@ const ProfilePage = () => {
                 <div className="flex items-center gap-4">
                   <h1 className="text-2xl md:text-3xl font-bold">{profile.displayName}</h1>
                   <span className="text-lg md:text-xl text-white/70 font-normal">@{profile.username}</span>
-                  {profile.emailVerified && (
+                  {profile.role === "moderator" ? (
+                    <span 
+                      className="text-[10px] rounded-full px-2 py-0.5 font-medium border animate-pulse whitespace-nowrap bg-purple-900/30 text-purple-300 border-purple-500/60 flex items-center gap-1"
+                      style={{ 
+                        boxShadow: `0 0 15px hsl(260 80% 50% / 0.3)`
+                      }}
+                    >
+                      <ModeratorIcon size={12} />
+                      Moderator
+                    </span>
+                  ) : profile.emailVerified ? (
                     <span 
                       className="text-[10px] rounded-full px-2 py-0.5 font-medium border animate-pulse whitespace-nowrap bg-primary/20 text-primary border-primary/60"
                       style={{ 
@@ -1056,7 +1067,7 @@ const ProfilePage = () => {
                     >
                       ✓ Verified
                     </span>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* Stats positioned directly below username */}
