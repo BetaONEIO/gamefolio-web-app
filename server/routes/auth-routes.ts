@@ -457,11 +457,17 @@ router.post('/auth/verify-code', async (req: Request, res: Response) => {
         if (req.session && (req.session as any).passport?.user) {
           (req.session as any).passport.user = userId; // Store only the ID, not the full object
           
-          // Save the session to ensure persistence
-          req.session.save((err) => {
-            if (err) {
-              console.error('Error saving session after email verification:', err);
-            }
+          // Save the session synchronously to ensure persistence before responding
+          await new Promise<void>((resolve, reject) => {
+            req.session.save((err) => {
+              if (err) {
+                console.error('Error saving session after email verification:', err);
+                reject(err);
+              } else {
+                console.log('✅ Session updated successfully after email verification');
+                resolve();
+              }
+            });
           });
         }
       }
