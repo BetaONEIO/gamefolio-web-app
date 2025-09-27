@@ -1,4 +1,4 @@
-import verifiedIconPath from "@assets/verified128_1758978451106.png";
+import verifiedIconPath from "@assets/green_badge_128_1758978841463.png";
 
 interface VerifiedIconProps {
   size?: number;
