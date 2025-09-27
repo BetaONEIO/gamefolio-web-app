@@ -209,10 +209,7 @@ function Router() {
           <Route path="/@:username/reel/:reelId" component={ClipPage} />
           <Route path="/@:username/reels/:reelId" component={ClipPage} />
           <Route path="/screenshots/:id" component={ScreenshotUploadPage} />
-          <Route path="/@:username/screenshot/:shareCode" component={() => {
-            console.log("SHARECODE ROUTE MATCHED! params:", useParams());
-            return <ProfilePage />;
-          }} />
+          <Route path="/@:username/screenshot/:shareCode" component={ProfilePage} />
           <Route path="/@:username/screenshots/:screenshotId" component={ProfilePage} />
           <Route path="/profile/:username" component={ProfilePage} />
 
