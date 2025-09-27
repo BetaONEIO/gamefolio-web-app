@@ -1069,10 +1069,12 @@ const ProfilePage = () => {
                     isModerator={profile.role === "moderator"} 
                     size="xl" 
                   />
-                  <VerificationBadge 
-                    isVerified={!!profile.emailVerified} 
-                    size="xl" 
-                  />
+                  {profile.role !== "moderator" && (
+                    <VerificationBadge 
+                      isVerified={!!profile.emailVerified} 
+                      size="xl" 
+                    />
+                  )}
                 </div>
 
                 {/* Stats positioned directly below username */}
