@@ -5643,10 +5643,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register view routes for shareable content
   app.use('/api/view', viewRouter);
 
-  // Username-based content sharing routes
-  app.get("/@:username/:contentType/:shareCode", async (req, res) => {
+  // Username-based content sharing routes (singular forms for shareCode redirection)
+  app.get("/@:username/clip/:shareCode", async (req, res) => {
     try {
-      const { username, contentType, shareCode } = req.params;
+      const { username, shareCode } = req.params;
 
       // Get user
       const user = await storage.getUserByUsername(username);
@@ -5654,30 +5654,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).send('User not found');
       }
 
-      let content;
-      if (contentType === 'clip' || contentType === 'reel') {
-        // Find clip by shareCode
-        const clips = await storage.getClipsByUserId(user.id);
-        content = clips.find(c => c.shareCode === shareCode);
+      // Find clip by shareCode
+      const clips = await storage.getClipsByUserId(user.id);
+      const content = clips.find(c => c.shareCode === shareCode);
 
-        if (content) {
-          // Redirect to view page with proper ID
-          return res.redirect(`/view/${content.id}`);
-        }
-      } else if (contentType === 'screenshot') {
-        // Find screenshot by shareCode
-        const screenshots = await storage.getScreenshotsByUserId(user.id);
-        content = screenshots.find(s => s.shareCode === shareCode);
-
-        if (content) {
-          // Redirect to profile page with proper screenshot ID
-          return res.redirect(`/@${username}/screenshots/${content.id}`);
-        }
+      if (content) {
+        // Redirect to view page with proper ID
+        return res.redirect(`/view/${content.id}`);
       }
 
       return res.status(404).send('Content not found');
     } catch (error) {
-      console.error('Error resolving username-based content URL:', error);
+      console.error('Error resolving clip URL:', error);
+      return res.status(500).send('Internal server error');
+    }
+  });
+
+  app.get("/@:username/reel/:shareCode", async (req, res) => {
+    try {
+      const { username, shareCode } = req.params;
+
+      // Get user
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(404).send('User not found');
+      }
+
+      // Find reel by shareCode
+      const clips = await storage.getClipsByUserId(user.id);
+      const content = clips.find(c => c.shareCode === shareCode);
+
+      if (content) {
+        // Redirect to view page with proper ID
+        return res.redirect(`/view/${content.id}`);
+      }
+
+      return res.status(404).send('Content not found');
+    } catch (error) {
+      console.error('Error resolving reel URL:', error);
+      return res.status(500).send('Internal server error');
+    }
+  });
+
+  app.get("/@:username/screenshot/:shareCode", async (req, res) => {
+    try {
+      const { username, shareCode } = req.params;
+
+      // Get user
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(404).send('User not found');
+      }
+
+      // Find screenshot by shareCode
+      const screenshots = await storage.getScreenshotsByUserId(user.id);
+      const content = screenshots.find(s => s.shareCode === shareCode);
+
+      if (content) {
+        // Redirect to profile page with proper screenshot ID
+        return res.redirect(`/@${username}/screenshots/${content.id}`);
+      }
+
+      return res.status(404).send('Content not found');
+    } catch (error) {
+      console.error('Error resolving screenshot URL:', error);
       return res.status(500).send('Internal server error');
     }
   });
