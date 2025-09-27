@@ -13,7 +13,6 @@ import authRoutes from './routes/auth-routes';
 import adminRoutes from './routes/admin';
 import uploadRoutes from './routes/upload';
 import twitchGamesRoutes from './routes/twitch-games';
-import { storage } from './storage';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -96,54 +95,6 @@ app.use((req, res, next) => {
     app.use('/api/admin', adminRoutes);
     app.use('/api', uploadRoutes);
     app.use('/api/twitch', twitchGamesRoutes);
-
-    // Handle shared screenshot URLs with shareCode - must be before Vite middleware
-    app.get('/@:username/screenshot/:shareCode', async (req, res) => {
-      try {
-        const { username, shareCode } = req.params;
-        console.log(`🔗 Profile screenshot share route: Attempting to load screenshot with shareCode ${shareCode} from user ${username}`);
-        
-        if (!shareCode || !username) {
-          console.log(`❌ Profile screenshot share route: Missing username or shareCode`);
-          return res.redirect('/trending');
-        }
-
-        // Look up the screenshot by shareCode
-        const screenshot = await storage.getScreenshotByShareCode(shareCode);
-        
-        if (!screenshot) {
-          console.log(`❌ Profile screenshot share route: Screenshot with shareCode ${shareCode} not found`);
-          return res.redirect('/trending');
-        }
-
-        // Get the user who owns this screenshot
-        const user = await storage.getUser(screenshot.userId);
-        
-        if (!user || user.username !== username) {
-          console.log(`❌ Profile screenshot share route: Username mismatch or user not found. Expected: ${username}, Found: ${user?.username || 'none'}`);
-          return res.redirect('/trending');
-        }
-
-        try {
-          // Increment view count (don't fail if this errors)
-          await storage.incrementScreenshotViews(screenshot.id);
-        } catch (viewError) {
-          console.log(`⚠️ Warning: Could not increment view count for screenshot ${screenshot.id}:`, viewError);
-        }
-
-        // Redirect to the profile page with screenshot ID
-        const redirectUrl = `/@${username}/screenshots/${screenshot.id}`;
-        console.log(`✅ Profile screenshot share route: Redirecting to ${redirectUrl}`);
-        
-        res.redirect(redirectUrl);
-        
-      } catch (error) {
-        console.error('❌ Profile screenshot share route error:', error);
-        // Graceful fallback
-        console.log('🔄 Redirecting to trending page as fallback');
-        res.redirect('/trending');
-      }
-    });
 
     // Social media preview route - must be before Vite middleware
     app.get('/profile/:username', async (req, res, next) => {

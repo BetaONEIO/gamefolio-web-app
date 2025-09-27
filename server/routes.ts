@@ -5665,8 +5665,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content = screenshots.find(s => s.shareCode === shareCode);
 
         if (content) {
-          // Redirect to view page with proper ID
-          return res.redirect(`/view/screenshot/${content.id}`);
+          // Redirect to profile page with proper screenshot ID
+          return res.redirect(`/@${username}/screenshots/${content.id}`);
         }
       }
 
