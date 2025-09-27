@@ -1,4 +1,4 @@
-import moderatorIcon from "@assets/Moderator icon_1758988839137.png";
+import moderatorIcon from "@assets/Moderator icon_1759008718821.png";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ModeratorBadgeProps {

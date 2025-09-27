@@ -587,7 +587,7 @@ const ProfilePage = () => {
       } else if (result.status === 'requested') {
         setFollowRequestStatus('requested');
         toast({
-          description: `Follow request sent to ${profile?.displayName}.`,
+          description: `Follow request sent.`,
           variant: 'gamefolioSuccess'
         });
       }
