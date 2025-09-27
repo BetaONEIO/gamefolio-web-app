@@ -55,6 +55,7 @@ import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import { VerifiedIcon } from "@/components/ui/verified-icon";
 import { ModeratorIcon } from "@/components/ui/moderator-icon";
+import { VerificationBadge } from "@/components/ui/verification-badge";
 import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import { ScreenshotShareDialog } from "@/components/screenshot/ScreenshotShareDialog";
 import { GamefolioShareDialog } from "@/components/profile/GamefolioShareDialog";
@@ -1073,16 +1074,12 @@ const ProfilePage = () => {
                       <ModeratorIcon size={12} />
                       Moderator
                     </span>
-                  ) : profile.emailVerified ? (
-                    <span 
-                      className="text-[10px] rounded-full px-2 py-0.5 font-medium border animate-pulse whitespace-nowrap bg-primary/20 text-primary border-primary/60"
-                      style={{ 
-                        boxShadow: `0 0 15px hsl(var(--primary) / 0.3)`
-                      }}
-                    >
-                      ✓ Verified
-                    </span>
-                  ) : null}
+                  ) : (
+                    <VerificationBadge 
+                      isVerified={!!profile.emailVerified} 
+                      size="md" 
+                    />
+                  )}
                 </div>
 
                 {/* Stats positioned directly below username */}
