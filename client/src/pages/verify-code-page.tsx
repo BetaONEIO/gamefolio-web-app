@@ -19,18 +19,14 @@ export default function VerifyCodePage() {
 
   // Redirect if user is already verified or not logged in
   useEffect(() => {
-    console.log('🔍 VerifyCodePage useEffect triggered, user:', user);
     if (!user) {
-      console.log('❌ No user, redirecting to /auth');
       setLocation('/auth');
       return;
     }
     if (user.emailVerified) {
-      console.log('✅ User email verified, redirecting to /onboarding');
       setLocation('/onboarding');
       return;
     }
-    console.log('⏳ User not verified yet, staying on verify page');
   }, [user, setLocation]);
 
   // Handle cooldown timer
@@ -76,7 +72,6 @@ export default function VerifyCodePage() {
       const data = await response.json();
 
       if (response.ok) {
-        console.log('✅ Email verification successful, refreshing user data...');
         toast({
           title: "Email Verified!",
           description: "Your email has been successfully verified.",
@@ -86,7 +81,6 @@ export default function VerifyCodePage() {
         // Refetch user to get updated emailVerified status
         // The useEffect will handle the redirect automatically when user data updates
         await refreshUser();
-        console.log('🔄 User data refreshed after verification');
       } else {
         toast({
           title: "Verification Failed",
