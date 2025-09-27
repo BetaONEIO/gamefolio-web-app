@@ -154,7 +154,7 @@ const ProfileHeader = ({
                 onClick={handleFollowClick}
                 size="sm"
                 variant={isFollowing ? "outline" : "default"}
-                className={`h-8 px-4 ${!isFollowing ? 'text-[#02172C]' : ''}`}
+                className={`h-8 px-4 ${!isFollowing ? 'text-white' : ''}`}
                 disabled={isFollowLoading}
                 style={!isFollowing ? buttonStyle : undefined}
               >
