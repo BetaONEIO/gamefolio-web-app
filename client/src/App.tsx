@@ -211,12 +211,8 @@ function Router() {
           <Route path="/screenshots/:id" component={ScreenshotUploadPage} />
           <Route path="/@:username/screenshot/:shareCode" component={ProfilePage} />
           <Route path="/@:username/screenshots/:screenshotId" component={ProfilePage} />
-          {/* Temporary test route without @ symbol */}
           <Route path="/:username/screenshot/:shareCode" component={ProfilePage} />
           <Route path="/profile/:username" component={ProfilePage} />
-          {/* General profile routes - support multiple URL patterns */}
-          <Route path="/@:username" component={ProfilePage} />
-          <Route path="/:username" component={ProfilePage} />
 
           {/* Protected routes requiring authentication */}
           <Route path="/explore" component={ExplorePage} />
@@ -260,7 +256,9 @@ function Router() {
           <Route path="/view/:id" component={ViewContentPage} />
 
           {/* Custom profile link route - matches gamefolio.gg/username pattern */}
-          {/* Catch-all route removed - it was interfering with @username routes */}
+          {/* General profile routes - MUST be at bottom after all specific routes */}
+          <Route path="/@:username" component={ProfilePage} />
+          <Route path="/:username" component={ProfilePage} />
 
           <Route component={NotFound} />
         </Switch>
