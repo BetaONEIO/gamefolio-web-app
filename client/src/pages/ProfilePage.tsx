@@ -1077,7 +1077,7 @@ const ProfilePage = () => {
                   ) : (
                     <VerificationBadge 
                       isVerified={!!profile.emailVerified} 
-                      size="md" 
+                      size="xl" 
                     />
                   )}
                 </div>
