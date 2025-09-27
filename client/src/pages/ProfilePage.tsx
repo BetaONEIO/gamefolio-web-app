@@ -69,6 +69,7 @@ import { cn } from "@/lib/utils";
 import NotFound from "./not-found";
 
 const ProfilePage = () => {
+  console.log('✅ ProfilePage component loaded!');
   const { username, screenshotId, shareCode } = useParams();
   console.log('ProfilePage params:', { username, screenshotId, shareCode, location: window.location.href });
   const [location, setLocation] = useLocation();
