@@ -57,6 +57,7 @@ import { EmailService } from "./email-service";
 import { createVerificationCode, verifyEmailCode, createPasswordResetToken, verifyPasswordResetToken, deletePasswordResetToken } from "./services/token-service";
 import { NotificationService } from "./notification-service";
 import { MentionService } from "./mention-service";
+import { initializeRealtimeNotificationService } from './realtime-notification-service';
 import { adminMiddleware } from "./middleware/admin";
 import QRCode from "qrcode";
 import { supabaseStorage } from "./supabase-storage";
@@ -230,6 +231,9 @@ const unblockedUsers = new Map<string, Set<number>>();
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
+  
+  // Initialize WebSocket notification service
+  const realtimeNotificationService = initializeRealtimeNotificationService(httpServer);
 
   // Handle validation errors with a consistent format
   const handleValidationError = (err: unknown, res: Response) => {

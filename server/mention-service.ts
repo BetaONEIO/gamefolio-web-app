@@ -1,4 +1,5 @@
 import { type IStorage } from './storage';
+import { getRealtimeNotificationService } from './realtime-notification-service';
 
 export interface MentionMatch {
   username: string;
@@ -108,6 +109,18 @@ export class MentionService {
           }
         }
       });
+
+      // Send real-time notification via WebSocket
+      const realtimeService = getRealtimeNotificationService();
+      if (realtimeService) {
+        realtimeService.sendMentionNotification(userId, {
+          type: 'clip_mention',
+          mentionedByUserId: mentionedByUserId,
+          mentionedByUsername: mentionCreator.username,
+          contentId: clipId,
+          contentTitle: clipTitle
+        });
+      }
     }
   }
 
@@ -160,6 +173,18 @@ export class MentionService {
           }
         }
       });
+
+      // Send real-time notification via WebSocket
+      const realtimeService = getRealtimeNotificationService();
+      if (realtimeService) {
+        realtimeService.sendMentionNotification(userId, {
+          type: 'comment_mention',
+          mentionedByUserId: mentionedByUserId,
+          mentionedByUsername: mentionCreator.username,
+          contentId: commentId,
+          contentText: `Comment on clip #${clipId}`
+        });
+      }
     }
   }
 

@@ -1,12 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
-import session from 'express-session';
-import cookieParser from 'cookie-parser';
-import bcrypt from 'bcryptjs';
-import { eq, and, desc, asc, sql, inArray, or, ne, isNull } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db } from './db';
-import { users, videoClips, screenshots, follows, likes, comments, notifications, blockedUsers } from '../shared/schema';
-import viteDevServer, { setupVite, serveStatic, log } from './vite';
-import { authenticateUser } from './middleware/auth';
+import { users } from '../shared/schema';
+import { setupVite, serveStatic, log } from './vite';
 import { registerRoutes } from './routes';
 import { runMigration } from './migrate-to-supabase';
 import authRoutes from './routes/auth-routes';
