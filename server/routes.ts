@@ -56,6 +56,7 @@ import sharp from "sharp";
 import { EmailService } from "./email-service";
 import { createVerificationCode, verifyEmailCode, createPasswordResetToken, verifyPasswordResetToken, deletePasswordResetToken } from "./services/token-service";
 import { NotificationService } from "./notification-service";
+import { MentionService } from "./mention-service";
 import { adminMiddleware } from "./middleware/admin";
 import QRCode from "qrcode";
 import { supabaseStorage } from "./supabase-storage";
@@ -603,6 +604,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     });
   };
+
+  // Initialize mention service for handling @username mentions
+  const mentionService = new MentionService(storage);
 
   // ==========================================
   // Authentication Routes (Basic)
@@ -2885,6 +2889,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the clip
       const clip = await storage.createClip(clipData);
 
+      // Parse mentions from clip title and description and create mention records
+      const titleMentions = await mentionService.parseMentions(title);
+      const descriptionMentions = description ? await mentionService.parseMentions(description) : [];
+      const allMentions = [...titleMentions, ...descriptionMentions];
+      
+      if (allMentions.length > 0) {
+        const mentionedUserIds = Array.from(new Set(allMentions.map(mention => mention.userId)));
+        await mentionService.createClipMentions(
+          clip.id,
+          mentionedUserIds,
+          userId,
+          title
+        );
+      }
+
       // Process video with trimming and thumbnail generation
       console.log(`Starting video processing for clip ${clip.id}`);
       try {
@@ -3246,6 +3265,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const comment = await storage.createComment(commentData);
+
+      // Parse mentions from comment content and create mention records
+      const mentions = await mentionService.parseMentions(req.body.content);
+      if (mentions.length > 0) {
+        const mentionedUserIds = mentions.map(mention => mention.userId);
+        await mentionService.createCommentMentions(
+          comment.id,
+          mentionedUserIds,
+          req.user!.id,
+          clipId
+        );
+      }
 
       // Create notification for the clip owner
       await NotificationService.createCommentNotification(clipId, req.user!.id, req.body.content, comment.id);
