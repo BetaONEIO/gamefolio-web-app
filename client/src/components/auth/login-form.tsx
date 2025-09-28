@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { GoogleAuthButton } from "./GoogleAuthButton";
 import { DiscordAuthButton } from "./DiscordAuthButton";
 import { FieldError } from "@/components/ui/field-error";
+import { Eye, EyeOff } from "lucide-react";
 
 interface LoginFormProps {
   onSuccess: () => void;
@@ -16,6 +17,7 @@ interface LoginFormProps {
 export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
   const [usernameOrEmail, setUsernameOrEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{
     usernameOrEmail?: string;
     password?: string;
@@ -90,16 +92,28 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
             Forgot password?
           </button>
         </div>
-        <Input
-          id="login-password"
-          type="password"
-          placeholder="Enter your password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          disabled={isLoading}
-          autoComplete="current-password"
-          className="bg-slate-800 border-slate-700 focus-visible:ring-primary/50 placeholder:text-slate-500"
-        />
+        <div className="relative">
+          <Input
+            id="login-password"
+            type={showPassword ? "text" : "password"}
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={isLoading}
+            autoComplete="current-password"
+            className="bg-slate-800 border-slate-700 focus-visible:ring-primary/50 placeholder:text-slate-500 pr-10"
+            data-testid="input-password"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors"
+            data-testid="button-toggle-password"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
         <FieldError error={fieldErrors.password} />
       </div>
       
