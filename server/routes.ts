@@ -1009,7 +1009,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Login failed for user:", req.body.username);
         return res.status(401).json({ message: info?.message || "Authentication failed" });
       }
-      req.login(user as any, (err) => {
+      req.login(user as any, async (err) => {
         if (err) {
           console.error("Session error:", err);
           return next(err);
@@ -1017,6 +1017,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Track login time for session security
         req.session.loginTime = Date.now();
+
+        // Update user's last login time in database
+        try {
+          await storage.updateUserLoginTime(user.id, 0);
+          console.log(`✅ Updated lastLoginAt for user ${user.username} (ID: ${user.id})`);
+        } catch (error) {
+          console.error("Error updating user login time:", error);
+          // Don't fail the login if this update fails
+        }
 
         // Remove password from response
         const { password, ...userWithoutPassword } = user;
