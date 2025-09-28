@@ -19,8 +19,10 @@ import { FireButton } from '@/components/engagement/FireButton';
 import { ReportButton } from '@/components/reporting/ReportButton';
 import { MobileTrendingViewer } from '@/components/clips/MobileTrendingViewer';
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
-import { UserIcon, X } from 'lucide-react';
+import { UserIcon, X, Trash2 } from 'lucide-react';
 import { Link } from 'wouter';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 
 type ContentType = 'clips' | 'reels' | 'screenshots';
 type FilterType = 'likes' | 'comments';
@@ -314,6 +316,33 @@ const TrendingPage: React.FC = () => {
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('today');
   const [showMobileViewer, setShowMobileViewer] = useState(false);
   const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotWithUser | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Delete screenshot mutation
+  const deleteScreenshotMutation = useMutation({
+    mutationFn: async (screenshotId: number) => {
+      const response = await apiRequest('DELETE', `/api/screenshots/${screenshotId}`);
+      return response;
+    },
+    onSuccess: () => {
+      // Invalidate trending screenshots to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ['/api/trending/screenshots'] });
+      setSelectedScreenshot(null); // Close the modal
+      toast({
+        title: "Screenshot deleted",
+        description: "Your screenshot has been deleted successfully.",
+        variant: "default",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Delete failed",
+        description: error.message || "Failed to delete screenshot. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Fetch trending clips using the working endpoint
   const { data: trendingClips, isLoading: isLoadingClips } = useQuery<ClipWithUser[]>({
@@ -604,6 +633,24 @@ const TrendingPage: React.FC = () => {
                       </div>
                     </Link>
                   </div>
+                  
+                  {/* Delete button - only show if current user owns the screenshot */}
+                  {user && selectedScreenshot.user.id === user.id && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (confirm(`Are you sure you want to delete "${selectedScreenshot.title}"? This action cannot be undone.`)) {
+                          deleteScreenshotMutation.mutate(selectedScreenshot.id);
+                        }
+                      }}
+                      disabled={deleteScreenshotMutation.isPending}
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                      data-testid="button-delete-screenshot"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
 
                 {/* Screenshot Details */}
