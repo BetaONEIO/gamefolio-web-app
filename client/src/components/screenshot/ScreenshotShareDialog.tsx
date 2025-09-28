@@ -110,7 +110,7 @@ export function ScreenshotShareDialog({
           description: "Content shared using your device's share menu.",
         });
       } catch (error) {
-        if (error.name !== 'AbortError') {
+        if ((error as Error).name !== 'AbortError') {
           console.error('Native share failed:', error);
         }
       }
@@ -220,7 +220,7 @@ export function ScreenshotShareDialog({
                   {copySuccess ? 'Copied!' : 'Copy'}
                 </Button>
                 {/* Native Share API for mobile devices */}
-                {typeof navigator !== 'undefined' && navigator.share && (
+                {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
                   <Button
                     variant="outline"
                     size="sm"
