@@ -92,7 +92,7 @@ export default function NotFound() {
         {/* Alpha Version Badge */}
         <div className="pt-4">
           <div className="inline-block px-3 py-1 bg-orange-500/10 text-orange-600 text-xs font-bold rounded-full border border-orange-500/20">
-            Alpha 1.0 • Sep 9, 2025
+            Alpha 1.1 • Sep 28, 2025
           </div>
         </div>
       </div>
