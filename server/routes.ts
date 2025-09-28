@@ -414,44 +414,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
+        console.log(`🔍 Login attempt for username: "${username}"`);
+        
         // Try to find user by username first, then by email
         let user = await storage.getUserByUsername(username);
+        console.log(`🔍 getUserByUsername result:`, user ? `Found user ID ${user.id}` : 'No user found');
 
         // If not found by username, try email (if it looks like an email)
         if (!user && username.includes('@')) {
+          console.log(`🔍 Username contains @, trying email lookup...`);
           // Check if storage has getUserByEmail method, otherwise search all users
           if (typeof storage.getUserByEmail === 'function') {
             user = await storage.getUserByEmail(username.toLowerCase());
+            console.log(`🔍 getUserByEmail result:`, user ? `Found user ID ${user.id}` : 'No user found');
           } else {
             // Fallback: search through users to find by email (case-insensitive)
             const allUsers = await storage.getAllUsers();
             user = allUsers.find(u => u.email?.toLowerCase() === username.toLowerCase());
+            console.log(`🔍 Email fallback result:`, user ? `Found user ID ${user.id}` : 'No user found');
           }
         }
 
         if (!user) {
+          console.log(`❌ No user found for "${username}"`);
           return done(null, false, { message: "Incorrect username or password" });
         }
 
+        console.log(`✅ User found: ID ${user.id}, username: ${user.username}, authProvider: ${user.authProvider}`);
+
         // Special handling for demo user
         if (user.id === 999) {
+          console.log(`🎭 Demo user login`);
           return done(null, user);
         }
 
         // Check if user signed up with Google OAuth
         if (user.authProvider === 'google') {
+          console.log(`🔒 Google OAuth user attempted local login`);
           return done(null, false, { 
             message: "This account is associated with Google - please login using the 'Continue with Google' button" 
           });
         }
 
+        console.log(`🔐 Comparing password for user ${user.username}...`);
         const isMatch = await comparePasswords(password, user.password);
+        console.log(`🔐 Password match result: ${isMatch}`);
+        
         if (!isMatch) {
+          console.log(`❌ Password mismatch for user ${user.username}`);
           return done(null, false, { message: "Incorrect username or password" });
         }
 
+        console.log(`✅ Authentication successful for user ${user.username}`);
         return done(null, user);
       } catch (error) {
+        console.error(`❌ Authentication error for "${username}":`, error);
         return done(error);
       }
     })
