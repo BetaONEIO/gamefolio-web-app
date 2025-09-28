@@ -71,7 +71,7 @@ import { cn } from "@/lib/utils";
 import NotFound from "./not-found";
 
 const ProfilePage = () => {
-  const { username, screenshotId, shareCode } = useParams();
+  const { username, screenshotId, shareCode, clipShareCode, reelShareCode } = useParams();
   const [location, setLocation] = useLocation();
   
   const { user: currentUser } = useAuth();
@@ -288,6 +288,18 @@ const ProfilePage = () => {
   const { data: screenshotByShareCode, isLoading: isLoadingScreenshotByShareCode } = useQuery<Screenshot>({
     queryKey: [`/api/screenshots/share/${shareCode}`],
     enabled: !!shareCode,
+  });
+
+  // Fetch clip by shareCode (when clipShareCode is present in URL)
+  const { data: clipByShareCode, isLoading: isLoadingClipByShareCode } = useQuery<ClipWithUser>({
+    queryKey: [`/api/clips/share/${clipShareCode}`],
+    enabled: !!clipShareCode,
+  });
+
+  // Fetch reel by shareCode (when reelShareCode is present in URL)
+  const { data: reelByShareCode, isLoading: isLoadingReelByShareCode } = useQuery<ClipWithUser>({
+    queryKey: [`/api/reels/share/${reelShareCode}`],
+    enabled: !!reelShareCode,
   });
 
   // Delete clip mutation
