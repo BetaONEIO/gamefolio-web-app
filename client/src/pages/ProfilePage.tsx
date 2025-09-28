@@ -581,7 +581,7 @@ const ProfilePage = () => {
       } else if (result.status === 'following') {
         setFollowRequestStatus('following');
         toast({
-          description: `You are now following ${profile?.displayName}!`,
+          description: `You are now following ${profile?.displayName || username}!`,
           variant: 'gamefolioSuccess'
         });
       } else if (result.status === 'requested') {
