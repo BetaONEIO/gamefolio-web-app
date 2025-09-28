@@ -1,7 +1,7 @@
 import {
   users, games, clips, likes, comments, userGameFavorites, follows, messages, profileBanners,
   monthlyLeaderboard, weeklyLeaderboard, topContributors, userPointsHistory, notifications, userBadges, contentFilterSettings, bannedWords,
-  heroTextSettings, bannerSettings,
+  heroTextSettings, bannerSettings, clipMentions, commentMentions, screenshotCommentMentions,
   type User, type InsertUser,
   type Game, type InsertGame,
   type Clip, type InsertClip,
@@ -22,6 +22,9 @@ import {
   type BannedWord, type InsertBannedWord,
   type HeroTextSettings, type InsertHeroTextSettings,
   type BannerSettings, type InsertBannerSettings,
+  type ClipMention, type InsertClipMention,
+  type CommentMention, type InsertCommentMention,
+  type ScreenshotCommentMention, type InsertScreenshotCommentMention,
   type ClipWithUser,
   type CommentWithUser,
   type UserWithStats,
@@ -38,7 +41,9 @@ export interface IStorage {
 
   // User operations
   getUser(id: number): Promise<User | null>;
+  getUserById(id: number): Promise<User | null>; // Alias for getUser for mention service compatibility
   getUserByUsername(username: string): Promise<User | null>;
+  getUsersByUsernames(usernames: string[]): Promise<User[]>; // For bulk username validation
   getUserByEmail(email: string): Promise<User | null>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<User>): Promise<User | null>;
@@ -97,6 +102,11 @@ export interface IStorage {
   createComment(comment: InsertComment): Promise<Comment>;
   getCommentsByClipId(clipId: number): Promise<CommentWithUser[]>;
   deleteComment(id: number): Promise<boolean>;
+
+  // Mention operations
+  createClipMention(mention: InsertClipMention): Promise<ClipMention>;
+  createCommentMention(mention: InsertCommentMention): Promise<CommentMention>;
+  createScreenshotCommentMention(mention: InsertScreenshotCommentMention): Promise<ScreenshotCommentMention>;
 
   // User game favorites operations
   addUserGameFavorite(favorite: InsertUserGameFavorite): Promise<UserGameFavorite>;
