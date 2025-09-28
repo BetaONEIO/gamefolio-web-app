@@ -101,11 +101,27 @@ function MainLayout({ children }: { children: React.ReactNode }) {
     const dismissed = localStorage.getItem('banner-dismissed');
     setIsBannerDismissed(dismissed === 'true');
   }, []);
+
+  // Reset banner dismissal state when banner settings change
+  React.useEffect(() => {
+    if (bannerSettings && bannerSettings.updatedAt) {
+      const lastDismissalTime = localStorage.getItem('banner-dismissed-time');
+      const bannerUpdateTime = new Date(bannerSettings.updatedAt).getTime();
+      
+      // If banner was updated after last dismissal, reset dismissal state
+      if (!lastDismissalTime || bannerUpdateTime > parseInt(lastDismissalTime)) {
+        setIsBannerDismissed(false);
+        localStorage.removeItem('banner-dismissed');
+        localStorage.removeItem('banner-dismissed-time');
+      }
+    }
+  }, [bannerSettings]);
   
   // Handle banner dismissal
   const dismissBanner = () => {
     setIsBannerDismissed(true);
     localStorage.setItem('banner-dismissed', 'true');
+    localStorage.setItem('banner-dismissed-time', Date.now().toString());
   };
 
   // Don't render layout for onboarding, verification, password reset, embed pages, and public view pages
