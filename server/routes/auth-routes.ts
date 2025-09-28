@@ -32,11 +32,11 @@ router.post('/auth/request-verification', async (req: Request, res: Response) =>
       return res.status(400).json({ message: 'Email is required' });
     }
 
-    // Find the user by email
+    // Find the user by email (normalize to lowercase for case-insensitive comparison)
     const [user] = await db
       .select()
       .from(users)
-      .where(eq(users.email, email));
+      .where(eq(users.email, email.toLowerCase()));
 
     if (!user) {
       // For security reasons, don't reveal if the email exists or not
@@ -271,11 +271,11 @@ router.post('/auth/forgot-password', async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Email is required' });
     }
 
-    // Find the user by email
+    // Find the user by email (normalize to lowercase for case-insensitive comparison)
     const [user] = await db
       .select()
       .from(users)
-      .where(eq(users.email, email));
+      .where(eq(users.email, email.toLowerCase()));
 
     console.log('👤 User found:', !!user);
 
@@ -376,11 +376,11 @@ router.get('/auth/debug-tokens/:email', async (req: Request, res: Response) => {
   try {
     const { email } = req.params;
 
-    // Find user by email
+    // Find user by email (normalize to lowercase for case-insensitive comparison)
     const [user] = await db
       .select()
       .from(users)
-      .where(eq(users.email, email));
+      .where(eq(users.email, email.toLowerCase()));
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
