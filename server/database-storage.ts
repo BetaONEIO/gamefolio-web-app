@@ -23,6 +23,8 @@ import {
   UserPointsHistory, InsertUserPointsHistory,
   ContentFilterSettings, InsertContentFilterSettings,
   BannedWord, InsertBannedWord,
+  BannerSettings, InsertBannerSettings,
+  HeroTextSettings, InsertHeroTextSettings,
   ClipWithUser,
   CommentWithUser,
   ScreenshotCommentWithUser,
@@ -57,7 +59,8 @@ import {
   emailVerificationTokens,
   contentFilterSettings,
   bannedWords,
-  heroTextSettings
+  heroTextSettings,
+  bannerSettings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, isNotNull } from "drizzle-orm";
@@ -3219,6 +3222,54 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error getting recent content count:', error);
       return 0;
+    }
+  }
+
+  // Banner settings operations
+  async getBannerSettings(): Promise<BannerSettings | null> {
+    try {
+      const [settings] = await db
+        .select()
+        .from(bannerSettings)
+        .limit(1);
+      return settings || null;
+    } catch (error) {
+      console.error('Error getting banner settings:', error);
+      return null;
+    }
+  }
+
+  async createBannerSettings(settings: InsertBannerSettings): Promise<BannerSettings> {
+    try {
+      const [created] = await db
+        .insert(bannerSettings)
+        .values(settings)
+        .returning();
+      return created;
+    } catch (error) {
+      console.error('Error creating banner settings:', error);
+      throw error;
+    }
+  }
+
+  async updateBannerSettings(settings: Partial<BannerSettings>): Promise<BannerSettings | null> {
+    try {
+      // Get the existing settings first to get the ID
+      const existing = await this.getBannerSettings();
+      if (!existing) {
+        return null;
+      }
+
+      const [updated] = await db
+        .update(bannerSettings)
+        .set({ ...settings, updatedAt: new Date() })
+        .where(eq(bannerSettings.id, existing.id))
+        .returning();
+      
+      return updated || null;
+    } catch (error) {
+      console.error('Error updating banner settings:', error);
+      return null;
     }
   }
 }
