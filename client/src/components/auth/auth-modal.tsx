@@ -66,7 +66,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                 className="h-24 w-auto drop-shadow-lg"
               />
               <div className="mt-3 px-3 py-1 bg-orange-500 text-white text-sm font-bold rounded-full shadow-lg">
-                Alpha 1.0 • Sep 9, 2025
+                Alpha 1.1 • Sep 28, 2025
               </div>
             </div>
           </div>

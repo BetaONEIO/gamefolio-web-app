@@ -1962,7 +1962,7 @@ const AdminPage = () => {
                     </div>
                     <div className="flex justify-between py-2 border-b">
                       <span className="font-medium">Version</span>
-                      <span>1.0.0</span>
+                      <span>1.1.0</span>
                     </div>
                   </div>
                 </div>
