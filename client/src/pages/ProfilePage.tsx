@@ -66,6 +66,7 @@ import { ProfilePictureLightbox, useProfilePictureLightbox } from "@/components/
 import { BannerLightbox, useBannerLightbox } from "@/components/ui/banner-lightbox";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
+import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { formatDistance } from "date-fns";
 import { cn } from "@/lib/utils";
 import NotFound from "./not-found";
@@ -100,6 +101,9 @@ const ProfilePage = () => {
 
   // Join dialog for guest interactions
   const { isOpen, actionType, openDialog, closeDialog } = useJoinDialog();
+  
+  // Clip dialog for opening clips/reels
+  const { openClipDialog } = useClipDialog();
 
   // Screenshot action handlers
   const handleScreenshotLike = () => {
@@ -395,6 +399,42 @@ const ProfilePage = () => {
       }
     }
   }, [screenshotId, shareCode, screenshots, screenshotByShareCode, setActiveTab]);
+
+  // Handle clip URL parameters for automatic modal opening (shareCode only for now)
+  useEffect(() => {
+    let clip: ClipWithUser | undefined = undefined;
+    
+    // Handle shareCode-based URLs (/@username/clip/:clipShareCode)
+    if (clipShareCode && clipByShareCode) {
+      clip = clipByShareCode;
+    }
+    
+    if (clip) {
+      // Open the clip dialog
+      openClipDialog(clip.id);
+      
+      // Switch to clips tab
+      setActiveTab('clips');
+    }
+  }, [clipShareCode, clipByShareCode, openClipDialog, setActiveTab]);
+
+  // Handle reel URL parameters for automatic modal opening (shareCode only for now)
+  useEffect(() => {
+    let reel: ClipWithUser | undefined = undefined;
+    
+    // Handle shareCode-based URLs (/@username/reel/:reelShareCode)
+    if (reelShareCode && reelByShareCode) {
+      reel = reelByShareCode;
+    }
+    
+    if (reel) {
+      // Open the reel dialog (reels use the same clip dialog)
+      openClipDialog(reel.id);
+      
+      // Switch to clips tab (reels are also in clips tab)
+      setActiveTab('clips');
+    }
+  }, [reelShareCode, reelByShareCode, openClipDialog, setActiveTab]);
 
   // Initialize follower/following counts from localStorage for demo users
   useEffect(() => {

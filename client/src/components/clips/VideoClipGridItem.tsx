@@ -31,7 +31,7 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
   const handleOpenClip = () => {
     // Pass reels list if this is a reel and we have the list
     if (clip.videoType === 'reel' && reelsList) {
-      openClipDialog(clip.id, reelsList, true); // Enable fullscreen mode for reels
+      openClipDialog(clip.id, reelsList); // Fullscreen mode is handled automatically for reels
     } else if (clipsList) {
       // Pass clips list for regular clips navigation
       openClipDialog(clip.id, clipsList);
