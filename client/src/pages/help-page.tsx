@@ -274,10 +274,10 @@ export default function HelpPage() {
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="tech-support">Tech Support</SelectItem>
-                        <SelectItem value="business-enquiry">Business Enquiry</SelectItem>
-                        <SelectItem value="partnership-enquiry">Partnership Enquiry</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="Tech Support">Tech Support</SelectItem>
+                        <SelectItem value="Business Enquiry">Business Enquiry</SelectItem>
+                        <SelectItem value="Partnership Enquiry">Partnership Enquiry</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
