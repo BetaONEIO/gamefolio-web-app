@@ -432,8 +432,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         console.log(`🔍 Login attempt for username: "${username}"`);
         
-        // Try to find user by username first, then by email
-        let user = await storage.getUserByUsername(username);
+        // Try to find user by username first, then by email (normalize username to lowercase)
+        let user = await storage.getUserByUsername(username.toLowerCase());
         console.log(`🔍 getUserByUsername result:`, user ? `Found user ID ${user.id}` : 'No user found');
 
         // If not found by username, try email (if it looks like an email)
@@ -634,8 +634,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Check if username already exists
-      const existingUser = await storage.getUserByUsername(username);
+      // Check if username already exists (normalize to lowercase)
+      const existingUser = await storage.getUserByUsername(username.toLowerCase());
       if (existingUser) {
         return res.status(400).json({ message: "Username is already taken" });
       }
@@ -676,9 +676,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const tempUsername = `temp_${uid.substring(0, 8)}_${timestamp}`;
 
         user = await storage.createUser({
-          username: tempUsername,
+          username: tempUsername.toLowerCase(),
           displayName: fallbackDisplayName,
-          email,
+          email: email.toLowerCase(),
           password: uid, // Use Firebase UID as password (they won't use traditional login)
           emailVerified: true, // Google accounts are pre-verified - no email verification needed
           avatarUrl: photoURL || "/attached_assets/gamefolio social logo 3d circle web.png",
@@ -840,9 +840,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : "/attached_assets/gamefolio social logo 3d circle web.png";
 
         user = await storage.createUser({
-          username: tempUsername,
+          username: tempUsername.toLowerCase(),
           displayName: displayName,
-          email,
+          email: email.toLowerCase(),
           password: id, // Use Discord ID as password (they won't use traditional login)
           emailVerified: true, // Discord accounts are pre-verified - no email verification needed
           avatarUrl,
@@ -949,8 +949,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Check if username already exists
-      const existingUser = await storage.getUserByUsername(userData.username);
+      // Check if username already exists (normalize to lowercase)
+      const existingUser = await storage.getUserByUsername(userData.username.toLowerCase());
       if (existingUser) {
         return res.status(400).json({ message: "Username already taken" });
       }
@@ -964,9 +964,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password
       const hashedPassword = await hashPassword(userData.password);
 
-      // Create user with hashed password and normalized email
+      // Create user with hashed password, normalized email and username
       const user = await storage.createUser({
         ...userData,
+        username: userData.username.toLowerCase(),
         email: userData.email.toLowerCase(),
         password: hashedPassword,
         emailVerified: false, // Set to false initially
