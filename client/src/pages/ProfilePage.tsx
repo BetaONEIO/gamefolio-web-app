@@ -76,8 +76,6 @@ const ProfilePage = () => {
   const { username, screenshotId, shareCode, clipShareCode, reelShareCode } = params;
   const [location, setLocation] = useLocation();
   
-  console.log("🔍 ProfilePage: URL params received:", params, "location:", location);
-  
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const { lightboxData, openLightbox, closeLightbox } = useProfilePictureLightbox();

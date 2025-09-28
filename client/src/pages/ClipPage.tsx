@@ -29,7 +29,6 @@ const ClipPage = () => {
 
   // Determine the clip ID from various possible URL patterns
   const clipId = useMemo(() => {
-    console.log("🔍 ClipPage: URL params received:", params);
     if (params.id) return params.id;
     if (params.clipId) return params.clipId;
     if (params.reelId) return params.reelId;
@@ -211,7 +210,7 @@ const ClipPage = () => {
 
   const { data: clip, isLoading, error } = useQuery<ClipWithUser>({
     queryKey: [apiEndpoint],
-    enabled: !!clipId && clipId > 0,
+    enabled: !!clipId && clipId.toString().length > 0,
     retry: 2,
     retryDelay: 1000,
     staleTime: 5 * 60 * 1000, // 5 minutes
