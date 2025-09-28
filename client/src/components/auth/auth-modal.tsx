@@ -55,19 +55,6 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md p-0 gap-0 bg-black/95 border-white/10">
-        {/* Close Button */}
-        <div className="absolute right-4 top-4 z-50">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="rounded-full h-8 w-8 p-0 text-white/60 hover:text-white hover:bg-white/10"
-            data-testid="button-close-auth-modal"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-
         {/* Content */}
         <div className="relative p-6">
           {/* Logo and Header */}
