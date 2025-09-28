@@ -1146,6 +1146,16 @@ const ProfilePage = () => {
                   </div>
                 </div>
 
+                {/* Member since date */}
+                <div className="flex items-center gap-1 mt-3">
+                  <span className="text-sm text-muted-foreground">
+                    Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long' 
+                    })}
+                  </span>
+                </div>
+
                 {/* Bio/description with increased text size (30% larger) */}
                 {profile.bio && (
                   <p className="mt-3 text-base text-foreground/90 max-w-2xl">{profile.bio}</p>
