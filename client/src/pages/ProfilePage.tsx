@@ -1147,14 +1147,16 @@ const ProfilePage = () => {
                 </div>
 
                 {/* Member since date */}
-                <div className="flex items-center gap-1 mt-3">
-                  <span className="text-sm text-muted-foreground">
-                    Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
-                      year: 'numeric', 
-                      month: 'long' 
-                    })}
-                  </span>
-                </div>
+                {profile.createdAt && (
+                  <div className="flex items-center gap-1 mt-3">
+                    <span className="text-sm text-muted-foreground">
+                      Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long' 
+                      })}
+                    </span>
+                  </div>
+                )}
 
                 {/* Bio/description with increased text size (30% larger) */}
                 {profile.bio && (
