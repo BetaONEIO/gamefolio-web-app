@@ -1,7 +1,7 @@
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { ClipWithUser } from "@shared/schema";
 import { Play, Gamepad2, Trash2, MoreVertical, Eye } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,17 +26,15 @@ interface VideoClipGridItemProps {
 
 const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, customAccentColor, canDelete = false, onDelete, reelsList, clipsList }: VideoClipGridItemProps) => {
   const { openClipDialog } = useClipDialog();
+  const [, navigate] = useLocation();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleOpenClip = () => {
-    // Pass reels list if this is a reel and we have the list
-    if (clip.videoType === 'reel' && reelsList) {
-      openClipDialog(clip.id, reelsList); // Fullscreen mode is handled automatically for reels
-    } else if (clipsList) {
-      // Pass clips list for regular clips navigation
-      openClipDialog(clip.id, clipsList);
+    // Navigate to proper URL for clips and reels to make them shareable
+    if (clip.videoType === 'reel') {
+      navigate(`/reels/${clip.id}`);
     } else {
-      openClipDialog(clip.id);
+      navigate(`/clips/${clip.id}`);
     }
   };
 

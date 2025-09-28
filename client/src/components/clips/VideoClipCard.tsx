@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import { formatDuration } from "@/lib/constants";
 import { Flame, Heart, MessageSquare, Eye, Tag, Share2 } from "lucide-react";
@@ -29,6 +29,7 @@ interface VideoClipCardProps {
 
 const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClipCardProps) => {
   const { openClipDialog } = useClipDialog();
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
   const { isOpen: joinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
@@ -110,7 +111,12 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
   // Handle click on the clip card
   const handleCardClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    openClipDialog(clip.id, clipsList);
+    // Navigate to proper URL for clips and reels to make them shareable
+    if (clip.videoType === 'reel') {
+      navigate(`/reels/${clip.id}`);
+    } else {
+      navigate(`/clips/${clip.id}`);
+    }
   };
 
   return (
