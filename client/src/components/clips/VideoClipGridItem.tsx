@@ -78,7 +78,7 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
       />
 
       {/* View count overlay on hover */}
-      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10 pointer-events-none">
         <div className="flex items-center gap-2 text-white">
           <Eye size={20} />
           <span className="text-lg font-semibold">{clip.views ?? 0}</span>
@@ -130,9 +130,10 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
           <Button
             size="sm"
             variant="destructive"
-            className="bg-red-600 hover:bg-red-700 text-white p-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            className="bg-red-600 hover:bg-red-700 text-white p-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20"
             onClick={handleDeleteClick}
             title="Delete clip"
+            data-testid="button-delete-clip"
           >
             <Trash2 size={12} />
           </Button>

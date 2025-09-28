@@ -110,7 +110,7 @@ export function ScreenshotCard({
           <Button
             size="sm"
             variant="destructive"
-            className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1 h-7 w-7 opacity-100 transition-opacity duration-300"
+            className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -146,8 +146,8 @@ export function ScreenshotCard({
           </div>
         )}
 
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="absolute bottom-2 left-2 right-2">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+          <div className="absolute bottom-2 left-2 right-2 pointer-events-none">
             <h4 className="text-white text-xs font-medium truncate">{screenshot.title}</h4>
             <p className="text-white/80 text-xs truncate">{profile.displayName || profile.username}</p>
           </div>
