@@ -29,6 +29,7 @@ const ClipPage = () => {
 
   // Determine the clip ID from various possible URL patterns
   const clipId = useMemo(() => {
+    console.log("🔍 ClipPage: URL params received:", params);
     if (params.id) return params.id;
     if (params.clipId) return params.clipId;
     if (params.reelId) return params.reelId;
