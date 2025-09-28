@@ -1,6 +1,6 @@
 import {
   users, games, clips, likes, comments, userGameFavorites, follows, messages, profileBanners,
-  monthlyLeaderboard, userPointsHistory, notifications, userBadges, contentFilterSettings, bannedWords,
+  monthlyLeaderboard, weeklyLeaderboard, topContributors, userPointsHistory, notifications, userBadges, contentFilterSettings, bannedWords,
   heroTextSettings, bannerSettings,
   type User, type InsertUser,
   type Game, type InsertGame,
@@ -13,6 +13,8 @@ import {
   type UserBlock, type InsertUserBlock,
   type ProfileBanner,
   type MonthlyLeaderboard, type InsertMonthlyLeaderboard,
+  type WeeklyLeaderboard, type InsertWeeklyLeaderboard,
+  type TopContributor, type InsertTopContributor,
   type UserPointsHistory, type InsertUserPointsHistory,
   type Notification, type InsertNotification,
   type UserBadge, type InsertUserBadge,
@@ -149,6 +151,18 @@ export interface IStorage {
   updateMonthlyLeaderboardEntry(id: number, updates: Partial<MonthlyLeaderboard>): Promise<MonthlyLeaderboard | null>;
   getMonthlyLeaderboard(month: string, year: number, limit?: number): Promise<(MonthlyLeaderboard & { user: User })[]>;
   recalculateMonthlyRankings(month: string, year: number): Promise<void>;
+  
+  // Weekly leaderboard operations
+  getWeeklyLeaderboardEntry(userId: number, week: string, year: number): Promise<WeeklyLeaderboard | null>;
+  createWeeklyLeaderboardEntry(entry: InsertWeeklyLeaderboard): Promise<WeeklyLeaderboard>;
+  updateWeeklyLeaderboardEntry(id: number, updates: Partial<WeeklyLeaderboard>): Promise<WeeklyLeaderboard | null>;
+  getWeeklyLeaderboard(week: string, year: number, limit?: number): Promise<(WeeklyLeaderboard & { user: User })[]>;
+  recalculateWeeklyRankings(week: string, year: number): Promise<void>;
+  
+  // Top contributors operations
+  createTopContributor(contributor: InsertTopContributor): Promise<TopContributor>;
+  getTopContributors(periodType: string, limit?: number): Promise<(TopContributor & { user: User })[]>;
+  getTopContributorsByPeriod(periodType: string, period: string, year: number): Promise<(TopContributor & { user: User })[]>;
 
   // Notification operations
   createNotification(notification: InsertNotification): Promise<Notification>;
