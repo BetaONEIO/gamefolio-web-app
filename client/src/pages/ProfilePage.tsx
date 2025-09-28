@@ -42,7 +42,7 @@ import {
   SiEpicgames,
   SiNintendo
 } from "react-icons/si";
-import { FaXbox } from "react-icons/fa";
+import { FaXbox, FaTwitter, FaYoutube, FaInstagram, FaFacebook } from "react-icons/fa";
 import {
   Dialog,
   DialogContent,
@@ -1195,6 +1195,58 @@ const ProfilePage = () => {
                       <SiNintendo className="w-3 h-3" />
                       <span>{profile.nintendoUsername}</span>
                     </div>
+                  )}
+
+                  {profile.twitterUsername && (
+                    <a 
+                      href={`https://twitter.com/${profile.twitterUsername}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
+                      style={{ backgroundColor: '#1DA1F2', color: '#FFFFFF' }}
+                    >
+                      <FaTwitter className="w-3 h-3" />
+                      <span>{profile.twitterUsername}</span>
+                    </a>
+                  )}
+
+                  {profile.youtubeUsername && (
+                    <a 
+                      href={`https://youtube.com/@${profile.youtubeUsername}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
+                      style={{ backgroundColor: '#FF0000', color: '#FFFFFF' }}
+                    >
+                      <FaYoutube className="w-3 h-3" />
+                      <span>{profile.youtubeUsername}</span>
+                    </a>
+                  )}
+
+                  {profile.instagramUsername && (
+                    <a 
+                      href={`https://instagram.com/${profile.instagramUsername}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
+                      style={{ backgroundColor: '#E4405F', color: '#FFFFFF' }}
+                    >
+                      <FaInstagram className="w-3 h-3" />
+                      <span>{profile.instagramUsername}</span>
+                    </a>
+                  )}
+
+                  {profile.facebookUsername && (
+                    <a 
+                      href={`https://facebook.com/${profile.facebookUsername}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
+                      style={{ backgroundColor: '#1877F2', color: '#FFFFFF' }}
+                    >
+                      <FaFacebook className="w-3 h-3" />
+                      <span>{profile.facebookUsername}</span>
+                    </a>
                   )}
                 </div>
               </div>

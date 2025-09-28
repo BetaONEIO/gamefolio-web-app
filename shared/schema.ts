@@ -29,6 +29,8 @@ export const users = pgTable("users", {
   discordUsername: text("discord_username"),  // Discord
   epicUsername: text("epic_username"),        // Epic Games
   nintendoUsername: text("nintendo_username"), // Nintendo
+  instagramUsername: text("instagram_username"), // Instagram
+  facebookUsername: text("facebook_username"), // Facebook
   // Onboarding data for analytics and personalization
   userType: text("user_type"), // Comma-separated list of user types
   ageRange: text("age_range"), // Age range: 13-17, 18-24, 25-34, 35-44, 45-54, 55+

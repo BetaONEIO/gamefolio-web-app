@@ -6,7 +6,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { FaSteam, FaXbox, FaPlaystation, FaTwitter, FaYoutube, FaDiscord } from 'react-icons/fa';
+import { FaSteam, FaXbox, FaPlaystation, FaTwitter, FaYoutube, FaDiscord, FaInstagram, FaFacebook } from 'react-icons/fa';
 import { SiEpicgames, SiNintendo } from 'react-icons/si';
 import { cn } from '@/lib/utils';
 
@@ -76,6 +76,20 @@ const PlatformConnections: React.FC<PlatformConnectionsProps> = ({
       icon: <FaYoutube className="w-5 h-5" />,
       url: (username: string) => `https://youtube.com/@${username}`,
       color: 'text-[#FF0000] hover:opacity-80'
+    },
+    {
+      name: 'Instagram',
+      username: profile.instagramUsername,
+      icon: <FaInstagram className="w-5 h-5" />,
+      url: (username: string) => `https://instagram.com/${username}`,
+      color: 'text-[#E4405F] hover:opacity-80'
+    },
+    {
+      name: 'Facebook',
+      username: profile.facebookUsername,
+      icon: <FaFacebook className="w-5 h-5" />,
+      url: (username: string) => `https://facebook.com/${username}`,
+      color: 'text-[#1877F2] hover:opacity-80'
     }
   ];
 
