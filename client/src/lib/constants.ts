@@ -18,8 +18,8 @@ export const defaultThumbnail = "https://placehold.co/600x340/222/444?text=Video
 // Define the placeholder avatar when no user image is available
 export const defaultAvatar = "https://placehold.co/100x100/222/444?text=User";
 
-// Define max file upload size in bytes (100MB)
-export const MAX_FILE_SIZE = 100 * 1024 * 1024;
+// Define max file upload size in bytes (500MB)
+export const MAX_FILE_SIZE = 500 * 1024 * 1024;
 
 // Define allowed video mime types
 export const ALLOWED_VIDEO_TYPES = [
