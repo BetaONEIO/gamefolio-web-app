@@ -288,10 +288,10 @@ const UploadPage = () => {
       return;
     }
     
-    // Validate file size (10MB limit for images)
-    const maxSize = 10 * 1024 * 1024;
+    // Validate file size (20MB limit for images)
+    const maxSize = 20 * 1024 * 1024;
     if (selectedFile.size > maxSize) {
-      setScreenshotError("Image size must be less than 10MB");
+      setScreenshotError("Image size must be less than 20MB");
       return;
     }
     

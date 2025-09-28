@@ -43,8 +43,9 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Configure body parser with larger limits to support file uploads
+app.use(express.json({ limit: '500mb' }));
+app.use(express.urlencoded({ extended: false, limit: '500mb' }));
 
 // Serve attached assets (including videos) as static files
 app.use('/attached_assets', express.static('attached_assets'));
