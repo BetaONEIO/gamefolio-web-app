@@ -1571,6 +1571,82 @@ const UploadPage = () => {
                     placeholder="Add at least 2 tags and press Enter"
                   />
                 </div>
+
+                {/* Enhanced Upload Progress Visualization for Reels */}
+                {isUploading && (
+                  <div className="space-y-4 p-6 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border border-primary/30 rounded-lg shadow-lg">
+                    {/* Header with animated icon */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                          </div>
+                        </div>
+                        <Label className="text-base font-semibold text-primary">
+                          {uploadProgress < 100 ? "Uploading" : "Processing"}
+                        </Label>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-primary">{uploadProgress}%</div>
+                        <div className="text-xs text-muted-foreground">
+                          {uploadProgress < 100 ? "Upload in progress" : "Converting to 9:16 format..."}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Enhanced Progress Bar */}
+                    <div className="relative">
+                      <div className="w-full h-3 bg-primary/20 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-300 ease-out relative"
+                          style={{ width: `${uploadProgress}%` }}
+                        >
+                          {/* Animated shimmer effect */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse"></div>
+                          {/* Moving highlight */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-slide-right"></div>
+                        </div>
+                      </div>
+                      {/* Progress markers */}
+                      <div className="flex justify-between mt-1 text-xs text-muted-foreground">
+                        <span className={uploadProgress >= 25 ? "text-primary" : ""}>25%</span>
+                        <span className={uploadProgress >= 50 ? "text-primary" : ""}>50%</span>
+                        <span className={uploadProgress >= 75 ? "text-primary" : ""}>75%</span>
+                        <span className={uploadProgress >= 100 ? "text-primary" : ""}>100%</span>
+                      </div>
+                    </div>
+
+                    {/* Dynamic status messages for reels */}
+                    <div className="text-center space-y-2">
+                      <div className="text-sm font-medium text-foreground">
+                        {uploadProgress < 20 && "Preparing your reel..."}
+                        {uploadProgress >= 20 && uploadProgress < 60 && "Uploading to server..."}
+                        {uploadProgress >= 60 && uploadProgress < 100 && "Almost there..."}
+                        {uploadProgress >= 100 && "Converting to 9:16 reel format"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {uploadProgress < 100 ? (
+                          <>
+                            Uploading {file?.name} ({(file?.size ? file.size / (1024 * 1024) : 0).toFixed(1)} MB)
+                          </>
+                        ) : (
+                          "Processing and cropping video to vertical format"
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Estimated time remaining */}
+                    {uploadProgress < 100 && uploadProgress > 0 && (
+                      <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                        <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>
+                        <span>Please keep this tab open while uploading</span>
+                        <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 
                 <div className="flex justify-end space-x-2">
                   <Button
@@ -1590,7 +1666,19 @@ const UploadPage = () => {
                       handleSubmit(e);
                     }}
                   >
-                    {isUploading ? "Uploading..." : "Upload Reel"}
+                    {isUploading ? (
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-white animate-spin mr-2"></div>
+                        <span>
+                          {uploadProgress < 100 ? `Uploading ${uploadProgress}%` : "Processing..."}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Camera className="h-4 w-4" />
+                        Upload Reel
+                      </div>
+                    )}
                   </Button>
                 </div>
               </form>
