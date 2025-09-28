@@ -240,11 +240,11 @@ const UploadPage = () => {
       return;
     }
 
-    // Validate file size (1GB limit)
-    const maxSize = 1024 * 1024 * 1024; // 1GB in bytes
+    // Validate file size (500MB limit)
+    const maxSize = 500 * 1024 * 1024; // 500MB in bytes
     if (selectedFile.size > maxSize) {
       console.log('File too large:', selectedFile.size, 'bytes');
-      setFileError("File size must be less than 1GB");
+      setFileError("File size must be less than 500MB");
       return;
     }
     
