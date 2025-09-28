@@ -227,6 +227,8 @@ function Router() {
           <Route path="/screenshots/:id" component={ScreenshotUploadPage} />
           <Route path="/@:username/screenshot/:shareCode" component={ProfilePage} />
           <Route path="/@:username/screenshots/:screenshotId" component={ProfilePage} />
+          <Route path="/@:username/clip/:clipShareCode" component={ProfilePage} />
+          <Route path="/@:username/reel/:reelShareCode" component={ProfilePage} />
           <Route path="/:username/screenshot/:shareCode" component={ProfilePage} />
           <Route path="/profile/:username" component={ProfilePage} />
 
