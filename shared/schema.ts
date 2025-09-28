@@ -194,7 +194,7 @@ export const profileBanners = pgTable("profile_banners", {
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id), // Who receives the notification
-  type: text("type").notNull(), // "like", "comment", "follow", "upload", "reply"
+  type: text("type").notNull(), // "like", "comment", "follow", "upload", "reply", "clip_mention", "comment_mention"
   title: text("title").notNull(),
   message: text("message").notNull(),
   isRead: boolean("is_read").default(false).notNull(),
@@ -203,8 +203,37 @@ export const notifications = pgTable("notifications", {
   clipId: integer("clip_id").references(() => clips.id), // Related clip (if applicable)
   screenshotId: integer("screenshot_id").references(() => screenshots.id), // Related screenshot (if applicable)
   commentId: integer("comment_id").references(() => comments.id), // Related comment (if applicable)
+  // Metadata for additional context (JSON format)
+  metadata: json("metadata"), // For storing additional context like mention details
   // Metadata
   actionUrl: text("action_url"), // URL to navigate to when clicked
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Clip mentions table - for tracking user mentions in clip uploads
+export const clipMentions = pgTable("clip_mentions", {
+  id: serial("id").primaryKey(),
+  clipId: integer("clip_id").notNull().references(() => clips.id, { onDelete: "cascade" }),
+  mentionedUserId: integer("mentioned_user_id").notNull().references(() => users.id, { onDelete: "cascade" }), // User who was mentioned
+  mentionedByUserId: integer("mentioned_by_user_id").notNull().references(() => users.id, { onDelete: "cascade" }), // User who created the mention
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Comment mentions table - for tracking user mentions in comments
+export const commentMentions = pgTable("comment_mentions", {
+  id: serial("id").primaryKey(),
+  commentId: integer("comment_id").notNull().references(() => comments.id, { onDelete: "cascade" }),
+  mentionedUserId: integer("mentioned_user_id").notNull().references(() => users.id, { onDelete: "cascade" }), // User who was mentioned
+  mentionedByUserId: integer("mentioned_by_user_id").notNull().references(() => users.id, { onDelete: "cascade" }), // User who created the mention
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Screenshot comment mentions table - for tracking user mentions in screenshot comments
+export const screenshotCommentMentions = pgTable("screenshot_comment_mentions", {
+  id: serial("id").primaryKey(),
+  screenshotCommentId: integer("screenshot_comment_id").notNull().references(() => screenshotComments.id, { onDelete: "cascade" }),
+  mentionedUserId: integer("mentioned_user_id").notNull().references(() => users.id, { onDelete: "cascade" }), // User who was mentioned
+  mentionedByUserId: integer("mentioned_by_user_id").notNull().references(() => users.id, { onDelete: "cascade" }), // User who created the mention
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -764,6 +793,34 @@ export type InsertHeroTextSettings = z.infer<typeof insertHeroTextSettingsSchema
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
+
+// Schema for inserting clip mentions
+export const insertClipMentionSchema = createInsertSchema(clipMentions).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Schema for inserting comment mentions
+export const insertCommentMentionSchema = createInsertSchema(commentMentions).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Schema for inserting screenshot comment mentions
+export const insertScreenshotCommentMentionSchema = createInsertSchema(screenshotCommentMentions).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for mentions
+export type ClipMention = typeof clipMentions.$inferSelect;
+export type InsertClipMention = z.infer<typeof insertClipMentionSchema>;
+
+export type CommentMention = typeof commentMentions.$inferSelect;
+export type InsertCommentMention = z.infer<typeof insertCommentMentionSchema>;
+
+export type ScreenshotCommentMention = typeof screenshotCommentMentions.$inferSelect;
+export type InsertScreenshotCommentMention = z.infer<typeof insertScreenshotCommentMentionSchema>;
 
 
 // Extended types with relational data
