@@ -51,7 +51,8 @@ const ClipPage = () => {
 
   
   // Determine if clipId is numeric (traditional ID) or alphanumeric (shareCode)
-  const isNumericId = clipId && !isNaN(parseInt(clipId));
+  // A numeric ID should be ONLY digits, not starting with digits followed by letters
+  const isNumericId = clipId && /^\d+$/.test(clipId);
   const apiEndpoint = useMemo(() => {
     if (isReelRoute) {
       return isNumericId ? `/api/reels/${clipId}` : `/api/reels/share/${clipId}`;
@@ -113,7 +114,7 @@ const ClipPage = () => {
   const navigateToPrevious = () => {
     if (!navigationClips.length || !clipId) return;
     
-    const currentIndex = navigationClips.findIndex(c => c.id === clipId);
+    const currentIndex = navigationClips.findIndex(c => c.id === parseInt(clipId) || c.shareCode === clipId);
     if (currentIndex > 0) {
       const previousClip = navigationClips[currentIndex - 1];
       // Store navigation context for the next page
@@ -125,7 +126,7 @@ const ClipPage = () => {
   const navigateToNext = () => {
     if (!navigationClips.length || !clipId) return;
     
-    const currentIndex = navigationClips.findIndex(c => c.id === clipId);
+    const currentIndex = navigationClips.findIndex(c => c.id === parseInt(clipId) || c.shareCode === clipId);
     if (currentIndex !== -1 && currentIndex < navigationClips.length - 1) {
       const nextClip = navigationClips[currentIndex + 1];
       // Store navigation context for the next page
