@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bell, User, MessageCircle, Video, X } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +44,7 @@ export function NotificationPanel({
   className 
 }: NotificationPanelProps) {
   const [notifications, setNotifications] = React.useState<NotificationData[]>([]);
+  const { user } = useAuth();
 
   // Fetch notifications
   const { data: fetchedNotifications = [], isLoading, refetch } = useQuery<NotificationData[]>({
@@ -60,21 +62,49 @@ export function NotificationPanel({
 
   // WebSocket for real-time notifications
   React.useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !user?.id) return;
 
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsHost = window.location.host;
-    const wsUrl = `${wsProtocol}//${wsHost}/api/ws/notifications?userId=USER_ID_PLACEHOLDER`;
+    const wsUrl = `${wsProtocol}//${wsHost}/api/ws/notifications?userId=${user.id}`;
 
-    // TODO: Replace USER_ID_PLACEHOLDER with actual user ID from auth context
-    // For now, we'll skip WebSocket connection and rely on polling
-    // const ws = new WebSocket(wsUrl);
+    console.log('🔗 Connecting to WebSocket notifications:', wsUrl);
+    
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      console.log('✅ WebSocket notifications connected');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('📢 Received notification:', data);
+        
+        if (data.type === 'mention_notification') {
+          // Add new notification to the list and refresh
+          refetch();
+        }
+      } catch (error) {
+        console.error('Failed to parse WebSocket message:', error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('❌ WebSocket error:', error);
+    };
+
+    ws.onclose = () => {
+      console.log('👋 WebSocket notifications disconnected');
+    };
 
     // Cleanup function
     return () => {
-      // ws?.close();
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        ws.close();
+      }
     };
-  }, [isOpen]);
+  }, [isOpen, user?.id, refetch]);
 
   // Get notification icon based on type
   const getNotificationIcon = (type: string) => {

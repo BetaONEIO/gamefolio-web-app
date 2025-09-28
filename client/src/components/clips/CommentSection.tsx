@@ -4,6 +4,7 @@ import { CommentWithUser, User } from "@shared/schema";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { MentionInput } from "@/components/ui/mention-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistance } from "date-fns";
 import { useCreateComment, useDeleteComment } from "@/hooks/use-clips";
@@ -211,42 +212,38 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
       {user ? (
         <form 
           onSubmit={handleSubmitComment} 
-          className="mt-4 flex items-center gap-3"
+          className="mt-4 space-y-3"
         >
-          <Avatar className="h-8 w-8 hidden sm:flex flex-shrink-0">
-            <AvatarImage 
-              src={currentUser?.avatarUrl || undefined} 
-              alt={currentUser?.username || "User"} 
-            />
-            <AvatarFallback className="text-xs">
-              {currentUser?.username?.[0].toUpperCase() || "U"}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 flex items-center border-b border-border pb-1">
-            <input
-              type="text"
-              placeholder="Add a comment..."
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmitComment(e);
-                }
-              }}
-              className="flex-1 bg-transparent text-sm border-none focus:outline-none focus:ring-0 p-0"
-              data-testid="input-comment"
-            />
-            <Button 
-              type="submit" 
-              variant="ghost"
-              size="sm"
-              className="text-primary font-semibold hover:text-primary/80 hover:bg-transparent focus:bg-transparent px-2"
-              disabled={!newComment.trim() || createCommentMutation.isPending}
-              data-testid="button-post-comment"
-            >
-              {createCommentMutation.isPending ? "Posting..." : "Post"}
-            </Button>
+          <div className="flex items-start gap-3">
+            <Avatar className="h-8 w-8 hidden sm:flex flex-shrink-0">
+              <AvatarImage 
+                src={currentUser?.avatarUrl || undefined} 
+                alt={currentUser?.username || "User"} 
+              />
+              <AvatarFallback className="text-xs">
+                {currentUser?.username?.[0].toUpperCase() || "U"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 space-y-2">
+              <MentionInput
+                value={newComment}
+                onChange={setNewComment}
+                placeholder="Add a comment... Use @username to mention other users!"
+                className="min-h-[60px] text-sm resize-none"
+                data-testid="input-comment"
+              />
+              <div className="flex justify-end">
+                <Button 
+                  type="submit" 
+                  variant="default"
+                  size="sm"
+                  disabled={!newComment.trim() || createCommentMutation.isPending}
+                  data-testid="button-post-comment"
+                >
+                  {createCommentMutation.isPending ? "Posting..." : "Post Comment"}
+                </Button>
+              </div>
+            </div>
           </div>
         </form>
       ) : (

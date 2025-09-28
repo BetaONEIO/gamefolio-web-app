@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { MentionInput } from "@/components/ui/mention-input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -1042,18 +1043,16 @@ const UploadPage = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    defaultValue={description}
-                    onChange={(e) => {
-                      descriptionRef.current = e.target.value;
+                  <Label htmlFor="description">Description (use @username to mention users)</Label>
+                  <MentionInput
+                    value={description}
+                    onChange={(value) => {
+                      setDescription(value);
+                      descriptionRef.current = value;
                     }}
-                    onBlur={(e) => {
-                      setDescription(e.target.value);
-                    }}
-                    placeholder="Describe what's happening in your clip"
+                    placeholder="Describe what's happening in your clip. Use @username to mention other users!"
                     className="min-h-24"
+                    data-testid="input-description"
                   />
                 </div>
                 
@@ -1535,14 +1534,16 @@ const UploadPage = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="reel-description">Description</Label>
-                  <Textarea
-                    id="reel-description"
-                    defaultValue={description}
-                    onChange={(e) => descriptionRef.current = e.target.value}
-                    onBlur={(e) => setDescription(e.target.value)}
-                    placeholder="Describe what's happening in your reel"
+                  <Label htmlFor="reel-description">Description (use @username to mention users)</Label>
+                  <MentionInput
+                    value={description}
+                    onChange={(value) => {
+                      setDescription(value);
+                      descriptionRef.current = value;
+                    }}
+                    placeholder="Describe what's happening in your reel. Use @username to mention other users!"
                     className="min-h-24"
+                    data-testid="input-reel-description"
                   />
                 </div>
                 
@@ -1747,13 +1748,13 @@ const UploadPage = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="screenshot-description">Description</Label>
-                  <Textarea
-                    id="screenshot-description"
+                  <Label htmlFor="screenshot-description">Description (use @username to mention users)</Label>
+                  <MentionInput
                     value={screenshotDescription}
-                    onChange={(e) => setScreenshotDescription(e.target.value)}
-                    placeholder="Describe what's happening in your screenshot"
+                    onChange={setScreenshotDescription}
+                    placeholder="Describe what's happening in your screenshot. Use @username to mention other users!"
                     className="min-h-24"
+                    data-testid="input-screenshot-description"
                   />
                 </div>
                 

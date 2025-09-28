@@ -32,7 +32,16 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
     // Fetch users for autocomplete
     const { data: users = [], isLoading } = useQuery<User[]>({
       queryKey: ["/api/users/search", currentQuery],
-      enabled: showSuggestions && currentQuery.length > 0,
+      queryFn: async () => {
+        const response = await fetch(`/api/users/search?q=${encodeURIComponent(currentQuery)}`, {
+          credentials: 'include',
+        });
+        if (!response.ok) {
+          throw new Error('Failed to search users');
+        }
+        return response.json();
+      },
+      enabled: showSuggestions && currentQuery.length >= 2,
       staleTime: 30000, // Cache for 30 seconds
     });
 
@@ -44,8 +53,9 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
       onChange(newValue);
 
       // Check if we're typing after an @ symbol
+      // Updated regex to match backend support for hyphens and underscores
       const beforeCursor = newValue.substring(0, cursorPosition);
-      const atMatch = beforeCursor.match(/@(\w*)$/);
+      const atMatch = beforeCursor.match(/@([a-zA-Z0-9_-]*)$/);
 
       if (atMatch) {
         const query = atMatch[1];
@@ -155,7 +165,11 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
               position: 'fixed'
             }}
           >
-            {isLoading ? (
+            {currentQuery.length < 2 ? (
+              <div className="p-2 text-sm text-gray-500 dark:text-gray-400">
+                Type at least 2 characters to search users...
+              </div>
+            ) : isLoading ? (
               <div className="p-2 text-sm text-gray-500 dark:text-gray-400">
                 Loading users...
               </div>
@@ -195,13 +209,9 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
                   </button>
                 ))}
               </div>
-            ) : currentQuery.length > 0 ? (
-              <div className="p-2 text-sm text-gray-500 dark:text-gray-400">
-                No users found for "@{currentQuery}"
-              </div>
             ) : (
               <div className="p-2 text-sm text-gray-500 dark:text-gray-400">
-                Type to search users...
+                No users found for "@{currentQuery}"
               </div>
             )}
           </div>
