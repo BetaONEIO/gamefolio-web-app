@@ -2504,6 +2504,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get reel by shareCode - MUST come before /api/reels/:id to avoid route conflicts
+  app.get("/api/reels/share/:shareCode", async (req, res) => {
+    try {
+      const shareCode = req.params.shareCode;
+      console.log(`🎥 Reels API: Getting reel by shareCode ${shareCode}`);
+
+      const clip = await storage.getClipByShareCode(shareCode);
+      if (!clip) {
+        console.log(`❌ Reels API: Reel with shareCode ${shareCode} not found`);
+        return res.status(404).json({ message: "Reel not found" });
+      }
+
+      // Ensure this is actually a reel
+      if (clip.videoType !== 'reel') {
+        console.log(`❌ Reels API: Content with shareCode ${shareCode} is not a reel, it's a ${clip.videoType}`);
+        return res.status(404).json({ message: "Reel not found" });
+      }
+
+      // Get full clip with user data
+      const fullClip = await storage.getClipById(clip.id);
+      if (!fullClip) {
+        return res.status(404).json({ message: "Reel not found" });
+      }
+
+      console.log(`✅ Reels API: Found reel by shareCode ${shareCode}: "${fullClip.title}"`);
+      res.json(fullClip);
+    } catch (err) {
+      console.error(`❌ Reels API: Error getting reel by shareCode ${req.params.shareCode}:`, err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get reel by ID - alias for clips API for consistency
   app.get("/api/reels/:id", async (req, res) => {
     try {
@@ -2579,37 +2611,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get reel by shareCode - used for nice URLs like /@username/reel/shareCode
-  app.get("/api/reels/share/:shareCode", async (req, res) => {
-    try {
-      const shareCode = req.params.shareCode;
-      console.log(`🎥 Reels API: Getting reel by shareCode ${shareCode}`);
-
-      const clip = await storage.getClipByShareCode(shareCode);
-      if (!clip) {
-        console.log(`❌ Reels API: Reel with shareCode ${shareCode} not found`);
-        return res.status(404).json({ message: "Reel not found" });
-      }
-
-      // Ensure this is actually a reel
-      if (clip.videoType !== 'reel') {
-        console.log(`❌ Reels API: Content with shareCode ${shareCode} is not a reel, it's a ${clip.videoType}`);
-        return res.status(404).json({ message: "Reel not found" });
-      }
-
-      // Get full clip with user data
-      const fullClip = await storage.getClipById(clip.id);
-      if (!fullClip) {
-        return res.status(404).json({ message: "Reel not found" });
-      }
-
-      console.log(`✅ Reels API: Found reel by shareCode ${shareCode}: "${fullClip.title}"`);
-      res.json(fullClip);
-    } catch (err) {
-      console.error(`❌ Reels API: Error getting reel by shareCode ${req.params.shareCode}:`, err);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
 
   // Generate QR code and social media links for existing clip
   app.get("/api/clips/:id/share", async (req, res) => {

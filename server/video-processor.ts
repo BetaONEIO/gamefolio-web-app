@@ -314,12 +314,16 @@ export class VideoProcessor {
           // Video is too wide, crop width but maintain reasonable scale
           outputHeight = inputHeight;
           outputWidth = Math.floor(inputHeight * targetAspectRatio);
+          // Ensure outputWidth doesn't exceed inputWidth
+          outputWidth = Math.min(outputWidth, inputWidth);
           const cropX = Math.floor((inputWidth - outputWidth) / 2);
           cropFilter = `crop=${outputWidth}:${outputHeight}:${cropX}:0`;
         } else {
           // Video is too tall, crop height but maintain reasonable scale
           outputWidth = inputWidth;
           outputHeight = Math.floor(inputWidth / targetAspectRatio);
+          // Ensure outputHeight doesn't exceed inputHeight
+          outputHeight = Math.min(outputHeight, inputHeight);
           const cropY = Math.floor((inputHeight - outputHeight) / 2);
           cropFilter = `crop=${outputWidth}:${outputHeight}:0:${cropY}`;
         }
@@ -337,6 +341,17 @@ export class VideoProcessor {
         }
 
         console.log(`Cropping ${inputWidth}x${inputHeight} to ${outputWidth}x${outputHeight} for 9:16 aspect ratio`);
+
+        // Validate crop parameters to prevent FFmpeg errors
+        if (outputWidth <= 0 || outputHeight <= 0) {
+          reject(new Error(`Invalid crop dimensions: ${outputWidth}x${outputHeight}`));
+          return;
+        }
+
+        if (outputWidth > inputWidth || outputHeight > inputHeight) {
+          reject(new Error(`Crop dimensions ${outputWidth}x${outputHeight} exceed input dimensions ${inputWidth}x${inputHeight}`));
+          return;
+        }
 
         ffmpeg(inputPath)
           .seekInput(startTime)
