@@ -36,7 +36,7 @@ const videoStorage = multer.diskStorage({
 const upload = multer({
   storage: videoStorage,
   limits: {
-    fileSize: 1024 * 1024 * 1024, // 1GB max for videos
+    fileSize: 500 * 1024 * 1024, // 500MB max for videos
   },
   fileFilter: (req, file, cb) => {
     const allowedVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/avi', 'video/x-msvideo'];
@@ -117,9 +117,9 @@ const tusServer = new TusServer({
       const uploadType = upload.metadata?.uploadType === 'reel' ? 'reel' : 'video';
 
       // Validate file size based on type
-      const maxSize = 250 * 1024 * 1024; // 250MB
+      const maxSize = 500 * 1024 * 1024; // 500MB
       if (upload.size && upload.size > maxSize) {
-        throw new Error(`File size exceeds maximum allowed size of 250MB`);
+        throw new Error(`File size exceeds maximum allowed size of 500MB`);
       }
 
       // Upload to Supabase
