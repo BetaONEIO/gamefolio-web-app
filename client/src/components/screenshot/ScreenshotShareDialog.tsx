@@ -22,6 +22,7 @@ interface ShareData {
   title: string;
   description?: string;
   qrCode: string;
+  imageUrl: string; // Add the actual image URL for preview
   socialMediaLinks: {
     twitter: string;
     facebook: string;
@@ -188,11 +189,12 @@ export function ScreenshotShareDialog({
             {/* Screenshot Thumbnail - Made bigger */}
             <div className="flex justify-center">
               <div className="relative w-72 h-40 bg-gray-800 rounded-lg overflow-hidden border border-gray-600">
-                {shareData.screenshotUrl && (
+                {shareData.imageUrl && (
                   <img
-                    src={shareData.screenshotUrl}
+                    src={shareData.imageUrl}
                     alt="Screenshot preview"
                     className="w-full h-full object-cover"
+                    data-testid="img-screenshot-preview"
                   />
                 )}
               </div>

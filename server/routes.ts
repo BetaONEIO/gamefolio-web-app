@@ -3197,6 +3197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         qrCode: qrCodeDataUrl,
         socialMediaLinks,
         screenshotUrl,
+        imageUrl: screenshot.imageUrl, // Add the actual image URL for preview
         title: screenshot.title,
         description: screenshot.description || ""
       });
