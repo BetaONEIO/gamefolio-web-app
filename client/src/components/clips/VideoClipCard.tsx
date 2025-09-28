@@ -111,11 +111,11 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
   // Handle click on the clip card
   const handleCardClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    // Navigate to proper URL for clips and reels to make them shareable
+    // Navigate to shareable URL format that matches share links
     if (clip.videoType === 'reel') {
-      navigate(`/reels/${clip.id}`);
+      navigate(`/@${clip.user.username}/reel/${clip.shareCode}`);
     } else {
-      navigate(`/clips/${clip.id}`);
+      navigate(`/@${clip.user.username}/clip/${clip.shareCode}`);
     }
   };
 

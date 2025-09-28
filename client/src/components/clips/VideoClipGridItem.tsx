@@ -30,11 +30,11 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleOpenClip = () => {
-    // Navigate to proper URL for clips and reels to make them shareable
+    // Navigate to shareable URL format that matches share links
     if (clip.videoType === 'reel') {
-      navigate(`/reels/${clip.id}`);
+      navigate(`/@${clip.user.username}/reel/${clip.shareCode}`);
     } else {
-      navigate(`/clips/${clip.id}`);
+      navigate(`/@${clip.user.username}/clip/${clip.shareCode}`);
     }
   };
 
