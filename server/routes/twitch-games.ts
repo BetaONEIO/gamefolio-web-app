@@ -1,6 +1,7 @@
 import express from 'express';
 import { storage } from '../storage';
 import { twitchApi } from '../services/twitch-api';
+import { InsertGame } from '@shared/schema';
 
 const router = express.Router();
 
@@ -40,7 +41,16 @@ router.get('/twitch/games/search', async (req: express.Request, res: express.Res
     res.json(games);
   } catch (error) {
     console.error('Error searching games on Twitch:', error);
-    res.status(500).json({ message: 'Failed to search games on Twitch' });
+
+    // Return a user-friendly error with fallback suggestion
+    if (error instanceof Error && error.message.includes('credentials not configured')) {
+      res.status(503).json({
+        message: 'Twitch API integration is not configured. Please set TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET environment variables.',
+        fallback: 'You can still browse existing games in the database.'
+      });
+    } else {
+      res.status(500).json({ message: 'Failed to search games on Twitch' });
+    }
   }
 });
 
@@ -57,7 +67,16 @@ router.get('/twitch/games/:id', async (req: express.Request, res: express.Respon
     res.json(game);
   } catch (error) {
     console.error('Error fetching game from Twitch:', error);
-    res.status(500).json({ message: 'Failed to fetch game from Twitch' });
+
+    // Return a user-friendly error with fallback suggestion
+    if (error instanceof Error && error.message.includes('credentials not configured')) {
+      res.status(503).json({
+        message: 'Twitch API integration is not configured. Please set TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET environment variables.',
+        fallback: 'You can still browse existing games in the database.'
+      });
+    } else {
+      res.status(500).json({ message: 'Failed to fetch game from Twitch' });
+    }
   }
 });
 
@@ -93,7 +112,16 @@ router.post('/twitch/games/add', async (req: express.Request, res: express.Respo
     res.status(201).json(createdGame);
   } catch (error) {
     console.error('Error adding Twitch game to database:', error);
-    res.status(500).json({ message: 'Failed to add Twitch game to database' });
+
+    // Return a user-friendly error with fallback suggestion
+    if (error instanceof Error && error.message.includes('credentials not configured')) {
+      res.status(503).json({
+        message: 'Twitch API integration is not configured. Please set TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET environment variables.',
+        fallback: 'You can still browse existing games in the database.'
+      });
+    } else {
+      res.status(500).json({ message: 'Failed to add Twitch game to database' });
+    }
   }
 });
 
