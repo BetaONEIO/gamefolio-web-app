@@ -262,9 +262,12 @@ router.post('/auth/verify-email', async (req: Request, res: Response) => {
  */
 router.post('/auth/forgot-password', async (req: Request, res: Response) => {
   try {
+    console.log('🔄 Password reset request received');
     const { email } = req.body;
+    console.log('📧 Email:', email);
 
     if (!email) {
+      console.log('❌ No email provided');
       return res.status(400).json({ message: 'Email is required' });
     }
 
@@ -274,31 +277,38 @@ router.post('/auth/forgot-password', async (req: Request, res: Response) => {
       .from(users)
       .where(eq(users.email, email));
 
+    console.log('👤 User found:', !!user);
+
     if (!user) {
       // For security reasons, don't reveal if the email exists or not
+      console.log('❌ User not found, but returning success for security');
       return res.status(200).json({
         message: 'If your email is registered, a password reset link has been sent'
       });
     }
 
     // Generate a new password reset token
+    console.log('🔑 Generating password reset token...');
     const token = await createPasswordResetToken(user.id);
+    console.log('🔑 Token generated successfully');
 
     // Send password reset email using Brevo
     try {
-      await EmailService.sendPasswordResetEmail(user.email, token);
-      console.log(`✅ Password reset email sent to ${user.email}`);
+      console.log('📧 Attempting to send password reset email...');
+      const emailResult = await EmailService.sendPasswordResetEmail(user.email, token);
+      console.log(`✅ Password reset email result: ${emailResult} for ${user.email}`);
     } catch (error) {
-      console.error('Failed to send password reset email:', error);
+      console.error('❌ Failed to send password reset email:', error);
       // Continue with the response even if email fails
     }
 
+    console.log('✅ Password reset request completed successfully');
     return res.status(200).json({
       message: 'Password reset email sent',
     });
 
   } catch (error) {
-    console.error('Error requesting password reset:', error);
+    console.error('❌ Error requesting password reset:', error);
     return res.status(500).json({ message: 'Failed to send password reset email' });
   }
 });

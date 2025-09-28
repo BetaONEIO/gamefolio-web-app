@@ -130,22 +130,31 @@ export class EmailService {
   static async sendPasswordResetEmail(email: string, token: string): Promise<boolean> {
     const resetUrl = `${SITE_URL}/reset-password?token=${token}`;
 
-    console.log(`Password reset URL: ${resetUrl}`);
-    console.log(`Base URL detected as: ${SITE_URL}`);
+    console.log(`📧 sendPasswordResetEmail called for: ${email}`);
+    console.log(`🔗 Password reset URL: ${resetUrl}`);
+    console.log(`🌐 Base URL detected as: ${SITE_URL}`);
+    console.log(`🔑 BREVO_API_KEY configured: ${!!process.env.BREVO_API_KEY}`);
 
     try {
+      console.log('📄 Loading password-reset template...');
       const html = await loadTemplate('password-reset', {
         resetUrl,
         siteUrl: SITE_URL
       });
+      console.log('📄 Template loaded successfully');
 
-      return await sendEmail({
+      console.log('📬 Sending email...');
+      const result = await sendEmail({
         to: email,
         subject: 'Reset Your Gamefolio Password',
         html,
       });
+      console.log(`📬 Email sending result: ${result}`);
+      
+      return result;
     } catch (error) {
-      console.error('Failed to send password reset email:', error);
+      console.error('❌ Failed to send password reset email:', error);
+      console.error('❌ Error details:', error instanceof Error ? error.message : error);
       return false;
     }
   }

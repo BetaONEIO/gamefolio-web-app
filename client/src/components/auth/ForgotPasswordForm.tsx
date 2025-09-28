@@ -52,6 +52,8 @@ const ForgotPasswordForm = ({ onBack }: ForgotPasswordFormProps) => {
     setIsSubmitting(true);
     
     try {
+      console.log('🔄 Sending password reset request for:', values.email);
+      
       // Request password reset from the server
       const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
@@ -61,7 +63,9 @@ const ForgotPasswordForm = ({ onBack }: ForgotPasswordFormProps) => {
         body: JSON.stringify({ email: values.email }),
       });
       
+      console.log('📋 Password reset response status:', response.status);
       const data = await response.json();
+      console.log('📋 Password reset response data:', data);
       
       // Server handles the email sending automatically with Brevo
       if (response.ok) {
@@ -72,6 +76,7 @@ const ForgotPasswordForm = ({ onBack }: ForgotPasswordFormProps) => {
         });
       } else {
         // Show error if request failed
+        console.error('❌ Password reset request failed:', data);
         toast({
           title: 'Request Failed',
           description: data.message || 'Unable to process password reset request',
@@ -79,6 +84,7 @@ const ForgotPasswordForm = ({ onBack }: ForgotPasswordFormProps) => {
         });
       }
     } catch (error) {
+      console.error('❌ Password reset request error:', error);
       toast({
         title: 'Something went wrong',
         description: 'We couldn\'t process your request. Please try again later.',
