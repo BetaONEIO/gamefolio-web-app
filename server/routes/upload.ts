@@ -250,15 +250,39 @@ router.post('/screenshot', fullAccessMiddleware, screenshotUpload.single('screen
               const gameData = await twitchApi.getGameById(parsedGameId.toString());
 
               if (gameData) {
-                // Create the game in our database using Twitch data
-                game = await storage.createGame({
-                  name: gameData.name,
-                  imageUrl: gameData.box_art_url ? 
-                    gameData.box_art_url.replace('{width}', '285').replace('{height}', '380') : '',
-                  twitchId: gameData.id
-                });
-                console.log(`✅ Created game: ${game.name} (ID: ${game.id}, Twitch ID: ${gameData.id})`);
-                finalGameId = game.id;
+                // Check if a game with this name already exists first
+                const existingGameByName = await storage.getGameByName(gameData.name);
+                if (existingGameByName) {
+                  console.log(`✅ Found existing game by name: ${gameData.name} (ID: ${existingGameByName.id})`);
+                  game = existingGameByName;
+                  finalGameId = existingGameByName.id;
+                } else {
+                  // Create the game in our database using Twitch data
+                  try {
+                    game = await storage.createGame({
+                      name: gameData.name,
+                      imageUrl: gameData.box_art_url ? 
+                        gameData.box_art_url.replace('{width}', '285').replace('{height}', '380') : '',
+                      twitchId: gameData.id
+                    });
+                    console.log(`✅ Created game: ${game.name} (ID: ${game.id}, Twitch ID: ${gameData.id})`);
+                    finalGameId = game.id;
+                  } catch (createError: any) {
+                    // Handle race condition where game was created by another request
+                    if (createError.code === '23505') { // Unique constraint violation
+                      console.log(`Game "${gameData.name}" was created by another request, fetching it`);
+                      const raceConditionGame = await storage.getGameByName(gameData.name);
+                      if (raceConditionGame) {
+                        game = raceConditionGame;
+                        finalGameId = raceConditionGame.id;
+                      } else {
+                        throw createError;
+                      }
+                    } else {
+                      throw createError;
+                    }
+                  }
+                }
               } else {
                 console.warn(`❌ Game ${parsedGameId} not found in Twitch API`);
                 finalGameId = null;
@@ -423,15 +447,39 @@ router.post('/process-video', fullAccessMiddleware, async (req, res) => {
               const gameData = await twitchApi.getGameById(parsedGameId.toString());
 
               if (gameData) {
-                // Create the game in our database using Twitch data
-                game = await storage.createGame({
-                  name: gameData.name,
-                  imageUrl: gameData.box_art_url ? 
-                    gameData.box_art_url.replace('{width}', '285').replace('{height}', '380') : '',
-                  twitchId: gameData.id
-                });
-                console.log(`✅ Created game: ${game.name} (ID: ${game.id}, Twitch ID: ${gameData.id})`);
-                finalGameId = game.id;
+                // Check if a game with this name already exists first
+                const existingGameByName = await storage.getGameByName(gameData.name);
+                if (existingGameByName) {
+                  console.log(`✅ Found existing game by name: ${gameData.name} (ID: ${existingGameByName.id})`);
+                  game = existingGameByName;
+                  finalGameId = existingGameByName.id;
+                } else {
+                  // Create the game in our database using Twitch data
+                  try {
+                    game = await storage.createGame({
+                      name: gameData.name,
+                      imageUrl: gameData.box_art_url ? 
+                        gameData.box_art_url.replace('{width}', '285').replace('{height}', '380') : '',
+                      twitchId: gameData.id
+                    });
+                    console.log(`✅ Created game: ${game.name} (ID: ${game.id}, Twitch ID: ${gameData.id})`);
+                    finalGameId = game.id;
+                  } catch (createError: any) {
+                    // Handle race condition where game was created by another request
+                    if (createError.code === '23505') { // Unique constraint violation
+                      console.log(`Game "${gameData.name}" was created by another request, fetching it`);
+                      const raceConditionGame = await storage.getGameByName(gameData.name);
+                      if (raceConditionGame) {
+                        game = raceConditionGame;
+                        finalGameId = raceConditionGame.id;
+                      } else {
+                        throw createError;
+                      }
+                    } else {
+                      throw createError;
+                    }
+                  }
+                }
               } else {
                 console.warn(`❌ Game ${parsedGameId} not found in Twitch API`);
                 finalGameId = null;
