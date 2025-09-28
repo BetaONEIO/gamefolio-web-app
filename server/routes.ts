@@ -73,18 +73,34 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 async function comparePasswords(password: string, hashedPassword: string | null | undefined): Promise<boolean> {
+  console.log(`🔐 comparePasswords called with password length: ${password?.length}, hashedPassword length: ${hashedPassword?.length}`);
+  
   // Handle case where user doesn't have a password (e.g., OAuth users)
   if (!hashedPassword) {
+    console.log(`🔐 No hashed password provided`);
     return false;
   }
   
   const [hash, salt] = hashedPassword.split('.');
   if (!hash || !salt) {
+    console.log(`🔐 Invalid hash format - hash: ${!!hash}, salt: ${!!salt}`);
     return false;
   }
   
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-  return timingSafeEqual(Buffer.from(hash, 'hex'), buf);
+  console.log(`🔐 Hash parts - hash length: ${hash.length}, salt length: ${salt.length}`);
+  
+  try {
+    const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+    const storedHash = Buffer.from(hash, 'hex');
+    const result = timingSafeEqual(storedHash, buf);
+    console.log(`🔐 Password comparison result: ${result}`);
+    console.log(`🔐 Generated hash: ${buf.toString('hex').substring(0, 20)}...`);
+    console.log(`🔐 Stored hash: ${hash.substring(0, 20)}...`);
+    return result;
+  } catch (error) {
+    console.error(`🔐 Error in password comparison:`, error);
+    return false;
+  }
 }
 
 // QR Code and social media utilities
