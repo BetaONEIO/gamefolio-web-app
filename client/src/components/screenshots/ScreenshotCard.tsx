@@ -112,7 +112,9 @@ export function ScreenshotCard({
             variant="destructive"
             className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
+              e.stopImmediatePropagation();
               if (confirm(`Are you sure you want to delete "${screenshot.title}"? This action cannot be undone.`)) {
                 onDelete?.(screenshot.id);
               }
