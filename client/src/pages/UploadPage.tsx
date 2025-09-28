@@ -685,7 +685,7 @@ const UploadPage = () => {
                         <TooltipTrigger asChild>
                           <div className="flex items-center text-xs text-muted-foreground">
                             <Info className="h-3 w-3 mr-1" />
-                            <span>Maximum 1GB</span>
+                            <span>Maximum 500MB</span>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -1236,7 +1236,7 @@ const UploadPage = () => {
                         <TooltipTrigger asChild>
                           <div className="flex items-center text-xs text-muted-foreground">
                             <Info className="h-3 w-3 mr-1" />
-                            <span>Maximum 1GB • Auto-converted to 9:16</span>
+                            <span>Maximum 500MB • Auto-converted to 9:16</span>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -1502,7 +1502,7 @@ const UploadPage = () => {
                         <Camera className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
                         <p className="font-medium">Drag and drop your video or click to browse</p>
                         <p className="text-sm text-muted-foreground mt-1">
-                          MP4, WebM, or MOV up to 1GB • Videos automatically converted to 9:16 reel format
+                          MP4, WebM, or MOV up to 500MB • Videos automatically converted to 9:16 reel format
                         </p>
                       </div>
                     )}
@@ -1656,7 +1656,7 @@ const UploadPage = () => {
                         <TooltipTrigger asChild>
                           <div className="flex items-center text-xs text-muted-foreground">
                             <Info className="h-3 w-3 mr-1" />
-                            <span>Maximum 10MB</span>
+                            <span>Maximum 20MB</span>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -1717,7 +1717,7 @@ const UploadPage = () => {
                         <Image className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
                         <p className="font-medium">Drag and drop your screenshot or click to browse</p>
                         <p className="text-sm text-muted-foreground mt-1">
-                          JPEG, PNG, or JPG up to 10MB
+                          JPEG, PNG, or JPG up to 20MB
                         </p>
                       </div>
                     )}
