@@ -114,7 +114,6 @@ export function ScreenshotCard({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              e.stopImmediatePropagation();
               if (confirm(`Are you sure you want to delete "${screenshot.title}"? This action cannot be undone.`)) {
                 onDelete?.(screenshot.id);
               }
