@@ -1836,6 +1836,7 @@ const UploadPage = () => {
         qrCode={uploadedScreenshot?.qrCode || ''}
         socialMediaLinks={uploadedScreenshot?.socialMediaLinks || {}}
         contentType="screenshot"
+        previewUrl={uploadedScreenshot?.screenshotUrl || ''}
       />
     </div>
   );

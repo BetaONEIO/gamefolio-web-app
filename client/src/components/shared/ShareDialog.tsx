@@ -24,6 +24,7 @@ interface ShareDialogProps {
     linkedin: string;
   };
   contentType?: "clip" | "reel" | "screenshot";
+  previewUrl?: string;
 }
 
 export function ShareDialog({
@@ -33,7 +34,8 @@ export function ShareDialog({
   shareUrl,
   qrCode,
   socialMediaLinks,
-  contentType = "clip"
+  contentType = "clip",
+  previewUrl
 }: ShareDialogProps) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
@@ -94,6 +96,20 @@ export function ShareDialog({
         </DialogHeader>
         
         <div className="space-y-4">
+          {/* Image Preview */}
+          {previewUrl && (
+            <div className="flex justify-center">
+              <div className="relative max-w-md w-full">
+                <img
+                  src={previewUrl}
+                  alt={contentTitle}
+                  className="w-full h-auto max-h-64 object-contain rounded-lg border border-gray-600"
+                  data-testid="img-share-preview"
+                />
+              </div>
+            </div>
+          )}
+          
           {/* Share Link - Single Line Layout */}
           <div className="flex items-center gap-2">
             <Input
