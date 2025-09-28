@@ -10,6 +10,7 @@ import session from "express-session";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage } from "./storage";
+import { LeaderboardService } from "./leaderboard-service";
 import { createInsertSchema } from "drizzle-zod";
 import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema } from "@shared/schema";
 import { promisify } from "util";
@@ -1333,6 +1334,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching leaderboard:", error);
       res.status(500).json({ message: "Error fetching leaderboard data" });
+    }
+  });
+
+  // Monthly leaderboard routes
+  app.get("/api/leaderboard/monthly/current", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const leaderboardData = await LeaderboardService.getCurrentMonthLeaderboard(limit);
+      res.json(leaderboardData);
+    } catch (error) {
+      console.error("Error fetching current month leaderboard:", error);
+      res.status(500).json({ message: "Error fetching current month leaderboard" });
+    }
+  });
+
+  app.get("/api/leaderboard/monthly/previous", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const leaderboardData = await LeaderboardService.getPreviousMonthLeaderboard(limit);
+      res.json(leaderboardData);
+    } catch (error) {
+      console.error("Error fetching previous month leaderboard:", error);
+      res.status(500).json({ message: "Error fetching previous month leaderboard" });
+    }
+  });
+
+  // Weekly leaderboard routes
+  app.get("/api/leaderboard/weekly/current", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const leaderboardData = await LeaderboardService.getCurrentWeekLeaderboard(limit);
+      res.json(leaderboardData);
+    } catch (error) {
+      console.error("Error fetching current week leaderboard:", error);
+      res.status(500).json({ message: "Error fetching current week leaderboard" });
+    }
+  });
+
+  app.get("/api/leaderboard/weekly/previous", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const leaderboardData = await LeaderboardService.getPreviousWeekLeaderboard(limit);
+      res.json(leaderboardData);
+    } catch (error) {
+      console.error("Error fetching previous week leaderboard:", error);
+      res.status(500).json({ message: "Error fetching previous week leaderboard" });
+    }
+  });
+
+  // User stats routes
+  app.get("/api/user/:userId/stats/monthly", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      const stats = await LeaderboardService.getUserCurrentMonthStats(userId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching user monthly stats:", error);
+      res.status(500).json({ message: "Error fetching user monthly stats" });
+    }
+  });
+
+  app.get("/api/user/:userId/stats/weekly", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      const stats = await LeaderboardService.getUserCurrentWeekStats(userId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching user weekly stats:", error);
+      res.status(500).json({ message: "Error fetching user weekly stats" });
+    }
+  });
+
+  // Top contributors routes
+  app.get("/api/leaderboard/top-contributors/:periodType", async (req, res) => {
+    try {
+      const periodType = req.params.periodType as 'weekly' | 'monthly';
+      if (!['weekly', 'monthly'].includes(periodType)) {
+        return res.status(400).json({ message: "Period type must be 'weekly' or 'monthly'" });
+      }
+      const limit = parseInt(req.query.limit as string) || 10;
+      const topContributors = await LeaderboardService.getTopContributors(periodType, limit);
+      res.json(topContributors);
+    } catch (error) {
+      console.error("Error fetching top contributors:", error);
+      res.status(500).json({ message: "Error fetching top contributors" });
+    }
+  });
+
+  app.get("/api/leaderboard/top-contributors/:periodType/:period/:year", async (req, res) => {
+    try {
+      const periodType = req.params.periodType as 'weekly' | 'monthly';
+      const period = req.params.period;
+      const year = parseInt(req.params.year);
+      
+      if (!['weekly', 'monthly'].includes(periodType)) {
+        return res.status(400).json({ message: "Period type must be 'weekly' or 'monthly'" });
+      }
+      if (isNaN(year)) {
+        return res.status(400).json({ message: "Invalid year" });
+      }
+      
+      const topContributors = await LeaderboardService.getTopContributorsByPeriod(periodType, period, year);
+      res.json(topContributors);
+    } catch (error) {
+      console.error("Error fetching top contributors by period:", error);
+      res.status(500).json({ message: "Error fetching top contributors by period" });
     }
   });
 
