@@ -527,6 +527,36 @@ export const userPointsHistory = pgTable("user_points_history", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Weekly Leaderboard table
+export const weeklyLeaderboard = pgTable("weekly_leaderboard", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  week: text("week").notNull(), // Format: "2024-W01", "2024-W02", etc.
+  year: integer("year").notNull(),
+  uploadsCount: integer("uploads_count").default(0).notNull(),
+  likesGivenCount: integer("likes_given_count").default(0).notNull(),
+  commentsCount: integer("comments_count").default(0).notNull(),
+  totalPoints: integer("total_points").default(0).notNull(),
+  rank: integer("rank").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Top Contributors table - stores historical winners when periods end
+export const topContributors = pgTable("top_contributors", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  periodType: text("period_type").notNull(), // "weekly" or "monthly"
+  period: text("period").notNull(), // Format: "2024-W01" for weekly, "2024-01" for monthly
+  year: integer("year").notNull(),
+  totalPoints: integer("total_points").notNull(),
+  uploadsCount: integer("uploads_count").default(0).notNull(),
+  likesGivenCount: integer("likes_given_count").default(0).notNull(),
+  commentsCount: integer("comments_count").default(0).notNull(),
+  achievedAt: timestamp("achieved_at").defaultNow().notNull(), // When they achieved this top position
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Schema for inserting monthly leaderboard entries
 export const insertMonthlyLeaderboardSchema = createInsertSchema(monthlyLeaderboard).omit({
   id: true,
@@ -538,6 +568,21 @@ export const insertMonthlyLeaderboardSchema = createInsertSchema(monthlyLeaderbo
 // Schema for inserting user points history
 export const insertUserPointsHistorySchema = createInsertSchema(userPointsHistory).omit({
   id: true,
+  createdAt: true,
+});
+
+// Schema for inserting weekly leaderboard entries
+export const insertWeeklyLeaderboardSchema = createInsertSchema(weeklyLeaderboard).omit({
+  id: true,
+  rank: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Schema for inserting top contributors
+export const insertTopContributorSchema = createInsertSchema(topContributors).omit({
+  id: true,
+  achievedAt: true,
   createdAt: true,
 });
 
@@ -651,6 +696,10 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type MonthlyLeaderboard = typeof monthlyLeaderboard.$inferSelect;
 export type InsertMonthlyLeaderboard = z.infer<typeof insertMonthlyLeaderboardSchema>;
+export type WeeklyLeaderboard = typeof weeklyLeaderboard.$inferSelect;
+export type InsertWeeklyLeaderboard = z.infer<typeof insertWeeklyLeaderboardSchema>;
+export type TopContributor = typeof topContributors.$inferSelect;
+export type InsertTopContributor = z.infer<typeof insertTopContributorSchema>;
 export type UserPointsHistory = typeof userPointsHistory.$inferSelect;
 export type InsertUserPointsHistory = z.infer<typeof insertUserPointsHistorySchema>;
 export type ClipReaction = typeof clipReactions.$inferSelect;
