@@ -134,7 +134,10 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                            location.startsWith("/view/") ||
                            location.startsWith("/@"); // Also exclude shared content pages from layout
 
+  console.log("🔍 MainLayout: location =", location, "isAuthOrOnboarding =", isAuthOrOnboarding);
+
   if (isAuthOrOnboarding) {
+    console.log("🔍 MainLayout: Rendering without layout for", location);
     return <>{children}</>;
   }
 
