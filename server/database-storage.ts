@@ -20,6 +20,8 @@ import {
   UserBlock, InsertUserBlock,
   UserBadge, InsertUserBadge,
   MonthlyLeaderboard, InsertMonthlyLeaderboard,
+  WeeklyLeaderboard, InsertWeeklyLeaderboard,
+  TopContributor, InsertTopContributor,
   UserPointsHistory, InsertUserPointsHistory,
   ContentFilterSettings, InsertContentFilterSettings,
   BannedWord, InsertBannedWord,
@@ -55,6 +57,8 @@ import {
   userBadges,
   badges,
   monthlyLeaderboard,
+  weeklyLeaderboard,
+  topContributors,
   userPointsHistory,
   emailVerificationTokens,
   contentFilterSettings,
@@ -2473,6 +2477,118 @@ export class DatabaseStorage implements IStorage {
         .set({ rank: i + 1 })
         .where(eq(monthlyLeaderboard.id, entries[i].id));
     }
+  }
+
+  // Weekly leaderboard operations
+  async getWeeklyLeaderboardEntry(userId: number, week: string, year: number): Promise<WeeklyLeaderboard | null> {
+    const [entry] = await db
+      .select()
+      .from(weeklyLeaderboard)
+      .where(and(
+        eq(weeklyLeaderboard.userId, userId),
+        eq(weeklyLeaderboard.week, week),
+        eq(weeklyLeaderboard.year, year)
+      ));
+    return entry || null;
+  }
+
+  async createWeeklyLeaderboardEntry(entry: InsertWeeklyLeaderboard): Promise<WeeklyLeaderboard> {
+    const [leaderboardEntry] = await db.insert(weeklyLeaderboard).values(entry).returning();
+    return leaderboardEntry;
+  }
+
+  async updateWeeklyLeaderboardEntry(id: number, updates: Partial<WeeklyLeaderboard>): Promise<WeeklyLeaderboard | null> {
+    const [updatedEntry] = await db
+      .update(weeklyLeaderboard)
+      .set(updates)
+      .where(eq(weeklyLeaderboard.id, id))
+      .returning();
+    return updatedEntry || null;
+  }
+
+  async getWeeklyLeaderboard(week: string, year: number, limit?: number): Promise<(WeeklyLeaderboard & { user: User })[]> {
+    const query = db
+      .select()
+      .from(weeklyLeaderboard)
+      .leftJoin(users, eq(weeklyLeaderboard.userId, users.id))
+      .where(and(
+        eq(weeklyLeaderboard.week, week),
+        eq(weeklyLeaderboard.year, year)
+      ))
+      .orderBy(desc(weeklyLeaderboard.totalPoints));
+
+    if (limit) {
+      query.limit(limit);
+    }
+
+    const results = await query;
+    return results.map(row => ({
+      ...row.weekly_leaderboard,
+      user: row.users!
+    }));
+  }
+
+  async recalculateWeeklyRankings(week: string, year: number): Promise<void> {
+    // Get all entries for the week sorted by total points
+    const entries = await db
+      .select()
+      .from(weeklyLeaderboard)
+      .where(and(
+        eq(weeklyLeaderboard.week, week),
+        eq(weeklyLeaderboard.year, year)
+      ))
+      .orderBy(desc(weeklyLeaderboard.totalPoints));
+
+    // Update rankings
+    for (let i = 0; i < entries.length; i++) {
+      await db
+        .update(weeklyLeaderboard)
+        .set({ rank: i + 1 })
+        .where(eq(weeklyLeaderboard.id, entries[i].id));
+    }
+  }
+
+  // Top contributors operations
+  async createTopContributor(contributor: InsertTopContributor): Promise<TopContributor> {
+    const [topContributor] = await db.insert(topContributors).values(contributor).returning();
+    return topContributor;
+  }
+
+  async getTopContributors(periodType: string, limit?: number): Promise<(TopContributor & { user: User })[]> {
+    const query = db
+      .select()
+      .from(topContributors)
+      .leftJoin(users, eq(topContributors.userId, users.id))
+      .where(eq(topContributors.periodType, periodType))
+      .orderBy(desc(topContributors.totalPoints));
+
+    if (limit) {
+      query.limit(limit);
+    }
+
+    const results = await query;
+    return results.map(row => ({
+      ...row.top_contributors,
+      user: row.users!
+    }));
+  }
+
+  async getTopContributorsByPeriod(periodType: string, period: string, year: number): Promise<(TopContributor & { user: User })[]> {
+    const results = await db
+      .select()
+      .from(topContributors)
+      .leftJoin(users, eq(topContributors.userId, users.id))
+      .where(and(
+        eq(topContributors.periodType, periodType),
+        eq(topContributors.period, period),
+        eq(topContributors.year, year)
+      ))
+      .orderBy(desc(topContributors.totalPoints));
+
+    return results.map(row => ({
+      ...row.top_contributors,
+      user: row.users!
+    }));
   }
 
   async getEngagementLeaderboard(limit: number = 10): Promise<Array<{
