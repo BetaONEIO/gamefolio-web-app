@@ -27,6 +27,9 @@ import {
   BannedWord, InsertBannedWord,
   BannerSettings, InsertBannerSettings,
   HeroTextSettings, InsertHeroTextSettings,
+  ClipMention, InsertClipMention,
+  CommentMention, InsertCommentMention,
+  ScreenshotCommentMention, InsertScreenshotCommentMention,
   ClipWithUser,
   CommentWithUser,
   ScreenshotCommentWithUser,
@@ -64,7 +67,10 @@ import {
   contentFilterSettings,
   bannedWords,
   heroTextSettings,
-  bannerSettings
+  bannerSettings,
+  clipMentions,
+  commentMentions,
+  screenshotCommentMentions
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, isNotNull } from "drizzle-orm";
@@ -131,6 +137,22 @@ export class DatabaseStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | null> {
     const [user] = await db.select().from(users).where(ilike(users.username, username));
     return user || null;
+  }
+
+  async getUserById(id: number): Promise<User | null> {
+    // Alias for getUser method for mention service compatibility
+    return this.getUser(id);
+  }
+
+  async getUsersByUsernames(usernames: string[]): Promise<User[]> {
+    if (usernames.length === 0) return [];
+    
+    // Use case-insensitive matching for usernames
+    const lowerUsernames = usernames.map(u => u.toLowerCase());
+    const users = await db.select().from(users).where(
+      inArray(sql`LOWER(${users.username})`, lowerUsernames)
+    );
+    return users;
   }
 
   async getUserByEmail(email: string): Promise<User | null> {
@@ -847,6 +869,22 @@ export class DatabaseStorage implements IStorage {
   async createComment(commentData: InsertComment): Promise<Comment> {
     const [comment] = await db.insert(comments).values(commentData).returning();
     return comment;
+  }
+
+  // Mention operations
+  async createClipMention(mentionData: InsertClipMention): Promise<ClipMention> {
+    const [mention] = await db.insert(clipMentions).values(mentionData).returning();
+    return mention;
+  }
+
+  async createCommentMention(mentionData: InsertCommentMention): Promise<CommentMention> {
+    const [mention] = await db.insert(commentMentions).values(mentionData).returning();
+    return mention;
+  }
+
+  async createScreenshotCommentMention(mentionData: InsertScreenshotCommentMention): Promise<ScreenshotCommentMention> {
+    const [mention] = await db.insert(screenshotCommentMentions).values(mentionData).returning();
+    return mention;
   }
 
   async getCommentsByClipId(clipId: number): Promise<CommentWithUser[]> {
