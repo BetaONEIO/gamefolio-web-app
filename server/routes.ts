@@ -4552,11 +4552,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if game exists, if not create it
       let game = await storage.getGame(parseInt(gameId));
       if (!game && gameName) {
-        console.log(`Creating new game with ID ${gameId}: ${gameName}`);
-        game = await storage.createGame({
-          name: gameName,
-          imageUrl: gameImageUrl || null
-        });
+        // First check if a game with this name already exists
+        const existingGame = await storage.getGameByName(gameName);
+        if (existingGame) {
+          console.log(`Found existing game by name: ${gameName} (ID: ${existingGame.id})`);
+          game = existingGame;
+        } else {
+          console.log(`Creating new game with ID ${gameId}: ${gameName}`);
+          try {
+            game = await storage.createGame({
+              name: gameName,
+              imageUrl: gameImageUrl || null
+            });
+          } catch (createError: any) {
+            // Handle race condition where game was created by another request
+            if (createError.code === '23505') { // Unique constraint violation
+              console.log(`Game "${gameName}" was created by another request, fetching it`);
+              game = await storage.getGameByName(gameName);
+            } else {
+              throw createError;
+            }
+          }
+        }
       }
 
       if (!game) {
