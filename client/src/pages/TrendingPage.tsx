@@ -18,6 +18,9 @@ import { LikeButton } from '@/components/engagement/LikeButton';
 import { FireButton } from '@/components/engagement/FireButton';
 import { ReportButton } from '@/components/reporting/ReportButton';
 import { MobileTrendingViewer } from '@/components/clips/MobileTrendingViewer';
+import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
+import { UserIcon, X } from 'lucide-react';
+import { Link } from 'wouter';
 
 type ContentType = 'clips' | 'reels' | 'screenshots';
 type FilterType = 'likes' | 'comments';
@@ -45,8 +48,8 @@ interface ScreenshotWithUser {
   };
 }
 
-// Screenshot card component
-const ScreenshotCard: React.FC<{ screenshot: ScreenshotWithUser }> = ({ screenshot }) => {
+// Screenshot card component  
+const ScreenshotCard: React.FC<{ screenshot: ScreenshotWithUser; onSelect?: (screenshot: ScreenshotWithUser) => void }> = ({ screenshot, onSelect }) => {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
   
@@ -108,7 +111,10 @@ const ScreenshotCard: React.FC<{ screenshot: ScreenshotWithUser }> = ({ screensh
   };
   
   return (
-    <Card className="group relative overflow-hidden transition-all duration-200 hover:shadow-lg hover:scale-105">
+    <Card 
+      className="group relative overflow-hidden transition-all duration-200 hover:shadow-lg hover:scale-105 cursor-pointer"
+      onClick={() => onSelect?.(screenshot)}
+    >
       <div className="aspect-video relative overflow-hidden">
         <img 
           src={screenshot.imageUrl} 
@@ -307,6 +313,7 @@ const TrendingPage: React.FC = () => {
   const [filter, setFilter] = useState<FilterType>('likes');
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('today');
   const [showMobileViewer, setShowMobileViewer] = useState(false);
+  const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotWithUser | null>(null);
 
   // Fetch trending clips using the working endpoint
   const { data: trendingClips, isLoading: isLoadingClips } = useQuery<ClipWithUser[]>({
@@ -417,7 +424,11 @@ const TrendingPage: React.FC = () => {
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {trendingScreenshots.map((screenshot) => (
-            <ScreenshotCard key={screenshot.id} screenshot={screenshot} />
+            <ScreenshotCard 
+              key={screenshot.id} 
+              screenshot={screenshot} 
+              onSelect={setSelectedScreenshot}
+            />
           ))}
         </div>
       );
@@ -555,6 +566,79 @@ const TrendingPage: React.FC = () => {
           </>
         )}
       </Tabs>
+
+      {/* Screenshot Modal Dialog */}
+      <Dialog open={!!selectedScreenshot} onOpenChange={() => setSelectedScreenshot(null)}>
+        <DialogContent className="max-w-[95vw] w-[95vw] p-0 bg-background text-foreground max-h-[95vh] h-[95vh] overflow-hidden">
+          <DialogClose className="absolute right-4 top-4 z-10 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+            <X className="h-6 w-6" />
+            <span className="sr-only">Close</span>
+          </DialogClose>
+
+          {selectedScreenshot && (
+            <div className="flex flex-col lg:flex-row h-full">
+              {/* Left side - Image display */}
+              <div className="bg-black flex items-center justify-center w-full lg:w-[75%] h-[60vh] lg:h-full">
+                <img
+                  src={selectedScreenshot.imageUrl}
+                  alt={selectedScreenshot.title}
+                  className="max-w-full max-h-full object-contain"
+                />
+              </div>
+
+              {/* Right side - Info and engagement */}
+              <div className="h-full flex flex-col w-full lg:w-[25%]">
+                {/* Header with username */}
+                <div className="border-b border-border p-4 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3">
+                      {selectedScreenshot.user.avatarUrl ? (
+                        <img 
+                          src={selectedScreenshot.user.avatarUrl} 
+                          alt={selectedScreenshot.user.displayName} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <UserIcon className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <Link href={`/@${selectedScreenshot.user.username}`}>
+                      <div className="text-muted-foreground flex items-center hover:text-primary transition-colors cursor-pointer">
+                        @{selectedScreenshot.user.username}
+                      </div>
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Screenshot Details */}
+                <div className="flex-1 p-4 overflow-y-auto">
+                  <h3 className="font-semibold text-lg mb-2">{selectedScreenshot.title}</h3>
+                  {selectedScreenshot.description && (
+                    <p className="text-muted-foreground text-sm mb-4">{selectedScreenshot.description}</p>
+                  )}
+                  
+                  {/* Game info */}
+                  {selectedScreenshot.game && (
+                    <div className="mb-4">
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium">Game:</span> {selectedScreenshot.game.name}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Stats */}
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Eye className="h-4 w-4" />
+                      <span>{selectedScreenshot.views?.toLocaleString() || '0'} views</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
