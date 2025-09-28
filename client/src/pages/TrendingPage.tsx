@@ -337,12 +337,17 @@ const TrendingPage: React.FC = () => {
     enabled: activeTab === 'reels' || (isMobile && showMobileViewer),
   });
 
-  // For now, disable screenshots until the endpoint is fixed
+  // Fetch trending screenshots using the working API endpoint
   const { data: trendingScreenshots, isLoading: isLoadingScreenshots } = useQuery<ScreenshotWithUser[]>({
-    queryKey: ['/api/screenshots/latest', timePeriod],
+    queryKey: ['/api/trending/screenshots', timePeriod],
     queryFn: async () => {
-      // Return empty array for now since screenshots endpoint is broken
-      return [];
+      const params = new URLSearchParams({
+        period: timePeriod,
+        limit: '20',
+      });
+      const response = await fetch(`/api/trending/screenshots?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch trending screenshots');
+      return response.json();
     },
     enabled: activeTab === 'screenshots' || (isMobile && showMobileViewer),
   });
