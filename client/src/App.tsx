@@ -161,7 +161,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
       {/* Dynamic Banner */}
       {!isLoadingBanner && bannerSettings && bannerSettings.isEnabled && !isBannerDismissed && (
-        <Alert className="mx-4 mt-2 border-primary/30 bg-primary/10 backdrop-blur-sm relative z-20">
+        <Alert className={`mx-4 mt-2 border-primary/30 bg-primary/10 backdrop-blur-sm relative z-20 ${!isMobile ? 'ml-64' : ''}`}>
           {bannerSettings.showIcon && <AlertTriangle className="h-4 w-4 text-primary" />}
           <AlertDescription className="text-foreground flex items-center justify-between">
             <span>
