@@ -31,11 +31,19 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleOpenClip = () => {
-    // Navigate to shareable URL format that matches share links
-    if (clip.videoType === 'reel') {
-      navigate(`/@${clip.user.username}/reel/${clip.shareCode}`);
+    // For reels, use direct dialog opening like trending reels do
+    if (clip.videoType === 'reel' && reelsList) {
+      openClipDialog(clip.id, reelsList);
+    } else if (clip.videoType === 'clip' && clipsList) {
+      // For clips, use direct dialog opening with clips list
+      openClipDialog(clip.id, clipsList);
     } else {
-      navigate(`/@${clip.user.username}/clip/${clip.shareCode}`);
+      // Fallback to URL navigation for shareable links when no list is provided
+      if (clip.videoType === 'reel') {
+        navigate(`/@${clip.user.username}/reel/${clip.shareCode}`);
+      } else {
+        navigate(`/@${clip.user.username}/clip/${clip.shareCode}`);
+      }
     }
   };
 
