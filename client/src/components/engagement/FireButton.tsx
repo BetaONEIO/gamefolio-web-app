@@ -11,6 +11,7 @@ import { useJoinDialog } from "@/hooks/use-join-dialog";
 interface FireButtonProps {
   contentId: number;
   contentType: 'clip' | 'screenshot';
+  contentOwnerId?: number;
   initialFired?: boolean;
   initialCount?: number;
   size?: 'sm' | 'md' | 'lg';
@@ -22,6 +23,7 @@ interface FireButtonProps {
 export function FireButton({ 
   contentId, 
   contentType, 
+  contentOwnerId,
   initialFired = false, 
   initialCount = 0,
   size = 'md',
@@ -93,6 +95,16 @@ export function FireButton({
       } else {
         openDialog('like'); // Using 'like' as it's similar to fire reaction
       }
+      return;
+    }
+
+    // Prevent users from firing their own content
+    if (contentOwnerId && user.id === contentOwnerId) {
+      toast({
+        title: "Cannot fire own content",
+        description: "You cannot fire your own content, casual!",
+        variant: "destructive"
+      });
       return;
     }
 

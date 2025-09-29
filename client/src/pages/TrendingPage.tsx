@@ -166,6 +166,7 @@ const ScreenshotCard: React.FC<{ screenshot: ScreenshotWithUser; onSelect?: (scr
           <FireButton 
             contentId={screenshot.id}
             contentType="screenshot"
+            contentOwnerId={screenshot.userId}
             initialFired={false}
             initialCount={(screenshot as any)._count?.reactions || 0}
             size="sm"

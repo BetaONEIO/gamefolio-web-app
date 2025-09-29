@@ -2394,6 +2394,7 @@ const ProfilePage = () => {
                           <FireButton 
                             contentId={selectedScreenshot.id}
                             contentType="screenshot"
+                            contentOwnerId={selectedScreenshot.userId}
                             initialFired={false}
                             initialCount={0}
                             size="lg"

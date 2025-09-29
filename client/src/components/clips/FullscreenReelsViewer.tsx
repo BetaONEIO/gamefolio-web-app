@@ -206,6 +206,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
               <FireButton
                 contentId={currentReel.id}
                 contentType="clip"
+                contentOwnerId={currentReel.userId}
                 initialCount={0}
                 size="lg"
                 showCount={true}

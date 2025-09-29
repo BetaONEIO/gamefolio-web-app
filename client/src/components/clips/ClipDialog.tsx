@@ -463,6 +463,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         <FireButton 
                           contentId={clip.id}
                           contentType="clip"
+                          contentOwnerId={clip.userId}
                           initialFired={false}
                           initialCount={0}
                           size="lg"
@@ -712,6 +713,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         <FireButton 
                           contentId={clip.id}
                           contentType="clip"
+                          contentOwnerId={clip.userId}
                           initialFired={false}
                           initialCount={0}
                           size="lg"

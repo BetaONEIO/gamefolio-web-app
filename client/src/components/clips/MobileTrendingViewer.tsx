@@ -302,6 +302,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose }: Mob
                 <FireButton
                   contentId={currentItem.id}
                   contentType={isVideoContent(currentItem) ? "clip" : "screenshot"}
+                  contentOwnerId={currentItem.user.id}
                   initialFired={false}
                   initialCount={(currentItem as any)._count?.reactions || 0}
                   size="lg"

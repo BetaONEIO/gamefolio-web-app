@@ -50,6 +50,7 @@ export function EngagementBar({
         <FireButton
           contentId={contentId}
           contentType={contentType}
+          contentOwnerId={contentOwnerId}
           initialFired={userHasFired}
           initialCount={initialFires}
           size={size}

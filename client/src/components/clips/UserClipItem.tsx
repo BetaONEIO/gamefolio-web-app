@@ -146,6 +146,7 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
                 <FireButton 
                   contentId={clip.id} 
                   contentType="clip" 
+                  contentOwnerId={clip.userId}
                   initialCount={0}
                   size="sm"
                 />

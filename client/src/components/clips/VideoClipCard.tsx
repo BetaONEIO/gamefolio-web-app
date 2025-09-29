@@ -239,6 +239,7 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
             <FireButton 
               contentId={clip.id}
               contentType="clip"
+              contentOwnerId={clip.userId}
               initialFired={false}
               initialCount={0}
               size="sm"
