@@ -38,7 +38,6 @@ const Header = () => {
   // Debounce search query for dropdown
   useEffect(() => {
     const handler = setTimeout(() => {
-      console.log("🔍 Debounced query updated:", searchQuery);
       setDebouncedQuery(searchQuery);
     }, 300);
 
@@ -51,7 +50,6 @@ const Header = () => {
   const { data: userResults } = useQuery<User[]>({
     queryKey: ['/api/search/users', debouncedQuery],
     queryFn: async () => {
-      console.log("🔍 Making user search API call with query:", debouncedQuery);
       const response = await fetch(`/api/search/users?q=${encodeURIComponent(debouncedQuery)}`);
       if (!response.ok) throw new Error("Failed to search users");
       return await response.json();
@@ -63,7 +61,6 @@ const Header = () => {
   const { data: gameResults } = useQuery<Game[]>({
     queryKey: ['/api/search/games', debouncedQuery],
     queryFn: async () => {
-      console.log("🔍 Making game search API call with query:", debouncedQuery);
       const response = await fetch(`/api/search/games?q=${encodeURIComponent(debouncedQuery)}`);
       if (!response.ok) throw new Error("Failed to search games");
       return await response.json();
@@ -106,7 +103,6 @@ const Header = () => {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    console.log("🔍 Search query changed:", value);
     setSearchQuery(value);
     setShowDropdown(value.length >= 2);
   };
@@ -313,10 +309,7 @@ const Header = () => {
               variant="ghost"
               size="icon"
               className="mr-2 p-2 touch-manipulation"
-              onClick={() => {
-                console.log("Mobile search button clicked!");
-                setShowMobileSearch(true);
-              }}
+              onClick={() => setShowMobileSearch(true)}
               aria-label="Search"
               data-testid="mobile-search-button"
             >
@@ -324,10 +317,6 @@ const Header = () => {
             </Button>
           )}
           
-          {/* Debug: Show mobile status */}
-          {isMobile && (
-            <div className="text-xs text-green-500 mr-2">Mobile Mode</div>
-          )}
           
           {user ? (
             <>
@@ -426,7 +415,6 @@ const Header = () => {
       {showMobileSearch && (
         <div className="fixed inset-0 bg-black/50 z-50 md:hidden flex flex-col">
           <div className="bg-card w-full p-4 shadow-lg safe-area-top">
-            <div className="text-xs text-green-500 mb-2">Mobile Search Overlay Active</div>
             <div
               ref={mobileSearchRef}
               className="relative max-w-full"
