@@ -197,23 +197,35 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
     const deltaY = touchEnd.y - touchStart.y;
     const minSwipeDistance = 50;
 
-    // Check if it's a horizontal or vertical swipe
-    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-      // Horizontal swipe
-      if (Math.abs(deltaX) > minSwipeDistance) {
-        if (deltaX > 0 && onPrevious) {
-          handlePreviousWithTransition(); // Swipe right = previous
-        } else if (deltaX < 0 && onNext) {
-          handleNextWithTransition(); // Swipe left = next
+    // For reels on mobile, prioritize vertical navigation (Instagram-like)
+    if (clip?.videoType === 'reel' && isMobile) {
+      // Vertical swipe for reels (Instagram-like behavior)
+      if (Math.abs(deltaY) > minSwipeDistance) {
+        if (deltaY < 0 && onNext) {
+          handleNextWithTransition(); // Swipe up = next reel
+        } else if (deltaY > 0 && onPrevious) {
+          handlePreviousWithTransition(); // Swipe down = previous reel
         }
       }
     } else {
-      // Vertical swipe
-      if (Math.abs(deltaY) > minSwipeDistance) {
-        if (deltaY < 0 && onNext) {
-          handleNextWithTransition(); // Swipe up = next
-        } else if (deltaY > 0 && onPrevious) {
-          handlePreviousWithTransition(); // Swipe down = previous
+      // Check if it's a horizontal or vertical swipe for regular clips
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        // Horizontal swipe
+        if (Math.abs(deltaX) > minSwipeDistance) {
+          if (deltaX > 0 && onPrevious) {
+            handlePreviousWithTransition(); // Swipe right = previous
+          } else if (deltaX < 0 && onNext) {
+            handleNextWithTransition(); // Swipe left = next
+          }
+        }
+      } else {
+        // Vertical swipe
+        if (Math.abs(deltaY) > minSwipeDistance) {
+          if (deltaY < 0 && onNext) {
+            handleNextWithTransition(); // Swipe up = next
+          } else if (deltaY > 0 && onPrevious) {
+            handlePreviousWithTransition(); // Swipe down = previous
+          }
         }
       }
     }
@@ -305,10 +317,10 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     />
                     {/* Mobile Instagram-like overlay for reels */}
                     <div className="absolute inset-0 pointer-events-none">
-                      {/* Top overlay with user info */}
+                      {/* Top overlay with user info - improved mobile design */}
                       <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-50 pointer-events-auto">
                         <div className="flex items-center">
-                          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3">
+                          <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3 border-2 border-white/20">
                             {clip.user?.avatarUrl ? (
                               <img 
                                 src={clip.user.avatarUrl} 
@@ -316,14 +328,18 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                                 className="w-full h-full object-cover"
                               />
                             ) : (
-                              <UserIcon className="h-5 w-5 text-muted-foreground" />
+                              <UserIcon className="h-6 w-6 text-white" />
                             )}
                           </div>
                           {clip.user?.username && (
-                            <div className="text-white font-medium text-sm">
+                            <div className="text-white font-semibold text-base drop-shadow-lg">
                               @{clip.user.username}
                             </div>
                           )}
+                        </div>
+                        {/* Follow button for mobile */}
+                        <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
+                          <span className="text-white font-medium text-sm">Follow</span>
                         </div>
                       </div>
                       
