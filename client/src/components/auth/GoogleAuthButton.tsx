@@ -62,43 +62,43 @@ export function GoogleAuthButton({ disabled = false }: GoogleAuthButtonProps) {
         toast({
           title: "Configuration Error",
           description: "Google sign-in is not properly configured. Please use username/password to log in.",
-          variant: "destructive",
+          variant: "gamefolioError",
         });
       } else if (error.code === 'auth/configuration-not-found') {
         toast({
           title: "Google Sign-in Unavailable",
           description: "Google sign-in needs to be enabled. Please use username/password to log in. Demo account: demo@gamefolio.com / password",
-          variant: "destructive",
+          variant: "gamefolioError",
         });
       } else if (error.code === 'auth/popup-blocked') {
         toast({
           title: "Popup Blocked",
           description: "Please allow popups for this site and try again.",
-          variant: "destructive",
+          variant: "gamefolioError",
         });
       } else if (error.code === 'auth/popup-closed-by-user') {
         toast({
           title: "Sign-in Cancelled",
           description: "Google sign-in was cancelled. Please try again.",
-          variant: "destructive",
+          variant: "gamefolioError",
         });
       } else if (error.code === 'auth/network-request-failed') {
         toast({
           title: "Network Error",
           description: "Please check your internet connection and try again.",
-          variant: "destructive",
+          variant: "gamefolioError",
         });
       } else if (error.code === 'auth/invalid-api-key') {
         toast({
           title: "Configuration Error",
           description: "Invalid Firebase configuration. Please contact support.",
-          variant: "destructive",
+          variant: "gamefolioError",
         });
       } else {
         toast({
           title: "Authentication Error",
           description: `Google sign-in error: ${error.message}. Please try logging in with username/password.`,
-          variant: "destructive",
+          variant: "gamefolioError",
         });
       }
     }

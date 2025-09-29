@@ -132,7 +132,7 @@ export function JoinGamefolioDialog({
           toast({
             title: "Registration Failed",
             description: error.message,
-            variant: "destructive",
+            variant: "gamefolioError",
           });
         }
       }

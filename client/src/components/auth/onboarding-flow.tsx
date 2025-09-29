@@ -221,7 +221,7 @@ export default function OnboardingFlow({
       toast({
         title: "Error",
         description: "Failed to load games from Twitch. Using local games instead.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       
       await loadFallbackGames();
@@ -243,7 +243,7 @@ export default function OnboardingFlow({
       toast({
         title: "Error",
         description: "Could not load any games. Please try again later.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     }
   };
@@ -290,7 +290,7 @@ export default function OnboardingFlow({
         toast({
           title: "Search Failed",
           description: "Could not search for games. Please try again later.",
-          variant: "destructive",
+          variant: "gamefolioError",
         });
       }
     } finally {
@@ -428,7 +428,7 @@ export default function OnboardingFlow({
       toast({
         title: "Upload failed",
         description: "Could not upload your avatar. Please try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     } finally {
       setIsUploadingAvatar(false);
@@ -458,7 +458,7 @@ export default function OnboardingFlow({
         toast({
           title: "Invalid file type",
           description: "Please select a valid image file (JPEG, PNG, WebP, GIF, BMP, TIFF, SVG, AVIF, HEIC).",
-          variant: "destructive",
+          variant: "gamefolioError",
         });
         return;
       }
@@ -468,7 +468,7 @@ export default function OnboardingFlow({
         toast({
           title: "File too large",
           description: "Please select an image smaller than 5MB.",
-          variant: "destructive",
+          variant: "gamefolioError",
         });
         return;
       }
@@ -557,7 +557,7 @@ export default function OnboardingFlow({
       toast({
         title: "Error",
         description: "We couldn't complete your profile setup. Let's try again!",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     } finally {
       setIsLoading(false);
