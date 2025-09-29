@@ -109,13 +109,14 @@ const GameSelector = ({ games, selectedGame, onSelect }: GameSelectorProps) => {
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between"
+          className="w-full justify-between h-12 sm:h-10 text-base sm:text-sm"
+          data-testid="button-select-game"
         >
-          <div className="flex items-center gap-2 overflow-hidden">
+          <div className="flex items-center gap-3 sm:gap-2 overflow-hidden">
             {selectedGame ? (
               <>
                 {selectedGame.imageUrl ? (
-                  <div className="h-6 w-6 shrink-0 overflow-hidden rounded">
+                  <div className="h-7 w-7 sm:h-6 sm:w-6 shrink-0 overflow-hidden rounded">
                     <img 
                       src={selectedGame.imageUrl}
                       alt={selectedGame.name}
@@ -126,37 +127,38 @@ const GameSelector = ({ games, selectedGame, onSelect }: GameSelectorProps) => {
                     />
                   </div>
                 ) : (
-                  <div className="h-6 w-6 shrink-0 overflow-hidden rounded bg-secondary flex items-center justify-center">
-                    <Gamepad2 className="h-3 w-3 text-muted-foreground" />
+                  <div className="h-7 w-7 sm:h-6 sm:w-6 shrink-0 overflow-hidden rounded bg-secondary flex items-center justify-center">
+                    <Gamepad2 className="h-4 w-4 sm:h-3 sm:w-3 text-muted-foreground" />
                   </div>
                 )}
-                <span className="truncate">{selectedGame.name}</span>
+                <span className="truncate font-medium">{selectedGame.name}</span>
               </>
             ) : (
               <span className="truncate text-muted-foreground">Select a game...</span>
             )}
           </div>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <ChevronsUpDown className="ml-2 h-5 w-5 sm:h-4 sm:w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
+      <PopoverContent className="w-full p-0 max-h-[70vh] max-w-[95vw] sm:max-w-[400px]">
         <Command shouldFilter={false}>
           <CommandInput 
             placeholder="Search for games..." 
             value={searchQuery}
             onValueChange={handleSearchChange}
+            className="h-12 sm:h-9 text-base sm:text-sm"
           />
           
           {isLoading ? (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              <span className="ml-2 text-sm text-muted-foreground">
+            <div className="flex items-center justify-center py-8 px-4">
+              <Loader2 className="h-6 w-6 sm:h-5 sm:w-5 animate-spin text-primary" />
+              <span className="ml-3 sm:ml-2 text-base sm:text-sm text-muted-foreground">
                 {enableSearch ? "Searching games..." : "Loading trending games..."}
               </span>
             </div>
           ) : (
-            <CommandList>
-              <CommandEmpty>
+            <CommandList className="max-h-[50vh] overflow-y-auto">
+              <CommandEmpty className="py-8 px-4 text-center text-base sm:text-sm">
                 {searchQuery.length < 2 
                   ? "Type at least 2 characters to search for games..." 
                   : "No games found. Try a different search term."}
@@ -170,10 +172,12 @@ const GameSelector = ({ games, selectedGame, onSelect }: GameSelectorProps) => {
                       onSelect(game.id === selectedGame?.id ? null : game);
                       setOpen(false);
                     }}
+                    className="p-3 sm:p-2 cursor-pointer min-h-[60px] sm:min-h-[48px]"
+                    data-testid={`game-option-${game.id}`}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3 sm:gap-2 w-full">
                       {game.imageUrl ? (
-                        <div className="h-10 w-10 overflow-hidden rounded">
+                        <div className="h-12 w-12 sm:h-10 sm:w-10 overflow-hidden rounded flex-shrink-0">
                           <img 
                             src={game.imageUrl} 
                             alt={game.name}
@@ -185,21 +189,21 @@ const GameSelector = ({ games, selectedGame, onSelect }: GameSelectorProps) => {
                           />
                         </div>
                       ) : (
-                        <div className="h-10 w-10 flex items-center justify-center rounded bg-secondary">
-                          <Gamepad2 className="h-5 w-5 text-muted-foreground" />
+                        <div className="h-12 w-12 sm:h-10 sm:w-10 flex items-center justify-center rounded bg-secondary flex-shrink-0">
+                          <Gamepad2 className="h-6 w-6 sm:h-5 sm:w-5 text-muted-foreground" />
                         </div>
                       )}
-                      <div className="flex flex-col">
-                        <div className="flex items-center">
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <div className="flex items-center w-full">
                           <Check
                             className={cn(
-                              "mr-2 h-4 w-4",
+                              "mr-2 h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0",
                               selectedGame?.id === game.id ? "opacity-100" : "opacity-0"
                             )}
                           />
-                          <span className="font-medium">{game.name}</span>
+                          <span className="font-medium text-base sm:text-sm truncate">{game.name}</span>
                         </div>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-sm sm:text-xs text-muted-foreground pl-7 sm:pl-6">
                           Twitch ID: {game.id}
                         </span>
                       </div>

@@ -1056,8 +1056,8 @@ const UploadPage = () => {
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="game" className="flex items-center gap-1">
+                <div className="space-y-3 sm:space-y-2">
+                  <Label htmlFor="game" className="flex items-center gap-1 text-base sm:text-sm font-medium">
                     Game 
                     <span className="text-destructive">*</span>
                   </Label>
@@ -1066,8 +1066,8 @@ const UploadPage = () => {
                     selectedGame={selectedGame} 
                     onSelect={setSelectedGame} 
                   />
-                  {!selectedGame && (
-                    <p className="text-xs text-destructive">Please select a game</p>
+                  {!selectedGame && hasAttemptedSubmit && (
+                    <p className="text-sm sm:text-xs text-destructive">Please select a game</p>
                   )}
                 </div>
                 
@@ -1547,8 +1547,8 @@ const UploadPage = () => {
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="reel-game" className="flex items-center gap-1">
+                <div className="space-y-3 sm:space-y-2">
+                  <Label htmlFor="reel-game" className="flex items-center gap-1 text-base sm:text-sm font-medium">
                     Game 
                     <span className="text-destructive">*</span>
                   </Label>
@@ -1557,6 +1557,9 @@ const UploadPage = () => {
                     selectedGame={selectedGame} 
                     onSelect={setSelectedGame} 
                   />
+                  {!selectedGame && hasAttemptedSubmit && (
+                    <p className="text-sm sm:text-xs text-destructive">Please select a game</p>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
@@ -1846,8 +1849,8 @@ const UploadPage = () => {
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="screenshot-game" className="flex items-center gap-1">
+                <div className="space-y-3 sm:space-y-2">
+                  <Label htmlFor="screenshot-game" className="flex items-center gap-1 text-base sm:text-sm font-medium">
                     Game 
                     <span className="text-destructive">*</span>
                   </Label>
@@ -1856,6 +1859,9 @@ const UploadPage = () => {
                     selectedGame={screenshotSelectedGame} 
                     onSelect={setScreenshotSelectedGame} 
                   />
+                  {!screenshotSelectedGame && hasAttemptedSubmit && (
+                    <p className="text-sm sm:text-xs text-destructive">Please select a game</p>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
