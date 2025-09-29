@@ -22,7 +22,7 @@ export function BannerLightbox({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl p-0 bg-black/95 border-none">
+      <DialogContent className="max-w-[90vw] w-full p-0 bg-black/95 border-none overflow-hidden">
         {/* Close button */}
         <Button
           variant="ghost"
@@ -34,13 +34,12 @@ export function BannerLightbox({
         </Button>
         
         {/* Banner image */}
-        <div className="relative flex flex-col items-center justify-center p-8">
-          <div className="relative max-w-full max-h-[80vh]">
+        <div className="relative flex flex-col items-center justify-center p-8 overflow-hidden">
+          <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
             <img
               src={bannerUrl}
               alt={`${displayName}'s banner`}
-              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-              style={{ maxWidth: '1024px', maxHeight: '80vh' }}
+              className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
             />
           </div>
           
