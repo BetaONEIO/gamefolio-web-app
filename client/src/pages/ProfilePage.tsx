@@ -1731,10 +1731,7 @@ const ProfilePage = () => {
                       onDelete={(id) => deleteScreenshotMutation.mutate(id)}
                       onSelect={(screenshot) => {
                         setSelectedScreenshot(screenshot);
-                        // Update URL to include shareCode for proper sharing
-                        if (screenshot.shareCode) {
-                          setLocation(`/@${profile.username}/screenshot/${screenshot.shareCode}`);
-                        }
+                        // Screenshot will open in dialog - no navigation needed
                       }}
                     />
                   );
