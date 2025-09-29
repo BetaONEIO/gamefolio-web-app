@@ -1074,7 +1074,279 @@ const ProfilePage = () => {
       {/* Profile Info - positioned below banner with overlapping profile picture */}
       <div className="container mx-auto px-4 relative z-20">
 
-        <div className="flex items-start gap-4 md:gap-8 pb-6" style={{ marginTop: '-56px', paddingTop: '24px' }}>
+        {/* Mobile Layout - Stacked Vertically */}
+        <div className="block md:hidden pb-6" style={{ marginTop: '-56px', paddingTop: '24px' }}>
+          {/* Profile Picture - Centered on Mobile */}
+          <div className="flex justify-center mb-6" style={{ transform: 'translateY(-28px)' }}>
+            <div className="relative">
+              <div 
+                className="absolute inset-0 rounded-full animate-pulse"
+                style={{
+                  background: `linear-gradient(45deg, hsl(var(--primary)), hsl(var(--card)))`,
+                  padding: '4px',
+                  filter: `drop-shadow(0 0 20px hsl(var(--primary) / 0.4))`,
+                }}
+              >
+                <div className="w-full h-full rounded-full bg-background"></div>
+              </div>
+              <div 
+                className="relative z-10 border-4 border-primary shadow-2xl cursor-pointer hover:opacity-90 transition-opacity w-32 h-32"
+                style={{ 
+                  borderRadius: '8px',
+                  boxShadow: `0 0 30px hsl(var(--primary) / 0.5), 0 0 60px hsl(var(--primary) / 0.2)`
+                }}
+                onClick={() => profile.avatarUrl && openLightbox(profile.avatarUrl, profile.displayName, profile.username)}
+              >
+                <Avatar 
+                  className="w-full h-full"
+                  style={{ 
+                    borderRadius: '8px'
+                  }}
+                >
+                  <AvatarImage src={profile.avatarUrl || undefined} alt={profile.displayName} />
+                  <AvatarFallback
+                    className="text-3xl text-primary-foreground font-bold bg-primary"
+                  >
+                    {profile.displayName.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats under profile picture on mobile */}
+          <div className="flex justify-center gap-8 mb-6" style={{ marginTop: '-20px' }}>
+            <div className="flex flex-col items-center">
+              <span className="font-bold text-xl">{Number(profile._count?.clips || 0)}</span>
+              <span className="text-muted-foreground text-sm">Clips</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="font-bold text-xl">{Number(profile._count?.followers || 0)}</span>
+              <span className="text-muted-foreground text-sm">Followers</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="font-bold text-xl">{Number(profile._count?.following || 0)}</span>
+              <span className="text-muted-foreground text-sm">Following</span>
+            </div>
+          </div>
+
+          {/* Rest of content centered on mobile */}
+          <div className="text-center">
+            {/* Username and Display Name */}
+            <div className="flex flex-col items-center gap-2 mb-6">
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold">{profile.displayName}</h1>
+                <ModeratorBadge 
+                  isModerator={profile.role === "moderator"} 
+                  size="xl" 
+                />
+                {profile.role !== "moderator" && (
+                  <VerificationBadge 
+                    isVerified={!!profile.emailVerified} 
+                    size="xl" 
+                  />
+                )}
+              </div>
+              <span className="text-lg text-white/70 font-normal">@{profile.username}</span>
+
+              {/* Member since date */}
+              {profile.createdAt && (
+                <div className="flex items-center gap-1 mt-2">
+                  <span className="text-sm text-muted-foreground">
+                    Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long' 
+                    })}
+                  </span>
+                </div>
+              )}
+
+              {/* Bio/description */}
+              {profile.bio && (
+                <p className="mt-3 text-base text-foreground/90 px-4">{profile.bio}</p>
+              )}
+            </div>
+
+            {/* Action buttons for mobile */}
+            {!isOwnProfile && currentUser && (
+              <div className="flex flex-col gap-3 mb-6 px-4">
+                <Button 
+                  onClick={handleFollowClick}
+                  variant={followRequestStatus === 'following' ? "outline" : (followRequestStatus === 'requested' ? "outline" : "default")}
+                  size="lg"
+                  disabled={followMutation.isPending}
+                  className="w-full relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
+                  style={followRequestStatus === 'following' || followRequestStatus === 'requested' ? {} : {
+                    boxShadow: `0 4px 15px hsl(var(--primary) / 0.4)`,
+                  }}
+                  data-testid="follow-button"
+                  data-following={followRequestStatus === 'following'}
+                >
+                  {followMutation.isPending ? (
+                    <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-current animate-spin mr-2"></div>
+                  ) : followRequestStatus === 'following' ? (
+                    <UserCheck className="mr-2 h-4 w-4" />
+                  ) : followRequestStatus === 'requested' ? (
+                    <Clock className="mr-2 h-4 w-4" />
+                  ) : (
+                    <UserPlus className="mr-2 h-4 w-4" />
+                  )}
+                  {followRequestStatus === 'following' ? "Following" : 
+                   followRequestStatus === 'requested' ? "Pending" : 
+                   "Follow"}
+                </Button>
+                
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => {
+                      console.log('🎯 MESSAGE BUTTON CLICKED - Setting target user:', username);
+                      setLocation(`/messages?user=${username}`);
+                    }}
+                    variant="outline"
+                    size="lg"
+                    className="flex-1 relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
+                  >
+                    <MessageSquare className="mr-2 h-4 w-4" /> Message
+                  </Button>
+
+                  <GamefolioShareDialog 
+                    username={profile.username}
+                    userProfile={{
+                      displayName: profile.displayName,
+                      bio: profile.bio,
+                      avatarUrl: profile.avatarUrl,
+                      bannerUrl: profile.bannerUrl
+                    }}
+                    trigger={
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        className="flex-1 relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
+                      >
+                        <Share2 className="mr-2 h-4 w-4" /> Share
+                      </Button>
+                    }
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Share button for own profile on mobile */}
+            {isOwnProfile && (
+              <div className="flex justify-center mb-6 px-4">
+                <GamefolioShareDialog 
+                  username={profile.username}
+                  userProfile={{
+                    displayName: profile.displayName,
+                    bio: profile.bio,
+                    avatarUrl: profile.avatarUrl,
+                    bannerUrl: profile.bannerUrl
+                  }}
+                  trigger={
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="w-full relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
+                    >
+                      <Share2 className="mr-2 h-4 w-4" /> Share Profile
+                    </Button>
+                  }
+                />
+              </div>
+            )}
+
+            {/* Platform Connections */}
+            <div className="flex flex-wrap justify-center gap-2 mt-4 px-4">
+              {profile.steamUsername && (
+                <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#1B2838', color: '#FFFFFF' }}>
+                  <SiSteam className="w-3 h-3" />
+                  <span>{profile.steamUsername}</span>
+                </div>
+              )}
+              {profile.xboxUsername && (
+                <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#107C10', color: '#FFFFFF' }}>
+                  <FaXbox className="w-3 h-3" />
+                  <span>{profile.xboxUsername}</span>
+                </div>
+              )}
+              {profile.playstationUsername && (
+                <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#003791', color: '#FFFFFF' }}>
+                  <SiPlaystation className="w-3 h-3" />
+                  <span>{profile.playstationUsername}</span>
+                </div>
+              )}
+              {profile.nintendoUsername && (
+                <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#E60012', color: '#FFFFFF' }}>
+                  <SiNintendo className="w-3 h-3" />
+                  <span>{profile.nintendoUsername}</span>
+                </div>
+              )}
+              {profile.epicUsername && (
+                <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#313131', color: '#FFFFFF' }}>
+                  <SiEpicgames className="w-3 h-3" />
+                  <span>{profile.epicUsername}</span>
+                </div>
+              )}
+              {profile.discordUsername && (
+                <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#5865F2', color: '#FFFFFF' }}>
+                  <SiDiscord className="w-3 h-3" />
+                  <span>{profile.discordUsername}</span>
+                </div>
+              )}
+              {profile.twitterUsername && (
+                <a 
+                  href={`https://twitter.com/${profile.twitterUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: '#1DA1F2', color: '#FFFFFF' }}
+                >
+                  <FaTwitter className="w-3 h-3" />
+                  <span>{profile.twitterUsername}</span>
+                </a>
+              )}
+              {profile.youtubeUsername && (
+                <a 
+                  href={`https://youtube.com/@${profile.youtubeUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: '#FF0000', color: '#FFFFFF' }}
+                >
+                  <FaYoutube className="w-3 h-3" />
+                  <span>{profile.youtubeUsername}</span>
+                </a>
+              )}
+              {profile.instagramUsername && (
+                <a 
+                  href={`https://instagram.com/${profile.instagramUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: '#E4405F', color: '#FFFFFF' }}
+                >
+                  <FaInstagram className="w-3 h-3" />
+                  <span>{profile.instagramUsername}</span>
+                </a>
+              )}
+              {profile.facebookUsername && (
+                <a 
+                  href={`https://facebook.com/${profile.facebookUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: '#1877F2', color: '#FFFFFF' }}
+                >
+                  <FaFacebook className="w-3 h-3" />
+                  <span>{profile.facebookUsername}</span>
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Layout - Horizontal */}
+        <div className="hidden md:flex items-start gap-4 md:gap-8 pb-6" style={{ marginTop: '-56px', paddingTop: '24px' }}>
           {/* Profile Picture positioned to overlap banner */}
           <div className="relative flex-shrink-0" style={{ transform: 'translateY(-28px)' }}>
             <div 
@@ -1088,7 +1360,7 @@ const ProfilePage = () => {
               <div className="w-full h-full rounded-full bg-background"></div>
             </div>
             <div 
-              className="relative z-10 border-4 border-primary shadow-2xl cursor-pointer hover:opacity-90 transition-opacity w-32 h-32 md:w-56 md:h-56"
+              className="relative z-10 border-4 border-primary shadow-2xl cursor-pointer hover:opacity-90 transition-opacity w-56 h-56"
               style={{ 
                 borderRadius: '8px',
                 boxShadow: `0 0 30px hsl(var(--primary) / 0.5), 0 0 60px hsl(var(--primary) / 0.2)`
@@ -1111,13 +1383,13 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          <div className="flex-1 pt-12 md:pt-16">
+          <div className="flex-1 pt-16">
             {/* Username and Display Name with action buttons */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-start gap-4 mb-6">
+            <div className="flex flex-row justify-between items-start gap-4 mb-6">
               <div className="flex flex-col flex-1">
                 <div className="flex items-center gap-4">
-                  <h1 className="text-2xl md:text-3xl font-bold">{profile.displayName}</h1>
-                  <span className="text-lg md:text-xl text-white/70 font-normal">@{profile.username}</span>
+                  <h1 className="text-3xl font-bold">{profile.displayName}</h1>
+                  <span className="text-xl text-white/70 font-normal">@{profile.username}</span>
                   <ModeratorBadge 
                     isModerator={profile.role === "moderator"} 
                     size="xl" 
@@ -1351,11 +1623,6 @@ const ProfilePage = () => {
               )}
             </div>
           </div>
-        </div>
-
-
-
-
         </div>
 
         {/* Spacer for tabs section */}
