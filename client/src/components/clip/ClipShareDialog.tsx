@@ -182,7 +182,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-2xl max-w-[90vw] mx-4 my-8 bg-gray-900 border-2 border-gray-700 text-white" aria-describedby="clip-share-description">
+      <DialogContent className="sm:max-w-2xl max-w-[95vw] mx-2 my-4 max-h-[90vh] bg-gray-900 border-2 border-gray-700 text-white overflow-hidden flex flex-col" aria-describedby="clip-share-description">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
             <Share2 className="w-5 h-5 text-white" />
@@ -217,63 +217,65 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
             </Button>
           </div>
         ) : shareData ? (
-          <div className="space-y-6 px-2">
-            {/* Clip Thumbnail - Made bigger */}
+          <div className="flex-1 overflow-y-auto space-y-4 sm:space-y-6 px-2 pb-4">
+            {/* Clip Thumbnail - Responsive sizing */}
             <div className="flex justify-center">
-              <div className="relative w-96 h-56 bg-gray-800 rounded-lg overflow-hidden border border-gray-600">
+              <div className="relative w-full max-w-sm sm:max-w-md h-48 sm:h-56 bg-gray-800 rounded-lg overflow-hidden border border-gray-600">
                 {/* Use a query to fetch clip data to get the thumbnail URL */}
                 <ClipThumbnail clipId={clipId} shareUrl={shareData.clipUrl} />
                 <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center">
-                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-                    <div className="w-0 h-0 border-l-[8px] border-l-gray-900 border-y-[6px] border-y-transparent ml-0.5"></div>
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center">
+                    <div className="w-0 h-0 border-l-[6px] sm:border-l-[8px] border-l-gray-900 border-y-[4px] sm:border-y-[6px] border-y-transparent ml-0.5"></div>
                   </div>
                 </div>
               </div>
             </div>
             {/* Share Link Section */}
-            <div className="space-y-2 px-2">
+            <div className="space-y-2">
               <h4 className="font-medium text-white">Share Link</h4>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <Input
                   value={shareData.clipUrl}
                   readOnly
                   className="flex-1 text-sm bg-gray-800 border-gray-600 text-white"
                   aria-label="Shareable clip URL"
                 />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopyLink}
-                  className={`px-4 transition-colors ${
-                    copySuccess ? 'text-white bg-blue-600 border-blue-500' : 'text-blue-400 border-blue-500 bg-gray-800 hover:bg-blue-500 hover:text-white'
-                  }`}
-                  aria-label="Copy clip URL to clipboard"
-                >
-                  <Copy className="h-4 w-4 mr-1" />
-                  {copySuccess ? 'Copied!' : 'Copy'}
-                </Button>
-                {/* Native Share API for mobile devices */}
-                {typeof navigator !== 'undefined' && navigator.share && (
+                <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleNativeShare}
-                    className="px-4 bg-blue-500 text-white hover:bg-blue-600 border-blue-500"
-                    aria-label="Share using device's native share menu"
+                    onClick={handleCopyLink}
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 transition-colors ${
+                      copySuccess ? 'text-white bg-blue-600 border-blue-500' : 'text-blue-400 border-blue-500 bg-gray-800 hover:bg-blue-500 hover:text-white'
+                    }`}
+                    aria-label="Copy clip URL to clipboard"
                   >
-                    <Share2 className="h-4 w-4 mr-1" />
-                    Share
+                    <Copy className="h-4 w-4 mr-1" />
+                    {copySuccess ? 'Copied!' : 'Copy'}
                   </Button>
-                )}
+                  {/* Native Share API for mobile devices */}
+                  {typeof navigator !== 'undefined' && navigator.share && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleNativeShare}
+                      className="flex-1 sm:flex-none px-3 sm:px-4 bg-blue-500 text-white hover:bg-blue-600 border-blue-500"
+                      aria-label="Share using device's native share menu"
+                    >
+                      <Share2 className="h-4 w-4 mr-1" />
+                      Share
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
 
             <Separator />
 
             {/* Social Media Platforms Grid */}
-            <div className="space-y-3 px-2">
+            <div className="space-y-3">
               <h4 className="font-medium text-white">Share on social media</h4>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                 {SOCIAL_PLATFORMS.map((platform) => {
                   const Icon = platform.icon;
                   const shareUrl = shareData.socialMediaLinks?.[platform.key as keyof typeof shareData.socialMediaLinks];
@@ -284,21 +286,19 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
                       variant="outline"
                       size="sm"
                       onClick={() => shareUrl && handleSocialShare(platform.name, shareUrl)}
-                      className={`flex flex-col items-center gap-1 p-3 h-auto bg-gray-800 hover:bg-gray-700 transition-colors border border-gray-600 ${platform.color} ${
+                      className={`flex flex-col items-center gap-1 p-2 sm:p-3 h-auto bg-gray-800 hover:bg-gray-700 transition-colors border border-gray-600 ${platform.color} ${
                         !shareUrl ? 'opacity-50 cursor-not-allowed' : ''
                       }`}
                       disabled={!shareUrl}
                       aria-label={`Share on ${platform.name}`}
                     >
-                      <Icon className="w-5 h-5" />
+                      <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                       <span className="text-xs text-gray-300">{platform.name}</span>
                     </Button>
                   );
                 })}
               </div>
             </div>
-
-
           </div>
         ) : (
           <div className="text-center py-12">
