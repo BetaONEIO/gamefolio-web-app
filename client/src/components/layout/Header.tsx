@@ -309,12 +309,20 @@ const Header = () => {
               variant="ghost"
               size="icon"
               className="mr-2 p-2 touch-manipulation"
-              onClick={() => setShowMobileSearch(true)}
+              onClick={() => {
+                console.log("Mobile search button clicked!");
+                setShowMobileSearch(true);
+              }}
               aria-label="Search"
               data-testid="mobile-search-button"
             >
               <Search className="h-5 w-5" />
             </Button>
+          )}
+          
+          {/* Debug: Show mobile status */}
+          {isMobile && (
+            <div className="text-xs text-green-500 mr-2">Mobile Mode</div>
           )}
           
           {user ? (
@@ -414,6 +422,7 @@ const Header = () => {
       {showMobileSearch && (
         <div className="fixed inset-0 bg-black/50 z-50 md:hidden flex flex-col">
           <div className="bg-card w-full p-4 shadow-lg safe-area-top">
+            <div className="text-xs text-green-500 mb-2">Mobile Search Overlay Active</div>
             <div
               ref={mobileSearchRef}
               className="relative max-w-full"
