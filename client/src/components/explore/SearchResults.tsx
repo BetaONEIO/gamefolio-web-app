@@ -29,7 +29,7 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const urlQuery = urlParams.get('q') || initialQuery || "";
-    console.log("Search query updated:", urlQuery); // Debug log
+    console.log("SearchResults useEffect triggered - location:", location, "urlQuery:", urlQuery, "initialQuery:", initialQuery);
     setCurrentQuery(urlQuery);
   }, [initialQuery, location]); // Add location as dependency
   
