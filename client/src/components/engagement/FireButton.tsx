@@ -125,7 +125,7 @@ export function FireButton({
         <div className="flex flex-col items-center gap-1">
           <Button
             variant="ghost"
-            size={size}
+            size="icon"
             onClick={handleFire}
             disabled={isLoading}
             className={cn(

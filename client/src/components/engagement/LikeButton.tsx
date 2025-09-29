@@ -45,7 +45,7 @@ export function LikeButton({
 
   // Update local state when like status is fetched
   useEffect(() => {
-    if (likeStatus !== undefined) {
+    if (likeStatus && typeof likeStatus === 'object' && 'hasLiked' in likeStatus) {
       setLiked(likeStatus.hasLiked);
     }
   }, [likeStatus]);
