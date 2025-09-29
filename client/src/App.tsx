@@ -25,48 +25,57 @@ import { AlertTriangle, X } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
-// Page components
-import HomePage from "./pages/HomePageSimple";
-import ProfilePage from "./pages/ProfilePage";
-import ExplorePage from "./pages/explore-page";
-import TrendingPage from "./pages/TrendingPage";
-import GameClipsPage from "./pages/game-clips-page";
-import GamePage from "./pages/game-page";
-import HashtagPage from "./pages/hashtag-page";
-import ClipPage from "./pages/ClipPage";
-import UploadPage from "./pages/UploadPage";
-import ScreenshotUploadPage from "./pages/ScreenshotUploadPage";
-import AccountSettingsPage from "./pages/AccountSettingsPage";
-import ProfileSettingsPage from "./pages/settings-page";
-import AppearanceSettingsPage from "./pages/AppearanceSettingsPage";
-import GameCategoriesPage from "./pages/GameCategoriesPage";
-
-import LeaderboardPage from "./pages/LeaderboardPage";
-import CustomizePage from "./pages/customize-page";
-import SettingsPage from "./pages/settings-page";
-import AuthPage from "./pages/auth-page";
-import OnboardingPage from "./pages/onboarding-page";
-import MessagesPage from "./pages/MessagesPage";
-import LatestReelsPage from "./pages/LatestReelsPage";
-import LatestClipsPage from "./pages/LatestClipsPage";
-import NotFound from "@/pages/not-found";
-import AdminPage from "./pages/AdminPage";
-import AdminContentFilter from "./pages/AdminContentFilter";
-import ContentFilterTest from "./pages/ContentFilterTest";
-import ViewContentPage from "./pages/ViewContentPage";
-import PostUploadSuccessPage from "./pages/PostUploadSuccessPage";
-
-// Import the new page components
-import VerifyEmailPage from "./pages/verify-email";
-import VerifyCodePage from "./pages/verify-code-page";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import TermsPage from "./pages/terms-page";
-import PrivacyPage from "./pages/privacy-page";
-import ContactPage from "./pages/contact-page";
-import HelpPage from "./pages/help-page";
-import LeaderboardEmbedPage from "./pages/LeaderboardEmbedPage";
+// Lazy-loaded page components for better performance
+import React, { Suspense } from 'react';
 import { DiscordCallback } from "./components/auth/DiscordCallback";
-import React from 'react';
+
+const HomePage = React.lazy(() => import("./pages/HomePageSimple"));
+const ProfilePage = React.lazy(() => import("./pages/ProfilePage"));
+const ExplorePage = React.lazy(() => import("./pages/explore-page"));
+const TrendingPage = React.lazy(() => import("./pages/TrendingPage"));
+const GameClipsPage = React.lazy(() => import("./pages/game-clips-page"));
+const GamePage = React.lazy(() => import("./pages/game-page"));
+const HashtagPage = React.lazy(() => import("./pages/hashtag-page"));
+const ClipPage = React.lazy(() => import("./pages/ClipPage"));
+const UploadPage = React.lazy(() => import("./pages/UploadPage"));
+const ScreenshotUploadPage = React.lazy(() => import("./pages/ScreenshotUploadPage"));
+const AccountSettingsPage = React.lazy(() => import("./pages/AccountSettingsPage"));
+const AppearanceSettingsPage = React.lazy(() => import("./pages/AppearanceSettingsPage"));
+const GameCategoriesPage = React.lazy(() => import("./pages/GameCategoriesPage"));
+const LeaderboardPage = React.lazy(() => import("./pages/LeaderboardPage"));
+const CustomizePage = React.lazy(() => import("./pages/customize-page"));
+const SettingsPage = React.lazy(() => import("./pages/settings-page"));
+const AuthPage = React.lazy(() => import("./pages/auth-page"));
+const OnboardingPage = React.lazy(() => import("./pages/onboarding-page"));
+const MessagesPage = React.lazy(() => import("./pages/MessagesPage"));
+const LatestReelsPage = React.lazy(() => import("./pages/LatestReelsPage"));
+const LatestClipsPage = React.lazy(() => import("./pages/LatestClipsPage"));
+const NotFound = React.lazy(() => import("@/pages/not-found"));
+const AdminPage = React.lazy(() => import("./pages/AdminPage"));
+const AdminContentFilter = React.lazy(() => import("./pages/AdminContentFilter"));
+const ContentFilterTest = React.lazy(() => import("./pages/ContentFilterTest"));
+const ViewContentPage = React.lazy(() => import("./pages/ViewContentPage"));
+const PostUploadSuccessPage = React.lazy(() => import("./pages/PostUploadSuccessPage"));
+const VerifyEmailPage = React.lazy(() => import("./pages/verify-email"));
+const VerifyCodePage = React.lazy(() => import("./pages/verify-code-page"));
+const ResetPasswordPage = React.lazy(() => import("./pages/ResetPasswordPage"));
+const TermsPage = React.lazy(() => import("./pages/terms-page"));
+const PrivacyPage = React.lazy(() => import("./pages/privacy-page"));
+const ContactPage = React.lazy(() => import("./pages/contact-page"));
+const HelpPage = React.lazy(() => import("./pages/help-page"));
+const LeaderboardEmbedPage = React.lazy(() => import("./pages/LeaderboardEmbedPage"));
+
+// Loading component for lazy-loaded routes
+function RouteLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[50vh]">
+      <div className="flex flex-col items-center space-y-4">
+        <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    </div>
+  );
+}
 
 // Component to handle /auth route redirect to modal
 function AuthRedirect() {
@@ -212,7 +221,8 @@ function Router() {
   return (
     <PageTransition>
       <OnboardingGuard>
-        <Switch>
+        <Suspense fallback={<RouteLoader />}>
+          <Switch>
           {/* Public routes accessible to guests */}
           <Route path="/" component={HomePage} />
           <Route path="/trending" component={TrendingPage} />
@@ -281,7 +291,8 @@ function Router() {
           <Route path="/:username" component={ProfilePage} />
 
           <Route component={NotFound} />
-        </Switch>
+          </Switch>
+        </Suspense>
       </OnboardingGuard>
     </PageTransition>
   );
