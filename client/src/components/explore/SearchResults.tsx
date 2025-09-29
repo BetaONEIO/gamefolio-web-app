@@ -27,11 +27,39 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
   
   // Update query when URL changes (including programmatic navigation from header)
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlQuery = urlParams.get('q') || initialQuery || "";
-    console.log("SearchResults useEffect triggered - location:", location, "urlQuery:", urlQuery, "initialQuery:", initialQuery);
-    setCurrentQuery(urlQuery);
-  }, [initialQuery, location]); // Add location as dependency
+    const updateQuery = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlQuery = urlParams.get('q') || initialQuery || "";
+      console.log("SearchResults query updated:", urlQuery);
+      setCurrentQuery(urlQuery);
+    };
+    
+    // Initial load
+    updateQuery();
+    
+    // Listen for URL changes (popstate for back/forward, custom event for programmatic changes)
+    window.addEventListener('popstate', updateQuery);
+    
+    // Listen for pushstate/replacestate changes (for header navigation)
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+    
+    window.history.pushState = function(...args) {
+      originalPushState.apply(window.history, args);
+      setTimeout(updateQuery, 0);
+    };
+    
+    window.history.replaceState = function(...args) {
+      originalReplaceState.apply(window.history, args);
+      setTimeout(updateQuery, 0);
+    };
+    
+    return () => {
+      window.removeEventListener('popstate', updateQuery);
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+    };
+  }, [initialQuery]);
   
   // Use currentQuery instead of the prop
   const query = currentQuery;
