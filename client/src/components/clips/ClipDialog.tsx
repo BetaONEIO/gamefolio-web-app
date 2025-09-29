@@ -233,7 +233,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           "p-0 bg-background text-foreground overflow-hidden clip-dialog-content",
           isMobile && clip?.videoType === 'reel' 
             ? "w-screen h-screen max-w-none max-h-none" // Full screen on mobile for reels
-            : "max-w-[85vw] w-[85vw] max-h-[85vh] h-[85vh]" // Smaller dialog size for better desktop experience
+            : "max-w-[95vw] w-[95vw] max-h-[90vh] h-[90vh]" // Larger dialog size for better content visibility
         )}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -275,7 +275,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               // Mobile Instagram-like behavior for reels only
               clip.videoType === 'reel' && isMobile
                 ? "w-full h-full" // Full screen on mobile for reels
-                : "w-full lg:w-[75%] h-[60vh] lg:h-full", // Same size for both clips and reels on desktop
+                : "w-full lg:w-[65%] h-[60vh] lg:h-full", // Reduced video width to give more space to sidebar
               isTransitioning ? "scale-95" : "scale-100"
             )}>
               {clip.videoType === 'reel' && isMobile ? (
@@ -425,7 +425,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               "h-full flex flex-col",
               clip.videoType === 'reel' && isMobile && !showComments
                 ? "hidden" // Hide sidebar on mobile for reels when comments not shown
-                : "w-full lg:w-[25%]", // Same sidebar width for both clips and reels on desktop
+                : "w-full lg:w-[35%]", // Increased sidebar width to accommodate more description content
               // Show comments as slide-up overlay on mobile for reels
               clip.videoType === 'reel' && isMobile && showComments
                 ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out" 
@@ -493,7 +493,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                 <div>
                   <h1 className="text-xl font-semibold">{clip.title}</h1>
                   {clip.description && (
-                    <p className="text-base text-foreground mt-1">{clip.description}</p>
+                    <p className="text-base text-foreground mt-1 leading-relaxed break-words">{clip.description}</p>
                   )}
 
                   {/* Game name above views/time */}
