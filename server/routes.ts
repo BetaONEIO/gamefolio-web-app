@@ -1088,6 +1088,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Get app version for cache busting
+  app.get("/api/version", (req, res) => {
+    try {
+      const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+      res.json({
+        version: packageJson.version,
+        buildTime: new Date().toISOString()
+      });
+    } catch (error) {
+      res.json({
+        version: "1.0.0",
+        buildTime: new Date().toISOString()
+      });
+    }
+  });
+
   // Get current user (supports guest access)
   app.get("/api/user", (req, res) => {
     if (!req.user) {
