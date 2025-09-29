@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useState } from "react";
 import { VerifiedIcon } from "@/components/ui/verified-icon";
-import { LazyImage } from "@/components/ui/lazy-image";
+import { LazyImage, LazyAvatar } from "@/components/ui/lazy-image";
 
 interface TrendingVideoCardProps {
   clip: ClipWithUser;
@@ -95,12 +95,14 @@ const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) 
           <div className="flex items-center justify-between">
             <Link href={`/profile/${clip.user.username}`} onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src={clip.user.avatarUrl || undefined} />
-                  <AvatarFallback className="text-xs">
-                    {clip.user.displayName?.[0] || clip.user.username[0]}
-                  </AvatarFallback>
-                </Avatar>
+                <LazyAvatar
+                  src={clip.user.avatarUrl}
+                  alt={clip.user.displayName || clip.user.username}
+                  size="sm"
+                  className="h-6 w-6"
+                  fallbackText={clip.user.displayName?.[0] || clip.user.username[0]}
+                  showLoadingSpinner={false}
+                />
                 <span className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
                   {clip.user.displayName || clip.user.username}
                   {clip.user.emailVerified && (
