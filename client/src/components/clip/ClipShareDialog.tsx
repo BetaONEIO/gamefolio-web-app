@@ -11,7 +11,7 @@ import {
   Copy, 
   RefreshCw,
   Facebook,
-  Twitter,
+  X,
   Mail,
   Linkedin,
   Send,
@@ -46,7 +46,7 @@ interface ShareData {
 }
 
 const SOCIAL_PLATFORMS = [
-  { name: "Twitter", icon: Twitter, key: "twitter", color: "text-blue-400" },
+  { name: "X", icon: X, key: "twitter", color: "text-blue-400" },
   { name: "Facebook", icon: Facebook, key: "facebook", color: "text-blue-600" },
   { name: "Reddit", icon: FaReddit, key: "reddit", color: "text-orange-500" },
   { name: "Discord", icon: FaDiscord, key: "discord", color: "text-indigo-500" },
