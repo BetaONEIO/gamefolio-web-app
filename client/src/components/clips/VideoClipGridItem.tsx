@@ -111,8 +111,22 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         </div>
       </div>
 
-      {/* Top right section with stats and delete button */}
-      <div className={`absolute top-2 right-2 flex items-center gap-1 ${
+      {/* Delete button for clip owner - positioned independently in top right corner */}
+      {canDelete && (
+        <Button
+          size="sm"
+          variant="destructive"
+          className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 h-8 w-8 md:h-7 md:w-7"
+          onClick={handleDeleteClick}
+          title="Delete clip"
+          data-testid="button-delete-clip"
+        >
+          <Trash2 className="h-4 w-4 md:h-3 md:w-3" />
+        </Button>
+      )}
+
+      {/* Top right section with stats */}
+      <div className={`absolute top-2 ${canDelete ? 'right-12' : 'right-2'} flex items-center gap-1 ${
         compact ? 'opacity-0 group-hover:opacity-100 transition-opacity duration-300' : ''
       }`}>
         {/* Duration badge */}
@@ -124,20 +138,6 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
             return `${Math.floor(actualDuration / 60)}:${(actualDuration % 60).toString().padStart(2, '0')}`;
           })()}
         </div>
-
-        {/* Delete button for clip owner */}
-        {canDelete && (
-          <Button
-            size="sm"
-            variant="destructive"
-            className="bg-red-600 hover:bg-red-700 text-white p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 h-8 w-8 md:h-7 md:w-7"
-            onClick={handleDeleteClick}
-            title="Delete clip"
-            data-testid="button-delete-clip"
-          >
-            <Trash2 className="h-4 w-4 md:h-3 md:w-3" />
-          </Button>
-        )}
 
         {/* View count with icon - show only in non-compact mode */}
         {!compact && (
