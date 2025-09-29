@@ -415,7 +415,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                 ? "w-full h-full" // Full screen on mobile for reels
                 : isMobile
                   ? "w-full flex-[0_0_clamp(280px,50vh,60vh)]" // Flexible height with reasonable bounds for mobile
-                  : "w-full lg:w-[65%] h-[60vh] lg:h-full", // Desktop layout
+                  : clip.videoType === 'reel'
+                    ? "w-full lg:w-[400px] h-full flex-shrink-0 mx-auto" // Fixed width container for reels on desktop
+                    : "w-full lg:w-[65%] h-[60vh] lg:h-full", // Desktop layout for regular clips
               isTransitioning ? "scale-95" : "scale-100"
             )}>
               {clip.videoType === 'reel' && isMobile ? (
