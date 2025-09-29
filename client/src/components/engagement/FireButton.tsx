@@ -83,7 +83,7 @@ export function FireButton({
       toast({
         title: "Error",
         description: error.message,
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });
@@ -103,7 +103,7 @@ export function FireButton({
       toast({
         title: "Cannot fire own content",
         description: "You cannot fire your own content, casual!",
-        variant: "destructive"
+        variant: "gamefolioError"
       });
       return;
     }

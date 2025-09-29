@@ -95,7 +95,7 @@ export function LikeButton({
       toast({
         title: "Error",
         description: error.message || "Failed to toggle like",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });
@@ -115,7 +115,7 @@ export function LikeButton({
       toast({
         title: "Cannot like own content",
         description: "You cannot like your own content, casual!",
-        variant: "destructive"
+        variant: "gamefolioError"
       });
       return;
     }
