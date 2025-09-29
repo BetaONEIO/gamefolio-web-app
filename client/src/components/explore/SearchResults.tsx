@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClipWithUser, Game, User, Screenshot } from "@shared/schema";
@@ -14,32 +14,50 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 interface SearchResultsProps {
-  query: string;
+  query?: string;
 }
 
-const SearchResults = ({ query }: SearchResultsProps) => {
+const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
   const [activeTab, setActiveTab] = useState("all");
   const { user } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location] = useLocation();
+  
+  // Get current query from URL to make component reactive to URL changes
+  const [currentQuery, setCurrentQuery] = useState("");
+  
+  // Update query when URL changes (including programmatic navigation from header)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlQuery = urlParams.get('q') || initialQuery || "";
+    setCurrentQuery(urlQuery);
+  }, [initialQuery, location]); // Add location as dependency
+  
+  // Use currentQuery instead of the prop
+  const query = currentQuery;
 
   const { data: clipResults, isLoading: isLoadingClips } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/search/clips?q=${encodeURIComponent(query)}`],
+    enabled: !!query && query.trim().length > 0,
   });
 
   const { data: reelResults, isLoading: isLoadingReels } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/search/reels?q=${encodeURIComponent(query)}`],
+    enabled: !!query && query.trim().length > 0,
   });
 
   const { data: screenshotResults, isLoading: isLoadingScreenshots } = useQuery<Screenshot[]>({
     queryKey: [`/api/search/screenshots?q=${encodeURIComponent(query)}`],
+    enabled: !!query && query.trim().length > 0,
   });
 
   const { data: userResults, isLoading: isLoadingUsers } = useQuery<User[]>({
     queryKey: [`/api/search/users?q=${encodeURIComponent(query)}`],
+    enabled: !!query && query.trim().length > 0,
   });
 
   const { data: gameResults, isLoading: isLoadingGames } = useQuery<Game[]>({
     queryKey: [`/api/search/games?q=${encodeURIComponent(query)}`],
+    enabled: !!query && query.trim().length > 0,
   });
 
   const isLoading = isLoadingClips || isLoadingReels || isLoadingScreenshots || isLoadingUsers || isLoadingGames;
@@ -359,7 +377,7 @@ const UserResultCard = ({ user }: UserResultCardProps) => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries([`/api/users/${user.id}/following/check`]);
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user.id}/following/check`] });
       toast({
         description: isFollowing ? `Unfollowed ${user.displayName}` : `Following ${user.displayName}`,
         variant: "gamefolioSuccess",
