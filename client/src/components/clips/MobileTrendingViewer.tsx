@@ -290,6 +290,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose }: Mob
                 <LikeButton
                   contentId={currentItem.id}
                   contentType={isVideoContent(currentItem) ? "clip" : "screenshot"}
+                  contentOwnerId={currentItem.user.id}
                   initialLiked={false}
                   initialCount={stats.likes}
                   size="lg"
