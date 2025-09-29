@@ -157,7 +157,7 @@ export default function SettingsPage() {
         toast({
           title: "File too large",
           description: "Profile picture must be less than 5MB",
-          variant: "destructive",
+          variant: "gamefolioError",
         });
         return;
       }
@@ -167,7 +167,7 @@ export default function SettingsPage() {
         toast({
           title: "Invalid file type",
           description: "Please select an image file",
-          variant: "destructive",
+          variant: "gamefolioError",
         });
         return;
       }

@@ -84,7 +84,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
     },
     onError: (error) => {
       setUploadStatus('error');
-      toast({ title: 'Error', description: 'Screenshot upload failed', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Screenshot upload failed', variant: 'gamefolioError' });
       console.error('Screenshot upload error:', error);
     }
   });
@@ -120,7 +120,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
     },
     onError: (error) => {
       setUploadStatus('error');
-      toast({ title: 'Error', description: 'Video processing failed', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Video processing failed', variant: 'gamefolioError' });
       console.error('Video processing error:', error);
     }
   });
@@ -148,7 +148,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
     const isImage = file.type.startsWith('image/');
 
     if (!isVideo && !isImage) {
-      toast({ title: 'Error', description: 'Please select a video or image file', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Please select a video or image file', variant: 'gamefolioError' });
       return;
     }
 
@@ -175,7 +175,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
       toast({
         title: 'File Too Large',
         description: `File size must be less than ${maxSizeMB}MB for ${uploadType}s`,
-        variant: 'destructive'
+        variant: 'gamefolioError'
       });
       return false;
     }

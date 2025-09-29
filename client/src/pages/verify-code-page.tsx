@@ -50,7 +50,7 @@ export default function VerifyCodePage() {
       toast({
         title: "Invalid Code",
         description: "Please enter a 6-digit verification code.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       return;
     }
@@ -85,7 +85,7 @@ export default function VerifyCodePage() {
         toast({
           title: "Verification Failed",
           description: data.message || "Invalid or expired verification code.",
-          variant: "destructive",
+          variant: "gamefolioError",
         });
       }
     } catch (error) {
@@ -93,7 +93,7 @@ export default function VerifyCodePage() {
       toast({
         title: "Error",
         description: "Network error. Please check your connection and try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     } finally {
       setIsVerifying(false);
@@ -133,7 +133,7 @@ export default function VerifyCodePage() {
         toast({
           title: "Please wait",
           description: data.message || `Please wait ${retryAfterSeconds} seconds before requesting another code.`,
-          variant: "destructive",
+          variant: "gamefolioError",
         });
         
         // Set cooldown based on server response
@@ -143,14 +143,14 @@ export default function VerifyCodePage() {
         toast({
           title: "Failed to send code",
           description: data.message || "Please try again later.",
-          variant: "destructive",
+          variant: "gamefolioError",
         });
       }
     } catch (error) {
       toast({
         title: "Error",
         description: "Unable to send verification code. Please try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     } finally {
       setIsResending(false);

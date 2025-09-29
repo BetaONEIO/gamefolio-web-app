@@ -196,7 +196,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       return;
     }
@@ -205,7 +205,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       toast({
         title: "Error",
         description: "Username is already taken. Please choose a different one.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       return;
     }
@@ -214,7 +214,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       toast({
         title: "Error",
         description: "Please wait for username availability check to complete",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       return;
     }
@@ -225,7 +225,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       toast({
         title: "Error",
         description: "Please enter a valid email address",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       return;
     }
@@ -235,7 +235,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       toast({
         title: "Error",
         description: "Passwords do not match",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       return;
     }
@@ -246,7 +246,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       toast({
         title: "Error",
         description: "Password must meet all requirements",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       return;
     }

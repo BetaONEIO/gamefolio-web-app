@@ -80,7 +80,7 @@ const ForgotPasswordForm = ({ onBack }: ForgotPasswordFormProps) => {
         toast({
           title: 'Request Failed',
           description: data.message || 'Unable to process password reset request',
-          variant: 'destructive',
+          variant: 'gamefolioError',
         });
       }
     } catch (error) {

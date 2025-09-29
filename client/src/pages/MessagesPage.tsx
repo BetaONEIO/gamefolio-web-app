@@ -156,7 +156,7 @@ const MessagesPage: React.FC = () => {
       toast({
         title: "Error",
         description: "Failed to search users",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });
@@ -190,7 +190,7 @@ const MessagesPage: React.FC = () => {
       toast({
         title: "Error",
         description: error.message || "Failed to send message",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });
@@ -214,7 +214,7 @@ const MessagesPage: React.FC = () => {
       toast({
         title: "Error",
         description: error.message || "Failed to start conversation",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });
@@ -250,7 +250,7 @@ const MessagesPage: React.FC = () => {
       toast({
         title: "❌ Failed to block user",
         description: error.message || "Unable to block user. Please try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });
@@ -284,7 +284,7 @@ const MessagesPage: React.FC = () => {
       toast({
         title: "❌ Failed to unblock user",
         description: error.message || "Unable to unblock user. Please try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });
@@ -310,7 +310,7 @@ const MessagesPage: React.FC = () => {
       toast({
         title: "Error",
         description: error.message || "Failed to delete message",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });
@@ -333,7 +333,7 @@ const MessagesPage: React.FC = () => {
       toast({
         title: "Error",
         description: error.message || "Failed to delete conversation",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });
