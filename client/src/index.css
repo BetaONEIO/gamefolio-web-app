@@ -110,10 +110,7 @@
   }
 }
 
-/* Global zoom out by 20% */
-html {
-  zoom: 0.8;
-}
+/* Zoom removed to prevent horizontal scroll bar issues */
 
 /* Remove focus outline from video elements */
 video {
