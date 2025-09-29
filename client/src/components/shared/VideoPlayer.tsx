@@ -72,13 +72,12 @@ const VideoPlayer = ({
           clearTimeout(timeoutRef.current);
         }
       } else {
-        // When user actively starts playing, unmute and set to full volume
-        if (isMuted) {
-          videoRef.current.muted = false;
-          videoRef.current.volume = 1;
-          setVolume(1);
-          setIsMuted(false);
-        }
+        // When user actively starts playing, always set to full volume and unmute
+        videoRef.current.muted = false;
+        videoRef.current.volume = 1;
+        setVolume(1);
+        setIsMuted(false);
+        
         videoRef.current.play().catch(err => {
           console.error("Video play() was interrupted:", err);
           setIsPlaying(false);
