@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 import { VerifiedIcon } from "@/components/ui/verified-icon";
+import { LazyImage } from "@/components/ui/lazy-image";
 
 interface VideoClipGridItemProps {
   clip: ClipWithUser;
@@ -68,11 +69,15 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
       }}
       onClick={handleOpenClip}
     >
-      {/* Thumbnail with enhanced visual appearance */}
-      <img
+      {/* Thumbnail with enhanced visual appearance and lazy loading */}
+      <LazyImage
         src={thumbnailUrl}
         alt={clip.title || "Video clip thumbnail"}
         className="w-full h-full object-cover"
+        placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%23f3f4f6'/%3e%3c/svg%3e"
+        showLoadingSpinner={true}
+        rootMargin="100px"
+        threshold={0.1}
       />
 
       {/* View count overlay on hover */}

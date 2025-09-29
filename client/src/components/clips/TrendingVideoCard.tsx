@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useState } from "react";
 import { VerifiedIcon } from "@/components/ui/verified-icon";
+import { LazyImage } from "@/components/ui/lazy-image";
 
 interface TrendingVideoCardProps {
   clip: ClipWithUser;
@@ -39,14 +40,21 @@ const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) 
             : '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
         }}
       >
-        {/* Thumbnail */}
+        {/* Thumbnail with lazy loading */}
         <div className="relative overflow-hidden aspect-video bg-gray-900">
           {!imageError ? (
-            <img
+            <LazyImage
               src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
               alt={clip.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              onError={() => setImageError(true)}
+              placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%23374151'/%3e%3c/svg%3e"
+              showLoadingSpinner={true}
+              rootMargin="50px"
+              fallback={
+                <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                  <Play className="h-12 w-12 text-gray-500" />
+                </div>
+              }
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-800">
