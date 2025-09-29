@@ -233,7 +233,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           "p-0 bg-background text-foreground overflow-hidden clip-dialog-content",
           isMobile && clip?.videoType === 'reel' 
             ? "w-screen h-screen max-w-none max-h-none" // Full screen on mobile for reels
-            : "max-w-[95%] w-[95%] max-h-[90vh] h-[90vh]" // Larger dialog size for better content visibility
+            : isMobile 
+              ? "w-screen h-screen max-w-none max-h-none sm:max-w-[95%] sm:w-[95%] sm:max-h-[90vh] sm:h-[90vh]" // Full screen on mobile for better viewing, responsive on larger screens
+              : "max-w-[95%] w-[95%] max-h-[90vh] h-[90vh]" // Desktop size
         )}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -245,8 +247,13 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
         <DialogDescription className="sr-only">
           {clip ? `Video by ${clip.user?.displayName || clip.user?.username || 'Unknown user'}` : 'Video content viewer'}
         </DialogDescription>
-        <DialogClose className="absolute right-4 top-4 z-10 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-          <X className="h-6 w-6" />
+        <DialogClose className={cn(
+          "absolute z-10 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
+          isMobile 
+            ? "right-2 top-2 p-3 bg-black/30 backdrop-blur-sm hover:bg-black/50" // Larger touch target with better visibility on mobile
+            : "right-4 top-4 p-2"
+        )}>
+          <X className={cn("text-white", isMobile ? "h-6 w-6" : "h-5 w-5")} />
           <span className="sr-only">Close</span>
         </DialogClose>
 
@@ -275,7 +282,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               // Mobile Instagram-like behavior for reels only
               clip.videoType === 'reel' && isMobile
                 ? "w-full h-full" // Full screen on mobile for reels
-                : "w-full lg:w-[65%] h-[60vh] lg:h-full", // Reduced video width to give more space to sidebar
+                : isMobile
+                  ? "w-full h-[70vh]" // Better mobile height for regular clips
+                  : "w-full lg:w-[65%] h-[60vh] lg:h-full", // Desktop layout
               isTransitioning ? "scale-95" : "scale-100"
             )}>
               {clip.videoType === 'reel' && isMobile ? (
@@ -420,20 +429,21 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               />
             )}
 
-            {/* Right side - Info and comments (hidden on mobile for reels when comments not shown) */}
+            {/* Right side - Info and comments */}
             <div className={cn(
               "h-full flex flex-col",
               clip.videoType === 'reel' && isMobile && !showComments
                 ? "hidden" // Hide sidebar on mobile for reels when comments not shown
-                : "w-full lg:w-[35%]", // Increased sidebar width to accommodate more description content
-              // Show comments as slide-up overlay on mobile for reels
-              clip.videoType === 'reel' && isMobile && showComments
-                ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out" 
-                : ""
+                : clip.videoType === 'reel' && isMobile && showComments
+                  ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out" // Show comments as slide-up overlay on mobile for reels
+                  : isMobile && clip.videoType !== 'reel'
+                    ? "w-full h-[30vh] overflow-y-auto" // Better mobile layout for regular clips
+                    : "w-full lg:w-[35%]" // Desktop layout
             )}>
               {/* Header with username (mobile comments header or regular header) */}
               <div className={cn(
-                "border-b border-border p-4 flex items-center justify-between",
+                "border-b border-border flex items-center justify-between",
+                isMobile ? "p-3" : "p-4", // Better mobile padding
                 clip.videoType === 'reel' && isMobile && showComments 
                   ? "relative" // Add relative positioning for mobile comments header
                   : ""
@@ -488,12 +498,15 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               </div>
 
               {/* Comments and content section - scrollable */}
-              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+              <div className={cn(
+                "flex-1 overflow-y-auto space-y-3",
+                isMobile ? "px-3 py-2" : "px-4 py-3" // Better mobile padding
+              )}>
                 {/* Title and description */}
                 <div>
-                  <h1 className="text-xl font-semibold">{clip.title}</h1>
+                  <h1 className={cn("font-semibold", isMobile ? "text-lg" : "text-xl")}>{clip.title}</h1>
                   {clip.description && (
-                    <p className="text-base text-foreground mt-1 leading-relaxed break-words">{clip.description}</p>
+                    <p className={cn("text-foreground mt-1 leading-relaxed break-words", isMobile ? "text-sm" : "text-base")}>{clip.description}</p>
                   )}
 
                   {/* Game name above views/time */}
