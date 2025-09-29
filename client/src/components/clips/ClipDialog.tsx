@@ -389,6 +389,12 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       objectFit="contain"
                       clipId={clip.id}
                     />
+                    {/* Reel badge indicator */}
+                    <div className="absolute top-4 right-4 z-50">
+                      <span className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-bold">
+                        Reel
+                      </span>
+                    </div>
                   </div>
                 </div>
               ) : (
