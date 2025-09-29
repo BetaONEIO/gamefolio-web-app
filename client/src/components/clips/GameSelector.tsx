@@ -140,7 +140,7 @@ const GameSelector = ({ games, selectedGame, onSelect }: GameSelectorProps) => {
           <ChevronsUpDown className="ml-2 h-5 w-5 sm:h-4 sm:w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0 max-h-[70vh] max-w-[95vw] sm:max-w-[400px]">
+      <PopoverContent className="w-full p-0 max-h-[70vh] max-w-[95%] sm:max-w-[400px]">
         <Command shouldFilter={false}>
           <CommandInput 
             placeholder="Search for games..." 

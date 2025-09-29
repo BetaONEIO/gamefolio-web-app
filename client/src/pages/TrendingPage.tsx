@@ -598,7 +598,7 @@ const TrendingPage: React.FC = () => {
 
       {/* Screenshot Modal Dialog */}
       <Dialog open={!!selectedScreenshot} onOpenChange={() => setSelectedScreenshot(null)}>
-        <DialogContent className="max-w-[95vw] w-[95vw] p-0 bg-background text-foreground max-h-[95vh] h-[95vh] overflow-hidden">
+        <DialogContent className="max-w-[95%] w-[95%] p-0 bg-background text-foreground max-h-[95vh] h-[95vh] overflow-hidden">
 
           {selectedScreenshot && (
             <div className="flex flex-col lg:flex-row h-full">

@@ -233,7 +233,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           "p-0 bg-background text-foreground overflow-hidden clip-dialog-content",
           isMobile && clip?.videoType === 'reel' 
             ? "w-screen h-screen max-w-none max-h-none" // Full screen on mobile for reels
-            : "max-w-[95vw] w-[95vw] max-h-[90vh] h-[90vh]" // Larger dialog size for better content visibility
+            : "max-w-[95%] w-[95%] max-h-[90vh] h-[90vh]" // Larger dialog size for better content visibility
         )}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
