@@ -5,7 +5,7 @@ import { ClipWithUser, Game, User, Screenshot } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import VideoClipCard from "@/components/clips/VideoClipCard";
 import TrendingGameCard from "@/components/clips/TrendingGameCard";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { UserPlus, Check, Search, FileImage, Film, Video } from "lucide-react";
@@ -20,6 +20,7 @@ interface SearchResultsProps {
 const SearchResults = ({ query }: SearchResultsProps) => {
   const [activeTab, setActiveTab] = useState("all");
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
 
   const { data: clipResults, isLoading: isLoadingClips } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/search/clips?q=${encodeURIComponent(query)}`],
@@ -96,9 +97,12 @@ const SearchResults = ({ query }: SearchResultsProps) => {
                 <li>• Searching for hashtags with #</li>
               </ul>
             </div>
-            <Link href="/explore" className="mt-6 inline-block">
-              <Button>Browse Explore Page</Button>
-            </Link>
+            <Button 
+              onClick={() => setLocation("/explore")}
+              className="mt-6"
+            >
+              Browse Explore Page
+            </Button>
           </div>
         ) : (
           <>
