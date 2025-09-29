@@ -404,9 +404,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               "h-full flex flex-col",
               clip.videoType === 'reel' && isMobile && !showComments
                 ? "hidden" // Hide sidebar on mobile for reels when comments not shown
-                : clip.videoType === 'reel' 
-                  ? "w-full lg:w-[35%]" // Adjusted sidebar for reels
-                  : "w-full lg:w-[25%]",  // Standard sidebar for clips
+                : "w-full lg:w-[25%]", // Same sidebar width for both clips and reels on desktop
               // Show comments as slide-up overlay on mobile for reels
               clip.videoType === 'reel' && isMobile && showComments
                 ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out" 
