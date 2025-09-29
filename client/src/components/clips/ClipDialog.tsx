@@ -306,7 +306,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               {clip.videoType === 'reel' && isMobile ? (
                 // Special mobile fullscreen layout for reels only
                 <div className="h-full flex items-center justify-center bg-black relative">
-                  <div className="h-full max-h-full aspect-[9/16] bg-black relative">
+                  <div className="w-full max-w-full max-h-full aspect-[9/16] bg-black relative">
                     <VideoPlayer 
                       videoUrl={clip.videoUrl} 
                       thumbnailUrl={clip.thumbnailUrl || (clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined)} 
