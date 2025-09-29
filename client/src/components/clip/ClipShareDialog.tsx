@@ -182,7 +182,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-2xl max-w-[95vw] mx-2 my-4 max-h-[90vh] bg-gray-900 border-2 border-gray-700 text-white overflow-hidden flex flex-col" aria-describedby="clip-share-description">
+      <DialogContent className="sm:max-w-2xl max-w-[90vw] mx-4 my-6 max-h-[85vh] bg-gray-900 border-2 border-gray-700 text-white overflow-hidden flex flex-col" aria-describedby="clip-share-description">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
             <Share2 className="w-5 h-5 text-white" />
