@@ -327,8 +327,8 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         </div>
                       </div>
                       
-                      {/* Right side action buttons */}
-                      <div className="absolute right-6 bottom-32 flex flex-col items-center space-y-4 z-50 pointer-events-auto">
+                      {/* Right side action buttons - improved mobile spacing and positioning */}
+                      <div className="absolute right-4 bottom-28 flex flex-col items-center space-y-6 z-50 pointer-events-auto">
                         <FireButton 
                           contentId={clip.id}
                           contentType="clip"
@@ -352,12 +352,12 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         <div className="flex flex-col items-center">
                           <button 
                             onClick={() => setShowComments(true)}
-                            className="p-3 rounded-full bg-black/30 backdrop-blur-sm"
+                            className="p-4 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors"
                             data-testid="button-comments"
                           >
-                            <MessageSquare className="h-6 w-6 text-white" />
+                            <MessageSquare className="h-7 w-7 text-white" />
                           </button>
-                          <span className="text-white text-xs mt-1">{comments?.length || 0}</span>
+                          <span className="text-white text-sm font-medium mt-1">{comments?.length || 0}</span>
                         </div>
                         
                         <div className="flex flex-col items-center">
@@ -365,23 +365,23 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                             clipId={clip.id} 
                             isOwnContent={user?.id === clip.userId}
                             trigger={
-                              <button className="p-3 rounded-full bg-black/30 backdrop-blur-sm">
-                                <Send className="h-6 w-6 text-white" />
+                              <button className="p-4 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors">
+                                <Send className="h-7 w-7 text-white" />
                               </button>
                             } 
                           />
                         </div>
                       </div>
                       
-                      {/* Bottom overlay with title and description */}
-                      <div className="absolute bottom-4 left-4 right-24 z-40">
-                        <h2 className="text-white font-semibold text-lg mb-1">{clip.title}</h2>
+                      {/* Bottom overlay with title and description - improved mobile layout */}
+                      <div className="absolute bottom-4 left-4 right-20 z-40">
+                        <h2 className="text-white font-semibold text-xl mb-2 leading-tight">{clip.title}</h2>
                         {clip.description && (
-                          <p className="text-white/80 text-sm">{clip.description}</p>
+                          <p className="text-white/90 text-base leading-relaxed line-clamp-3">{clip.description}</p>
                         )}
                         {clip.game && (
-                          <div className="mt-2">
-                            <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold">
+                          <div className="mt-3">
+                            <span className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-bold shadow-lg">
                               {clip.game.name}
                             </span>
                           </div>
