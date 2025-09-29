@@ -182,26 +182,34 @@ export function LikeButton({
   // Horizontal layout (original)
   return (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         <Button
           variant="ghost"
-          size="sm" // Keep 'sm' for ghost buttons to maintain padding
-          className={`${buttonSizeClasses[size]} flex items-center gap-1 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors ${
+          size="sm"
+          className={cn(
+            "p-1.5 h-auto transition-colors hover:bg-red-50 dark:hover:bg-red-900/20",
             liked ? 'text-red-500 hover:text-red-600' : 'text-gray-500 hover:text-red-500'
-          }`}
+          )}
           onClick={handleLike}
           disabled={likeMutation.isPending}
         >
           <Heart 
             size={iconSizes[size]} 
-            className={`transition-all duration-200 ${
+            className={cn(
+              "transition-all duration-200",
               liked ? 'fill-current scale-110' : 'hover:scale-105'
-            }`}
+            )}
           />
-          {count > 0 && showCount && ( // Added showCount check here as well
-            <span className="font-medium">{count}</span>
-          )}
         </Button>
+        {showCount && (
+          <span className={cn(
+            "font-medium min-w-[1rem] text-center transition-colors",
+            countTextSizes[size],
+            liked ? 'text-red-500' : 'text-muted-foreground'
+          )}>
+            {count}
+          </span>
+        )}
       </div>
       
       <JoinGamefolioDialog 
