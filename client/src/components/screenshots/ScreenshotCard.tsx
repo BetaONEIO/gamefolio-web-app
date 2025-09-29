@@ -70,6 +70,16 @@ export function ScreenshotCard({
       return;
     }
     
+    // Prevent users from liking their own content
+    if (currentUser?.id === screenshot.userId) {
+      toast({
+        title: "Cannot like own content",
+        description: "You cannot like your own content, casual!",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     // Trigger animation when liking (not unliking)
     if (!hasUserLiked) {
       setIsAnimating(true);

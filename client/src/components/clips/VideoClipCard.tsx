@@ -88,6 +88,16 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
       return;
     }
     
+    // Prevent users from liking their own content
+    if (user?.id === clip.userId) {
+      toast({
+        title: "Cannot like own content",
+        description: "You cannot like your own content, casual!",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     // Trigger animation when liking (not unliking)
     if (!hasUserLiked) {
       setIsAnimating(true);
