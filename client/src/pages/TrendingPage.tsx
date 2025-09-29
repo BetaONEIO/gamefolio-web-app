@@ -340,7 +340,7 @@ const TrendingPage: React.FC = () => {
       toast({
         title: "Delete failed",
         description: error.message || "Failed to delete screenshot. Please try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });

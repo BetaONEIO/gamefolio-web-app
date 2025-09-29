@@ -337,7 +337,7 @@ const ProfilePage = () => {
       toast({
         title: "Delete failed",
         description: error.message || "Failed to delete clip. Please try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });
@@ -362,7 +362,7 @@ const ProfilePage = () => {
       toast({
         title: "Delete failed",
         description: error.message || "Failed to delete screenshot. Please try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });
@@ -623,7 +623,7 @@ const ProfilePage = () => {
       // Show error toast
       toast({
         description: (err as Error).message || "An error occurred. Please try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
     onSuccess: (result) => {
@@ -692,7 +692,7 @@ const ProfilePage = () => {
       toast({
         title: "Failed to remove game",
         description: error.message || "Something went wrong",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });

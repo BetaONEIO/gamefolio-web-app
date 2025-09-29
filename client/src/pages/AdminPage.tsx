@@ -109,7 +109,7 @@ function BannerManagement() {
       toast({
         title: "Error",
         description: error.message || "Failed to update banner settings.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     } finally {
       setIsLoading(false);
@@ -135,7 +135,7 @@ function BannerManagement() {
       toast({
         title: "Error",
         description: error.message || "Failed to reset banner settings.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     } finally {
       setIsLoading(false);
@@ -496,7 +496,7 @@ const AdminPage = () => {
       toast({
         title: "Error",
         description: "Failed to ban user. Please try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     }
   };
@@ -513,7 +513,7 @@ const AdminPage = () => {
       toast({
         title: "Error",
         description: "Failed to unban user. Please try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     }
   };
@@ -530,7 +530,7 @@ const AdminPage = () => {
       toast({
         title: "Error",
         description: "Failed to update user role. Please try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     }
   };
@@ -547,7 +547,7 @@ const AdminPage = () => {
       toast({
         title: "Error",
         description: "Failed to update user role. Please try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     }
   };
@@ -573,7 +573,7 @@ const AdminPage = () => {
       toast({
         title: "Error",
         description: "Failed to reset password. Please try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     }
   };
@@ -593,7 +593,7 @@ const AdminPage = () => {
         toast({
           title: "Error",
           description: "Failed to delete user. Please try again.",
-          variant: "destructive",
+          variant: "gamefolioError",
         });
       }
     }
@@ -612,7 +612,7 @@ const AdminPage = () => {
         toast({
           title: "Error",
           description: "Failed to delete clip. Please try again.",
-          variant: "destructive",
+          variant: "gamefolioError",
         });
       }
     }
@@ -635,7 +635,7 @@ const AdminPage = () => {
       toast({
         title: "Error",
         description: "Failed to assign badge. Please try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     }
   };
@@ -652,7 +652,7 @@ const AdminPage = () => {
       toast({
         title: "Error",
         description: "Failed to remove badge. Please try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     }
   };
@@ -668,7 +668,7 @@ const AdminPage = () => {
       toast({
         title: "Error",
         description: "Failed to cleanup badges. Please try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     }
   };
@@ -679,7 +679,7 @@ const AdminPage = () => {
       toast({
         title: "Error",
         description: "Badge name is required.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       return;
     }
@@ -713,7 +713,7 @@ const AdminPage = () => {
       toast({
         title: "Error",
         description: "Failed to create badge. Please try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     } finally {
       setCreateBadgeLoading(false);
@@ -736,7 +736,7 @@ const AdminPage = () => {
       toast({
         title: "Error",
         description: "Failed to delete badge. It may be assigned to users.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     }
   };
@@ -763,7 +763,7 @@ const AdminPage = () => {
       toast({
         title: "Error",
         description: "Failed to upload image. Please try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     }
   };
@@ -813,7 +813,7 @@ const AdminPage = () => {
       toast({
         title: "Error",
         description: "Failed to update hero text",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     }
   };
@@ -1678,7 +1678,7 @@ const AdminPage = () => {
                             toast({
                               title: "Missing Information",
                               description: "Please select both a user and badge type.",
-                              variant: "destructive",
+                              variant: "gamefolioError",
                             });
                           }
                         }}

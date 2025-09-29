@@ -250,7 +250,7 @@ const ClipPage = () => {
       toast({
         title: "Error",
         description: "Failed to like the clip. Please try again.",
-        variant: "destructive"
+        variant: "gamefolioError"
       });
     }
   });

@@ -143,7 +143,7 @@ const ExplorePage = () => {
       .catch(() => toast({
         title: "Error",
         description: "Failed to refresh trending games",
-        variant: "destructive",
+        variant: "gamefolioError",
       }));
   };
 

@@ -28,7 +28,7 @@ export default function HelpPage() {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       return;
     }
@@ -55,7 +55,7 @@ export default function HelpPage() {
       toast({
         title: "Error",
         description: "Failed to send your support request. Please try again.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     } finally {
       setIsSubmitting(false);

@@ -356,7 +356,7 @@ const UploadPage = () => {
       toast({
         title: "Upload failed",
         description: error.message,
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });
@@ -511,7 +511,7 @@ const UploadPage = () => {
       toast({
         title: "Upload failed",
         description: error.message,
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       setIsUploading(false);
       setUploadProgress(0);
@@ -549,7 +549,7 @@ const UploadPage = () => {
       toast({
         title: "Video too long",
         description: `Your video is ${Math.round(videoDuration / 60 * 10) / 10} minutes long. Clips must be 5 minutes or less.`,
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       return;
     }
@@ -560,7 +560,7 @@ const UploadPage = () => {
         toast({
           title: "Video processing error",
           description: "Please wait for the video to fully load before uploading.",
-          variant: "destructive",
+          variant: "gamefolioError",
         });
         return;
       }
@@ -582,7 +582,7 @@ const UploadPage = () => {
       toast({
         title: "Email verification required",
         description: "Please verify your email address before uploading clips. Check your inbox for a verification link.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       return;
     }
@@ -592,7 +592,7 @@ const UploadPage = () => {
       toast({
         title: "No file selected",
         description: "Please select a video file to upload.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       return;
     }
@@ -601,7 +601,7 @@ const UploadPage = () => {
       toast({
         title: "Title required",
         description: "Please enter a title for your video.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       return;
     }
@@ -610,7 +610,7 @@ const UploadPage = () => {
       toast({
         title: "Game required",
         description: "Please select a game for your video.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       return;
     }
@@ -619,7 +619,7 @@ const UploadPage = () => {
       toast({
         title: "Tags required",
         description: "Please add at least 2 tags for your video.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       return;
     }
@@ -1012,7 +1012,7 @@ const UploadPage = () => {
                   </div>
                   
                   {fileError && (
-                    <Alert variant="destructive" className="mt-2">
+                    <Alert variant="gamefolioError" className="mt-2">
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>Error</AlertTitle>
                       <AlertDescription>{fileError}</AlertDescription>
@@ -1509,7 +1509,7 @@ const UploadPage = () => {
                   </div>
                   
                   {fileError && (
-                    <Alert variant="destructive" className="mt-2">
+                    <Alert variant="gamefolioError" className="mt-2">
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>Error</AlertTitle>
                       <AlertDescription>{fileError}</AlertDescription>
@@ -1705,7 +1705,7 @@ const UploadPage = () => {
                   toast({
                     title: "No screenshot selected",
                     description: "Please select a screenshot to upload.",
-                    variant: "destructive",
+                    variant: "gamefolioError",
                   });
                   return;
                 }
@@ -1714,7 +1714,7 @@ const UploadPage = () => {
                   toast({
                     title: "Title required",
                     description: "Please enter a title for your screenshot.",
-                    variant: "destructive",
+                    variant: "gamefolioError",
                   });
                   return;
                 }
@@ -1723,7 +1723,7 @@ const UploadPage = () => {
                   toast({
                     title: "Game required",
                     description: "Please select a game for your screenshot.",
-                    variant: "destructive",
+                    variant: "gamefolioError",
                   });
                   return;
                 }
@@ -1732,7 +1732,7 @@ const UploadPage = () => {
                   toast({
                     title: "Tags required",
                     description: "Please add at least 2 tags for your screenshot.",
-                    variant: "destructive",
+                    variant: "gamefolioError",
                   });
                   return;
                 }
@@ -1815,7 +1815,7 @@ const UploadPage = () => {
                   </div>
                   
                   {screenshotError && (
-                    <Alert variant="destructive" className="mt-2">
+                    <Alert variant="gamefolioError" className="mt-2">
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>Error</AlertTitle>
                       <AlertDescription>{screenshotError}</AlertDescription>

@@ -33,7 +33,7 @@ export default function ContactPage() {
         toast({
           title: "Invalid file type",
           description: `${file.name} is not an image file. Please upload only image files.`,
-          variant: "destructive",
+          variant: "gamefolioError",
         });
         return;
       }
@@ -43,7 +43,7 @@ export default function ContactPage() {
         toast({
           title: "File too large",
           description: `${file.name} is larger than 10MB. Please choose a smaller file.`,
-          variant: "destructive",
+          variant: "gamefolioError",
         });
         return;
       }

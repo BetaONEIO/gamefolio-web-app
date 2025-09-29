@@ -42,13 +42,13 @@ export default function AuthPage() {
         toast({
           title: "Verification Link Expired",
           description: decodedMessage,
-          variant: "destructive",
+          variant: "gamefolioError",
         });
       } else if (verificationStatus === 'error') {
         toast({
           title: "Verification Error",
           description: decodedMessage,
-          variant: "destructive",
+          variant: "gamefolioError",
         });
       }
 
