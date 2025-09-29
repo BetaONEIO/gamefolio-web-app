@@ -17,8 +17,10 @@ class VideoAudioStore {
   private preferences: AudioPreferences = DEFAULT_PREFERENCES;
   private listeners = new Set<() => void>();
   private isInitialized = false;
+  private cachedSnapshot: AudioPreferences & { isInitialized: boolean };
 
   constructor() {
+    this.cachedSnapshot = { ...DEFAULT_PREFERENCES, isInitialized: false };
     this.loadFromStorage();
   }
 
@@ -38,6 +40,7 @@ class VideoAudioStore {
       console.warn('Failed to load video audio preferences:', error);
     } finally {
       this.isInitialized = true;
+      this.updateCachedSnapshot();
     }
   }
 
@@ -49,12 +52,17 @@ class VideoAudioStore {
     }
   }
 
+  private updateCachedSnapshot() {
+    this.cachedSnapshot = { ...this.preferences, isInitialized: this.isInitialized };
+  }
+
   private notifyListeners() {
+    this.updateCachedSnapshot();
     this.listeners.forEach(listener => listener());
   }
 
   getSnapshot = () => {
-    return { ...this.preferences, isInitialized: this.isInitialized };
+    return this.cachedSnapshot;
   };
 
   subscribe = (listener: () => void) => {
