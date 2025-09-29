@@ -16,6 +16,7 @@ interface VideoPlayerProps {
   className?: string;
   objectFit?: 'contain' | 'cover' | 'fill';
   clipId?: number;
+  disableAspectRatio?: boolean;
 }
 
 const VideoPlayer = ({ 
@@ -27,7 +28,8 @@ const VideoPlayer = ({
   filter = 'none',
   className,
   objectFit = 'contain',
-  clipId
+  clipId,
+  disableAspectRatio = false
 }: VideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
@@ -202,7 +204,11 @@ const VideoPlayer = ({
 
   return (
     <div 
-      className={cn("relative w-full overflow-hidden bg-black flex items-center justify-center video-container", className)}
+      className={cn(
+        "relative overflow-hidden bg-black flex items-center justify-center video-container",
+        disableAspectRatio ? "w-full h-full" : "w-full aspect-video",
+        className
+      )}
       onMouseMove={hideControlsTimer}
       onMouseLeave={() => isPlaying && setShowControls(false)}
     >
