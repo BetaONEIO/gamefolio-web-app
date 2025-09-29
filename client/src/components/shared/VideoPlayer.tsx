@@ -4,6 +4,7 @@ import { Play, Pause, Volume2, VolumeX, Maximize } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { formatDuration } from "@/lib/constants";
+import { useVideoAudioPreference } from "@/hooks/use-video-audio-preference";
 
 
 interface VideoPlayerProps {
@@ -35,13 +36,14 @@ const VideoPlayer = ({
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [currentTime, setCurrentTime] = useState(initialTime);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
-  const [isMuted, setIsMuted] = useState(true); // Start muted to comply with browser autoplay policies
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasSetInitialTime = useRef(false);
   const hasTrackedView = useRef(false);
+  
+  // Use shared audio preferences across all video players
+  const { muted: isMuted, volume, setMuted, setVolume: setGlobalVolume, toggleMuted, isInitialized } = useVideoAudioPreference();
   
   // Function to track video view
   const trackView = async () => {
@@ -72,9 +74,14 @@ const VideoPlayer = ({
           clearTimeout(timeoutRef.current);
         }
       } else {
-        // When user actively starts playing, set state to unmute and full volume
-        setVolume(1);
-        setIsMuted(false);
+        // When user actively starts playing, unmute if currently muted
+        if (isMuted) {
+          setMuted(false);
+        }
+        // Ensure volume is at least 0.5 when user starts playing
+        if (volume === 0) {
+          setGlobalVolume(0.5);
+        }
         
         videoRef.current.play().catch(err => {
           console.error("Video play() was interrupted:", err);
@@ -90,24 +97,12 @@ const VideoPlayer = ({
   const handleVolumeChange = (newVolume: number[]) => {
     if (videoRef.current) {
       const vol = newVolume[0];
-      videoRef.current.volume = vol;
-      videoRef.current.muted = vol === 0;
-      setVolume(vol);
-      setIsMuted(vol === 0);
+      setGlobalVolume(vol);
     }
   };
 
   const toggleMute = () => {
-    if (videoRef.current) {
-      if (isMuted) {
-        videoRef.current.muted = false;
-        videoRef.current.volume = volume;
-      } else {
-        videoRef.current.muted = true;
-        videoRef.current.volume = 0;
-      }
-      setIsMuted(!isMuted);
-    }
+    toggleMuted();
   };
 
   const handleSeek = (newTime: number[]) => {
@@ -157,11 +152,11 @@ const VideoPlayer = ({
   // Effect to sync volume and mute state to video element
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !isInitialized) return;
     
     video.volume = volume;
     video.muted = isMuted;
-  }, [volume, isMuted]);
+  }, [volume, isMuted, isInitialized]);
 
   useEffect(() => {
     const video = videoRef.current;
