@@ -226,7 +226,13 @@ const ClipPage = () => {
 
   const likeMutation = useMutation({
     mutationFn: async () => {
-      const likeEndpoint = isReelRoute ? `/api/reels/${clipId}/likes` : `/api/clips/${clipId}/likes`;
+      // Use the actual numeric clip ID from the loaded clip data, not the URL parameter
+      const actualClipId = clip?.id;
+      if (!actualClipId) {
+        throw new Error("Clip data not loaded");
+      }
+      
+      const likeEndpoint = isReelRoute ? `/api/reels/${actualClipId}/likes` : `/api/clips/${actualClipId}/likes`;
       if (hasLiked) {
         await apiRequest("DELETE", likeEndpoint);
         return false;
