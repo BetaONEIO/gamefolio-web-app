@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { ClipWithUser, CommentWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
@@ -26,7 +26,10 @@ import {
   ChevronRight,
   Heart,
   Send,
-  ChevronDown
+  ChevronDown,
+  UserPlus,
+  UserMinus,
+  UserCheck
 } from "lucide-react";
 import { formatDistance } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -161,6 +164,118 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
     queryKey: [`/api/clips/${clipId}/comments`],
     enabled: isOpen && clipId !== null,
   });
+
+  // Follow functionality
+  const queryClient = useQueryClient();
+  const [followRequestStatus, setFollowRequestStatus] = useState<
+    'following' | 'requested' | 'not_following'
+  >('not_following');
+  
+  const isOwnClip = user?.id === clip?.user?.id;
+  
+  // Check if current user is following the clip author
+  const { data: followStatus } = useQuery({
+    queryKey: [`/api/users/${clip?.user?.username}/follow-status`],
+    enabled: !isOwnClip && !!user && !!clip?.user?.username,
+    refetchOnWindowFocus: false,
+  });
+
+  // Sync followRequestStatus state with server data
+  useEffect(() => {
+    if (followStatus !== undefined && !isOwnClip && clip?.user?.username) {
+      if (followStatus.following) {
+        setFollowRequestStatus('following');
+      } else if (followStatus.requested) {
+        setFollowRequestStatus('requested');
+      } else {
+        setFollowRequestStatus('not_following');
+      }
+    }
+  }, [followStatus, isOwnClip, clip?.user?.username]);
+
+  // Follow mutation
+  const followMutation = useMutation({
+    mutationFn: async ({ currentFollowStatus }: { currentFollowStatus: 'following' | 'requested' | 'not_following' }) => {
+      if (!clip?.user?.username) throw new Error('No username available');
+      
+      if (currentFollowStatus === 'following' || currentFollowStatus === 'requested') {
+        const response = await fetch(`/api/users/${clip.user.username}/follow`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+        if (!response.ok) throw new Error('Failed to unfollow');
+        return { action: 'unfollowed' };
+      } else {
+        const response = await fetch(`/api/users/${clip.user.username}/follow`, {
+          method: 'POST',
+          credentials: 'include'
+        });
+        if (!response.ok) throw new Error('Failed to follow');
+        const result = await response.json();
+        return result;
+      }
+    },
+    onMutate: async () => {
+      if (!clip?.user?.username) return;
+      
+      await queryClient.cancelQueries({ queryKey: [`/api/users/${clip.user.username}/follow-status`] });
+      
+      const previousFollowStatus = followRequestStatus;
+      
+      if (followRequestStatus === 'following' || followRequestStatus === 'requested') {
+        setFollowRequestStatus('not_following');
+      } else {
+        setFollowRequestStatus('requested'); // Optimistically assume it will be requested
+      }
+      
+      return { previousFollowStatus };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousFollowStatus) {
+        setFollowRequestStatus(context.previousFollowStatus);
+      }
+      toast({
+        title: "Error",
+        description: "Failed to update follow status. Please try again.",
+        variant: "destructive",
+      });
+    },
+    onSuccess: (data) => {
+      if (data.action === 'unfollowed') {
+        setFollowRequestStatus('not_following');
+        toast({
+          title: "Unfollowed",
+          description: `You are no longer following @${clip?.user?.username}`,
+        });
+      } else if (data.status === 'following') {
+        setFollowRequestStatus('following');
+        toast({
+          title: "Following",
+          description: `You are now following @${clip?.user?.username}`,
+        });
+      } else if (data.status === 'requested') {
+        setFollowRequestStatus('requested');
+        toast({
+          title: "Follow request sent",
+          description: `Follow request sent to @${clip?.user?.username}`,
+        });
+      }
+    },
+    onSettled: () => {
+      if (clip?.user?.username) {
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/follow-status`] });
+      }
+    }
+  });
+
+  const handleFollowClick = () => {
+    if (!user) {
+      openDialog('follow');
+      return;
+    }
+    
+    followMutation.mutate({ currentFollowStatus: followRequestStatus });
+  };
 
   // Share functionality replaced by ShareMenu component
 
@@ -513,7 +628,37 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                 </div>
 
                 <div className="text-sm">
-                  {/* Game name moved to description area */}
+                  {/* Follow button */}
+                  {!isOwnClip && user && clip.user?.username && (
+                    <Button
+                      variant={followRequestStatus === 'following' ? "secondary" : "default"}
+                      size="sm"
+                      onClick={handleFollowClick}
+                      disabled={followMutation.isPending}
+                      className={cn(
+                        "transition-all duration-200",
+                        followRequestStatus === 'following' && "bg-secondary hover:bg-secondary/80",
+                        followRequestStatus === 'requested' && "bg-orange-500 hover:bg-orange-600"
+                      )}
+                      data-testid={`button-follow-${clip.user.username}`}
+                    >
+                      {followMutation.isPending ? (
+                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-1" />
+                      ) : followRequestStatus === 'following' ? (
+                        <UserCheck className="w-4 h-4 mr-1" />
+                      ) : followRequestStatus === 'requested' ? (
+                        <UserMinus className="w-4 h-4 mr-1" />
+                      ) : (
+                        <UserPlus className="w-4 h-4 mr-1" />
+                      )}
+                      {followRequestStatus === 'following' 
+                        ? 'Following' 
+                        : followRequestStatus === 'requested' 
+                          ? 'Requested' 
+                          : 'Follow'
+                      }
+                    </Button>
+                  )}
                 </div>
               </div>
 
