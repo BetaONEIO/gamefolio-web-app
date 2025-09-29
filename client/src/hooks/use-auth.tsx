@@ -109,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           toast({
             title: "Authentication failed",
             description: "There was an error signing you in. Please try again.",
-            variant: "destructive",
+            variant: "gamefolioError",
           });
         }
       }

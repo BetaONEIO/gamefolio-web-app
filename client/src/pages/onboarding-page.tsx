@@ -29,7 +29,7 @@ export default function OnboardingPage() {
         toast({
           title: "Complete your profile",
           description: "Please finish setting up your profile before continuing",
-          variant: "destructive",
+          variant: "gamefolioError",
         });
       }
     };

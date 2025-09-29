@@ -139,7 +139,7 @@ export default function ContactPage() {
       toast({
         title: "Failed to submit",
         description: error.message,
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       setIsSubmitting(false);
     },
@@ -153,7 +153,7 @@ export default function ContactPage() {
       toast({
         title: "Subject required",
         description: "Please enter a subject for your support request.",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       return;
     }
@@ -162,7 +162,7 @@ export default function ContactPage() {
       toast({
         title: "Description required",
         description: "Please provide a detailed description of your issue (at least 10 characters).",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
       return;
     }

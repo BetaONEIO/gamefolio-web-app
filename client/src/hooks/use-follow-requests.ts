@@ -30,7 +30,7 @@ export function useApproveFollowRequest() {
       toast({
         title: "Failed to approve request",
         description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });
@@ -57,7 +57,7 @@ export function useRejectFollowRequest() {
       toast({
         title: "Failed to reject request",
         description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });

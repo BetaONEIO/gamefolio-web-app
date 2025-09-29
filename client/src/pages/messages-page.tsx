@@ -149,7 +149,7 @@ export default function MessagesPage() {
       toast({
         title: "Error",
         description: error.message || "Failed to send message",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });
@@ -189,7 +189,7 @@ export default function MessagesPage() {
       toast({
         title: "Error",
         description: error.message || "Failed to send message",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });
@@ -211,7 +211,7 @@ export default function MessagesPage() {
       toast({
         title: "Error",
         description: error.message || "Failed to delete message",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });
@@ -233,7 +233,7 @@ export default function MessagesPage() {
       toast({
         title: "Error",
         description: error.message || "Failed to block user",
-        variant: "destructive",
+        variant: "gamefolioError",
       });
     },
   });
