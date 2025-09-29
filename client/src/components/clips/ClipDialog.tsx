@@ -67,10 +67,10 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   // Access closeClipDialog from useClipDialog
   const { closeClipDialog } = useClipDialog();
 
-  // Detect mobile device
+  // Detect mobile device - use same breakpoint as useMobile hook
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+      setIsMobile(window.innerWidth <= 768); // mobile breakpoint, matching useMobile hook
     };
     
     checkMobile();
