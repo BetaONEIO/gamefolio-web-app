@@ -105,10 +105,16 @@ export function FireButton({
     lg: "h-12 w-12 text-base"
   };
 
-  const emojiSizes = {
-    sm: "text-sm",
-    md: "text-base",
-    lg: "text-lg"
+  const iconSizes = {
+    sm: 16,
+    md: 20,
+    lg: 24
+  };
+
+  const countTextSizes = {
+    sm: "text-xs",
+    md: "text-sm",
+    lg: "text-base"
   };
 
   const isLoading = fireMutation.isPending;
@@ -157,14 +163,14 @@ export function FireButton({
 
   return (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         <Button
           variant="ghost"
-          size={size}
+          size="sm"
           onClick={handleFire}
           disabled={isLoading}
           className={cn(
-            "transition-colors",
+            "p-1.5 h-auto transition-colors hover:bg-orange-50 dark:hover:bg-orange-900/20",
             fired 
               ? "text-orange-500 hover:text-orange-600" 
               : "text-muted-foreground hover:text-orange-500"
@@ -173,14 +179,16 @@ export function FireButton({
           <Flame 
             className={cn(
               size === 'sm' ? 'h-4 w-4' : size === 'lg' ? 'h-6 w-6' : 'h-5 w-5',
-              fired && "fill-current"
+              "transition-all duration-200",
+              fired ? "fill-current scale-110" : "hover:scale-105"
             )} 
           />
         </Button>
         {showCount && (
           <span className={cn(
-            "text-muted-foreground transition-colors",
-            size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm'
+            "font-medium min-w-[1rem] text-center transition-colors",
+            size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm',
+            fired ? 'text-orange-500' : 'text-muted-foreground'
           )}>
             {count}
           </span>
