@@ -1736,16 +1736,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               ${displayGames.map((game, index) => {
                 const gameName = game.name.length > 10 ? game.name.substring(0, 10) + '...' : game.name;
-                const width = Math.max(gameName.length * 7 + 16, 75);
+                // Increased padding for better visual appearance (from 16 to 24 pixels total padding)
+                const width = Math.max(gameName.length * 7 + 24, 85);
                 const x = index === 0 ? 0 : displayGames.slice(0, index).reduce((acc, g) => {
                   const prevName = g.name.length > 10 ? g.name.substring(0, 10) + '...' : g.name;
-                  return acc + Math.max(prevName.length * 7 + 16, 75) + 8;
+                  return acc + Math.max(prevName.length * 7 + 24, 85) + 8;
                 }, 0);
                 return `
                   <rect x="${x}" y="40" width="${width}" height="28" rx="14" fill="#059669"/>
                   <text x="${x + width / 2}" y="58" class="badge-text" text-anchor="middle" style="font-size: 14px;">${gameName}</text>
                 `;
               }).join('')}
+              
+              <!-- Gaming Platform Links -->
+              ${(() => {
+                // Collect available gaming platforms from user profile
+                const availablePlatforms = [];
+                
+                if (user.steamUsername) {
+                  availablePlatforms.push({ name: 'Steam', username: user.steamUsername, color: '#1B2838', icon: '⚙' });
+                }
+                if (user.xboxUsername) {
+                  availablePlatforms.push({ name: 'Xbox', username: user.xboxUsername, color: '#107C10', icon: 'Ⓧ' });
+                }
+                if (user.playstationUsername) {
+                  availablePlatforms.push({ name: 'PlayStation', username: user.playstationUsername, color: '#003791', icon: '▲' });
+                }
+                if (user.youtubeUsername) {
+                  availablePlatforms.push({ name: 'YouTube', username: user.youtubeUsername, color: '#FF0000', icon: '▶' });
+                }
+                if (user.discordUsername) {
+                  availablePlatforms.push({ name: 'Discord', username: user.discordUsername, color: '#7289DA', icon: '💬' });
+                }
+                if (user.epicUsername) {
+                  availablePlatforms.push({ name: 'Epic', username: user.epicUsername, color: '#313131', icon: 'E' });
+                }
+                if (user.nintendoUsername) {
+                  availablePlatforms.push({ name: 'Nintendo', username: user.nintendoUsername, color: '#E60012', icon: 'N' });
+                }
+                if (user.twitterUsername) {
+                  availablePlatforms.push({ name: 'Twitter', username: user.twitterUsername, color: '#1DA1F2', icon: '🐦' });
+                }
+
+                // Limit to first 6 platforms for space constraints
+                const displayPlatforms = availablePlatforms.slice(0, 6);
+                
+                return displayPlatforms.map((platform, index) => {
+                  const platformText = platform.name;
+                  const width = Math.max(platformText.length * 6 + 20, 70);
+                  const x = index === 0 ? 0 : displayPlatforms.slice(0, index).reduce((acc, p) => {
+                    return acc + Math.max(p.name.length * 6 + 20, 70) + 6;
+                  }, 0);
+                  return `
+                    <rect x="${x}" y="76" width="${width}" height="24" rx="12" fill="${platform.color}" opacity="0.9"/>
+                    <text x="${x + width / 2}" y="91" class="badge-text" text-anchor="middle" style="font-size: 12px; fill: #ffffff;">${platform.icon} ${platformText}</text>
+                  `;
+                }).join('');
+              })()}
             </g>
           </g>
           
