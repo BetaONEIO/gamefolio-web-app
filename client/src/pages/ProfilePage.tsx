@@ -1076,8 +1076,8 @@ const ProfilePage = () => {
 
         {/* Mobile Layout - Stacked Vertically */}
         <div className="block md:hidden pb-6" style={{ marginTop: '-56px', paddingTop: '24px' }}>
-          {/* Profile Picture - Centered on Mobile */}
-          <div className="flex justify-center mb-6" style={{ transform: 'translateY(-28px)' }}>
+          {/* Profile Picture with 3 dots - Centered on Mobile */}
+          <div className="flex justify-center items-start mb-6" style={{ transform: 'translateY(-28px)' }}>
             <div className="relative">
               <div 
                 className="absolute inset-0 rounded-full animate-pulse"
@@ -1112,10 +1112,54 @@ const ProfilePage = () => {
                 </Avatar>
               </div>
             </div>
+            
+            {/* 3 dots menu for share - positioned to the right of profile picture */}
+            {isOwnProfile && (
+              <div className="ml-4 mt-2">
+                <GamefolioShareDialog 
+                  username={profile.username}
+                  userProfile={{
+                    displayName: profile.displayName,
+                    bio: profile.bio,
+                    avatarUrl: profile.avatarUrl,
+                    bannerUrl: profile.bannerUrl
+                  }}
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="p-2 h-10 w-10 rounded-full hover:bg-primary/10"
+                    >
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                      </svg>
+                    </Button>
+                  }
+                />
+              </div>
+            )}
           </div>
 
-          {/* Stats under profile picture on mobile */}
-          <div className="flex justify-center gap-8 mb-6" style={{ marginTop: '-20px' }}>
+          {/* Username and Display Name - Centered on Mobile */}
+          <div className="flex flex-col items-center gap-2 mb-6 text-center" style={{ marginTop: '-20px' }}>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold">{profile.displayName}</h1>
+              <ModeratorBadge 
+                isModerator={profile.role === "moderator"} 
+                size="xl" 
+              />
+              {profile.role !== "moderator" && (
+                <VerificationBadge 
+                  isVerified={!!profile.emailVerified} 
+                  size="xl" 
+                />
+              )}
+            </div>
+            <span className="text-lg text-white/70 font-normal">@{profile.username}</span>
+          </div>
+
+          {/* Stats under username on mobile */}
+          <div className="flex justify-center gap-8 mb-6">
             <div className="flex flex-col items-center">
               <span className="font-bold text-xl">{Number(profile._count?.clips || 0)}</span>
               <span className="text-muted-foreground text-sm">Clips</span>
@@ -1130,42 +1174,24 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          {/* Rest of content centered on mobile */}
+          {/* Bio and other content centered on mobile */}
           <div className="text-center">
-            {/* Username and Display Name */}
-            <div className="flex flex-col items-center gap-2 mb-6">
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold">{profile.displayName}</h1>
-                <ModeratorBadge 
-                  isModerator={profile.role === "moderator"} 
-                  size="xl" 
-                />
-                {profile.role !== "moderator" && (
-                  <VerificationBadge 
-                    isVerified={!!profile.emailVerified} 
-                    size="xl" 
-                  />
-                )}
+            {/* Member since date */}
+            {profile.createdAt && (
+              <div className="flex justify-center items-center gap-1 mb-3">
+                <span className="text-sm text-muted-foreground">
+                  Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long' 
+                  })}
+                </span>
               </div>
-              <span className="text-lg text-white/70 font-normal">@{profile.username}</span>
+            )}
 
-              {/* Member since date */}
-              {profile.createdAt && (
-                <div className="flex items-center gap-1 mt-2">
-                  <span className="text-sm text-muted-foreground">
-                    Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
-                      year: 'numeric', 
-                      month: 'long' 
-                    })}
-                  </span>
-                </div>
-              )}
-
-              {/* Bio/description */}
-              {profile.bio && (
-                <p className="mt-3 text-base text-foreground/90 px-4">{profile.bio}</p>
-              )}
-            </div>
+            {/* Bio/description */}
+            {profile.bio && (
+              <p className="mb-6 text-base text-foreground/90 px-4">{profile.bio}</p>
+            )}
 
             {/* Action buttons for mobile */}
             {!isOwnProfile && currentUser && (
@@ -1231,29 +1257,6 @@ const ProfilePage = () => {
               </div>
             )}
 
-            {/* Share button for own profile on mobile */}
-            {isOwnProfile && (
-              <div className="flex justify-center mb-6 px-4">
-                <GamefolioShareDialog 
-                  username={profile.username}
-                  userProfile={{
-                    displayName: profile.displayName,
-                    bio: profile.bio,
-                    avatarUrl: profile.avatarUrl,
-                    bannerUrl: profile.bannerUrl
-                  }}
-                  trigger={
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      className="w-full relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
-                    >
-                      <Share2 className="mr-2 h-4 w-4" /> Share Profile
-                    </Button>
-                  }
-                />
-              </div>
-            )}
 
             {/* Platform Connections */}
             <div className="flex flex-wrap justify-center gap-2 mt-4 px-4">
