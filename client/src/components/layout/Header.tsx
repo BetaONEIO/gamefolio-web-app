@@ -70,17 +70,19 @@ const Header = () => {
 
   // Handle clicks outside search to close dropdown
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
       }
-      if (mobileSearchRef.current && !mobileSearchRef.current.contains(event.target as Node)) {
-        setShowMobileSearch(false);
-      }
+      // Don't auto-close mobile search on outside clicks - user must use Cancel button
     }
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -306,7 +308,7 @@ const Header = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="mr-2 p-2"
+              className="mr-2 p-2 touch-manipulation"
               onClick={() => setShowMobileSearch(true)}
               aria-label="Search"
               data-testid="mobile-search-button"
@@ -410,22 +412,23 @@ const Header = () => {
       
       {/* Mobile Search Overlay */}
       {showMobileSearch && (
-        <div className="fixed inset-0 bg-black/50 z-50 md:hidden">
-          <div className="bg-card w-full p-4 shadow-lg">
+        <div className="fixed inset-0 bg-black/50 z-50 md:hidden flex flex-col">
+          <div className="bg-card w-full p-4 shadow-lg safe-area-top">
             <div
               ref={mobileSearchRef}
-              className="relative"
+              className="relative max-w-full"
             >
               <form onSubmit={handleSearch} className="flex items-center gap-2">
                 <div className="flex-1 relative">
                   <Input
                     type="text"
                     placeholder="Search #hashtags, users, games..."
-                    className="w-full py-3 px-4 pr-12 rounded-lg bg-secondary text-foreground"
+                    className="w-full py-3 px-4 pr-12 rounded-lg bg-secondary text-foreground text-base"
                     value={searchQuery}
                     onChange={handleSearchChange}
                     onFocus={() => searchQuery.length >= 2 && setShowDropdown(true)}
                     autoFocus
+                    inputMode="search"
                     data-testid="mobile-search-input"
                   />
                   <Button
@@ -440,8 +443,12 @@ const Header = () => {
                 <Button
                   type="button"
                   variant="ghost"
-                  onClick={() => setShowMobileSearch(false)}
-                  className="text-muted-foreground"
+                  onClick={() => {
+                    setShowMobileSearch(false);
+                    setShowDropdown(false);
+                    setSearchQuery("");
+                  }}
+                  className="text-muted-foreground touch-manipulation min-w-[60px] px-3"
                   data-testid="mobile-search-close"
                 >
                   Cancel
@@ -450,7 +457,7 @@ const Header = () => {
 
               {/* Mobile Search Dropdown */}
               {showDropdown && (searchQuery.startsWith('#') || (userResults && userResults.length > 0) || (gameResults && gameResults.length > 0)) && (
-                <div className="absolute top-full mt-2 w-full bg-card border border-border rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+                <div className="absolute top-full mt-2 w-full bg-card border border-border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto left-0 right-0">
                   <div className="p-2">
                     {/* Hashtag Section */}
                     {searchQuery.startsWith('#') && searchQuery.length > 1 && (
