@@ -1145,26 +1145,26 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          {/* Username and Display Name - Centered on Mobile */}
-          <div className="flex flex-col items-center gap-2 mb-6 text-center" style={{ marginTop: '-20px' }}>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold">{profile.displayName}</h1>
+          {/* Username and Display Name - On one line on Mobile */}
+          <div className="flex flex-col items-center gap-1 mb-3 text-center" style={{ marginTop: '-20px' }}>
+            <div className="flex items-center gap-2 flex-wrap justify-center">
+              <h1 className="text-xl font-bold">{profile.displayName}</h1>
+              <span className="text-lg text-white/70 font-normal">@{profile.username}</span>
               <ModeratorBadge 
                 isModerator={profile.role === "moderator"} 
-                size="xl" 
+                size="lg" 
               />
               {profile.role !== "moderator" && (
                 <VerificationBadge 
                   isVerified={!!profile.emailVerified} 
-                  size="xl" 
+                  size="lg" 
                 />
               )}
             </div>
-            <span className="text-lg text-white/70 font-normal">@{profile.username}</span>
           </div>
 
           {/* Stats under username on mobile */}
-          <div className="flex justify-center gap-8 mb-6">
+          <div className="flex justify-center gap-8 mb-4">
             <div className="flex flex-col items-center">
               <span className="font-bold text-xl">{Number(profile._count?.clips || 0)}</span>
               <span className="text-muted-foreground text-sm">Clips</span>
@@ -1180,10 +1180,10 @@ const ProfilePage = () => {
           </div>
 
           {/* Bio and other content centered on mobile */}
-          <div className="text-center">
+          <div className="text-center space-y-3">
             {/* Member since date */}
             {profile.createdAt && (
-              <div className="flex justify-center items-center gap-1 mb-3">
+              <div className="flex justify-center items-center gap-1">
                 <span className="text-sm text-muted-foreground">
                   Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
                     year: 'numeric', 
@@ -1195,12 +1195,12 @@ const ProfilePage = () => {
 
             {/* Bio/description */}
             {profile.bio && (
-              <p className="mb-6 text-base text-foreground/90 px-4">{profile.bio}</p>
+              <p className="text-base text-foreground/90 px-4">{profile.bio}</p>
             )}
 
             {/* Action buttons for mobile */}
             {!isOwnProfile && currentUser && (
-              <div className="flex flex-col gap-3 mb-6 px-4">
+              <div className="flex flex-col gap-3 px-4">
                 <Button 
                   onClick={handleFollowClick}
                   variant={followRequestStatus === 'following' ? "outline" : (followRequestStatus === 'requested' ? "outline" : "default")}
@@ -1262,9 +1262,8 @@ const ProfilePage = () => {
               </div>
             )}
 
-
             {/* Platform Connections */}
-            <div className="flex flex-wrap justify-center gap-2 mt-4 px-4">
+            <div className="flex flex-wrap justify-center gap-2 px-4">
               {profile.steamUsername && (
                 <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#1B2838', color: '#FFFFFF' }}>
                   <SiSteam className="w-3 h-3" />
