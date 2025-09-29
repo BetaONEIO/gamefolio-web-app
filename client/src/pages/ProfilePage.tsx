@@ -47,7 +47,9 @@ import {
   Dialog,
   DialogContent,
   DialogTrigger,
-  DialogClose
+  DialogClose,
+  DialogHeader,
+  DialogTitle
 } from "@/components/ui/dialog";
 import CommentSection from "@/components/clips/CommentSection";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
@@ -105,6 +107,9 @@ const ProfilePage = () => {
   
   // Clip dialog for opening clips/reels
   const { openClipDialog } = useClipDialog();
+
+  // Profile picture action dialog state  
+  const [profileActionDialogOpen, setProfileActionDialogOpen] = useState(false);
 
   // Screenshot action handlers
   const handleScreenshotLike = () => {
@@ -1071,13 +1076,39 @@ const ProfilePage = () => {
         )}
       </div>
 
+      {/* 3 dots menu - positioned underneath banner on the right for mobile */}
+      <div className="block md:hidden absolute top-4 right-4 z-30">
+        {isOwnProfile && (
+          <GamefolioShareDialog 
+            username={profile.username}
+            userProfile={{
+              displayName: profile.displayName,
+              bio: profile.bio,
+              avatarUrl: profile.avatarUrl,
+              bannerUrl: profile.bannerUrl
+            }}
+            trigger={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-2 h-10 w-10 rounded-full hover:bg-primary/10 bg-background/80 backdrop-blur-sm"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                </svg>
+              </Button>
+            }
+          />
+        )}
+      </div>
+
       {/* Profile Info - positioned below banner with overlapping profile picture */}
       <div className="container mx-auto px-4 relative z-20">
 
         {/* Mobile Layout - Stacked Vertically */}
         <div className="block md:hidden pb-6" style={{ marginTop: '-56px', paddingTop: '24px' }}>
-          {/* Profile Picture with 3 dots - Centered on Mobile */}
-          <div className="flex justify-center items-start mb-6" style={{ transform: 'translateY(-28px)' }}>
+          {/* Profile Picture - Centered on Mobile */}
+          <div className="flex justify-center mb-6" style={{ transform: 'translateY(-28px)' }}>
             <div className="relative">
               <div 
                 className="absolute inset-0 rounded-full animate-pulse"
@@ -1095,7 +1126,7 @@ const ProfilePage = () => {
                   borderRadius: '8px',
                   boxShadow: `0 0 30px hsl(var(--primary) / 0.5), 0 0 60px hsl(var(--primary) / 0.2)`
                 }}
-                onClick={() => profile.avatarUrl && openLightbox(profile.avatarUrl, profile.displayName, profile.username)}
+                onClick={() => setProfileActionDialogOpen(true)}
               >
                 <Avatar 
                   className="w-full h-full"
@@ -1112,32 +1143,6 @@ const ProfilePage = () => {
                 </Avatar>
               </div>
             </div>
-            
-            {/* 3 dots menu for share - positioned to the right of profile picture */}
-            {isOwnProfile && (
-              <div className="ml-4 mt-2">
-                <GamefolioShareDialog 
-                  username={profile.username}
-                  userProfile={{
-                    displayName: profile.displayName,
-                    bio: profile.bio,
-                    avatarUrl: profile.avatarUrl,
-                    bannerUrl: profile.bannerUrl
-                  }}
-                  trigger={
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="p-2 h-10 w-10 rounded-full hover:bg-primary/10"
-                    >
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                      </svg>
-                    </Button>
-                  }
-                />
-              </div>
-            )}
           </div>
 
           {/* Username and Display Name - Centered on Mobile */}
@@ -2493,6 +2498,49 @@ const ProfilePage = () => {
         onOpenChange={closeDialog}
         actionType={actionType}
       />
+
+      {/* Profile Picture Action Dialog */}
+      <Dialog open={profileActionDialogOpen} onOpenChange={setProfileActionDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Profile Options</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
+            <GamefolioShareDialog 
+              username={profile.username}
+              userProfile={{
+                displayName: profile.displayName,
+                bio: profile.bio,
+                avatarUrl: profile.avatarUrl,
+                bannerUrl: profile.bannerUrl
+              }}
+              trigger={
+                <Button variant="outline" className="w-full justify-start" onClick={() => setProfileActionDialogOpen(false)}>
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Share Profile
+                </Button>
+              }
+            />
+            {!isOwnProfile && (
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => {
+                  setProfileActionDialogOpen(false);
+                  toast({
+                    title: "Report Profile",
+                    description: "Profile reporting feature coming soon. Please contact support for urgent issues.",
+                    variant: "default"
+                  });
+                }}
+              >
+                <Flag className="mr-2 h-4 w-4" />
+                Report Profile
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
