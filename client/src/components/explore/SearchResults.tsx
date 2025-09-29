@@ -20,7 +20,7 @@ interface SearchResultsProps {
 const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
   const [activeTab, setActiveTab] = useState("all");
   const { user } = useAuth();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   
   // Get current query from URL to make component reactive to URL changes
   const [currentQuery, setCurrentQuery] = useState("");
@@ -29,6 +29,7 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const urlQuery = urlParams.get('q') || initialQuery || "";
+    console.log("Search query updated:", urlQuery); // Debug log
     setCurrentQuery(urlQuery);
   }, [initialQuery, location]); // Add location as dependency
   
