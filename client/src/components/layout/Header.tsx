@@ -38,6 +38,7 @@ const Header = () => {
   // Debounce search query for dropdown
   useEffect(() => {
     const handler = setTimeout(() => {
+      console.log("🔍 Debounced query updated:", searchQuery);
       setDebouncedQuery(searchQuery);
     }, 300);
 
@@ -50,6 +51,7 @@ const Header = () => {
   const { data: userResults } = useQuery<User[]>({
     queryKey: ['/api/search/users', debouncedQuery],
     queryFn: async () => {
+      console.log("🔍 Making user search API call with query:", debouncedQuery);
       const response = await fetch(`/api/search/users?q=${encodeURIComponent(debouncedQuery)}`);
       if (!response.ok) throw new Error("Failed to search users");
       return await response.json();
@@ -61,6 +63,7 @@ const Header = () => {
   const { data: gameResults } = useQuery<Game[]>({
     queryKey: ['/api/search/games', debouncedQuery],
     queryFn: async () => {
+      console.log("🔍 Making game search API call with query:", debouncedQuery);
       const response = await fetch(`/api/search/games?q=${encodeURIComponent(debouncedQuery)}`);
       if (!response.ok) throw new Error("Failed to search games");
       return await response.json();
@@ -103,6 +106,7 @@ const Header = () => {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    console.log("🔍 Search query changed:", value);
     setSearchQuery(value);
     setShowDropdown(value.length >= 2);
   };
