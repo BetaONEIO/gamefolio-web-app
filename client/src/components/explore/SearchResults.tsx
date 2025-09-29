@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ClipWithUser, Game, User } from "@shared/schema";
+import { ClipWithUser, Game, User, Screenshot } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import VideoClipCard from "@/components/clips/VideoClipCard";
 import TrendingGameCard from "@/components/clips/TrendingGameCard";
 import { Link } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Check, Search } from "lucide-react";
+import { UserPlus, Check, Search, FileImage, Film, Video } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +25,14 @@ const SearchResults = ({ query }: SearchResultsProps) => {
     queryKey: [`/api/search/clips?q=${encodeURIComponent(query)}`],
   });
 
+  const { data: reelResults, isLoading: isLoadingReels } = useQuery<ClipWithUser[]>({
+    queryKey: [`/api/search/reels?q=${encodeURIComponent(query)}`],
+  });
+
+  const { data: screenshotResults, isLoading: isLoadingScreenshots } = useQuery<Screenshot[]>({
+    queryKey: [`/api/search/screenshots?q=${encodeURIComponent(query)}`],
+  });
+
   const { data: userResults, isLoading: isLoadingUsers } = useQuery<User[]>({
     queryKey: [`/api/search/users?q=${encodeURIComponent(query)}`],
   });
@@ -33,9 +41,11 @@ const SearchResults = ({ query }: SearchResultsProps) => {
     queryKey: [`/api/search/games?q=${encodeURIComponent(query)}`],
   });
 
-  const isLoading = isLoadingClips || isLoadingUsers || isLoadingGames;
+  const isLoading = isLoadingClips || isLoadingReels || isLoadingScreenshots || isLoadingUsers || isLoadingGames;
   const hasResults = 
     (clipResults && clipResults.length > 0) || 
+    (reelResults && reelResults.length > 0) ||
+    (screenshotResults && screenshotResults.length > 0) ||
     (userResults && userResults.length > 0) || 
     (gameResults && gameResults.length > 0);
 
@@ -49,7 +59,18 @@ const SearchResults = ({ query }: SearchResultsProps) => {
       <Tabs defaultValue="all" onValueChange={setActiveTab}>
         <TabsList className="mb-6">
           <TabsTrigger value="all">All results</TabsTrigger>
-          <TabsTrigger value="clips">Clips</TabsTrigger>
+          <TabsTrigger value="clips" className="flex items-center gap-2">
+            <Video className="h-4 w-4" />
+            Clips
+          </TabsTrigger>
+          <TabsTrigger value="reels" className="flex items-center gap-2">
+            <Film className="h-4 w-4" />
+            Reels
+          </TabsTrigger>
+          <TabsTrigger value="screenshots" className="flex items-center gap-2">
+            <FileImage className="h-4 w-4" />
+            Screenshots
+          </TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="games">Games</TabsTrigger>
         </TabsList>
@@ -62,11 +83,20 @@ const SearchResults = ({ query }: SearchResultsProps) => {
           </div>
         ) : !hasResults ? (
           <div className="text-center py-10">
+            <Search className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
             <h2 className="text-xl font-semibold mb-2">No results found</h2>
-            <p className="text-muted-foreground mb-4">
-              We couldn't find anything matching "{query}"
+            <p className="text-muted-foreground mb-6">
+              We couldn't find any clips, reels, screenshots, users, or games matching "{query}"
             </p>
-            <Link href="/explore">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Try:</p>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Checking your spelling</li>
+                <li>• Using different keywords</li>
+                <li>• Searching for hashtags with #</li>
+              </ul>
+            </div>
+            <Link href="/explore" className="mt-6 inline-block">
               <Button>Browse Explore Page</Button>
             </Link>
           </div>
@@ -119,7 +149,7 @@ const SearchResults = ({ query }: SearchResultsProps) => {
 
               {/* Clips section */}
               {clipResults && clipResults.length > 0 && (
-                <div>
+                <div className="mb-8">
                   <h2 className="text-xl font-semibold mb-4">Clips</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {clipResults.slice(0, 4).map((clip) => (
@@ -138,6 +168,62 @@ const SearchResults = ({ query }: SearchResultsProps) => {
                   )}
                 </div>
               )}
+
+              {/* Reels section */}
+              {reelResults && reelResults.length > 0 && (
+                <div className="mb-8">
+                  <h2 className="text-xl font-semibold mb-4">Reels</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {reelResults.slice(0, 4).map((reel) => (
+                      <VideoClipCard key={reel.id} clip={reel} userId={user?.id || 0} clipsList={reelResults} />
+                    ))}
+                  </div>
+                  {reelResults.length > 4 && (
+                    <div className="text-center mt-4">
+                      <Button 
+                        variant="outline"
+                        onClick={() => setActiveTab("reels")}
+                      >
+                        View all {reelResults.length} reels
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Screenshots section */}
+              {screenshotResults && screenshotResults.length > 0 && (
+                <div>
+                  <h2 className="text-xl font-semibold mb-4">Screenshots</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {screenshotResults.slice(0, 6).map((screenshot) => (
+                      <div key={screenshot.id} className="bg-card rounded-lg overflow-hidden">
+                        <img 
+                          src={screenshot.imageUrl} 
+                          alt={screenshot.title}
+                          className="w-full h-48 object-cover"
+                        />
+                        <div className="p-4">
+                          <h3 className="font-semibold text-sm mb-1">{screenshot.title}</h3>
+                          {screenshot.description && (
+                            <p className="text-muted-foreground text-xs line-clamp-2">{screenshot.description}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {screenshotResults.length > 6 && (
+                    <div className="text-center mt-4">
+                      <Button 
+                        variant="outline"
+                        onClick={() => setActiveTab("screenshots")}
+                      >
+                        View all {screenshotResults.length} screenshots
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="clips">
@@ -149,7 +235,63 @@ const SearchResults = ({ query }: SearchResultsProps) => {
                 </div>
               ) : (
                 <div className="text-center py-8">
+                  <Video className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                   <p className="text-muted-foreground">No clips found matching "{query}"</p>
+                  <p className="text-sm text-muted-foreground mt-2">Try searching for different keywords or hashtags</p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="reels">
+              {reelResults && reelResults.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {reelResults.map((reel) => (
+                    <VideoClipCard key={reel.id} clip={reel} userId={user?.id || 0} clipsList={reelResults} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Film className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <p className="text-muted-foreground">No reels found matching "{query}"</p>
+                  <p className="text-sm text-muted-foreground mt-2">Try searching for different keywords or hashtags</p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="screenshots">
+              {screenshotResults && screenshotResults.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {screenshotResults.map((screenshot) => (
+                    <div key={screenshot.id} className="bg-card rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+                      <img 
+                        src={screenshot.imageUrl} 
+                        alt={screenshot.title}
+                        className="w-full h-48 object-cover"
+                        loading="lazy"
+                      />
+                      <div className="p-4">
+                        <h3 className="font-semibold text-sm mb-1">{screenshot.title}</h3>
+                        {screenshot.description && (
+                          <p className="text-muted-foreground text-xs line-clamp-2">{screenshot.description}</p>
+                        )}
+                        {screenshot.tags && screenshot.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {screenshot.tags.slice(0, 3).map((tag) => (
+                              <span key={tag} className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <FileImage className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <p className="text-muted-foreground">No screenshots found matching "{query}"</p>
+                  <p className="text-sm text-muted-foreground mt-2">Try searching for different keywords or hashtags</p>
                 </div>
               )}
             </TabsContent>
@@ -164,6 +306,7 @@ const SearchResults = ({ query }: SearchResultsProps) => {
               ) : (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">No users found matching "{query}"</p>
+                  <p className="text-sm text-muted-foreground mt-2">Try searching for different usernames or display names</p>
                 </div>
               )}
             </TabsContent>
@@ -178,6 +321,7 @@ const SearchResults = ({ query }: SearchResultsProps) => {
               ) : (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">No games found matching "{query}"</p>
+                  <p className="text-sm text-muted-foreground mt-2">Try searching for different game titles</p>
                 </div>
               )}
             </TabsContent>
