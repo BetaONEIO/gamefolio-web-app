@@ -4459,6 +4459,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Search reels with query parameter
+  app.get("/api/search/reels", async (req, res) => {
+    try {
+      const query = req.query.q as string;
+      if (!query) {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+      const reels = await storage.searchReels(query);
+      res.json(reels);
+    } catch (err) {
+      console.error("Error searching reels:", err);
+      return res.status(500).json({ message: "Error searching reels" });
+    }
+  });
+
+  // Search screenshots with query parameter
+  app.get("/api/search/screenshots", async (req, res) => {
+    try {
+      const query = req.query.q as string;
+      if (!query) {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+      const screenshots = await storage.searchScreenshots(query);
+      res.json(screenshots);
+    } catch (err) {
+      console.error("Error searching screenshots:", err);
+      return res.status(500).json({ message: "Error searching screenshots" });
+    }
+  });
+
   // Legacy search endpoints (kept for backward compatibility)
 
   // Search users

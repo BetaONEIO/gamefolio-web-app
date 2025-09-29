@@ -149,6 +149,8 @@ export interface IStorage {
   searchUsers(query: string): Promise<User[]>;
   searchGames(query: string): Promise<Game[]>;
   searchClips(query: string): Promise<ClipWithUser[]>;
+  searchReels(query: string): Promise<ClipWithUser[]>;
+  searchScreenshots(query: string): Promise<Screenshot[]>;
 
   // Profile customization operations
   getAllProfileBanners(): Promise<ProfileBanner[]>;

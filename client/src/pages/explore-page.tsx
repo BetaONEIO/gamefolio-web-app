@@ -182,7 +182,7 @@ export default function ExplorePage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-500 mb-4">Failed to load trending clips</p>
+          <p className="text-red-500 mb-4">Failed to load trending games</p>
           <p className="text-muted-foreground">Please try again later</p>
         </div>
       </div>

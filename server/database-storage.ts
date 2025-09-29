@@ -1160,22 +1160,28 @@ export class DatabaseStorage implements IStorage {
     let matchingClips;
 
     if (isHashtag) {
-      // Search by hashtags in tags array
+      // Search by hashtags in tags array for clips only
       matchingClips = await db
         .select()
         .from(clips)
         .where(
-          sql`EXISTS (SELECT 1 FROM unnest(${clips.tags}) AS tag WHERE LOWER(tag) = ${searchTerm})`
+          and(
+            eq(clips.videoType, 'clip'),
+            sql`EXISTS (SELECT 1 FROM unnest(${clips.tags}) AS tag WHERE LOWER(tag) = ${searchTerm})`
+          )
         );
     } else {
-      // Search by title and description
+      // Search by title and description for clips only
       matchingClips = await db
         .select()
         .from(clips)
         .where(
-          or(
-            ilike(clips.title, `%${query}%`),
-            ilike(clips.description, `%${query}%`)
+          and(
+            eq(clips.videoType, 'clip'),
+            or(
+              ilike(clips.title, `%${query}%`),
+              ilike(clips.description, `%${query}%`)
+            )
           )
         );
     }
@@ -1189,6 +1195,82 @@ export class DatabaseStorage implements IStorage {
     }
 
     return clipsWithDetails;
+  }
+
+  async searchReels(query: string): Promise<ClipWithUser[]> {
+    // Check if query is a hashtag
+    const isHashtag = query.startsWith('#');
+    const searchTerm = isHashtag ? query.slice(1).toLowerCase() : query.toLowerCase();
+
+    let matchingReels;
+
+    if (isHashtag) {
+      // Search by hashtags in tags array for reels only
+      matchingReels = await db
+        .select()
+        .from(clips)
+        .where(
+          and(
+            eq(clips.videoType, 'reel'),
+            sql`EXISTS (SELECT 1 FROM unnest(${clips.tags}) AS tag WHERE LOWER(tag) = ${searchTerm})`
+          )
+        );
+    } else {
+      // Search by title and description for reels only
+      matchingReels = await db
+        .select()
+        .from(clips)
+        .where(
+          and(
+            eq(clips.videoType, 'reel'),
+            or(
+              ilike(clips.title, `%${query}%`),
+              ilike(clips.description, `%${query}%`)
+            )
+          )
+        );
+    }
+
+    const reelsWithDetails: ClipWithUser[] = [];
+    for (const reel of matchingReels) {
+      const reelWithUser = await this.getClipWithUser(reel.id);
+      if (reelWithUser) {
+        reelsWithDetails.push(reelWithUser);
+      }
+    }
+
+    return reelsWithDetails;
+  }
+
+  async searchScreenshots(query: string): Promise<Screenshot[]> {
+    // Check if query is a hashtag
+    const isHashtag = query.startsWith('#');
+    const searchTerm = isHashtag ? query.slice(1).toLowerCase() : query.toLowerCase();
+
+    if (isHashtag) {
+      // Search by hashtags in tags array for screenshots
+      return db
+        .select()
+        .from(screenshots)
+        .where(
+          sql`EXISTS (SELECT 1 FROM unnest(${screenshots.tags}) AS tag WHERE LOWER(tag) = ${searchTerm})`
+        )
+        .orderBy(desc(screenshots.createdAt), desc(screenshots.id))
+        .limit(20);
+    } else {
+      // Search by title and description for screenshots
+      return db
+        .select()
+        .from(screenshots)
+        .where(
+          or(
+            ilike(screenshots.title, `%${query}%`),
+            ilike(screenshots.description, `%${query}%`)
+          )
+        )
+        .orderBy(desc(screenshots.createdAt), desc(screenshots.id))
+        .limit(20);
+    }
   }
 
   // Profile customization operations
