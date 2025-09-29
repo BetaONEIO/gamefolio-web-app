@@ -72,9 +72,7 @@ const VideoPlayer = ({
           clearTimeout(timeoutRef.current);
         }
       } else {
-        // When user actively starts playing, always set to full volume and unmute
-        videoRef.current.muted = false;
-        videoRef.current.volume = 1;
+        // When user actively starts playing, set state to unmute and full volume
         setVolume(1);
         setIsMuted(false);
         
@@ -156,6 +154,15 @@ const VideoPlayer = ({
     }, isPlaying ? 6000 : 12000); // Much longer timeout, especially when paused
   };
 
+  // Effect to sync volume and mute state to video element
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    video.volume = volume;
+    video.muted = isMuted;
+  }, [volume, isMuted]);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -232,7 +239,6 @@ const VideoPlayer = ({
         autoPlay={autoPlay}
         playsInline
         preload="metadata"
-        muted={isMuted}
         onError={(e) => {
           console.error("Video playback error:", e);
           console.error("Failed video URL:", videoUrl);
