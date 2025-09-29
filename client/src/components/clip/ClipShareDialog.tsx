@@ -18,6 +18,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { FaReddit, FaWhatsapp, FaTelegram, FaDiscord } from "react-icons/fa";
+import { SiX } from "react-icons/si";
 
 interface ClipShareDialogProps {
   clipId: number;
@@ -46,7 +47,7 @@ interface ShareData {
 }
 
 const SOCIAL_PLATFORMS = [
-  { name: "X", icon: X, key: "twitter", color: "text-blue-400" },
+  { name: "X", icon: SiX, key: "twitter", color: "text-white" },
   { name: "Facebook", icon: Facebook, key: "facebook", color: "text-blue-600" },
   { name: "Reddit", icon: FaReddit, key: "reddit", color: "text-orange-500" },
   { name: "Discord", icon: FaDiscord, key: "discord", color: "text-indigo-500" },
