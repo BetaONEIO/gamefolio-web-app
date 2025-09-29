@@ -110,7 +110,7 @@ export function ScreenshotCard({
           <Button
             size="sm"
             variant="destructive"
-            className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20"
+            className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 h-8 w-8 md:h-7 md:w-7"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -121,7 +121,7 @@ export function ScreenshotCard({
             title="Delete screenshot"
             data-testid="button-delete-screenshot"
           >
-            <X size={12} />
+            <X className="h-4 w-4 md:h-3 md:w-3" />
           </Button>
         ) : (
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
