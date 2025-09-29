@@ -5,12 +5,13 @@ import { ClipWithUser, CommentWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
 import { 
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogClose
 } from "@/components/ui/dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { DialogOverlay, DialogPortal } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -227,20 +228,23 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent 
-        ref={dialogRef}
-        className={cn(
-          "p-0 bg-background text-foreground clip-dialog-content",
-          isMobile && clip?.videoType === 'reel' 
-            ? "w-screen h-screen max-w-none max-h-none overflow-hidden" // Full screen on mobile for reels with no scroll
-            : isMobile 
-              ? "w-screen h-screen max-w-none max-h-none overflow-y-auto sm:max-w-[95%] sm:w-[95%] sm:max-h-[90vh] sm:h-[90vh] sm:overflow-hidden" // Allow scrolling on mobile, fixed on larger screens
-              : "max-w-[95%] w-[95%] max-h-[90vh] h-[90vh] overflow-hidden" // Desktop size
-        )}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
+      <DialogPortal>
+        <DialogOverlay />
+        <DialogPrimitive.Content
+          ref={dialogRef}
+          className={cn(
+            "fixed left-[50%] top-[50%] z-50 grid w-full translate-x-[-50%] translate-y-[-50%] border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+            "p-0 bg-background text-foreground clip-dialog-content",
+            isMobile && clip?.videoType === 'reel' 
+              ? "w-screen h-screen max-w-none max-h-none overflow-hidden" // Full screen on mobile for reels with no scroll
+              : isMobile 
+                ? "w-screen h-screen max-w-none max-h-none overflow-y-auto sm:max-w-[95%] sm:w-[95%] sm:max-h-[90vh] sm:h-[90vh] sm:overflow-hidden" // Allow scrolling on mobile, fixed on larger screens
+                : "max-w-[95%] w-[95%] max-h-[90vh] h-[90vh] overflow-hidden" // Desktop size
+          )}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
         <DialogTitle className="sr-only">
           {clip ? `Video: ${clip.title}` : 'Video Player'}
         </DialogTitle>
@@ -587,7 +591,8 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             </div>
           </div>
         )}
-      </DialogContent>
+        </DialogPrimitive.Content>
+      </DialogPortal>
       
       <JoinGamefolioDialog 
         open={joinDialogOpen} 
