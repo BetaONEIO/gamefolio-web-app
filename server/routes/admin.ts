@@ -49,6 +49,18 @@ adminRouter.post("/initialize", async (req: Request, res: Response) => {
     if (superAdmin) {
       // Update existing user to admin role
       await storage.updateUser(superAdmin.id, { role: "admin" });
+      
+      // Assign moderator badge to admin
+      try {
+        await storage.createUserBadge({
+          userId: superAdmin.id,
+          badgeType: "moderator",
+          assignedBy: "system"
+        });
+      } catch (badgeError) {
+        console.error("Failed to assign moderator badge during admin initialization:", badgeError);
+      }
+      
       res.json({ 
         message: "Super admin mod_tom role updated successfully",
         user: { username: superAdmin.username, role: "admin" }
@@ -64,6 +76,17 @@ adminRouter.post("/initialize", async (req: Request, res: Response) => {
         password: tempPassword, // This should be changed on first login
         bio: "Platform Administrator"
       });
+      
+      // Assign moderator badge to new admin
+      try {
+        await storage.createUserBadge({
+          userId: newSuperAdmin.id,
+          badgeType: "moderator",
+          assignedBy: "system"
+        });
+      } catch (badgeError) {
+        console.error("Failed to assign moderator badge to new admin during initialization:", badgeError);
+      }
       
       // ENTERPRISE SECURITY: Never return credentials in any environment
       console.log('🔐 AUDIT: Super admin created successfully - credentials secured');
@@ -222,6 +245,19 @@ adminRouter.post("/users/:id/make-admin", async (req: Request, res: Response) =>
       role: "admin"
     });
 
+    // Automatically assign moderator badge to new admin
+    try {
+      await storage.createUserBadge({
+        userId: userId,
+        badgeType: "moderator",
+        assignedBy: "system",
+        assignedById: adminUser.id
+      });
+    } catch (badgeError) {
+      // Log error but don't fail the admin promotion if badge assignment fails
+      console.error("Failed to assign moderator badge to new admin:", badgeError);
+    }
+
     res.json(updatedUser);
   } catch (err) {
     console.error("Error making user admin:", err);
@@ -244,6 +280,18 @@ adminRouter.post("/users/by-username/:username/make-admin", async (req: Request,
     const updatedUser = await storage.updateUser(user.id, {
       role: "admin"
     });
+
+    // Automatically assign moderator badge to new admin
+    try {
+      await storage.createUserBadge({
+        userId: user.id,
+        badgeType: "moderator",
+        assignedBy: "system"
+      });
+    } catch (badgeError) {
+      // Log error but don't fail the admin promotion if badge assignment fails
+      console.error("Failed to assign moderator badge to new admin:", badgeError);
+    }
 
     res.json(updatedUser);
   } catch (err) {
@@ -272,6 +320,14 @@ adminRouter.post("/users/:id/remove-admin", async (req: Request, res: Response) 
     const updatedUser = await storage.updateUser(userId, {
       role: "user"
     });
+
+    // Automatically remove moderator badge when removing admin role
+    try {
+      await storage.deleteBadgesByType(userId, "moderator");
+    } catch (badgeError) {
+      // Log error but don't fail the admin demotion if badge removal fails
+      console.error("Failed to remove moderator badge from former admin:", badgeError);
+    }
 
     res.json(updatedUser);
   } catch (err) {
