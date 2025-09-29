@@ -1,5 +1,5 @@
 import { useLocation, Link } from "wouter";
-import { Home, Compass, PlusCircle, Flame, User, Trophy } from "lucide-react";
+import { Home, Compass, PlusCircle, Flame, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -13,7 +13,6 @@ const MobileNav = () => {
     { icon: Compass, label: "Explore", href: "/explore" },
     { icon: PlusCircle, label: "", href: "/upload", isUpload: true },
     { icon: Flame, label: "Trending", href: "/trending" },
-    { icon: Trophy, label: "Leaderboard", href: "/leaderboard" },
     { icon: User, label: "Profile", href: `/profile/${username}` },
   ];
 

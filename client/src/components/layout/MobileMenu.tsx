@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { X, Search, Home, Compass, Flame, User, Settings, LogOut, MessageSquare } from "lucide-react";
+import { X, Search, Home, Compass, Flame, User, Settings, LogOut, MessageSquare, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -122,6 +122,16 @@ const MobileMenu = () => {
                 >
                   <Flame className="mr-3 h-5 w-5 text-primary" />
                   <span className="font-medium">Trending</span>
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  href="/leaderboard"
+                  onClick={close}
+                  className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                >
+                  <Trophy className="mr-3 h-5 w-5 text-primary" />
+                  <span className="font-medium">Leaderboard</span>
                 </Link>
               </li>
               {user && (user.messagingEnabled !== false && user.messaging_enabled !== false) && (
