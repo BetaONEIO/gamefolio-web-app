@@ -3548,6 +3548,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Clip not found" });
       }
 
+      // Prevent users from liking their own content
+      if (clip.userId === userId) {
+        return res.status(400).json({ message: "Cannot like your own content, casual!" });
+      }
+
       // Check if user already liked this clip
       const hasLiked = await storage.hasUserLikedClip(userId, clipId);
 
@@ -3631,6 +3636,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const clip = await storage.getClip(clipId);
       if (!clip) {
         return res.status(404).json({ message: "Clip not found" });
+      }
+
+      // Prevent users from reacting to their own content
+      if (clip.userId === req.user?.id) {
+        return res.status(400).json({ message: "Cannot react to your own content, casual!" });
       }
 
       // Check email verification (except for demo user)
@@ -5718,6 +5728,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Screenshot not found" });
       }
 
+      // Prevent users from liking their own content
+      if (screenshot.userId === userId) {
+        return res.status(400).json({ message: "Cannot like your own content, casual!" });
+      }
+
       // Check if user already liked this screenshot
       const hasLiked = await storage.hasUserLikedScreenshot(userId, screenshotId);
 
@@ -5763,6 +5778,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const screenshot = await storage.getScreenshot(screenshotId);
       if (!screenshot) {
         return res.status(404).json({ message: "Screenshot not found" });
+      }
+
+      // Prevent users from reacting to their own content
+      if (screenshot.userId === userId) {
+        return res.status(400).json({ message: "Cannot react to your own content, casual!" });
       }
 
       // Validate emoji (allow heart and fire reactions)
