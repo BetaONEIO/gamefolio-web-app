@@ -388,6 +388,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       className="max-w-full max-h-full"
                       objectFit="contain"
                       clipId={clip.id}
+                      disableAspectRatio={true}
                     />
                     {/* Reel badge indicator */}
                     <div className="absolute top-4 right-4 z-50">
