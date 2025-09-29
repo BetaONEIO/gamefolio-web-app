@@ -26,12 +26,14 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const { user, logoutMutation } = useAuth();
   const { toggle } = useMobileMenu();
   const isMobile = useMobile();
   const [, setLocation] = useLocation();
   const searchRef = useRef<HTMLDivElement>(null);
+  const mobileSearchRef = useRef<HTMLDivElement>(null);
 
   // Debounce search query for dropdown
   useEffect(() => {
@@ -72,6 +74,9 @@ const Header = () => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
       }
+      if (mobileSearchRef.current && !mobileSearchRef.current.contains(event.target as Node)) {
+        setShowMobileSearch(false);
+      }
     }
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -89,6 +94,7 @@ const Header = () => {
         setLocation(`/explore?q=${encodeURIComponent(searchQuery)}`);
       }
       setShowDropdown(false);
+      setShowMobileSearch(false);
       setSearchQuery("");
     }
   };
@@ -102,6 +108,7 @@ const Header = () => {
   const handleUserSelect = (username: string) => {
     setLocation(`/profile/${username}`);
     setShowDropdown(false);
+    setShowMobileSearch(false);
     setSearchQuery("");
   };
 
@@ -110,6 +117,7 @@ const Header = () => {
     const gameSlug = gameName.toLowerCase().replace(/[^a-z0-9]/g, '');
     setLocation(`/games/${gameSlug}`);
     setShowDropdown(false);
+    setShowMobileSearch(false);
     setSearchQuery("");
   };
 
@@ -293,6 +301,20 @@ const Header = () => {
 
         {/* User Actions */}
         <div className="flex items-center">
+          {/* Mobile Search Button */}
+          {isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="mr-2 p-2"
+              onClick={() => setShowMobileSearch(true)}
+              aria-label="Search"
+              data-testid="mobile-search-button"
+            >
+              <Search className="h-5 w-5" />
+            </Button>
+          )}
+          
           {user ? (
             <>
               <NotificationBell />
@@ -385,6 +407,159 @@ const Header = () => {
           )}
         </div>
       </div>
+      
+      {/* Mobile Search Overlay */}
+      {showMobileSearch && (
+        <div className="fixed inset-0 bg-black/50 z-50 md:hidden">
+          <div className="bg-card w-full p-4 shadow-lg">
+            <div
+              ref={mobileSearchRef}
+              className="relative"
+            >
+              <form onSubmit={handleSearch} className="flex items-center gap-2">
+                <div className="flex-1 relative">
+                  <Input
+                    type="text"
+                    placeholder="Search #hashtags, users, games..."
+                    className="w-full py-3 px-4 pr-12 rounded-lg bg-secondary text-foreground"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    onFocus={() => searchQuery.length >= 2 && setShowDropdown(true)}
+                    autoFocus
+                    data-testid="mobile-search-input"
+                  />
+                  <Button
+                    type="submit"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+                  >
+                    <Search className="h-5 w-5" />
+                  </Button>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setShowMobileSearch(false)}
+                  className="text-muted-foreground"
+                  data-testid="mobile-search-close"
+                >
+                  Cancel
+                </Button>
+              </form>
+
+              {/* Mobile Search Dropdown */}
+              {showDropdown && (searchQuery.startsWith('#') || (userResults && userResults.length > 0) || (gameResults && gameResults.length > 0)) && (
+                <div className="absolute top-full mt-2 w-full bg-card border border-border rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+                  <div className="p-2">
+                    {/* Hashtag Section */}
+                    {searchQuery.startsWith('#') && searchQuery.length > 1 && (
+                      <>
+                        <div className="text-xs text-muted-foreground px-3 py-2 font-medium">Hashtags</div>
+                        <button
+                          onClick={() => {
+                            setLocation(`/hashtag/${encodeURIComponent(searchQuery.slice(1))}`);
+                            setShowDropdown(false);
+                            setShowMobileSearch(false);
+                            setSearchQuery("");
+                          }}
+                          className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
+                            #
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium text-foreground block truncate">{searchQuery}</span>
+                            <div className="text-sm text-muted-foreground">Search for clips with this hashtag</div>
+                          </div>
+                        </button>
+                      </>
+                    )}
+
+                    {/* Games Section */}
+                    {gameResults && gameResults.length > 0 && (
+                      <>
+                        {searchQuery.startsWith('#') && <div className="border-t border-border my-2"></div>}
+                        <div className="text-xs text-muted-foreground px-3 py-2 font-medium">Games</div>
+                        {gameResults.slice(0, 3).map((game) => (
+                          <button
+                            key={game.id}
+                            onClick={() => handleGameSelect(game.id, game.name)}
+                            className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left"
+                          >
+                            <div className="w-8 h-8 rounded-md overflow-hidden bg-secondary flex-shrink-0">
+                              {game.imageUrl ? (
+                                <img
+                                  src={game.imageUrl}
+                                  alt={game.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs">
+                                  {getInitials(game.name)}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="font-medium text-foreground block truncate">{game.name}</span>
+                              <div className="text-sm text-muted-foreground">Game</div>
+                            </div>
+                          </button>
+                        ))}
+                      </>
+                    )}
+
+                    {/* Users Section */}
+                    {userResults && userResults.length > 0 && (
+                      <>
+                        {((gameResults && gameResults.length > 0) || searchQuery.startsWith('#')) && <div className="border-t border-border my-2"></div>}
+                        <div className="text-xs text-muted-foreground px-3 py-2 font-medium">Users</div>
+                        {userResults.slice(0, 3).map((user) => (
+                          <button
+                            key={user.id}
+                            onClick={() => handleUserSelect(user.username)}
+                            className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
+                              {getInitials(user.displayName)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-foreground">{user.displayName}</span>
+                                {user.emailVerified && (
+                                  <CheckCircle2 className="h-3 w-3 text-primary" />
+                                )}
+                              </div>
+                              <div className="text-sm text-muted-foreground">@{user.username}</div>
+                            </div>
+                          </button>
+                        ))}
+                      </>
+                    )}
+
+                    {/* View All Results */}
+                    {((userResults && userResults.length > 3) || (gameResults && gameResults.length > 3)) && (
+                      <>
+                        <div className="border-t border-border my-2"></div>
+                        <button
+                          onClick={() => {
+                            setLocation(`/explore?q=${encodeURIComponent(searchQuery)}`);
+                            setShowDropdown(false);
+                            setShowMobileSearch(false);
+                          }}
+                          className="w-full px-3 py-2 text-sm text-primary hover:bg-secondary rounded-md transition-colors text-center"
+                        >
+                          View all results
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };
