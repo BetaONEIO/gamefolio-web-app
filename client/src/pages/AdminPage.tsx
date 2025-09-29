@@ -3,7 +3,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
 import AdminContentFilter from "./AdminContentFilter";
-import { UserWithBadges, BannerSettings } from "@shared/schema";
+import { UserWithBadges, BannerSettings, Badge as BadgeType } from "@shared/schema";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -463,7 +463,7 @@ const AdminPage = () => {
   });
 
   // Badge management queries
-  const { data: badgesData, isLoading: badgesLoading, refetch: refetchBadges } = useQuery({
+  const { data: badgesData, isLoading: badgesLoading, refetch: refetchBadges } = useQuery<BadgeType[]>({
     queryKey: ["/api/admin/badges"],
   });
 
@@ -1650,24 +1650,20 @@ const AdminPage = () => {
                           <SelectValue placeholder="Select badge type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="newcomer">
-                            <div className="flex items-center gap-2">
-                              <Star className="h-4 w-4" />
-                              Newcomer
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="founder">
-                            <div className="flex items-center gap-2">
-                              <Crown className="h-4 w-4" />
-                              Founder
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="admin">
-                            <div className="flex items-center gap-2">
-                              <Shield className="h-4 w-4" />
-                              Admin
-                            </div>
-                          </SelectItem>
+                          {badgesLoading ? (
+                            <div className="px-2 py-1 text-sm text-gray-500">Loading badges...</div>
+                          ) : badgesData && badgesData.length > 0 ? (
+                            badgesData.map((badge: BadgeType) => (
+                              <SelectItem key={badge.id} value={badge.name}>
+                                <div className="flex items-center gap-2">
+                                  {getBadgeIcon(badge.name)}
+                                  <span>{badge.name}</span>
+                                </div>
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="px-2 py-1 text-sm text-gray-500">No badges available</div>
+                          )}
                         </SelectContent>
                       </Select>
                       <Button
