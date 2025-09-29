@@ -195,6 +195,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
               <LikeButton
                 contentId={currentReel.id}
                 contentType="clip"
+                contentOwnerId={currentReel.userId}
                 initialLiked={false}
                 initialCount={parseInt(currentReel._count?.likes?.toString() || '0')}
                 size="lg"

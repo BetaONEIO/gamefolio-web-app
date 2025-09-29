@@ -2385,6 +2385,7 @@ const ProfilePage = () => {
                           <LikeButton 
                             contentId={selectedScreenshot.id}
                             contentType="screenshot"
+                            contentOwnerId={selectedScreenshot.userId}
                             initialLiked={false}
                             initialCount={0}
                             size="lg"

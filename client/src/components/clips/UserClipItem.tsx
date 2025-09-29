@@ -137,6 +137,7 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
                 <LikeButton 
                   contentId={clip.id} 
                   contentType="clip" 
+                  contentOwnerId={clip.userId}
                   initialCount={parseInt(clip._count?.likes?.toString() || '0')} 
                   size="sm"
                 />

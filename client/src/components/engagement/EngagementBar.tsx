@@ -5,6 +5,7 @@ import { CommentSection } from "./CommentSection";
 interface EngagementBarProps {
   contentId: number;
   contentType: 'clip' | 'screenshot';
+  contentOwnerId?: number;
   initialLikes?: number;
   initialFires?: number;
   initialComments?: number;
@@ -18,6 +19,7 @@ interface EngagementBarProps {
 export function EngagementBar({
   contentId,
   contentType,
+  contentOwnerId,
   initialLikes = 0,
   initialFires = 0,
   initialComments = 0,
@@ -39,6 +41,7 @@ export function EngagementBar({
         <LikeButton
           contentId={contentId}
           contentType={contentType}
+          contentOwnerId={contentOwnerId}
           initialLiked={userHasLiked}
           initialCount={initialLikes}
           size={size}

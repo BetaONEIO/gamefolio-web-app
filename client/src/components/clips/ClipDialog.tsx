@@ -473,6 +473,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         <LikeButton 
                           contentId={clip.id}
                           contentType="clip"
+                          contentOwnerId={clip.userId}
                           initialLiked={false}
                           initialCount={clip._count?.likes || 0}
                           size="lg"

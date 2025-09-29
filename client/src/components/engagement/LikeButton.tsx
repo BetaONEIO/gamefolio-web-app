@@ -11,6 +11,7 @@ import { useJoinDialog } from "@/hooks/use-join-dialog";
 interface LikeButtonProps {
   contentId: number;
   contentType: 'clip' | 'screenshot';
+  contentOwnerId?: number;
   initialLiked?: boolean;
   initialCount?: number;
   size?: 'sm' | 'md' | 'lg';
@@ -22,6 +23,7 @@ interface LikeButtonProps {
 export function LikeButton({ 
   contentId, 
   contentType, 
+  contentOwnerId,
   initialLiked = false, 
   initialCount = 0,
   size = 'md',
@@ -45,7 +47,7 @@ export function LikeButton({
 
   // Update local state when like status is fetched
   useEffect(() => {
-    if (likeStatus && typeof likeStatus === 'object' && 'hasLiked' in likeStatus) {
+    if (likeStatus && typeof likeStatus === 'object' && 'hasLiked' in likeStatus && typeof likeStatus.hasLiked === 'boolean') {
       setLiked(likeStatus.hasLiked);
     }
   }, [likeStatus]);
@@ -105,6 +107,16 @@ export function LikeButton({
       } else {
         openDialog('like');
       }
+      return;
+    }
+
+    // Prevent users from liking their own content
+    if (contentOwnerId && user.id === contentOwnerId) {
+      toast({
+        title: "Cannot like own content",
+        description: "You cannot like your own content, casual!",
+        variant: "destructive"
+      });
       return;
     }
 
