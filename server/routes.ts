@@ -1633,9 +1633,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userClips = await storage.getClipsByUserId(user.id);
       const clipsCount = userClips?.length || 0;
       
-      // Get follower counts directly (simplified for now since getUserWithStats seems to have issues)
-      const followersCount = 0; // Will show 0 for now, can implement direct query if needed
-      const followingCount = 0; // Will show 0 for now, can implement direct query if needed
+      // Get follower counts using proper database queries
+      const followersCount = await storage.getFollowerCount(user.id);
+      const followingCount = await storage.getFollowingCount(user.id);
       
       console.log(`📊 User stats (direct): ${clipsCount} clips, ${followersCount} followers, ${followingCount} following`);
       
@@ -1693,8 +1693,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           <!-- Profile info section - positioned to the right of profile picture -->
           <g transform="translate(${profileX + profilePicSize + 40}, ${profileY + 20})">
-            <!-- Username (much larger) -->
-            <text x="0" y="0" class="username">${displayName}</text>
+            <!-- Username (much larger) with verified badge if applicable -->
+            <g>
+              <text x="0" y="0" class="username">${displayName}</text>
+              ${user.emailVerified ? `
+                <!-- Verified badge icon -->
+                <image x="${displayName.length * 29}" y="-32" width="32" height="32" href="/attached_assets/green_badge_128_1758978841463.png"/>
+              ` : ''}
+            </g>
             <!-- Handle -->
             <text x="0" y="35" class="handle">@${user.username}</text>
             
@@ -1719,15 +1725,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             <!-- User Type and Game badges -->
             <g transform="translate(0, 180)">
-              ${displayUserTypes.map((userType, index) => `
-                <rect x="${index * 110}" y="0" width="${Math.max(userType.length * 8 + 20, 80)}" height="32" rx="16" fill="#8b5cf6"/>
-                <text x="${index * 110 + Math.max(userType.length * 8 + 20, 80) / 2}" y="21" class="badge-text" text-anchor="middle">${userType}</text>
-              `).join('')}
+              ${displayUserTypes.map((userType, index) => {
+                const width = Math.max(userType.length * 8 + 20, 80);
+                const x = index === 0 ? 0 : displayUserTypes.slice(0, index).reduce((acc, type) => acc + Math.max(type.length * 8 + 20, 80) + 10, 0);
+                return `
+                  <rect x="${x}" y="0" width="${width}" height="32" rx="16" fill="#8b5cf6"/>
+                  <text x="${x + width / 2}" y="21" class="badge-text" text-anchor="middle">${userType}</text>
+                `;
+              }).join('')}
               
-              ${displayGames.map((game, index) => `
-                <rect x="${index * 120}" y="40" width="${Math.max(game.name.length * 6 + 16, 70)}" height="28" rx="14" fill="#059669"/>
-                <text x="${index * 120 + Math.max(game.name.length * 6 + 16, 70) / 2}" y="58" class="badge-text" text-anchor="middle" style="font-size: 14px;">${game.name.length > 12 ? game.name.substring(0, 12) + '...' : game.name}</text>
-              `).join('')}
+              ${displayGames.map((game, index) => {
+                const gameName = game.name.length > 10 ? game.name.substring(0, 10) + '...' : game.name;
+                const width = Math.max(gameName.length * 7 + 16, 75);
+                const x = index === 0 ? 0 : displayGames.slice(0, index).reduce((acc, g) => {
+                  const prevName = g.name.length > 10 ? g.name.substring(0, 10) + '...' : g.name;
+                  return acc + Math.max(prevName.length * 7 + 16, 75) + 8;
+                }, 0);
+                return `
+                  <rect x="${x}" y="40" width="${width}" height="28" rx="14" fill="#059669"/>
+                  <text x="${x + width / 2}" y="58" class="badge-text" text-anchor="middle" style="font-size: 14px;">${gameName}</text>
+                `;
+              }).join('')}
             </g>
           </g>
           
