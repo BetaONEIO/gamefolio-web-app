@@ -23,16 +23,6 @@ export function BannerLightbox({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[90vw] w-full p-0 bg-black/95 border-none overflow-hidden">
-        {/* Close button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="absolute right-4 top-4 z-50 text-white/70 hover:text-white hover:bg-white/10"
-          onClick={onClose}
-        >
-          <X className="h-5 w-5" />
-        </Button>
-        
         {/* Banner image */}
         <div className="relative flex flex-col items-center justify-center p-8 overflow-hidden">
           <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
