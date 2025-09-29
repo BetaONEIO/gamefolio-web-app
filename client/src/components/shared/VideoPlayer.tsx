@@ -232,6 +232,7 @@ const VideoPlayer = ({
         )}
         onClick={togglePlay}
         autoPlay={autoPlay}
+        muted={isMuted}
         playsInline
         preload="metadata"
         onError={(e) => {
