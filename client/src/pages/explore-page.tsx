@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Search, Upload, Plus } from "lucide-react";
 import TwitchGameSearch, { TwitchGame } from "@/components/games/TwitchGameSearch";
+import SearchResults from "@/components/explore/SearchResults";
 
 interface Game {
   id: string;
@@ -24,6 +25,15 @@ export default function ExplorePage() {
   const [allLoadedGames, setAllLoadedGames] = useState<Game[]>([]);
   const [hasMore, setHasMore] = useState(true);
   const loadingRef = useRef<HTMLDivElement>(null);
+  
+  // Check for search query in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const searchQuery = urlParams.get('q');
+  
+  // If there's a search query, show search results instead of explore
+  if (searchQuery) {
+    return <SearchResults query={searchQuery} />;
+  }
 
 
 
