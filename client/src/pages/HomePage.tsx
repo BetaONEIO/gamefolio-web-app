@@ -622,7 +622,6 @@ const HomePage = () => {
                 key={clip.id} 
                 clip={clip} 
                 userId={userId}
-                clipsList={topClips?.filter(c => c.videoType !== 'reel')}
               />
             ))
           )}
@@ -655,7 +654,6 @@ const HomePage = () => {
                 clip={clip} 
                 userId={userId}
                 compact={true}
-                clipsList={popularClips?.filter(c => c.videoType !== 'reel')}
               />
             ))
           )}
