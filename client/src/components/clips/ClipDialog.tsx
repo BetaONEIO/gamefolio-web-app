@@ -380,12 +380,12 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               ) : clip.videoType === 'reel' ? (
                 // Desktop reels: maintain 9:16 aspect ratio
                 <div className="h-full flex items-center justify-center bg-black relative">
-                  <div className="h-full max-h-full aspect-[9/16] bg-black relative">
+                  <div className="h-full max-h-full aspect-[9/16] bg-black relative flex items-center justify-center">
                     <VideoPlayer 
                       videoUrl={clip.videoUrl} 
                       thumbnailUrl={clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined} 
                       autoPlay={true}
-                      className="w-full h-full"
+                      className="max-w-full max-h-full"
                       objectFit="contain"
                       clipId={clip.id}
                     />
