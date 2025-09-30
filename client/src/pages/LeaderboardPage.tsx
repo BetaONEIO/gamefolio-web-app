@@ -56,6 +56,14 @@ interface TopContributor {
   };
 }
 
+interface XPLeaderboardEntry {
+  id: number;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  totalXP: number;
+}
+
 const LeaderboardPage = () => {
   const { user } = useAuth();
 
@@ -82,6 +90,11 @@ const LeaderboardPage = () => {
   // Fetch historic weekly winners
   const { data: historicWeeklyData, isLoading: historicWeeklyLoading } = useQuery<TopContributor[]>({
     queryKey: ["/api/leaderboard/top-contributors/weekly"],
+  });
+
+  // Fetch XP leaderboard
+  const { data: xpData, isLoading: xpLoading } = useQuery<XPLeaderboardEntry[]>({
+    queryKey: ["/api/xp/leaderboard"],
   });
 
   const getRankBadgeColor = (rank: number) => {
@@ -321,6 +334,83 @@ const LeaderboardPage = () => {
     </Card>
   );
 
+  const XPLeaderboardTable = ({ data, isLoading }: { data: XPLeaderboardEntry[] | undefined, isLoading: boolean }) => (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-primary" />
+          XP Leaderboard
+        </CardTitle>
+        <CardDescription>
+          Earn 1 XP for every video view your clips receive
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="space-y-3 sm:space-y-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-2 sm:gap-4 p-3 sm:p-4">
+                <div className="w-8 h-8 sm:w-12 sm:h-12 bg-muted rounded-lg animate-pulse" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-full animate-pulse" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 sm:h-4 bg-muted rounded animate-pulse" />
+                  <div className="h-2 sm:h-3 bg-muted rounded w-1/2 animate-pulse" />
+                </div>
+                <div className="h-5 w-12 sm:h-6 sm:w-16 bg-muted rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
+        ) : !data || data.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>No XP data available yet.</p>
+            <p className="text-sm">Start uploading clips and getting views to earn XP!</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {data.map((entry, index) => {
+              const rank = index + 1;
+              return (
+                <div 
+                  key={entry.id}
+                  className={`flex items-center gap-2 sm:gap-4 p-3 sm:p-4 rounded-lg border transition-all hover:shadow-md cursor-pointer hover:scale-[1.02] ${
+                    user?.id === entry.id ? 'bg-primary/5 border-primary/20' : 'bg-muted/30'
+                  }`}
+                  data-testid={`xp-leaderboard-entry-${entry.id}`}
+                  onClick={() => window.location.href = `/profile/${entry.username}`}
+                >
+                  <div className="flex items-center justify-center w-8 sm:w-12 h-8 sm:h-12">
+                    {rank === 1 ? <Crown className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500" /> :
+                     rank === 2 ? <Medal className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400" /> :
+                     rank === 3 ? <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600" /> :
+                     <span className="text-sm sm:text-lg font-bold text-muted-foreground">#{rank}</span>}
+                  </div>
+                  
+                  <Avatar className="h-8 w-8 sm:h-10 sm:h-10">
+                    <AvatarImage src={entry.avatarUrl || undefined} />
+                    <AvatarFallback className="text-xs sm:text-sm">{entry.displayName.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-foreground text-sm sm:text-base truncate">{entry.displayName}</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground truncate">@{entry.username}</div>
+                  </div>
+                  
+                  <Badge 
+                    className={`${getRankBadgeColor(rank)} text-white font-bold px-2 sm:px-3 py-1 text-xs sm:text-sm flex-shrink-0`}
+                    data-testid={`xp-${entry.id}`}
+                  >
+                    {entry.totalXP} XP
+                  </Badge>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   const HistoricLeaderboard = () => {
     const formatPeriod = (period: string, periodType: string) => {
       if (periodType === 'monthly') {
@@ -548,10 +638,11 @@ const LeaderboardPage = () => {
 
         {/* Leaderboard Tabs */}
         <Tabs defaultValue="month" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="week" data-testid="tab-week">This Week</TabsTrigger>
             <TabsTrigger value="month" data-testid="tab-month">This Month</TabsTrigger>
             <TabsTrigger value="historic" data-testid="tab-historic">Historic</TabsTrigger>
+            <TabsTrigger value="xp" data-testid="tab-xp">XP</TabsTrigger>
             <TabsTrigger value="alltime" data-testid="tab-alltime">All Time</TabsTrigger>
           </TabsList>
 
@@ -575,6 +666,10 @@ const LeaderboardPage = () => {
 
           <TabsContent value="historic" data-testid="content-historic">
             <HistoricLeaderboard />
+          </TabsContent>
+
+          <TabsContent value="xp" data-testid="content-xp">
+            <XPLeaderboardTable data={xpData} isLoading={xpLoading} />
           </TabsContent>
 
           <TabsContent value="alltime" data-testid="content-alltime">
