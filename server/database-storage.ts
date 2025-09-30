@@ -1483,11 +1483,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getScreenshotsByUserId(userId: number): Promise<Screenshot[]> {
-    return await db
-      .select()
+    const results = await db
+      .select({
+        screenshot: screenshots,
+        likesCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotLikes} WHERE ${screenshotLikes.screenshotId} = ${screenshots.id}), 0)`,
+        reactionsCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotReactions} WHERE ${screenshotReactions.screenshotId} = ${screenshots.id}), 0)`,
+        commentsCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotComments} WHERE ${screenshotComments.screenshotId} = ${screenshots.id}), 0)`
+      })
       .from(screenshots)
       .where(eq(screenshots.userId, userId))
       .orderBy(desc(screenshots.createdAt), desc(screenshots.id));
+    
+    return results.map(row => ({
+      ...row.screenshot,
+      _count: {
+        likes: row.likesCount,
+        reactions: row.reactionsCount,
+        comments: row.commentsCount
+      }
+    })) as any;
   }
 
   async getScreenshotsByGameId(gameId: number, limit: number = 20): Promise<Screenshot[]> {
@@ -2349,9 +2363,15 @@ export class DatabaseStorage implements IStorage {
         dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     }
 
-    // For now, get screenshots ordered by views and creation date since likes/comments aren't supported yet
     const screenshotsQuery = db
-      .select()
+      .select({
+        screenshot: screenshots,
+        user: users,
+        game: games,
+        likesCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotLikes} WHERE ${screenshotLikes.screenshotId} = ${screenshots.id}), 0)`,
+        reactionsCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotReactions} WHERE ${screenshotReactions.screenshotId} = ${screenshots.id}), 0)`,
+        commentsCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotComments} WHERE ${screenshotComments.screenshotId} = ${screenshots.id}), 0)`
+      })
       .from(screenshots)
       .leftJoin(users, eq(screenshots.userId, users.id))
       .leftJoin(games, eq(screenshots.gameId, games.id))
@@ -2367,10 +2387,15 @@ export class DatabaseStorage implements IStorage {
     const results = await screenshotsQuery;
 
     return results.map(row => ({
-      ...row.screenshots,
-      user: row.users?.id ? { ...row.users } : null,
-      game: row.games?.id ? { ...row.games } : null
-    })) as (Screenshot & { user: User | null; game?: Game | null })[];
+      ...row.screenshot,
+      user: row.user?.id ? { ...row.user } : null,
+      game: row.game?.id ? { ...row.game } : null,
+      _count: {
+        likes: row.likesCount,
+        reactions: row.reactionsCount,
+        comments: row.commentsCount
+      }
+    })) as any;
   }
 
   // Badge definition operations

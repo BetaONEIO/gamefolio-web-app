@@ -80,6 +80,9 @@ export function ScreenshotCard({
       return;
     }
     
+    // Optimistically update like count
+    setLikeCount(hasUserLiked ? likeCount - 1 : likeCount + 1);
+    
     // Trigger animation when liking (not unliking)
     if (!hasUserLiked) {
       setIsAnimating(true);

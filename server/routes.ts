@@ -2584,6 +2584,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // General screenshots endpoint (supports filtering by game and time period)
+  app.get("/api/screenshots", async (req, res) => {
+    try {
+      const { period = 'today', limit = 20, gameId } = req.query;
+      const screenshots = await storage.getTrendingScreenshots(
+        period as string,
+        parseInt(limit as string) || 20,
+        gameId ? parseInt(gameId as string) : undefined
+      );
+      res.json(screenshots);
+    } catch (err) {
+      console.error("Error fetching screenshots:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Game categories route
   app.get("/api/games/categories", async (req, res) => {
     try {
