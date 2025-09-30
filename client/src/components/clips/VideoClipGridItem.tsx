@@ -156,7 +156,7 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         {/* Game name badge - green color, positioned next to NEW badge */}
         {clip.gameId && clip.game && (
           <Link 
-            href={`/games/${clip.gameId}/clips`}
+            href={`/games/${clip.gameId}`}
             onClick={(e) => e.stopPropagation()}
             className={`bg-green-600 text-white px-2 py-1 rounded-md font-bold hover:bg-green-500 transition-all duration-300 ${
               compact ? 'text-[10px]' : 'text-xs'

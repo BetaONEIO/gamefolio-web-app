@@ -475,7 +475,7 @@ const ClipPage = () => {
           )}
 
           {(clip as any).game && (
-            <Link href={`/games/${(clip as any).game.id}/clips`} className="inline-block bg-green-600 text-white px-3 py-1 rounded-full text-sm font-bold hover:bg-green-500 transition-colors">
+            <Link href={`/games/${(clip as any).game.id}`} className="inline-block bg-green-600 text-white px-3 py-1 rounded-full text-sm font-bold hover:bg-green-500 transition-colors">
               {(clip as any).game.name}
             </Link>
           )}
