@@ -12,6 +12,7 @@ import {
 import { useState } from "react";
 import { VerifiedIcon } from "@/components/ui/verified-icon";
 import { LazyImage } from "@/components/ui/lazy-image";
+import { createGameSlug } from "@/lib/utils";
 
 interface VideoClipGridItemProps {
   clip: ClipWithUser;
@@ -156,7 +157,7 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         {/* Game name badge - green color, positioned next to NEW badge */}
         {clip.gameId && clip.game && (
           <Link 
-            href={`/games/${clip.gameId}`}
+            href={`/games/${createGameSlug(clip.game.name)}`}
             onClick={(e) => e.stopPropagation()}
             className={`bg-green-600 text-white px-2 py-1 rounded-md font-bold hover:bg-green-500 transition-all duration-300 ${
               compact ? 'text-[10px]' : 'text-xs'
