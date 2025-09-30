@@ -18,18 +18,13 @@ export default function GamePage() {
   const [timePeriod, setTimePeriod] = useState<'day' | 'week' | 'month'>('day');
   const [contentType, setContentType] = useState<'clips' | 'reels' | 'screenshots'>('clips');
   
-  // Check if param is a numeric ID or a slug
-  const isNumericId = !isNaN(Number(id));
-  const gameIdOrSlug = id || '';
+  const gameSlug = id || '';
 
-  // Fetch game details - handle both IDs and slugs
+  // Fetch game details by slug
   const { data: game, isLoading: isLoadingGame } = useQuery<Game>({
-    queryKey: isNumericId ? ['/api/games', gameIdOrSlug] : ['/api/twitch/games/slug', gameIdOrSlug],
+    queryKey: ['/api/twitch/games/slug', gameSlug],
     queryFn: async () => {
-      const url = isNumericId 
-        ? `/api/games/${gameIdOrSlug}`
-        : `/api/twitch/games/slug/${gameIdOrSlug}`;
-      const response = await fetch(url);
+      const response = await fetch(`/api/twitch/games/slug/${gameSlug}`);
       if (!response.ok) throw new Error('Failed to fetch game');
       return response.json();
     },

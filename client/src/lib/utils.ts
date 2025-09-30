@@ -8,6 +8,10 @@ export function cn(...inputs: ClassValue[]) {
 export function createGameSlug(gameName: string): string {
   return gameName
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
+    .trim()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[\s_]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
