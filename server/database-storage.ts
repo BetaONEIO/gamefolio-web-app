@@ -73,7 +73,7 @@ import {
   screenshotCommentMentions
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, isNotNull } from "drizzle-orm";
+import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, isNotNull, getTableColumns } from "drizzle-orm";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { IStorage } from "./storage";
@@ -392,7 +392,7 @@ export class DatabaseStorage implements IStorage {
     try {
       const result = await db
         .select({
-          clip: clips,
+          ...getTableColumns(clips),
           user: {
             id: users.id,
             username: users.username,
@@ -416,7 +416,8 @@ export class DatabaseStorage implements IStorage {
 
       if (result.length === 0) return null;
 
-      const { clip, user, game } = result[0];
+      const row = result[0];
+      const { user, game, ...clipData } = row;
 
       // Get engagement counts
       const [likesResult, commentsResult, reactionsResult] = await Promise.all([
@@ -426,7 +427,7 @@ export class DatabaseStorage implements IStorage {
       ]);
 
       return {
-        ...clip,
+        ...clipData,
         user: user?.id ? { ...user } : null,
         game: game?.id ? { ...game } : null,
         _count: {
