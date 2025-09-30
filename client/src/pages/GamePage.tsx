@@ -18,19 +18,17 @@ export default function GamePage() {
   const [timePeriod, setTimePeriod] = useState<'day' | 'week' | 'month'>('day');
   const [contentType, setContentType] = useState<'clips' | 'reels' | 'screenshots'>('clips');
   
-  const gameSlug = id || '';
+  const gameId = parseInt(id || '0');
 
-  // Fetch game details by slug
+  // Fetch game details
   const { data: game, isLoading: isLoadingGame } = useQuery<Game>({
-    queryKey: ['/api/twitch/games/slug', gameSlug],
+    queryKey: ['/api/games', gameId],
     queryFn: async () => {
-      const response = await fetch(`/api/twitch/games/slug/${gameSlug}`);
+      const response = await fetch(`/api/games/${gameId}`);
       if (!response.ok) throw new Error('Failed to fetch game');
       return response.json();
     },
   });
-
-  const gameId = game?.id || 0;
 
   // Fetch trending clips for this game
   const { data: trendingClips, isLoading: isLoadingClips } = useQuery<ClipWithUser[]>({
@@ -45,7 +43,7 @@ export default function GamePage() {
       if (!response.ok) throw new Error('Failed to fetch trending clips');
       return response.json();
     },
-    enabled: contentType === 'clips' && !!game,
+    enabled: contentType === 'clips',
   });
 
   // Fetch trending reels for this game
@@ -61,7 +59,7 @@ export default function GamePage() {
       if (!response.ok) throw new Error('Failed to fetch trending reels');
       return response.json();
     },
-    enabled: contentType === 'reels' && !!game,
+    enabled: contentType === 'reels',
   });
 
   // Fetch screenshots for this game
@@ -77,13 +75,13 @@ export default function GamePage() {
       if (!response.ok) throw new Error('Failed to fetch screenshots');
       return response.json();
     },
-    enabled: contentType === 'screenshots' && !!game,
+    enabled: contentType === 'screenshots',
   });
 
   // Fetch all clips for this game (fallback)
   const { data: allClips, isLoading: isLoadingAllClips } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/games/${gameId}/clips`],
-    enabled: !trendingClips?.length && !trendingReels?.length && contentType !== 'screenshots' && !!game,
+    enabled: !trendingClips?.length && !trendingReels?.length && contentType !== 'screenshots',
   });
 
   const getPeriodIcon = (period: string) => {

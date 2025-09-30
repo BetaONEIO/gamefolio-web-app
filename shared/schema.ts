@@ -56,7 +56,6 @@ export const users = pgTable("users", {
 export const games = pgTable("games", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
-  slug: text("slug"), // URL-friendly slug for game pages
   imageUrl: text("image_url"),
   twitchId: text("twitch_id"), // Twitch game ID for mapping
   createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -20,7 +20,7 @@ import { formatDistance } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { cn, createGameSlug } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const ClipPage = () => {
   const { id } = useParams();
@@ -475,7 +475,7 @@ const ClipPage = () => {
           )}
 
           {(clip as any).game && (
-            <Link href={`/games/${createGameSlug((clip as any).game.name)}`} className="inline-block bg-green-600 text-white px-3 py-1 rounded-full text-sm font-bold hover:bg-green-500 transition-colors">
+            <Link href={`/games/${(clip as any).game.id}/clips`} className="inline-block bg-green-600 text-white px-3 py-1 rounded-full text-sm font-bold hover:bg-green-500 transition-colors">
               {(clip as any).game.name}
             </Link>
           )}

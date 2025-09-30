@@ -36,7 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
-import { cn, createGameSlug } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import CommentSection from "@/components/clips/CommentSection";
 import ShareMenu from "@/components/clips/ShareMenu";
@@ -681,7 +681,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   {/* Game name above views/time */}
                   {clip.game && (
                     <div className="mt-2">
-                      <Link href={`/games/${createGameSlug(clip.game.name)}`} onClick={(e) => {
+                      <Link href={`/games/${clip.game.id}/clips`} onClick={(e) => {
                         e.stopPropagation();
                         onClose(); // Close the dialog when navigating to game clips
                       }}>

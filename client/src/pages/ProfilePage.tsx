@@ -70,7 +70,7 @@ import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { formatDistance } from "date-fns";
-import { cn, createGameSlug } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import NotFound from "./not-found";
 
 const ProfilePage = () => {
@@ -2363,7 +2363,7 @@ const ProfilePage = () => {
                     {/* Game name above views/time */}
                     {selectedScreenshot.gameId && games?.find(g => g.id === selectedScreenshot.gameId) && (
                       <div className="mt-2">
-                        <Link href={`/games/${createGameSlug(games.find(g => g.id === selectedScreenshot.gameId)?.name || '')}`} onClick={(e) => e.stopPropagation()}>
+                        <Link href={`/games/${selectedScreenshot.gameId}/clips`} onClick={(e) => e.stopPropagation()}>
                           <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold hover:bg-green-500 cursor-pointer transition-colors">
                             {games.find(g => g.id === selectedScreenshot.gameId)?.name}
                           </span>
