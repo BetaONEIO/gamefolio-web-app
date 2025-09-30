@@ -270,7 +270,7 @@ export default function GamePage() {
               <p className="text-muted-foreground mb-4">
                 No {contentType} have been uploaded for {game.name} yet.
               </p>
-              <Link href="/upload">
+              <Link href={`/upload?type=${contentType}`}>
                 <Button>
                   Upload First {contentType === 'clips' ? 'Clip' : contentType === 'reels' ? 'Reel' : 'Screenshot'}
                 </Button>
