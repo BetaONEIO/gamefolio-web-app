@@ -46,6 +46,8 @@ export const users = pgTable("users", {
   // Privacy preferences
   messagingEnabled: boolean("messaging_enabled").default(true),
   isPrivate: boolean("is_private").default(false),
+  // XP System
+  totalXP: integer("total_xp").default(0).notNull(), // Total experience points earned from views
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -558,6 +560,17 @@ export const userPointsHistory = pgTable("user_points_history", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// User XP History table - tracks XP earned from clip views
+export const userXPHistory = pgTable("user_xp_history", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  clipId: integer("clip_id").notNull().references(() => clips.id),
+  xpAmount: integer("xp_amount").notNull(), // XP earned (1 XP per view)
+  viewCount: integer("view_count").notNull(), // The view count milestone that triggered this XP
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Weekly Leaderboard table
 export const weeklyLeaderboard = pgTable("weekly_leaderboard", {
   id: serial("id").primaryKey(),
@@ -598,6 +611,12 @@ export const insertMonthlyLeaderboardSchema = createInsertSchema(monthlyLeaderbo
 
 // Schema for inserting user points history
 export const insertUserPointsHistorySchema = createInsertSchema(userPointsHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Schema for inserting user XP history
+export const insertUserXPHistorySchema = createInsertSchema(userXPHistory).omit({
   id: true,
   createdAt: true,
 });
@@ -733,6 +752,8 @@ export type TopContributor = typeof topContributors.$inferSelect;
 export type InsertTopContributor = z.infer<typeof insertTopContributorSchema>;
 export type UserPointsHistory = typeof userPointsHistory.$inferSelect;
 export type InsertUserPointsHistory = z.infer<typeof insertUserPointsHistorySchema>;
+export type UserXPHistory = typeof userXPHistory.$inferSelect;
+export type InsertUserXPHistory = z.infer<typeof insertUserXPHistorySchema>;
 export type ClipReaction = typeof clipReactions.$inferSelect;
 export type InsertClipReaction = z.infer<typeof insertClipReactionSchema>;
 

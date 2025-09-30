@@ -1,6 +1,6 @@
 import {
   users, games, clips, likes, comments, userGameFavorites, follows, messages, profileBanners,
-  monthlyLeaderboard, weeklyLeaderboard, topContributors, userPointsHistory, notifications, userBadges, contentFilterSettings, bannedWords,
+  monthlyLeaderboard, weeklyLeaderboard, topContributors, userPointsHistory, userXPHistory, notifications, userBadges, contentFilterSettings, bannedWords,
   heroTextSettings, bannerSettings, clipMentions, commentMentions, screenshotCommentMentions,
   type User, type InsertUser,
   type Game, type InsertGame,
@@ -16,6 +16,7 @@ import {
   type WeeklyLeaderboard, type InsertWeeklyLeaderboard,
   type TopContributor, type InsertTopContributor,
   type UserPointsHistory, type InsertUserPointsHistory,
+  type UserXPHistory, type InsertUserXPHistory,
   type Notification, type InsertNotification,
   type UserBadge, type InsertUserBadge,
   type ContentFilterSettings, type InsertContentFilterSettings,
@@ -175,6 +176,12 @@ export interface IStorage {
   createTopContributor(contributor: InsertTopContributor): Promise<TopContributor>;
   getTopContributors(periodType: string, limit?: number): Promise<(TopContributor & { user: User })[]>;
   getTopContributorsByPeriod(periodType: string, period: string, year: number): Promise<(TopContributor & { user: User })[]>;
+
+  // XP operations
+  addUserXPHistory(xpHistory: InsertUserXPHistory): Promise<UserXPHistory>;
+  incrementUserXP(userId: number, xpAmount: number): Promise<void>;
+  getUserXPHistory(userId: number, limit?: number): Promise<(UserXPHistory & { clip: Clip })[]>;
+  getXPLeaderboard(limit?: number): Promise<Array<{ id: number; username: string; displayName: string; avatarUrl: string | null; totalXP: number }>>;
 
   // Notification operations
   createNotification(notification: InsertNotification): Promise<Notification>;

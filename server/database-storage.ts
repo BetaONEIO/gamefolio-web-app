@@ -23,6 +23,7 @@ import {
   WeeklyLeaderboard, InsertWeeklyLeaderboard,
   TopContributor, InsertTopContributor,
   UserPointsHistory, InsertUserPointsHistory,
+  UserXPHistory, InsertUserXPHistory,
   ContentFilterSettings, InsertContentFilterSettings,
   BannedWord, InsertBannedWord,
   BannerSettings, InsertBannerSettings,
@@ -63,6 +64,7 @@ import {
   weeklyLeaderboard,
   topContributors,
   userPointsHistory,
+  userXPHistory,
   emailVerificationTokens,
   contentFilterSettings,
   bannedWords,
@@ -493,10 +495,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async incrementClipViews(id: number): Promise<void> {
+    // Get the clip first to get userId and current views
+    const [clip] = await db.select().from(clips).where(eq(clips.id, id));
+    if (!clip) return;
+
+    // Increment views
     await db
       .update(clips)
       .set({ views: sql`${clips.views} + 1` })
       .where(eq(clips.id, id));
+
+    // Award XP to the clip owner (1 XP per view)
+    const newViewCount = (clip.views || 0) + 1;
+    const { XPService } = await import("./xp-service");
+    await XPService.awardXPForViews(id, clip.userId, newViewCount);
   }
 
   async incrementScreenshotViews(id: number): Promise<void> {
@@ -2710,6 +2722,50 @@ export class DatabaseStorage implements IStorage {
       ...row.top_contributors,
       user: row.users!
     }));
+  }
+
+  // XP operations
+  async addUserXPHistory(xpHistory: InsertUserXPHistory): Promise<UserXPHistory> {
+    const [xp] = await db.insert(userXPHistory).values(xpHistory).returning();
+    return xp;
+  }
+
+  async incrementUserXP(userId: number, xpAmount: number): Promise<void> {
+    await db
+      .update(users)
+      .set({ totalXP: sql`${users.totalXP} + ${xpAmount}` })
+      .where(eq(users.id, userId));
+  }
+
+  async getUserXPHistory(userId: number, limit: number = 50): Promise<(UserXPHistory & { clip: Clip })[]> {
+    const results = await db
+      .select()
+      .from(userXPHistory)
+      .leftJoin(clips, eq(userXPHistory.clipId, clips.id))
+      .where(eq(userXPHistory.userId, userId))
+      .orderBy(desc(userXPHistory.createdAt))
+      .limit(limit);
+
+    return results.map(row => ({
+      ...row.user_xp_history,
+      clip: row.clips!
+    }));
+  }
+
+  async getXPLeaderboard(limit: number = 10): Promise<Array<{ id: number; username: string; displayName: string; avatarUrl: string | null; totalXP: number }>> {
+    const results = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        displayName: users.displayName,
+        avatarUrl: users.avatarUrl,
+        totalXP: users.totalXP
+      })
+      .from(users)
+      .orderBy(desc(users.totalXP))
+      .limit(limit);
+
+    return results;
   }
 
   async getEngagementLeaderboard(limit: number = 10): Promise<Array<{

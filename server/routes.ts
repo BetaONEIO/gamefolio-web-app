@@ -1473,6 +1473,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // XP routes
+  app.get("/api/xp/leaderboard", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const { XPService } = await import("./xp-service");
+      const xpLeaderboard = await XPService.getXPLeaderboard(limit);
+      res.json(xpLeaderboard);
+    } catch (error) {
+      console.error("Error fetching XP leaderboard:", error);
+      res.status(500).json({ message: "Error fetching XP leaderboard" });
+    }
+  });
+
+  app.get("/api/user/:userId/xp", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      const { XPService } = await import("./xp-service");
+      const totalXP = await XPService.getUserTotalXP(userId);
+      res.json({ totalXP });
+    } catch (error) {
+      console.error("Error fetching user XP:", error);
+      res.status(500).json({ message: "Error fetching user XP" });
+    }
+  });
+
+  app.get("/api/user/:userId/xp/history", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      const limit = parseInt(req.query.limit as string) || 50;
+      const { XPService } = await import("./xp-service");
+      const xpHistory = await XPService.getUserXPHistory(userId, limit);
+      res.json(xpHistory);
+    } catch (error) {
+      console.error("Error fetching user XP history:", error);
+      res.status(500).json({ message: "Error fetching user XP history" });
+    }
+  });
+
   // Get user by username
   app.get("/api/users/:username", async (req, res) => {
     try {
