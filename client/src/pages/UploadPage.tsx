@@ -63,15 +63,21 @@ const UploadPage = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   
-  // Read the type from URL query parameter (e.g., /upload?type=reels)
-  const urlParams = new URLSearchParams(window.location.search);
-  const typeParam = urlParams.get('type');
-  const initialContentType = (typeParam === 'clips' || typeParam === 'reels' || typeParam === 'screenshots') 
-    ? typeParam 
-    : 'clips';
-  
   // Content type selection
-  const [contentType, setContentType] = useState<'clips' | 'reels' | 'screenshots'>(initialContentType);
+  const [contentType, setContentType] = useState<'clips' | 'reels' | 'screenshots'>('clips');
+  
+  // Read the type from URL query parameter and set it on mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const typeParam = urlParams.get('type');
+    console.log('📤 UploadPage URL params:', window.location.search);
+    console.log('📤 Type parameter:', typeParam);
+    
+    if (typeParam === 'clips' || typeParam === 'reels' || typeParam === 'screenshots') {
+      console.log('📤 Setting contentType to:', typeParam);
+      setContentType(typeParam);
+    }
+  }, []);
   
   // Screenshot-specific state
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
