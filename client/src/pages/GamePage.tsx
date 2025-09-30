@@ -18,17 +18,24 @@ export default function GamePage() {
   const [timePeriod, setTimePeriod] = useState<'day' | 'week' | 'month'>('day');
   const [contentType, setContentType] = useState<'clips' | 'reels' | 'screenshots'>('clips');
   
-  const gameId = parseInt(id || '0');
+  // Check if param is a numeric ID or a slug
+  const isNumericId = !isNaN(Number(id));
+  const gameIdOrSlug = id || '';
 
-  // Fetch game details
+  // Fetch game details - handle both IDs and slugs
   const { data: game, isLoading: isLoadingGame } = useQuery<Game>({
-    queryKey: ['/api/games', gameId],
+    queryKey: isNumericId ? ['/api/games', gameIdOrSlug] : ['/api/twitch/games/slug', gameIdOrSlug],
     queryFn: async () => {
-      const response = await fetch(`/api/games/${gameId}`);
+      const url = isNumericId 
+        ? `/api/games/${gameIdOrSlug}`
+        : `/api/twitch/games/slug/${gameIdOrSlug}`;
+      const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch game');
       return response.json();
     },
   });
+
+  const gameId = game?.id || 0;
 
   // Fetch trending clips for this game
   const { data: trendingClips, isLoading: isLoadingClips } = useQuery<ClipWithUser[]>({
@@ -43,7 +50,7 @@ export default function GamePage() {
       if (!response.ok) throw new Error('Failed to fetch trending clips');
       return response.json();
     },
-    enabled: contentType === 'clips',
+    enabled: contentType === 'clips' && !!game,
   });
 
   // Fetch trending reels for this game
@@ -59,7 +66,7 @@ export default function GamePage() {
       if (!response.ok) throw new Error('Failed to fetch trending reels');
       return response.json();
     },
-    enabled: contentType === 'reels',
+    enabled: contentType === 'reels' && !!game,
   });
 
   // Fetch screenshots for this game
@@ -75,13 +82,13 @@ export default function GamePage() {
       if (!response.ok) throw new Error('Failed to fetch screenshots');
       return response.json();
     },
-    enabled: contentType === 'screenshots',
+    enabled: contentType === 'screenshots' && !!game,
   });
 
   // Fetch all clips for this game (fallback)
   const { data: allClips, isLoading: isLoadingAllClips } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/games/${gameId}/clips`],
-    enabled: !trendingClips?.length && !trendingReels?.length && contentType !== 'screenshots',
+    enabled: !trendingClips?.length && !trendingReels?.length && contentType !== 'screenshots' && !!game,
   });
 
   const getPeriodIcon = (period: string) => {
