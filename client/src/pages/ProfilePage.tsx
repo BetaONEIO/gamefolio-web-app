@@ -276,6 +276,15 @@ const ProfilePage = () => {
     enabled: !!username && canViewContent,
   });
 
+  // Debug: Log clips data to see videoType values
+  React.useEffect(() => {
+    if (clips) {
+      console.log('🎬 ProfilePage clips data:', clips.map(c => ({ id: c.id, title: c.title, videoType: c.videoType })));
+      console.log('🎬 Clips only (videoType !== "reel"):', clips.filter(c => c.videoType !== 'reel').map(c => ({ id: c.id, title: c.title, videoType: c.videoType })));
+      console.log('🎬 Reels only (videoType === "reel"):', clips.filter(c => c.videoType === 'reel').map(c => ({ id: c.id, title: c.title, videoType: c.videoType })));
+    }
+  }, [clips]);
+
   // Fetch user favorite games (only if allowed to view content)
   const { data: favoriteGames, isLoading: isLoadingFavorites } = useQuery<Game[]>({
     queryKey: [`/api/users/${username}/games/favorites`],
