@@ -23,6 +23,7 @@ import { UserIcon, X, Trash2 } from 'lucide-react';
 import { Link } from 'wouter';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { ScreenshotCard } from '@/components/screenshots/ScreenshotCard';
 
 type ContentType = 'clips' | 'reels' | 'screenshots';
 type FilterType = 'likes' | 'comments';
@@ -37,6 +38,7 @@ interface ScreenshotWithUser {
   tags?: string[];
   views: number;
   createdAt: string;
+  userId: number;
   user: {
     id: number;
     username: string;
@@ -48,163 +50,12 @@ interface ScreenshotWithUser {
     name: string;
     imageUrl?: string;
   };
-}
-
-// Screenshot card component  
-const ScreenshotCard: React.FC<{ screenshot: ScreenshotWithUser; onSelect?: (screenshot: ScreenshotWithUser) => void }> = ({ screenshot, onSelect }) => {
-  const { user: currentUser } = useAuth();
-  const { toast } = useToast();
-  
-  // Screenshot like functionality
-  const likeMutation = useLikeScreenshot();
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [likeCount, setLikeCount] = useState(() => {
-    const screenshotAny = screenshot as any;
-    const likeCountValue = typeof screenshotAny._count?.likes === 'string' ? parseInt(screenshotAny._count.likes) : screenshotAny._count?.likes || 0;
-    return isNaN(likeCountValue) ? 0 : likeCountValue;
-  });
-
-  // Check if user has liked this screenshot
-  const { data: likeStatus } = useQuery({
-    queryKey: ['screenshotLikeStatus', screenshot.id],
-    queryFn: async () => {
-      if (!currentUser) return { hasLiked: false };
-      const response = await fetch(`/api/screenshots/${screenshot.id}/likes/status`, {
-        credentials: 'include'
-      });
-      if (!response.ok) return { hasLiked: false };
-      return response.json();
-    },
-    enabled: !!currentUser,
-  });
-
-  const hasUserLiked = likeStatus?.hasLiked || false;
-
-  // Handle like button click
-  const handleLikeClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (!currentUser) {
-      toast({
-        title: "Not logged in",
-        description: "You need to be logged in to like screenshots",
-        variant: "default"
-      });
-      return;
-    }
-    
-    // Trigger animation when liking (not unliking)
-    if (!hasUserLiked) {
-      setIsAnimating(true);
-      setTimeout(() => setIsAnimating(false), 2000);
-    }
-    
-    likeMutation.mutate({
-      screenshotId: screenshot.id,
-      unlike: hasUserLiked
-    });
-    
-    toast({
-      title: hasUserLiked ? "Unliked" : "Liked!",
-      description: hasUserLiked ? "Removed from your liked screenshots" : "Added to your liked screenshots ❤️",
-      variant: "default"
-    });
+  _count?: {
+    likes?: number;
+    reactions?: number;
+    comments?: number;
   };
-  
-  return (
-    <Card 
-      className="group relative overflow-hidden transition-all duration-200 hover:shadow-lg hover:scale-105 cursor-pointer"
-      onClick={() => onSelect?.(screenshot)}
-    >
-      <div className="aspect-video relative overflow-hidden">
-        <img 
-          src={screenshot.imageUrl} 
-          alt={screenshot.title}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-        <div className="absolute bottom-2 left-2 right-2 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          <h4 className="font-medium text-sm truncate">{screenshot.title}</h4>
-          <p className="text-xs text-white/80">{screenshot.views} views</p>
-        </div>
-      </div>
-      <CardContent className="p-3">
-        <h3 className="font-medium text-sm mb-1 line-clamp-2">{screenshot.title}</h3>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{screenshot.user.displayName || screenshot.user.username}</span>
-          {screenshot.game && (
-            <>
-              <span>•</span>
-              <span>{screenshot.game.name}</span>
-            </>
-          )}
-        </div>
-      </CardContent>
-      
-      {/* Engagement Footer - Match clip layout exactly */}
-      <CardFooter className="px-3 py-2 border-t flex justify-between">
-        <div className="flex items-center space-x-1.5">
-          <button 
-            onClick={handleLikeClick}
-            className={`flex items-center text-[9px] transition-colors ${hasUserLiked ? 'text-green-500' : 'text-muted-foreground hover:text-green-500'}`}
-          >
-            <Heart 
-              className={`h-2.5 w-2.5 transition-all duration-300 ${
-                hasUserLiked 
-                  ? `fill-green-500 stroke-green-500 text-green-500 ${isAnimating ? 'animate-bounce scale-125' : 'scale-110'}` 
-                  : 'stroke-muted-foreground hover:stroke-green-500 fill-transparent hover:scale-105'
-              }`} 
-              style={{
-                animation: isAnimating ? 'heartGrow 2s ease-out' : undefined
-              }}
-            />
-            <span className="ml-0.5">{likeCount}</span>
-            {hasUserLiked && <span className="text-green-500 text-xs ml-1">✓</span>}
-          </button>
-          
-          <FireButton 
-            contentId={screenshot.id}
-            contentType="screenshot"
-            contentOwnerId={screenshot.userId}
-            initialFired={false}
-            initialCount={(screenshot as any)._count?.reactions || 0}
-            size="sm"
-          />
-          
-          <div className="flex items-center text-[9px] text-muted-foreground">
-            <MessageSquare className="h-2.5 w-2.5" />
-            <span className="ml-0.5">{(screenshot as any)._count?.comments || 0}</span>
-          </div>
-          
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            className="flex items-center text-[9px] text-muted-foreground hover:text-primary"
-          >
-            <Share2 className="h-2.5 w-2.5" />
-          </button>
-          
-          <ReportButton
-            contentType="screenshot"
-            contentId={screenshot.id}
-            contentTitle={screenshot.title}
-            variant="minimal"
-            size="sm"
-            className="text-[9px]"
-          />
-        </div>
-        
-        <div className="flex items-center text-[9px] text-muted-foreground">
-          <Eye className="h-2.5 w-2.5" />
-          <span className="ml-0.5">{screenshot.views?.toLocaleString() || '0'}</span>
-        </div>
-      </CardFooter>
-    </Card>
-  );
-};
+}
 
 // Reel card component - TikTok/YouTube Shorts style
 const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({ reel, reelsList }) => {
@@ -456,7 +307,10 @@ const TrendingPage: React.FC = () => {
           {trendingScreenshots.map((screenshot) => (
             <ScreenshotCard 
               key={screenshot.id} 
-              screenshot={screenshot} 
+              screenshot={screenshot}
+              isOwnProfile={user?.id === screenshot.userId}
+              profile={screenshot.user}
+              onDelete={(id) => deleteScreenshotMutation.mutate(id)}
               onSelect={setSelectedScreenshot}
             />
           ))}

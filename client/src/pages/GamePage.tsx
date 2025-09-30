@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Clock, Calendar, CalendarDays, Play, Users, TrendingUp, Camera } from "lucide-react";
 import { Link } from "wouter";
 import VideoClipCard from "@/components/clips/VideoClipCard";
+import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Game, ClipWithUser } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
@@ -251,14 +252,25 @@ export default function GamePage() {
 
               {/* Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {displayData.map((clip) => (
-                  <VideoClipCard
-                    key={clip.id}
-                    clip={clip}
-                    userId={user?.id}
-                    clipsList={displayData}
-                  />
-                ))}
+                {contentType === 'screenshots' ? (
+                  displayData.map((screenshot: any) => (
+                    <ScreenshotCard
+                      key={screenshot.id}
+                      screenshot={screenshot}
+                      isOwnProfile={user?.id === screenshot.userId}
+                      profile={screenshot.user}
+                    />
+                  ))
+                ) : (
+                  displayData.map((clip) => (
+                    <VideoClipCard
+                      key={clip.id}
+                      clip={clip}
+                      userId={user?.id}
+                      clipsList={displayData}
+                    />
+                  ))
+                )}
               </div>
             </>
           ) : (
