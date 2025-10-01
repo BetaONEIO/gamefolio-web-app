@@ -333,15 +333,15 @@ const TrendingPage: React.FC = () => {
       // Vertical scroll container with snap behavior
       return (
         <div 
-          className="fixed inset-x-0 top-[68px] bottom-0 overflow-y-auto snap-y snap-mandatory"
+          className="fixed inset-x-0 top-[68px] bottom-0 overflow-y-auto snap-y snap-mandatory bg-background z-10"
           style={{ scrollbarWidth: 'none' }}
         >
           {trendingReels.map((reel) => (
             <div 
               key={reel.id} 
-              className="snap-start snap-always h-[calc(100vh-68px)] flex items-center justify-center"
+              className="snap-start snap-always h-[calc(100vh-68px)] flex items-center justify-center bg-background"
             >
-              <div className="w-full max-w-sm h-full flex items-center">
+              <div className="w-full max-w-sm h-full flex items-center justify-center py-4">
                 <ReelCard reel={reel} reelsList={trendingReels} />
               </div>
             </div>
@@ -465,7 +465,7 @@ const TrendingPage: React.FC = () => {
             {renderContent()}
           </TabsContent>
 
-          <TabsContent value="reels" className="mt-0 px-4 md:px-0">
+          <TabsContent value="reels" className="mt-0 px-0">
             {renderContent()}
           </TabsContent>
 
