@@ -1,12 +1,12 @@
 
-const { db } = await import('./server/database-storage.js');
+import { DatabaseStorage } from './server/database-storage.js';
+
+const storage = new DatabaseStorage();
 
 async function getAppMetrics() {
   console.log('📊 Fetching Gamefolio App Metrics...\n');
   
   try {
-    // Use the existing admin stats methods from your storage
-    const storage = db;
     
     // Get basic counts
     console.log('👥 USER METRICS:');
@@ -24,16 +24,17 @@ async function getAppMetrics() {
     console.log(`  Total Video Clips: ${totalClips}`);
     
     // Get clips by type (reels vs regular clips)
-    const { eq } = await import('drizzle-orm');
+    const { eq, sql } = await import('drizzle-orm');
     const { clips } = await import('./shared/schema.js');
+    const { db } = await import('./server/db.js');
     
-    const [reelsResult] = await db.db
-      .select({ count: db.sql`count(*)` })
+    const [reelsResult] = await db
+      .select({ count: sql`count(*)` })
       .from(clips)
       .where(eq(clips.videoType, 'reel'));
     
-    const [regularClipsResult] = await db.db
-      .select({ count: db.sql`count(*)` })
+    const [regularClipsResult] = await db
+      .select({ count: sql`count(*)` })
       .from(clips)
       .where(eq(clips.videoType, 'clip'));
     
@@ -49,25 +50,23 @@ async function getAppMetrics() {
     console.log('\n🎯 ENGAGEMENT METRICS:');
     
     // Get likes count
-    const { likes } = await import('./shared/schema.js');
-    const [likesResult] = await db.db
-      .select({ count: db.sql`count(*)` })
+    const { likes, comments, follows } = await import('./shared/schema.js');
+    const [likesResult] = await db
+      .select({ count: sql`count(*)` })
       .from(likes);
     const totalLikes = likesResult?.count || 0;
     console.log(`  Total Likes: ${totalLikes}`);
     
     // Get comments count
-    const { comments } = await import('./shared/schema.js');
-    const [commentsResult] = await db.db
-      .select({ count: db.sql`count(*)` })
+    const [commentsResult] = await db
+      .select({ count: sql`count(*)` })
       .from(comments);
     const totalComments = commentsResult?.count || 0;
     console.log(`  Total Comments: ${totalComments}`);
     
     // Get follows count
-    const { follows } = await import('./shared/schema.js');
-    const [followsResult] = await db.db
-      .select({ count: db.sql`count(*)` })
+    const [followsResult] = await db
+      .select({ count: sql`count(*)` })
       .from(follows);
     const totalFollows = followsResult?.count || 0;
     console.log(`  Total Follows: ${totalFollows}`);
@@ -90,8 +89,8 @@ async function getAppMetrics() {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     
-    const [recentUsersResult] = await db.db
-      .select({ count: db.sql`count(*)` })
+    const [recentUsersResult] = await db
+      .select({ count: sql`count(*)` })
       .from(users)
       .where(gte(users.createdAt, sevenDaysAgo));
     
@@ -99,8 +98,8 @@ async function getAppMetrics() {
     console.log(`  New Users (Last 7 days): ${recentUsers}`);
     
     // Get recent content (last 7 days)
-    const [recentClipsResult] = await db.db
-      .select({ count: db.sql`count(*)` })
+    const [recentClipsResult] = await db
+      .select({ count: sql`count(*)` })
       .from(clips)
       .where(gte(clips.createdAt, sevenDaysAgo));
     
