@@ -454,27 +454,8 @@ const TrendingPage: React.FC = () => {
             {renderContent()}
           </TabsContent>
 
-          <TabsContent value="reels" className="mt-0">
-            {isMobile && trendingReels && trendingReels.length > 0 ? (
-              <div className="overflow-x-auto pb-2 -mx-4 px-4" style={{ scrollbarWidth: 'thin' }}>
-                <div className="flex gap-4" style={{ minWidth: "100%", width: "max-content" }}>
-                  {trendingReels.map((clip: ClipWithUser) => (
-                    <div key={`reel-${clip.id}`} className="flex-shrink-0 w-56">
-                      <VideoClipGridItem 
-                        clip={clip}
-                        userId={user?.id}
-                        compact={true}
-                        reelsList={trendingReels}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="px-4 md:px-0">
-                {renderContent()}
-              </div>
-            )}
+          <TabsContent value="reels" className="mt-0 px-4 md:px-0">
+            {renderContent()}
           </TabsContent>
 
           <TabsContent value="screenshots" className="mt-0 px-4 md:px-0">
