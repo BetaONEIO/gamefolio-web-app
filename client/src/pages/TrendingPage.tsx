@@ -341,9 +341,9 @@ const TrendingPage: React.FC = () => {
             {trendingReels.map((reel) => (
               <div 
                 key={reel.id}
-                className="snap-start snap-always h-full flex items-center justify-center px-4 py-16"
+                className="snap-start snap-always h-full flex items-center justify-center"
               >
-                <div className="w-full max-w-[280px] max-h-[calc(100vh-300px)]">
+                <div className="w-full h-full">
                   <VideoClipGridItem
                     clip={reel}
                     userId={user?.id}
