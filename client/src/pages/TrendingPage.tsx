@@ -339,7 +339,7 @@ const TrendingPage: React.FC = () => {
             {/* Thumbnail preview below tab */}
             <div className="px-4 py-2 bg-background">
               <div 
-                className="relative w-full aspect-[9/16] max-h-[200px] rounded-lg overflow-hidden cursor-pointer"
+                className="relative mx-auto max-w-[180px] aspect-[9/16] rounded-lg overflow-hidden cursor-pointer"
                 onClick={() => openClipDialog(trendingReels[0].id)}
               >
                 <img
