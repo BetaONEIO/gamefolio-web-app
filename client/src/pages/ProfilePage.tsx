@@ -1143,6 +1143,14 @@ const ProfilePage = () => {
                   </AvatarFallback>
                 </Avatar>
               </div>
+              {/* Level Badge */}
+              <div 
+                className="absolute -bottom-2 -right-2 z-20 flex items-center justify-center rounded-full bg-yellow-500 text-black font-bold shadow-lg w-10 h-10 border-2 border-background"
+                data-testid="level-badge"
+              >
+                <Trophy className="w-4 h-4 absolute top-1 left-1 text-yellow-700 opacity-30" />
+                <span className="relative z-10 text-sm">{profile.level || 1}</span>
+              </div>
             </div>
           </div>
 
@@ -1177,13 +1185,6 @@ const ProfilePage = () => {
             <div className="flex flex-col items-center">
               <span className="font-bold text-xl">{Number(profile._count?.following || 0)}</span>
               <span className="text-muted-foreground text-sm">Following</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="font-bold text-xl flex items-center gap-1">
-                <Trophy className="w-4 h-4 text-yellow-500" />
-                {profile.level || 1}
-              </span>
-              <span className="text-muted-foreground text-sm">Level</span>
             </div>
           </div>
 
@@ -1396,6 +1397,14 @@ const ProfilePage = () => {
                 </AvatarFallback>
               </Avatar>
             </div>
+            {/* Level Badge */}
+            <div 
+              className="absolute -bottom-2 -right-2 z-20 flex items-center justify-center rounded-full bg-yellow-500 text-black font-bold shadow-lg w-14 h-14 border-4 border-background"
+              data-testid="level-badge"
+            >
+              <Trophy className="w-5 h-5 absolute top-2 left-2 text-yellow-700 opacity-30" />
+              <span className="relative z-10 text-lg">{profile.level || 1}</span>
+            </div>
           </div>
 
           <div className="flex-1 pt-16">
@@ -1430,11 +1439,6 @@ const ProfilePage = () => {
                   <div className="flex items-center gap-1">
                     <span className="font-semibold">{Number(profile._count?.following || 0)}</span>
                     <span className="text-muted-foreground">Following</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Trophy className="w-4 h-4 text-yellow-500" />
-                    <span className="font-semibold">{profile.level || 1}</span>
-                    <span className="text-muted-foreground">Level</span>
                   </div>
                 </div>
 
