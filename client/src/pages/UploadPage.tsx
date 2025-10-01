@@ -201,8 +201,10 @@ const UploadPage = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    canvas.width = 320;
-    canvas.height = 180;
+    // Use 9:16 aspect ratio for reels, 16:9 for clips
+    const isReelVideo = contentType === 'reels';
+    canvas.width = isReelVideo ? 180 : 320;
+    canvas.height = isReelVideo ? 320 : 180;
     
     const thumbnails: string[] = [];
     const numberOfThumbnails = 5;
