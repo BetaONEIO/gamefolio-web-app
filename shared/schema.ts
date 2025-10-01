@@ -48,6 +48,7 @@ export const users = pgTable("users", {
   isPrivate: boolean("is_private").default(false),
   // XP System
   totalXP: integer("total_xp").default(0).notNull(), // Total experience points earned from views
+  level: integer("level").default(1).notNull(), // User level based on XP
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
