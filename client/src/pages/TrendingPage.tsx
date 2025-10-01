@@ -331,130 +331,18 @@ const TrendingPage: React.FC = () => {
         );
       }
 
-      // Mobile: Vertical scroll container with snap behavior - 1 reel per view
-      // Desktop: Grid layout
-      if (isMobile) {
-        return (
-          <>
-            {/* Thumbnail preview below tab */}
-            <div className="px-4 py-2 bg-background">
-              <div 
-                className="relative mx-auto max-w-[180px] aspect-[9/16] rounded-lg overflow-hidden cursor-pointer"
-                onClick={() => openClipDialog(trendingReels[0].id)}
-              >
-                <img
-                  src={trendingReels[0].thumbnailUrl || `/api/clips/${trendingReels[0].id}/thumbnail`}
-                  alt={trendingReels[0].title}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="bg-white/20 backdrop-blur-sm rounded-full p-3">
-                    <Play size={24} className="text-white fill-white" />
-                  </div>
-                </div>
-                <div className="absolute bottom-2 left-2 right-2">
-                  <p className="text-white text-sm font-semibold line-clamp-1">{trendingReels[0].title}</p>
-                  <p className="text-white/70 text-xs">@{trendingReels[0].user.username}</p>
-                </div>
-              </div>
-            </div>
-            
-            {/* Full-screen reels viewer */}
-            <div 
-              className="fixed inset-x-0 top-[68px] bottom-[68px] overflow-y-auto snap-y snap-mandatory bg-black z-10"
-              style={{ scrollbarWidth: 'none' }}
-            >
-              {trendingReels.map((reel, index) => (
-              <div 
-                key={reel.id} 
-                className="snap-start snap-always w-full relative"
-                style={{ height: 'calc(100vh - 136px)' }}
-                onClick={() => openClipDialog(reel.id)}
-              >
-                {/* Thumbnail/Background */}
-                <img
-                  src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
-                  alt={reel.title}
-                  className="w-full h-full object-cover"
-                />
-                
-                {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40" />
-                
-                {/* Play button */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="bg-white/20 backdrop-blur-sm rounded-full p-6 hover:bg-white/30 transition-all">
-                    <Play size={48} className="text-white fill-white" />
-                  </div>
-                </div>
-                
-                {/* Content info */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <img
-                      src={reel.user.avatarUrl || ''}
-                      alt={reel.user.username}
-                      className="w-10 h-10 rounded-full"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                    <div>
-                      <p className="text-white font-semibold">@{reel.user.username}</p>
-                      <p className="text-white/70 text-sm">{reel.game?.name}</p>
-                    </div>
-                  </div>
-                  
-                  <h3 className="text-white text-lg font-semibold line-clamp-2">
-                    {reel.title}
-                  </h3>
-                  
-                  <div className="flex items-center gap-4 text-white/80 text-sm">
-                    <span className="flex items-center gap-1">
-                      <Eye size={16} />
-                      {reel.views || 0}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Heart size={16} />
-                      {reel._count?.likes || 0}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <MessageCircle size={16} />
-                      {reel._count?.comments || 0}
-                    </span>
-                  </div>
-                </div>
-                
-                {/* Duration badge */}
-                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-md font-medium">
-                  {(() => {
-                    const actualDuration = reel.trimEnd && reel.trimEnd > 0 
-                      ? reel.trimEnd - (reel.trimStart || 0)
-                      : reel.duration || 0;
-                    return `${Math.floor(actualDuration / 60)}:${(actualDuration % 60).toString().padStart(2, '0')}`;
-                  })()}
-                </div>
-              </div>
-            ))}
-          </div>
-          </>
-        );
-      }
-
-      // Desktop: Show reels in 9:16 format - larger cards
+      // Use same grid layout for both mobile and desktop with VideoClipGridItem
       return (
-        <div className="px-4 md:px-0">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {trendingReels.map((reel) => (
-              <VideoClipGridItem
-                key={reel.id}
-                clip={reel}
-                compact={false}
-                reelsList={trendingReels}
-              />
-            ))}
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+          {trendingReels.map((reel) => (
+            <VideoClipGridItem
+              key={reel.id}
+              clip={reel}
+              userId={user?.id}
+              compact={false}
+              reelsList={trendingReels}
+            />
+          ))}
         </div>
       );
     }
@@ -574,7 +462,7 @@ const TrendingPage: React.FC = () => {
             {renderContent()}
           </TabsContent>
 
-          <TabsContent value="reels" className="mt-0">
+          <TabsContent value="reels" className="mt-0 px-4 md:px-0">
             {renderContent()}
           </TabsContent>
 
