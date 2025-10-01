@@ -342,7 +342,8 @@ const TrendingPage: React.FC = () => {
             {trendingReels.map((reel, index) => (
               <div 
                 key={reel.id} 
-                className="snap-start snap-always h-full w-full relative"
+                className="snap-start snap-always w-full relative"
+                style={{ height: 'calc(100vh - 136px)' }}
                 onClick={() => openClipDialog(reel.id)}
               >
                 {/* Thumbnail/Background */}
