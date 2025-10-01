@@ -40,9 +40,11 @@ interface MobileTrendingViewerProps {
   content: ContentItem[];
   initialIndex?: number;
   onClose: () => void;
+  hideCloseButton?: boolean;
+  embedded?: boolean;
 }
 
-export function MobileTrendingViewer({ content, initialIndex = 0, onClose }: MobileTrendingViewerProps) {
+export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideCloseButton = false, embedded = false }: MobileTrendingViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [showComments, setShowComments] = useState(false);
   const [showShare, setShowShare] = useState(false);
@@ -203,7 +205,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose }: Mob
   return (
     <div 
       ref={containerRef}
-      className="fixed inset-0 z-50 bg-black flex items-center justify-center"
+      className={embedded ? "relative w-full h-full bg-black" : "fixed inset-0 z-50 bg-black flex items-center justify-center"}
       data-testid="mobile-trending-viewer"
     >
       {/* Content - Full mobile screen 9:16 format */}
@@ -211,25 +213,27 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose }: Mob
         {renderContent()}
 
         {/* Top overlay with close button */}
-        <div className="absolute top-0 left-0 right-0 flex justify-between items-center p-4 bg-gradient-to-b from-black/60 to-transparent z-10">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="text-white hover:bg-white/20"
-            data-testid="button-close"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          
-          {/* Content type indicator */}
-          <div className="bg-black/40 text-white text-xs px-2 py-1 rounded-full">
-            {isVideoContent(currentItem) 
-              ? 'Video'
-              : 'Screenshot'
-            }
+        {!hideCloseButton && (
+          <div className="absolute top-0 left-0 right-0 flex justify-between items-center p-4 bg-gradient-to-b from-black/60 to-transparent z-10">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="text-white hover:bg-white/20"
+              data-testid="button-close"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            
+            {/* Content type indicator */}
+            <div className="bg-black/40 text-white text-xs px-2 py-1 rounded-full">
+              {isVideoContent(currentItem) 
+                ? 'Video'
+                : 'Screenshot'
+              }
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Bottom overlay with user info and controls */}
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">

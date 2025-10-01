@@ -447,31 +447,34 @@ const TrendingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Content - Full page for reels on mobile */}
-        {isMobile && activeTab === 'reels' && trendingReels && trendingReels.length > 0 ? (
-          <div className="fixed inset-0 top-[60px] bg-black z-20">
-            <MobileTrendingViewer
-              content={trendingReels}
-              initialIndex={0}
-              onClose={() => {}}
-            />
-          </div>
-        ) : (
-          <div className="px-4">
-            {/* Content */}
-            <TabsContent value="clips" className="mt-0">
-              {renderContent()}
-            </TabsContent>
+        {/* Content */}
+        <div className="px-0 md:px-4">
+          <TabsContent value="clips" className="mt-0 px-4 md:px-0">
+            {renderContent()}
+          </TabsContent>
 
-            <TabsContent value="reels" className="mt-0">
-              {renderContent()}
-            </TabsContent>
+          <TabsContent value="reels" className="mt-0">
+            {isMobile && trendingReels && trendingReels.length > 0 ? (
+              <div className="fixed inset-x-0 top-[68px] bottom-0 bg-black z-10">
+                <MobileTrendingViewer
+                  content={trendingReels}
+                  initialIndex={0}
+                  onClose={() => {}}
+                  hideCloseButton={true}
+                  embedded={true}
+                />
+              </div>
+            ) : (
+              <div className="px-4 md:px-0">
+                {renderContent()}
+              </div>
+            )}
+          </TabsContent>
 
-            <TabsContent value="screenshots" className="mt-0">
-              {renderContent()}
-            </TabsContent>
-          </div>
-        )}
+          <TabsContent value="screenshots" className="mt-0 px-4 md:px-0">
+            {renderContent()}
+          </TabsContent>
+        </div>
       </Tabs>
 
       {/* Screenshot Modal Dialog */}
