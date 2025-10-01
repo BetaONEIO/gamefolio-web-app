@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useLikeScreenshot } from '@/hooks/use-clips';
 import { useToast } from '@/hooks/use-toast';
 import { ClipWithUser } from '@shared/schema';
-import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Share2, Heart, Play } from 'lucide-react';
+import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Share2, Heart, Play, MessageCircle } from 'lucide-react';
 import { formatDuration } from '@/lib/constants';
 import { useClipDialog } from '@/hooks/use-clip-dialog';
 import { Button } from '@/components/ui/button';
@@ -164,6 +164,7 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
 const TrendingPage: React.FC = () => {
   const { user } = useAuth();
   const isMobile = useMobile();
+  const { openClipDialog } = useClipDialog();
   const [activeTab, setActiveTab] = useState<ContentType>('clips');
   const [filter, setFilter] = useState<FilterType>('likes');
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('today');
@@ -335,20 +336,77 @@ const TrendingPage: React.FC = () => {
       if (isMobile) {
         return (
           <div 
-            className="fixed inset-x-0 top-[68px] bottom-0 overflow-y-auto snap-y snap-mandatory bg-background z-10"
+            className="fixed inset-x-0 top-[68px] bottom-0 overflow-y-auto snap-y snap-mandatory bg-black z-10"
             style={{ scrollbarWidth: 'none' }}
           >
-            {trendingReels.map((reel) => (
+            {trendingReels.map((reel, index) => (
               <div 
                 key={reel.id} 
-                className="snap-start snap-always h-[calc(100vh-68px)] flex items-center justify-center bg-background p-4"
+                className="snap-start snap-always h-[calc(100vh-68px)] w-full relative"
+                onClick={() => openClipDialog(reel.id)}
               >
-                <div className="w-full max-w-md h-full">
-                  <VideoClipGridItem
-                    clip={reel}
-                    compact={false}
-                    reelsList={trendingReels}
-                  />
+                {/* Thumbnail/Background */}
+                <img
+                  src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
+                  alt={reel.title}
+                  className="w-full h-full object-cover"
+                />
+                
+                {/* Gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40" />
+                
+                {/* Play button */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-full p-6 hover:bg-white/30 transition-all">
+                    <Play size={48} className="text-white fill-white" />
+                  </div>
+                </div>
+                
+                {/* Content info */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={reel.user.avatarUrl || ''}
+                      alt={reel.user.username}
+                      className="w-10 h-10 rounded-full"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                    <div>
+                      <p className="text-white font-semibold">@{reel.user.username}</p>
+                      <p className="text-white/70 text-sm">{reel.game?.name}</p>
+                    </div>
+                  </div>
+                  
+                  <h3 className="text-white text-lg font-semibold line-clamp-2">
+                    {reel.title}
+                  </h3>
+                  
+                  <div className="flex items-center gap-4 text-white/80 text-sm">
+                    <span className="flex items-center gap-1">
+                      <Eye size={16} />
+                      {reel.views || 0}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Heart size={16} />
+                      {reel._count?.likes || 0}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <MessageCircle size={16} />
+                      {reel._count?.comments || 0}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Duration badge */}
+                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-md font-medium">
+                  {(() => {
+                    const actualDuration = reel.trimEnd && reel.trimEnd > 0 
+                      ? reel.trimEnd - (reel.trimStart || 0)
+                      : reel.duration || 0;
+                    return `${Math.floor(actualDuration / 60)}:${(actualDuration % 60).toString().padStart(2, '0')}`;
+                  })()}
                 </div>
               </div>
             ))}
