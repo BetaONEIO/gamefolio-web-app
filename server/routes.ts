@@ -3720,6 +3720,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const reaction = await storage.createClipReaction(reactionData);
+      
+      // Award points if this is a fire reaction
+      if (req.body.emoji === '🔥' && req.user?.id) {
+        await LeaderboardService.awardPoints(
+          req.user.id,
+          'fire',
+          `Fire reaction given to clip #${clipId}`
+        );
+      }
+      
       res.status(201).json(reaction);
     } catch (err) {
       return handleValidationError(err, res);
@@ -5896,6 +5906,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         const reaction = await storage.createScreenshotReaction(reactionData);
+        
+        // Award points if this is a fire reaction
+        if (emoji === '🔥') {
+          await LeaderboardService.awardPoints(
+            userId,
+            'fire',
+            `Fire reaction given to screenshot #${screenshotId}`
+          );
+        }
+        
         res.status(201).json({ message: "Reaction added", reacted: true, reaction });
       }
     } catch (err) {

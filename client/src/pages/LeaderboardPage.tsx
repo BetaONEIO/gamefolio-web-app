@@ -28,6 +28,7 @@ interface PointsLeaderboardEntry {
   uploadsCount: number;
   likesGivenCount: number;
   commentsCount: number;
+  firesGivenCount: number;
   totalPoints: number;
   rank: number;
   user: {
@@ -47,6 +48,7 @@ interface TopContributor {
   uploadsCount: number;
   likesGivenCount: number;
   commentsCount: number;
+  firesGivenCount: number;
   achievedAt: string;
   user: {
     id: number;
@@ -302,6 +304,10 @@ const LeaderboardPage = () => {
                     <MessageCircle className="h-4 w-4 text-green-500" />
                     <span>{entry.commentsCount}</span>
                   </div>
+                  <div className="flex items-center gap-1" title="Fire Reactions (3pts each)">
+                    <span className="text-orange-500">🔥</span>
+                    <span>{entry.firesGivenCount}</span>
+                  </div>
                 </div>
                 
                 {/* Mobile stats layout - condensed */}
@@ -317,6 +323,10 @@ const LeaderboardPage = () => {
                   <span className="flex items-center gap-1 text-green-500">
                     <MessageCircle className="h-3 w-3" />
                     {entry.commentsCount}
+                  </span>
+                  <span className="flex items-center gap-1 text-orange-500">
+                    🔥
+                    {entry.firesGivenCount}
                   </span>
                 </div>
                 
@@ -491,6 +501,10 @@ const LeaderboardPage = () => {
                         <MessageCircle className="h-4 w-4 text-green-500" />
                         <span>{contributor.commentsCount}</span>
                       </div>
+                      <div className="flex items-center gap-1" title="Fire Reactions">
+                        <span className="text-orange-500">🔥</span>
+                        <span>{contributor.firesGivenCount}</span>
+                      </div>
                     </div>
 
                     <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-bold" data-testid={`historic-monthly-score-${index}`}>
@@ -570,6 +584,10 @@ const LeaderboardPage = () => {
                         <MessageCircle className="h-4 w-4 text-green-500" />
                         <span>{contributor.commentsCount}</span>
                       </div>
+                      <div className="flex items-center gap-1" title="Fire Reactions">
+                        <span className="text-orange-500">🔥</span>
+                        <span>{contributor.firesGivenCount}</span>
+                      </div>
                     </div>
 
                     <Badge className="bg-gradient-to-r from-gray-300 to-gray-500 text-white font-bold" data-testid={`historic-weekly-score-${index}`}>
@@ -624,7 +642,7 @@ const LeaderboardPage = () => {
               data={monthlyData} 
               isLoading={monthlyLoading}
               title="This Month's Top Contributors"
-              description="Earn points by uploading clips (10pts), giving likes (2pts), and commenting (5pts)"
+              description="Earn points by uploading clips (10pts), giving likes (2pts), commenting (5pts), and fire reactions (3pts)"
             />
           </TabsContent>
 
@@ -654,7 +672,7 @@ const LeaderboardPage = () => {
             <CardTitle className="text-center">How Rankings Work</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
               <div className="text-center space-y-2">
                 <div className="p-2 sm:p-3 rounded-full bg-blue-500/10 w-fit mx-auto">
                   <Upload className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500" />
@@ -678,6 +696,14 @@ const LeaderboardPage = () => {
                 <h3 className="font-semibold text-sm sm:text-base">Comments Made</h3>
                 <p className="text-xl sm:text-2xl font-bold text-green-500">+5 points</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">Engage with the community</p>
+              </div>
+              <div className="text-center space-y-2">
+                <div className="p-2 sm:p-3 rounded-full bg-orange-500/10 w-fit mx-auto">
+                  <span className="text-2xl sm:text-3xl">🔥</span>
+                </div>
+                <h3 className="font-semibold text-sm sm:text-base">Fire Reactions</h3>
+                <p className="text-xl sm:text-2xl font-bold text-orange-500">+3 points</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Fire up amazing content</p>
               </div>
             </div>
           </CardContent>
