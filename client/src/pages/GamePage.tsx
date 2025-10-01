@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Clock, Calendar, CalendarDays, Play, Users, TrendingUp, Camera } from "lucide-react";
 import { Link } from "wouter";
 import VideoClipCard from "@/components/clips/VideoClipCard";
+import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Game, ClipWithUser } from "@shared/schema";
@@ -259,6 +260,16 @@ export default function GamePage() {
                       screenshot={screenshot}
                       isOwnProfile={user?.id === screenshot.userId}
                       profile={screenshot.user}
+                    />
+                  ))
+                ) : contentType === 'reels' ? (
+                  displayData.map((reel) => (
+                    <VideoClipGridItem
+                      key={reel.id}
+                      clip={reel}
+                      userId={user?.id}
+                      compact={false}
+                      reelsList={displayData}
                     />
                   ))
                 ) : (
