@@ -330,11 +330,13 @@ const TrendingPage: React.FC = () => {
         );
       }
 
+      // Show only the first reel
+      const firstReel = trendingReels[0];
       return (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-6">
-          {trendingReels.map((reel) => (
-            <ReelCard key={reel.id} reel={reel} reelsList={trendingReels} />
-          ))}
+        <div className="flex justify-center">
+          <div className="w-full max-w-sm">
+            <ReelCard reel={firstReel} reelsList={trendingReels} />
+          </div>
         </div>
       );
     }
