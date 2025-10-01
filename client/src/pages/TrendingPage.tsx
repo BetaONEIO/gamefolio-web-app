@@ -456,15 +456,12 @@ const TrendingPage: React.FC = () => {
 
           <TabsContent value="reels" className="mt-0">
             {isMobile && trendingReels && trendingReels.length > 0 ? (
-              <div className="fixed inset-0 top-[68px] bg-black z-20">
-                <MobileTrendingViewer
-                  content={trendingReels}
-                  initialIndex={0}
-                  onClose={() => {}}
-                  hideCloseButton={true}
-                  embedded={true}
-                />
-              </div>
+              <MobileTrendingViewer
+                content={trendingReels}
+                initialIndex={0}
+                onClose={() => {}}
+                hideCloseButton={true}
+              />
             ) : (
               <div className="px-4 md:px-0">
                 {renderContent()}
