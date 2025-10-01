@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import TrendingVideoCard from '@/components/clips/TrendingVideoCard';
+import VideoClipGridItem from '@/components/clips/VideoClipGridItem';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
 import { useMobile } from '@/hooks/use-mobile';
@@ -455,14 +456,19 @@ const TrendingPage: React.FC = () => {
 
           <TabsContent value="reels" className="mt-0">
             {isMobile && trendingReels && trendingReels.length > 0 ? (
-              <div className="fixed inset-x-0 top-[68px] bottom-0 bg-black z-10">
-                <MobileTrendingViewer
-                  content={trendingReels}
-                  initialIndex={0}
-                  onClose={() => {}}
-                  hideCloseButton={true}
-                  embedded={true}
-                />
+              <div className="overflow-x-auto pb-2 -mx-4 px-4" style={{ scrollbarWidth: 'thin' }}>
+                <div className="flex gap-4" style={{ minWidth: "100%", width: "max-content" }}>
+                  {trendingReels.map((clip: ClipWithUser) => (
+                    <div key={`reel-${clip.id}`} className="flex-shrink-0 w-56">
+                      <VideoClipGridItem 
+                        clip={clip}
+                        userId={user?.id}
+                        compact={true}
+                        reelsList={trendingReels}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="px-4 md:px-0">
