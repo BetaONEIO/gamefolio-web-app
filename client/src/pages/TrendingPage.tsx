@@ -330,13 +330,22 @@ const TrendingPage: React.FC = () => {
         );
       }
 
-      // Show only the first reel
-      const firstReel = trendingReels[0];
+      // Vertical scroll container with snap behavior
       return (
-        <div className="flex justify-center">
-          <div className="w-full max-w-sm">
-            <ReelCard reel={firstReel} reelsList={trendingReels} />
-          </div>
+        <div 
+          className="fixed inset-x-0 top-[68px] bottom-0 overflow-y-auto snap-y snap-mandatory"
+          style={{ scrollbarWidth: 'none' }}
+        >
+          {trendingReels.map((reel) => (
+            <div 
+              key={reel.id} 
+              className="snap-start snap-always h-[calc(100vh-68px)] flex items-center justify-center"
+            >
+              <div className="w-full max-w-sm h-full flex items-center">
+                <ReelCard reel={reel} reelsList={trendingReels} />
+              </div>
+            </div>
+          ))}
         </div>
       );
     }
