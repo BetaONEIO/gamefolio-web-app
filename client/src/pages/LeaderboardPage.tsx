@@ -601,7 +601,54 @@ const LeaderboardPage = () => {
           </p>
         </div>
 
-        {/* Scoring System Info */}
+        {/* Current Leaderboard Tabs */}
+        <Tabs defaultValue="month" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="week" data-testid="tab-week">This Week</TabsTrigger>
+            <TabsTrigger value="month" data-testid="tab-month">This Month</TabsTrigger>
+            <TabsTrigger value="xp" data-testid="tab-xp">XP</TabsTrigger>
+            <TabsTrigger value="alltime" data-testid="tab-alltime">All Time</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="week" data-testid="content-week">
+            <PointsLeaderboardTable 
+              data={weeklyData} 
+              isLoading={weeklyLoading}
+              title="This Week's Top Contributors"
+              description="Earn points by uploading clips (10pts), giving likes (2pts), and commenting (5pts)"
+            />
+          </TabsContent>
+
+          <TabsContent value="month" data-testid="content-month">
+            <PointsLeaderboardTable 
+              data={monthlyData} 
+              isLoading={monthlyLoading}
+              title="This Month's Top Contributors"
+              description="Earn points by uploading clips (10pts), giving likes (2pts), and commenting (5pts)"
+            />
+          </TabsContent>
+
+          <TabsContent value="xp" data-testid="content-xp">
+            <XPLeaderboardTable data={xpData} isLoading={xpLoading} />
+          </TabsContent>
+
+          <TabsContent value="alltime" data-testid="content-alltime">
+            <AllTimeLeaderboardTable data={allTimeData} isLoading={allTimeLoading} />
+          </TabsContent>
+        </Tabs>
+
+        {/* Historic Data Section */}
+        <div className="space-y-4">
+          <div className="text-center">
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground">Historic Winners</h2>
+            <p className="text-sm sm:text-base text-muted-foreground mt-2">
+              Hall of fame for past champions
+            </p>
+          </div>
+          <HistoricLeaderboard />
+        </div>
+
+        {/* How Rankings Work Section */}
         <Card className="border-2 border-primary/20">
           <CardHeader>
             <CardTitle className="text-center">How Rankings Work</CardTitle>
@@ -635,47 +682,6 @@ const LeaderboardPage = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* Leaderboard Tabs */}
-        <Tabs defaultValue="month" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="week" data-testid="tab-week">This Week</TabsTrigger>
-            <TabsTrigger value="month" data-testid="tab-month">This Month</TabsTrigger>
-            <TabsTrigger value="historic" data-testid="tab-historic">Historic</TabsTrigger>
-            <TabsTrigger value="xp" data-testid="tab-xp">XP</TabsTrigger>
-            <TabsTrigger value="alltime" data-testid="tab-alltime">All Time</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="week" data-testid="content-week">
-            <PointsLeaderboardTable 
-              data={weeklyData} 
-              isLoading={weeklyLoading}
-              title="This Week's Top Contributors"
-              description="Earn points by uploading clips (10pts), giving likes (2pts), and commenting (5pts)"
-            />
-          </TabsContent>
-
-          <TabsContent value="month" data-testid="content-month">
-            <PointsLeaderboardTable 
-              data={monthlyData} 
-              isLoading={monthlyLoading}
-              title="This Month's Top Contributors"
-              description="Earn points by uploading clips (10pts), giving likes (2pts), and commenting (5pts)"
-            />
-          </TabsContent>
-
-          <TabsContent value="historic" data-testid="content-historic">
-            <HistoricLeaderboard />
-          </TabsContent>
-
-          <TabsContent value="xp" data-testid="content-xp">
-            <XPLeaderboardTable data={xpData} isLoading={xpLoading} />
-          </TabsContent>
-
-          <TabsContent value="alltime" data-testid="content-alltime">
-            <AllTimeLeaderboardTable data={allTimeData} isLoading={allTimeLoading} />
-          </TabsContent>
-        </Tabs>
 
         {/* Call to Action */}
         <Card className="text-center bg-gradient-to-r from-primary/5 to-secondary/5 border-primary/20">
