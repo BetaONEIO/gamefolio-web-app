@@ -624,7 +624,7 @@ const LeaderboardPage = () => {
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="week" data-testid="tab-week">This Week</TabsTrigger>
             <TabsTrigger value="month" data-testid="tab-month">This Month</TabsTrigger>
-            <TabsTrigger value="xp" data-testid="tab-xp">XP</TabsTrigger>
+            <TabsTrigger value="xp" data-testid="tab-xp">All time</TabsTrigger>
             <TabsTrigger value="alltime" data-testid="tab-alltime">All Time</TabsTrigger>
           </TabsList>
 
