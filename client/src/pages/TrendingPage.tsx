@@ -335,13 +335,13 @@ const TrendingPage: React.FC = () => {
       if (isMobile) {
         return (
           <div 
-            className="fixed inset-x-0 top-[140px] bottom-[68px] overflow-y-auto snap-y snap-mandatory"
+            className="h-[calc(100vh-220px)] overflow-y-auto snap-y snap-mandatory -mx-4"
             style={{ scrollbarWidth: 'none' }}
           >
             {trendingReels.map((reel) => (
               <div 
                 key={reel.id}
-                className="snap-start snap-always h-[calc(100vh-208px)] flex items-center justify-center px-4"
+                className="snap-start snap-always h-full flex items-center justify-center px-4"
               >
                 <div className="w-full max-w-[280px]">
                   <VideoClipGridItem
