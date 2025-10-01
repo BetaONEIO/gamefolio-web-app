@@ -1431,6 +1431,11 @@ const ProfilePage = () => {
                     <span className="font-semibold">{Number(profile._count?.following || 0)}</span>
                     <span className="text-muted-foreground">Following</span>
                   </div>
+                  <div className="flex items-center gap-1">
+                    <Trophy className="w-4 h-4 text-yellow-500" />
+                    <span className="font-semibold">{profile.level || 1}</span>
+                    <span className="text-muted-foreground">Level</span>
+                  </div>
                 </div>
 
                 {/* Member since date */}
