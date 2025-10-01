@@ -330,22 +330,36 @@ const TrendingPage: React.FC = () => {
         );
       }
 
-      // Vertical scroll container with snap behavior
-      return (
-        <div 
-          className="fixed inset-x-0 top-[68px] bottom-0 overflow-y-auto snap-y snap-mandatory bg-background z-10"
-          style={{ scrollbarWidth: 'none' }}
-        >
-          {trendingReels.map((reel) => (
-            <div 
-              key={reel.id} 
-              className="snap-start snap-always h-[calc(100vh-68px)] flex items-center justify-center bg-background"
-            >
-              <div className="w-full max-w-sm h-full flex items-center justify-center py-4">
-                <ReelCard reel={reel} reelsList={trendingReels} />
+      // Mobile: Vertical scroll container with snap behavior
+      // Desktop: Grid layout
+      if (isMobile) {
+        return (
+          <div 
+            className="fixed inset-x-0 top-[68px] bottom-0 overflow-y-auto snap-y snap-mandatory bg-background z-10"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            {trendingReels.map((reel) => (
+              <div 
+                key={reel.id} 
+                className="snap-start snap-always h-[calc(100vh-68px)] flex items-center justify-center bg-background"
+              >
+                <div className="w-full max-w-sm h-full flex items-center justify-center py-4">
+                  <ReelCard reel={reel} reelsList={trendingReels} />
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        );
+      }
+
+      // Desktop grid layout
+      return (
+        <div className="px-4 md:px-0">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-6">
+            {trendingReels.map((reel) => (
+              <ReelCard key={reel.id} reel={reel} reelsList={trendingReels} />
+            ))}
+          </div>
         </div>
       );
     }
@@ -465,7 +479,7 @@ const TrendingPage: React.FC = () => {
             {renderContent()}
           </TabsContent>
 
-          <TabsContent value="reels" className="mt-0 px-0">
+          <TabsContent value="reels" className="mt-0">
             {renderContent()}
           </TabsContent>
 
