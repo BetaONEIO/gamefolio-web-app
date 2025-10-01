@@ -118,8 +118,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       {/* Scrollable reels container */}
       <div 
         ref={containerRef}
-        className="h-full overflow-y-auto snap-y snap-mandatory [&::-webkit-scrollbar]:hidden"
-        style={{ scrollbarWidth: 'none' }}
+        className="h-screen w-full overflow-y-scroll snap-y snap-mandatory [&::-webkit-scrollbar]:hidden"
+        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
       >
         {reels.map((reel, index) => (
           <div 
@@ -128,24 +128,26 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           >
             {/* Video player */}
             <div className="relative w-full h-full max-w-sm mx-auto md:max-w-md lg:max-w-lg">
-              <VideoPlayer
-                videoUrl={reel.videoUrl}
-                thumbnailUrl={reel.thumbnailUrl || undefined}
-                autoPlay={index === currentIndex}
-                className="w-full h-full"
-                objectFit="cover"
-                clipId={reel.id}
-                onEnded={() => {
-                  if (index < reels.length - 1 && containerRef.current) {
-                    containerRef.current.scrollTo({ top: (index + 1) * window.innerHeight, behavior: 'smooth' });
-                  }
-                }}
-              />
+              <div className="w-full h-full [&_video]:pointer-events-auto">
+                <VideoPlayer
+                  videoUrl={reel.videoUrl}
+                  thumbnailUrl={reel.thumbnailUrl || undefined}
+                  autoPlay={index === currentIndex}
+                  className="w-full h-full"
+                  objectFit="cover"
+                  clipId={reel.id}
+                  onEnded={() => {
+                    if (index < reels.length - 1 && containerRef.current) {
+                      containerRef.current.scrollTo({ top: (index + 1) * window.innerHeight, behavior: 'smooth' });
+                    }
+                  }}
+                />
+              </div>
 
               {/* Video overlay content */}
-              <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute inset-0 pointer-events-none z-10">
                 {/* Left side - User info and title */}
-                <div className="absolute bottom-12 md:bottom-16 left-2 md:left-4 right-16 md:right-20 pointer-events-auto">
+                <div className="absolute bottom-12 md:bottom-16 left-2 md:left-4 right-16 md:right-20 pointer-events-auto z-10">
                   <Link href={`/profile/${reel.user.username}`}>
                     <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3 text-white">
                       <div className="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-white/50">
@@ -276,11 +278,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             </div>
             <div className="overflow-y-auto max-h-[calc(80vh-60px)] md:max-h-[calc(70vh-80px)]">
               <CommentSection
-                contentId={currentReel.id}
-                contentType="clip"
+                clipId={currentReel.id}
                 currentUserId={user?.id}
-                autoExpanded={true}
-                initialCount={currentReel._count?.comments || 0}
               />
             </div>
           </div>
