@@ -330,7 +330,7 @@ const TrendingPage: React.FC = () => {
         );
       }
 
-      // Mobile: Vertical scroll container with snap behavior
+      // Mobile: Vertical scroll container with snap behavior - 1 reel per view
       // Desktop: Grid layout
       if (isMobile) {
         return (
@@ -341,10 +341,14 @@ const TrendingPage: React.FC = () => {
             {trendingReels.map((reel) => (
               <div 
                 key={reel.id} 
-                className="snap-start snap-always h-[calc(100vh-68px)] flex items-center justify-center bg-background"
+                className="snap-start snap-always h-[calc(100vh-68px)] flex items-center justify-center bg-background p-4"
               >
-                <div className="w-full max-w-sm h-full flex items-center justify-center py-4">
-                  <ReelCard reel={reel} reelsList={trendingReels} />
+                <div className="w-full max-w-md h-full">
+                  <VideoClipGridItem
+                    clip={reel}
+                    compact={false}
+                    reelsList={trendingReels}
+                  />
                 </div>
               </div>
             ))}
@@ -357,7 +361,12 @@ const TrendingPage: React.FC = () => {
         <div className="px-4 md:px-0">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {trendingReels.map((reel) => (
-              <ReelCard key={reel.id} reel={reel} reelsList={trendingReels} />
+              <VideoClipGridItem
+                key={reel.id}
+                clip={reel}
+                compact={false}
+                reelsList={trendingReels}
+              />
             ))}
           </div>
         </div>
