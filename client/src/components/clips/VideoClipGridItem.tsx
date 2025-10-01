@@ -45,13 +45,15 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
     }
   };
 
-  // Use the actual thumbnail URL from the clip data (user-selected or auto-generated)
-  // Fall back to dynamic generation only if no thumbnail is stored
-  const thumbnailUrl = clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`;
-
   // Determine aspect ratio based on video type
   const isReel = clip.videoType === 'reel';
   const aspectRatioClass = isReel ? 'aspect-[9/16]' : 'aspect-video';
+
+  // Use the actual thumbnail URL from the clip data (user-selected or auto-generated)
+  // Fall back to a placeholder for missing thumbnails
+  const thumbnailUrl = clip.thumbnailUrl || (isReel 
+    ? 'data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'180\' height=\'320\'%3e%3crect width=\'180\' height=\'320\' fill=\'%23111827\'/%3e%3ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23374151\' font-size=\'14\' font-family=\'system-ui\'%3eNo Thumbnail%3c/text%3e%3c/svg%3e'
+    : 'data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'320\' height=\'180\'%3e%3crect width=\'320\' height=\'180\' fill=\'%23111827\'/%3e%3ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23374151\' font-size=\'14\' font-family=\'system-ui\'%3eNo Thumbnail%3c/text%3e%3c/svg%3e');
 
   return (
     <div
@@ -125,12 +127,14 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         </Button>
       )}
 
-      {/* Top right section with stats */}
+      {/* Top right section with stats - smaller for reels */}
       <div className={`absolute top-2 ${canDelete ? 'right-12' : 'right-2'} flex items-center gap-1 ${
         compact ? 'opacity-0 group-hover:opacity-100 transition-opacity duration-300' : ''
       }`}>
-        {/* Duration badge */}
-        <div className="bg-black/60 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-md font-medium flex items-center gap-1 border border-white/10">
+        {/* Duration badge - smaller for reels */}
+        <div className={`bg-black/60 backdrop-blur-sm text-white font-medium flex items-center gap-1 border border-white/10 ${
+          isReel ? 'text-[10px] px-1.5 py-0.5 rounded' : 'text-xs px-2.5 py-1 rounded-md'
+        }`}>
           {(() => {
             const actualDuration = clip.trimEnd && clip.trimEnd > 0 
               ? clip.trimEnd - (clip.trimStart || 0)
@@ -139,10 +143,12 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
           })()}
         </div>
 
-        {/* View count with icon - show only in non-compact mode */}
+        {/* View count with icon - show only in non-compact mode, smaller for reels */}
         {!compact && (
-          <div className="bg-black/60 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-md font-medium flex items-center gap-1 border border-white/10">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className={`bg-black/60 backdrop-blur-sm text-white font-medium flex items-center gap-1 border border-white/10 ${
+            isReel ? 'text-[10px] px-1.5 py-0.5 rounded' : 'text-xs px-2.5 py-1 rounded-md'
+          }`}>
+            <svg xmlns="http://www.w3.org/2000/svg" className={isReel ? 'h-2.5 w-2.5' : 'h-3 w-3'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
               <circle cx="12" cy="12" r="3" />
             </svg>
@@ -151,25 +157,25 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         )}
       </div>
 
-      {/* Bottom right badges container */}
+      {/* Bottom right badges container - smaller for reels */}
       <div className="absolute bottom-2 right-2 flex items-center gap-1">
-        {/* Game name badge - green color, positioned next to NEW badge */}
+        {/* Game name badge - green color, positioned next to NEW badge, smaller for reels */}
         {clip.gameId && clip.game && (
           <Link 
             href={`/games/${clip.gameId}/clips`}
             onClick={(e) => e.stopPropagation()}
-            className={`bg-green-600 text-white rounded-md font-bold hover:bg-green-500 transition-all duration-300 ${
-              compact ? 'text-[10px] px-2 py-0.5' : 'text-xs px-2.5 py-1'
+            className={`bg-green-600 text-white rounded font-bold hover:bg-green-500 transition-all duration-300 ${
+              isReel ? 'text-[9px] px-1.5 py-0.5' : compact ? 'text-[10px] px-2 py-0.5' : 'text-xs px-2.5 py-1'
             }`}
           >
             {clip.game.name}
           </Link>
         )}
 
-        {/* Latest clip indicator - smaller for compact mode */}
+        {/* Latest clip indicator - smaller for compact mode and reels */}
         {clip.createdAt && Date.now() - new Date(clip.createdAt).getTime() < 86400000 * 3 && (
           <div className={`bg-gray-600 text-white font-bold transform rotate-1 shadow-lg ${
-            compact ? 'text-[10px] px-2 py-0.5 rounded' : 'text-xs px-2.5 py-1 rounded-md'
+            isReel ? 'text-[9px] px-1.5 py-0.5 rounded' : compact ? 'text-[10px] px-2 py-0.5 rounded' : 'text-xs px-2.5 py-1 rounded-md'
           }`}>
             NEW
           </div>
