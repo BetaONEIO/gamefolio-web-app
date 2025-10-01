@@ -70,7 +70,7 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
       <LazyImage
         src={thumbnailUrl}
         alt={clip.title || "Video clip thumbnail"}
-        className="w-full h-full object-cover"
+        className={`w-full h-full ${isReel ? 'object-contain bg-black' : 'object-cover'}`}
         placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%23f3f4f6'/%3e%3c/svg%3e"
         showLoadingSpinner={true}
         rootMargin="100px"
