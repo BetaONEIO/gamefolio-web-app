@@ -50,10 +50,9 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
   const aspectRatioClass = isReel ? 'aspect-[9/16]' : 'aspect-video';
 
   // Use the actual thumbnail URL from the clip data (user-selected or auto-generated)
-  // Fall back to a placeholder for missing thumbnails
-  const thumbnailUrl = clip.thumbnailUrl || (isReel 
-    ? 'data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'180\' height=\'320\'%3e%3crect width=\'180\' height=\'320\' fill=\'%23111827\'/%3e%3ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23374151\' font-size=\'14\' font-family=\'system-ui\'%3eNo Thumbnail%3c/text%3e%3c/svg%3e'
-    : 'data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'320\' height=\'180\'%3e%3crect width=\'320\' height=\'180\' fill=\'%23111827\'/%3e%3ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23374151\' font-size=\'14\' font-family=\'system-ui\'%3eNo Thumbnail%3c/text%3e%3c/svg%3e');
+  // For videos without thumbnails, use the video itself with poster frame
+  const thumbnailUrl = clip.thumbnailUrl;
+  const hasNoThumbnail = !thumbnailUrl;
 
   return (
     <div
@@ -69,15 +68,25 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
       onClick={handleOpenClip}
     >
       {/* Thumbnail with enhanced visual appearance and lazy loading */}
-      <LazyImage
-        src={thumbnailUrl}
-        alt={clip.title || "Video clip thumbnail"}
-        className="w-full h-full object-cover"
-        placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%23f3f4f6'/%3e%3c/svg%3e"
-        showLoadingSpinner={true}
-        rootMargin="100px"
-        threshold={0.1}
-      />
+      {hasNoThumbnail ? (
+        <video
+          src={clip.videoUrl}
+          className="w-full h-full object-cover"
+          preload="metadata"
+          muted
+          playsInline
+        />
+      ) : (
+        <LazyImage
+          src={thumbnailUrl}
+          alt={clip.title || "Video clip thumbnail"}
+          className="w-full h-full object-cover"
+          placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%23f3f4f6'/%3e%3c/svg%3e"
+          showLoadingSpinner={true}
+          rootMargin="100px"
+          threshold={0.1}
+        />
+      )}
 
       {/* View count overlay on hover */}
       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10 pointer-events-none">
