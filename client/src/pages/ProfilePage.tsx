@@ -1643,7 +1643,7 @@ const ProfilePage = () => {
           className="w-full"
         >
           <TabsList 
-            className="border-b w-full justify-start rounded-none h-12 md:h-14 p-0 relative overflow-x-auto overflow-y-hidden grid grid-cols-4"
+            className="border-b w-full justify-start rounded-none h-12 md:h-14 p-0 relative overflow-x-auto overflow-y-hidden flex"
             style={{ 
               backgroundColor: `hsl(var(--background) / 0.4)`,
               borderBottomColor: `hsl(var(--primary) / 0.6)`
@@ -1665,7 +1665,7 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={clipsTabRef}
               value="clips" 
-              className="relative rounded-none h-12 md:h-14 font-medium transition-all duration-300 hover:scale-105 flex-shrink-0 px-4 md:px-6"
+              className="relative rounded-none h-12 md:h-14 font-medium transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6"
               style={{ 
                 color: activeTab === 'clips' ? 'hsl(var(--primary))' : '#9CA3AF',
                 backgroundColor: 'transparent',
@@ -1685,7 +1685,7 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={reelsTabRef}
               value="reels" 
-              className="relative rounded-none h-12 md:h-14 font-medium transition-all duration-300 hover:scale-105 flex-shrink-0 px-4 md:px-6"
+              className="relative rounded-none h-12 md:h-14 font-medium transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6"
               style={{ 
                 color: activeTab === 'reels' ? 'hsl(var(--primary))' : '#9CA3AF',
                 backgroundColor: activeTab === 'reels' ? 'hsl(var(--primary) / 0.1)' : 'transparent',
@@ -1705,7 +1705,7 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={screenshotsTabRef}
               value="screenshots" 
-              className="relative rounded-none h-12 md:h-14 font-medium transition-all duration-300 hover:scale-105 flex-shrink-0 px-4 md:px-6"
+              className="relative rounded-none h-12 md:h-14 font-medium transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6 text-xs md:text-base"
               style={{ 
                 color: activeTab === 'screenshots' ? 'hsl(var(--primary))' : '#9CA3AF',
                 backgroundColor: activeTab === 'screenshots' ? 'hsl(var(--primary) / 0.1)' : 'transparent',
@@ -1725,7 +1725,7 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={favoritesTabRef}
               value="favorites" 
-              className="relative rounded-none h-12 md:h-14 font-medium transition-all duration-300 hover:scale-105 flex-shrink-0 px-4 md:px-6"
+              className="relative rounded-none h-12 md:h-14 font-medium transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6"
               style={{ 
                 color: activeTab === 'favorites' ? 'hsl(var(--primary))' : '#9CA3AF',
                 backgroundColor: activeTab === 'favorites' ? 'hsl(var(--primary) / 0.1)' : 'transparent',
