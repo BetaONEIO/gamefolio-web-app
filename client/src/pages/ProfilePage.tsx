@@ -33,7 +33,8 @@ import {
   Flag,
   Home,
   Search,
-  Loader2
+  Loader2,
+  Trophy
 } from "lucide-react";
 import { 
   SiSteam,

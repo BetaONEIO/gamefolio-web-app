@@ -3555,7 +3555,7 @@ export class DatabaseStorage implements IStorage {
         .limit(1);
       return settings || null;
     } catch (error) {
-      console.error('Error getting banner settings:', error);
+      // Silently return null if table doesn't exist - default settings will be used
       return null;
     }
   }
