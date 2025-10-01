@@ -336,13 +336,13 @@ const TrendingPage: React.FC = () => {
       if (isMobile) {
         return (
           <div 
-            className="fixed inset-x-0 top-[68px] bottom-0 overflow-y-auto snap-y snap-mandatory bg-black z-10"
+            className="fixed inset-x-0 top-[68px] bottom-[68px] overflow-y-auto snap-y snap-mandatory bg-black z-10"
             style={{ scrollbarWidth: 'none' }}
           >
             {trendingReels.map((reel, index) => (
               <div 
                 key={reel.id} 
-                className="snap-start snap-always h-[calc(100vh-68px)] w-full relative"
+                className="snap-start snap-always h-full w-full relative"
                 onClick={() => openClipDialog(reel.id)}
               >
                 {/* Thumbnail/Background */}
