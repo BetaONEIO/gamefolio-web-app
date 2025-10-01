@@ -6,6 +6,7 @@ export const POINT_VALUES = {
   upload: 10,
   like: 2,
   comment: 5,
+  fire: 3,
 } as const;
 
 export class LeaderboardService {
@@ -67,6 +68,7 @@ export class LeaderboardService {
         uploadsCount: action === 'upload' ? 1 : 0,
         likesGivenCount: action === 'like' ? 1 : 0,
         commentsCount: action === 'comment' ? 1 : 0,
+        firesGivenCount: action === 'fire' ? 1 : 0,
         totalPoints: points,
       });
     } else {
@@ -75,6 +77,7 @@ export class LeaderboardService {
         uploadsCount: entry.uploadsCount + (action === 'upload' ? 1 : 0),
         likesGivenCount: entry.likesGivenCount + (action === 'like' ? 1 : 0),
         commentsCount: entry.commentsCount + (action === 'comment' ? 1 : 0),
+        firesGivenCount: entry.firesGivenCount + (action === 'fire' ? 1 : 0),
         totalPoints: entry.totalPoints + points,
       };
       
@@ -110,6 +113,7 @@ export class LeaderboardService {
         uploadsCount: action === 'upload' ? 1 : 0,
         likesGivenCount: action === 'like' ? 1 : 0,
         commentsCount: action === 'comment' ? 1 : 0,
+        firesGivenCount: action === 'fire' ? 1 : 0,
         totalPoints: points,
       });
     } else {
@@ -118,6 +122,7 @@ export class LeaderboardService {
         uploadsCount: entry.uploadsCount + (action === 'upload' ? 1 : 0),
         likesGivenCount: entry.likesGivenCount + (action === 'like' ? 1 : 0),
         commentsCount: entry.commentsCount + (action === 'comment' ? 1 : 0),
+        firesGivenCount: entry.firesGivenCount + (action === 'fire' ? 1 : 0),
         totalPoints: entry.totalPoints + points,
       };
       
@@ -217,6 +222,7 @@ export class LeaderboardService {
           uploadsCount: topContributor.uploadsCount,
           likesGivenCount: topContributor.likesGivenCount,
           commentsCount: topContributor.commentsCount,
+          firesGivenCount: topContributor.firesGivenCount || 0,
         };
 
         await storage.createTopContributor(contributorData);

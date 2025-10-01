@@ -544,6 +544,7 @@ export const monthlyLeaderboard = pgTable("monthly_leaderboard", {
   uploadsCount: integer("uploads_count").default(0).notNull(),
   likesGivenCount: integer("likes_given_count").default(0).notNull(),
   commentsCount: integer("comments_count").default(0).notNull(),
+  firesGivenCount: integer("fires_given_count").default(0).notNull(),
   totalPoints: integer("total_points").default(0).notNull(),
   rank: integer("rank").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -554,7 +555,7 @@ export const monthlyLeaderboard = pgTable("monthly_leaderboard", {
 export const userPointsHistory = pgTable("user_points_history", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
-  action: text("action").notNull(), // "upload", "like", "comment"
+  action: text("action").notNull(), // "upload", "like", "comment", "fire"
   points: integer("points").notNull(),
   description: text("description"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -580,6 +581,7 @@ export const weeklyLeaderboard = pgTable("weekly_leaderboard", {
   uploadsCount: integer("uploads_count").default(0).notNull(),
   likesGivenCount: integer("likes_given_count").default(0).notNull(),
   commentsCount: integer("comments_count").default(0).notNull(),
+  firesGivenCount: integer("fires_given_count").default(0).notNull(),
   totalPoints: integer("total_points").default(0).notNull(),
   rank: integer("rank").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -597,6 +599,7 @@ export const topContributors = pgTable("top_contributors", {
   uploadsCount: integer("uploads_count").default(0).notNull(),
   likesGivenCount: integer("likes_given_count").default(0).notNull(),
   commentsCount: integer("comments_count").default(0).notNull(),
+  firesGivenCount: integer("fires_given_count").default(0).notNull(),
   achievedAt: timestamp("achieved_at").defaultNow().notNull(), // When they achieved this top position
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
