@@ -7,6 +7,7 @@ export const POINT_VALUES = {
   like: 2,
   comment: 5,
   fire: 3,
+  view: 1, // 1 point per view (also awards 1 XP for leveling)
 } as const;
 
 export class LeaderboardService {
