@@ -2431,7 +2431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Trending clips route
   app.get("/api/clips/trending", async (req, res) => {
     try {
-      const { period = 'day', limit = 10, gameId } = req.query;
+      const { period = 'all', limit = 10, gameId } = req.query;
       const currentUserId = (req.user as any)?.id;
       console.log('🔍 Trending clips API: currentUserId =', currentUserId, 'period =', period, 'session user:', req.user);
       
