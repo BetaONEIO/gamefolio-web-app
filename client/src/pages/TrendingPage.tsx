@@ -352,15 +352,12 @@ const TrendingPage: React.FC = () => {
         );
       }
 
-      // Desktop: Use same card format as clips
+      // Desktop: Show reels in 9:16 format
       return (
         <div className="px-4 md:px-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {trendingReels.map((reel) => (
-              <TrendingVideoCard
-                key={reel.id}
-                clip={reel}
-              />
+              <ReelCard key={reel.id} reel={reel} reelsList={trendingReels} />
             ))}
           </div>
         </div>
