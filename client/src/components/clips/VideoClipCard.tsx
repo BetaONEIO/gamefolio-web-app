@@ -140,7 +140,7 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
         }}
       >
         {/* Thumbnail with duration */}
-        <div className="relative overflow-hidden" style={{ aspectRatio: "16/9" }}>
+        <div className="relative overflow-hidden" style={{ aspectRatio: clip.videoType === 'reel' ? "9/16" : "16/9" }}>
           <img
             src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
             alt={clip.title}
