@@ -119,7 +119,7 @@ export function getLevelProgress(xp: number, currentLevel: number): {
   currentXP: number;
   xpForCurrentLevel: number;
   xpForNextLevel: number;
-  xpNeeded: number;
+  xpRemaining: number;
   progressPercent: number;
 } {
   const xpForCurrentLevel = currentLevel >= 50 
@@ -128,14 +128,14 @@ export function getLevelProgress(xp: number, currentLevel: number): {
     
   const xpForNextLevel = getXPForNextLevel(currentLevel);
   const xpIntoCurrentLevel = xp - xpForCurrentLevel;
-  const xpNeeded = xpForNextLevel - xpForCurrentLevel;
-  const progressPercent = Math.min(100, Math.max(0, (xpIntoCurrentLevel / xpNeeded) * 100));
+  const xpNeededForLevel = xpForNextLevel - xpForCurrentLevel;
+  const progressPercent = Math.min(100, Math.max(0, (xpIntoCurrentLevel / xpNeededForLevel) * 100));
   
   return {
     currentXP: xp,
     xpForCurrentLevel,
     xpForNextLevel,
-    xpNeeded: xpForNextLevel - xp,
+    xpRemaining: xpForNextLevel - xp,
     progressPercent,
   };
 }

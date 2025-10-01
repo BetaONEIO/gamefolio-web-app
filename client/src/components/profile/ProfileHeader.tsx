@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { UserWithStats } from "@shared/schema";
-import { Mail, UserPlus, UserCheck, Share2, CheckCircle2, MessageSquare } from "lucide-react";
+import { Mail, UserPlus, UserCheck, Share2, CheckCircle2, MessageSquare, Trophy } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
@@ -109,6 +109,22 @@ const ProfileHeader = ({
               <div className="text-center">
                 <span className="font-bold block">{profile._count?.following || 0}</span>
                 <span className="text-muted-foreground">Following</span>
+              </div>
+              <div className="text-center">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <span className="font-bold block flex items-center gap-1">
+                        <Trophy className="w-3 h-3 text-yellow-500" />
+                        {profile.level || 1}
+                      </span>
+                      <span className="text-muted-foreground">Level</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-sm">{profile.totalXP || 0} Total XP</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
           </div>

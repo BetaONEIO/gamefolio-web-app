@@ -1517,6 +1517,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Recalculate levels for all users based on their current XP
+  app.post("/api/admin/recalculate-levels", authMiddleware, async (req, res) => {
+    try {
+      // Check if user is admin
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      const { calculateLevel } = await import("./level-system");
+      const allUsers = await storage.getAllUsers();
+      
+      let updatedCount = 0;
+      for (const user of allUsers) {
+        const newLevel = calculateLevel(user.totalXP);
+        if (newLevel !== user.level) {
+          await storage.updateUser(user.id, { level: newLevel });
+          updatedCount++;
+          console.log(`Updated user ${user.username} from level ${user.level} to level ${newLevel} (${user.totalXP} XP)`);
+        }
+      }
+
+      console.log(`✅ Recalculated levels for ${updatedCount} users`);
+      res.json({ 
+        message: `Successfully recalculated levels for ${updatedCount} users`,
+        updatedCount,
+        totalUsers: allUsers.length
+      });
+    } catch (error) {
+      console.error("Error recalculating levels:", error);
+      res.status(500).json({ message: "Error recalculating levels" });
+    }
+  });
+
   // Get user by username
   app.get("/api/users/:username", async (req, res) => {
     try {
