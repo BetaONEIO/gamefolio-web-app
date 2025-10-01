@@ -1,5 +1,5 @@
 
-import { DatabaseStorage } from './server/database-storage.js';
+import { DatabaseStorage } from './server/database-storage.ts';
 
 const storage = new DatabaseStorage();
 
