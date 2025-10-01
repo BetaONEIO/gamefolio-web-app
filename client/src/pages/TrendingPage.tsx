@@ -335,11 +335,37 @@ const TrendingPage: React.FC = () => {
       // Desktop: Grid layout
       if (isMobile) {
         return (
-          <div 
-            className="fixed inset-x-0 top-[68px] bottom-[68px] overflow-y-auto snap-y snap-mandatory bg-black z-10"
-            style={{ scrollbarWidth: 'none' }}
-          >
-            {trendingReels.map((reel, index) => (
+          <>
+            {/* Thumbnail preview below tab */}
+            <div className="px-4 py-2 bg-background">
+              <div 
+                className="relative w-full aspect-[9/16] max-h-[200px] rounded-lg overflow-hidden cursor-pointer"
+                onClick={() => openClipDialog(trendingReels[0].id)}
+              >
+                <img
+                  src={trendingReels[0].thumbnailUrl || `/api/clips/${trendingReels[0].id}/thumbnail`}
+                  alt={trendingReels[0].title}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-full p-3">
+                    <Play size={24} className="text-white fill-white" />
+                  </div>
+                </div>
+                <div className="absolute bottom-2 left-2 right-2">
+                  <p className="text-white text-sm font-semibold line-clamp-1">{trendingReels[0].title}</p>
+                  <p className="text-white/70 text-xs">@{trendingReels[0].user.username}</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Full-screen reels viewer */}
+            <div 
+              className="fixed inset-x-0 top-[68px] bottom-[68px] overflow-y-auto snap-y snap-mandatory bg-black z-10"
+              style={{ scrollbarWidth: 'none' }}
+            >
+              {trendingReels.map((reel, index) => (
               <div 
                 key={reel.id} 
                 className="snap-start snap-always w-full relative"
@@ -412,6 +438,7 @@ const TrendingPage: React.FC = () => {
               </div>
             ))}
           </div>
+          </>
         );
       }
 
