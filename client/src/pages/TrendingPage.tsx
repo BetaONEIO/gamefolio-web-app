@@ -331,18 +331,17 @@ const TrendingPage: React.FC = () => {
         );
       }
 
-      // Use same grid layout for both mobile and desktop with VideoClipGridItem
+      // Show single centered thumbnail
       return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-          {trendingReels.map((reel) => (
+        <div className="flex justify-center">
+          <div className="w-full max-w-[280px] sm:max-w-[320px]">
             <VideoClipGridItem
-              key={reel.id}
-              clip={reel}
+              clip={trendingReels[0]}
               userId={user?.id}
               compact={false}
               reelsList={trendingReels}
             />
-          ))}
+          </div>
         </div>
       );
     }
