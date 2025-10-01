@@ -371,70 +371,93 @@ const TrendingPage: React.FC = () => {
   }, [isMobile, activeTab, activeTabContent.length]);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
-      {/* Mobile trigger button when viewer is closed */}
-      {isMobile && !showMobileViewer && activeTabContent.length > 0 && (
-        <div className="fixed bottom-20 right-4 z-40">
-          <Button
-            onClick={() => setShowMobileViewer(true)}
-            className="rounded-full w-14 h-14 bg-primary hover:bg-primary/90 text-white shadow-lg"
-            data-testid="button-open-mobile-viewer"
-          >
-            <Play className="h-6 w-6" />
-          </Button>
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <div className="flex items-center gap-3">
-          <TrendingUp className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold">Trending</h1>
-            <p className="text-muted-foreground">Discover the most popular gaming content</p>
+    <div className="container mx-auto px-0 md:px-4 py-0 md:py-8 max-w-7xl">
+      {/* Tabs at the top - Mobile responsive */}
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ContentType)} className="w-full">
+        <div className="bg-card/50 dark:bg-card/30 backdrop-blur-sm border-b border-border mb-0 md:mb-6 md:rounded-xl md:border sticky top-0 z-30">
+          <div className="px-4 py-3 md:py-4">
+            <TabsList className="grid w-full grid-cols-3 bg-slate-800/90 dark:bg-slate-900/90 p-1 rounded-xl h-auto">
+              <TabsTrigger 
+                value="clips" 
+                className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70 rounded-lg px-4 py-2.5 md:py-3 text-sm md:text-base font-medium transition-all"
+                data-testid="tab-clips"
+              >
+                Clips
+              </TabsTrigger>
+              <TabsTrigger 
+                value="reels" 
+                className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70 rounded-lg px-4 py-2.5 md:py-3 text-sm md:text-base font-medium transition-all"
+                data-testid="tab-reels"
+              >
+                Reels
+              </TabsTrigger>
+              <TabsTrigger 
+                value="screenshots" 
+                className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70 rounded-lg px-4 py-2.5 md:py-3 text-sm md:text-base font-medium transition-all"
+                data-testid="tab-screenshots"
+              >
+                Screenshots
+              </TabsTrigger>
+            </TabsList>
           </div>
         </div>
 
-        {/* Time Period Filter */}
-        <div className="flex items-center gap-2">
-          {(['today', 'week', 'ever'] as const).map((period) => (
-            <Button
-              key={period}
-              variant={timePeriod === period ? "default" : "outline"}
-              size="sm"
-              onClick={() => setTimePeriod(period)}
-              className="flex items-center gap-2"
-            >
-              {getPeriodIcon(period)}
-              {getPeriodLabel(period)}
-            </Button>
-          ))}
-        </div>
-      </div>
+        {/* Header - below tabs on mobile, visible on desktop */}
+        <div className="px-4 mb-6 hidden md:flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-3">
+            <TrendingUp className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-3xl font-bold">Trending</h1>
+              <p className="text-muted-foreground">Discover the most popular gaming content</p>
+            </div>
+          </div>
 
-      {/* Tabs and Filters */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ContentType)} className="w-full">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <TabsList className="grid w-full sm:w-auto grid-cols-3">
-            <TabsTrigger value="clips">Clips</TabsTrigger>
-            <TabsTrigger value="reels">Reels</TabsTrigger>
-            <TabsTrigger value="screenshots">Screenshots</TabsTrigger>
-          </TabsList>
-
-          {/* Note: Filter dropdown temporarily disabled while fixing database queries */}
+          {/* Time Period Filter */}
+          <div className="flex items-center gap-2">
+            {(['today', 'week', 'ever'] as const).map((period) => (
+              <Button
+                key={period}
+                variant={timePeriod === period ? "default" : "outline"}
+                size="sm"
+                onClick={() => setTimePeriod(period)}
+                className="flex items-center gap-2"
+              >
+                {getPeriodIcon(period)}
+                {getPeriodLabel(period)}
+              </Button>
+            ))}
+          </div>
         </div>
 
-        {/* Mobile viewer or regular content */}
-        {isMobile && showMobileViewer && activeTabContent.length > 0 ? (
-          <div className="mt-0">
+        {/* Mobile time period filter - compact */}
+        <div className="px-4 mb-4 flex md:hidden items-center justify-between">
+          <h2 className="text-lg font-semibold">Trending</h2>
+          <div className="flex items-center gap-1">
+            {(['today', 'week', 'ever'] as const).map((period) => (
+              <Button
+                key={period}
+                variant={timePeriod === period ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setTimePeriod(period)}
+                className="h-8 px-2 text-xs"
+              >
+                {getPeriodLabel(period)}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Content - Full page for reels on mobile */}
+        {isMobile && activeTab === 'reels' && trendingReels && trendingReels.length > 0 ? (
+          <div className="fixed inset-0 top-[60px] bg-black z-20">
             <MobileTrendingViewer
-              content={activeTabContent}
+              content={trendingReels}
               initialIndex={0}
-              onClose={() => setShowMobileViewer(false)}
+              onClose={() => {}}
             />
           </div>
         ) : (
-          <>
+          <div className="px-4">
             {/* Content */}
             <TabsContent value="clips" className="mt-0">
               {renderContent()}
@@ -447,7 +470,7 @@ const TrendingPage: React.FC = () => {
             <TabsContent value="screenshots" className="mt-0">
               {renderContent()}
             </TabsContent>
-          </>
+          </div>
         )}
       </Tabs>
 
