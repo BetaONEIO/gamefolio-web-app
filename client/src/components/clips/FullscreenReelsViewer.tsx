@@ -124,10 +124,10 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         {reels.map((reel, index) => (
           <div 
             key={reel.id}
-            className="snap-start snap-always h-screen flex items-center justify-center"
+            className="snap-start snap-always h-screen flex items-center justify-center py-4 md:py-6"
           >
             {/* Video player */}
-            <div className="relative w-full h-full max-w-sm mx-auto md:max-w-md lg:max-w-lg">
+            <div className="relative w-full h-full max-w-sm mx-auto md:max-w-md lg:max-w-lg px-4 md:px-0">
               <div className="w-full h-full [&_video]:pointer-events-auto">
                 <VideoPlayer
                   videoUrl={reel.videoUrl}
