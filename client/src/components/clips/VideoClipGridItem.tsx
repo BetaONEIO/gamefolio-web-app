@@ -116,12 +116,12 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         <Button
           size="sm"
           variant="destructive"
-          className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 h-8 w-8 md:h-7 md:w-7"
+          className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 h-9 w-9 md:h-8 md:w-8"
           onClick={handleDeleteClick}
           title="Delete clip"
           data-testid="button-delete-clip"
         >
-          <Trash2 className="h-4 w-4 md:h-3 md:w-3" />
+          <Trash2 className="h-4 w-4" />
         </Button>
       )}
 
@@ -130,7 +130,7 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         compact ? 'opacity-0 group-hover:opacity-100 transition-opacity duration-300' : ''
       }`}>
         {/* Duration badge */}
-        <div className="bg-black/60 backdrop-blur-sm text-white text-xs px-1.5 py-0.5 rounded-md font-medium flex items-center gap-1 border border-white/10">
+        <div className="bg-black/60 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-md font-medium flex items-center gap-1 border border-white/10">
           {(() => {
             const actualDuration = clip.trimEnd && clip.trimEnd > 0 
               ? clip.trimEnd - (clip.trimStart || 0)
@@ -141,7 +141,7 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
 
         {/* View count with icon - show only in non-compact mode */}
         {!compact && (
-          <div className="bg-black/60 backdrop-blur-sm text-white text-xs px-1.5 py-0.5 rounded-md font-medium flex items-center gap-1 border border-white/10">
+          <div className="bg-black/60 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-md font-medium flex items-center gap-1 border border-white/10">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
               <circle cx="12" cy="12" r="3" />
@@ -158,8 +158,8 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
           <Link 
             href={`/games/${clip.gameId}/clips`}
             onClick={(e) => e.stopPropagation()}
-            className={`bg-green-600 text-white px-2 py-1 rounded-md font-bold hover:bg-green-500 transition-all duration-300 ${
-              compact ? 'text-[10px]' : 'text-xs'
+            className={`bg-green-600 text-white rounded-md font-bold hover:bg-green-500 transition-all duration-300 ${
+              compact ? 'text-[10px] px-2 py-0.5' : 'text-xs px-2.5 py-1'
             }`}
           >
             {clip.game.name}
@@ -169,7 +169,7 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         {/* Latest clip indicator - smaller for compact mode */}
         {clip.createdAt && Date.now() - new Date(clip.createdAt).getTime() < 86400000 * 3 && (
           <div className={`bg-gray-600 text-white font-bold transform rotate-1 shadow-lg ${
-            compact ? 'text-[10px] px-1.5 py-0.5 rounded' : 'text-xs px-2 py-1 rounded-md'
+            compact ? 'text-[10px] px-2 py-0.5 rounded' : 'text-xs px-2.5 py-1 rounded-md'
           }`}>
             NEW
           </div>
