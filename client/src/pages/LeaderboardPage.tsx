@@ -621,10 +621,9 @@ const LeaderboardPage = () => {
 
         {/* Current Leaderboard Tabs */}
         <Tabs defaultValue="month" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="week" data-testid="tab-week">This Week</TabsTrigger>
             <TabsTrigger value="month" data-testid="tab-month">This Month</TabsTrigger>
-            <TabsTrigger value="xp" data-testid="tab-xp">All time</TabsTrigger>
             <TabsTrigger value="alltime" data-testid="tab-alltime">All Time</TabsTrigger>
           </TabsList>
 
@@ -644,10 +643,6 @@ const LeaderboardPage = () => {
               title="This Month's Top Contributors"
               description="Earn points by uploading clips (10pts), giving likes (2pts), commenting (5pts), and fire reactions (3pts)"
             />
-          </TabsContent>
-
-          <TabsContent value="xp" data-testid="content-xp">
-            <XPLeaderboardTable data={xpData} isLoading={xpLoading} />
           </TabsContent>
 
           <TabsContent value="alltime" data-testid="content-alltime">
