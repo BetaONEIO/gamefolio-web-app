@@ -70,6 +70,7 @@ export class LeaderboardService {
         likesGivenCount: action === 'like' ? 1 : 0,
         commentsCount: action === 'comment' ? 1 : 0,
         firesGivenCount: action === 'fire' ? 1 : 0,
+        viewsCount: action === 'view' ? 1 : 0,
         totalPoints: points,
       });
     } else {
@@ -79,6 +80,7 @@ export class LeaderboardService {
         likesGivenCount: entry.likesGivenCount + (action === 'like' ? 1 : 0),
         commentsCount: entry.commentsCount + (action === 'comment' ? 1 : 0),
         firesGivenCount: entry.firesGivenCount + (action === 'fire' ? 1 : 0),
+        viewsCount: entry.viewsCount + (action === 'view' ? 1 : 0),
         totalPoints: entry.totalPoints + points,
       };
       
@@ -115,6 +117,7 @@ export class LeaderboardService {
         likesGivenCount: action === 'like' ? 1 : 0,
         commentsCount: action === 'comment' ? 1 : 0,
         firesGivenCount: action === 'fire' ? 1 : 0,
+        viewsCount: action === 'view' ? 1 : 0,
         totalPoints: points,
       });
     } else {
@@ -124,6 +127,7 @@ export class LeaderboardService {
         likesGivenCount: entry.likesGivenCount + (action === 'like' ? 1 : 0),
         commentsCount: entry.commentsCount + (action === 'comment' ? 1 : 0),
         firesGivenCount: entry.firesGivenCount + (action === 'fire' ? 1 : 0),
+        viewsCount: entry.viewsCount + (action === 'view' ? 1 : 0),
         totalPoints: entry.totalPoints + points,
       };
       
@@ -224,6 +228,7 @@ export class LeaderboardService {
           likesGivenCount: topContributor.likesGivenCount,
           commentsCount: topContributor.commentsCount,
           firesGivenCount: topContributor.firesGivenCount || 0,
+          viewsCount: topContributor.viewsCount || 0,
         };
 
         await storage.createTopContributor(contributorData);

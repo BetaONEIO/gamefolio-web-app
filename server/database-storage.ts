@@ -508,17 +508,31 @@ export class DatabaseStorage implements IStorage {
       .set({ views: sql`${clips.views} + 1` })
       .where(eq(clips.id, id));
 
-    // Award XP to the clip owner (1 XP per view)
+    // Award XP to the clip owner (1 XP per view) and Points for leaderboard
     const newViewCount = (clip.views || 0) + 1;
     const { XPService } = await import("./xp-service");
-    await XPService.awardXPForViews(id, clip.userId, newViewCount);
+    const { LeaderboardService } = await import("./leaderboard-service");
+    
+    await Promise.all([
+      XPService.awardXPForViews(id, clip.userId, newViewCount),
+      LeaderboardService.awardPoints(clip.userId, 'view', `View on clip: ${clip.title}`)
+    ]);
   }
 
   async incrementScreenshotViews(id: number): Promise<void> {
+    // Get the screenshot first to get userId
+    const [screenshot] = await db.select().from(screenshots).where(eq(screenshots.id, id));
+    if (!screenshot) return;
+
+    // Increment views
     await db
       .update(screenshots)
       .set({ views: sql`${screenshots.views} + 1` })
       .where(eq(screenshots.id, id));
+
+    // Award Points for leaderboard (screenshots don't have XP tracking yet)
+    const { LeaderboardService } = await import("./leaderboard-service");
+    await LeaderboardService.awardPoints(screenshot.userId, 'view', `View on screenshot: ${screenshot.title}`);
   }
 
   async getClipsByUserId(userId: number): Promise<ClipWithUser[]> {
