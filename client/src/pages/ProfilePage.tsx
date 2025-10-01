@@ -1145,7 +1145,7 @@ const ProfilePage = () => {
               </div>
               {/* Level Badge */}
               <div 
-                className="absolute -bottom-2 -right-2 z-20 flex items-center justify-center rounded-full bg-yellow-500 text-black font-bold shadow-lg w-10 h-10 border-2 border-background"
+                className="absolute -bottom-3 -right-3 z-20 flex items-center justify-center rounded-full bg-yellow-500 text-black font-bold shadow-lg w-10 h-10 border-2 border-background"
                 data-testid="level-badge"
               >
                 <Trophy className="w-4 h-4 absolute top-1 left-1 text-yellow-700 opacity-30" />
@@ -1399,7 +1399,7 @@ const ProfilePage = () => {
             </div>
             {/* Level Badge */}
             <div 
-              className="absolute -bottom-2 -right-2 z-20 flex items-center justify-center rounded-full bg-yellow-500 text-black font-bold shadow-lg w-14 h-14 border-4 border-background"
+              className="absolute -bottom-4 -right-4 z-20 flex items-center justify-center rounded-full bg-yellow-500 text-black font-bold shadow-lg w-14 h-14 border-4 border-background"
               data-testid="level-badge"
             >
               <Trophy className="w-5 h-5 absolute top-2 left-2 text-yellow-700 opacity-30" />
