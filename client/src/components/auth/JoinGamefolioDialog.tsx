@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -197,6 +201,12 @@ export function JoinGamefolioDialog({
     return (
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="max-w-md mx-auto p-0 bg-gray-900 border-gray-700 text-white overflow-hidden">
+          <VisuallyHidden>
+            <DialogHeader>
+              <DialogTitle>Create Your Account</DialogTitle>
+              <DialogDescription>Sign up for Gamefolio</DialogDescription>
+            </DialogHeader>
+          </VisuallyHidden>
           {/* Close button */}
           <button
             onClick={handleClose}
@@ -321,6 +331,12 @@ export function JoinGamefolioDialog({
     return (
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="max-w-md mx-auto p-0 bg-gray-900 border-gray-700 text-white overflow-hidden">
+          <VisuallyHidden>
+            <DialogHeader>
+              <DialogTitle>Log In</DialogTitle>
+              <DialogDescription>Log in to your Gamefolio account</DialogDescription>
+            </DialogHeader>
+          </VisuallyHidden>
           {/* Close button */}
           <button
             onClick={handleClose}
@@ -408,6 +424,12 @@ export function JoinGamefolioDialog({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md mx-auto p-0 bg-gray-900 border-gray-700 text-white overflow-hidden">
+        <VisuallyHidden>
+          <DialogHeader>
+            <DialogTitle>Welcome to Gamefolio</DialogTitle>
+            <DialogDescription>Choose how you'd like to join or log in</DialogDescription>
+          </DialogHeader>
+        </VisuallyHidden>
         {/* Close button */}
         <button
           onClick={handleClose}

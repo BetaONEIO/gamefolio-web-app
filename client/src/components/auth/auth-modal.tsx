@@ -5,7 +5,8 @@ import RegisterForm from "@/components/auth/register-form";
 import ForgotPasswordForm from "@/components/auth/ForgotPasswordForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 
@@ -55,6 +56,12 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md p-0 gap-0 bg-black/95 border-white/10">
+        <VisuallyHidden>
+          <DialogHeader>
+            <DialogTitle>Authentication</DialogTitle>
+            <DialogDescription>Login or register to access Gamefolio</DialogDescription>
+          </DialogHeader>
+        </VisuallyHidden>
         {/* Content */}
         <div className="relative p-6">
           {/* Logo and Header */}
