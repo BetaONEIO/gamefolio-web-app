@@ -15,7 +15,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { VerificationBadge } from "@/components/ui/verification-badge";
 import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import { useLikeClip } from "@/hooks/use-clips";
 import { ReportButton } from "@/components/reporting/ReportButton";
@@ -196,11 +195,7 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
                   <Link href={`/profile/${clip.user.username}`} onClick={(e) => e.stopPropagation()}>
                     <span className="hover:text-foreground transition-colors cursor-pointer font-medium">{clip.user.displayName}</span>
                   </Link>
-                  <VerificationBadge 
-                    isVerified={!!clip.user.emailVerified} 
-                    size="sm" 
-                  />
-                  <span>• {clip.createdAt ? formatDate(new Date(clip.createdAt)) : 'Unknown'}</span>
+                  <span className="ml-1">• {clip.createdAt ? formatDate(new Date(clip.createdAt)) : 'Unknown'}</span>
                 </div>
               </div>
             </div>

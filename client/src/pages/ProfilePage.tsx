@@ -56,9 +56,7 @@ import CommentSection from "@/components/clips/CommentSection";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
-import { VerifiedIcon } from "@/components/ui/verified-icon";
 import { ModeratorIcon } from "@/components/ui/moderator-icon";
-import { VerificationBadge } from "@/components/ui/verification-badge";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import { ScreenshotShareDialog } from "@/components/screenshot/ScreenshotShareDialog";
@@ -1163,12 +1161,6 @@ const ProfilePage = () => {
                 isModerator={profile.role === "moderator"} 
                 size="lg" 
               />
-              {profile.role !== "moderator" && (
-                <VerificationBadge 
-                  isVerified={!!profile.emailVerified} 
-                  size="lg" 
-                />
-              )}
             </div>
           </div>
 
@@ -1418,12 +1410,6 @@ const ProfilePage = () => {
                     isModerator={profile.role === "moderator"} 
                     size="xl" 
                   />
-                  {profile.role !== "moderator" && (
-                    <VerificationBadge 
-                      isVerified={!!profile.emailVerified} 
-                      size="xl" 
-                    />
-                  )}
                 </div>
 
                 {/* Stats positioned directly below username */}

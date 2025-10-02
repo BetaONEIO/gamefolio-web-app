@@ -40,7 +40,6 @@ import { cn } from "@/lib/utils";
 import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import CommentSection from "@/components/clips/CommentSection";
 import ShareMenu from "@/components/clips/ShareMenu";
-import { VerificationBadge } from "@/components/ui/verification-badge";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import { FullscreenReelsViewer } from "./FullscreenReelsViewer";
@@ -618,10 +617,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     }}>
                       <div className="font-medium flex items-center hover:text-primary transition-colors cursor-pointer">
                         @{clip.user.username}
-                        <VerificationBadge 
-                          isVerified={!!clip.user?.emailVerified} 
-                          size="sm" 
-                        />
                       </div>
                     </Link>
                   ) : (

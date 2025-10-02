@@ -2,7 +2,6 @@ import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Game, User } from "@shared/schema";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
-import { VerifiedIcon } from "@/components/ui/verified-icon";
 
 interface FeaturedProfileCardProps {
   user: User & { 
@@ -37,10 +36,6 @@ const FeaturedProfileCard = ({ user }: FeaturedProfileCardProps) => {
             <h3 className="text-lg font-semibold text-foreground hover:text-primary transition-colors duration-300">
               {user.username}
             </h3>
-            {/* Show verified icon for email-verified users */}
-            {user.emailVerified && (
-              <VerifiedIcon size={16} className="ml-1" />
-            )}
           </Link>
         </div>
         

@@ -9,7 +9,6 @@ import { useMobile } from "@/hooks/use-mobile";
 import { useQuery } from "@tanstack/react-query";
 import { User, Game } from "@shared/schema";
 
-import { VerificationBadge } from "@/components/ui/verification-badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -348,10 +347,6 @@ const Header = () => {
                     <div className="px-4 py-3 border-b">
                       <div className="flex items-center">
                         <p className="text-sm font-medium">{user.displayName}</p>
-                        <VerificationBadge
-                          isVerified={!!user.emailVerified}
-                          size="sm"
-                        />
                       </div>
                       <p className="text-sm text-muted-foreground">@{user.username}</p>
                     </div>

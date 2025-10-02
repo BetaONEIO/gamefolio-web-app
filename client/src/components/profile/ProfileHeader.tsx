@@ -11,7 +11,6 @@ import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import PlatformConnections from "./PlatformConnections";
 import { GamefolioShareDialog } from "./GamefolioShareDialog";
-import { VerificationBadge } from "@/components/ui/verification-badge";
 
 interface ProfileHeaderProps {
   profile: UserWithStats;
@@ -146,10 +145,6 @@ const ProfileHeader = ({
                 <h1 className="text-2xl font-bold text-foreground">
                   {profile.displayName}
                 </h1>
-                <VerificationBadge 
-                  isVerified={!!profile.emailVerified} 
-                  size="md" 
-                />
               </div>
 
               {/* Handle */}

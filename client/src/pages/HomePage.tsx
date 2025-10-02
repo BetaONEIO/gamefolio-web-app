@@ -15,7 +15,6 @@ import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
 import { useLocation, Link } from "wouter";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
-import { VerifiedIcon } from "@/components/ui/verified-icon";
 
 // Popular games for filtering by name instead of using IDs
 const POPULAR_GAMES = [
@@ -467,11 +466,8 @@ const HomePage = () => {
                     <div className="space-y-1">
                       <h4 className="text-white text-sm font-medium line-clamp-2 leading-tight">{screenshot.title}</h4>
                       <Link href={`/profile/${screenshot.user.username}`} onClick={(e) => e.stopPropagation()}>
-                        <p className="text-white/80 hover:text-white text-xs cursor-pointer transition-colors flex items-center gap-1">
+                        <p className="text-white/80 hover:text-white text-xs cursor-pointer transition-colors">
                           {screenshot.user.displayName || screenshot.user.username}
-                          {screenshot.user.emailVerified && (
-                            <VerifiedIcon size={12} className="flex-shrink-0" />
-                          )}
                         </p>
                       </Link>
                     </div>

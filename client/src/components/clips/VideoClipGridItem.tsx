@@ -10,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
-import { VerifiedIcon } from "@/components/ui/verified-icon";
 import { LazyImage } from "@/components/ui/lazy-image";
 
 interface VideoClipGridItemProps {
@@ -104,11 +103,8 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
           {clip.title}
         </h3>
         <Link href={`/profile/${clip.user.username}`} onClick={(e) => e.stopPropagation()}>
-          <p className={`text-white/80 hover:text-white transition-colors cursor-pointer ${compact ? 'text-xs' : 'text-sm'} flex items-center gap-1`}>
+          <p className={`text-white/80 hover:text-white transition-colors cursor-pointer ${compact ? 'text-xs' : 'text-sm'}`}>
             @{clip.user.username}
-            {clip.user.emailVerified && (
-              <VerifiedIcon size={compact ? 12 : 14} className="flex-shrink-0" />
-            )}
           </p>
         </Link>
       </div>
