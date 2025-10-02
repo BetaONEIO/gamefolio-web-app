@@ -173,6 +173,39 @@ adminRouter.patch("/users/:id", async (req: Request, res: Response) => {
   }
 });
 
+// PATCH /api/admin/users/:id/level - Update user level and XP
+adminRouter.patch("/users/:id/level", async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { level, totalXP } = req.body;
+
+    // Validate inputs
+    if (!level || !totalXP) {
+      return res.status(400).json({ message: "Level and totalXP are required" });
+    }
+
+    if (level < 1 || totalXP < 0) {
+      return res.status(400).json({ message: "Level must be at least 1 and totalXP must be at least 0" });
+    }
+
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update user level and XP
+    const updatedUser = await storage.updateUser(userId, {
+      level: parseInt(level),
+      totalXP: parseInt(totalXP)
+    });
+
+    res.json(updatedUser);
+  } catch (err) {
+    console.error("Error updating user level:", err);
+    res.status(500).json({ message: "Error updating user level" });
+  }
+});
+
 // POST /api/admin/users/:id/ban - Ban user
 adminRouter.post("/users/:id/ban", async (req: Request, res: Response) => {
   try {
