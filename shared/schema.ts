@@ -733,6 +733,9 @@ export const heroTextSettings = pgTable("hero_text_settings", {
   textType: text("text_type").notNull(), // "experienced_users" - for users who have uploaded content
   title: text("title").notNull(),
   subtitle: text("subtitle").notNull(),
+  buttonText: text("button_text"), // Optional button text
+  buttonUrl: text("button_url"), // Optional button URL/path
+  targetAudience: text("target_audience").notNull().default("experienced_users"), // "new_users", "existing_users", "users_with_content", "all_users"
   isActive: boolean("is_active").default(true).notNull(),
   updatedBy: integer("updated_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
