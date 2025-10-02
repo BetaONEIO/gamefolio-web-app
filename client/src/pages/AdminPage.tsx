@@ -425,6 +425,12 @@ const AdminPage = () => {
   const [heroButtonText, setHeroButtonText] = useState("");
   const [heroButtonUrl, setHeroButtonUrl] = useState("");
   const [heroTargetAudience, setHeroTargetAudience] = useState("experienced_users");
+  
+  // Level management state
+  const [levelUserSearch, setLevelUserSearch] = useState("");
+  const [selectedLevelUser, setSelectedLevelUser] = useState<any>(null);
+  const [newLevel, setNewLevel] = useState("");
+  const [newXP, setNewXP] = useState("");
 
   // Badge creation state
   const [newBadgeName, setNewBadgeName] = useState("");
@@ -863,13 +869,14 @@ const AdminPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-9">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
           <TabsTrigger value="content-filter">Content Filter</TabsTrigger>
           <TabsTrigger value="banner">Banner</TabsTrigger>
           <TabsTrigger value="badges">Badges</TabsTrigger>
+          <TabsTrigger value="levels">Levels</TabsTrigger>
           <TabsTrigger value="hero-text">Hero Text</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
@@ -1855,6 +1862,161 @@ const AdminPage = () => {
                   </Card>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Level Management Tab */}
+        <TabsContent value="levels" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="h-5 w-5" />
+                Level & XP Management
+              </CardTitle>
+              <CardDescription>
+                Manage user levels and experience points
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* User Search Section */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="levelUserSearch" className="text-sm font-medium">
+                    Search User
+                  </label>
+                  <Input
+                    id="levelUserSearch"
+                    placeholder="Search by username..."
+                    value={levelUserSearch}
+                    onChange={(e) => setLevelUserSearch(e.target.value)}
+                    data-testid="input-level-user-search"
+                  />
+                </div>
+
+                {/* User Search Results */}
+                {levelUserSearch.length >= 2 && (
+                  <div className="border rounded-lg p-4 max-h-60 overflow-y-auto">
+                    <h4 className="font-medium mb-2">Search Results</h4>
+                    {badgeUsersData?.users.filter(u => 
+                      u.username.toLowerCase().includes(levelUserSearch.toLowerCase())
+                    ).map(user => (
+                      <div
+                        key={user.id}
+                        className="flex items-center justify-between p-2 hover:bg-muted rounded-md cursor-pointer"
+                        onClick={() => {
+                          setSelectedLevelUser(user);
+                          setNewLevel(user.level?.toString() || "1");
+                          setNewXP(user.totalXP?.toString() || "0");
+                        }}
+                      >
+                        <div>
+                          <p className="font-medium">{user.username}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Level {user.level || 1} • {user.totalXP || 0} XP
+                          </p>
+                        </div>
+                        <Button size="sm" variant="outline">
+                          Select
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Selected User Edit Form */}
+              {selectedLevelUser && (
+                <div className="border rounded-lg p-4 space-y-4 bg-muted/50">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium text-lg">{selectedLevelUser.username}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Current: Level {selectedLevelUser.level || 1} • {selectedLevelUser.totalXP || 0} XP
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedLevelUser(null);
+                        setNewLevel("");
+                        setNewXP("");
+                      }}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label htmlFor="newLevel" className="text-sm font-medium">
+                        New Level
+                      </label>
+                      <Input
+                        id="newLevel"
+                        type="number"
+                        min="1"
+                        placeholder="Enter level"
+                        value={newLevel}
+                        onChange={(e) => setNewLevel(e.target.value)}
+                        data-testid="input-new-level"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="newXP" className="text-sm font-medium">
+                        Total XP
+                      </label>
+                      <Input
+                        id="newXP"
+                        type="number"
+                        min="0"
+                        placeholder="Enter XP"
+                        value={newXP}
+                        onChange={(e) => setNewXP(e.target.value)}
+                        data-testid="input-new-xp"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={async () => {
+                        try {
+                          await apiRequest("PATCH", `/api/admin/users/${selectedLevelUser.id}/level`, {
+                            level: parseInt(newLevel),
+                            totalXP: parseInt(newXP),
+                          });
+                          toast({
+                            title: "Success",
+                            description: `Updated ${selectedLevelUser.username}'s level to ${newLevel} with ${newXP} XP`,
+                          });
+                          queryClient.invalidateQueries({ queryKey: ["/api/admin/users"], exact: false });
+                          setSelectedLevelUser(null);
+                          setNewLevel("");
+                          setNewXP("");
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: "Failed to update user level",
+                            variant: "gamefolioError",
+                          });
+                        }
+                      }}
+                      disabled={!newLevel || !newXP}
+                      data-testid="button-update-level"
+                    >
+                      Update Level & XP
+                    </Button>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <p className="text-xs text-muted-foreground">
+                      <strong>Note:</strong> XP thresholds - Level 1: 0 XP, Level 2: 100 XP, Level 3: 500 XP, Level 4: 1000 XP, etc.
+                    </p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
