@@ -1207,9 +1207,7 @@ const ProfilePage = () => {
                   variant={followRequestStatus === 'following' ? "default" : (followRequestStatus === 'requested' ? "outline" : "outline")}
                   size="lg"
                   disabled={followMutation.isPending}
-                  className={`w-full relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg ${
-                    followRequestStatus === 'following' ? '' : 'hover:bg-primary hover:text-black dark:hover:text-black'
-                  }`}
+                  className="w-full relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
                   style={followRequestStatus === 'following' ? {
                     backgroundColor: 'hsl(var(--primary))',
                     borderColor: 'hsl(var(--primary))',
@@ -1218,6 +1216,19 @@ const ProfilePage = () => {
                   } : {
                     borderColor: 'hsl(var(--primary))',
                     color: 'hsl(var(--primary))',
+                    backgroundColor: 'transparent',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (followRequestStatus !== 'following') {
+                      e.currentTarget.style.backgroundColor = 'hsl(var(--primary))';
+                      e.currentTarget.style.color = '#000000';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (followRequestStatus !== 'following') {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = 'hsl(var(--primary))';
+                    }
                   }}
                   data-testid="follow-button"
                   data-following={followRequestStatus === 'following'}
@@ -1562,9 +1573,7 @@ const ProfilePage = () => {
                     variant={followRequestStatus === 'following' ? "default" : (followRequestStatus === 'requested' ? "outline" : "outline")}
                     size="sm"
                     disabled={followMutation.isPending}
-                    className={`relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg ${
-                      followRequestStatus === 'following' ? '' : 'hover:bg-primary hover:text-black dark:hover:text-black'
-                    }`}
+                    className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
                     style={followRequestStatus === 'following' ? {
                       backgroundColor: 'hsl(var(--primary))',
                       borderColor: 'hsl(var(--primary))',
@@ -1573,6 +1582,19 @@ const ProfilePage = () => {
                     } : {
                       borderColor: 'hsl(var(--primary))',
                       color: 'hsl(var(--primary))',
+                      backgroundColor: 'transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (followRequestStatus !== 'following') {
+                        e.currentTarget.style.backgroundColor = 'hsl(var(--primary))';
+                        e.currentTarget.style.color = '#000000';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (followRequestStatus !== 'following') {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = 'hsl(var(--primary))';
+                      }
                     }}
                     data-testid="follow-button"
                     data-following={followRequestStatus === 'following'}
