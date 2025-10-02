@@ -46,6 +46,9 @@ interface ClipsData {
 interface HeroTextData {
   title: string;
   subtitle: string;
+  buttonText?: string;
+  buttonUrl?: string;
+  targetAudience?: string;
 }
 
 // Banner Management Component
@@ -419,6 +422,9 @@ const AdminPage = () => {
   const [selectedBadgeUser, setSelectedBadgeUser] = useState<any>(null);
   const [heroTextTitle, setHeroTextTitle] = useState("");
   const [heroTextSubtitle, setHeroTextSubtitle] = useState("");
+  const [heroButtonText, setHeroButtonText] = useState("");
+  const [heroButtonUrl, setHeroButtonUrl] = useState("");
+  const [heroTargetAudience, setHeroTargetAudience] = useState("experienced_users");
 
   // Badge creation state
   const [newBadgeName, setNewBadgeName] = useState("");
@@ -472,6 +478,9 @@ const AdminPage = () => {
     if (currentHeroText) {
       setHeroTextTitle(currentHeroText.title || "");
       setHeroTextSubtitle(currentHeroText.subtitle || "");
+      setHeroButtonText(currentHeroText.buttonText || "");
+      setHeroButtonUrl(currentHeroText.buttonUrl || "");
+      setHeroTargetAudience(currentHeroText.targetAudience || "experienced_users");
     }
   }, [currentHeroText]);
 
@@ -800,6 +809,9 @@ const AdminPage = () => {
       await apiRequest("PATCH", "/api/hero-text/experienced", {
         title: heroTextTitle,
         subtitle: heroTextSubtitle,
+        buttonText: heroButtonText || null,
+        buttonUrl: heroButtonUrl || null,
+        targetAudience: heroTargetAudience,
       });
 
       toast({
@@ -1856,7 +1868,7 @@ const AdminPage = () => {
                 Hero Text Management
               </CardTitle>
               <CardDescription>
-                Customize the hero text displayed to experienced users who have uploaded content
+                Customize the hero text displayed to different user groups on the homepage
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1890,16 +1902,69 @@ const AdminPage = () => {
                       />
                     </div>
                   </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label htmlFor="heroButtonText" className="text-sm font-medium">
+                        Button Text (Optional)
+                      </label>
+                      <Input
+                        id="heroButtonText"
+                        placeholder="e.g., Get Started"
+                        value={heroButtonText}
+                        onChange={(e) => setHeroButtonText(e.target.value)}
+                        data-testid="input-hero-button-text"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="heroButtonUrl" className="text-sm font-medium">
+                        Button URL (Optional)
+                      </label>
+                      <Input
+                        id="heroButtonUrl"
+                        placeholder="e.g., /explore or https://example.com"
+                        value={heroButtonUrl}
+                        onChange={(e) => setHeroButtonUrl(e.target.value)}
+                        data-testid="input-hero-button-url"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="heroTargetAudience" className="text-sm font-medium">
+                      Target Audience
+                    </label>
+                    <select
+                      id="heroTargetAudience"
+                      value={heroTargetAudience}
+                      onChange={(e) => setHeroTargetAudience(e.target.value)}
+                      className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      data-testid="select-hero-target-audience"
+                    >
+                      <option value="new_users">New Users (No content uploaded)</option>
+                      <option value="existing_users">Existing Users (Authenticated)</option>
+                      <option value="experienced_users">Experienced Users (With content)</option>
+                      <option value="all_users">All Users</option>
+                    </select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Choose which users will see this hero text on the homepage
+                    </p>
+                  </div>
                   
                   <div className="border rounded-lg p-4 bg-muted/50">
                     <h4 className="font-medium mb-2">Preview</h4>
-                    <div className="space-y-1">
+                    <div className="space-y-3">
                       <div className="text-lg font-semibold">
                         {heroTextTitle || "Enter title above"}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {heroTextSubtitle || "Enter subtitle above"}
                       </div>
+                      {heroButtonText && (
+                        <Button variant="default" size="sm" disabled>
+                          {heroButtonText}
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -1918,10 +1983,15 @@ const AdminPage = () => {
                     <div className="text-sm text-muted-foreground space-y-1">
                       <p><strong>Current Title:</strong> {currentHeroText?.title || "Not set"}</p>
                       <p><strong>Current Subtitle:</strong> {currentHeroText?.subtitle || "Not set"}</p>
-                      <p className="text-xs mt-2">
-                        <strong>Note:</strong> This text will be shown to users who have uploaded content.
-                        New users will see the default text.
-                      </p>
+                      <p><strong>Button Text:</strong> {currentHeroText?.buttonText || "Not set"}</p>
+                      <p><strong>Button URL:</strong> {currentHeroText?.buttonUrl || "Not set"}</p>
+                      <p><strong>Target Audience:</strong> {
+                        currentHeroText?.targetAudience === 'new_users' ? 'New Users' :
+                        currentHeroText?.targetAudience === 'existing_users' ? 'Existing Users' :
+                        currentHeroText?.targetAudience === 'experienced_users' ? 'Experienced Users' :
+                        currentHeroText?.targetAudience === 'all_users' ? 'All Users' :
+                        'Experienced Users'
+                      }</p>
                     </div>
                   </div>
                 </div>
