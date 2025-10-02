@@ -8,7 +8,7 @@ import TrendingGameCard from "@/components/clips/TrendingGameCard";
 import { Link, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Check, Search, FileImage, Film, Video } from "lucide-react";
+import { UserPlus, Check, Search, FileImage, Film, Video, Trophy } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -442,15 +442,25 @@ const UserResultCard = ({ user }: UserResultCardProps) => {
     <div className="bg-card rounded-lg p-4 flex items-center justify-between">
       <Link href={`/profile/${user.username}`}>
         <a className="flex items-center group">
-          <Avatar className="h-12 w-12">
-            <AvatarImage 
-              src={user.avatarUrl || undefined} 
-              alt={user.displayName} 
-            />
-            <AvatarFallback>
-              {user.displayName[0]}
-            </AvatarFallback>
-          </Avatar>
+          <div className="relative">
+            <Avatar className="h-12 w-12">
+              <AvatarImage 
+                src={user.avatarUrl || undefined} 
+                alt={user.displayName} 
+              />
+              <AvatarFallback>
+                {user.displayName[0]}
+              </AvatarFallback>
+            </Avatar>
+            {/* Level Badge */}
+            <div 
+              className="absolute -bottom-1 -right-1 z-10 flex items-center justify-center rounded-full bg-yellow-500 text-black font-bold shadow-lg w-6 h-6 border border-background"
+              data-testid="level-badge"
+            >
+              <Trophy className="w-2.5 h-2.5 absolute top-0.5 left-0.5 text-yellow-700 opacity-30" />
+              <span className="relative z-10 text-xs">{user.level || 1}</span>
+            </div>
+          </div>
           <div className="ml-3">
             <h3 className="font-semibold group-hover:text-primary transition-colors">
               {user.displayName}

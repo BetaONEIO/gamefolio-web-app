@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Game, User } from "@shared/schema";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
+import { Trophy } from "lucide-react";
 
 interface FeaturedProfileCardProps {
   user: User & { 
@@ -22,13 +23,21 @@ const FeaturedProfileCard = ({ user }: FeaturedProfileCardProps) => {
     >
       <div className="flex flex-col items-center text-center">
         {/* Avatar and Username */}
-        <Link href={`/profile/${user.username}`} className="block">
+        <Link href={`/profile/${user.username}`} className="block relative mb-3">
           <CustomAvatar 
             user={user}
             size="xl"
-            className="mb-3 hover:scale-105"
+            className="hover:scale-105"
             borderIntensity="normal"
           />
+          {/* Level Badge */}
+          <div 
+            className="absolute -bottom-2 -right-2 z-10 flex items-center justify-center rounded-full bg-yellow-500 text-black font-bold shadow-lg w-8 h-8 border-2 border-background"
+            data-testid="level-badge"
+          >
+            <Trophy className="w-3 h-3 absolute top-1 left-1 text-yellow-700 opacity-30" />
+            <span className="relative z-10 text-sm">{user.level || 1}</span>
+          </div>
         </Link>
         
         <div className="mb-3">
