@@ -395,21 +395,23 @@ const UserResultCard = ({ user }: UserResultCardProps) => {
   const { toast } = useToast();
   
   // Check if current user is following this user
-  const { data: isFollowing = false } = useQuery<boolean>({
-    queryKey: [`/api/users/${user.id}/following/check`],
+  const { data: followStatus } = useQuery<{ following: boolean; requested: boolean }>({
+    queryKey: [`/api/users/${user.username}/follow-status`],
     enabled: !!currentUser?.id,
   });
+
+  const isFollowing = followStatus?.following || followStatus?.requested || false;
 
   const followMutation = useMutation({
     mutationFn: async () => {
       if (isFollowing) {
-        await apiRequest("DELETE", `/api/users/${user.id}/follow`);
+        await apiRequest("DELETE", `/api/users/${user.username}/follow`);
       } else {
-        await apiRequest("POST", `/api/users/${user.id}/follow`);
+        await apiRequest("POST", `/api/users/${user.username}/follow`);
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${user.id}/following/check`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user.username}/follow-status`] });
       toast({
         description: isFollowing ? `Unfollowed ${user.displayName}` : `Following ${user.displayName}`,
         variant: "gamefolioSuccess",
