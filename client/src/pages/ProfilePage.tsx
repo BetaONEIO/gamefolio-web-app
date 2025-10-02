@@ -1204,12 +1204,18 @@ const ProfilePage = () => {
               <div className="flex flex-col gap-3 px-4">
                 <Button 
                   onClick={handleFollowClick}
-                  variant={followRequestStatus === 'following' ? "outline" : (followRequestStatus === 'requested' ? "outline" : "default")}
+                  variant={followRequestStatus === 'following' ? "default" : (followRequestStatus === 'requested' ? "outline" : "outline")}
                   size="lg"
                   disabled={followMutation.isPending}
-                  className="w-full relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
-                  style={followRequestStatus === 'following' || followRequestStatus === 'requested' ? {} : {
+                  className="w-full relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                  style={followRequestStatus === 'following' ? {
+                    backgroundColor: 'hsl(var(--primary))',
+                    borderColor: 'hsl(var(--primary))',
+                    color: 'hsl(var(--primary-foreground))',
                     boxShadow: `0 4px 15px hsl(var(--primary) / 0.4)`,
+                  } : {
+                    borderColor: 'hsl(var(--primary))',
+                    color: 'hsl(var(--primary))',
                   }}
                   data-testid="follow-button"
                   data-following={followRequestStatus === 'following'}
@@ -1551,12 +1557,18 @@ const ProfilePage = () => {
                 <div className="flex gap-2 flex-shrink-0">
                   <Button 
                     onClick={handleFollowClick}
-                    variant={followRequestStatus === 'following' ? "outline" : (followRequestStatus === 'requested' ? "outline" : "default")}
+                    variant={followRequestStatus === 'following' ? "default" : (followRequestStatus === 'requested' ? "outline" : "outline")}
                     size="sm"
                     disabled={followMutation.isPending}
-                    className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
-                    style={followRequestStatus === 'following' || followRequestStatus === 'requested' ? {} : {
+                    className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                    style={followRequestStatus === 'following' ? {
+                      backgroundColor: 'hsl(var(--primary))',
+                      borderColor: 'hsl(var(--primary))',
+                      color: 'hsl(var(--primary-foreground))',
                       boxShadow: `0 4px 15px hsl(var(--primary) / 0.4)`,
+                    } : {
+                      borderColor: 'hsl(var(--primary))',
+                      color: 'hsl(var(--primary))',
                     }}
                     data-testid="follow-button"
                     data-following={followRequestStatus === 'following'}
@@ -1761,19 +1773,17 @@ const ProfilePage = () => {
                   {currentUser && (
                     <Button 
                       onClick={handleFollowClick}
-                      variant={followRequestStatus === 'following' ? "outline" : (followRequestStatus === 'requested' ? "outline" : "default")}
+                      variant={followRequestStatus === 'following' ? "default" : (followRequestStatus === 'requested' ? "outline" : "outline")}
                       disabled={followMutation.isPending}
                       className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
                       style={followRequestStatus === 'following' ? {
-                        borderColor: accentColor,
-                        color: accentColor,
-                      } : followRequestStatus === 'requested' ? {
-                        borderColor: accentColor,
-                        color: accentColor,
-                      } : {
                         backgroundColor: accentColor,
                         borderColor: accentColor,
+                        color: '#000000',
                         boxShadow: `0 4px 15px ${accentColor}40`,
+                      } : {
+                        borderColor: accentColor,
+                        color: accentColor,
                       }}
                     >
                       {followMutation.isPending ? (
@@ -1858,19 +1868,17 @@ const ProfilePage = () => {
                   {currentUser && (
                     <Button 
                       onClick={handleFollowClick}
-                      variant={followRequestStatus === 'following' ? "outline" : (followRequestStatus === 'requested' ? "outline" : "default")}
+                      variant={followRequestStatus === 'following' ? "default" : (followRequestStatus === 'requested' ? "outline" : "outline")}
                       disabled={followMutation.isPending}
                       className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
                       style={followRequestStatus === 'following' ? {
-                        borderColor: accentColor,
-                        color: accentColor,
-                      } : followRequestStatus === 'requested' ? {
-                        borderColor: accentColor,
-                        color: accentColor,
-                      } : {
                         backgroundColor: accentColor,
                         borderColor: accentColor,
+                        color: '#000000',
                         boxShadow: `0 4px 15px ${accentColor}40`,
+                      } : {
+                        borderColor: accentColor,
+                        color: accentColor,
                       }}
                     >
                       {followMutation.isPending ? (
@@ -1956,19 +1964,17 @@ const ProfilePage = () => {
                   {currentUser && (
                     <Button 
                       onClick={handleFollowClick}
-                      variant={followRequestStatus === 'following' ? "outline" : (followRequestStatus === 'requested' ? "outline" : "default")}
+                      variant={followRequestStatus === 'following' ? "default" : (followRequestStatus === 'requested' ? "outline" : "outline")}
                       disabled={followMutation.isPending}
                       className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
                       style={followRequestStatus === 'following' ? {
-                        borderColor: accentColor,
-                        color: accentColor,
-                      } : followRequestStatus === 'requested' ? {
-                        borderColor: accentColor,
-                        color: accentColor,
-                      } : {
                         backgroundColor: accentColor,
                         borderColor: accentColor,
+                        color: '#000000',
                         boxShadow: `0 4px 15px ${accentColor}40`,
+                      } : {
+                        borderColor: accentColor,
+                        color: accentColor,
                       }}
                     >
                       {followMutation.isPending ? (
@@ -2051,19 +2057,17 @@ const ProfilePage = () => {
                   {currentUser && (
                     <Button 
                       onClick={handleFollowClick}
-                      variant={followRequestStatus === 'following' ? "outline" : (followRequestStatus === 'requested' ? "outline" : "default")}
+                      variant={followRequestStatus === 'following' ? "default" : (followRequestStatus === 'requested' ? "outline" : "outline")}
                       disabled={followMutation.isPending}
                       className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
                       style={followRequestStatus === 'following' ? {
-                        borderColor: accentColor,
-                        color: accentColor,
-                      } : followRequestStatus === 'requested' ? {
-                        borderColor: accentColor,
-                        color: accentColor,
-                      } : {
                         backgroundColor: accentColor,
                         borderColor: accentColor,
+                        color: '#000000',
                         boxShadow: `0 4px 15px ${accentColor}40`,
+                      } : {
+                        borderColor: accentColor,
+                        color: accentColor,
                       }}
                     >
                       {followMutation.isPending ? (
