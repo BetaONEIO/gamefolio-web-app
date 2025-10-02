@@ -357,6 +357,7 @@ const MessagesPage: React.FC = () => {
         console.log('🔄 Setting selected conversation to userId:', existingConversation.userId);
         setSelectedConversation(existingConversation.userId);
         setSelectedUserInfo(null); // Clear any stored user info since we have a real conversation
+        setShowMobileConversationList(false); // Show chat on mobile when conversation is selected via URL
         // Clean up the URL immediately for existing conversations
         window.history.replaceState({}, '', '/messages');
         console.log('✅ Conversation selection and URL cleanup complete');
@@ -380,6 +381,7 @@ const MessagesPage: React.FC = () => {
         console.log('🎯 Found target user from search, selecting conversation:', targetUser);
         setSelectedConversation(targetUser.id);
         setSelectedUserInfo(targetUser); // Store user info for header display
+        setShowMobileConversationList(false); // Show chat on mobile when new conversation is selected via URL
         setUserSearchResults([]); // Clear search results
         setProcessedUrlParam(null); // Reset so URL can be processed again if needed
         // Clean up the URL after successfully setting up the new conversation
