@@ -6,7 +6,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -200,13 +199,11 @@ export function JoinGamefolioDialog({
   if (showEmailForm) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-md mx-auto p-0 bg-gray-900 border-gray-700 text-white overflow-hidden">
-          <VisuallyHidden>
-            <DialogHeader>
-              <DialogTitle>Create Your Account</DialogTitle>
-              <DialogDescription>Sign up for Gamefolio</DialogDescription>
-            </DialogHeader>
-          </VisuallyHidden>
+        <DialogContent className="max-w-md mx-auto p-0 bg-gray-900 border-gray-700 text-white overflow-hidden" aria-describedby="signup-description">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Create Your Account</DialogTitle>
+            <DialogDescription id="signup-description">Sign up for Gamefolio</DialogDescription>
+          </DialogHeader>
           {/* Close button */}
           <button
             onClick={handleClose}
@@ -330,13 +327,11 @@ export function JoinGamefolioDialog({
   if (showLoginForm) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-md mx-auto p-0 bg-gray-900 border-gray-700 text-white overflow-hidden">
-          <VisuallyHidden>
-            <DialogHeader>
-              <DialogTitle>Log In</DialogTitle>
-              <DialogDescription>Log in to your Gamefolio account</DialogDescription>
-            </DialogHeader>
-          </VisuallyHidden>
+        <DialogContent className="max-w-md mx-auto p-0 bg-gray-900 border-gray-700 text-white overflow-hidden" aria-describedby="login-description">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Log In</DialogTitle>
+            <DialogDescription id="login-description">Log in to your Gamefolio account</DialogDescription>
+          </DialogHeader>
           {/* Close button */}
           <button
             onClick={handleClose}
@@ -423,13 +418,11 @@ export function JoinGamefolioDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md mx-auto p-0 bg-gray-900 border-gray-700 text-white overflow-hidden">
-        <VisuallyHidden>
-          <DialogHeader>
-            <DialogTitle>Welcome to Gamefolio</DialogTitle>
-            <DialogDescription>Choose how you'd like to join or log in</DialogDescription>
-          </DialogHeader>
-        </VisuallyHidden>
+      <DialogContent className="max-w-md mx-auto p-0 bg-gray-900 border-gray-700 text-white overflow-hidden" aria-describedby="welcome-description">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Welcome to Gamefolio</DialogTitle>
+          <DialogDescription id="welcome-description">Choose how you'd like to join or log in</DialogDescription>
+        </DialogHeader>
         {/* Close button */}
         <button
           onClick={handleClose}
