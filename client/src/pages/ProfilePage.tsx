@@ -1158,7 +1158,7 @@ const ProfilePage = () => {
               <h1 className="text-xl font-bold">{profile.displayName}</h1>
               <span className="text-lg text-white/70 font-normal">@{profile.username}</span>
               <ModeratorBadge 
-                isModerator={profile.role === "moderator"} 
+                isModerator={profile.role === "moderator" || profile.role === "admin"} 
                 size="lg" 
               />
             </div>
@@ -1426,7 +1426,7 @@ const ProfilePage = () => {
                   <h1 className="text-3xl font-bold">{profile.displayName}</h1>
                   <span className="text-xl text-white/70 font-normal">@{profile.username}</span>
                   <ModeratorBadge 
-                    isModerator={profile.role === "moderator"} 
+                    isModerator={profile.role === "moderator" || profile.role === "admin"} 
                     size="xl" 
                   />
                 </div>
