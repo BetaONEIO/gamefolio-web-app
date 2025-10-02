@@ -3,7 +3,7 @@ import { InsertUserPointsHistory, InsertWeeklyLeaderboard, InsertTopContributor 
 
 // Point values for different actions
 export const POINT_VALUES = {
-  upload: 10,
+  upload: 5,
   like: 2,
   comment: 5,
   fire: 3,
