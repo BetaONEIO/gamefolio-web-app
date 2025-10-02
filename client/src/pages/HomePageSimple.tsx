@@ -214,8 +214,14 @@ const HomePage = () => {
     enabled: !!userId, // Only run query if user is logged in
   });
 
-  // Query to get custom hero text for experienced users
-  const { data: experiencedHeroText, isLoading: isLoadingExperiencedText } = useQuery<{ title: string; subtitle: string }>({
+  // Query to get custom hero text
+  const { data: experiencedHeroText, isLoading: isLoadingExperiencedText } = useQuery<{ 
+    title: string; 
+    subtitle: string; 
+    buttonText?: string; 
+    buttonUrl?: string; 
+    targetAudience?: string; 
+  }>({
     queryKey: ['/api/hero-text/experienced'],
     queryFn: async () => {
       const response = await fetch('/api/hero-text/experienced');
@@ -224,7 +230,7 @@ const HomePage = () => {
       }
       return response.json();
     },
-    enabled: !!userHasContent, // Only fetch if user has content
+    enabled: !!userId || !user, // Always fetch to check target audience
   });
 
   // Determine which hero text to display based on user authentication status
@@ -238,15 +244,24 @@ const HomePage = () => {
     subtitle: "Upload, discover, and share epic gaming clips with the community. Build your gaming portfolio and connect with fellow gamers."
   };
 
-  // Handle hero text logic for both guests and authenticated users
-  const isStillLoading = user && (isLoadingUserContent || (userHasContent && isLoadingExperiencedText));
+  // Handle hero text logic based on target audience
+  const isStillLoading = isLoadingUserContent || isLoadingExperiencedText;
   
   const heroText = isStillLoading 
-    ? null // Show loading state while determining user status or fetching experienced text
+    ? null // Show loading state while determining user status or fetching text
+    : experiencedHeroText && experiencedHeroText.targetAudience
+    ? (() => {
+        const target = experiencedHeroText.targetAudience;
+        // Check if custom text matches current user state
+        if (target === 'all_users') return experiencedHeroText;
+        if (target === 'new_users' && user && !userHasContent) return experiencedHeroText;
+        if (target === 'existing_users' && user) return experiencedHeroText;
+        if (target === 'experienced_users' && user && userHasContent) return experiencedHeroText;
+        // If custom text doesn't match, use default
+        return !user ? guestHeroText : defaultHeroText;
+      })()
     : !user
-    ? guestHeroText // Show guest text for non-authenticated users
-    : userHasContent && experiencedHeroText
-    ? experiencedHeroText
+    ? guestHeroText 
     : defaultHeroText;
 
 
@@ -282,8 +297,22 @@ const HomePage = () => {
                   <p className="text-sm sm:text-base md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-2">
                     {heroText.subtitle}
                   </p>
-                  {/* Show appropriate call-to-action button based on user authentication status */}
-                  {!user ? (
+                  {/* Show custom button if provided, otherwise show default buttons */}
+                  {heroText.buttonText && heroText.buttonUrl ? (
+                    <Button 
+                      className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                      onClick={() => {
+                        if (heroText.buttonUrl?.startsWith('http')) {
+                          window.open(heroText.buttonUrl, '_blank');
+                        } else {
+                          setLocation(heroText.buttonUrl || '/');
+                        }
+                      }}
+                      data-testid="button-custom-hero"
+                    >
+                      {heroText.buttonText}
+                    </Button>
+                  ) : !user ? (
                     <Button 
                       className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
                       onClick={() => setLocation('/auth')}

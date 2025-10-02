@@ -4966,7 +4966,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only admins can update hero text settings" });
       }
 
-      const { title, subtitle } = req.body;
+      const { title, subtitle, buttonText, buttonUrl, targetAudience } = req.body;
       
       if (!title || !subtitle) {
         return res.status(400).json({ message: "Title and subtitle are required" });
@@ -4976,6 +4976,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedSettings = await storage.updateHeroTextSettings('experienced_users', {
         title,
         subtitle,
+        buttonText: buttonText || null,
+        buttonUrl: buttonUrl || null,
+        targetAudience: targetAudience || 'experienced_users',
         updatedBy: req.user!.id,
       });
 
