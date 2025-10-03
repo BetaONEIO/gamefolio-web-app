@@ -38,10 +38,10 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
 - **Protected Content Uploads**: Requires email verification and onboarding completion for gaming clip and screenshot uploads.
 - **Protected Social Features**: Email verification is required for reactions, likes, and messaging.
 - **Content Filtering**: Automated profanity and inappropriate content detection system.
-- **Unified Points System**: XP and Points are now the same - all engagement activities award points that count for BOTH leveling and leaderboards. Points earned: Uploads (5pts), Likes (2pts), Comments (5pts), Fire reactions (3pts), Views (1pt). Every point contributes to user totalXP for leveling.
-- **Leveling System**: Progressive thresholds based on total points (Level 1=0, Level 2=100, Level 3=500, etc.) with level display on user profiles marked with Trophy icon.
+- **Points System**: Single unified points system for both leveling and leaderboards. Points earned: Uploads (5pts), Likes (2pts), Comments (5pts), Fire reactions (3pts), Views (1pt). Total points determine user level.
+- **Leveling System**: Progressive thresholds based on total points (Level 1: 0pts, Level 2: 100pts, Level 3: 500pts, etc.) with level display on user profiles marked with Trophy icon.
 - **Leaderboard System**: Weekly and monthly leaderboards tracking uploads, likes, comments, fires, and views with comprehensive ranking system.
-- **Admin Panel**: Comprehensive user management, content moderation, user deletion, and points/XP synchronization tools.
+- **Admin Panel**: Comprehensive user management, content moderation, user deletion, and points/level synchronization tools.
 - **Multi-game Support**: Integration with Twitch API for game data retrieval and automatic game creation.
 - **Adaptive URL Support**: Email verification URLs dynamically adapt to development, Replit, and custom production environments.
 - **Post-Upload Workflow**: Seamless redirection to user profile with automatic share dialog display after content uploads.
