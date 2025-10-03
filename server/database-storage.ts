@@ -2655,6 +2655,49 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getAllTimeLeaderboard(limit: number = 10): Promise<Array<{
+    userId: number;
+    uploadsCount: number;
+    likesGivenCount: number;
+    commentsCount: number;
+    firesGivenCount: number;
+    viewsCount: number;
+    totalPoints: number;
+    rank: number;
+    user: User;
+  }>> {
+    // Aggregate all monthly leaderboard data by user
+    const aggregated = await db
+      .select({
+        userId: monthlyLeaderboard.userId,
+        uploadsCount: sql<number>`CAST(SUM(${monthlyLeaderboard.uploadsCount}) AS INTEGER)`,
+        likesGivenCount: sql<number>`CAST(SUM(${monthlyLeaderboard.likesGivenCount}) AS INTEGER)`,
+        commentsCount: sql<number>`CAST(SUM(${monthlyLeaderboard.commentsCount}) AS INTEGER)`,
+        firesGivenCount: sql<number>`CAST(SUM(${monthlyLeaderboard.firesGivenCount}) AS INTEGER)`,
+        viewsCount: sql<number>`CAST(SUM(${monthlyLeaderboard.viewsCount}) AS INTEGER)`,
+        totalPoints: sql<number>`CAST(SUM(${monthlyLeaderboard.totalPoints}) AS INTEGER)`,
+      })
+      .from(monthlyLeaderboard)
+      .groupBy(monthlyLeaderboard.userId)
+      .having(sql`SUM(${monthlyLeaderboard.totalPoints}) > 0`)
+      .orderBy(desc(sql`SUM(${monthlyLeaderboard.totalPoints})`))
+      .limit(limit);
+
+    // Get user details for each entry
+    const results = await Promise.all(
+      aggregated.map(async (entry, index) => {
+        const user = await this.getUser(entry.userId);
+        return {
+          ...entry,
+          rank: index + 1,
+          user: user!
+        };
+      })
+    );
+
+    return results;
+  }
+
   // Weekly leaderboard operations
   async getWeeklyLeaderboardEntry(userId: number, week: string, year: number): Promise<WeeklyLeaderboard | null> {
     const [entry] = await db

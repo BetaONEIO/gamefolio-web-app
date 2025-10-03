@@ -198,6 +198,11 @@ export class LeaderboardService {
     return await storage.getWeeklyLeaderboardEntry(userId, week, year);
   }
 
+  // Get all-time leaderboard (aggregated from all monthly leaderboards)
+  static async getAllTimeLeaderboard(limit: number = 10) {
+    return await storage.getAllTimeLeaderboard(limit);
+  }
+
   // Store top contributors when a period ends (weekly/monthly)
   static async storeTopContributors(periodType: 'weekly' | 'monthly', period: string, year: number): Promise<void> {
     try {

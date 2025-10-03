@@ -1349,15 +1349,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get engagement leaderboard endpoint
+  // Get all-time points leaderboard endpoint
   app.get("/api/leaderboard", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
-      const leaderboardData = await storage.getEngagementLeaderboard(limit);
+      const leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
       res.json(leaderboardData);
     } catch (error) {
-      console.error("Error fetching leaderboard:", error);
-      res.status(500).json({ message: "Error fetching leaderboard data" });
+      console.error("Error fetching all-time leaderboard:", error);
+      res.status(500).json({ message: "Error fetching all-time leaderboard data" });
     }
   });
 

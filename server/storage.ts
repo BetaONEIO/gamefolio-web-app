@@ -164,6 +164,17 @@ export interface IStorage {
   updateMonthlyLeaderboardEntry(id: number, updates: Partial<MonthlyLeaderboard>): Promise<MonthlyLeaderboard | null>;
   getMonthlyLeaderboard(month: string, year: number, limit?: number): Promise<(MonthlyLeaderboard & { user: User })[]>;
   recalculateMonthlyRankings(month: string, year: number): Promise<void>;
+  getAllTimeLeaderboard(limit?: number): Promise<Array<{
+    userId: number;
+    uploadsCount: number;
+    likesGivenCount: number;
+    commentsCount: number;
+    firesGivenCount: number;
+    viewsCount: number;
+    totalPoints: number;
+    rank: number;
+    user: User;
+  }>>;
   
   // Weekly leaderboard operations
   getWeeklyLeaderboardEntry(userId: number, week: string, year: number): Promise<WeeklyLeaderboard | null>;

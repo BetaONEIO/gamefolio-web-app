@@ -70,7 +70,7 @@ const LeaderboardPage = () => {
   const { user } = useAuth();
 
   // Fetch all-time leaderboard data from API
-  const { data: allTimeData, isLoading: allTimeLoading } = useQuery<LeaderboardEntry[]>({
+  const { data: allTimeData, isLoading: allTimeLoading } = useQuery<PointsLeaderboardEntry[]>({
     queryKey: ["/api/leaderboard"],
   });
 
@@ -106,7 +106,7 @@ const LeaderboardPage = () => {
     return "bg-gradient-to-r from-blue-500 to-purple-600";
   };
 
-  const AllTimeLeaderboardTable = ({ data, isLoading }: { data: LeaderboardEntry[] | undefined, isLoading: boolean }) => (
+  const AllTimeLeaderboardTable = ({ data, isLoading }: { data: PointsLeaderboardEntry[] | undefined, isLoading: boolean }) => (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -114,7 +114,7 @@ const LeaderboardPage = () => {
           All-Time Top Gamers
         </CardTitle>
         <CardDescription>
-          Ranked by community engagement: likes received + comments received + clips uploaded
+          Ranked by total points earned across all time from uploads, likes, comments, reactions, and views
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -173,17 +173,17 @@ const LeaderboardPage = () => {
                 
                 {/* Desktop stats layout */}
                 <div className="hidden sm:flex items-center gap-3 text-sm">
-                  <div className="flex items-center gap-1" title="Clips Uploaded">
+                  <div className="flex items-center gap-1" title="Uploads">
                     <Upload className="h-4 w-4 text-blue-500" />
-                    <span>{entry.clipsUploaded}</span>
+                    <span>{entry.uploadsCount}</span>
                   </div>
-                  <div className="flex items-center gap-1" title="Likes Received">
+                  <div className="flex items-center gap-1" title="Likes Given">
                     <Heart className="h-4 w-4 text-red-500" />
-                    <span>{entry.likesReceived}</span>
+                    <span>{entry.likesGivenCount}</span>
                   </div>
-                  <div className="flex items-center gap-1" title="Comments Received">
+                  <div className="flex items-center gap-1" title="Comments">
                     <MessageCircle className="h-4 w-4 text-green-500" />
-                    <span>{entry.commentsReceived}</span>
+                    <span>{entry.commentsCount}</span>
                   </div>
                 </div>
                 
@@ -191,15 +191,15 @@ const LeaderboardPage = () => {
                 <div className="flex sm:hidden items-center gap-2 text-xs">
                   <span className="flex items-center gap-1 text-blue-500">
                     <Upload className="h-3 w-3" />
-                    {entry.clipsUploaded}
+                    {entry.uploadsCount}
                   </span>
                   <span className="flex items-center gap-1 text-red-500">
                     <Heart className="h-3 w-3" />
-                    {entry.likesReceived}
+                    {entry.likesGivenCount}
                   </span>
                   <span className="flex items-center gap-1 text-green-500">
                     <MessageCircle className="h-3 w-3" />
-                    {entry.commentsReceived}
+                    {entry.commentsCount}
                   </span>
                 </div>
                 
@@ -207,7 +207,7 @@ const LeaderboardPage = () => {
                   className={`${getRankBadgeColor(entry.rank)} text-white font-bold px-2 sm:px-3 py-1 text-xs sm:text-sm flex-shrink-0`}
                   data-testid={`score-${entry.user.id}`}
                 >
-                  {entry.totalScore}
+                  {entry.totalPoints}
                 </Badge>
               </div>
             ))}
