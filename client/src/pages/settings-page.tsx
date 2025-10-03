@@ -415,9 +415,6 @@ export default function SettingsPage() {
                       <span className="text-xs text-gray-500 max-w-24 text-center truncate">
                         {avatarPreview ? 'Preview' : user?.avatarUrl ? `URL: ${user.avatarUrl.split('/').pop()}` : 'No avatar'}
                       </span>
-                      <span className="text-xs text-blue-500 max-w-24 text-center truncate">
-                        Debug: {JSON.stringify({hasPreview: !!avatarPreview, avatarUrl: user?.avatarUrl, src: avatarPreview || user?.avatarUrl || ''})}
-                      </span>
                     </div>
                     
                     {/* Upload Controls */}
