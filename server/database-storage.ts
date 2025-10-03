@@ -2605,67 +2605,103 @@ export class DatabaseStorage implements IStorage {
     
     console.log(`📊 Rebuilding leaderboards from ${pointsRecords.length} points records...`);
     
+    // Aggregate data by user+period FIRST to avoid duplicates
+    const monthlyData = new Map<string, InsertMonthlyLeaderboard>();
+    const weeklyData = new Map<string, InsertWeeklyLeaderboard>();
+    
     for (const record of pointsRecords) {
       const timestamp = new Date(record.createdAt);
       const month = String(timestamp.getMonth() + 1).padStart(2, '0');
       const year = timestamp.getFullYear();
       const monthKey = `${year}-${month}`;
       
-      // Calculate week
+      // Calculate week using ISO week calculation
       const startOfYear = new Date(timestamp.getFullYear(), 0, 1);
       const days = Math.floor((timestamp.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
       const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
       const week = `${year}-W${String(weekNumber).padStart(2, '0')}`;
       
-      // Update monthly leaderboard
-      const monthEntry = await this.getMonthlyLeaderboardEntry(record.userId, monthKey, year);
-      if (!monthEntry) {
-        await this.createMonthlyLeaderboardEntry({
-          userId: record.userId,
-          month: monthKey,
-          year,
-          uploadsCount: record.action === 'upload' ? 1 : 0,
-          likesGivenCount: record.action === 'like' ? 1 : 0,
-          commentsCount: record.action === 'comment' ? 1 : 0,
-          firesGivenCount: record.action === 'fire' ? 1 : 0,
-          viewsCount: record.action === 'view' ? 1 : 0,
-          totalPoints: record.points,
-        });
-      } else {
-        await this.updateMonthlyLeaderboardEntry(monthEntry.id, {
-          uploadsCount: monthEntry.uploadsCount + (record.action === 'upload' ? 1 : 0),
-          likesGivenCount: monthEntry.likesGivenCount + (record.action === 'like' ? 1 : 0),
-          commentsCount: monthEntry.commentsCount + (record.action === 'comment' ? 1 : 0),
-          firesGivenCount: monthEntry.firesGivenCount + (record.action === 'fire' ? 1 : 0),
-          viewsCount: monthEntry.viewsCount + (record.action === 'view' ? 1 : 0),
-          totalPoints: monthEntry.totalPoints + record.points,
-        });
-      }
+      // Aggregate monthly data
+      const monthMapKey = `${record.userId}-${monthKey}-${year}`;
+      const existing = monthlyData.get(monthMapKey) || {
+        userId: record.userId,
+        month: monthKey,
+        year,
+        uploadsCount: 0,
+        likesGivenCount: 0,
+        commentsCount: 0,
+        firesGivenCount: 0,
+        viewsCount: 0,
+        totalPoints: 0,
+      };
       
-      // Update weekly leaderboard
-      const weekEntry = await this.getWeeklyLeaderboardEntry(record.userId, week, year);
-      if (!weekEntry) {
-        await this.createWeeklyLeaderboardEntry({
-          userId: record.userId,
-          week,
-          year,
-          uploadsCount: record.action === 'upload' ? 1 : 0,
-          likesGivenCount: record.action === 'like' ? 1 : 0,
-          commentsCount: record.action === 'comment' ? 1 : 0,
-          firesGivenCount: record.action === 'fire' ? 1 : 0,
-          viewsCount: record.action === 'view' ? 1 : 0,
-          totalPoints: record.points,
+      existing.uploadsCount = (existing.uploadsCount || 0) + (record.action === 'upload' ? 1 : 0);
+      existing.likesGivenCount = (existing.likesGivenCount || 0) + (record.action === 'like' ? 1 : 0);
+      existing.commentsCount = (existing.commentsCount || 0) + (record.action === 'comment' ? 1 : 0);
+      existing.firesGivenCount = (existing.firesGivenCount || 0) + (record.action === 'fire' ? 1 : 0);
+      existing.viewsCount = (existing.viewsCount || 0) + (record.action === 'view' ? 1 : 0);
+      existing.totalPoints = (existing.totalPoints || 0) + record.points;
+      
+      monthlyData.set(monthMapKey, existing);
+      
+      // Aggregate weekly data
+      const weekMapKey = `${record.userId}-${week}-${year}`;
+      const existingWeek = weeklyData.get(weekMapKey) || {
+        userId: record.userId,
+        week,
+        year,
+        uploadsCount: 0,
+        likesGivenCount: 0,
+        commentsCount: 0,
+        firesGivenCount: 0,
+        viewsCount: 0,
+        totalPoints: 0,
+      };
+      
+      existingWeek.uploadsCount = (existingWeek.uploadsCount || 0) + (record.action === 'upload' ? 1 : 0);
+      existingWeek.likesGivenCount = (existingWeek.likesGivenCount || 0) + (record.action === 'like' ? 1 : 0);
+      existingWeek.commentsCount = (existingWeek.commentsCount || 0) + (record.action === 'comment' ? 1 : 0);
+      existingWeek.firesGivenCount = (existingWeek.firesGivenCount || 0) + (record.action === 'fire' ? 1 : 0);
+      existingWeek.viewsCount = (existingWeek.viewsCount || 0) + (record.action === 'view' ? 1 : 0);
+      existingWeek.totalPoints = (existingWeek.totalPoints || 0) + record.points;
+      
+      weeklyData.set(weekMapKey, existingWeek);
+    }
+    
+    // Insert aggregated monthly data using upsert to handle conflicts
+    console.log(`📊 Inserting ${monthlyData.size} monthly leaderboard entries...`);
+    for (const entry of Array.from(monthlyData.values())) {
+      await db.insert(monthlyLeaderboard)
+        .values(entry)
+        .onConflictDoUpdate({
+          target: [monthlyLeaderboard.userId, monthlyLeaderboard.month, monthlyLeaderboard.year],
+          set: {
+            uploadsCount: sql`${monthlyLeaderboard.uploadsCount} + ${entry.uploadsCount}`,
+            likesGivenCount: sql`${monthlyLeaderboard.likesGivenCount} + ${entry.likesGivenCount}`,
+            commentsCount: sql`${monthlyLeaderboard.commentsCount} + ${entry.commentsCount}`,
+            firesGivenCount: sql`${monthlyLeaderboard.firesGivenCount} + ${entry.firesGivenCount}`,
+            viewsCount: sql`${monthlyLeaderboard.viewsCount} + ${entry.viewsCount}`,
+            totalPoints: sql`${monthlyLeaderboard.totalPoints} + ${entry.totalPoints}`,
+          }
         });
-      } else {
-        await this.updateWeeklyLeaderboardEntry(weekEntry.id, {
-          uploadsCount: weekEntry.uploadsCount + (record.action === 'upload' ? 1 : 0),
-          likesGivenCount: weekEntry.likesGivenCount + (record.action === 'like' ? 1 : 0),
-          commentsCount: weekEntry.commentsCount + (record.action === 'comment' ? 1 : 0),
-          firesGivenCount: weekEntry.firesGivenCount + (record.action === 'fire' ? 1 : 0),
-          viewsCount: weekEntry.viewsCount + (record.action === 'view' ? 1 : 0),
-          totalPoints: weekEntry.totalPoints + record.points,
+    }
+    
+    // Insert aggregated weekly data using upsert to handle conflicts
+    console.log(`📊 Inserting ${weeklyData.size} weekly leaderboard entries...`);
+    for (const entry of Array.from(weeklyData.values())) {
+      await db.insert(weeklyLeaderboard)
+        .values(entry)
+        .onConflictDoUpdate({
+          target: [weeklyLeaderboard.userId, weeklyLeaderboard.week, weeklyLeaderboard.year],
+          set: {
+            uploadsCount: sql`${weeklyLeaderboard.uploadsCount} + ${entry.uploadsCount}`,
+            likesGivenCount: sql`${weeklyLeaderboard.likesGivenCount} + ${entry.likesGivenCount}`,
+            commentsCount: sql`${weeklyLeaderboard.commentsCount} + ${entry.commentsCount}`,
+            firesGivenCount: sql`${weeklyLeaderboard.firesGivenCount} + ${entry.firesGivenCount}`,
+            viewsCount: sql`${weeklyLeaderboard.viewsCount} + ${entry.viewsCount}`,
+            totalPoints: sql`${weeklyLeaderboard.totalPoints} + ${entry.totalPoints}`,
+          }
         });
-      }
     }
     
     // Recalculate all rankings
