@@ -1,16 +1,17 @@
 // Level system configuration and utilities
+// Levels are based on total Points earned from engagement activities
 
-// XP thresholds for each level
-// Level 1: 0 XP
-// Level 2: 100 XP
-// Level 3: 500 XP
-// Level 4: 1000 XP
-// Level 5: 2000 XP
-// Level 6: 3500 XP
-// Level 7: 5500 XP
-// Level 8: 8000 XP
-// Level 9: 11000 XP
-// Level 10: 15000 XP
+// Points thresholds for each level
+// Level 1: 0 Points
+// Level 2: 100 Points
+// Level 3: 500 Points
+// Level 4: 1000 Points
+// Level 5: 2000 Points
+// Level 6: 3500 Points
+// Level 7: 5500 Points
+// Level 8: 8000 Points
+// Level 9: 11000 Points
+// Level 10: 15000 Points
 // And continues to scale...
 
 export const LEVEL_THRESHOLDS: { [level: number]: number } = {
@@ -67,28 +68,28 @@ export const LEVEL_THRESHOLDS: { [level: number]: number } = {
 };
 
 /**
- * Calculate user level based on total XP
- * @param xp Total XP amount
+ * Calculate user level based on total Points
+ * @param points Total Points amount
  * @returns User level (1-50+)
  */
-export function calculateLevel(xp: number): number {
-  if (xp < 0) return 1;
+export function calculateLevel(points: number): number {
+  if (points < 0) return 1;
   
   // Find the highest level the user has reached
   let level = 1;
   
   for (let i = 50; i >= 1; i--) {
-    if (xp >= LEVEL_THRESHOLDS[i]) {
+    if (points >= LEVEL_THRESHOLDS[i]) {
       level = i;
       break;
     }
   }
   
-  // If XP exceeds level 50, calculate extended levels
-  if (xp >= LEVEL_THRESHOLDS[50]) {
-    const xpAbove50 = xp - LEVEL_THRESHOLDS[50];
-    const xpPerLevelAbove50 = 50000; // Each level above 50 requires 50k more XP
-    const additionalLevels = Math.floor(xpAbove50 / xpPerLevelAbove50);
+  // If Points exceed level 50, calculate extended levels
+  if (points >= LEVEL_THRESHOLDS[50]) {
+    const pointsAbove50 = points - LEVEL_THRESHOLDS[50];
+    const pointsPerLevelAbove50 = 50000; // Each level above 50 requires 50k more Points
+    const additionalLevels = Math.floor(pointsAbove50 / pointsPerLevelAbove50);
     level = 50 + additionalLevels;
   }
   
@@ -96,13 +97,13 @@ export function calculateLevel(xp: number): number {
 }
 
 /**
- * Get XP required for next level
+ * Get Points required for next level
  * @param currentLevel Current user level
- * @returns XP required to reach next level
+ * @returns Points required to reach next level
  */
-export function getXPForNextLevel(currentLevel: number): number {
+export function getPointsForNextLevel(currentLevel: number): number {
   if (currentLevel >= 50) {
-    // For levels above 50, each level requires 50k more XP
+    // For levels above 50, each level requires 50k more Points
     return LEVEL_THRESHOLDS[50] + (currentLevel - 49) * 50000;
   }
   
@@ -110,32 +111,32 @@ export function getXPForNextLevel(currentLevel: number): number {
 }
 
 /**
- * Get XP progress to next level
- * @param xp Total XP amount
+ * Get Points progress to next level
+ * @param points Total Points amount
  * @param currentLevel Current user level
- * @returns Object with current XP, XP for next level, and progress percentage
+ * @returns Object with current Points, Points for next level, and progress percentage
  */
-export function getLevelProgress(xp: number, currentLevel: number): {
-  currentXP: number;
-  xpForCurrentLevel: number;
-  xpForNextLevel: number;
-  xpRemaining: number;
+export function getLevelProgress(points: number, currentLevel: number): {
+  currentPoints: number;
+  pointsForCurrentLevel: number;
+  pointsForNextLevel: number;
+  pointsRemaining: number;
   progressPercent: number;
 } {
-  const xpForCurrentLevel = currentLevel >= 50 
+  const pointsForCurrentLevel = currentLevel >= 50 
     ? LEVEL_THRESHOLDS[50] + (currentLevel - 50) * 50000
     : LEVEL_THRESHOLDS[currentLevel];
     
-  const xpForNextLevel = getXPForNextLevel(currentLevel);
-  const xpIntoCurrentLevel = xp - xpForCurrentLevel;
-  const xpNeededForLevel = xpForNextLevel - xpForCurrentLevel;
-  const progressPercent = Math.min(100, Math.max(0, (xpIntoCurrentLevel / xpNeededForLevel) * 100));
+  const pointsForNextLevel = getPointsForNextLevel(currentLevel);
+  const pointsIntoCurrentLevel = points - pointsForCurrentLevel;
+  const pointsNeededForLevel = pointsForNextLevel - pointsForCurrentLevel;
+  const progressPercent = Math.min(100, Math.max(0, (pointsIntoCurrentLevel / pointsNeededForLevel) * 100));
   
   return {
-    currentXP: xp,
-    xpForCurrentLevel,
-    xpForNextLevel,
-    xpRemaining: xpForNextLevel - xp,
+    currentPoints: points,
+    pointsForCurrentLevel,
+    pointsForNextLevel,
+    pointsRemaining: pointsForNextLevel - points,
     progressPercent,
   };
 }
