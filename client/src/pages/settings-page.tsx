@@ -343,7 +343,8 @@ export default function SettingsPage() {
     >
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
+        <div className="mb-6">
+          <h1 className="text-xl sm:text-3xl font-bold mb-3">Profile & Appearance</h1>
           <Button
             variant="ghost"
             size="sm"
@@ -353,7 +354,6 @@ export default function SettingsPage() {
             <ArrowLeft className="h-4 w-4" />
             Back to Profile
           </Button>
-          <h1 className="text-3xl font-bold">Profile & Appearance</h1>
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
