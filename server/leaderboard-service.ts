@@ -2,8 +2,8 @@ import { storage } from "./storage";
 import { InsertUserPointsHistory, InsertWeeklyLeaderboard, InsertTopContributor } from "@shared/schema";
 
 // Point values for different actions
-// Points are used for BOTH leaderboards AND leveling (unified system)
-// Every point earned contributes to user's totalXP for leveling up
+// Points are used for BOTH leaderboards AND leveling
+// Every point earned contributes to user's level progression
 export const POINT_VALUES = {
   upload: 5,    // 5 points for uploading content
   like: 2,      // 2 points for liking content
@@ -24,7 +24,7 @@ export class LeaderboardService {
   }
 
   // Award points to a user for an action
-  // Points are used for both leaderboards AND leveling (unified system)
+  // Points are used for both leaderboards AND leveling
   static async awardPoints(
     userId: number,
     action: keyof typeof POINT_VALUES,
@@ -44,8 +44,8 @@ export class LeaderboardService {
     
     await storage.addUserPointsHistory(pointsHistory);
     
-    // Update user's total XP (unified with points) and recalculate level
-    await storage.incrementUserXP(userId, points);
+    // Update user's total points (stored in totalXP field) and recalculate level
+    await storage.incrementUserPoints(userId, points);
     await this.updateUserLevel(userId);
     
     // Update both monthly and weekly leaderboards using the timestamp
@@ -55,13 +55,14 @@ export class LeaderboardService {
     ]);
   }
 
-  // Update user's level based on their total points (now used as XP)
+  // Update user's level based on their total points
   static async updateUserLevel(userId: number): Promise<void> {
     try {
       const user = await storage.getUser(userId);
       if (!user) return;
       
       const { calculateLevel } = await import("./level-system");
+      // Note: totalXP field stores total points (field name kept for DB compatibility)
       const newLevel = calculateLevel(user.totalXP);
       
       // Only update if level has changed
