@@ -2619,7 +2619,8 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(monthlyLeaderboard.userId, users.id))
       .where(and(
         eq(monthlyLeaderboard.month, month),
-        eq(monthlyLeaderboard.year, year)
+        eq(monthlyLeaderboard.year, year),
+        gt(monthlyLeaderboard.totalPoints, 0)
       ))
       .orderBy(desc(monthlyLeaderboard.totalPoints));
 
@@ -2688,7 +2689,8 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(weeklyLeaderboard.userId, users.id))
       .where(and(
         eq(weeklyLeaderboard.week, week),
-        eq(weeklyLeaderboard.year, year)
+        eq(weeklyLeaderboard.year, year),
+        gt(weeklyLeaderboard.totalPoints, 0)
       ))
       .orderBy(desc(weeklyLeaderboard.totalPoints));
 

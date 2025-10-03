@@ -292,7 +292,7 @@ const LeaderboardPage = () => {
                 
                 {/* Desktop stats layout */}
                 <div className="hidden sm:flex items-center gap-3 text-sm">
-                  <div className="flex items-center gap-1" title="Uploads (10pts each)">
+                  <div className="flex items-center gap-1" title="Uploads (5pts each)">
                     <Upload className="h-4 w-4 text-blue-500" />
                     <span>{entry.uploadsCount}</span>
                   </div>
