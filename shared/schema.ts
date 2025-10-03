@@ -551,7 +551,9 @@ export const monthlyLeaderboard = pgTable("monthly_leaderboard", {
   rank: integer("rank").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  uniqueUserMonth: unique().on(table.userId, table.month, table.year),
+}));
 
 // User Points History table
 export const userPointsHistory = pgTable("user_points_history", {
@@ -589,7 +591,9 @@ export const weeklyLeaderboard = pgTable("weekly_leaderboard", {
   rank: integer("rank").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  uniqueUserWeek: unique().on(table.userId, table.week, table.year),
+}));
 
 // Top Contributors table - stores historical winners when periods end
 export const topContributors = pgTable("top_contributors", {
