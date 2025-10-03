@@ -233,6 +233,33 @@ export class LeaderboardService {
 
         await storage.createTopContributor(contributorData);
         console.log(`Top contributor stored for ${periodType} ${period}: User ${topContributor.userId} with ${topContributor.totalPoints} points`);
+
+        // Award "Monthly Top Contributor" badge for monthly winners
+        if (periodType === 'monthly') {
+          try {
+            // Check if user already has this badge for this specific month
+            const existingBadges = await storage.getUserBadges(topContributor.userId);
+            const alreadyHasBadgeForPeriod = existingBadges.some(
+              ub => ub.badgeType === 'monthly_top_contributor' && 
+                    ub.createdAt && 
+                    ub.createdAt.toISOString().startsWith(`${year}-${period.split('-')[1]}`)
+            );
+
+            if (!alreadyHasBadgeForPeriod) {
+              await storage.createUserBadge({
+                userId: topContributor.userId,
+                badgeType: 'monthly_top_contributor',
+                assignedBy: 'system',
+                assignedById: null,
+                expiresAt: null // Badge doesn't expire
+              });
+              
+              console.log(`🏆 Monthly Top Contributor badge awarded to user ${topContributor.userId} for ${period}`);
+            }
+          } catch (badgeError) {
+            console.error(`Error awarding monthly badge to user ${topContributor.userId}:`, badgeError);
+          }
+        }
       }
     } catch (error) {
       console.error(`Error storing top contributors for ${periodType} ${period}:`, error);

@@ -1550,6 +1550,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Award monthly top contributor badges retroactively
+  app.post("/api/admin/award-monthly-badges", authMiddleware, async (req, res) => {
+    try {
+      // Check if user is admin
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      console.log('🏆 Starting retroactive monthly badge awards...');
+      
+      // Get all monthly top contributors from the database
+      const allMonthlyWinners = await LeaderboardService.getTopContributors('monthly', 100);
+      
+      let badgesAwarded = 0;
+      
+      for (const winner of allMonthlyWinners) {
+        try {
+          // Check if user already has this badge for this specific month
+          const existingBadges = await storage.getUserBadges(winner.userId);
+          const alreadyHasBadgeForPeriod = existingBadges.some(
+            ub => ub.badgeType === 'monthly_top_contributor' && 
+                  ub.createdAt && 
+                  ub.createdAt.toISOString().startsWith(`${winner.year}-${winner.period.split('-')[1]}`)
+          );
+
+          if (!alreadyHasBadgeForPeriod) {
+            await storage.createUserBadge({
+              userId: winner.userId,
+              badgeType: 'monthly_top_contributor',
+              assignedBy: 'system',
+              assignedById: null,
+              expiresAt: null
+            });
+            
+            badgesAwarded++;
+            console.log(`🏆 Badge awarded to user ${winner.userId} for ${winner.period}`);
+          }
+        } catch (error) {
+          console.error(`Error awarding badge to user ${winner.userId}:`, error);
+        }
+      }
+
+      console.log(`✅ Awarded ${badgesAwarded} monthly top contributor badges`);
+      
+      res.json({ 
+        message: `Successfully awarded ${badgesAwarded} monthly top contributor badges`,
+        badgesAwarded,
+        totalWinners: allMonthlyWinners.length
+      });
+    } catch (error) {
+      console.error("Error awarding monthly badges:", error);
+      res.status(500).json({ message: "Error awarding monthly badges" });
+    }
+  });
+
   // Recalculate upload points for all historic clips and screenshots
   app.post("/api/admin/recalculate-upload-points", authMiddleware, async (req, res) => {
     try {
