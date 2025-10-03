@@ -12,6 +12,7 @@ import sharp from 'sharp';
 import { nanoid } from 'nanoid';
 import QRCode from 'qrcode';
 import { fullAccessMiddleware } from '../middleware/full-access';
+import { LeaderboardService } from '../leaderboard-service';
 
 const router = express.Router();
 
@@ -365,6 +366,13 @@ router.post('/screenshot', fullAccessMiddleware, screenshotUpload.single('screen
 
     const screenshot = await storage.createScreenshot(screenshotDataWithShareCode);
 
+    // Award upload points to the user
+    await LeaderboardService.awardPoints(
+      req.user!.id,
+      'upload',
+      `Upload: Screenshot - ${screenshot.title}`
+    );
+
     // Generate QR code and sharing data for screenshot
     const baseUrl = 'https://app.gamefolio.com';
 
@@ -666,6 +674,13 @@ router.post('/process-video', fullAccessMiddleware, async (req, res) => {
 
     // Create the clip
     const clip = await storage.createClip(validatedClipData);
+
+    // Award upload points to the user
+    await LeaderboardService.awardPoints(
+      req.user!.id,
+      'upload',
+      `Upload: ${videoType === 'reel' ? 'Reel' : 'Clip'} - ${title}`
+    );
 
     // Generate QR code and sharing data
     const baseUrl = 'https://app.gamefolio.com';
