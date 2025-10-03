@@ -619,8 +619,7 @@ export const insertMonthlyLeaderboardSchema = createInsertSchema(monthlyLeaderbo
 // Schema for inserting user points history
 export const insertUserPointsHistorySchema = createInsertSchema(userPointsHistory).omit({
   id: true,
-  createdAt: true,
-});
+}).partial({ createdAt: true }); // Make createdAt optional for historic migrations
 
 // Schema for inserting user XP history
 export const insertUserXPHistorySchema = createInsertSchema(userXPHistory).omit({

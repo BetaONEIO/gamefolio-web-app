@@ -2156,6 +2156,80 @@ const AdminPage = () => {
 
           <Card>
             <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <RefreshCw className="h-5 w-5" />
+                Historic Data Management
+              </CardTitle>
+              <CardDescription>
+                Clean up and rebuild historic leaderboard data with correct timestamps
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="p-4 border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg">
+                  <p className="text-sm text-yellow-900 dark:text-yellow-100 mb-3">
+                    <strong>Important:</strong> This will clean up incorrectly dated historic migration points and rebuild leaderboards using actual upload dates.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={async () => {
+                        if (!confirm("This will delete historic migration points and rebuild leaderboards. Continue?")) return;
+                        try {
+                          const response = await apiRequest('/api/admin/clear-historic-points', {
+                            method: 'POST'
+                          });
+                          toast({
+                            title: "Success",
+                            description: "Historic data cleaned and leaderboards rebuilt successfully",
+                          });
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: "Failed to clean historic data",
+                            variant: "gamefolioError",
+                          });
+                        }
+                      }}
+                      variant="outline"
+                      data-testid="button-clean-historic-data"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Clean & Rebuild
+                    </Button>
+                    <Button
+                      onClick={async () => {
+                        if (!confirm("This will re-run the migration to backfill points with correct timestamps. Continue?")) return;
+                        try {
+                          const response = await apiRequest('/api/admin/recalculate-upload-points', {
+                            method: 'POST'
+                          });
+                          toast({
+                            title: "Success",
+                            description: `Recalculated points for all historic uploads`,
+                          });
+                          queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"], exact: false });
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: "Failed to recalculate upload points",
+                            variant: "gamefolioError",
+                          });
+                        }
+                      }}
+                      variant="default"
+                      data-testid="button-recalculate-points"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Re-run Migration
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>User Point Management</CardTitle>
               <CardDescription>
                 View point history and adjust points for any user
