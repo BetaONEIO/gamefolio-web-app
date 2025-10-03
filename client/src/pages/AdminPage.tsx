@@ -408,6 +408,7 @@ import {
   Heart,
   MessageCircle,
   Eye,
+  Trophy,
 } from "lucide-react";
 
 const AdminPage = () => {
