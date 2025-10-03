@@ -1892,6 +1892,52 @@ const AdminPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Recalculate All Levels */}
+              <div className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-950">
+                <div className="flex items-start gap-4">
+                  <div className="flex-1">
+                    <h4 className="font-semibold mb-1">Recalculate All User Levels</h4>
+                    <p className="text-sm text-muted-foreground">
+                      This will update all user levels based on their current XP totals. 
+                      Use this to ensure everyone is at the correct level.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={async () => {
+                      const confirmed = window.confirm(
+                        "This will recalculate levels for all users based on their current XP. Continue?"
+                      );
+                      if (!confirmed) return;
+
+                      try {
+                        const response = await apiRequest("/api/admin/recalculate-levels", {
+                          method: "POST",
+                        }) as { updatedCount: number; totalUsers: number };
+
+                        toast({
+                          title: "Levels recalculated",
+                          description: `Updated ${response.updatedCount} of ${response.totalUsers} users`,
+                          variant: "gamefolioSuccess",
+                        });
+
+                        // Refresh users data
+                        queryClient.invalidateQueries({ queryKey: ["/api/admin/users"], exact: false });
+                      } catch (error: any) {
+                        toast({
+                          title: "Error",
+                          description: error.message || "Failed to recalculate levels",
+                          variant: "gamefolioError",
+                        });
+                      }
+                    }}
+                    data-testid="button-recalculate-levels"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Recalculate All Levels
+                  </Button>
+                </div>
+              </div>
+
               {/* User Search Section */}
               <div className="space-y-4">
                 <div className="space-y-2">
