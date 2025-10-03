@@ -2,12 +2,14 @@ import { storage } from "./storage";
 import { InsertUserPointsHistory, InsertWeeklyLeaderboard, InsertTopContributor } from "@shared/schema";
 
 // Point values for different actions
+// Points are used for BOTH leaderboards AND leveling (unified system)
+// Every point earned contributes to user's totalXP for leveling up
 export const POINT_VALUES = {
-  upload: 5,
-  like: 2,
-  comment: 5,
-  fire: 3,
-  view: 1, // 1 point per view (also awards 1 XP for leveling)
+  upload: 5,    // 5 points for uploading content
+  like: 2,      // 2 points for liking content
+  comment: 5,   // 5 points for commenting
+  fire: 3,      // 3 points for fire reactions
+  view: 1,      // 1 point per view on uploaded content
 } as const;
 
 export class LeaderboardService {
@@ -22,6 +24,7 @@ export class LeaderboardService {
   }
 
   // Award points to a user for an action
+  // Points are used for both leaderboards AND leveling (unified system)
   static async awardPoints(
     userId: number,
     action: keyof typeof POINT_VALUES,
@@ -41,11 +44,34 @@ export class LeaderboardService {
     
     await storage.addUserPointsHistory(pointsHistory);
     
+    // Update user's total XP (unified with points) and recalculate level
+    await storage.incrementUserXP(userId, points);
+    await this.updateUserLevel(userId);
+    
     // Update both monthly and weekly leaderboards using the timestamp
     await Promise.all([
       this.updateMonthlyLeaderboard(userId, action, points, timestamp),
       this.updateWeeklyLeaderboard(userId, action, points, timestamp)
     ]);
+  }
+
+  // Update user's level based on their total points (now used as XP)
+  static async updateUserLevel(userId: number): Promise<void> {
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) return;
+      
+      const { calculateLevel } = await import("./level-system");
+      const newLevel = calculateLevel(user.totalXP);
+      
+      // Only update if level has changed
+      if (newLevel !== user.level) {
+        await storage.updateUser(userId, { level: newLevel });
+        console.log(`✨ User ${userId} leveled up to level ${newLevel}!`);
+      }
+    } catch (error) {
+      console.error("Error updating user level:", error);
+    }
   }
 
   // Update the monthly leaderboard for a user

@@ -1817,6 +1817,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Recalculate all users' XP from points history (admin only)
+  app.post("/api/admin/recalculate-xp-from-points", authMiddleware, async (req, res) => {
+    try {
+      // Check if user is admin
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      console.log('🔄 Recalculating all users\' XP from points history...');
+      
+      // Get all users
+      const allUsers = await storage.getAllUsers();
+      let usersUpdated = 0;
+      
+      for (const user of allUsers) {
+        // Get sum of all points for this user
+        const pointsHistory = await storage.getUserPointsHistory(user.id, 999999);
+        const totalPoints = pointsHistory.reduce((sum, entry) => sum + entry.points, 0);
+        
+        // Update user's totalXP to match their total points
+        await storage.updateUser(user.id, { totalXP: totalPoints });
+        
+        // Recalculate and update level
+        await LeaderboardService.updateUserLevel(user.id);
+        
+        usersUpdated++;
+        if (usersUpdated % 10 === 0) {
+          console.log(`Updated ${usersUpdated} users...`);
+        }
+      }
+      
+      console.log(`✅ Recalculated XP and levels for ${usersUpdated} users`);
+      
+      res.json({ 
+        message: `Successfully recalculated XP and levels for ${usersUpdated} users`,
+        usersUpdated
+      });
+    } catch (error) {
+      console.error("Error recalculating XP from points:", error);
+      res.status(500).json({ message: "Error recalculating XP from points" });
+    }
+  });
+
   // Get user by username
   app.get("/api/users/:username", async (req, res) => {
     try {
