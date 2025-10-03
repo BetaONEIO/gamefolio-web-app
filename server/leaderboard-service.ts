@@ -6,8 +6,8 @@ import { InsertUserPointsHistory, InsertWeeklyLeaderboard, InsertTopContributor 
 // Every point earned contributes to user's level progression
 export const POINT_VALUES = {
   upload: 5,    // 5 points for uploading content
-  like: 2,      // 2 points for liking content
-  comment: 5,   // 5 points for commenting
+  like: 1,      // 1 point for liking content
+  comment: 1,   // 1 point for commenting
   fire: 3,      // 3 points for fire reactions
   view: 1,      // 1 point per view on uploaded content
 } as const;

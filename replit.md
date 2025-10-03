@@ -38,7 +38,7 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
 - **Protected Content Uploads**: Requires email verification and onboarding completion for gaming clip and screenshot uploads.
 - **Protected Social Features**: Email verification is required for reactions, likes, and messaging.
 - **Content Filtering**: Automated profanity and inappropriate content detection system.
-- **Points System**: Single unified points system for both leveling and leaderboards. Points earned: Uploads (5pts), Likes (2pts), Comments (5pts), Fire reactions (3pts), Views (1pt). Total points determine user level.
+- **Points System**: Single unified points system for both leveling and leaderboards. Points earned: Uploads (5pts), Likes (1pt), Comments (1pt), Fire reactions (3pts), Views (1pt). Total points determine user level.
 - **Leveling System**: Progressive thresholds based on total points (Level 1: 0pts, Level 2: 100pts, Level 3: 500pts, etc.) with level display on user profiles marked with Trophy icon.
 - **Leaderboard System**: Weekly and monthly leaderboards tracking uploads, likes, comments, fires, and views with comprehensive ranking system.
 - **Admin Panel**: Comprehensive user management, content moderation, user deletion, and points/level synchronization tools.
