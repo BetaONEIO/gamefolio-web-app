@@ -404,6 +404,10 @@ import {
   Minus,
   Type,
   Trash2,
+  Upload,
+  Heart,
+  MessageCircle,
+  Eye,
 } from "lucide-react";
 
 const AdminPage = () => {
@@ -441,6 +445,13 @@ const AdminPage = () => {
   const [createBadgeLoading, setCreateBadgeLoading] = useState(false);
   const [editingBadge, setEditingBadge] = useState<any>(null);
   const [editBadgeDialogOpen, setEditBadgeDialogOpen] = useState(false);
+
+  // Points tab state
+  const [selectedPointsUserId, setSelectedPointsUserId] = useState<number | null>(null);
+  const [pointsHistory, setPointsHistory] = useState<any[] | null>(null);
+  const [isLoadingPointsHistory, setIsLoadingPointsHistory] = useState(false);
+  const [pointsAdjustment, setPointsAdjustment] = useState<number | null>(null);
+  const [pointsAdjustmentReason, setPointsAdjustmentReason] = useState("");
 
   // Access check is now handled by AdminProtectedRoute
 
@@ -869,7 +880,7 @@ const AdminPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-9">
+        <TabsList className="grid w-full grid-cols-10">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
@@ -877,6 +888,7 @@ const AdminPage = () => {
           <TabsTrigger value="banner">Banner</TabsTrigger>
           <TabsTrigger value="badges">Badges</TabsTrigger>
           <TabsTrigger value="levels">Levels</TabsTrigger>
+          <TabsTrigger value="points">Points</TabsTrigger>
           <TabsTrigger value="hero-text">Hero Text</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
@@ -2017,6 +2029,252 @@ const AdminPage = () => {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Points Tab */}
+        <TabsContent value="points" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Star className="h-5 w-5" />
+                Points System Overview
+              </CardTitle>
+              <CardDescription>
+                View how points are awarded and manage user points
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Upload className="h-4 w-4 text-blue-500" />
+                      <h3 className="font-semibold">Uploads</h3>
+                    </div>
+                    <p className="text-2xl font-bold text-blue-500">5 points</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Per clip, reel, or screenshot uploaded
+                    </p>
+                  </div>
+
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Heart className="h-4 w-4 text-red-500" />
+                      <h3 className="font-semibold">Likes</h3>
+                    </div>
+                    <p className="text-2xl font-bold text-red-500">2 points</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Per like given to content
+                    </p>
+                  </div>
+
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MessageCircle className="h-4 w-4 text-green-500" />
+                      <h3 className="font-semibold">Comments</h3>
+                    </div>
+                    <p className="text-2xl font-bold text-green-500">5 points</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Per comment posted
+                    </p>
+                  </div>
+
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-orange-500">🔥</span>
+                      <h3 className="font-semibold">Fire Reactions</h3>
+                    </div>
+                    <p className="text-2xl font-bold text-orange-500">3 points</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Per fire reaction given
+                    </p>
+                  </div>
+
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Eye className="h-4 w-4 text-purple-500" />
+                      <h3 className="font-semibold">Views</h3>
+                    </div>
+                    <p className="text-2xl font-bold text-purple-500">1 point</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Per view on uploaded content (also awards 1 XP)
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>User Point Management</CardTitle>
+              <CardDescription>
+                View point history and adjust points for any user
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter User ID"
+                    type="number"
+                    value={selectedPointsUserId || ""}
+                    onChange={(e) => setSelectedPointsUserId(e.target.value ? parseInt(e.target.value) : null)}
+                    data-testid="input-points-user-id"
+                  />
+                  <Button
+                    onClick={async () => {
+                      if (!selectedPointsUserId) return;
+                      setIsLoadingPointsHistory(true);
+                      try {
+                        const response = await fetch(`/api/admin/users/${selectedPointsUserId}/points-history?limit=50`);
+                        if (response.ok) {
+                          const data = await response.json();
+                          setPointsHistory(data);
+                        }
+                      } catch (error) {
+                        console.error("Error fetching points history:", error);
+                      } finally {
+                        setIsLoadingPointsHistory(false);
+                      }
+                    }}
+                    disabled={!selectedPointsUserId}
+                    data-testid="button-load-points"
+                  >
+                    Load Points History
+                  </Button>
+                </div>
+
+                {isLoadingPointsHistory && (
+                  <div className="text-center py-4">Loading points history...</div>
+                )}
+
+                {pointsHistory && pointsHistory.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="border rounded-lg p-4 bg-muted/50">
+                      <h4 className="font-semibold mb-2">Point Adjustment</h4>
+                      <div className="grid gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Points to add/subtract (use negative for subtract)"
+                          value={pointsAdjustment || ""}
+                          onChange={(e) => setPointsAdjustment(e.target.value ? parseInt(e.target.value) : null)}
+                          data-testid="input-points-adjustment"
+                        />
+                        <Input
+                          placeholder="Reason for adjustment"
+                          value={pointsAdjustmentReason}
+                          onChange={(e) => setPointsAdjustmentReason(e.target.value)}
+                          data-testid="input-points-reason"
+                        />
+                        <Button
+                          onClick={async () => {
+                            if (!selectedPointsUserId || !pointsAdjustment || !pointsAdjustmentReason) {
+                              toast({
+                                title: "Missing information",
+                                description: "Please enter points amount and reason",
+                                variant: "gamefolioError",
+                              });
+                              return;
+                            }
+
+                            try {
+                              await apiRequest(`/api/admin/users/${selectedPointsUserId}/adjust-points`, {
+                                method: 'POST',
+                                body: {
+                                  points: pointsAdjustment,
+                                  reason: pointsAdjustmentReason
+                                }
+                              });
+
+                              toast({
+                                title: "Points adjusted",
+                                description: `Successfully ${pointsAdjustment > 0 ? 'added' : 'removed'} ${Math.abs(pointsAdjustment)} points`,
+                                variant: "gamefolioSuccess",
+                              });
+
+                              // Reload points history
+                              const response = await fetch(`/api/admin/users/${selectedPointsUserId}/points-history?limit=50`);
+                              if (response.ok) {
+                                const data = await response.json();
+                                setPointsHistory(data);
+                              }
+
+                              setPointsAdjustment(null);
+                              setPointsAdjustmentReason("");
+                            } catch (error: any) {
+                              toast({
+                                title: "Error",
+                                description: error.message || "Failed to adjust points",
+                                variant: "gamefolioError",
+                              });
+                            }
+                          }}
+                          disabled={!pointsAdjustment || !pointsAdjustmentReason}
+                          data-testid="button-adjust-points"
+                        >
+                          Adjust Points
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="border rounded-lg">
+                      <div className="p-4 border-b bg-muted/50">
+                        <h4 className="font-semibold">Points History (Last 50 entries)</h4>
+                      </div>
+                      <div className="max-h-96 overflow-y-auto">
+                        <table className="w-full">
+                          <thead className="sticky top-0 bg-muted">
+                            <tr className="border-b">
+                              <th className="text-left p-2">Date</th>
+                              <th className="text-left p-2">Action</th>
+                              <th className="text-left p-2">Points</th>
+                              <th className="text-left p-2">Description</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {pointsHistory.map((entry: any, index: number) => (
+                              <tr key={index} className="border-b hover:bg-muted/50">
+                                <td className="p-2 text-sm">
+                                  {new Date(entry.createdAt).toLocaleDateString()} {new Date(entry.createdAt).toLocaleTimeString()}
+                                </td>
+                                <td className="p-2 text-sm">
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                    entry.action === 'upload' ? 'bg-blue-100 text-blue-700' :
+                                    entry.action === 'like' ? 'bg-red-100 text-red-700' :
+                                    entry.action === 'comment' ? 'bg-green-100 text-green-700' :
+                                    entry.action === 'fire' ? 'bg-orange-100 text-orange-700' :
+                                    entry.action === 'view' ? 'bg-purple-100 text-purple-700' :
+                                    'bg-gray-100 text-gray-700'
+                                  }`}>
+                                    {entry.action}
+                                  </span>
+                                </td>
+                                <td className="p-2 text-sm font-semibold">
+                                  <span className={entry.points >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                    {entry.points >= 0 ? '+' : ''}{entry.points}
+                                  </span>
+                                </td>
+                                <td className="p-2 text-sm text-muted-foreground">
+                                  {entry.description}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {pointsHistory && pointsHistory.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No points history found for this user.</p>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

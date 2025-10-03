@@ -1605,6 +1605,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user point history (admin endpoint)
+  app.get("/api/admin/users/:userId/points-history", authMiddleware, async (req, res) => {
+    try {
+      // Check if user is admin
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const limit = parseInt(req.query.limit as string) || 100;
+      const pointsHistory = await storage.getUserPointsHistory(userId, limit);
+      
+      res.json(pointsHistory);
+    } catch (error) {
+      console.error("Error fetching user points history:", error);
+      res.status(500).json({ message: "Error fetching user points history" });
+    }
+  });
+
+  // Manually adjust user points (admin endpoint)
+  app.post("/api/admin/users/:userId/adjust-points", authMiddleware, async (req, res) => {
+    try {
+      // Check if user is admin
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const { points, reason } = req.body;
+      
+      if (typeof points !== 'number' || !reason) {
+        return res.status(400).json({ message: "Points (number) and reason (string) are required" });
+      }
+
+      // Create a manual adjustment entry in the points history
+      await storage.addUserPointsHistory({
+        userId,
+        action: 'upload', // Using upload as the base action type
+        points,
+        description: `Admin Adjustment: ${reason}`
+      });
+
+      // Update monthly leaderboard
+      const now = new Date();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const year = now.getFullYear();
+      const monthKey = `${year}-${month}`;
+
+      const entry = await storage.getMonthlyLeaderboardEntry(userId, monthKey, year);
+      if (entry) {
+        await storage.updateMonthlyLeaderboardEntry(entry.id, {
+          totalPoints: entry.totalPoints + points
+        });
+      } else {
+        await storage.createMonthlyLeaderboardEntry({
+          userId,
+          month: monthKey,
+          year,
+          uploadsCount: 0,
+          likesGivenCount: 0,
+          commentsCount: 0,
+          firesGivenCount: 0,
+          viewsCount: 0,
+          totalPoints: points,
+        });
+      }
+
+      // Recalculate rankings
+      await LeaderboardService.recalculateRankings(monthKey, year);
+
+      console.log(`✅ Admin adjusted ${points} points for user ${userId}: ${reason}`);
+      
+      res.json({ 
+        message: "Points adjusted successfully",
+        userId,
+        pointsAdjusted: points,
+        reason
+      });
+    } catch (error) {
+      console.error("Error adjusting user points:", error);
+      res.status(500).json({ message: "Error adjusting user points" });
+    }
+  });
+
+  // Get points system breakdown (admin endpoint)
+  app.get("/api/admin/points-system", authMiddleware, async (req, res) => {
+    try {
+      // Check if user is admin
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      res.json({
+        pointValues: {
+          upload: 5,
+          like: 2,
+          comment: 5,
+          fire: 3,
+          view: 1
+        },
+        description: {
+          upload: "Points awarded for uploading clips, reels, or screenshots",
+          like: "Points awarded for liking content",
+          comment: "Points awarded for commenting on content",
+          fire: "Points awarded for fire reactions",
+          view: "Points awarded when content receives views (also awards 1 XP)"
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching points system:", error);
+      res.status(500).json({ message: "Error fetching points system" });
+    }
+  });
+
   // Recalculate upload points for all historic clips and screenshots
   app.post("/api/admin/recalculate-upload-points", authMiddleware, async (req, res) => {
     try {
