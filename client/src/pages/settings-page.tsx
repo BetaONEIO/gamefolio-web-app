@@ -344,16 +344,16 @@ export default function SettingsPage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-xl sm:text-3xl font-bold mb-3">Profile & Appearance</h1>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setLocation(`/profile/${user.username}`)}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 mb-3"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Profile
           </Button>
+          <h1 className="text-xl sm:text-3xl font-bold">Profile & Appearance</h1>
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
