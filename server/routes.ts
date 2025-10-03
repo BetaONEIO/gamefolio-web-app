@@ -3068,6 +3068,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the clip
       const clip = await storage.createClip(clipData);
 
+      // Award upload points to the user
+      await LeaderboardService.awardPoints(
+        userId,
+        'upload',
+        `Upload: ${clipData.videoType === 'reel' ? 'Reel' : 'Clip'} - ${title}`
+      );
+
       // Parse mentions from clip title and description and create mention records
       const titleMentions = await mentionService.parseMentions(title);
       const descriptionMentions = description ? await mentionService.parseMentions(description) : [];
@@ -4853,6 +4860,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const screenshot = await storage.createScreenshot(screenshotData);
+
+      // Award upload points to the user
+      await LeaderboardService.awardPoints(
+        userId,
+        'upload',
+        `Upload: Screenshot - ${title}`
+      );
 
       // Clean up original unoptimized file
       await fsPromises.unlink(originalPath);
