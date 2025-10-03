@@ -4114,7 +4114,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ success: true, message: 'Demo clip views not tracked' });
       }
 
-      await storage.incrementClipViews(clipId);
+      // Get the clip to find the owner
+      const clip = await storage.getClip(clipId);
+      if (clip) {
+        // Increment the view count on the clip
+        await storage.incrementClipViews(clipId);
+
+        // Award 1 point to the content owner for receiving a view
+        await LeaderboardService.awardPoints(
+          clip.userId,
+          'view',
+          `Clip #${clipId} received a view`
+        );
+      }
 
       res.json({ success: true });
     } catch (error) {
