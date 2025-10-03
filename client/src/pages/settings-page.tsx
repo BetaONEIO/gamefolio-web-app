@@ -412,9 +412,6 @@ export default function SettingsPage() {
                       <span className="text-xs text-muted-foreground">
                         {avatarFile ? 'New' : 'Current'}
                       </span>
-                      <span className="text-xs text-gray-500 max-w-24 text-center truncate">
-                        {avatarPreview ? 'Preview' : user?.avatarUrl ? `URL: ${user.avatarUrl.split('/').pop()}` : 'No avatar'}
-                      </span>
                     </div>
                     
                     {/* Upload Controls */}
