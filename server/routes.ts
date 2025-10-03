@@ -1473,34 +1473,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // XP routes
+  // Points leaderboard (kept as /api/xp/leaderboard for backward compatibility)
+  // Note: totalXP field now stores total Points
   app.get("/api/xp/leaderboard", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
-      const { XPService } = await import("./xp-service");
-      const xpLeaderboard = await XPService.getXPLeaderboard(limit);
-      res.json(xpLeaderboard);
+      const leaderboard = await storage.getXPLeaderboard(limit);
+      res.json(leaderboard);
     } catch (error) {
-      console.error("Error fetching XP leaderboard:", error);
-      res.status(500).json({ message: "Error fetching XP leaderboard" });
+      console.error("Error fetching points leaderboard:", error);
+      res.status(500).json({ message: "Error fetching points leaderboard" });
     }
   });
 
+  // Get user's total points (kept as /api/user/:userId/xp for backward compatibility)
   app.get("/api/user/:userId/xp", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       if (isNaN(userId)) {
         return res.status(400).json({ message: "Invalid user ID" });
       }
-      const { XPService } = await import("./xp-service");
-      const totalXP = await XPService.getUserTotalXP(userId);
-      res.json({ totalXP });
+      const user = await storage.getUser(userId);
+      res.json({ totalXP: user?.totalXP || 0 });
     } catch (error) {
-      console.error("Error fetching user XP:", error);
-      res.status(500).json({ message: "Error fetching user XP" });
+      console.error("Error fetching user points:", error);
+      res.status(500).json({ message: "Error fetching user points" });
     }
   });
 
+  // Get user's points history (kept as /api/user/:userId/xp/history for backward compatibility)
   app.get("/api/user/:userId/xp/history", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
@@ -1508,12 +1509,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid user ID" });
       }
       const limit = parseInt(req.query.limit as string) || 50;
-      const { XPService } = await import("./xp-service");
-      const xpHistory = await XPService.getUserXPHistory(userId, limit);
-      res.json(xpHistory);
+      const pointsHistory = await storage.getUserPointsHistory(userId, limit);
+      res.json(pointsHistory);
     } catch (error) {
-      console.error("Error fetching user XP history:", error);
-      res.status(500).json({ message: "Error fetching user XP history" });
+      console.error("Error fetching user points history:", error);
+      res.status(500).json({ message: "Error fetching user points history" });
     }
   });
 
@@ -1817,15 +1817,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Recalculate all users' XP from points history (admin only)
-  app.post("/api/admin/recalculate-xp-from-points", authMiddleware, async (req, res) => {
+  // Recalculate all users' total points and levels from points history (admin only)
+  app.post("/api/admin/recalculate-points-and-levels", authMiddleware, async (req, res) => {
     try {
       // Check if user is admin
       if (req.user!.role !== 'admin') {
         return res.status(403).json({ message: "Unauthorized - Admin access required" });
       }
 
-      console.log('🔄 Recalculating all users\' XP from points history...');
+      console.log('🔄 Recalculating all users\' points and levels from points history...');
       
       // Get all users
       const allUsers = await storage.getAllUsers();
@@ -1836,7 +1836,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pointsHistory = await storage.getUserPointsHistory(user.id, 999999);
         const totalPoints = pointsHistory.reduce((sum, entry) => sum + entry.points, 0);
         
-        // Update user's totalXP to match their total points
+        // Update user's totalXP field (which now stores total points)
         await storage.updateUser(user.id, { totalXP: totalPoints });
         
         // Recalculate and update level
@@ -1848,15 +1848,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      console.log(`✅ Recalculated XP and levels for ${usersUpdated} users`);
+      console.log(`✅ Recalculated points and levels for ${usersUpdated} users`);
       
       res.json({ 
-        message: `Successfully recalculated XP and levels for ${usersUpdated} users`,
+        message: `Successfully recalculated points and levels for ${usersUpdated} users`,
         usersUpdated
       });
     } catch (error) {
-      console.error("Error recalculating XP from points:", error);
-      res.status(500).json({ message: "Error recalculating XP from points" });
+      console.error("Error recalculating points and levels:", error);
+      res.status(500).json({ message: "Error recalculating points and levels" });
     }
   });
 

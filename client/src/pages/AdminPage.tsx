@@ -2224,30 +2224,30 @@ const AdminPage = () => {
                     </Button>
                     <Button
                       onClick={async () => {
-                        if (!confirm("This will recalculate all users' XP and levels from their points history. Continue?")) return;
+                        if (!confirm("This will recalculate all users' points and levels from their points history. Continue?")) return;
                         try {
-                          const response = await apiRequest('/api/admin/recalculate-xp-from-points', {
+                          const response = await apiRequest('/api/admin/recalculate-points-and-levels', {
                             method: 'POST'
                           });
                           const data = response as any;
                           toast({
                             title: "Success",
-                            description: `Recalculated XP and levels for ${data.usersUpdated || 'all'} users`,
+                            description: `Recalculated points and levels for ${data.usersUpdated || 'all'} users`,
                           });
                           queryClient.invalidateQueries({ queryKey: ["/api/users"], exact: false });
                         } catch (error) {
                           toast({
                             title: "Error",
-                            description: "Failed to recalculate XP from points",
+                            description: "Failed to recalculate points and levels",
                             variant: "gamefolioError",
                           });
                         }
                       }}
                       variant="secondary"
-                      data-testid="button-recalculate-xp"
+                      data-testid="button-recalculate-points"
                     >
                       <Trophy className="h-4 w-4 mr-2" />
-                      Sync XP from Points
+                      Sync Points & Levels
                     </Button>
                   </div>
                 </div>
