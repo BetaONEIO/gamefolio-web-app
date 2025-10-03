@@ -1550,6 +1550,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Recalculate upload points for all historic clips and screenshots
+  app.post("/api/admin/recalculate-upload-points", authMiddleware, async (req, res) => {
+    try {
+      // Check if user is admin
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      console.log('🔄 Starting recalculation of historic upload points...');
+      
+      // Get all clips and screenshots
+      const allClips = await storage.getAllClips();
+      const allScreenshots = await storage.getAllScreenshots();
+      
+      let clipPointsAwarded = 0;
+      let screenshotPointsAwarded = 0;
+      
+      // Award points for each clip (5 points per upload)
+      for (const clip of allClips) {
+        await LeaderboardService.awardPoints(
+          clip.userId,
+          'upload',
+          `Historic: ${clip.videoType === 'reel' ? 'Reel' : 'Clip'} - ${clip.title}`
+        );
+        clipPointsAwarded++;
+        
+        if (clipPointsAwarded % 10 === 0) {
+          console.log(`Processed ${clipPointsAwarded} clips...`);
+        }
+      }
+      
+      // Award points for each screenshot (5 points per upload)
+      for (const screenshot of allScreenshots) {
+        await LeaderboardService.awardPoints(
+          screenshot.userId,
+          'upload',
+          `Historic: Screenshot - ${screenshot.title}`
+        );
+        screenshotPointsAwarded++;
+        
+        if (screenshotPointsAwarded % 10 === 0) {
+          console.log(`Processed ${screenshotPointsAwarded} screenshots...`);
+        }
+      }
+
+      const totalPointsAwarded = (clipPointsAwarded + screenshotPointsAwarded) * 5;
+      console.log(`✅ Recalculated upload points: ${clipPointsAwarded} clips + ${screenshotPointsAwarded} screenshots = ${totalPointsAwarded} total points awarded`);
+      
+      res.json({ 
+        message: `Successfully recalculated upload points for all historic content`,
+        clipsProcessed: clipPointsAwarded,
+        screenshotsProcessed: screenshotPointsAwarded,
+        totalUploads: clipPointsAwarded + screenshotPointsAwarded,
+        totalPointsAwarded
+      });
+    } catch (error) {
+      console.error("Error recalculating upload points:", error);
+      res.status(500).json({ message: "Error recalculating upload points" });
+    }
+  });
+
   // Get user by username
   app.get("/api/users/:username", async (req, res) => {
     try {
