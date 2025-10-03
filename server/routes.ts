@@ -3762,6 +3762,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const comment = await storage.createComment(commentData);
 
+      // Award points to the user for commenting
+      await LeaderboardService.awardPoints(
+        req.user!.id,
+        'comment',
+        `Commented on clip #${clipId}`
+      );
+
       // Parse mentions from comment content and create mention records
       const mentions = await mentionService.parseMentions(req.body.content);
       if (mentions.length > 0) {
@@ -3977,6 +3984,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId,
         });
         const like = await storage.createLike(likeData);
+
+        // Award points to the user for liking
+        await LeaderboardService.awardPoints(
+          userId,
+          'like',
+          `Liked clip #${clipId}`
+        );
 
         // Create notification for the clip owner
         await NotificationService.createLikeNotification(clipId, userId);
@@ -6135,6 +6149,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const comment = await storage.createScreenshotComment(commentData);
 
+      // Award points to the user for commenting
+      await LeaderboardService.awardPoints(
+        req.user!.id,
+        'comment',
+        `Commented on screenshot #${screenshotId}`
+      );
+
       // Create notification for the screenshot owner
       await NotificationService.createScreenshotCommentNotification(screenshotId, req.user!.id, req.body.content, comment.id);
 
@@ -6203,6 +6224,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Like the screenshot
         const like = await storage.createScreenshotLike(userId, screenshotId);
+
+        // Award points to the user for liking
+        await LeaderboardService.awardPoints(
+          userId,
+          'like',
+          `Liked screenshot #${screenshotId}`
+        );
 
         // Create notification for the screenshot owner
         await NotificationService.createScreenshotLikeNotification(screenshotId, userId);
