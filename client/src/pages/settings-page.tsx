@@ -416,10 +416,11 @@ export default function SettingsPage() {
                     
                     {/* Upload Controls */}
                     <div className="flex-1 space-y-3">
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2 pr-4">
                         <Button 
                           type="button" 
                           variant="outline" 
+                          size="sm"
                           className="relative"
                           onClick={() => document.getElementById('avatar-upload')?.click()}
                           disabled={uploadingAvatar}
@@ -431,7 +432,8 @@ export default function SettingsPage() {
                         {avatarFile && !uploadingAvatar && (
                           <Button 
                             type="button" 
-                            variant="ghost" 
+                            variant="ghost"
+                            size="sm"
                             onClick={() => {
                               setAvatarFile(null);
                               setAvatarPreview('');
@@ -450,7 +452,7 @@ export default function SettingsPage() {
                         className="hidden"
                       />
                       
-                      <div className="text-xs text-muted-foreground space-y-1">
+                      <div className="text-xs text-muted-foreground space-y-1 pr-4">
                         <div>• Recommended: 400x400 pixels or larger</div>
                         <div>• Square images work best</div>
                         <div>• Maximum file size: 5MB</div>
