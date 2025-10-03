@@ -2170,7 +2170,7 @@ const AdminPage = () => {
                   <p className="text-sm text-yellow-900 dark:text-yellow-100 mb-3">
                     <strong>Important:</strong> This will clean up incorrectly dated historic migration points and rebuild leaderboards using actual upload dates.
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button
                       onClick={async () => {
                         if (!confirm("This will delete historic migration points and rebuild leaderboards. Continue?")) return;
@@ -2221,6 +2221,33 @@ const AdminPage = () => {
                     >
                       <Upload className="h-4 w-4 mr-2" />
                       Re-run Migration
+                    </Button>
+                    <Button
+                      onClick={async () => {
+                        if (!confirm("This will recalculate all users' XP and levels from their points history. Continue?")) return;
+                        try {
+                          const response = await apiRequest('/api/admin/recalculate-xp-from-points', {
+                            method: 'POST'
+                          });
+                          const data = response as any;
+                          toast({
+                            title: "Success",
+                            description: `Recalculated XP and levels for ${data.usersUpdated || 'all'} users`,
+                          });
+                          queryClient.invalidateQueries({ queryKey: ["/api/users"], exact: false });
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: "Failed to recalculate XP from points",
+                            variant: "gamefolioError",
+                          });
+                        }
+                      }}
+                      variant="secondary"
+                      data-testid="button-recalculate-xp"
+                    >
+                      <Trophy className="h-4 w-4 mr-2" />
+                      Sync XP from Points
                     </Button>
                   </div>
                 </div>

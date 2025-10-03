@@ -2934,6 +2934,18 @@ export class DatabaseStorage implements IStorage {
       clip: row.clips!
     }));
   }
+  
+  // Get user's points history (unified with XP system)
+  async getUserPointsHistory(userId: number, limit: number = 999999): Promise<UserPointsHistory[]> {
+    const results = await db
+      .select()
+      .from(userPointsHistory)
+      .where(eq(userPointsHistory.userId, userId))
+      .orderBy(desc(userPointsHistory.createdAt))
+      .limit(limit);
+
+    return results;
+  }
 
   async getXPLeaderboard(limit: number = 10): Promise<Array<{ id: number; username: string; displayName: string; avatarUrl: string | null; totalXP: number }>> {
     const results = await db

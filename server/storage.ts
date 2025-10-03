@@ -190,11 +190,14 @@ export interface IStorage {
   getTopContributors(periodType: string, limit?: number): Promise<(TopContributor & { user: User })[]>;
   getTopContributorsByPeriod(periodType: string, period: string, year: number): Promise<(TopContributor & { user: User })[]>;
 
-  // XP operations
+  // XP operations (unified with points system)
   addUserXPHistory(xpHistory: InsertUserXPHistory): Promise<UserXPHistory>;
   incrementUserXP(userId: number, xpAmount: number): Promise<void>;
   getUserXPHistory(userId: number, limit?: number): Promise<(UserXPHistory & { clip: Clip })[]>;
   getXPLeaderboard(limit?: number): Promise<Array<{ id: number; username: string; displayName: string; avatarUrl: string | null; totalXP: number }>>;
+  
+  // Points history operations (now unified with XP for leveling)
+  getUserPointsHistory(userId: number, limit?: number): Promise<UserPointsHistory[]>;
 
   // Notification operations
   createNotification(notification: InsertNotification): Promise<Notification>;
