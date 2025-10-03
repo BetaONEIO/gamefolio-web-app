@@ -2586,6 +2586,102 @@ export class DatabaseStorage implements IStorage {
     return points;
   }
 
+  async deleteHistoricMigrationPoints(): Promise<void> {
+    // Delete all points history entries with "Historic Migration" in description
+    await db.delete(userPointsHistory).where(
+      sql`${userPointsHistory.description} LIKE '%Historic Migration%'`
+    );
+    console.log('🗑️ Deleted historic migration points from user_points_history');
+  }
+
+  async rebuildLeaderboards(): Promise<void> {
+    // Clear all monthly and weekly leaderboard entries
+    await db.delete(monthlyLeaderboard);
+    await db.delete(weeklyLeaderboard);
+    console.log('🗑️ Cleared all leaderboard entries');
+    
+    // Rebuild from remaining points history
+    const pointsRecords = await db.select().from(userPointsHistory).orderBy(userPointsHistory.createdAt);
+    
+    console.log(`📊 Rebuilding leaderboards from ${pointsRecords.length} points records...`);
+    
+    for (const record of pointsRecords) {
+      const timestamp = new Date(record.createdAt);
+      const month = String(timestamp.getMonth() + 1).padStart(2, '0');
+      const year = timestamp.getFullYear();
+      const monthKey = `${year}-${month}`;
+      
+      // Calculate week
+      const startOfYear = new Date(timestamp.getFullYear(), 0, 1);
+      const days = Math.floor((timestamp.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+      const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
+      const week = `${year}-W${String(weekNumber).padStart(2, '0')}`;
+      
+      // Update monthly leaderboard
+      const monthEntry = await this.getMonthlyLeaderboardEntry(record.userId, monthKey, year);
+      if (!monthEntry) {
+        await this.createMonthlyLeaderboardEntry({
+          userId: record.userId,
+          month: monthKey,
+          year,
+          uploadsCount: record.action === 'upload' ? 1 : 0,
+          likesGivenCount: record.action === 'like' ? 1 : 0,
+          commentsCount: record.action === 'comment' ? 1 : 0,
+          firesGivenCount: record.action === 'fire' ? 1 : 0,
+          viewsCount: record.action === 'view' ? 1 : 0,
+          totalPoints: record.points,
+        });
+      } else {
+        await this.updateMonthlyLeaderboardEntry(monthEntry.id, {
+          uploadsCount: monthEntry.uploadsCount + (record.action === 'upload' ? 1 : 0),
+          likesGivenCount: monthEntry.likesGivenCount + (record.action === 'like' ? 1 : 0),
+          commentsCount: monthEntry.commentsCount + (record.action === 'comment' ? 1 : 0),
+          firesGivenCount: monthEntry.firesGivenCount + (record.action === 'fire' ? 1 : 0),
+          viewsCount: monthEntry.viewsCount + (record.action === 'view' ? 1 : 0),
+          totalPoints: monthEntry.totalPoints + record.points,
+        });
+      }
+      
+      // Update weekly leaderboard
+      const weekEntry = await this.getWeeklyLeaderboardEntry(record.userId, week, year);
+      if (!weekEntry) {
+        await this.createWeeklyLeaderboardEntry({
+          userId: record.userId,
+          week,
+          year,
+          uploadsCount: record.action === 'upload' ? 1 : 0,
+          likesGivenCount: record.action === 'like' ? 1 : 0,
+          commentsCount: record.action === 'comment' ? 1 : 0,
+          firesGivenCount: record.action === 'fire' ? 1 : 0,
+          viewsCount: record.action === 'view' ? 1 : 0,
+          totalPoints: record.points,
+        });
+      } else {
+        await this.updateWeeklyLeaderboardEntry(weekEntry.id, {
+          uploadsCount: weekEntry.uploadsCount + (record.action === 'upload' ? 1 : 0),
+          likesGivenCount: weekEntry.likesGivenCount + (record.action === 'like' ? 1 : 0),
+          commentsCount: weekEntry.commentsCount + (record.action === 'comment' ? 1 : 0),
+          firesGivenCount: weekEntry.firesGivenCount + (record.action === 'fire' ? 1 : 0),
+          viewsCount: weekEntry.viewsCount + (record.action === 'view' ? 1 : 0),
+          totalPoints: weekEntry.totalPoints + record.points,
+        });
+      }
+    }
+    
+    // Recalculate all rankings
+    const months = await db.selectDistinct({ month: monthlyLeaderboard.month, year: monthlyLeaderboard.year }).from(monthlyLeaderboard);
+    for (const { month, year } of months) {
+      await this.recalculateMonthlyRankings(month, year);
+    }
+    
+    const weeks = await db.selectDistinct({ week: weeklyLeaderboard.week, year: weeklyLeaderboard.year }).from(weeklyLeaderboard);
+    for (const { week, year } of weeks) {
+      await this.recalculateWeeklyRankings(week, year);
+    }
+    
+    console.log('✅ Leaderboards rebuilt successfully');
+  }
+
   async getMonthlyLeaderboardEntry(userId: number, month: string, year: number): Promise<MonthlyLeaderboard | undefined> {
     const [entry] = await db
       .select()

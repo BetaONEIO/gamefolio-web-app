@@ -1744,12 +1744,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let clipPointsAwarded = 0;
       let screenshotPointsAwarded = 0;
       
-      // Award points for each clip (5 points per upload)
+      // Award points for each clip (5 points per upload) using the actual upload date
       for (const clip of allClips) {
         await LeaderboardService.awardPoints(
           clip.userId,
           'upload',
-          `Historic: ${clip.videoType === 'reel' ? 'Reel' : 'Clip'} - ${clip.title}`
+          `Historic Migration: ${clip.videoType === 'reel' ? 'Reel' : 'Clip'} - ${clip.title}`,
+          clip.createdAt
         );
         clipPointsAwarded++;
         
@@ -1758,12 +1759,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Award points for each screenshot (5 points per upload)
+      // Award points for each screenshot (5 points per upload) using the actual upload date
       for (const screenshot of allScreenshots) {
         await LeaderboardService.awardPoints(
           screenshot.userId,
           'upload',
-          `Historic: Screenshot - ${screenshot.title}`
+          `Historic Migration: Screenshot - ${screenshot.title}`,
+          screenshot.createdAt
         );
         screenshotPointsAwarded++;
         
@@ -1785,6 +1787,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error recalculating upload points:", error);
       res.status(500).json({ message: "Error recalculating upload points" });
+    }
+  });
+
+  // Clear historic migration points (admin only)
+  app.post("/api/admin/clear-historic-points", authMiddleware, async (req, res) => {
+    try {
+      // Check if user is admin
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      console.log('🗑️ Clearing historic migration points...');
+      
+      // Delete all points history entries with "Historic Migration" in description
+      await storage.deleteHistoricMigrationPoints();
+      
+      // Rebuild all leaderboard entries from scratch based on actual dates
+      await storage.rebuildLeaderboards();
+      
+      console.log('✅ Successfully cleared historic migration points and rebuilt leaderboards');
+      
+      res.json({ 
+        message: `Successfully cleared historic migration points and rebuilt leaderboards`
+      });
+    } catch (error) {
+      console.error("Error clearing historic points:", error);
+      res.status(500).json({ message: "Error clearing historic points" });
     }
   });
 

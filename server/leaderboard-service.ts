@@ -12,8 +12,8 @@ export const POINT_VALUES = {
 
 export class LeaderboardService {
   // Get current week in ISO format (e.g., "2024-W01")
-  static getCurrentWeek(): { week: string; year: number } {
-    const now = new Date();
+  static getCurrentWeek(date?: Date): { week: string; year: number } {
+    const now = date || new Date();
     const startOfYear = new Date(now.getFullYear(), 0, 1);
     const days = Math.floor((now.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
     const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
@@ -25,24 +25,26 @@ export class LeaderboardService {
   static async awardPoints(
     userId: number,
     action: keyof typeof POINT_VALUES,
-    description?: string
+    description?: string,
+    timestamp?: Date
   ): Promise<void> {
     const points = POINT_VALUES[action];
     
-    // Record the points in history
+    // Record the points in history with the correct timestamp
     const pointsHistory: InsertUserPointsHistory = {
       userId,
       action,
       points,
       description: description || `Points awarded for ${action}`,
+      createdAt: timestamp,
     };
     
     await storage.addUserPointsHistory(pointsHistory);
     
-    // Update both monthly and weekly leaderboards
+    // Update both monthly and weekly leaderboards using the timestamp
     await Promise.all([
-      this.updateMonthlyLeaderboard(userId, action, points),
-      this.updateWeeklyLeaderboard(userId, action, points)
+      this.updateMonthlyLeaderboard(userId, action, points, timestamp),
+      this.updateWeeklyLeaderboard(userId, action, points, timestamp)
     ]);
   }
 
@@ -50,9 +52,10 @@ export class LeaderboardService {
   static async updateMonthlyLeaderboard(
     userId: number,
     action: keyof typeof POINT_VALUES,
-    points: number
+    points: number,
+    timestamp?: Date
   ): Promise<void> {
-    const now = new Date();
+    const now = timestamp || new Date();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const year = now.getFullYear();
     const monthKey = `${year}-${month}`;
@@ -100,9 +103,10 @@ export class LeaderboardService {
   static async updateWeeklyLeaderboard(
     userId: number,
     action: keyof typeof POINT_VALUES,
-    points: number
+    points: number,
+    timestamp?: Date
   ): Promise<void> {
-    const { week, year } = this.getCurrentWeek();
+    const { week, year } = this.getCurrentWeek(timestamp);
 
     // Get or create weekly leaderboard entry
     let entry = await storage.getWeeklyLeaderboardEntry(userId, week, year);
