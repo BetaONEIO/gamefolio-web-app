@@ -330,7 +330,23 @@ router.post('/screenshot', fullAccessMiddleware, screenshotUpload.single('screen
       thumbnailUrl: '', // Will be set after processing
     };
 
-    const validatedData = insertScreenshotSchema.parse(screenshotData);
+    // Validate screenshot data with detailed error logging
+    let validatedData;
+    try {
+      validatedData = insertScreenshotSchema.parse(screenshotData);
+    } catch (validationError: any) {
+      console.error('❌ Screenshot validation failed:', {
+        titleLength: title?.length,
+        descriptionLength: description?.length,
+        tagsCount: screenshotData.tags?.length,
+        error: validationError.errors || validationError.message
+      });
+      
+      return res.status(400).json({
+        error: 'Invalid screenshot data',
+        details: validationError.errors || validationError.message
+      });
+    }
 
     // Process and upload image
     const processedBuffer = await sharp(req.file.path)
@@ -536,7 +552,23 @@ router.post('/process-video', fullAccessMiddleware, async (req, res) => {
       duration: 0, // Will be determined during processing
     };
 
-    const validatedData = insertClipSchema.parse(initialClipData);
+    // Validate clip data with detailed error logging
+    let validatedData;
+    try {
+      validatedData = insertClipSchema.parse(initialClipData);
+    } catch (validationError: any) {
+      console.error('❌ Clip validation failed:', {
+        titleLength: title?.length,
+        descriptionLength: description?.length,
+        tagsCount: tags?.length,
+        error: validationError.errors || validationError.message
+      });
+      
+      return res.status(400).json({
+        error: 'Invalid clip data',
+        details: validationError.errors || validationError.message
+      });
+    }
 
     // Process video (crop for reels, generate thumbnails)
     let processedVideoUrl = uploadResult.url; // Default to original

@@ -418,6 +418,9 @@ export const insertClipSchema = createInsertSchema(clips).omit({
   createdAt: true,
 }).extend({
   shareCode: z.string().optional(),
+  title: z.string().min(1, "Title is required").max(200, "Title must be 200 characters or less"),
+  description: z.string().max(5000, "Description must be 5000 characters or less").optional(),
+  tags: z.array(z.string().max(50, "Each tag must be 50 characters or less")).max(20, "Maximum 20 tags allowed").optional(),
 });
 
 // Schema for inserting a like
@@ -439,6 +442,9 @@ export const insertScreenshotSchema = createInsertSchema(screenshots).omit({
   createdAt: true,
 }).extend({
   shareCode: z.string().optional(),
+  title: z.string().min(1, "Title is required").max(200, "Title must be 200 characters or less"),
+  description: z.string().max(5000, "Description must be 5000 characters or less").optional(),
+  tags: z.array(z.string().max(50, "Each tag must be 50 characters or less")).max(20, "Maximum 20 tags allowed").optional(),
 });
 
 // Schema for inserting a user game favorite
