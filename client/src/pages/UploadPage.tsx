@@ -431,7 +431,7 @@ const UploadPage = () => {
             if (resultHeader) {
               try {
                 uploadResult = JSON.parse(resultHeader);
-                console.log('TUS upload result captured:', uploadResult);
+                console.log('Upload result captured:', uploadResult);
               } catch (e) {
                 console.warn('Failed to parse Upload-Result header:', e);
               }
