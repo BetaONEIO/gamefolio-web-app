@@ -147,7 +147,17 @@ const tusServer = new TusServer({
 // Direct video upload endpoint (bypassing TUS for now)
 router.post('/video-direct', fullAccessMiddleware, upload.single('file'), async (req, res) => {
   try {
+    console.log('📹 Video upload request received:', {
+      fileProvided: !!req.file,
+      fileName: req.file?.originalname,
+      fileSize: req.file?.size ? `${(req.file.size / (1024 * 1024)).toFixed(2)} MB` : 'N/A',
+      mimeType: req.file?.mimetype,
+      uploadType: req.body.uploadType,
+      userId: req.user?.id
+    });
+
     if (!req.file) {
+      console.error('❌ No video file provided in request');
       return res.status(400).json({ error: 'No video file provided' });
     }
 
@@ -164,6 +174,8 @@ router.post('/video-direct', fullAccessMiddleware, upload.single('file'), async 
     const fileName = `${prefix}/${timestamp}-${randomId}${extension}`;
     const filePath = `users/${req.user!.id}/${fileName}`;
 
+    console.log('📤 Uploading to Supabase:', fileName);
+
     // Upload to Supabase
     const result = await supabaseStorage.uploadBuffer(
       fileBuffer,
@@ -177,6 +189,8 @@ router.post('/video-direct', fullAccessMiddleware, upload.single('file'), async 
     if (!result.url) {
       throw new Error('Supabase upload failed - no URL returned');
     }
+
+    console.log('✅ Video uploaded successfully:', result.url);
 
     // Clean up temp file immediately after successful Supabase upload
     fs.unlink(req.file.path, (err) => {
@@ -193,7 +207,7 @@ router.post('/video-direct', fullAccessMiddleware, upload.single('file'), async 
     });
 
   } catch (error) {
-    console.error('Direct video upload error:', error);
+    console.error('❌ Direct video upload error:', error);
 
     // Clean up temp file on error
     if (req.file?.path) {
@@ -870,6 +884,41 @@ router.post('/avatar', fullAccessMiddleware, avatarUpload.single('file'), async 
       error: error instanceof Error ? error.message : 'Avatar upload failed' 
     });
   }
+});
+
+// Global error handler for multer errors
+router.use((error: any, req: any, res: any, next: any) => {
+  if (error instanceof multer.MulterError) {
+    console.error('❌ Multer upload error:', {
+      code: error.code,
+      field: error.field,
+      message: error.message,
+      file: req.file?.originalname,
+      fileSize: req.file?.size ? `${(req.file.size / (1024 * 1024)).toFixed(2)} MB` : 'N/A',
+      endpoint: req.path,
+      userId: req.user?.id
+    });
+
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      const limit = error.message.includes('500') ? '500MB' : 
+                    error.message.includes('20') ? '20MB' : 
+                    error.message.includes('5') ? '5MB' : 'the allowed size';
+      
+      return res.status(413).json({
+        error: `File too large. Maximum size is ${limit}.`,
+        code: 'LIMIT_FILE_SIZE',
+        details: error.message
+      });
+    }
+
+    return res.status(400).json({
+      error: error.message || 'File upload error',
+      code: error.code
+    });
+  }
+
+  // If it's not a multer error, pass it to the next error handler
+  next(error);
 });
 
 export default router;
