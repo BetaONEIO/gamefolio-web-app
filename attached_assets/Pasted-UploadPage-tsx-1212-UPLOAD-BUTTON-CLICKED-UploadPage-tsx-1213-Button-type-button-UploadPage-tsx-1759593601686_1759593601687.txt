@@ -1,0 +1,163 @@
+UploadPage.tsx:1212 🚀 UPLOAD BUTTON CLICKED!
+UploadPage.tsx:1213 Button type: button
+UploadPage.tsx:1214 Calling handleSubmit directly
+UploadPage.tsx:542 🚀 HANDLESUBMIT FUNCTION CALLED - START
+UploadPage.tsx:546 === UPLOAD FORM SUBMIT ===
+UploadPage.tsx:547 handleSubmit function called!
+UploadPage.tsx:548 Submit button clicked
+UploadPage.tsx:549 Current form state: {file: true, fileName: 'april_foold_doom_better_than_normal.MP4', fileSize: 43692865, title: 'April fools Doom better than Normal Doom?', description: 'test, test, test, test !@£@£@£@', …}
+UploadPage.tsx:562  Form submitted! File: april_foold_doom_better_than_normal.MP4, Title: April fools Doom better than Normal Doom?, Game: Overwatch 2
+handleSubmit @ UploadPage.tsx:562
+onClick @ UploadPage.tsx:1215
+callCallback2 @ react-dom.development.js:4164
+invokeGuardedCallbackDev @ react-dom.development.js:4213
+invokeGuardedCallback @ react-dom.development.js:4277
+invokeGuardedCallbackAndCatchFirstError @ react-dom.development.js:4291
+executeDispatch @ react-dom.development.js:9041
+processDispatchQueueItemsInOrder @ react-dom.development.js:9073
+processDispatchQueue @ react-dom.development.js:9086
+dispatchEventsForPlugins @ react-dom.development.js:9097
+(anonymous) @ react-dom.development.js:9288
+batchedUpdates$1 @ react-dom.development.js:26179
+batchedUpdates @ react-dom.development.js:3991
+dispatchEventForPluginEventSystem @ react-dom.development.js:9287
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ react-dom.development.js:6465
+dispatchEvent @ react-dom.development.js:6457
+dispatchDiscreteEvent @ react-dom.development.js:6430
+UploadPage.tsx:563  HANDLESUBMIT WAS CALLED - THIS SHOULD APPEAR IN RED!
+handleSubmit @ UploadPage.tsx:563
+onClick @ UploadPage.tsx:1215
+callCallback2 @ react-dom.development.js:4164
+invokeGuardedCallbackDev @ react-dom.development.js:4213
+invokeGuardedCallback @ react-dom.development.js:4277
+invokeGuardedCallbackAndCatchFirstError @ react-dom.development.js:4291
+executeDispatch @ react-dom.development.js:9041
+processDispatchQueueItemsInOrder @ react-dom.development.js:9073
+processDispatchQueue @ react-dom.development.js:9086
+dispatchEventsForPlugins @ react-dom.development.js:9097
+(anonymous) @ react-dom.development.js:9288
+batchedUpdates$1 @ react-dom.development.js:26179
+batchedUpdates @ react-dom.development.js:3991
+dispatchEventForPluginEventSystem @ react-dom.development.js:9287
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ react-dom.development.js:6465
+dispatchEvent @ react-dom.development.js:6457
+dispatchDiscreteEvent @ react-dom.development.js:6430
+UploadPage.tsx:565 Content type for validation: clips
+UploadPage.tsx:653 About to call uploadMutation.mutate()
+UploadPage.tsx:654 Final validation before upload: {fileExists: true, titleExists: true, gameExists: true, tagsCount: 2, userAuthenticated: true, …}
+UploadPage.tsx:662 === TRIGGERING UPLOAD MUTATION ===
+UploadPage.tsx:383 === MUTATION FUNCTION STARTED ===
+UploadPage.tsx:392 Starting upload with user: mod_tom
+UploadPage.tsx:399 getVideoType returned: clip
+UploadPage.tsx:408 Final video type for upload: clip
+UploadPage.tsx:496 Starting TUS upload to /api/tus
+UploadPage.tsx:441  TUS upload failed: DetailedError2: tus: invalid or missing Location header, originated from request (method: POST, url: /api/tus, response code: 201, response text: , request id: n/a)
+    at Upload2._emitHttpError (upload.js:438:23)
+    at upload.js:570:18
+onError @ UploadPage.tsx:441
+_emitError @ upload.js:466
+_emitHttpError @ upload.js:438
+(anonymous) @ upload.js:570
+Promise.then
+_createUpload @ upload.js:563
+_startSingleUpload @ upload.js:381
+(anonymous) @ upload.js:228
+Promise.then
+start @ upload.js:201
+(anonymous) @ upload.js:460
+setTimeout
+_emitError @ upload.js:459
+_emitHttpError @ upload.js:438
+(anonymous) @ upload.js:570
+Promise.then
+_createUpload @ upload.js:563
+_startSingleUpload @ upload.js:381
+(anonymous) @ upload.js:228
+Promise.then
+start @ upload.js:201
+(anonymous) @ upload.js:460
+setTimeout
+_emitError @ upload.js:459
+_emitHttpError @ upload.js:438
+(anonymous) @ upload.js:570
+Promise.then
+_createUpload @ upload.js:563
+_startSingleUpload @ upload.js:381
+(anonymous) @ upload.js:228
+Promise.then
+start @ upload.js:201
+(anonymous) @ upload.js:460
+setTimeout
+_emitError @ upload.js:459
+_emitHttpError @ upload.js:438
+(anonymous) @ upload.js:570
+Promise.then
+_createUpload @ upload.js:563
+_startSingleUpload @ upload.js:381
+(anonymous) @ upload.js:228
+Promise.then
+start @ upload.js:201
+(anonymous) @ upload.js:460
+setTimeout
+_emitError @ upload.js:459
+_emitHttpError @ upload.js:438
+(anonymous) @ upload.js:570
+Promise.then
+_createUpload @ upload.js:563
+_startSingleUpload @ upload.js:381
+(anonymous) @ upload.js:228
+Promise.then
+start @ upload.js:201
+(anonymous) @ UploadPage.tsx:497
+mutationFn @ UploadPage.tsx:414
+fn @ mutation.ts:170
+run @ retryer.ts:153
+start @ retryer.ts:218
+execute @ mutation.ts:208
+await in execute
+mutate @ mutationObserver.ts:125
+(anonymous) @ useMutation.ts:52
+handleSubmit @ UploadPage.tsx:663
+onClick @ UploadPage.tsx:1215
+callCallback2 @ react-dom.development.js:4164
+invokeGuardedCallbackDev @ react-dom.development.js:4213
+invokeGuardedCallback @ react-dom.development.js:4277
+invokeGuardedCallbackAndCatchFirstError @ react-dom.development.js:4291
+executeDispatch @ react-dom.development.js:9041
+processDispatchQueueItemsInOrder @ react-dom.development.js:9073
+processDispatchQueue @ react-dom.development.js:9086
+dispatchEventsForPlugins @ react-dom.development.js:9097
+(anonymous) @ react-dom.development.js:9288
+batchedUpdates$1 @ react-dom.development.js:26179
+batchedUpdates @ react-dom.development.js:3991
+dispatchEventForPluginEventSystem @ react-dom.development.js:9287
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ react-dom.development.js:6465
+dispatchEvent @ react-dom.development.js:6457
+dispatchDiscreteEvent @ react-dom.development.js:6430
+UploadPage.tsx:530  Upload mutation error: Error: Upload failed: tus: invalid or missing Location header, originated from request (method: POST, url: /api/tus, response code: 201, response text: , request id: n/a)
+    at Object.onError (UploadPage.tsx:442:20)
+    at Upload2._emitError (upload.js:466:22)
+    at Upload2._emitHttpError (upload.js:438:12)
+    at upload.js:570:18
+onError @ UploadPage.tsx:530
+execute @ mutation.ts:243
+await in execute
+mutate @ mutationObserver.ts:125
+(anonymous) @ useMutation.ts:52
+handleSubmit @ UploadPage.tsx:663
+onClick @ UploadPage.tsx:1215
+callCallback2 @ react-dom.development.js:4164
+invokeGuardedCallbackDev @ react-dom.development.js:4213
+invokeGuardedCallback @ react-dom.development.js:4277
+invokeGuardedCallbackAndCatchFirstError @ react-dom.development.js:4291
+executeDispatch @ react-dom.development.js:9041
+processDispatchQueueItemsInOrder @ react-dom.development.js:9073
+processDispatchQueue @ react-dom.development.js:9086
+dispatchEventsForPlugins @ react-dom.development.js:9097
+(anonymous) @ react-dom.development.js:9288
+batchedUpdates$1 @ react-dom.development.js:26179
+batchedUpdates @ react-dom.development.js:3991
+dispatchEventForPluginEventSystem @ react-dom.development.js:9287
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ react-dom.development.js:6465
+dispatchEvent @ react-dom.development.js:6457
+dispatchDiscreteEvent @ react-dom.development.js:6430

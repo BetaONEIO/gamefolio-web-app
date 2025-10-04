@@ -101,7 +101,7 @@ const avatarUpload = multer({
 
 // TUS server configuration for video/reel uploads
 const tusServer = new TusServer({
-  path: '/api/tus',
+  path: '/tus',
   datastore: supabaseTusStore,
   respectForwardedHeaders: true,
   namingFunction: (req) => {
