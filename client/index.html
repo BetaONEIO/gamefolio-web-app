@@ -3,6 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <script>
+      window.addEventListener('unhandledrejection', function(event) {
+        var error = event.reason;
+        var errorMessage = (error && error.message) || error || '';
+        if (typeof errorMessage === 'string' && (
+          errorMessage.includes('Failed to construct \'WebSocket\'') ||
+          (errorMessage.includes('WebSocket') && errorMessage.includes('is invalid'))
+        )) {
+          event.preventDefault();
+        }
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>
