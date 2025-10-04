@@ -185,6 +185,10 @@ const LeaderboardPage = () => {
                     <MessageCircle className="h-4 w-4 text-green-500" />
                     <span>{entry.commentsCount}</span>
                   </div>
+                  <div className="flex items-center gap-1" title="Fire Reactions">
+                    <span className="text-orange-500">🔥</span>
+                    <span>{entry.firesGivenCount}</span>
+                  </div>
                 </div>
                 
                 {/* Mobile stats layout - condensed */}
@@ -200,6 +204,10 @@ const LeaderboardPage = () => {
                   <span className="flex items-center gap-1 text-green-500">
                     <MessageCircle className="h-3 w-3" />
                     {entry.commentsCount}
+                  </span>
+                  <span className="flex items-center gap-1 text-orange-500">
+                    🔥
+                    {entry.firesGivenCount}
                   </span>
                 </div>
                 
