@@ -416,7 +416,7 @@ const UploadPage = () => {
         let uploadResult: any = null;
         
         const upload = new tus.Upload(file, {
-          endpoint: '/api/upload/tus',
+          endpoint: '/api/tus',
           retryDelays: [0, 3000, 5000, 10000],
           chunkSize: 5 * 1024 * 1024, // 5MB chunks to avoid proxy limits
           metadata: {
@@ -493,7 +493,7 @@ const UploadPage = () => {
           }
         });
         
-        console.log('Starting TUS upload to /api/upload/tus');
+        console.log('Starting TUS upload to /api/tus');
         upload.start();
       });
     },
