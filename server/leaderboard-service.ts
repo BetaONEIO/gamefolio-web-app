@@ -14,10 +14,20 @@ export const POINT_VALUES = {
 
 export class LeaderboardService {
   // Get current week in ISO format (e.g., "2024-W01")
+  // Week starts on Monday per ISO 8601 standard
   static getCurrentWeek(date?: Date): { week: string; year: number } {
     const now = date || new Date();
+    
+    // Calculate start of week (Monday)
+    const dayOfWeek = now.getDay();
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - daysFromMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    // Calculate week number using ISO 8601 (Monday start)
     const startOfYear = new Date(now.getFullYear(), 0, 1);
-    const days = Math.floor((now.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+    const days = Math.floor((startOfWeek.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
     const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
     const week = `${now.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
     return { week, year: now.getFullYear() };

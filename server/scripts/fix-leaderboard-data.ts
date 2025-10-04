@@ -41,11 +41,11 @@ export async function fixLeaderboardData() {
     // Calculate start of current month
     const startOfMonth = new Date(currentYear, now.getMonth(), 1);
     
-    // Calculate start of current week (assuming week starts on Sunday)
+    // Calculate start of current week (week starts on Monday)
     const startOfWeek = new Date(now);
-    const day = startOfWeek.getDay();
-    const diff = startOfWeek.getDate() - day;
-    startOfWeek.setDate(diff);
+    const dayOfWeek = startOfWeek.getDay();
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days
+    startOfWeek.setDate(startOfWeek.getDate() - daysFromMonday);
     startOfWeek.setHours(0, 0, 0, 0);
 
     // Process each user
