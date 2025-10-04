@@ -1146,4 +1146,23 @@ adminRouter.post("/banner-settings/reset", async (req: Request, res: Response) =
   }
 });
 
+// POST /api/admin/fix-leaderboard - Fix leaderboard data by rebuilding from points history
+adminRouter.post("/fix-leaderboard", async (req: Request, res: Response) => {
+  try {
+    const { fixLeaderboardData } = await import('../scripts/fix-leaderboard-data.js');
+    await fixLeaderboardData();
+    res.json({ 
+      success: true, 
+      message: "Leaderboard data has been successfully rebuilt from points history" 
+    });
+  } catch (err) {
+    console.error("Error fixing leaderboard data:", err);
+    res.status(500).json({ 
+      success: false,
+      message: "Error fixing leaderboard data",
+      error: err instanceof Error ? err.message : String(err)
+    });
+  }
+});
+
 export default adminRouter;
