@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MentionInput } from "@/components/ui/mention-input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import * as tus from "tus-js-client";
 import {
   Card,
   CardContent,
@@ -411,36 +412,53 @@ const UploadPage = () => {
       setUploadProgress(0);
 
       return new Promise((resolve, reject) => {
-        // Step 1: Upload via direct upload endpoint
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("uploadType", videoType);
-        formData.append("filename", file.name);
-        formData.append("filetype", file.type);
+        // Step 1: Upload via TUS (resumable chunked upload)
+        let uploadResult: any = null;
         
-        const xhr = new XMLHttpRequest();
-        
-        // Track upload progress
-        xhr.upload.addEventListener('progress', (event) => {
-          if (event.lengthComputable) {
-            const percentComplete = Math.round((event.loaded / event.total) * 50); // 50% for upload
+        const upload = new tus.Upload(file, {
+          endpoint: '/api/upload/tus',
+          retryDelays: [0, 3000, 5000, 10000],
+          chunkSize: 5 * 1024 * 1024, // 5MB chunks to avoid proxy limits
+          metadata: {
+            filename: file.name,
+            filetype: file.type,
+            uploadType: videoType,
+            userId: user.id.toString()
+          },
+          onAfterResponse: (req: any, res: any) => {
+            // Capture the upload result from custom header
+            const resultHeader = res.getHeader('Upload-Result');
+            if (resultHeader) {
+              try {
+                uploadResult = JSON.parse(resultHeader);
+                console.log('TUS upload result captured:', uploadResult);
+              } catch (e) {
+                console.warn('Failed to parse Upload-Result header:', e);
+              }
+            }
+          },
+          onError: (error) => {
+            console.error('TUS upload failed:', error);
+            reject(new Error('Upload failed: ' + error.message));
+          },
+          onProgress: (bytesUploaded, bytesTotal) => {
+            const percentComplete = Math.round((bytesUploaded / bytesTotal) * 50); // 50% for upload
             console.log('Upload progress:', percentComplete + '%');
             setUploadProgress(percentComplete);
-          }
-        });
-        
-        xhr.addEventListener('load', async () => {
-          console.log('Direct Upload complete - Status:', xhr.status);
-          if (xhr.status >= 200 && xhr.status < 300) {
+          },
+          onSuccess: async () => {
             try {
-              const uploadResult = JSON.parse(xhr.responseText);
-              console.log('Direct Upload successful:', uploadResult);
+              console.log('TUS Upload complete');
+              
+              if (!uploadResult) {
+                throw new Error('Upload completed but no result was returned');
+              }
               
               // Step 2: Process the uploaded video
               setUploadProgress(75); // 75% after upload complete
               
               const processData = {
-                uploadResult: uploadResult.result,
+                uploadResult,
                 title: titleRef.current || title,
                 description: descriptionRef.current || description,
                 gameId: selectedGame ? parseInt(selectedGame.id.toString()) : null,
@@ -453,11 +471,13 @@ const UploadPage = () => {
                 headers: {
                   'Content-Type': 'application/json',
                 },
+                credentials: 'include',
                 body: JSON.stringify(processData),
               });
               
               if (!processResponse.ok) {
-                throw new Error('Video processing failed');
+                const errorData = await processResponse.json();
+                throw new Error(errorData.error || 'Video processing failed');
               }
               
               const processResult = await processResponse.json();
@@ -470,26 +490,11 @@ const UploadPage = () => {
               console.error('Processing error:', error);
               reject(error);
             }
-          } else {
-            console.error('Direct Upload failed:', xhr.status, xhr.responseText);
-            try {
-              const errorData = JSON.parse(xhr.responseText);
-              reject(new Error(errorData.message || 'Upload failed'));
-            } catch {
-              reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText}`));
-            }
           }
         });
         
-        xhr.addEventListener('error', () => {
-          console.error('XHR error event triggered');
-          reject(new Error('Network error during upload'));
-        });
-        
-        console.log('Starting direct upload to /api/upload/video-direct');
-        xhr.open('POST', '/api/upload/video-direct');
-        xhr.withCredentials = true;
-        xhr.send(formData);
+        console.log('Starting TUS upload to /api/upload/tus');
+        upload.start();
       });
     },
     onSuccess: (data: any) => {

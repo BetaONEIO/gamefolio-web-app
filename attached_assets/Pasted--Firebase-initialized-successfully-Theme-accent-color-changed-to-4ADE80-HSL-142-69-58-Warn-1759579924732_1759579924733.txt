@@ -1,0 +1,117 @@
+ Firebase initialized successfully
+ Theme accent color changed to: #4ADE80 (HSL: 142 69% 58%)
+  Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(anonymous) @ index-BXFGUlFt.js:1782
+app.gamefolio.com/:1 [DOM] Input elements should have autocomplete attributes (suggested: "username"): (More info: https://www.chromium.org/developers/design-documents/create-amazing-password-forms) 
+app.gamefolio.com/:1 [DOM] Input elements should have autocomplete attributes (suggested: "username"): (More info: https://www.chromium.org/developers/design-documents/create-amazing-password-forms) 
+ 📤 UploadPage URL params: 
+UploadPage-9ZqF0_yP.js:6 📤 Type parameter: null
+UploadPage-9ZqF0_yP.js:6 === FILE SELECTION EVENT ===
+UploadPage-9ZqF0_yP.js:6 Selected file details: Object
+UploadPage-9ZqF0_yP.js:6 File validation passed, setting file state
+UploadPage-9ZqF0_yP.js:6 File state updated successfully, video preview should be visible
+UploadPage-9ZqF0_yP.js:6 Created stable blob URL for video preview: blob:https://app.gamefolio.com/bc73f8d4-f732-4664-adda-51b75f98eba0
+UploadPage-9ZqF0_yP.js:6 Video metadata loaded - preventing duplicate processing
+UploadPage-9ZqF0_yP.js:6 Setting video duration: 61.141313 seconds
+UploadPage-9ZqF0_yP.js:6 Video dimensions: 1600 x 820
+UploadPage-9ZqF0_yP.js:6 Aspect ratio: 1.951219512195122 Auto-detected type: clip
+UploadPage-9ZqF0_yP.js:6 Video preview can play
+UploadPage-9ZqF0_yP.js:6 Video preview can play through without buffering
+UploadPage-9ZqF0_yP.js:6 🚀 UPLOAD BUTTON CLICKED!
+UploadPage-9ZqF0_yP.js:6 Button type: button
+UploadPage-9ZqF0_yP.js:6 Calling handleSubmit directly
+UploadPage-9ZqF0_yP.js:6 🚀 HANDLESUBMIT FUNCTION CALLED - START
+UploadPage-9ZqF0_yP.js:6 === UPLOAD FORM SUBMIT ===
+UploadPage-9ZqF0_yP.js:6 handleSubmit function called!
+UploadPage-9ZqF0_yP.js:6 Submit button clicked
+UploadPage-9ZqF0_yP.js:6 Current form state: Object
+UploadPage-9ZqF0_yP.js:6  Form submitted! File: april_foold_doom_better_than_normal.MP4, Title: April Fools Doom better than than Normal Doom?, Game: Overwatch 2
+ce @ UploadPage-9ZqF0_yP.js:6
+UploadPage-9ZqF0_yP.js:6  HANDLESUBMIT WAS CALLED - THIS SHOULD APPEAR IN RED!
+ce @ UploadPage-9ZqF0_yP.js:6
+UploadPage-9ZqF0_yP.js:6 Content type for validation: clips
+UploadPage-9ZqF0_yP.js:6 About to call uploadMutation.mutate()
+UploadPage-9ZqF0_yP.js:6 Final validation before upload: Object
+UploadPage-9ZqF0_yP.js:6 === TRIGGERING UPLOAD MUTATION ===
+UploadPage-9ZqF0_yP.js:6 === MUTATION FUNCTION STARTED ===
+UploadPage-9ZqF0_yP.js:6 Starting upload with user: mod_tom
+UploadPage-9ZqF0_yP.js:6 getVideoType returned: clip
+UploadPage-9ZqF0_yP.js:6 Final video type for upload: clip
+UploadPage-9ZqF0_yP.js:6 Starting direct upload to /api/upload/video-direct
+UploadPage-9ZqF0_yP.js:6 Upload progress: 1%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 1%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 2%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 3%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 3%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 4%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 5%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 6%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 7%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 8%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 9%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 10%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 11%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 11%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 12%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 14%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 15%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 16%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 17%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 18%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 19%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 20%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 21%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 23%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 23%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 24%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 26%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 27%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 28%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 29%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 30%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 32%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 33%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 34%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 36%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 37%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 38%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 39%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 40%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 41%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 42%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 43%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 45%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 46%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 47%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 48%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 49%
+UploadPage-9ZqF0_yP.js:6 Upload progress: 50%
+api/upload/video-direct:1   Failed to load resource: the server responded with a status of 413 ()
+UploadPage-9ZqF0_yP.js:6 Direct Upload complete - Status: 413
+UploadPage-9ZqF0_yP.js:6  Direct Upload failed: 413 
+<html><head>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<title>413 Request Entity Too Large</title>
+</head>
+<body text=#000000 bgcolor=#ffffff>
+<h1>Error: Request Entity Too Large</h1>
+<h2>Your client issued a request that was too large.
+</h2>
+<h2></h2>
+</body></html>
+
+(anonymous) @ UploadPage-9ZqF0_yP.js:6
+UploadPage-9ZqF0_yP.js:6  Upload mutation error: Error: Upload failed with status 413: 
+<html><head>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<title>413 Request Entity Too Large</title>
+</head>
+<body text=#000000 bgcolor=#ffffff>
+<h1>Error: Request Entity Too Large</h1>
+<h2>Your client issued a request that was too large.
+</h2>
+<h2></h2>
+</body></html>
+
+    at XMLHttpRequest.<anonymous> (UploadPage-9ZqF0_yP.js:6:13156)
+onError @ UploadPage-9ZqF0_yP.js:6
