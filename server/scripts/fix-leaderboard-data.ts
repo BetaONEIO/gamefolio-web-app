@@ -50,18 +50,26 @@ export async function fixLeaderboardData() {
 
     // Process each user
     for (const { userId } of usersWithActivity) {
-      // Get this month's activity
-      const monthActivity = await db
+      // Get ALL activity for this user
+      const allActivity = await db
         .select()
         .from(userPointsHistory)
-        .where(
-          and(
-            eq(userPointsHistory.userId, userId),
-            gte(userPointsHistory.createdAt, startOfMonth)
-          )
-        );
+        .where(eq(userPointsHistory.userId, userId));
 
-      if (monthActivity.length > 0) {
+      // Group by month
+      const activityByMonth = new Map<string, any[]>();
+      for (const activity of allActivity) {
+        const date = new Date(activity.createdAt);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        if (!activityByMonth.has(monthKey)) {
+          activityByMonth.set(monthKey, []);
+        }
+        activityByMonth.get(monthKey)!.push(activity);
+      }
+
+      // Create monthly entries for each month
+      for (const [monthKey, monthActivity] of activityByMonth) {
+        const [year, month] = monthKey.split('-');
         const monthStats = {
           uploadsCount: monthActivity.filter(a => a.action === 'upload').length,
           likesGivenCount: monthActivity.filter(a => a.action === 'like').length,
@@ -73,8 +81,8 @@ export async function fixLeaderboardData() {
 
         await db.insert(monthlyLeaderboard).values({
           userId,
-          month: currentMonthKey,
-          year: currentYear,
+          month: monthKey,
+          year: parseInt(year),
           ...monthStats,
           rank: 0, // Will be recalculated
         });
