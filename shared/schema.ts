@@ -114,7 +114,7 @@ export const comments = pgTable("comments", {
 export const screenshots = pgTable("screenshots", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
-  gameId: integer("game_id").notNull().references(() => games.id),
+  gameId: integer("game_id").references(() => games.id),
   title: text("title").notNull(),
   description: text("description"),
   imageUrl: text("image_url").notNull(),
