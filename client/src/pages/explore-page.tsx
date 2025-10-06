@@ -196,24 +196,24 @@ export default function ExplorePage() {
 
         {/* Games Grid */}
         <div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 pb-8">
             {allLoadedGames.map((game) => (
               <Card
                 key={game.id}
-                className="group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-xl bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30 overflow-hidden"
+                className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30"
                 onClick={() => handleGameClick(game.id, game.name)}
               >
                 <CardContent className="p-0">
-                  {/* Game Image with overlay text */}
-                  <div className="aspect-[21/9] relative overflow-hidden">
+                  {/* Game Image */}
+                  <div className="aspect-[3/4] relative overflow-hidden rounded-t-lg">
                     {game.box_art_url ? (
                       <img
-                        src={game.box_art_url.replace('{width}x{height}', '600x260')}
+                        src={game.box_art_url.replace('{width}x{height}', '285x380')}
                         alt={game.name}
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
-                          target.src = "/api/placeholder/600x260?text=" + encodeURIComponent(game.name);
+                          target.src = "/api/placeholder/300x400?text=" + encodeURIComponent(game.name);
                         }}
                       />
                     ) : (
@@ -224,22 +224,22 @@ export default function ExplorePage() {
                       </div>
                     )}
 
-                    {/* Gradient overlay for text readability */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
-
-                    {/* Game Name */}
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
-                      <h3 className="font-semibold text-lg text-white drop-shadow-lg">
-                        {game.name}
-                      </h3>
-                    </div>
-
                     {/* Hover Overlay */}
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                       <Badge className="bg-primary text-primary-foreground font-semibold px-4 py-2">
                         View Clips
                       </Badge>
                     </div>
+                  </div>
+
+                  {/* Game Info */}
+                  <div className="p-4">
+                    <h3 className="font-semibold text-sm mb-2 line-clamp-2 min-h-[2.5rem] text-foreground group-hover:text-primary transition-colors">
+                      {game.name}
+                    </h3>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                      Clips
+                    </p>
                   </div>
                 </CardContent>
               </Card>

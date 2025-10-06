@@ -4,8 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClipWithUser, Game, User, Screenshot } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import VideoClipCard from "@/components/clips/VideoClipCard";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import TrendingGameCard from "@/components/clips/TrendingGameCard";
 import { Link, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -184,50 +183,9 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
               {gameResults && gameResults.length > 0 && (
                 <div className="mb-8">
                   <h2 className="text-xl font-semibold mb-4">Games</h2>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {gameResults.slice(0, 4).map((game) => (
-                      <Card
-                        key={game.id}
-                        className="group cursor-pointer transition-all duration-300 hover:scale-[1.02] overflow-hidden bg-card/50 border-border/50"
-                        onClick={() => {
-                          const gameSlug = game.name
-                            .toLowerCase()
-                            .replace(/[^a-z0-9\s]/g, '')
-                            .replace(/\s+/g, '-')
-                            .replace(/^-+|-+$/g, '');
-                          setLocation(`/games/${gameSlug}`);
-                        }}
-                      >
-                        <CardContent className="p-0">
-                          <div className="aspect-[3/4] relative overflow-hidden">
-                            {game.imageUrl ? (
-                              <img
-                                src={game.imageUrl}
-                                alt={game.name}
-                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                }}
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                                <span className="text-primary text-4xl font-bold">
-                                  {game.name.charAt(0)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="p-4 bg-card">
-                            <h3 className="font-semibold text-base text-foreground mb-1">
-                              {game.name}
-                            </h3>
-                            <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                              CLIPS
-                            </p>
-                          </div>
-                        </CardContent>
-                      </Card>
+                      <TrendingGameCard key={game.id} game={game} />
                     ))}
                   </div>
                   {gameResults.length > 4 && (
@@ -409,50 +367,9 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
 
             <TabsContent value="games">
               {gameResults && gameResults.length > 0 ? (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {gameResults.map((game) => (
-                    <Card
-                      key={game.id}
-                      className="group cursor-pointer transition-all duration-300 hover:scale-[1.02] overflow-hidden bg-card/50 border-border/50"
-                      onClick={() => {
-                        const gameSlug = game.name
-                          .toLowerCase()
-                          .replace(/[^a-z0-9\s]/g, '')
-                          .replace(/\s+/g, '-')
-                          .replace(/^-+|-+$/g, '');
-                        setLocation(`/games/${gameSlug}`);
-                      }}
-                    >
-                      <CardContent className="p-0">
-                        <div className="aspect-[3/4] relative overflow-hidden">
-                          {game.imageUrl ? (
-                            <img
-                              src={game.imageUrl}
-                              alt={game.name}
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
-                              }}
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                              <span className="text-primary text-4xl font-bold">
-                                {game.name.charAt(0)}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="p-4 bg-card">
-                          <h3 className="font-semibold text-base text-foreground mb-1">
-                            {game.name}
-                          </h3>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                            CLIPS
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <TrendingGameCard key={game.id} game={game} />
                   ))}
                 </div>
               ) : (
