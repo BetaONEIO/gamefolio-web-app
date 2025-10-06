@@ -1143,7 +1143,7 @@ const ProfilePage = () => {
                 </Avatar>
               </div>
               {/* Level Badge with Progress */}
-              <div className="absolute bottom-0 right-0 z-20">
+              <div className="absolute -bottom-2 -right-2 z-20">
                 <LevelBadgeWithProgress 
                   userId={profile.id}
                   level={profile.level || 1}
@@ -1410,7 +1410,7 @@ const ProfilePage = () => {
               </Avatar>
             </div>
             {/* Level Badge with Progress */}
-            <div className="absolute bottom-0 right-0 z-20">
+            <div className="absolute -bottom-3 -right-3 z-20">
               <LevelBadgeWithProgress 
                 userId={profile.id}
                 level={profile.level || 1}
