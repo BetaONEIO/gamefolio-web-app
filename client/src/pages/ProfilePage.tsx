@@ -2445,8 +2445,8 @@ const ProfilePage = () => {
                     }}>
                       <div className="text-muted-foreground flex items-center hover:text-primary transition-colors cursor-pointer">
                         @{profile?.username}
-                        <VerificationBadge 
-                          isVerified={profile?.emailVerified || false} 
+                        <ModeratorBadge 
+                          isModerator={profile?.role === "moderator" || profile?.role === "admin"} 
                           size="sm" 
                         />
                       </div>
