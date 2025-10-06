@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import badgeIcon56 from "@assets/yellow_badge_56x56_1759744373125.png";
 import badgeIcon40 from "@assets/yellow_badge_40x40_1759744552084.png";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface LevelBadgeWithProgressProps {
   userId: number;
@@ -44,77 +45,90 @@ export function LevelBadgeWithProgress({
   const progressPercent = progress?.progressPercent || 0;
   const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
 
-  return (
-    <div className={`relative ${className}`} data-testid="level-badge-with-progress">
-      {/* SVG Progress Ring */}
-      <svg
-        className="absolute inset-0 -rotate-90"
-        width={svgSize}
-        height={svgSize}
-        style={{
-          left: "-5px",
-          top: "-5px",
-        }}
-      >
-        {/* Background circle */}
-        <circle
-          cx={svgSize / 2}
-          cy={svgSize / 2}
-          r={radius}
-          fill="none"
-          stroke="rgba(255, 255, 255, 0.1)"
-          strokeWidth={strokeWidth}
-        />
-        {/* Progress circle */}
-        <circle
-          cx={svgSize / 2}
-          cy={svgSize / 2}
-          r={radius}
-          fill="none"
-          stroke="#EAB308"
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          style={{
-            transition: "stroke-dashoffset 0.5s ease",
-          }}
-        />
-      </svg>
+  const tooltipContent = progress 
+    ? `${progress.currentPoints} / ${progress.pointsForNextLevel} XP • ${progress.pointsRemaining} XP to Level ${progress.level + 1}`
+    : `Level ${level}`;
 
-      {/* Custom Badge with Dynamic Level Number */}
-      <div 
-        className="relative z-10 flex items-center justify-center shadow-lg"
-        style={{
-          width: `${badgeSize}px`,
-          height: `${badgeSize}px`,
-        }}
-        data-testid="level-badge"
-      >
-        {/* Custom Badge Image */}
-        <img 
-          src={badgeIcon} 
-          alt="Level Badge"
-          className="absolute inset-0 w-full h-full object-contain"
-          style={{
-            userSelect: 'none',
-            WebkitUserDrag: 'none',
-            pointerEvents: 'none'
-          } as React.CSSProperties}
-          draggable="false"
-          onContextMenu={(e) => e.preventDefault()}
-        />
-        {/* Dynamic Level Number */}
-        <span 
-          className="relative z-10 font-bold text-black"
-          style={{
-            fontSize: "18px",
-            textShadow: "0 1px 2px rgba(0, 0, 0, 0.3)",
-          }}
-        >
-          {level || 1}
-        </span>
-      </div>
-    </div>
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className={`relative ${className} cursor-pointer`} data-testid="level-badge-with-progress">
+            {/* SVG Progress Ring */}
+            <svg
+              className="absolute inset-0 -rotate-90"
+              width={svgSize}
+              height={svgSize}
+              style={{
+                left: "-5px",
+                top: "-5px",
+              }}
+            >
+              {/* Background circle */}
+              <circle
+                cx={svgSize / 2}
+                cy={svgSize / 2}
+                r={radius}
+                fill="none"
+                stroke="rgba(255, 255, 255, 0.1)"
+                strokeWidth={strokeWidth}
+              />
+              {/* Progress circle */}
+              <circle
+                cx={svgSize / 2}
+                cy={svgSize / 2}
+                r={radius}
+                fill="none"
+                stroke="#EAB308"
+                strokeWidth={strokeWidth}
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+                style={{
+                  transition: "stroke-dashoffset 0.5s ease",
+                }}
+              />
+            </svg>
+
+            {/* Custom Badge with Dynamic Level Number */}
+            <div 
+              className="relative z-10 flex items-center justify-center shadow-lg"
+              style={{
+                width: `${badgeSize}px`,
+                height: `${badgeSize}px`,
+              }}
+              data-testid="level-badge"
+            >
+              {/* Custom Badge Image */}
+              <img 
+                src={badgeIcon} 
+                alt="Level Badge"
+                className="absolute inset-0 w-full h-full object-contain"
+                style={{
+                  userSelect: 'none',
+                  WebkitUserDrag: 'none',
+                  pointerEvents: 'none'
+                } as React.CSSProperties}
+                draggable="false"
+                onContextMenu={(e) => e.preventDefault()}
+              />
+              {/* Dynamic Level Number */}
+              <span 
+                className="relative z-10 font-bold text-black"
+                style={{
+                  fontSize: "18px",
+                  textShadow: "0 1px 2px rgba(0, 0, 0, 0.3)",
+                }}
+              >
+                {level || 1}
+              </span>
+            </div>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="text-sm">
+          <p>{tooltipContent}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
