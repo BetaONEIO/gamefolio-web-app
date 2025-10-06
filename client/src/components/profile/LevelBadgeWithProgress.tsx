@@ -50,7 +50,7 @@ export function LevelBadgeWithProgress({
     : `Level ${level}`;
 
   return (
-    <TooltipProvider>
+    <TooltipProvider delayDuration={300}>
       <Tooltip>
         <TooltipTrigger asChild>
           <div className={`relative ${className} cursor-pointer`} data-testid="level-badge-with-progress">
