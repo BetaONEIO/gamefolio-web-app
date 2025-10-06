@@ -103,7 +103,7 @@ export function ReportDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-md mx-4 my-8 sm:m-6">
+      <DialogContent className="max-w-md mx-4 my-8 sm:m-6 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-destructive" />
@@ -119,7 +119,7 @@ export function ReportDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 pb-2">
           <div className="space-y-3">
             <Label className="text-sm font-medium">Why are you reporting this {contentTypeLabel}?</Label>
             <RadioGroup 
