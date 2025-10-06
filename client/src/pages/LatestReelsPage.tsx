@@ -12,16 +12,16 @@ export default function LatestReelsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background p-6">
+      <div className="min-h-screen bg-background p-4 md:p-6">
         <div className="w-full">
-          <div className="flex items-center gap-4 mb-8">
+          <div className="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:gap-4 md:mb-8">
             <Link href="/">
-              <Button variant="ghost" size="sm" className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" className="flex items-center gap-2 w-fit" data-testid="button-back-home">
                 <ChevronLeft size={20} />
                 Back to Home
               </Button>
             </Link>
-            <h1 className="text-3xl font-bold text-white">Latest Reels</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-white" data-testid="text-page-title">Latest Reels</h1>
           </div>
           
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
@@ -35,19 +35,21 @@ export default function LatestReelsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-background p-4 md:p-6">
       <div className="w-full">
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:gap-4 md:mb-8">
           <Link href="/">
-            <Button variant="ghost" size="sm" className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="flex items-center gap-2 w-fit" data-testid="button-back-home">
               <ChevronLeft size={20} />
               Back to Home
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold text-white">Latest Reels</h1>
-          <span className="text-muted-foreground">
-            {latestReels?.length || 0} reels
-          </span>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl md:text-3xl font-bold text-white" data-testid="text-page-title">Latest Reels</h1>
+            <span className="text-muted-foreground text-sm md:text-base" data-testid="text-reels-count">
+              {latestReels?.length || 0} reels
+            </span>
+          </div>
         </div>
 
         {latestReels && latestReels.length > 0 ? (
