@@ -12,8 +12,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Share2, Copy, Download, Twitter, Facebook, Linkedin, Mail, RefreshCw, AlertCircle } from 'lucide-react';
+import { Share2, Copy, Download, Facebook, Linkedin, Mail, RefreshCw, AlertCircle } from 'lucide-react';
 import { FaReddit, FaWhatsapp, FaTelegram, FaDiscord } from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
 import { useToast } from '@/hooks/use-toast';
 
 interface ShareData {
@@ -44,7 +45,7 @@ interface ScreenshotShareDialogProps {
 }
 
 const SOCIAL_PLATFORMS = [
-  { name: "Twitter", icon: Twitter, key: "twitter", color: "text-blue-400" },
+  { name: "X", icon: FaXTwitter, key: "twitter", color: "text-foreground" },
   { name: "Facebook", icon: Facebook, key: "facebook", color: "text-blue-600" },
   { name: "Reddit", icon: FaReddit, key: "reddit", color: "text-orange-500" },
   { name: "Discord", icon: FaDiscord, key: "discord", color: "text-indigo-500" },

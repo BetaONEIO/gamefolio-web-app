@@ -29,7 +29,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { FaSteam, FaXbox, FaPlaystation, FaTwitter, FaYoutube } from 'react-icons/fa';
+import { FaSteam, FaXbox, FaPlaystation, FaYoutube } from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
 
 interface EditProfileModalProps {
   profile: UserWithStats;
@@ -232,7 +233,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ profile, trigger })
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center gap-2">
-                          <FaTwitter className="text-[#1DA1F2]" /> X
+                          <FaXTwitter className="text-foreground" /> X
                         </FormLabel>
                         <FormControl>
                           <Input placeholder="username" {...field} />

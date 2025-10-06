@@ -9,7 +9,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Share2, Copy, ExternalLink } from 'lucide-react';
-import { FaTwitter, FaFacebook, FaReddit, FaLinkedin, FaWhatsapp, FaTelegram, FaDiscord, FaEnvelope } from 'react-icons/fa';
+import { FaFacebook, FaReddit, FaLinkedin, FaWhatsapp, FaTelegram, FaDiscord, FaEnvelope } from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
 import { toast } from '@/hooks/use-toast';
 
 interface GamefolioShareData {
@@ -148,7 +149,7 @@ export function GamefolioShareDialog({
 
   // Social media platforms configuration
   const socialPlatforms = [
-    { name: 'X', icon: FaTwitter, color: 'bg-blue-500 hover:bg-blue-600', key: 'twitter' },
+    { name: 'X', icon: FaXTwitter, color: 'bg-black dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-200', key: 'twitter' },
     { name: 'Facebook', icon: FaFacebook, color: 'bg-blue-600 hover:bg-blue-700', key: 'facebook' },
     { name: 'LinkedIn', icon: FaLinkedin, color: 'bg-blue-700 hover:bg-blue-800', key: 'linkedin' },
     { name: 'WhatsApp', icon: FaWhatsapp, color: 'bg-green-500 hover:bg-green-600', key: 'whatsapp' },

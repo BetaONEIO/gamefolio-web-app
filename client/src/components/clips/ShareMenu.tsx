@@ -6,8 +6,9 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Share2, Copy, Twitter, Facebook, Linkedin, Mail } from "lucide-react";
+import { Share2, Copy, Facebook, Linkedin, Mail } from "lucide-react";
 import { FaReddit, FaWhatsapp, FaTelegram } from "react-icons/fa";
+import { FaXTwitter } from "react-icons/fa6";
 import { useToast } from "@/hooks/use-toast";
 
 interface ShareMenuProps {
@@ -123,7 +124,7 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
           onClick={() => handleShareClick(twitterUrl)} 
           className="cursor-pointer"
         >
-          <Twitter className="mr-2 h-4 w-4 text-[#1DA1F2]" />
+          <FaXTwitter className="mr-2 h-4 w-4" />
           <span>X</span>
         </DropdownMenuItem>
         

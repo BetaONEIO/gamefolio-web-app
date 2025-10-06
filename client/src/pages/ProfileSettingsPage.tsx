@@ -38,7 +38,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { FaSteam, FaXbox, FaPlaystation, FaTwitter, FaYoutube, FaDiscord } from 'react-icons/fa';
+import { FaSteam, FaXbox, FaPlaystation, FaYoutube, FaDiscord } from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
 import { SiEpicgames, SiNintendo } from 'react-icons/si';
 import { ProfilePictureSelector } from '@/components/profile/ProfilePictureSelector';
 
@@ -271,41 +272,6 @@ const ProfileSettingsPage: React.FC = () => {
                   className="space-y-6"
                 >
                   {/* Profile Picture Upload Section */}
-                  <div className="flex items-center space-x-6 mb-6">
-                    <div 
-                      className="w-20 h-20 border-2 overflow-hidden relative"
-                      style={{ 
-                        borderColor: user.accentColor || '#4ADE80',
-                        borderRadius: '8px !important'
-                      }}
-                    >
-                      {avatarPreview || user.avatarUrl ? (
-                        <img
-                          src={avatarPreview || user.avatarUrl}
-                          alt={user.displayName}
-                          className="w-full h-full object-cover"
-                          style={{ 
-                            borderRadius: '6px !important',
-                            borderTopLeftRadius: '6px !important',
-                            borderTopRightRadius: '6px !important', 
-                            borderBottomLeftRadius: '6px !important',
-                            borderBottomRightRadius: '6px !important'
-                          }}
-                        />
-                      ) : (
-                        <div
-                          className="w-full h-full flex items-center justify-center text-lg font-bold text-primary-foreground"
-                          style={{ 
-                            backgroundColor: user.accentColor || '#4ADE80',
-                            borderRadius: '6px !important',
-                            borderTopLeftRadius: '6px !important',
-                            borderTopRightRadius: '6px !important', 
-                            borderBottomLeftRadius: '6px !important',
-                            borderBottomRightRadius: '6px !important'
-                          }}
-                        >
-                          {user.displayName.charAt(0)}</div_str>
-<new_str>                  {/* Profile Picture Upload Section */}
                   <div className="flex items-center space-x-6 mb-6">
                     <div 
                       className="w-20 h-20 border-2 overflow-hidden relative"

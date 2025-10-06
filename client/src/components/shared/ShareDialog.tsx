@@ -9,7 +9,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Download, Facebook, Twitter, MessageCircle, Mail, Share2 } from "lucide-react";
+import { Copy, Download, Facebook, MessageCircle, Mail, Share2 } from "lucide-react";
+import { FaXTwitter } from "react-icons/fa6";
 
 interface ShareDialogProps {
   isOpen: boolean;

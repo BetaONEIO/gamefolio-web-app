@@ -14,7 +14,6 @@ import {
   Copy, 
   Download, 
   Facebook, 
-  Twitter, 
   MessageCircle, 
   Share2, 
   Plus,
@@ -31,6 +30,7 @@ import {
   Zap
 } from "lucide-react";
 import { SiReddit } from "react-icons/si";
+import { FaXTwitter } from "react-icons/fa6";
 
 interface UploadedContent {
   id: number;
@@ -409,9 +409,9 @@ const PostUploadSuccessPage = () => {
                   <Button
                     variant="outline"
                     onClick={() => handleSocialShare('twitter', uploadedContent.socialMediaLinks!.twitter)}
-                    className="flex items-center justify-center gap-2 hover:bg-sky-50 dark:hover:bg-sky-900/20"
+                    className="flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-900/20"
                   >
-                    <Twitter className="h-4 w-4 text-sky-500" />
+                    <FaXTwitter className="h-4 w-4" />
                     X
                   </Button>
 

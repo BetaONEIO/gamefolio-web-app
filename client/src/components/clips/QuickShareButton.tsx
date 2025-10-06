@@ -7,7 +7,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Share2 } from "lucide-react";
 import { 
-  FaTwitter, 
   FaFacebookF, 
   FaReddit, 
   FaLinkedinIn, 
@@ -16,6 +15,7 @@ import {
   FaLink,
   FaEllipsisH
 } from "react-icons/fa";
+import { FaXTwitter } from "react-icons/fa6";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -64,7 +64,7 @@ const QuickShareButton: React.FC<QuickShareButtonProps> = ({
       });
       setShowPopover(false);
     }},
-    { name: 'Twitter', icon: <FaTwitter className="h-4 w-4" />, color: 'bg-[#1DA1F2]', url: twitterUrl },
+    { name: 'X', icon: <FaXTwitter className="h-4 w-4" />, color: 'bg-black dark:bg-white', url: twitterUrl },
     { name: 'Facebook', icon: <FaFacebookF className="h-4 w-4" />, color: 'bg-[#4267B2]', url: facebookUrl },
     { name: 'Reddit', icon: <FaReddit className="h-4 w-4" />, color: 'bg-[#FF4500]', url: redditUrl },
     { name: 'LinkedIn', icon: <FaLinkedinIn className="h-4 w-4" />, color: 'bg-[#0A66C2]', url: linkedinUrl },

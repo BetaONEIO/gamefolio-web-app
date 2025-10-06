@@ -6,7 +6,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { FaSteam, FaXbox, FaPlaystation, FaTwitter, FaYoutube, FaDiscord, FaInstagram, FaFacebook } from 'react-icons/fa';
+import { FaSteam, FaXbox, FaPlaystation, FaYoutube, FaDiscord, FaInstagram, FaFacebook } from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
 import { SiEpicgames, SiNintendo } from 'react-icons/si';
 import { cn } from '@/lib/utils';
 
@@ -66,9 +67,9 @@ const PlatformConnections: React.FC<PlatformConnectionsProps> = ({
     {
       name: 'X',
       username: profile.twitterUsername,
-      icon: <FaTwitter className="w-5 h-5" />,
+      icon: <FaXTwitter className="w-5 h-5" />,
       url: (username: string) => `https://twitter.com/${username}`,
-      color: 'text-[#1DA1F2] hover:opacity-80'
+      color: 'text-foreground hover:opacity-80'
     },
     {
       name: 'YouTube',

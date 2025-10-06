@@ -17,7 +17,6 @@ import {
   Heart, 
   Users, 
   Youtube, 
-  Twitter, 
   Gamepad,
   UserCog,
   Share,
@@ -44,7 +43,8 @@ import {
   SiEpicgames,
   SiNintendo
 } from "react-icons/si";
-import { FaXbox, FaTwitter, FaYoutube, FaInstagram, FaFacebook } from "react-icons/fa";
+import { FaXbox, FaYoutube, FaInstagram, FaFacebook } from "react-icons/fa";
+import { FaXTwitter } from "react-icons/fa6";
 import {
   Dialog,
   DialogContent,
@@ -1340,7 +1340,7 @@ const ProfilePage = () => {
                   className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
                   style={{ backgroundColor: '#1DA1F2', color: '#FFFFFF' }}
                 >
-                  <FaTwitter className="w-3 h-3" />
+                  <FaXTwitter className="w-3 h-3" />
                   <span>{profile.twitterUsername}</span>
                 </a>
               )}
@@ -1531,7 +1531,7 @@ const ProfilePage = () => {
                       className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
                       style={{ backgroundColor: '#1DA1F2', color: '#FFFFFF' }}
                     >
-                      <FaTwitter className="w-3 h-3" />
+                      <FaXTwitter className="w-3 h-3" />
                       <span>{profile.twitterUsername}</span>
                     </a>
                   )}
@@ -2327,7 +2327,7 @@ const ProfilePage = () => {
                         rel="noreferrer"
                         className="text-muted-foreground hover:text-foreground flex items-center gap-2"
                       >
-                        <Twitter className="h-5 w-5" />
+                        <FaXTwitter className="h-5 w-5" />
                         <span>X: @{profile.twitterUsername}</span>
                       </a>
                     )}

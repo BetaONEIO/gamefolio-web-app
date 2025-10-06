@@ -58,7 +58,8 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { HexColorPicker } from "react-colorful";
-import { FaSteam, FaXbox, FaPlaystation, FaTwitter, FaYoutube, FaDiscord } from 'react-icons/fa';
+import { FaSteam, FaXbox, FaPlaystation, FaYoutube, FaDiscord } from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
 import { SiEpicgames, SiNintendo } from 'react-icons/si';
 
 // Form validation schemas
@@ -545,7 +546,7 @@ const AccountSettingsPage: React.FC = () => {
                       render={({ field }) => (
                         <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
                           <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
-                            <FaTwitter className="w-6 h-6 text-[#1DA1F2]" />
+                            <FaXTwitter className="w-6 h-6 text-[#000000] dark:text-[#FFFFFF]" />
                           </div>
                           <div className="flex-grow space-y-1">
                             <FormLabel>X (formerly Twitter)</FormLabel>
