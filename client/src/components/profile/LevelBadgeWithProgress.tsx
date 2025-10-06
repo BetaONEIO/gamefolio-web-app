@@ -1,5 +1,5 @@
-import { Trophy } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import badgeIcon from "@assets/yellow_badge_56x56_1759744373125.png";
 
 interface LevelBadgeWithProgressProps {
   userId: number;
@@ -34,7 +34,7 @@ export function LevelBadgeWithProgress({
   });
 
   const isSmall = size === "small";
-  const badgeSize = isSmall ? "w-10 h-10" : "w-14 h-14";
+  const badgeSize = isSmall ? 40 : 56;
   const svgSize = isSmall ? 50 : 66;
   const radius = isSmall ? 18 : 24;
   const strokeWidth = isSmall ? 3 : 4;
@@ -80,13 +80,31 @@ export function LevelBadgeWithProgress({
         />
       </svg>
 
-      {/* Level Badge */}
+      {/* Custom Badge with Dynamic Level Number */}
       <div 
-        className={`relative z-10 flex items-center justify-center rounded-full bg-yellow-500 text-black font-bold shadow-lg ${badgeSize} ${isSmall ? "border-2" : "border-4"} border-background`}
+        className="relative z-10 flex items-center justify-center shadow-lg"
+        style={{
+          width: `${badgeSize}px`,
+          height: `${badgeSize}px`,
+        }}
         data-testid="level-badge"
       >
-        <Trophy className={`${isSmall ? "w-4 h-4" : "w-5 h-5"} absolute ${isSmall ? "top-1 left-1" : "top-2 left-2"} text-yellow-700 opacity-30`} />
-        <span className={`relative z-10 ${isSmall ? "text-sm" : "text-lg"}`}>{level || 1}</span>
+        {/* Custom Badge Image */}
+        <img 
+          src={badgeIcon} 
+          alt="Level Badge"
+          className="absolute inset-0 w-full h-full object-contain"
+        />
+        {/* Dynamic Level Number */}
+        <span 
+          className="relative z-10 font-bold text-black"
+          style={{
+            fontSize: isSmall ? "14px" : "18px",
+            textShadow: "0 1px 2px rgba(0, 0, 0, 0.3)",
+          }}
+        >
+          {level || 1}
+        </span>
       </div>
     </div>
   );
