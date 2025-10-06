@@ -1517,6 +1517,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user's level progress (for circular XP progress ring)
+  app.get("/api/user/:userId/level-progress", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { getLevelProgress } = await import("./level-system");
+      const progress = getLevelProgress(user.totalXP, user.level);
+      
+      res.json({
+        level: user.level,
+        currentXP: user.totalXP,
+        ...progress
+      });
+    } catch (error) {
+      console.error("Error fetching user level progress:", error);
+      res.status(500).json({ message: "Error fetching user level progress" });
+    }
+  });
+
   // Recalculate levels for all users based on their current XP
   app.post("/api/admin/recalculate-levels", authMiddleware, async (req, res) => {
     try {
