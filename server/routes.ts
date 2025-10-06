@@ -2188,7 +2188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   availablePlatforms.push({ name: 'Nintendo', username: user.nintendoUsername, color: '#E60012', icon: 'N' });
                 }
                 if (user.twitterUsername) {
-                  availablePlatforms.push({ name: 'Twitter', username: user.twitterUsername, color: '#1DA1F2', icon: '🐦' });
+                  availablePlatforms.push({ name: 'X', username: user.twitterUsername, color: '#1DA1F2', icon: '🐦' });
                 }
 
                 // Limit to first 6 platforms for space constraints

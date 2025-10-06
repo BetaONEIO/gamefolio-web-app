@@ -64,7 +64,7 @@ const PlatformConnections: React.FC<PlatformConnectionsProps> = ({
       color: 'text-[#E60012] hover:opacity-80'
     },
     {
-      name: 'Twitter',
+      name: 'X',
       username: profile.twitterUsername,
       icon: <FaTwitter className="w-5 h-5" />,
       url: (username: string) => `https://twitter.com/${username}`,

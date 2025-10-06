@@ -548,15 +548,15 @@ const AccountSettingsPage: React.FC = () => {
                             <FaTwitter className="w-6 h-6 text-[#1DA1F2]" />
                           </div>
                           <div className="flex-grow space-y-1">
-                            <FormLabel>Twitter / X</FormLabel>
+                            <FormLabel>X (formerly Twitter)</FormLabel>
                             <FormControl>
                               <Input 
-                                placeholder="Enter your Twitter username" 
+                                placeholder="Enter your X username" 
                                 {...field}
                               />
                             </FormControl>
                             <FormDescription>
-                              Your Twitter/X username (without @)
+                              Your X username (without @)
                             </FormDescription>
                             <FormMessage />
                           </div>

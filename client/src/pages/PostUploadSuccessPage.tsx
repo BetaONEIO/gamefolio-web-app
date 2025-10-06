@@ -412,7 +412,7 @@ const PostUploadSuccessPage = () => {
                     className="flex items-center justify-center gap-2 hover:bg-sky-50 dark:hover:bg-sky-900/20"
                   >
                     <Twitter className="h-4 w-4 text-sky-500" />
-                    X (Twitter)
+                    X
                   </Button>
 
                   <Button

@@ -148,7 +148,7 @@ export function GamefolioShareDialog({
 
   // Social media platforms configuration
   const socialPlatforms = [
-    { name: 'Twitter', icon: FaTwitter, color: 'bg-blue-500 hover:bg-blue-600', key: 'twitter' },
+    { name: 'X', icon: FaTwitter, color: 'bg-blue-500 hover:bg-blue-600', key: 'twitter' },
     { name: 'Facebook', icon: FaFacebook, color: 'bg-blue-600 hover:bg-blue-700', key: 'facebook' },
     { name: 'LinkedIn', icon: FaLinkedin, color: 'bg-blue-700 hover:bg-blue-800', key: 'linkedin' },
     { name: 'WhatsApp', icon: FaWhatsapp, color: 'bg-green-500 hover:bg-green-600', key: 'whatsapp' },

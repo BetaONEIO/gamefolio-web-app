@@ -2328,7 +2328,7 @@ const ProfilePage = () => {
                         className="text-muted-foreground hover:text-foreground flex items-center gap-2"
                       >
                         <Twitter className="h-5 w-5" />
-                        <span>Twitter: @{profile.twitterUsername}</span>
+                        <span>X: @{profile.twitterUsername}</span>
                       </a>
                     )}
 

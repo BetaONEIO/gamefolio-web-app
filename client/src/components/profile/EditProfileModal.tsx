@@ -232,13 +232,13 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ profile, trigger })
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center gap-2">
-                          <FaTwitter className="text-[#1DA1F2]" /> Twitter/X
+                          <FaTwitter className="text-[#1DA1F2]" /> X
                         </FormLabel>
                         <FormControl>
                           <Input placeholder="username" {...field} />
                         </FormControl>
                         <FormDescription>
-                          Your Twitter/X username (without @)
+                          Your X username (without @)
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
