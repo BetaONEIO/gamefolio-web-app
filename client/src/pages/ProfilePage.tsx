@@ -1126,7 +1126,7 @@ const ProfilePage = () => {
                   borderRadius: '8px',
                   boxShadow: `0 0 30px hsl(var(--primary) / 0.5), 0 0 60px hsl(var(--primary) / 0.2)`
                 }}
-                onClick={() => setProfileActionDialogOpen(true)}
+                onClick={() => profile.avatarUrl && openLightbox(profile.avatarUrl, profile.displayName, profile.username)}
               >
                 <Avatar 
                   className="w-full h-full"
