@@ -37,9 +37,9 @@ export function LevelBadgeWithProgress({
   const isSmall = size === "small";
   const badgeSize = 56;
   const badgeIcon = badgeIcon56;
-  const svgSize = isSmall ? 50 : 66;
-  const radius = isSmall ? 18 : 24;
-  const strokeWidth = isSmall ? 3 : 4;
+  const svgSize = 66;
+  const radius = 24;
+  const strokeWidth = 4;
   const circumference = 2 * Math.PI * radius;
   const progressPercent = progress?.progressPercent || 0;
   const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
@@ -52,8 +52,8 @@ export function LevelBadgeWithProgress({
         width={svgSize}
         height={svgSize}
         style={{
-          left: isSmall ? "-4px" : "-6px",
-          top: isSmall ? "-4px" : "-6px",
+          left: "-5px",
+          top: "-5px",
         }}
       >
         {/* Background circle */}
@@ -101,7 +101,7 @@ export function LevelBadgeWithProgress({
         <span 
           className="relative z-10 font-bold text-black"
           style={{
-            fontSize: isSmall ? "14px" : "18px",
+            fontSize: "18px",
             textShadow: "0 1px 2px rgba(0, 0, 0, 0.3)",
           }}
         >
