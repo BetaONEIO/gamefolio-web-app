@@ -184,11 +184,11 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
               {gameResults && gameResults.length > 0 && (
                 <div className="mb-8">
                   <h2 className="text-xl font-semibold mb-4">Games</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     {gameResults.slice(0, 4).map((game) => (
                       <Card
                         key={game.id}
-                        className="group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-xl bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30 overflow-hidden"
+                        className="group cursor-pointer transition-all duration-300 hover:scale-[1.02] overflow-hidden bg-card/50 border-border/50"
                         onClick={() => {
                           const gameSlug = game.name
                             .toLowerCase()
@@ -199,12 +199,12 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
                         }}
                       >
                         <CardContent className="p-0">
-                          <div className="aspect-[21/9] relative overflow-hidden">
+                          <div className="aspect-[3/4] relative overflow-hidden">
                             {game.imageUrl ? (
                               <img
                                 src={game.imageUrl}
                                 alt={game.name}
-                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                 onError={(e) => {
                                   const target = e.target as HTMLImageElement;
                                   target.style.display = 'none';
@@ -217,20 +217,14 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
                                 </span>
                               </div>
                             )}
-
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
-
-                            <div className="absolute bottom-0 left-0 right-0 p-4">
-                              <h3 className="font-semibold text-lg text-white drop-shadow-lg">
-                                {game.name}
-                              </h3>
-                            </div>
-
-                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                              <Badge className="bg-primary text-primary-foreground font-semibold px-4 py-2">
-                                View Clips
-                              </Badge>
-                            </div>
+                          </div>
+                          <div className="p-4 bg-card">
+                            <h3 className="font-semibold text-base text-foreground mb-1">
+                              {game.name}
+                            </h3>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                              CLIPS
+                            </p>
                           </div>
                         </CardContent>
                       </Card>
@@ -415,11 +409,11 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
 
             <TabsContent value="games">
               {gameResults && gameResults.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   {gameResults.map((game) => (
                     <Card
                       key={game.id}
-                      className="group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-xl bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30 overflow-hidden"
+                      className="group cursor-pointer transition-all duration-300 hover:scale-[1.02] overflow-hidden bg-card/50 border-border/50"
                       onClick={() => {
                         const gameSlug = game.name
                           .toLowerCase()
@@ -430,12 +424,12 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
                       }}
                     >
                       <CardContent className="p-0">
-                        <div className="aspect-[21/9] relative overflow-hidden">
+                        <div className="aspect-[3/4] relative overflow-hidden">
                           {game.imageUrl ? (
                             <img
                               src={game.imageUrl}
                               alt={game.name}
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
                                 target.style.display = 'none';
@@ -448,20 +442,14 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
                               </span>
                             </div>
                           )}
-
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
-
-                          <div className="absolute bottom-0 left-0 right-0 p-4">
-                            <h3 className="font-semibold text-lg text-white drop-shadow-lg">
-                              {game.name}
-                            </h3>
-                          </div>
-
-                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                            <Badge className="bg-primary text-primary-foreground font-semibold px-4 py-2">
-                              View Clips
-                            </Badge>
-                          </div>
+                        </div>
+                        <div className="p-4 bg-card">
+                          <h3 className="font-semibold text-base text-foreground mb-1">
+                            {game.name}
+                          </h3>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                            CLIPS
+                          </p>
                         </div>
                       </CardContent>
                     </Card>
