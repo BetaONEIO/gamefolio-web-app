@@ -23,16 +23,6 @@ export function ProfilePictureLightbox({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[calc(100vw-3rem)] md:max-w-2xl p-0 bg-black/95 border-none">
-        {/* Close button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="absolute right-2 top-2 md:right-4 md:top-4 z-50 text-white/70 hover:text-white hover:bg-white/10"
-          onClick={onClose}
-        >
-          <X className="h-5 w-5" />
-        </Button>
-        
         {/* Profile image */}
         <div className="relative flex flex-col items-center justify-center p-4 md:p-8">
           <div className="relative max-w-full max-h-[70vh] md:max-h-[80vh]">
