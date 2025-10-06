@@ -412,8 +412,8 @@ const Header = () => {
       
       {/* Mobile Search Overlay */}
       {showMobileSearch && (
-        <div className="fixed inset-0 bg-black/50 z-50 md:hidden flex flex-col">
-          <div className="bg-card w-full p-4 shadow-lg safe-area-top">
+        <div className="fixed inset-0 bg-black/50 z-50 md:hidden flex flex-col pointer-events-none">
+          <div className="bg-card w-full p-4 shadow-lg safe-area-top pointer-events-auto">
             <div
               ref={mobileSearchRef}
               className="relative max-w-full"
