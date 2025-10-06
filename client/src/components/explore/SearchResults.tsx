@@ -4,7 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClipWithUser, Game, User, Screenshot } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import VideoClipCard from "@/components/clips/VideoClipCard";
-import TrendingGameCard from "@/components/clips/TrendingGameCard";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -183,9 +184,56 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
               {gameResults && gameResults.length > 0 && (
                 <div className="mb-8">
                   <h2 className="text-xl font-semibold mb-4">Games</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {gameResults.slice(0, 4).map((game) => (
-                      <TrendingGameCard key={game.id} game={game} />
+                      <Card
+                        key={game.id}
+                        className="group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-xl bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30 overflow-hidden"
+                        onClick={() => {
+                          const gameSlug = game.name
+                            .toLowerCase()
+                            .replace(/[^a-z0-9\s]/g, '')
+                            .replace(/\s+/g, '-')
+                            .replace(/^-+|-+$/g, '');
+                          setLocation(`/games/${gameSlug}`);
+                        }}
+                      >
+                        <CardContent className="p-0">
+                          <div className="aspect-[21/9] relative overflow-hidden">
+                            {game.imageUrl ? (
+                              <img
+                                src={game.imageUrl}
+                                alt={game.name}
+                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                                <span className="text-primary text-4xl font-bold">
+                                  {game.name.charAt(0)}
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+
+                            <div className="absolute bottom-0 left-0 right-0 p-4">
+                              <h3 className="font-semibold text-lg text-white drop-shadow-lg">
+                                {game.name}
+                              </h3>
+                            </div>
+
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                              <Badge className="bg-primary text-primary-foreground font-semibold px-4 py-2">
+                                View Clips
+                              </Badge>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
                     ))}
                   </div>
                   {gameResults.length > 4 && (
@@ -367,9 +415,56 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
 
             <TabsContent value="games">
               {gameResults && gameResults.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {gameResults.map((game) => (
-                    <TrendingGameCard key={game.id} game={game} />
+                    <Card
+                      key={game.id}
+                      className="group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-xl bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30 overflow-hidden"
+                      onClick={() => {
+                        const gameSlug = game.name
+                          .toLowerCase()
+                          .replace(/[^a-z0-9\s]/g, '')
+                          .replace(/\s+/g, '-')
+                          .replace(/^-+|-+$/g, '');
+                        setLocation(`/games/${gameSlug}`);
+                      }}
+                    >
+                      <CardContent className="p-0">
+                        <div className="aspect-[21/9] relative overflow-hidden">
+                          {game.imageUrl ? (
+                            <img
+                              src={game.imageUrl}
+                              alt={game.name}
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                              <span className="text-primary text-4xl font-bold">
+                                {game.name.charAt(0)}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+
+                          <div className="absolute bottom-0 left-0 right-0 p-4">
+                            <h3 className="font-semibold text-lg text-white drop-shadow-lg">
+                              {game.name}
+                            </h3>
+                          </div>
+
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                            <Badge className="bg-primary text-primary-foreground font-semibold px-4 py-2">
+                              View Clips
+                            </Badge>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               ) : (
