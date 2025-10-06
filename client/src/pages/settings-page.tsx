@@ -339,7 +339,7 @@ export default function SettingsPage() {
 
   return (
     <div 
-      className="min-h-screen p-6"
+      className="min-h-screen p-6 pb-24 md:pb-6"
     >
       <div className="max-w-4xl mx-auto">
         {/* Header */}
@@ -787,7 +787,7 @@ export default function SettingsPage() {
         </Tabs>
 
         {/* Save Button */}
-        <div className="flex justify-between items-center mt-6">
+        <div className="flex justify-between items-center mt-6 mb-4">
           {hasUnsavedChanges && (
             <div className="text-sm text-yellow-600 bg-yellow-50 px-3 py-1 rounded-md border border-yellow-200">
               You have unsaved changes
