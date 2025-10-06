@@ -104,7 +104,8 @@ export default function ExplorePage() {
     setLocation(`/games/${gameSlug}`);
   };
 
-  const handleGameSelect = async (game: TwitchGame) => {
+  const handleGameSelect = (game: TwitchGame) => {
+    console.log('Game selected from dropdown:', game);
     setSelectedGame(game);
     
     // Navigate to the game page using slug format (same as clicking game cards)
@@ -113,6 +114,8 @@ export default function ExplorePage() {
       .replace(/[^a-z0-9\s]/g, '')
       .replace(/\s+/g, '-')
       .replace(/^-+|-+$/g, '');
+    
+    console.log('Navigating to:', `/games/${gameSlug}`);
     setLocation(`/games/${gameSlug}`);
   };
 
