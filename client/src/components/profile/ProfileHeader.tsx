@@ -84,16 +84,20 @@ const ProfileHeader = ({
         {/* Profile Image - Positioned halfway on banner */}
         <div className="absolute left-8 bottom-0 transform translate-y-1/2">
           <div className="flex flex-col items-center">
-            <img 
-              src={profile.avatarUrl || `/attached_assets/gamefolio social logo 3d circle web.png`} 
-              alt={profile.displayName} 
-              className="w-32 h-32 rounded-lg object-cover border-4 shadow-lg bg-background"
+            <div 
+              className="w-32 h-32 rounded-lg border-4 shadow-lg overflow-hidden"
               style={{ borderColor: profile.avatarBorderColor || '#4ADE80' }}
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = "/attached_assets/gamefolio social logo 3d circle web.png";
-              }}
-            />
+            >
+              <img 
+                src={profile.avatarUrl || `/attached_assets/gamefolio social logo 3d circle web.png`} 
+                alt={profile.displayName} 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = "/attached_assets/gamefolio social logo 3d circle web.png";
+                }}
+              />
+            </div>
             
             {/* Profile Stats underneath profile picture */}
             <div className="flex space-x-4 text-xs mt-3 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 border">
