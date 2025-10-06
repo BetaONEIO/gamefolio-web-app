@@ -1087,6 +1087,11 @@ const ProfilePage = () => {
               avatarUrl: profile.avatarUrl,
               bannerUrl: profile.bannerUrl
             }}
+            userStats={{
+              clips: profile._count?.clips || 0,
+              followers: profile._count?.followers || 0,
+              following: profile._count?.following || 0
+            }}
             trigger={
               <Button
                 variant="ghost"
@@ -1268,6 +1273,11 @@ const ProfilePage = () => {
                       bio: profile.bio,
                       avatarUrl: profile.avatarUrl,
                       bannerUrl: profile.bannerUrl
+                    }}
+                    userStats={{
+                      clips: profile._count?.clips || 0,
+                      followers: profile._count?.followers || 0,
+                      following: profile._count?.following || 0
                     }}
                     trigger={
                       <Button
@@ -1634,6 +1644,11 @@ const ProfilePage = () => {
                       avatarUrl: profile.avatarUrl,
                       bannerUrl: profile.bannerUrl
                     }}
+                    userStats={{
+                      clips: profile._count?.clips || 0,
+                      followers: profile._count?.followers || 0,
+                      following: profile._count?.following || 0
+                    }}
                     trigger={
                       <Button
                         variant="outline"
@@ -1657,6 +1672,11 @@ const ProfilePage = () => {
                       bio: profile.bio,
                       avatarUrl: profile.avatarUrl,
                       bannerUrl: profile.bannerUrl
+                    }}
+                    userStats={{
+                      clips: profile._count?.clips || 0,
+                      followers: profile._count?.followers || 0,
+                      following: profile._count?.following || 0
                     }}
                     trigger={
                       <Button
@@ -2600,6 +2620,11 @@ const ProfilePage = () => {
                 bio: profile.bio,
                 avatarUrl: profile.avatarUrl,
                 bannerUrl: profile.bannerUrl
+              }}
+              userStats={{
+                clips: profile._count?.clips || 0,
+                followers: profile._count?.followers || 0,
+                following: profile._count?.following || 0
               }}
               trigger={
                 <Button variant="outline" className="w-full justify-start" onClick={() => setProfileActionDialogOpen(false)}>

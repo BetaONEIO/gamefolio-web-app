@@ -40,6 +40,11 @@ interface GamefolioShareDialogProps {
     avatarUrl?: string | null;
     bannerUrl?: string | null;
   };
+  userStats?: {
+    clips?: number;
+    followers?: number;
+    following?: number;
+  };
 }
 
 export function GamefolioShareDialog({ 
@@ -47,7 +52,8 @@ export function GamefolioShareDialog({
   trigger, 
   open: controlledOpen, 
   onOpenChange: controlledOnOpenChange,
-  userProfile
+  userProfile,
+  userStats
 }: GamefolioShareDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [shareData, setShareData] = useState<GamefolioShareData | null>(null);
@@ -167,10 +173,10 @@ export function GamefolioShareDialog({
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Share2 className="w-5 h-5 text-primary" />
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Share2 className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             Share Gamefolio Profile
           </DialogTitle>
         </DialogHeader>
@@ -180,12 +186,12 @@ export function GamefolioShareDialog({
             <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
           </div>
         ) : shareData ? (
-          <div className="space-y-6">
-            {/* Gamefolio Profile Preview */}
-            <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 shadow-2xl">
+          <div className="space-y-4 sm:space-y-6">
+            {/* Gamefolio Profile Preview - Smaller on Mobile */}
+            <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 shadow-2xl mx-auto max-w-full sm:max-w-2xl">
               {/* Banner Background */}
               <div 
-                className="h-32 bg-cover bg-center relative"
+                className="h-20 sm:h-32 bg-cover bg-center relative"
                 style={{
                   backgroundImage: userProfile?.bannerUrl 
                     ? `url(${userProfile.bannerUrl})` 
@@ -197,56 +203,56 @@ export function GamefolioShareDialog({
               </div>
               
               {/* Profile Section */}
-              <div className="relative px-6 pb-6 -mt-12">
-                <div className="flex items-start gap-4">
+              <div className="relative px-3 sm:px-6 pb-4 sm:pb-6 -mt-8 sm:-mt-12">
+                <div className="flex items-start gap-2 sm:gap-4">
                   {/* Profile Picture with Purple Border */}
                   <div className="relative">
                     {userProfile?.avatarUrl ? (
                       <img 
                         src={userProfile.avatarUrl} 
                         alt={`${username}'s avatar`}
-                        className="w-24 h-24 rounded-full border-4 border-purple-500 shadow-lg bg-slate-800 object-cover"
+                        className="w-16 h-16 sm:w-24 sm:h-24 rounded-full border-2 sm:border-4 border-purple-500 shadow-lg bg-slate-800 object-cover"
                       />
                     ) : (
-                      <div className="w-24 h-24 rounded-full border-4 border-purple-500 shadow-lg bg-slate-800 flex items-center justify-center">
-                        <span className="text-2xl font-bold text-purple-400">{username[0]?.toUpperCase()}</span>
+                      <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full border-2 sm:border-4 border-purple-500 shadow-lg bg-slate-800 flex items-center justify-center">
+                        <span className="text-lg sm:text-2xl font-bold text-purple-400">{username[0]?.toUpperCase()}</span>
                       </div>
                     )}
                   </div>
                   
                   {/* Profile Info */}
-                  <div className="flex-1 pt-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-xl font-bold text-white">
+                  <div className="flex-1 pt-2 sm:pt-4">
+                    <div className="flex items-center gap-1 sm:gap-2 mb-1">
+                      <h3 className="text-sm sm:text-xl font-bold text-white truncate">
                         {userProfile?.displayName || username}
                       </h3>
-                      <span className="text-sm text-gray-400">@{username}</span>
+                      <span className="text-xs sm:text-sm text-gray-400 truncate">@{username}</span>
                     </div>
                     
                     {userProfile?.bio && (
-                      <p className="text-gray-300 text-sm mb-3 line-clamp-2">
+                      <p className="text-gray-300 text-xs sm:text-sm mb-2 sm:mb-3 line-clamp-2">
                         {userProfile.bio}
                       </p>
                     )}
                     
                     {/* Stats Row */}
-                    <div className="flex items-center gap-6 text-sm">
+                    <div className="flex items-center gap-3 sm:gap-6 text-xs sm:text-sm">
                       <div className="text-center">
-                        <div className="font-bold text-white">0</div>
+                        <div className="font-bold text-white">{userStats?.clips || 0}</div>
                         <div className="text-gray-400">Clips</div>
                       </div>
                       <div className="text-center">
-                        <div className="font-bold text-white">0</div>
+                        <div className="font-bold text-white">{userStats?.followers || 0}</div>
                         <div className="text-gray-400">Followers</div>
                       </div>
                       <div className="text-center">
-                        <div className="font-bold text-white">0</div>
+                        <div className="font-bold text-white">{userStats?.following || 0}</div>
                         <div className="text-gray-400">Following</div>
                       </div>
                     </div>
                     
-                    {/* Badges */}
-                    <div className="flex gap-2 mt-3">
+                    {/* Badges - Hidden on very small screens */}
+                    <div className="hidden sm:flex gap-2 mt-3">
                       <span className="px-3 py-1 bg-purple-600 text-white text-xs rounded-full font-medium">
                         Gamer
                       </span>
@@ -256,8 +262,8 @@ export function GamefolioShareDialog({
                     </div>
                   </div>
                   
-                  {/* Share Button (smaller) */}
-                  <div className="pt-4">
+                  {/* Share Button (smaller) - Hidden on very small screens */}
+                  <div className="hidden sm:block pt-4">
                     <div className="px-3 py-1 border border-gray-600 rounded-lg text-xs text-gray-400">
                       Share
                     </div>
