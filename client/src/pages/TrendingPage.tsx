@@ -331,10 +331,10 @@ const TrendingPage: React.FC = () => {
         );
       }
 
-      // Show grid of reel thumbnails for both mobile and desktop
+      // Show 1 row with 4 columns filling the page
       return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
-          {trendingReels.map((reel) => (
+        <div className="grid grid-cols-4 gap-4 w-full">
+          {trendingReels.slice(0, 4).map((reel) => (
             <ReelCard
               key={reel.id}
               reel={reel}
