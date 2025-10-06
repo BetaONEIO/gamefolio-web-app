@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { ChevronLeft, Heart, MessageCircle, Share2, MoreVertical, User, Play, Pause, Flag } from "lucide-react";
+import { ChevronLeft, Heart, MessageCircle, Share2, MoreVertical, User, Play, Pause, Flag, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
@@ -12,6 +12,9 @@ import ShareMenu from "@/components/clips/ShareMenu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { ReportDialog } from "@/components/content/ReportDialog";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface FullscreenReelsViewerProps {
   reels: ClipWithUser[];
@@ -25,8 +28,57 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   const [showShare, setShowShare] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+  const { toast } = useToast();
 
   const currentReel = reels[currentIndex];
+
+  // Follow status for current user
+  const { data: followStatus } = useQuery<{ following: boolean; requested: boolean }>({
+    queryKey: [`/api/users/${currentReel?.user?.username}/follow-status`],
+    enabled: !!currentReel?.user?.username && !!user,
+  });
+
+  const isFollowing = followStatus?.following || followStatus?.requested || false;
+
+  // Follow/unfollow mutation
+  const followMutation = useMutation({
+    mutationFn: async () => {
+      if (isFollowing) {
+        await apiRequest("DELETE", `/api/users/${currentReel.user.username}/follow`);
+      } else {
+        await apiRequest("POST", `/api/users/${currentReel.user.username}/follow`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${currentReel.user.username}/follow-status`] });
+      toast({
+        description: isFollowing ? `Unfollowed ${currentReel.user.displayName}` : `Following ${currentReel.user.displayName}`,
+        variant: "gamefolioSuccess",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update follow status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFollow = () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to follow users",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (user.id === currentReel.user.id) {
+      return; // Don't allow following yourself
+    }
+    followMutation.mutate();
+  };
 
   // Scroll to initial reel on mount
   useEffect(() => {
@@ -148,23 +200,50 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
               <div className="absolute inset-0 pointer-events-none z-10">
                 {/* Left side - User info and title */}
                 <div className="absolute bottom-12 md:bottom-16 left-2 md:left-4 right-16 md:right-20 pointer-events-auto z-10">
-                  <Link href={`/profile/${reel.user.username}`}>
-                    <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3 text-white">
-                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-white/50">
-                        <img
-                          src={reel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                          alt={reel.user.displayName}
-                          className="w-full h-full object-cover"
-                        />
+                  <div className="mb-2 md:mb-3">
+                    <Link href={`/profile/${reel.user.username}`}>
+                      <div className="flex items-center gap-2 md:gap-3 mb-2 text-white">
+                        <div className="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-white/50">
+                          <img
+                            src={reel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                            alt={reel.user.displayName}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-xs md:text-sm">
+                            {reel.user.displayName || reel.user.username}
+                          </p>
+                          <p className="text-white/70 text-xs">@{reel.user.username}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-xs md:text-sm">
-                          {reel.user.displayName || reel.user.username}
-                        </p>
-                        <p className="text-white/70 text-xs">@{reel.user.username}</p>
-                      </div>
-                    </div>
-                  </Link>
+                    </Link>
+                    
+                    {/* Follow button */}
+                    {user && user.id !== reel.user.id && index === currentIndex && (
+                      <Button
+                        onClick={handleFollow}
+                        disabled={followMutation.isPending}
+                        size="sm"
+                        className={cn(
+                          "h-7 md:h-8 px-3 md:px-4 text-xs font-semibold rounded-full transition-colors",
+                          isFollowing 
+                            ? "bg-white/20 text-white hover:bg-white/30" 
+                            : "bg-green-500 text-white hover:bg-green-600"
+                        )}
+                        data-testid="button-follow"
+                      >
+                        {isFollowing ? (
+                          <>
+                            <Check className="mr-1 h-3 w-3" />
+                            Following
+                          </>
+                        ) : (
+                          "Follow"
+                        )}
+                      </Button>
+                    )}
+                  </div>
 
                   <h3 className="text-white font-medium text-xs md:text-sm mb-1 md:mb-2 leading-tight line-clamp-2">
                     {reel.title}
