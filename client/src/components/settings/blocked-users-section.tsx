@@ -238,9 +238,9 @@ export function BlockedUsersSection() {
         </CardHeader>
       <CardContent>
         {blockedUsers.length === 0 ? (
-          <div className="text-center py-8">
-            <UserCheck className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <p className="text-gray-500 mb-2">No blocked users</p>
+          <div className="text-center py-4 md:py-8">
+            <UserCheck className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-2 md:mb-4 text-gray-400" />
+            <p className="text-gray-500 mb-1 md:mb-2">No blocked users</p>
             <p className="text-sm text-gray-400">
               Users you block will appear here
             </p>
