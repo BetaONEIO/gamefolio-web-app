@@ -1272,35 +1272,49 @@ export class DatabaseStorage implements IStorage {
     return reelsWithDetails;
   }
 
-  async searchScreenshots(query: string): Promise<Screenshot[]> {
+  async searchScreenshots(query: string): Promise<(Screenshot & { user: User; game?: Game; _count?: { likes: number; reactions: number; comments: number } })[]> {
     // Check if query is a hashtag
     const isHashtag = query.startsWith('#');
     const searchTerm = isHashtag ? query.slice(1).toLowerCase() : query.toLowerCase();
 
+    let whereClause;
     if (isHashtag) {
       // Search by hashtags in tags array for screenshots
-      return db
-        .select()
-        .from(screenshots)
-        .where(
-          sql`EXISTS (SELECT 1 FROM unnest(${screenshots.tags}) AS tag WHERE LOWER(tag) = ${searchTerm})`
-        )
-        .orderBy(desc(screenshots.createdAt), desc(screenshots.id))
-        .limit(20);
+      whereClause = sql`EXISTS (SELECT 1 FROM unnest(${screenshots.tags}) AS tag WHERE LOWER(tag) = ${searchTerm})`;
     } else {
       // Search by title and description for screenshots
-      return db
-        .select()
-        .from(screenshots)
-        .where(
-          or(
-            ilike(screenshots.title, `%${query}%`),
-            ilike(screenshots.description, `%${query}%`)
-          )
-        )
-        .orderBy(desc(screenshots.createdAt), desc(screenshots.id))
-        .limit(20);
+      whereClause = or(
+        ilike(screenshots.title, `%${query}%`),
+        ilike(screenshots.description, `%${query}%`)
+      );
     }
+
+    const results = await db
+      .select({
+        screenshot: screenshots,
+        user: users,
+        game: games,
+        likesCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotLikes} WHERE ${screenshotLikes.screenshotId} = ${screenshots.id}), 0)`,
+        reactionsCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotReactions} WHERE ${screenshotReactions.screenshotId} = ${screenshots.id}), 0)`,
+        commentsCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotComments} WHERE ${screenshotComments.screenshotId} = ${screenshots.id}), 0)`
+      })
+      .from(screenshots)
+      .leftJoin(users, eq(screenshots.userId, users.id))
+      .leftJoin(games, eq(screenshots.gameId, games.id))
+      .where(whereClause)
+      .orderBy(desc(screenshots.createdAt), desc(screenshots.id))
+      .limit(20);
+
+    return results.map(row => ({
+      ...row.screenshot,
+      user: row.user,
+      game: row.game || undefined,
+      _count: {
+        likes: row.likesCount,
+        reactions: row.reactionsCount,
+        comments: row.commentsCount
+      }
+    }));
   }
 
   // Profile customization operations
