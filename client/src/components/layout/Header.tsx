@@ -470,7 +470,7 @@ const Header = () => {
                             setShowMobileSearch(false);
                             setSearchQuery("");
                           }}
-                          className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left"
+                          className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left touch-manipulation active:bg-secondary/50"
                         >
                           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
                             #
@@ -492,7 +492,7 @@ const Header = () => {
                           <button
                             key={game.id}
                             onClick={() => handleGameSelect(game.id, game.name)}
-                            className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left"
+                            className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left touch-manipulation active:bg-secondary/50"
                           >
                             <div className="w-8 h-8 rounded-md overflow-hidden bg-secondary flex-shrink-0">
                               {game.imageUrl ? (
@@ -525,7 +525,7 @@ const Header = () => {
                           <button
                             key={user.id}
                             onClick={() => handleUserSelect(user.username)}
-                            className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left"
+                            className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left touch-manipulation active:bg-secondary/50"
                           >
                             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
                               {getInitials(user.displayName)}
@@ -554,7 +554,7 @@ const Header = () => {
                             setShowDropdown(false);
                             setShowMobileSearch(false);
                           }}
-                          className="w-full px-3 py-2 text-sm text-primary hover:bg-secondary rounded-md transition-colors text-center"
+                          className="w-full px-3 py-2 text-sm text-primary hover:bg-secondary rounded-md transition-colors text-center touch-manipulation active:bg-secondary/50"
                         >
                           View all results
                         </button>
