@@ -391,12 +391,12 @@ export default function SettingsPage() {
                 <div className="space-y-4">
                   <div>
                     <Label className="text-base font-medium">Profile Picture</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground hidden md:block">
                       Upload a profile picture that represents you. Recommended size: 400x400 pixels or larger.
                     </p>
                   </div>
                   
-                  <div className="flex items-start space-x-6">
+                  <div className="flex flex-col md:flex-row md:items-start space-y-4 md:space-y-0 md:space-x-6">
                     {/* Current/Preview Avatar */}
                     <div className="flex flex-col items-center space-y-2">
                       <Avatar className="h-24 w-24 border-4 border-border">
@@ -416,7 +416,7 @@ export default function SettingsPage() {
                     
                     {/* Upload Controls */}
                     <div className="flex-1 space-y-3">
-                      <div className="flex flex-wrap gap-2 pr-4">
+                      <div className="flex flex-wrap gap-2 justify-center md:justify-start">
                         <Button 
                           type="button" 
                           variant="outline" 
@@ -452,7 +452,7 @@ export default function SettingsPage() {
                         className="hidden"
                       />
                       
-                      <div className="text-xs text-muted-foreground space-y-1 pr-4">
+                      <div className="text-xs text-muted-foreground space-y-1">
                         <div>• Recommended: 400x400 pixels or larger</div>
                         <div>• Square images work best</div>
                         <div>• Maximum file size: 5MB</div>
