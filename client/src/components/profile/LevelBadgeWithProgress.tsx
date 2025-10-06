@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import badgeIcon from "@assets/yellow_badge_56x56_1759744373125.png";
+import badgeIcon56 from "@assets/yellow_badge_56x56_1759744373125.png";
+import badgeIcon40 from "@assets/yellow_badge_40x40_1759744552084.png";
 
 interface LevelBadgeWithProgressProps {
   userId: number;
@@ -35,6 +36,7 @@ export function LevelBadgeWithProgress({
 
   const isSmall = size === "small";
   const badgeSize = isSmall ? 40 : 56;
+  const badgeIcon = isSmall ? badgeIcon40 : badgeIcon56;
   const svgSize = isSmall ? 50 : 66;
   const radius = isSmall ? 18 : 24;
   const strokeWidth = isSmall ? 3 : 4;
