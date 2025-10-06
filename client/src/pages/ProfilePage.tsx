@@ -2490,7 +2490,7 @@ const ProfilePage = () => {
                             contentType="screenshot"
                             contentOwnerId={selectedScreenshot.userId}
                             initialLiked={false}
-                            initialCount={0}
+                            initialCount={(selectedScreenshot as any)._count?.likes || 0}
                             size="lg"
                           />
 
@@ -2499,7 +2499,7 @@ const ProfilePage = () => {
                             contentType="screenshot"
                             contentOwnerId={selectedScreenshot.userId}
                             initialFired={false}
-                            initialCount={0}
+                            initialCount={(selectedScreenshot as any)._count?.reactions || 0}
                             size="lg"
                           />
                         </div>
@@ -2533,7 +2533,7 @@ const ProfilePage = () => {
                     contentType="screenshot"
                     currentUserId={profile?.id} 
                     autoExpanded={true}
-                    initialCount={0}
+                    initialCount={(selectedScreenshot as any)._count?.comments || 0}
                     onUsernameClick={() => setSelectedScreenshot(null)}
                   />
                 </div>
