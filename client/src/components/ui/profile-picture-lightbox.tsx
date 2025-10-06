@@ -22,30 +22,33 @@ export function ProfilePictureLightbox({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl p-0 bg-black/95 border-none">
+      <DialogContent className="max-w-[calc(100vw-3rem)] md:max-w-2xl p-0 bg-black/95 border-none">
         {/* Close button */}
         <Button
           variant="ghost"
           size="sm"
-          className="absolute right-4 top-4 z-50 text-white/70 hover:text-white hover:bg-white/10"
+          className="absolute right-2 top-2 md:right-4 md:top-4 z-50 text-white/70 hover:text-white hover:bg-white/10"
           onClick={onClose}
         >
           <X className="h-5 w-5" />
         </Button>
         
         {/* Profile image */}
-        <div className="relative flex flex-col items-center justify-center p-8">
-          <div className="relative max-w-full max-h-[80vh]">
+        <div className="relative flex flex-col items-center justify-center p-4 md:p-8">
+          <div className="relative max-w-full max-h-[70vh] md:max-h-[80vh]">
             <img
               src={avatarUrl}
               alt={`${displayName}'s profile picture`}
               className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-              style={{ maxWidth: '512px', maxHeight: '80vh' }}
+              style={{ 
+                maxWidth: '280px',
+                maxHeight: '70vh'
+              }}
             />
           </div>
           
           {/* Username below image */}
-          <div className="text-center text-white/80 text-lg font-medium mt-6">
+          <div className="text-center text-white/80 text-base md:text-lg font-medium mt-4 md:mt-6">
             @{username}
           </div>
         </div>
