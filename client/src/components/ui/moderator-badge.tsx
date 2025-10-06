@@ -24,6 +24,13 @@ export function ModeratorBadge({ isModerator, size = "md" }: ModeratorBadgeProps
             src={moderatorIcon} 
             alt="Moderator" 
             className={`${sizeClasses[size]} ml-1`}
+            style={{
+              userSelect: 'none',
+              WebkitUserDrag: 'none',
+              pointerEvents: 'none'
+            } as React.CSSProperties}
+            draggable="false"
+            onContextMenu={(e) => e.preventDefault()}
           />
         </TooltipTrigger>
         <TooltipContent>

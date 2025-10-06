@@ -11,7 +11,15 @@ export const ModeratorIcon = ({ size = 16, className = "" }: ModeratorIconProps)
       src={moderatorIconPath}
       alt="Moderator"
       className={`inline-block ${className}`}
-      style={{ width: size, height: size }}
+      style={{ 
+        width: size, 
+        height: size,
+        userSelect: 'none',
+        WebkitUserDrag: 'none',
+        pointerEvents: 'none'
+      } as React.CSSProperties}
+      draggable="false"
+      onContextMenu={(e) => e.preventDefault()}
       data-testid="icon-moderator"
     />
   );

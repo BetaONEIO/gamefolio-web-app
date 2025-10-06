@@ -96,6 +96,13 @@ export function LevelBadgeWithProgress({
           src={badgeIcon} 
           alt="Level Badge"
           className="absolute inset-0 w-full h-full object-contain"
+          style={{
+            userSelect: 'none',
+            WebkitUserDrag: 'none',
+            pointerEvents: 'none'
+          } as React.CSSProperties}
+          draggable="false"
+          onContextMenu={(e) => e.preventDefault()}
         />
         {/* Dynamic Level Number */}
         <span 
