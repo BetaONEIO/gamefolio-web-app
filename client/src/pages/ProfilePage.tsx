@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import GameSelectionDialog from "@/components/games/GameSelectionDialog";
+import { LevelBadgeWithProgress } from "@/components/profile/LevelBadgeWithProgress";
 import { 
   Heart, 
   Users, 
@@ -1141,13 +1142,13 @@ const ProfilePage = () => {
                   </AvatarFallback>
                 </Avatar>
               </div>
-              {/* Level Badge */}
-              <div 
-                className="absolute -bottom-3 -right-3 z-20 flex items-center justify-center rounded-full bg-yellow-500 text-black font-bold shadow-lg w-10 h-10 border-2 border-background"
-                data-testid="level-badge"
-              >
-                <Trophy className="w-4 h-4 absolute top-1 left-1 text-yellow-700 opacity-30" />
-                <span className="relative z-10 text-sm">{profile.level || 1}</span>
+              {/* Level Badge with Progress */}
+              <div className="absolute -bottom-3 -right-3 z-20">
+                <LevelBadgeWithProgress 
+                  userId={profile.id}
+                  level={profile.level || 1}
+                  size="small"
+                />
               </div>
             </div>
           </div>
@@ -1408,13 +1409,13 @@ const ProfilePage = () => {
                 </AvatarFallback>
               </Avatar>
             </div>
-            {/* Level Badge */}
-            <div 
-              className="absolute -bottom-4 -right-4 z-20 flex items-center justify-center rounded-full bg-yellow-500 text-black font-bold shadow-lg w-14 h-14 border-4 border-background"
-              data-testid="level-badge"
-            >
-              <Trophy className="w-5 h-5 absolute top-2 left-2 text-yellow-700 opacity-30" />
-              <span className="relative z-10 text-lg">{profile.level || 1}</span>
+            {/* Level Badge with Progress */}
+            <div className="absolute -bottom-4 -right-4 z-20">
+              <LevelBadgeWithProgress 
+                userId={profile.id}
+                level={profile.level || 1}
+                size="large"
+              />
             </div>
           </div>
 
