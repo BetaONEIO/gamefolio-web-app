@@ -5,6 +5,7 @@ import { ClipWithUser, Game, User, Screenshot } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import VideoClipCard from "@/components/clips/VideoClipCard";
 import TrendingGameCard from "@/components/clips/TrendingGameCard";
+import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { Link, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -256,20 +257,14 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
                 <div>
                   <h2 className="text-xl font-semibold mb-4">Screenshots</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {screenshotResults.slice(0, 6).map((screenshot) => (
-                      <div key={screenshot.id} className="bg-card rounded-lg overflow-hidden">
-                        <img 
-                          src={screenshot.imageUrl} 
-                          alt={screenshot.title}
-                          className="w-full h-48 object-cover"
-                        />
-                        <div className="p-4">
-                          <h3 className="font-semibold text-sm mb-1">{screenshot.title}</h3>
-                          {screenshot.description && (
-                            <p className="text-muted-foreground text-xs line-clamp-2">{screenshot.description}</p>
-                          )}
-                        </div>
-                      </div>
+                    {screenshotResults.slice(0, 6).map((screenshot: any) => (
+                      <ScreenshotCard
+                        key={screenshot.id}
+                        screenshot={screenshot}
+                        profile={screenshot.user || { username: 'Unknown', displayName: 'Unknown User' }}
+                        isOwnProfile={user?.id === screenshot.userId}
+                        onSelect={(s) => console.log('Screenshot selected:', s.id)}
+                      />
                     ))}
                   </div>
                   {screenshotResults.length > 6 && (
@@ -321,30 +316,14 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
             <TabsContent value="screenshots">
               {screenshotResults && screenshotResults.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {screenshotResults.map((screenshot) => (
-                    <div key={screenshot.id} className="bg-card rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-                      <img 
-                        src={screenshot.imageUrl} 
-                        alt={screenshot.title}
-                        className="w-full h-48 object-cover"
-                        loading="lazy"
-                      />
-                      <div className="p-4">
-                        <h3 className="font-semibold text-sm mb-1">{screenshot.title}</h3>
-                        {screenshot.description && (
-                          <p className="text-muted-foreground text-xs line-clamp-2">{screenshot.description}</p>
-                        )}
-                        {screenshot.tags && screenshot.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {screenshot.tags.slice(0, 3).map((tag) => (
-                              <span key={tag} className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
-                                #{tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                  {screenshotResults.map((screenshot: any) => (
+                    <ScreenshotCard
+                      key={screenshot.id}
+                      screenshot={screenshot}
+                      profile={screenshot.user || { username: 'Unknown', displayName: 'Unknown User' }}
+                      isOwnProfile={user?.id === screenshot.userId}
+                      onSelect={(s) => console.log('Screenshot selected:', s.id)}
+                    />
                   ))}
                 </div>
               ) : (
