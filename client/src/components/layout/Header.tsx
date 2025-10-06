@@ -115,7 +115,11 @@ const Header = () => {
 
   const handleGameSelect = (gameId: number, gameName: string) => {
     // Create a URL-safe slug from the game name to match explore page behavior
-    const gameSlug = gameName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const gameSlug = gameName
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/^-+|-+$/g, '');
     setLocation(`/games/${gameSlug}`);
     setShowDropdown(false);
     setShowMobileSearch(false);
