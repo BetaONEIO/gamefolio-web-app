@@ -98,30 +98,35 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
     (gameResults && gameResults.length > 0);
 
   return (
-    <div>
+    <div className="pb-24 md:pb-8">
       <h1 className="text-2xl font-bold mb-6 flex items-center">
         <Search className="mr-2 h-5 w-5" />
         Search results for "{query}"
       </h1>
 
       <Tabs defaultValue="all" onValueChange={setActiveTab}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="all">All results</TabsTrigger>
-          <TabsTrigger value="clips" className="flex items-center gap-2">
-            <Video className="h-4 w-4" />
-            Clips
-          </TabsTrigger>
-          <TabsTrigger value="reels" className="flex items-center gap-2">
-            <Film className="h-4 w-4" />
-            Reels
-          </TabsTrigger>
-          <TabsTrigger value="screenshots" className="flex items-center gap-2">
-            <FileImage className="h-4 w-4" />
-            Screenshots
-          </TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="games">Games</TabsTrigger>
-        </TabsList>
+        <div className="mb-6 overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+          <TabsList className="w-full md:w-auto inline-flex min-w-max">
+            <TabsTrigger value="all" className="whitespace-nowrap">All results</TabsTrigger>
+            <TabsTrigger value="clips" className="flex items-center gap-2 whitespace-nowrap">
+              <Video className="h-4 w-4" />
+              <span className="hidden sm:inline">Clips</span>
+              <span className="sm:hidden">Clips</span>
+            </TabsTrigger>
+            <TabsTrigger value="reels" className="flex items-center gap-2 whitespace-nowrap">
+              <Film className="h-4 w-4" />
+              <span className="hidden sm:inline">Reels</span>
+              <span className="sm:hidden">Reels</span>
+            </TabsTrigger>
+            <TabsTrigger value="screenshots" className="flex items-center gap-2 whitespace-nowrap">
+              <FileImage className="h-4 w-4" />
+              <span className="hidden sm:inline">Screenshots</span>
+              <span className="sm:hidden">Screenshots</span>
+            </TabsTrigger>
+            <TabsTrigger value="users" className="whitespace-nowrap">Users</TabsTrigger>
+            <TabsTrigger value="games" className="whitespace-nowrap">Games</TabsTrigger>
+          </TabsList>
+        </div>
 
         {isLoading ? (
           <div className="space-y-8">
@@ -130,13 +135,13 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
             ))}
           </div>
         ) : !hasResults ? (
-          <div className="text-center py-10">
+          <div className="text-center py-10 px-4">
             <Search className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
             <h2 className="text-xl font-semibold mb-2">No results found</h2>
             <p className="text-muted-foreground mb-6">
               We couldn't find any clips, reels, screenshots, users, or games matching "{query}"
             </p>
-            <div className="space-y-2">
+            <div className="space-y-2 mb-8">
               <p className="text-sm text-muted-foreground">Try:</p>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• Checking your spelling</li>
@@ -149,7 +154,8 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
                 // Force a fresh page load to the explore page
                 window.location.href = "/explore";
               }}
-              className="mt-6"
+              className="w-full sm:w-auto"
+              data-testid="button-browse-explore"
             >
               Browse Explore Page
             </Button>
