@@ -2412,11 +2412,6 @@ const ProfilePage = () => {
         // Dialog closes without navigation - stays on same page
       }}>
         <DialogContent className="max-w-[95%] w-[95%] p-0 bg-background text-foreground max-h-[95vh] h-[95vh] overflow-hidden">
-          <DialogClose className="absolute right-4 top-4 z-10 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-            <X className="h-6 w-6" />
-            <span className="sr-only">Close</span>
-          </DialogClose>
-
           {selectedScreenshot && (
             <div className="flex flex-col lg:flex-row h-full">
               {/* Left side - Image display */}
