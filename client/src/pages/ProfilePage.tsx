@@ -988,7 +988,7 @@ const ProfilePage = () => {
     >
       {/* Enhanced Banner with global theme colors */}
       <div 
-        className={`h-64 sm:h-80 md:h-96 bg-cover bg-center overflow-hidden profile-banner relative -mx-4 md:-mx-8 border-b-4 border-primary ${profile?.bannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
+        className={`h-52 sm:h-64 md:h-96 bg-cover bg-center overflow-hidden profile-banner relative -mx-4 md:-mx-8 border-b-4 border-primary ${profile?.bannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
         style={{
           ...bannerStyle,
         }}
