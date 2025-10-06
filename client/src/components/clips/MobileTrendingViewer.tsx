@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { ChevronLeft, Heart, MessageCircle, Share2, User, Play, Pause, Flag, Eye, Check } from "lucide-react";
+import { ChevronLeft, Heart, MessageCircle, Share2, User, Play, Pause, Flag, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
@@ -11,9 +11,6 @@ import ShareMenu from "@/components/clips/ShareMenu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { ReportDialog } from "@/components/content/ReportDialog";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
 
 interface ScreenshotWithUser {
   id: number;
@@ -69,57 +66,8 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   }, []);
   const containerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
-  const { toast } = useToast();
 
   const currentItem = content[currentIndex];
-
-  // Follow status for current user
-  const { data: followStatus } = useQuery<{ following: boolean; requested: boolean }>({
-    queryKey: [`/api/users/${currentItem?.user?.username}/follow-status`],
-    enabled: !!currentItem?.user?.username && !!user,
-  });
-
-  const isFollowing = followStatus?.following || followStatus?.requested || false;
-
-  // Follow/unfollow mutation
-  const followMutation = useMutation({
-    mutationFn: async () => {
-      if (isFollowing) {
-        await apiRequest("DELETE", `/api/users/${currentItem.user.username}/follow`);
-      } else {
-        await apiRequest("POST", `/api/users/${currentItem.user.username}/follow`);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${currentItem.user.username}/follow-status`] });
-      toast({
-        description: isFollowing ? `Unfollowed ${currentItem.user.displayName}` : `Following ${currentItem.user.displayName}`,
-        variant: "gamefolioSuccess",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update follow status",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleFollow = () => {
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to follow users",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (user.id === currentItem.user.id) {
-      return; // Don't allow following yourself
-    }
-    followMutation.mutate();
-  };
 
   // Early return if no content or invalid index
   if (!currentItem || currentIndex < 0 || currentIndex >= content.length) {
@@ -293,54 +241,22 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             {/* Left side - User info and content details */}
             <div className="flex-1 pr-4">
               {/* User info */}
-              <div className="mb-3">
-                <Link 
-                  href={`/profile/${currentItem.user.username}`}
-                  className="flex items-center gap-3 mb-2 no-underline"
-                  data-testid={`link-user-${currentItem.user.username}`}
-                >
-                  <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/50">
-                    <img
-                      src={currentItem.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                      alt={currentItem.user.displayName}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-white font-semibold">
-                      {currentItem.user.displayName || currentItem.user.username}
-                    </span>
-                    <span className="text-white/70 text-xs">
-                      @{currentItem.user.username}
-                    </span>
-                  </div>
-                </Link>
-                
-                {/* Follow button */}
-                {user && user.id !== currentItem.user.id && (
-                  <Button
-                    onClick={handleFollow}
-                    disabled={followMutation.isPending}
-                    size="sm"
-                    className={cn(
-                      "h-8 px-4 text-xs font-semibold rounded-full transition-colors",
-                      isFollowing 
-                        ? "bg-white/20 text-white hover:bg-white/30" 
-                        : "bg-green-500 text-white hover:bg-green-600"
-                    )}
-                    data-testid="button-follow"
-                  >
-                    {isFollowing ? (
-                      <>
-                        <Check className="mr-1 h-3 w-3" />
-                        Following
-                      </>
-                    ) : (
-                      "Follow"
-                    )}
-                  </Button>
-                )}
-              </div>
+              <Link 
+                href={`/profile/${currentItem.user.username}`}
+                className="flex items-center gap-3 mb-3 no-underline"
+                data-testid={`link-user-${currentItem.user.username}`}
+              >
+                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/50">
+                  <img
+                    src={currentItem.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                    alt={currentItem.user.displayName}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <span className="text-white font-semibold">
+                  {currentItem.user.displayName || currentItem.user.username}
+                </span>
+              </Link>
 
               {/* Title */}
               <h3 className="text-white font-semibold mb-2 line-clamp-2 text-sm">
