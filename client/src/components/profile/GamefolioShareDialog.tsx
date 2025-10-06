@@ -79,7 +79,7 @@ export function GamefolioShareDialog({
       } else {
         // Generate basic share data if endpoint doesn't exist
         const baseUrl = window.location.origin;
-        const profileUrl = `${baseUrl}/profile/${username}`;
+        const profileUrl = `${baseUrl}/@${username}`;
         
         setShareData({
           profileUrl,
@@ -101,7 +101,7 @@ export function GamefolioShareDialog({
       console.error('Error fetching share data:', error);
       // Fallback to basic share data
       const baseUrl = window.location.origin;
-      const profileUrl = `${baseUrl}/profile/${username}`;
+      const profileUrl = `${baseUrl}/@${username}`;
       
       setShareData({
         profileUrl,
