@@ -103,7 +103,7 @@ export function ReportDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-md m-4 sm:m-6">
+      <DialogContent className="max-w-md mx-4 my-8 sm:m-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-destructive" />
