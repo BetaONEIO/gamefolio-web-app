@@ -35,8 +35,8 @@ export function LevelBadgeWithProgress({
   });
 
   const isSmall = size === "small";
-  const badgeSize = isSmall ? 40 : 56;
-  const badgeIcon = isSmall ? badgeIcon40 : badgeIcon56;
+  const badgeSize = 56;
+  const badgeIcon = badgeIcon56;
   const svgSize = isSmall ? 50 : 66;
   const radius = isSmall ? 18 : 24;
   const strokeWidth = isSmall ? 3 : 4;
