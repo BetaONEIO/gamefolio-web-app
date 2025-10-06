@@ -331,43 +331,16 @@ const TrendingPage: React.FC = () => {
         );
       }
 
-      // Mobile: Vertical scroll with snap behavior, Desktop: Single centered thumbnail
-      if (isMobile) {
-        return (
-          <div 
-            className="h-[calc(100vh-220px)] overflow-y-auto snap-y snap-mandatory -mx-4"
-            style={{ scrollbarWidth: 'none' }}
-          >
-            {trendingReels.map((reel) => (
-              <div 
-                key={reel.id}
-                className="snap-start snap-always h-full flex items-center justify-center"
-              >
-                <div className="w-full h-full">
-                  <VideoClipGridItem
-                    clip={reel}
-                    userId={user?.id}
-                    compact={false}
-                    reelsList={trendingReels}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-      }
-
-      // Desktop: Show single centered thumbnail
+      // Show grid of reel thumbnails for both mobile and desktop
       return (
-        <div className="flex justify-center">
-          <div className="w-full max-w-[280px] sm:max-w-[320px]">
-            <VideoClipGridItem
-              clip={trendingReels[0]}
-              userId={user?.id}
-              compact={false}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
+          {trendingReels.map((reel) => (
+            <ReelCard
+              key={reel.id}
+              reel={reel}
               reelsList={trendingReels}
             />
-          </div>
+          ))}
         </div>
       );
     }
