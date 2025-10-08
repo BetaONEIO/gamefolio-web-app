@@ -168,17 +168,17 @@ const GamePage = () => {
       </div>
 
       {/* Game Info */}
-      <div className="flex items-center gap-6 mb-8">
-        <div className={isMobile ? "w-36 h-36 rounded-lg overflow-hidden bg-card/50 backdrop-blur-sm border border-border/50" : "w-24 h-32 rounded-lg overflow-hidden bg-card/50 backdrop-blur-sm border border-border/50"}>
+      <div className={isMobile ? "flex items-center gap-3 mb-8" : "flex items-center gap-6 mb-8"}>
+        <div className={isMobile ? "w-32 h-44 rounded-lg overflow-hidden bg-card/50 backdrop-blur-sm border border-border/50 flex-shrink-0" : "w-24 h-32 rounded-lg overflow-hidden bg-card/50 backdrop-blur-sm border border-border/50"}>
           <img
             src={game.imageUrl || `https://placehold.co/240x320/222/444?text=${encodeURIComponent(game.name)}`}
             alt={game.name}
-            className={isMobile ? "w-full h-full object-contain" : "w-full h-full object-cover"}
+            className="w-full h-full object-cover"
           />
         </div>
-        <div>
-          <h1 className={isMobile ? "text-xl font-bold mb-2" : "text-3xl font-bold mb-2"}>{game.name}</h1>
-          <p className="text-muted-foreground mb-4">
+        <div className={isMobile ? "flex-1 min-w-0" : ""}>
+          <h1 className={isMobile ? "text-xl font-bold mb-1" : "text-3xl font-bold mb-2"}>{game.name}</h1>
+          <p className={isMobile ? "text-muted-foreground mb-2 text-sm" : "text-muted-foreground mb-4"}>
             Browse clips from the {game.name} community
           </p>
           <div className="flex items-center gap-4">
