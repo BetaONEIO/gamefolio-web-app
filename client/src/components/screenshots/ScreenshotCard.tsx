@@ -157,81 +157,64 @@ export function ScreenshotCard({
             />
           </div>
         )}
-
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
-          <div className="absolute bottom-2 left-2 right-2 pointer-events-none">
-            <h4 className="text-white text-xs font-medium truncate">{screenshot.title}</h4>
-            <p className="text-white/80 text-xs truncate">{profile.displayName || profile.username}</p>
-          </div>
-        </div>
       </div>
 
-      {/* Engagement Footer - Match clip layout exactly */}
-      <CardFooter className="px-3 py-2 border-t flex justify-between">
-        <div className="flex items-center space-x-1.5">
-          <button 
-            onClick={handleLikeClick}
-            className={`flex items-center text-[9px] transition-colors ${hasUserLiked ? 'text-green-500' : 'text-muted-foreground hover:text-green-500'}`}
-          >
-            <Heart 
-              className={`h-2.5 w-2.5 transition-all duration-300 ${
-                hasUserLiked 
-                  ? `fill-green-500 stroke-green-500 text-green-500 ${isAnimating ? 'animate-bounce scale-125' : 'scale-110'}` 
-                  : 'stroke-muted-foreground hover:stroke-green-500 fill-transparent hover:scale-105'
-              }`} 
-              style={{
-                animation: isAnimating ? 'heartGrow 2s ease-out' : undefined
-              }}
-            />
-            <span className="ml-0.5">{likeCount}</span>
-            {hasUserLiked && <span className="text-green-500 text-xs ml-1">✓</span>}
-          </button>
-          
-          <FireButton 
-            contentId={screenshot.id}
-            contentType="screenshot"
-            contentOwnerId={screenshot.userId}
-            initialFired={false}
-            initialCount={(screenshot as any)._count?.reactions || 0}
-            size="sm"
-          />
-          
-          <div className="flex items-center text-[9px] text-muted-foreground">
-            <MessageSquare className="h-2.5 w-2.5" />
-            <span className="ml-0.5">{(screenshot as any)._count?.comments || 0}</span>
+      {/* Info Section - Title, User, Stats, Game */}
+      <div className="p-3 space-y-2">
+        {/* Title */}
+        <h3 className="font-semibold text-sm line-clamp-2 leading-tight">{screenshot.title}</h3>
+        
+        {/* User info and stats row */}
+        <div className="flex items-center justify-between">
+          {/* User with avatar */}
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full overflow-hidden bg-secondary flex items-center justify-center flex-shrink-0">
+              {profile.avatarUrl ? (
+                <img 
+                  src={profile.avatarUrl} 
+                  alt={profile.displayName} 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-xs font-medium">{profile.username?.charAt(0).toUpperCase()}</span>
+              )}
+            </div>
+            <span className="text-sm text-muted-foreground">{profile.displayName || profile.username}</span>
           </div>
           
-          <ScreenshotShareDialog 
-            screenshotId={screenshot.id.toString()} 
-            isOwnContent={currentUser?.id === screenshot.userId}
-            trigger={
-              <button 
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
+          {/* Stats */}
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <button 
+              onClick={handleLikeClick}
+              className={`flex items-center gap-1 transition-colors ${hasUserLiked ? 'text-green-500' : 'hover:text-green-500'}`}
+            >
+              <Heart 
+                className={`h-4 w-4 transition-all duration-300 ${
+                  hasUserLiked 
+                    ? `fill-green-500 stroke-green-500 ${isAnimating ? 'animate-bounce scale-125' : ''}` 
+                    : 'fill-transparent'
+                }`} 
+                style={{
+                  animation: isAnimating ? 'heartGrow 2s ease-out' : undefined
                 }}
-                className="flex items-center text-[9px] text-muted-foreground hover:text-primary"
-              >
-                <Share2 className="h-2.5 w-2.5" />
-              </button>
-            } 
-          />
-          
-          <ReportButton
-            contentType="screenshot"
-            contentId={screenshot.id}
-            contentTitle={screenshot.title}
-            variant="minimal"
-            size="sm"
-            className="text-[9px]"
-          />
+              />
+              <span>{likeCount}</span>
+            </button>
+            
+            <div className="flex items-center gap-1">
+              <MessageSquare className="h-4 w-4" />
+              <span>{(screenshot as any)._count?.comments || 0}</span>
+            </div>
+          </div>
         </div>
         
-        <div className="flex items-center text-[9px] text-muted-foreground">
-          <Eye className="h-2.5 w-2.5" />
-          <span className="ml-0.5">{screenshot.views?.toLocaleString() || 0}</span>
-        </div>
-      </CardFooter>
+        {/* Game name */}
+        {(screenshot as any).game && (
+          <div className="text-sm text-primary font-medium">
+            {(screenshot as any).game.name}
+          </div>
+        )}
+      </div>
     </Card>
   );
 }
