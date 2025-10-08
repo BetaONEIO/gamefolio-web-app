@@ -157,36 +157,26 @@ export default function GamePage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Back Button */}
-        <Link href="/explore">
-          <Button variant="ghost" size="sm" className="mb-6">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Explore
-          </Button>
-        </Link>
-
-        {/* Game Banner Header */}
-        <div className="relative mb-8 rounded-lg overflow-hidden bg-card">
-          <div className="absolute inset-0">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <Link href="/explore">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          </Link>
+          
+          <div className="flex items-center gap-4">
             <img
               src={game.imageUrl || "/placeholder-game.png"}
               alt={game.name}
-              className="w-full h-full object-cover opacity-30 blur-sm"
+              className="h-16 w-16 rounded-lg object-cover"
             />
-          </div>
-          <div className="relative px-6 py-8 md:px-8 md:py-12">
-            <div className="flex items-center gap-4 mb-4">
-              <img
-                src={game.imageUrl || "/placeholder-game.png"}
-                alt={game.name}
-                className="h-20 w-20 md:h-24 md:w-24 rounded-lg object-cover shadow-lg"
-              />
-              <div>
-                <h1 className="text-2xl md:text-4xl font-bold text-white mb-2">{game.name}</h1>
-                <div className="flex items-center gap-2 text-white/80">
-                  <Users className="h-4 w-4" />
-                  <span>Browse clips from the {game.name} community</span>
-                </div>
+            <div>
+              <h1 className="text-3xl font-bold">{game.name}</h1>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Users className="h-4 w-4" />
+                <span>{displayData?.length || 0} clips</span>
               </div>
             </div>
           </div>
@@ -195,24 +185,20 @@ export default function GamePage() {
         {/* Controls */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           {/* Time Period Filter */}
-          <div className="w-full sm:w-auto">
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
-              <span className="text-sm font-medium whitespace-nowrap mr-1">Time Period:</span>
-              {(['day', 'week', 'month'] as const).map((period) => (
-                <Button
-                  key={period}
-                  variant={timePeriod === period ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setTimePeriod(period)}
-                  className="flex items-center gap-1 md:gap-2 whitespace-nowrap flex-shrink-0"
-                  data-testid={`filter-period-${period}`}
-                >
-                  {getPeriodIcon(period)}
-                  <span className="hidden md:inline">{getPeriodLabel(period)}</span>
-                  <span className="md:hidden text-xs">{period === 'day' ? 'Today' : period === 'week' ? 'Week' : 'Month'}</span>
-                </Button>
-              ))}
-            </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Time Period:</span>
+            {(['day', 'week', 'month'] as const).map((period) => (
+              <Button
+                key={period}
+                variant={timePeriod === period ? "default" : "outline"}
+                size="sm"
+                onClick={() => setTimePeriod(period)}
+                className="flex items-center gap-2"
+              >
+                {getPeriodIcon(period)}
+                {getPeriodLabel(period)}
+              </Button>
+            ))}
           </div>
 
           {/* Content Type Tabs */}
