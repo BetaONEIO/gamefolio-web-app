@@ -331,7 +331,66 @@ const TrendingPage: React.FC = () => {
         );
       }
 
-      // Show 1 row with 4 columns filling the page
+      // Mobile: Instagram/TikTok style 2-column masonry grid using CSS columns
+      if (isMobile) {
+        // Create varying aspect ratios for masonry effect
+        const aspectRatios = ['aspect-[9/16]', 'aspect-[3/4]', 'aspect-[2/3]', 'aspect-[9/14]', 'aspect-[3/5]', 'aspect-[4/5]'];
+        
+        const formatNumber = (num: number) => {
+          if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+          if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+          return num.toString();
+        };
+        
+        return (
+          <div className="columns-2 gap-1 space-y-1">
+            {trendingReels.map((reel, index) => {
+              const aspectRatio = aspectRatios[index % aspectRatios.length];
+              
+              return (
+                <div
+                  key={reel.id}
+                  onClick={() => openClipDialog(reel.id, trendingReels)}
+                  className="break-inside-avoid mb-1"
+                >
+                  <div className={`relative ${aspectRatio} w-full rounded-sm overflow-hidden cursor-pointer group`}>
+                    {/* Thumbnail */}
+                    <img
+                      src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
+                      alt={reel.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = "/placeholder-game.png";
+                      }}
+                    />
+                    
+                    {/* Subtle gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    
+                    {/* View count - bottom left */}
+                    <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white text-sm font-medium drop-shadow-lg">
+                      <Eye className="h-4 w-4" />
+                      <span>{formatNumber(reel.views || 0)}</span>
+                    </div>
+                    
+                    {/* Title overlay - some reels show title */}
+                    {index % 3 === 0 && (
+                      <div className="absolute bottom-8 left-2 right-2">
+                        <p className="text-white text-sm font-medium line-clamp-2 drop-shadow-lg">
+                          {reel.title}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      }
+
+      // Desktop: 1 row with 4 columns filling the page
       return (
         <div className="grid grid-cols-4 gap-4 w-full">
           {trendingReels.slice(0, 4).map((reel) => (
