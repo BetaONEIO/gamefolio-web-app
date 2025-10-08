@@ -272,12 +272,12 @@ router.post('/screenshot', fullAccessMiddleware, screenshotUpload.single('screen
                   game = existingGameByName;
                   finalGameId = existingGameByName.id;
                 } else {
-                  // Create the game in our database using Twitch data
+                  // Create the game in our database using Twitch data - use higher resolution for crisp display
                   try {
                     game = await storage.createGame({
                       name: gameData.name,
                       imageUrl: gameData.box_art_url ? 
-                        gameData.box_art_url.replace('{width}', '285').replace('{height}', '380') : '',
+                        gameData.box_art_url.replace('{width}', '600').replace('{height}', '800') : '',
                       twitchId: gameData.id
                     });
                     console.log(`✅ Created game: ${game.name} (ID: ${game.id}, Twitch ID: ${gameData.id})`);
@@ -492,12 +492,12 @@ router.post('/process-video', fullAccessMiddleware, async (req, res) => {
                   game = existingGameByName;
                   finalGameId = existingGameByName.id;
                 } else {
-                  // Create the game in our database using Twitch data
+                  // Create the game in our database using Twitch data - use higher resolution for crisp display
                   try {
                     game = await storage.createGame({
                       name: gameData.name,
                       imageUrl: gameData.box_art_url ? 
-                        gameData.box_art_url.replace('{width}', '285').replace('{height}', '380') : '',
+                        gameData.box_art_url.replace('{width}', '600').replace('{height}', '800') : '',
                       twitchId: gameData.id
                     });
                     console.log(`✅ Created game: ${game.name} (ID: ${game.id}, Twitch ID: ${gameData.id})`);

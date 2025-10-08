@@ -134,11 +134,11 @@ class TwitchApiService {
       return paginatedGames.map((game: any) => {
         let boxArtUrl = game.box_art_url;
         
-        // Handle both possible template formats
+        // Handle both possible template formats - use higher resolution for crisp display
         if (boxArtUrl.includes('{width}x{height}')) {
-          boxArtUrl = boxArtUrl.replace('{width}x{height}', '285x380');
+          boxArtUrl = boxArtUrl.replace('{width}x{height}', '600x800');
         } else if (boxArtUrl.includes('{width}') && boxArtUrl.includes('{height}')) {
-          boxArtUrl = boxArtUrl.replace('{width}', '285').replace('{height}', '380');
+          boxArtUrl = boxArtUrl.replace('{width}', '600').replace('{height}', '800');
         }
         
         return {
@@ -181,11 +181,11 @@ class TwitchApiService {
       return response.data.data.map((game: any) => {
         let boxArtUrl = game.box_art_url;
         
-        // Handle both possible template formats
+        // Handle both possible template formats - use higher resolution for crisp display
         if (boxArtUrl.includes('{width}x{height}')) {
-          boxArtUrl = boxArtUrl.replace('{width}x{height}', '285x380');
+          boxArtUrl = boxArtUrl.replace('{width}x{height}', '600x800');
         } else if (boxArtUrl.includes('{width}') && boxArtUrl.includes('{height}')) {
-          boxArtUrl = boxArtUrl.replace('{width}', '285').replace('{height}', '380');
+          boxArtUrl = boxArtUrl.replace('{width}', '600').replace('{height}', '800');
         }
         
         return {

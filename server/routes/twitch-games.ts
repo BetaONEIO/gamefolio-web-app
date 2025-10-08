@@ -102,10 +102,10 @@ router.post('/twitch/games/add', async (req: express.Request, res: express.Respo
       return res.json(existingGame);
     }
 
-    // Add the game to our database
+    // Add the game to our database - use higher resolution for crisp display
     const newGame: InsertGame = {
       name: twitchGame.name,
-      imageUrl: twitchGame.box_art_url?.replace('{width}', '200').replace('{height}', '266'),
+      imageUrl: twitchGame.box_art_url?.replace('{width}', '600').replace('{height}', '800'),
     };
 
     const createdGame = await storage.createGame(newGame);
@@ -243,7 +243,7 @@ router.get('/games/slug/:slug', async (req: express.Request, res: express.Respon
             try {
               const newGame: InsertGame = {
                 name: twitchGame.name,
-                imageUrl: twitchGame.box_art_url?.replace('{width}', '200').replace('{height}', '266'),
+                imageUrl: twitchGame.box_art_url?.replace('{width}', '600').replace('{height}', '800'),
               };
 
               game = await storage.createGame(newGame);

@@ -2566,10 +2566,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Find the best match (exact name match or first result)
           const twitchGame = twitchGames[0];
 
-          // Create the game in database
+          // Create the game in database - use higher resolution for crisp display
           const newGame = await storage.createGame({
             name: twitchGame.name,
-            imageUrl: twitchGame.box_art_url.replace('{width}x{height}', '285x380'),
+            imageUrl: twitchGame.box_art_url.replace('{width}x{height}', '600x800'),
             twitchId: twitchGame.id
           });
 
@@ -3307,10 +3307,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               let existingGame = await storage.getGameByName(twitchGame.name);
 
               if (!existingGame) {
-                // Create the game in our database using Twitch data
+                // Create the game in our database using Twitch data - use higher resolution for crisp display
                 existingGame = await storage.createGame({
                   name: twitchGame.name,
-                  imageUrl: twitchGame.box_art_url.replace('{width}', '285').replace('{height}', '380'),
+                  imageUrl: twitchGame.box_art_url.replace('{width}', '600').replace('{height}', '800'),
                   twitchId: twitchGame.id
                 });
               }
