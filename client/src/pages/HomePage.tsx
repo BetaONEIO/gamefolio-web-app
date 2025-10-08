@@ -403,7 +403,7 @@ const HomePage = () => {
                 <Video className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No clips yet</h3>
                 <p className="text-muted-foreground mb-4">Upload your first gaming clip to get started!</p>
-                <Button onClick={() => window.location.href = '/upload'}>
+                <Button onClick={() => window.location.href = '/upload?type=clips'}>
                   <Plus className="h-4 w-4 mr-2" />
                   Upload
                 </Button>
@@ -577,7 +577,7 @@ const HomePage = () => {
                 <Camera className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No reels yet</h3>
                 <p className="text-muted-foreground mb-4">Upload your first vertical gaming reel!</p>
-                <Button onClick={() => window.location.href = '/upload'}>
+                <Button onClick={() => window.location.href = '/upload?type=reels'}>
                   <Plus className="h-4 w-4 mr-2" />
                   Upload Reel
                 </Button>
