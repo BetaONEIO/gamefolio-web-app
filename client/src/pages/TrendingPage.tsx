@@ -609,7 +609,7 @@ const TrendingPage: React.FC = () => {
                 </div>
 
                 {/* Screenshot Details */}
-                <div className="flex-1 p-4 overflow-y-auto">
+                <div className="flex-1 p-4 pb-6 lg:pb-4 overflow-y-auto">
                   <h3 className="font-semibold text-lg mb-2">{selectedScreenshot.title}</h3>
                   {selectedScreenshot.description && (
                     <p className="text-muted-foreground text-sm mb-4">{selectedScreenshot.description}</p>
@@ -633,7 +633,9 @@ const TrendingPage: React.FC = () => {
                   </div>
                   
                   {/* Comments Section */}
-                  <ScreenshotCommentSection screenshotId={selectedScreenshot.id} />
+                  <div className="mb-4">
+                    <ScreenshotCommentSection screenshotId={selectedScreenshot.id} />
+                  </div>
                 </div>
               </div>
             </div>
