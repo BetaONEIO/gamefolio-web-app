@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ClipWithUser } from '@shared/schema';
 import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Share2, Heart, Play, MessageCircle } from 'lucide-react';
 import { formatDuration } from '@/lib/constants';
+import { formatDistance } from 'date-fns';
 import { useClipDialog } from '@/hooks/use-clip-dialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -568,7 +569,7 @@ const TrendingPage: React.FC = () => {
 
               {/* Right side - Info and engagement */}
               <div className="h-full flex flex-col w-full lg:w-[25%]">
-                {/* Header with username */}
+                {/* Header with username and Follow button */}
                 <div className="border-b border-border p-4 flex items-center justify-between">
                   <div className="flex items-center">
                     <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3">
@@ -583,14 +584,14 @@ const TrendingPage: React.FC = () => {
                       )}
                     </div>
                     <Link href={`/@${selectedScreenshot.user.username}`}>
-                      <div className="text-muted-foreground flex items-center hover:text-primary transition-colors cursor-pointer">
+                      <div className="font-medium flex items-center hover:text-primary transition-colors cursor-pointer">
                         @{selectedScreenshot.user.username}
                       </div>
                     </Link>
                   </div>
                   
-                  {/* Delete button - only show if current user owns the screenshot */}
-                  {user && selectedScreenshot.user.id === user.id && (
+                  {/* Follow button or delete button */}
+                  {user && selectedScreenshot.user.id === user.id ? (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -605,53 +606,80 @@ const TrendingPage: React.FC = () => {
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                  ) : (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      data-testid="button-follow"
+                    >
+                      Follow
+                    </Button>
                   )}
                 </div>
 
-                {/* Screenshot Details */}
-                <div className="flex-1 p-4 pb-8 lg:pb-4 overflow-y-auto">
-                  <h3 className="font-semibold text-lg mb-2">{selectedScreenshot.title}</h3>
-                  {selectedScreenshot.description && (
-                    <p className="text-muted-foreground text-sm mb-4">{selectedScreenshot.description}</p>
-                  )}
-                  
-                  {/* Game info */}
-                  {selectedScreenshot.game && (
-                    <div className="mb-4">
-                      <p className="text-sm text-muted-foreground">
-                        <span className="font-medium">Game:</span> {selectedScreenshot.game.name}
-                      </p>
+                {/* Screenshot Details - scrollable */}
+                <div className="flex-1 p-4 pb-8 lg:pb-4 overflow-y-auto space-y-3">
+                  {/* Title and description */}
+                  <div>
+                    <h1 className="font-semibold text-xl">{selectedScreenshot.title}</h1>
+                    {selectedScreenshot.description && (
+                      <p className="text-foreground mt-1 leading-relaxed break-words text-base">{selectedScreenshot.description}</p>
+                    )}
+
+                    {/* Game badge */}
+                    {selectedScreenshot.game && (
+                      <div className="mt-2">
+                        <span className="bg-green-600 text-white px-3 py-1.5 rounded text-sm font-bold">
+                          {selectedScreenshot.game.name}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Views and time */}
+                    <div className="flex items-center mt-2 text-sm text-muted-foreground">
+                      <Eye className="h-4 w-4 mr-1" />
+                      <span className="mr-3">{selectedScreenshot.views?.toLocaleString() || '0'} views</span>
+                      <Clock className="h-4 w-4 mr-1" />
+                      <span>{selectedScreenshot.createdAt ? formatDistance(new Date(selectedScreenshot.createdAt), new Date(), { addSuffix: true }) : 'Unknown'}</span>
                     </div>
-                  )}
-                  
-                  {/* Stats and Engagement */}
-                  <div className="flex items-center gap-4 mb-6 border-b pb-4">
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Eye className="h-4 w-4" />
-                      <span>{selectedScreenshot.views?.toLocaleString() || '0'}</span>
-                    </div>
-                    <LikeButton
-                      contentId={selectedScreenshot.id}
-                      contentType="screenshot"
-                      contentOwnerId={selectedScreenshot.userId}
-                      initialLiked={false}
-                      initialCount={selectedScreenshot._count?.likes || 0}
-                    />
-                    <FireButton
-                      contentId={selectedScreenshot.id}
-                      contentType="screenshot"
-                      contentOwnerId={selectedScreenshot.userId}
-                      initialFired={false}
-                      initialCount={selectedScreenshot._count?.reactions || 0}
-                    />
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <MessageSquare className="h-4 w-4" />
-                      <span>{selectedScreenshot._count?.comments || 0}</span>
+
+                    {/* Action bar with engagement buttons */}
+                    <div className="border-t border-b border-border py-3 mt-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <LikeButton
+                            contentId={selectedScreenshot.id}
+                            contentType="screenshot"
+                            contentOwnerId={selectedScreenshot.userId}
+                            initialLiked={false}
+                            initialCount={selectedScreenshot._count?.likes || 0}
+                            size="lg"
+                          />
+                          <FireButton
+                            contentId={selectedScreenshot.id}
+                            contentType="screenshot"
+                            contentOwnerId={selectedScreenshot.userId}
+                            initialFired={false}
+                            initialCount={selectedScreenshot._count?.reactions || 0}
+                            size="lg"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button className="focus:outline-none">
+                            <Share2 className="h-6 w-6" />
+                          </button>
+                          <ReportButton
+                            contentType="screenshot"
+                            contentId={selectedScreenshot.id}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  
+
                   {/* Comments Section */}
-                  <div className="mb-6">
+                  <div className="pt-2 pb-6">
                     <ScreenshotCommentSection screenshotId={selectedScreenshot.id} />
                   </div>
                 </div>
