@@ -16,6 +16,7 @@ import { useMobile } from "@/hooks/use-mobile";
 
 export default function GamePage() {
   const { id } = useParams<{ id: string }>();
+  const [, navigate] = useLocation();
   const { user } = useAuth();
   const isMobile = useMobile();
   const [timePeriod, setTimePeriod] = useState<'day' | 'week' | 'month'>('day');
@@ -303,7 +304,9 @@ export default function GamePage() {
               <p className="text-muted-foreground mb-4">
                 No {contentType} have been uploaded for {game.name} yet.
               </p>
-              <Button onClick={() => window.location.href = `/upload?type=${contentType}`}>
+              <Button onClick={() => {
+                window.location.assign(`/upload?type=${contentType}`);
+              }}>
                 Upload First {contentType === 'clips' ? 'Clip' : contentType === 'reels' ? 'Reel' : 'Screenshot'}
               </Button>
             </div>
