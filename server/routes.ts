@@ -5082,6 +5082,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log("Banner uploaded successfully:", bannerUrl);
 
+      // Save to uploaded_banners table and update user's banner
+      await storage.createUploadedBanner(req.user.id, bannerUrl);
+
       // Clean up local file
       try {
         await fsPromises.unlink(req.file.path);
@@ -5097,6 +5100,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Error uploading banner:", err);
       return res.status(500).json({ message: "Error uploading banner" });
+    }
+  });
+
+  // Get user's uploaded banners
+  app.get("/api/user/banners", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const banners = await storage.getUserUploadedBanners(req.user.id);
+      res.json(banners);
+    } catch (err) {
+      console.error("Error fetching uploaded banners:", err);
+      return res.status(500).json({ message: "Error fetching uploaded banners" });
+    }
+  });
+
+  // Set a banner as active
+  app.put("/api/user/banners/:id/activate", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const bannerId = parseInt(req.params.id);
+      const success = await storage.setActiveBanner(req.user.id, bannerId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Banner not found" });
+      }
+
+      res.json({ message: "Banner activated successfully" });
+    } catch (err) {
+      console.error("Error activating banner:", err);
+      return res.status(500).json({ message: "Error activating banner" });
+    }
+  });
+
+  // Delete an uploaded banner
+  app.delete("/api/user/banners/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const bannerId = parseInt(req.params.id);
+      const success = await storage.deleteUploadedBanner(req.user.id, bannerId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Banner not found" });
+      }
+
+      res.json({ message: "Banner deleted successfully" });
+    } catch (err) {
+      console.error("Error deleting banner:", err);
+      return res.status(500).json({ message: "Error deleting banner" });
     }
   });
 

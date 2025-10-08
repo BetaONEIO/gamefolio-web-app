@@ -1,7 +1,7 @@
 import {
   users, games, clips, likes, comments, userGameFavorites, follows, messages, profileBanners,
   monthlyLeaderboard, weeklyLeaderboard, topContributors, userPointsHistory, userXPHistory, notifications, userBadges, contentFilterSettings, bannedWords,
-  heroTextSettings, bannerSettings, clipMentions, commentMentions, screenshotCommentMentions,
+  heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions,
   type User, type InsertUser,
   type Game, type InsertGame,
   type Clip, type InsertClip,
@@ -23,6 +23,7 @@ import {
   type BannedWord, type InsertBannedWord,
   type HeroTextSettings, type InsertHeroTextSettings,
   type BannerSettings, type InsertBannerSettings,
+  type UploadedBanner, type InsertUploadedBanner,
   type ClipMention, type InsertClipMention,
   type CommentMention, type InsertCommentMention,
   type ScreenshotCommentMention, type InsertScreenshotCommentMention,
@@ -156,6 +157,12 @@ export interface IStorage {
   // Profile customization operations
   getAllProfileBanners(): Promise<ProfileBanner[]>;
   getProfileBannersByCategory(category: string): Promise<ProfileBanner[]>;
+
+  // Uploaded banner operations
+  createUploadedBanner(userId: number, bannerUrl: string): Promise<UploadedBanner>;
+  getUserUploadedBanners(userId: number): Promise<UploadedBanner[]>;
+  setActiveBanner(userId: number, bannerId: number): Promise<boolean>;
+  deleteUploadedBanner(userId: number, bannerId: number): Promise<boolean>;
 
   // Leaderboard operations
   addUserPointsHistory(pointsHistory: InsertUserPointsHistory): Promise<UserPointsHistory>;

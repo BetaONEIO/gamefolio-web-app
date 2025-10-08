@@ -1332,6 +1332,85 @@ export class DatabaseStorage implements IStorage {
     return banners;
   }
 
+  // Uploaded banner operations
+  async createUploadedBanner(userId: number, bannerUrl: string): Promise<UploadedBanner> {
+    // Deactivate all previous banners for this user
+    await db
+      .update(uploadedBanners)
+      .set({ isActive: false })
+      .where(eq(uploadedBanners.userId, userId));
+
+    // Insert new banner as active
+    const [banner] = await db
+      .insert(uploadedBanners)
+      .values({ userId, bannerUrl, isActive: true })
+      .returning();
+
+    // Update user's bannerUrl
+    await db
+      .update(users)
+      .set({ bannerUrl })
+      .where(eq(users.id, userId));
+
+    return banner;
+  }
+
+  async getUserUploadedBanners(userId: number): Promise<UploadedBanner[]> {
+    const banners = await db
+      .select()
+      .from(uploadedBanners)
+      .where(eq(uploadedBanners.userId, userId))
+      .orderBy(desc(uploadedBanners.createdAt));
+    return banners;
+  }
+
+  async setActiveBanner(userId: number, bannerId: number): Promise<boolean> {
+    // Get the banner to activate
+    const [banner] = await db
+      .select()
+      .from(uploadedBanners)
+      .where(and(
+        eq(uploadedBanners.id, bannerId),
+        eq(uploadedBanners.userId, userId)
+      ));
+
+    if (!banner) {
+      return false;
+    }
+
+    // Deactivate all banners for this user
+    await db
+      .update(uploadedBanners)
+      .set({ isActive: false })
+      .where(eq(uploadedBanners.userId, userId));
+
+    // Activate the selected banner
+    await db
+      .update(uploadedBanners)
+      .set({ isActive: true })
+      .where(eq(uploadedBanners.id, bannerId));
+
+    // Update user's bannerUrl
+    await db
+      .update(users)
+      .set({ bannerUrl: banner.bannerUrl })
+      .where(eq(users.id, userId));
+
+    return true;
+  }
+
+  async deleteUploadedBanner(userId: number, bannerId: number): Promise<boolean> {
+    const result = await db
+      .delete(uploadedBanners)
+      .where(and(
+        eq(uploadedBanners.id, bannerId),
+        eq(uploadedBanners.userId, userId)
+      ))
+      .returning();
+
+    return result.length > 0;
+  }
+
   // Admin operations
   async getAllUsers(limit: number = 10, offset: number = 0, search?: string): Promise<UserWithBadges[]> {
     let userQuery = db.select().from(users);

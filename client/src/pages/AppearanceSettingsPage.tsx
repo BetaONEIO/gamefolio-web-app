@@ -5,10 +5,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useUpdateProfile } from '@/hooks/use-profile';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest, getQueryFn } from '@/lib/queryClient';
-import { useQuery } from '@tanstack/react-query';
+import { apiRequest, getQueryFn, queryClient } from '@/lib/queryClient';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Redirect } from 'wouter';
-import { Loader2, Upload, Camera } from 'lucide-react';
+import { Loader2, Upload, Camera, Trash2, Check } from 'lucide-react';
 import { HexColorPicker } from "react-colorful";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
@@ -42,6 +42,143 @@ type ProfileBanner = {
   category: string;
   imageUrl: string;
   createdAt: string;
+};
+
+// Define UploadedBanner type
+type UploadedBanner = {
+  id: number;
+  userId: number;
+  bannerUrl: string;
+  isActive: boolean;
+  createdAt: string;
+};
+
+// Uploaded Banners Section Component
+const UploadedBannersSection: React.FC<{
+  onSelectBanner: (bannerUrl: string) => void;
+  currentBannerUrl: string;
+}> = ({ onSelectBanner, currentBannerUrl }) => {
+  const { toast } = useToast();
+
+  // Fetch user's uploaded banners
+  const { data: uploadedBanners = [], isLoading } = useQuery<UploadedBanner[]>({
+    queryKey: ['/api/user/banners'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+  });
+
+  // Delete banner mutation
+  const deleteBanner = useMutation({
+    mutationFn: async (bannerId: number) => {
+      const response = await fetch(`/api/user/banners/${bannerId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to delete banner');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user/banners'] });
+      toast({
+        title: "Banner deleted",
+        description: "Your uploaded banner has been removed.",
+        variant: "gamefolioSuccess",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete banner.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  if (isLoading) {
+    return (
+      <div className="mt-4">
+        <h4 className="text-sm font-medium mb-2">Your Uploaded Banners</h4>
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!uploadedBanners || uploadedBanners.length === 0) {
+    return null;
+  }
+
+  const activeBanner = uploadedBanners.find(b => b.isActive);
+
+  return (
+    <div className="mt-4">
+      <h4 className="text-sm font-medium mb-2">Your Uploaded Banners</h4>
+      
+      {/* Active Banner */}
+      {activeBanner && (
+        <div className="mb-3">
+          <p className="text-xs text-muted-foreground mb-2">Current Active Banner:</p>
+          <div className="relative rounded-md overflow-hidden border-2 border-primary h-32">
+            <img
+              src={activeBanner.bannerUrl}
+              alt="Active banner"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute top-2 right-2 bg-primary text-primary-foreground px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1">
+              <Check className="h-3 w-3" />
+              Active
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Banner History */}
+      <div>
+        <p className="text-xs text-muted-foreground mb-2">Banner History:</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {uploadedBanners.map((banner) => (
+            <div
+              key={banner.id}
+              className={`
+                relative rounded-md overflow-hidden border-2 h-24 group
+                ${banner.bannerUrl === currentBannerUrl ? 'border-primary' : 'border-transparent'}
+                hover:border-primary/70 transition-all cursor-pointer
+              `}
+            >
+              <img
+                src={banner.bannerUrl}
+                alt="Uploaded banner"
+                className="w-full h-full object-cover"
+                onClick={() => onSelectBanner(banner.bannerUrl)}
+              />
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => onSelectBanner(banner.bannerUrl)}
+                  data-testid={`button-select-banner-${banner.id}`}
+                >
+                  Select
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteBanner.mutate(banner.id);
+                  }}
+                  disabled={deleteBanner.isPending}
+                  data-testid={`button-delete-banner-${banner.id}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const AppearanceSettingsPage: React.FC = () => {
@@ -985,12 +1122,35 @@ const AppearanceSettingsPage: React.FC = () => {
                                 description: "Your custom banner has been set. Save your profile to apply changes.",
                                 variant: "gamefolioSuccess",
                               });
+
+                              // Refetch uploaded banners
+                              queryClient.invalidateQueries({ queryKey: ['/api/user/banners'] });
                             }}
                             onCancel={() => {
                               console.log('🚫 Banner upload cancelled');
                             }}
                           />
                         </div>
+
+                        {/* Uploaded Banners History */}
+                        <UploadedBannersSection 
+                          onSelectBanner={(bannerUrl: string) => {
+                            field.onChange(bannerUrl);
+                            setSelectedBannerUrl('');
+                            appearanceForm.setValue('bannerUrl', bannerUrl, { 
+                              shouldDirty: true, 
+                              shouldValidate: true,
+                              shouldTouch: true
+                            });
+
+                            toast({
+                              title: "Banner selected",
+                              description: "Your uploaded banner has been selected. Save your profile to apply changes.",
+                              variant: "gamefolioSuccess",
+                            });
+                          }}
+                          currentBannerUrl={field.value || ''}
+                        />
                       </div>
                     </FormControl>
                     <FormDescription>

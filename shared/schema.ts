@@ -373,6 +373,15 @@ export const bannerSettings = pgTable("banner_settings", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// User uploaded banners table for banner history
+export const uploadedBanners = pgTable("uploaded_banners", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  bannerUrl: text("banner_url").notNull(),
+  isActive: boolean("is_active").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Schema for inserting a user
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -533,7 +542,15 @@ export type InsertBannedWord = typeof bannedWords.$inferInsert;
 export type BannerSettings = typeof bannerSettings.$inferSelect;
 export type InsertBannerSettings = typeof bannerSettings.$inferInsert;
 
+// Schema for inserting uploaded banners
+export const insertUploadedBannerSchema = createInsertSchema(uploadedBanners).omit({
+  id: true,
+  createdAt: true,
+});
 
+// Types for uploaded banners
+export type UploadedBanner = typeof uploadedBanners.$inferSelect;
+export type InsertUploadedBanner = z.infer<typeof insertUploadedBannerSchema>;
 
 // Sessions table for express-session with connect-pg-simple
 export const sessions = pgTable("sessions", {
