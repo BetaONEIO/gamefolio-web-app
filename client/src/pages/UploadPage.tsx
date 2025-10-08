@@ -67,16 +67,30 @@ const UploadPage = () => {
   // Content type selection
   const [contentType, setContentType] = useState<'clips' | 'reels' | 'screenshots'>('clips');
   
-  // Read the type from URL query parameter and set it on mount
+  // Read the type from URL query parameter or sessionStorage and set it on mount
   useEffect(() => {
+    // First check URL params
     const urlParams = new URLSearchParams(window.location.search);
     const typeParam = urlParams.get('type');
-    console.log('📤 UploadPage URL params:', window.location.search);
-    console.log('📤 Type parameter:', typeParam);
     
-    if (typeParam === 'clips' || typeParam === 'reels' || typeParam === 'screenshots') {
-      console.log('📤 Setting contentType to:', typeParam);
-      setContentType(typeParam);
+    // Then check sessionStorage
+    const storedType = sessionStorage.getItem('uploadContentType');
+    
+    console.log('📤 UploadPage URL params:', window.location.search);
+    console.log('📤 Type parameter from URL:', typeParam);
+    console.log('📤 Type parameter from sessionStorage:', storedType);
+    
+    // Prefer URL param, fallback to sessionStorage
+    const finalType = typeParam || storedType;
+    
+    if (finalType === 'clips' || finalType === 'reels' || finalType === 'screenshots') {
+      console.log('📤 Setting contentType to:', finalType);
+      setContentType(finalType);
+    }
+    
+    // Clear sessionStorage after using it
+    if (storedType) {
+      sessionStorage.removeItem('uploadContentType');
     }
   }, []);
   

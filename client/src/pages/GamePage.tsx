@@ -305,7 +305,8 @@ export default function GamePage() {
                 No {contentType} have been uploaded for {game.name} yet.
               </p>
               <Button onClick={() => {
-                window.location.assign(`/upload?type=${contentType}`);
+                sessionStorage.setItem('uploadContentType', contentType);
+                navigate('/upload');
               }}>
                 Upload First {contentType === 'clips' ? 'Clip' : contentType === 'reels' ? 'Reel' : 'Screenshot'}
               </Button>
