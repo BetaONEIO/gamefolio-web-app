@@ -149,12 +149,20 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
               target.src = "/placeholder-game.png";
             }}
           />
-          <div className="absolute bottom-1 right-1 bg-background/80 text-foreground px-1.5 py-0.5 text-[10px] rounded">
-            {formatDuration(
-              clip.trimEnd && clip.trimEnd > 0 
-                ? clip.trimEnd - (clip.trimStart || 0)
-                : clip.duration || 0
-            )}
+          
+          {/* Top right badges: duration and views */}
+          <div className="absolute top-2 right-2 flex items-center gap-1">
+            <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium">
+              {formatDuration(
+                clip.trimEnd && clip.trimEnd > 0 
+                  ? clip.trimEnd - (clip.trimStart || 0)
+                  : clip.duration || 0
+              )}
+            </div>
+            <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium flex items-center gap-1">
+              <Eye className="h-3 w-3" />
+              {(clip.views ?? 0) > 1000 ? `${((clip.views ?? 0) / 1000).toFixed(1)}K` : (clip.views ?? 0)}
+            </div>
           </div>
           
           {/* Bottom right badges container */}
@@ -270,11 +278,6 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
               size="sm"
               className="text-[9px]"
             />
-          </div>
-          
-          <div className="flex items-center text-[9px] text-muted-foreground">
-            <Eye className="h-2.5 w-2.5" />
-            <span className="ml-0.5">{(clip.views ?? 0).toLocaleString()}</span>
           </div>
         </CardFooter>
       </Card>
