@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -303,11 +303,9 @@ export default function GamePage() {
               <p className="text-muted-foreground mb-4">
                 No {contentType} have been uploaded for {game.name} yet.
               </p>
-              <Link href={`/upload?type=${contentType}`}>
-                <Button>
-                  Upload First {contentType === 'clips' ? 'Clip' : contentType === 'reels' ? 'Reel' : 'Screenshot'}
-                </Button>
-              </Link>
+              <Button onClick={() => window.location.href = `/upload?type=${contentType}`}>
+                Upload First {contentType === 'clips' ? 'Clip' : contentType === 'reels' ? 'Reel' : 'Screenshot'}
+              </Button>
             </div>
           )}
         </div>
