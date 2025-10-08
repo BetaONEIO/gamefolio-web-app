@@ -1691,10 +1691,9 @@ const ProfilePage = () => {
           className="w-full"
         >
           <TabsList 
-            className="border-b w-full justify-start rounded-none h-12 md:h-14 p-0 relative overflow-x-auto overflow-y-hidden flex"
+            className="w-full justify-start rounded-none h-12 md:h-14 p-0 relative overflow-x-auto overflow-y-hidden flex"
             style={{ 
-              backgroundColor: `hsl(var(--background) / 0.4)`,
-              borderBottomColor: `hsl(var(--primary) / 0.6)`
+              backgroundColor: `hsl(var(--background) / 0.4)`
             }}
           >
             <TabsTrigger 
