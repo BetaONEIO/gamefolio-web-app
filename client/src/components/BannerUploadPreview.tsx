@@ -318,8 +318,8 @@ export function BannerUploadPreview({
         </div>
 
         {/* Controls - Mobile Responsive */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
             <Button
               variant="outline"
               size="sm"
@@ -365,12 +365,12 @@ export function BannerUploadPreview({
             </Button>
           </div>
           
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row items-stretch gap-2 w-full">
             <Button
               variant="outline"
               onClick={handleCancel}
               disabled={isUploading}
-              className="flex-1 sm:flex-none"
+              className="w-full sm:w-auto sm:flex-1"
               data-testid="button-cancel-banner"
             >
               <X className="h-4 w-4 mr-2" />
@@ -379,7 +379,7 @@ export function BannerUploadPreview({
             <Button
               onClick={handleUpload}
               disabled={!selectedFile || isUploading}
-              className="flex-1 sm:flex-none"
+              className="w-full sm:w-auto sm:flex-1"
               data-testid="button-upload-banner"
             >
               {isUploading ? (
