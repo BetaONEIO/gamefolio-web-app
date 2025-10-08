@@ -189,9 +189,9 @@ export function ScreenshotCommentSection({ screenshotId }: ScreenshotCommentSect
       
       {/* Comment form */}
       {user ? (
-        <form onSubmit={handleSubmitComment} className="space-y-3 pt-3 border-t">
+        <form onSubmit={handleSubmitComment} className="mt-4 space-y-3">
           <div className="flex items-start gap-3">
-            <Avatar className="h-8 w-8 flex-shrink-0">
+            <Avatar className="h-8 w-8 hidden sm:flex flex-shrink-0">
               <AvatarImage 
                 src={user?.avatarUrl || undefined} 
                 alt={user?.username || "User"} 
@@ -200,22 +200,25 @@ export function ScreenshotCommentSection({ screenshotId }: ScreenshotCommentSect
                 {user?.username?.[0].toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 flex gap-2">
+            <div className="flex-1 space-y-2">
               <Textarea
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Add a comment..."
+                placeholder="Add a comment... Use @username to mention other users!"
                 className="min-h-[60px] resize-none text-sm"
                 data-testid="input-comment"
               />
-              <Button 
-                type="submit" 
-                size="sm"
-                disabled={!newComment.trim() || createCommentMutation.isPending}
-                data-testid="button-post-comment"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+              <div className="flex justify-end">
+                <Button 
+                  type="submit" 
+                  variant="default"
+                  size="sm"
+                  disabled={!newComment.trim() || createCommentMutation.isPending}
+                  data-testid="button-post-comment"
+                >
+                  {createCommentMutation.isPending ? "Posting..." : "Post Comment"}
+                </Button>
+              </div>
             </div>
           </div>
         </form>
