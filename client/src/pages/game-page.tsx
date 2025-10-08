@@ -169,11 +169,11 @@ const GamePage = () => {
 
       {/* Game Info */}
       <div className="flex items-center gap-6 mb-8">
-        <div className={isMobile ? "w-28 h-28 rounded-lg overflow-hidden bg-card/50 backdrop-blur-sm border border-border/50" : "w-24 h-32 rounded-lg overflow-hidden bg-card/50 backdrop-blur-sm border border-border/50"}>
+        <div className={isMobile ? "w-36 h-36 rounded-lg overflow-hidden bg-card/50 backdrop-blur-sm border border-border/50" : "w-24 h-32 rounded-lg overflow-hidden bg-card/50 backdrop-blur-sm border border-border/50"}>
           <img
             src={game.imageUrl || `https://placehold.co/240x320/222/444?text=${encodeURIComponent(game.name)}`}
             alt={game.name}
-            className="w-full h-full object-cover"
+            className={isMobile ? "w-full h-full object-contain" : "w-full h-full object-cover"}
           />
         </div>
         <div>
