@@ -184,45 +184,6 @@ export const GameLoader = ({
               />
             </motion.div>
 
-            {/* Loading Text */}
-            <div className="text-center space-y-2">
-              <AnimatePresence mode="wait">
-                <motion.p
-                  key={loadingText || loadingMessages[variant][currentMessage]}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className={cn(
-                    "font-medium text-foreground",
-                    config.text
-                  )}
-                >
-                  {loadingText || loadingMessages[variant][currentMessage]}
-                </motion.p>
-              </AnimatePresence>
-
-              {/* Animated Dots */}
-              <div className="flex space-x-1 justify-center">
-                {[...Array(3)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    className={cn(
-                      "bg-primary rounded-full",
-                      config.dots
-                    )}
-                    animate={{
-                      scale: [1, 1.5, 1],
-                      opacity: [0.7, 1, 0.7],
-                    }}
-                    transition={{
-                      duration: 1,
-                      repeat: Infinity,
-                      delay: i * 0.2,
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
 
             {/* Progress Bar for Upload/Processing */}
             {(variant === "upload" || variant === "processing") && (
