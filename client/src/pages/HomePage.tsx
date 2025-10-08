@@ -15,6 +15,8 @@ import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
 import { useLocation, Link } from "wouter";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
+import { useClipDialog } from "@/hooks/use-clip-dialog";
+import { useMobile } from "@/hooks/use-mobile";
 
 // Popular games for filtering by name instead of using IDs
 const POPULAR_GAMES = [
@@ -41,6 +43,14 @@ const HomePage = () => {
   // Get current user from auth context
   const { user } = useAuth();
   const userId = user?.id;
+  const { openClipDialog } = useClipDialog();
+  const isMobile = useMobile();
+
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    return num.toString();
+  };
 
   // Aggressively clear all old game cache
   useEffect(() => {
@@ -403,29 +413,166 @@ const HomePage = () => {
 
           {/* Reels Tab Content */}
           <TabsContent value="reels" className="space-y-6" data-content-tab="reels">
-            <div className="overflow-x-auto pb-2 -mx-4 px-4" ref={reelsContainerRef} style={{ scrollbarWidth: 'thin' }}>
-              <div className="flex gap-4" style={{ minWidth: "100%", width: "max-content" }}>
-              {isLoadingClips ? (
-                Array(5).fill(0).map((_, i) => (
-                  <div key={`reels-skeleton-${i}`} className="aspect-[9/16] rounded-lg overflow-hidden flex-shrink-0 w-56">
-                    <Skeleton className="w-full h-full" />
+            {isLoadingClips ? (
+              <div className={isMobile ? "columns-2 gap-1" : "grid grid-cols-4 gap-4"}>
+                {Array(8).fill(0).map((_, i) => (
+                  <div key={`reels-skeleton-${i}`} className={isMobile ? "break-inside-avoid mb-1 aspect-[9/16]" : "aspect-[9/16]"}>
+                    <Skeleton className="w-full h-full rounded-xl" />
                   </div>
-                ))
-              ) : (
-                latestClips?.filter(clip => clip.videoType === 'reel')?.slice(0, 5).map((clip: ClipWithUser) => (
-                  <div key={`reel-${clip.id}`} className="flex-shrink-0 w-56">
-                    <VideoClipGridItem 
-                      clip={clip}
-                      userId={userId}
-                      compact={true}
-                      reelsList={latestClips?.filter(c => c.videoType === 'reel')}
-                    />
-                  </div>
-                ))
-              )}
+                ))}
               </div>
-            </div>
-            {(!latestClips || latestClips.filter(clip => clip.videoType === 'reel').length === 0) && !isLoadingClips && (
+            ) : latestClips?.filter(clip => clip.videoType === 'reel').length > 0 ? (
+              isMobile ? (
+                // Mobile: Masonry grid with 2 columns
+                <div className="columns-2 gap-1">
+                  {latestClips.filter(clip => clip.videoType === 'reel').map((reel, index) => {
+                    const aspectRatios = ['aspect-[9/14]', 'aspect-[9/16]', 'aspect-[9/18]'];
+                    const aspectRatio = aspectRatios[index % aspectRatios.length];
+
+                    return (
+                      <div 
+                        key={`reel-${reel.id}`}
+                        onClick={() => openClipDialog(reel.id, latestClips.filter(c => c.videoType === 'reel'))}
+                        className="break-inside-avoid mb-1"
+                      >
+                        <div className={`relative ${aspectRatio} w-full rounded-sm overflow-hidden cursor-pointer group`}>
+                          {/* Thumbnail */}
+                          <img
+                            src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
+                            alt={reel.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = "/placeholder-game.png";
+                            }}
+                          />
+                          
+                          {/* Subtle gradient overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+                          
+                          {/* Username - top left */}
+                          <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                            <div className="w-6 h-6 rounded-full overflow-hidden border border-white/50">
+                              <img
+                                src={reel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                                alt={reel.user.displayName}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <span className="text-white text-xs font-medium drop-shadow-lg">
+                              {reel.user.displayName || reel.user.username}
+                            </span>
+                          </div>
+                          
+                          {/* View count and game - bottom left */}
+                          <div className="absolute bottom-2 left-2 flex items-center gap-2 text-white text-xs font-medium drop-shadow-lg">
+                            <div className="flex items-center gap-1">
+                              <Eye className="h-4 w-4" />
+                              <span>{formatNumber(reel.views || 0)}</span>
+                            </div>
+                            {reel.game && (
+                              <div className="bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full">
+                                {reel.game.name}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Title overlay - some reels show title */}
+                          {index % 3 === 0 && (
+                            <div className="absolute bottom-8 left-2 right-2">
+                              <p className="text-white text-sm font-medium line-clamp-2 drop-shadow-lg">
+                                {reel.title}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                // Desktop: Grid with 4 columns
+                <div className="grid grid-cols-4 gap-4 w-full">
+                  {latestClips.filter(clip => clip.videoType === 'reel').map((reel) => (
+                    <div 
+                      key={`reel-${reel.id}`}
+                      onClick={() => openClipDialog(reel.id, latestClips.filter(c => c.videoType === 'reel'))}
+                      className="group relative bg-black rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
+                    >
+                      {/* Thumbnail/Video */}
+                      <div className="relative w-full h-full">
+                        <img
+                          src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
+                          alt={reel.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = "/placeholder-game.png";
+                          }}
+                        />
+
+                        {/* Gradient overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+
+                        {/* Play button overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <div className="bg-white/20 backdrop-blur-sm rounded-full p-4">
+                            <svg className="w-8 h-8 text-white fill-white" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z"/>
+                            </svg>
+                          </div>
+                        </div>
+
+                        {/* Content overlay */}
+                        <div className="absolute bottom-0 left-0 right-0 p-4">
+                          {/* User info */}
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/50">
+                              <img
+                                src={reel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                                alt={reel.user.displayName}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <span className="text-white text-sm font-medium">
+                              {reel.user.displayName || reel.user.username}
+                            </span>
+                          </div>
+
+                          {/* Title */}
+                          <h3 className="text-white font-semibold text-sm mb-2 line-clamp-2 leading-tight">
+                            {reel.title}
+                          </h3>
+
+                          {/* Stats and game */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 text-white/80 text-xs">
+                              <span className="flex items-center gap-1">
+                                <Eye className="h-3 w-3" />
+                                {formatNumber(reel.views || 0)}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                ♥ {formatNumber(parseInt(reel._count?.likes?.toString() || '0'))}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                💬 {formatNumber(parseInt(reel._count?.comments?.toString() || '0'))}
+                              </span>
+                            </div>
+
+                            {/* Game badge */}
+                            {reel.game && (
+                              <div className="bg-primary/80 text-white text-xs px-2 py-1 rounded-full">
+                                {reel.game.name}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : (
               <div className="text-center py-12">
                 <Camera className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No reels yet</h3>
