@@ -382,17 +382,17 @@ const TrendingPage: React.FC = () => {
                       </span>
                     </div>
                     
-                    {/* Game badge - top right */}
-                    {reel.game && (
-                      <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-0.5 rounded-full">
-                        {reel.game.name}
+                    {/* View count and game - bottom left */}
+                    <div className="absolute bottom-2 left-2 flex items-center gap-2 text-white text-xs font-medium drop-shadow-lg">
+                      <div className="flex items-center gap-1">
+                        <Eye className="h-4 w-4" />
+                        <span>{formatNumber(reel.views || 0)}</span>
                       </div>
-                    )}
-                    
-                    {/* View count - bottom left */}
-                    <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white text-sm font-medium drop-shadow-lg">
-                      <Eye className="h-4 w-4" />
-                      <span>{formatNumber(reel.views || 0)}</span>
+                      {reel.game && (
+                        <div className="bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full">
+                          {reel.game.name}
+                        </div>
+                      )}
                     </div>
                     
                     {/* Title overlay - some reels show title */}
