@@ -105,3 +105,42 @@ export function useLikeScreenshot() {
     },
   });
 }
+
+export function useScreenshotComments(screenshotId: string | number) {
+  return useQuery<CommentWithUser[]>({
+    queryKey: [`/api/screenshots/${screenshotId}/comments`],
+    enabled: !!screenshotId,
+  });
+}
+
+export function useCreateScreenshotComment() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: { screenshotId: number; text: string }) => {
+      const response = await apiRequest("POST", `/api/screenshots/${data.screenshotId}/comments`, {
+        content: data.text,
+      });
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/screenshots/${variables.screenshotId}/comments`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/screenshots/${variables.screenshotId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/trending/screenshots'] });
+    },
+  });
+}
+
+export function useDeleteScreenshotComment() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: { screenshotId: number; commentId: number }) => {
+      await apiRequest("DELETE", `/api/screenshot-comments/${data.commentId}`);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/screenshots/${variables.screenshotId}/comments`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/screenshots/${variables.screenshotId}`] });
+    },
+  });
+}

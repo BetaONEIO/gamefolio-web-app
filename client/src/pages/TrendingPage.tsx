@@ -25,6 +25,7 @@ import { Link } from 'wouter';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { ScreenshotCard } from '@/components/screenshots/ScreenshotCard';
+import { ScreenshotCommentSection } from '@/components/screenshots/ScreenshotCommentSection';
 
 type ContentType = 'clips' | 'reels' | 'screenshots';
 type FilterType = 'likes' | 'comments';
@@ -624,12 +625,15 @@ const TrendingPage: React.FC = () => {
                   )}
                   
                   {/* Stats */}
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6">
                     <div className="flex items-center gap-1">
                       <Eye className="h-4 w-4" />
                       <span>{selectedScreenshot.views?.toLocaleString() || '0'} views</span>
                     </div>
                   </div>
+                  
+                  {/* Comments Section */}
+                  <ScreenshotCommentSection screenshotId={selectedScreenshot.id} />
                 </div>
               </div>
             </div>
