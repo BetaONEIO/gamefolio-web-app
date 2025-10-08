@@ -708,26 +708,11 @@ const ProfilePage = () => {
   const getTabPosition = (tabName: string) => {
     const tabIndex = ['clips', 'reels', 'screenshots', 'favorites'].indexOf(tabName);
     
-    // Check if mobile (simplified check for component)
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-    
-    if (isMobile) {
-      // On mobile: centered underlines (60% of tab width) centered within each 25% tab
-      const tabWidthPercent = 25;
-      const underlineWidthPercent = tabWidthPercent * 0.6; // 15% - wider for better visibility
-      const centerOffset = (tabWidthPercent - underlineWidthPercent) / 2; // 5%
-      
-      return {
-        leftPercent: tabIndex * tabWidthPercent + centerOffset,
-        widthPercent: underlineWidthPercent
-      };
-    } else {
-      // Desktop: full width underlines
-      return {
-        leftPercent: tabIndex * 25,
-        widthPercent: 25
-      };
-    }
+    // Full width underlines matching the highlighted area
+    return {
+      leftPercent: tabIndex * 25,
+      widthPercent: 25
+    };
   };
 
   const [tabPosition, setTabPosition] = useState(() => getTabPosition(activeTab));
@@ -1714,7 +1699,7 @@ const ProfilePage = () => {
           >
             {/* Animated background indicator */}
             <div 
-              className="absolute bottom-0 h-1 transition-all duration-300 ease-out z-50 profile-tab-indicator"
+              className="absolute bottom-0 h-[3px] transition-all duration-300 ease-out z-50 profile-tab-indicator"
               style={{
                 backgroundColor: `hsl(var(--primary))`,
                 boxShadow: `0 0 20px hsl(var(--primary) / 0.2)`,
