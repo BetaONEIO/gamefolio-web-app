@@ -2477,6 +2477,16 @@ const ProfilePage = () => {
                             initialCount={(selectedScreenshot as any)._count?.reactions || 0}
                             size="lg"
                           />
+
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-muted-foreground hover:text-foreground flex items-center gap-1"
+                            data-testid="button-comment"
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                            <span>{(selectedScreenshot as any)._count?.comments || 0}</span>
+                          </Button>
                         </div>
 
                         <div className="flex items-center gap-2">
