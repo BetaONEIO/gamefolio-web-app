@@ -132,14 +132,10 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         </Button>
       )}
 
-      {/* Top right section with stats - smaller for reels */}
-      <div className={`absolute top-2 ${canDelete ? 'right-12' : 'right-2'} flex items-center gap-1 ${
-        compact ? 'opacity-0 group-hover:opacity-100 transition-opacity duration-300' : ''
-      }`}>
-        {/* Duration badge - smaller for reels */}
-        <div className={`bg-black/60 backdrop-blur-sm text-white font-medium flex items-center gap-1 border border-white/10 ${
-          isReel ? 'text-[10px] px-1.5 py-0.5 rounded' : 'text-xs px-2.5 py-1 rounded-md'
-        }`}>
+      {/* Top right section with stats - matches VideoClipCard styling */}
+      <div className={`absolute top-2 ${canDelete ? 'right-12' : 'right-2'} flex items-center gap-1`}>
+        {/* Duration badge */}
+        <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium">
           {(() => {
             const actualDuration = clip.trimEnd && clip.trimEnd > 0 
               ? clip.trimEnd - (clip.trimStart || 0)
@@ -148,18 +144,11 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
           })()}
         </div>
 
-        {/* View count with icon - show only in non-compact mode, smaller for reels */}
-        {!compact && (
-          <div className={`bg-black/60 backdrop-blur-sm text-white font-medium flex items-center gap-1 border border-white/10 ${
-            isReel ? 'text-[10px] px-1.5 py-0.5 rounded' : 'text-xs px-2.5 py-1 rounded-md'
-          }`}>
-            <svg xmlns="http://www.w3.org/2000/svg" className={isReel ? 'h-2.5 w-2.5' : 'h-3 w-3'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-            {(clip.views ?? 0) > 1000 ? `${((clip.views ?? 0) / 1000).toFixed(1)}K` : (clip.views ?? 0)}
-          </div>
-        )}
+        {/* View count with icon */}
+        <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium flex items-center gap-1">
+          <Eye className="h-3 w-3" />
+          {(clip.views ?? 0) > 1000 ? `${((clip.views ?? 0) / 1000).toFixed(1)}K` : (clip.views ?? 0)}
+        </div>
       </div>
 
       {/* Bottom right badges container - smaller for reels */}
