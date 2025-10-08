@@ -712,10 +712,10 @@ const ProfilePage = () => {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     
     if (isMobile) {
-      // On mobile: narrower underlines (40% of tab width) centered within each 25% tab
+      // On mobile: centered underlines (60% of tab width) centered within each 25% tab
       const tabWidthPercent = 25;
-      const underlineWidthPercent = tabWidthPercent * 0.4; // 10%
-      const centerOffset = (tabWidthPercent - underlineWidthPercent) / 2; // 7.5%
+      const underlineWidthPercent = tabWidthPercent * 0.6; // 15% - wider for better visibility
+      const centerOffset = (tabWidthPercent - underlineWidthPercent) / 2; // 5%
       
       return {
         leftPercent: tabIndex * tabWidthPercent + centerOffset,
