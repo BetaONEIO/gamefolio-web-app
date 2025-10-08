@@ -787,23 +787,16 @@ export default function SettingsPage() {
         </Tabs>
 
         {/* Save Button */}
-        <div className="flex justify-between items-center mt-6 mb-4">
-          {hasUnsavedChanges && (
-            <div className="text-sm text-yellow-600 bg-yellow-50 px-3 py-1 rounded-md border border-yellow-200">
-              You have unsaved changes
-            </div>
-          )}
-          <div className="flex items-center gap-2 ml-auto">
-            <Button
-              onClick={handleSave}
-              disabled={updateProfileMutation.isPending || !hasUnsavedChanges}
-              className="flex items-center gap-2 text-white font-medium px-6 py-2"
-              style={{ backgroundColor: hasUnsavedChanges ? profileData.accentColor : '#6B7280' }}
-            >
-              <Save className="h-4 w-4" />
-              {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
+        <div className="flex justify-end items-center mt-6 mb-4">
+          <Button
+            onClick={handleSave}
+            disabled={updateProfileMutation.isPending || !hasUnsavedChanges}
+            className="flex items-center gap-2 text-white font-medium px-6 py-2"
+            style={{ backgroundColor: hasUnsavedChanges ? profileData.accentColor : '#6B7280' }}
+          >
+            <Save className="h-4 w-4" />
+            {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
+          </Button>
         </div>
       </div>
     </div>
