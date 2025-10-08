@@ -31,7 +31,6 @@ export function BannerUploadPreview({
   const { toast } = useToast();
 
   const handleFileSelect = useCallback((file: File) => {
-    // Validate file type
     const allowedTypes = [
       'image/jpeg',
       'image/jpg', 
@@ -48,7 +47,6 @@ export function BannerUploadPreview({
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "File too large",
@@ -62,7 +60,7 @@ export function BannerUploadPreview({
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
     setPosition({ x: 0, y: 0 });
-    setScale(1); // Will be auto-adjusted when image loads
+    setScale(1);
     setIsDragMode(true);
     setIsImageLoaded(false);
   }, [toast]);
@@ -114,7 +112,6 @@ export function BannerUploadPreview({
       const newX = startPosX + deltaX;
       const newY = startPosY + deltaY;
       
-      // Simple bounds checking - allow more freedom for positioning
       const maxX = 200;
       const maxY = 100;
       
@@ -153,20 +150,17 @@ export function BannerUploadPreview({
     
     if (imageNaturalWidth === 0) return 1;
     
-    // Calculate scale to fit image width to container width with slight overflow for better cropping
     const widthScale = containerWidth / imageNaturalWidth;
-    // Ensure minimum scale that covers the full width
-    return Math.max(widthScale * 1.1, 1); // 10% larger than exact fit for better coverage
+    return Math.max(widthScale * 1.1, 1);
   }, []);
 
   const handleImageLoad = useCallback(() => {
     setIsImageLoaded(true);
-    // Auto-scale to fit width after image loads
     setTimeout(() => {
       const autoScale = calculateFitToWidthScale();
       setScale(autoScale);
-      setPosition({ x: 0, y: 0 }); // Reset position when auto-scaling
-    }, 100); // Small delay to ensure DOM is ready
+      setPosition({ x: 0, y: 0 });
+    }, 100);
   }, [calculateFitToWidthScale]);
 
   const handleReset = useCallback(() => {
@@ -192,8 +186,6 @@ export function BannerUploadPreview({
       
       const formData = new FormData();
       formData.append('banner', selectedFile);
-      
-      // Add positioning data for server-side processing
       formData.append('positionX', position.x.toString());
       formData.append('positionY', position.y.toString());
       formData.append('scale', scale.toString());
@@ -261,6 +253,7 @@ export function BannerUploadPreview({
               variant="outline" 
               onClick={() => fileInputRef.current?.click()}
               className="mb-2"
+              data-testid="button-choose-file"
             >
               Choose File
             </Button>
@@ -324,14 +317,15 @@ export function BannerUploadPreview({
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        {/* Controls - Mobile Responsive */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="outline"
               size="sm"
               onClick={handleZoomOut}
               disabled={scale <= 0.5}
+              data-testid="button-zoom-out"
             >
               −
             </Button>
@@ -343,6 +337,7 @@ export function BannerUploadPreview({
               size="sm"
               onClick={handleZoomIn}
               disabled={scale >= 3}
+              data-testid="button-zoom-in"
             >
               +
             </Button>
@@ -351,6 +346,7 @@ export function BannerUploadPreview({
               size="sm"
               onClick={handleReset}
               title="Fit to width and reset position"
+              data-testid="button-reset"
             >
               <RotateCcw className="h-4 w-4" />
             </Button>
@@ -363,16 +359,19 @@ export function BannerUploadPreview({
               }}
               title="Auto-fit image to banner width"
               className="text-xs px-2"
+              data-testid="button-auto-fit"
             >
               Auto Fit
             </Button>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button
               variant="outline"
               onClick={handleCancel}
               disabled={isUploading}
+              className="flex-1 sm:flex-none"
+              data-testid="button-cancel-banner"
             >
               <X className="h-4 w-4 mr-2" />
               Cancel
@@ -380,6 +379,8 @@ export function BannerUploadPreview({
             <Button
               onClick={handleUpload}
               disabled={!selectedFile || isUploading}
+              className="flex-1 sm:flex-none"
+              data-testid="button-upload-banner"
             >
               {isUploading ? (
                 <>

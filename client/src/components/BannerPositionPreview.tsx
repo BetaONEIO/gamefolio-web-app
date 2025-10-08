@@ -173,14 +173,15 @@ export function BannerPositionPreview({
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        {/* Controls - Mobile Responsive */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="outline"
               size="sm"
               onClick={handleZoomOut}
               disabled={scale <= 0.5}
+              data-testid="button-zoom-out"
             >
               −
             </Button>
@@ -192,6 +193,7 @@ export function BannerPositionPreview({
               size="sm"
               onClick={handleZoomIn}
               disabled={scale >= 3}
+              data-testid="button-zoom-in"
             >
               +
             </Button>
@@ -200,6 +202,7 @@ export function BannerPositionPreview({
               size="sm"
               onClick={handleReset}
               title="Fit to width and reset position"
+              data-testid="button-reset-position"
             >
               <RotateCcw className="h-4 w-4" />
             </Button>
@@ -212,21 +215,26 @@ export function BannerPositionPreview({
               }}
               title="Auto-fit image to banner width"
               className="text-xs px-2"
+              data-testid="button-auto-fit-position"
             >
               Auto Fit
             </Button>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button
               variant="outline"
               onClick={handleCancel}
+              className="flex-1 sm:flex-none"
+              data-testid="button-cancel-position"
             >
               <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>
             <Button
               onClick={handleApply}
+              className="flex-1 sm:flex-none"
+              data-testid="button-apply-position"
             >
               Apply Position
             </Button>
