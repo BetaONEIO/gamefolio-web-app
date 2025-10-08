@@ -366,7 +366,28 @@ const TrendingPage: React.FC = () => {
                     />
                     
                     {/* Subtle gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+                    
+                    {/* Username - top left */}
+                    <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                      <div className="w-6 h-6 rounded-full overflow-hidden border border-white/50">
+                        <img
+                          src={reel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                          alt={reel.user.displayName}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <span className="text-white text-xs font-medium drop-shadow-lg">
+                        {reel.user.displayName || reel.user.username}
+                      </span>
+                    </div>
+                    
+                    {/* Game badge - top right */}
+                    {reel.game && (
+                      <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-0.5 rounded-full">
+                        {reel.game.name}
+                      </div>
+                    )}
                     
                     {/* View count - bottom left */}
                     <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white text-sm font-medium drop-shadow-lg">
