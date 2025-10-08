@@ -12,10 +12,12 @@ import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Game, ClipWithUser } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
+import { useMobile } from "@/hooks/use-mobile";
 
 export default function GamePage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const isMobile = useMobile();
   const [timePeriod, setTimePeriod] = useState<'day' | 'week' | 'month'>('day');
   const [contentType, setContentType] = useState<'clips' | 'reels' | 'screenshots'>('clips');
   
@@ -95,6 +97,14 @@ export default function GamePage() {
   };
 
   const getPeriodLabel = (period: string) => {
+    if (isMobile) {
+      switch (period) {
+        case 'day': return '1D';
+        case 'week': return '1W';
+        case 'month': return '1M';
+        default: return '1D';
+      }
+    }
     switch (period) {
       case 'day': return 'Today';
       case 'week': return 'This Week';
@@ -170,10 +180,10 @@ export default function GamePage() {
             <img
               src={game.imageUrl || "/placeholder-game.png"}
               alt={game.name}
-              className="h-16 w-16 rounded-lg object-cover"
+              className={isMobile ? "h-24 w-24 rounded-lg object-cover" : "h-16 w-16 rounded-lg object-cover"}
             />
             <div>
-              <h1 className="text-3xl font-bold">{game.name}</h1>
+              <h1 className={isMobile ? "text-xl font-bold" : "text-3xl font-bold"}>{game.name}</h1>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Users className="h-4 w-4" />
                 <span>{displayData?.length || 0} clips</span>
@@ -193,9 +203,9 @@ export default function GamePage() {
                 variant={timePeriod === period ? "default" : "outline"}
                 size="sm"
                 onClick={() => setTimePeriod(period)}
-                className="flex items-center gap-2"
+                className={isMobile ? "flex items-center gap-1" : "flex items-center gap-2"}
               >
-                {getPeriodIcon(period)}
+                {!isMobile && getPeriodIcon(period)}
                 {getPeriodLabel(period)}
               </Button>
             ))}
