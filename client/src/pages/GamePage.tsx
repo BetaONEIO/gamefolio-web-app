@@ -185,18 +185,20 @@ export default function GamePage() {
         {/* Controls */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           {/* Time Period Filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Time Period:</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium whitespace-nowrap">Time Period:</span>
             {(['day', 'week', 'month'] as const).map((period) => (
               <Button
                 key={period}
                 variant={timePeriod === period ? "default" : "outline"}
                 size="sm"
                 onClick={() => setTimePeriod(period)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-1 md:gap-2"
+                data-testid={`filter-period-${period}`}
               >
                 {getPeriodIcon(period)}
-                {getPeriodLabel(period)}
+                <span className="hidden md:inline">{getPeriodLabel(period)}</span>
+                <span className="md:hidden text-xs">{period === 'day' ? 'Today' : period === 'week' ? 'Week' : 'Month'}</span>
               </Button>
             ))}
           </div>
