@@ -27,6 +27,7 @@ import {
   ContentFilterSettings, InsertContentFilterSettings,
   BannedWord, InsertBannedWord,
   BannerSettings, InsertBannerSettings,
+  UploadedBanner, InsertUploadedBanner,
   HeroTextSettings, InsertHeroTextSettings,
   ClipMention, InsertClipMention,
   CommentMention, InsertCommentMention,
@@ -70,6 +71,7 @@ import {
   bannedWords,
   heroTextSettings,
   bannerSettings,
+  uploadedBanners,
   clipMentions,
   commentMentions,
   screenshotCommentMentions
