@@ -105,7 +105,16 @@ const UploadedBannersSection: React.FC<{
   }
 
   if (!uploadedBanners || uploadedBanners.length === 0) {
-    return null;
+    return (
+      <div className="mt-4">
+        <h4 className="text-sm font-medium mb-2">Your Uploaded Banners</h4>
+        <div className="p-4 bg-muted/50 rounded-lg border text-center">
+          <p className="text-sm text-muted-foreground">
+            No custom banners uploaded yet. Upload a banner above to see it here in your history.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const activeBanner = uploadedBanners.find(b => b.isActive);
