@@ -609,7 +609,7 @@ const TrendingPage: React.FC = () => {
                 </div>
 
                 {/* Screenshot Details */}
-                <div className="flex-1 p-4 pb-6 lg:pb-4 overflow-y-auto">
+                <div className="flex-1 p-4 pb-8 lg:pb-4 overflow-y-auto">
                   <h3 className="font-semibold text-lg mb-2">{selectedScreenshot.title}</h3>
                   {selectedScreenshot.description && (
                     <p className="text-muted-foreground text-sm mb-4">{selectedScreenshot.description}</p>
@@ -624,16 +624,34 @@ const TrendingPage: React.FC = () => {
                     </div>
                   )}
                   
-                  {/* Stats */}
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6">
-                    <div className="flex items-center gap-1">
+                  {/* Stats and Engagement */}
+                  <div className="flex items-center gap-4 mb-6 border-b pb-4">
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <Eye className="h-4 w-4" />
-                      <span>{selectedScreenshot.views?.toLocaleString() || '0'} views</span>
+                      <span>{selectedScreenshot.views?.toLocaleString() || '0'}</span>
+                    </div>
+                    <LikeButton
+                      contentId={selectedScreenshot.id}
+                      contentType="screenshot"
+                      contentOwnerId={selectedScreenshot.userId}
+                      initialLiked={false}
+                      initialCount={selectedScreenshot._count?.likes || 0}
+                    />
+                    <FireButton
+                      contentId={selectedScreenshot.id}
+                      contentType="screenshot"
+                      contentOwnerId={selectedScreenshot.userId}
+                      initialFired={false}
+                      initialCount={selectedScreenshot._count?.reactions || 0}
+                    />
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <MessageSquare className="h-4 w-4" />
+                      <span>{selectedScreenshot._count?.comments || 0}</span>
                     </div>
                   </div>
                   
                   {/* Comments Section */}
-                  <div className="mb-4">
+                  <div className="mb-6">
                     <ScreenshotCommentSection screenshotId={selectedScreenshot.id} />
                   </div>
                 </div>
