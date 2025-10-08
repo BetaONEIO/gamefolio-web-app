@@ -223,7 +223,7 @@ const MobileMenu = () => {
           <div className="p-4 border-t border-border">
             {user ? (
               <Button 
-                variant="destructive" 
+                variant="default" 
                 className="w-full" 
                 onClick={handleLogout}
               >
