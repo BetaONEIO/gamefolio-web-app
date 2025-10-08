@@ -12,11 +12,13 @@ import { formatDuration } from "@/lib/constants";
 import VideoClipCard from "@/components/clips/VideoClipCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
+import { useMobile } from "@/hooks/use-mobile";
 
 const GamePage = () => {
   const [, navigate] = useLocation();
   const [match, params] = useRoute("/games/:gameSlug");
   const gameSlug = params?.gameSlug;
+  const isMobile = useMobile();
   const [timePeriod, setTimePeriod] = useState<'day' | 'week' | 'month'>('day');
   const [contentType, setContentType] = useState<'clips' | 'reels' | 'screenshots'>('clips');
   const { user } = useAuth();
@@ -95,6 +97,13 @@ const GamePage = () => {
   };
 
   const getPeriodLabel = (period: 'day' | 'week' | 'month') => {
+    if (isMobile) {
+      switch (period) {
+        case 'day': return '1D';
+        case 'week': return '1W';
+        case 'month': return '1M';
+      }
+    }
     switch (period) {
       case 'day': return 'Today';
       case 'week': return 'This Week';
@@ -160,7 +169,7 @@ const GamePage = () => {
 
       {/* Game Info */}
       <div className="flex items-center gap-6 mb-8">
-        <div className="w-24 h-32 rounded-lg overflow-hidden bg-card/50 backdrop-blur-sm border border-border/50">
+        <div className={isMobile ? "w-20 h-20 rounded-lg overflow-hidden bg-card/50 backdrop-blur-sm border border-border/50" : "w-24 h-32 rounded-lg overflow-hidden bg-card/50 backdrop-blur-sm border border-border/50"}>
           <img
             src={game.imageUrl || `https://placehold.co/240x320/222/444?text=${encodeURIComponent(game.name)}`}
             alt={game.name}
@@ -168,7 +177,7 @@ const GamePage = () => {
           />
         </div>
         <div>
-          <h1 className="text-3xl font-bold mb-2">{game.name}</h1>
+          <h1 className={isMobile ? "text-xl font-bold mb-2" : "text-3xl font-bold mb-2"}>{game.name}</h1>
           <p className="text-muted-foreground mb-4">
             Browse clips from the {game.name} community
           </p>
@@ -191,9 +200,9 @@ const GamePage = () => {
               variant={timePeriod === period ? "default" : "outline"}
               size="sm"
               onClick={() => setTimePeriod(period)}
-              className="flex items-center gap-2"
+              className={isMobile ? "flex items-center gap-1" : "flex items-center gap-2"}
             >
-              {getPeriodIcon(period)}
+              {!isMobile && getPeriodIcon(period)}
               {getPeriodLabel(period)}
             </Button>
           ))}
