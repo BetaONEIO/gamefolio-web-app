@@ -1700,10 +1700,11 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={clipsTabRef}
               value="clips" 
-              className="relative rounded-none h-12 md:h-14 font-medium transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6"
+              className={`relative rounded-none h-12 md:h-14 transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6 border ${activeTab === 'clips' ? 'font-bold' : 'font-medium'}`}
               style={{ 
-                color: activeTab === 'clips' ? 'hsl(var(--primary))' : '#9CA3AF',
-                backgroundColor: 'transparent',
+                color: activeTab === 'clips' ? '#FFFFFF' : '#9CA3AF',
+                backgroundColor: activeTab === 'clips' ? 'hsl(var(--primary) / 0.1)' : 'transparent',
+                borderColor: activeTab === 'clips' ? 'hsl(var(--primary))' : 'transparent',
               }}
             >
               <span className="relative z-10">Clips</span>
@@ -1720,10 +1721,11 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={reelsTabRef}
               value="reels" 
-              className="relative rounded-none h-12 md:h-14 font-medium transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6"
+              className={`relative rounded-none h-12 md:h-14 transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6 border ${activeTab === 'reels' ? 'font-bold' : 'font-medium'}`}
               style={{ 
-                color: activeTab === 'reels' ? 'hsl(var(--primary))' : '#9CA3AF',
+                color: activeTab === 'reels' ? '#FFFFFF' : '#9CA3AF',
                 backgroundColor: activeTab === 'reels' ? 'hsl(var(--primary) / 0.1)' : 'transparent',
+                borderColor: activeTab === 'reels' ? 'hsl(var(--primary))' : 'transparent',
               }}
             >
               <span className="relative z-10">Reels</span>
@@ -1740,10 +1742,11 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={screenshotsTabRef}
               value="screenshots" 
-              className="relative rounded-none h-12 md:h-14 font-medium transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6 text-xs md:text-base"
+              className={`relative rounded-none h-12 md:h-14 transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6 text-xs md:text-base border ${activeTab === 'screenshots' ? 'font-bold' : 'font-medium'}`}
               style={{ 
-                color: activeTab === 'screenshots' ? 'hsl(var(--primary))' : '#9CA3AF',
+                color: activeTab === 'screenshots' ? '#FFFFFF' : '#9CA3AF',
                 backgroundColor: activeTab === 'screenshots' ? 'hsl(var(--primary) / 0.1)' : 'transparent',
+                borderColor: activeTab === 'screenshots' ? 'hsl(var(--primary))' : 'transparent',
               }}
             >
               <span className="relative z-10">Screenshots</span>
@@ -1760,10 +1763,11 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={favoritesTabRef}
               value="favorites" 
-              className="relative rounded-none h-12 md:h-14 font-medium transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6"
+              className={`relative rounded-none h-12 md:h-14 transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6 border ${activeTab === 'favorites' ? 'font-bold' : 'font-medium'}`}
               style={{ 
-                color: activeTab === 'favorites' ? 'hsl(var(--primary))' : '#9CA3AF',
+                color: activeTab === 'favorites' ? '#FFFFFF' : '#9CA3AF',
                 backgroundColor: activeTab === 'favorites' ? 'hsl(var(--primary) / 0.1)' : 'transparent',
+                borderColor: activeTab === 'favorites' ? 'hsl(var(--primary))' : 'transparent',
               }}
             >
               <span className="relative z-10">Favorites</span>
