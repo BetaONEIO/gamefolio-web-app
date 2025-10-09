@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog";
 import { CloudUpload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -7,21 +7,78 @@ interface XPGainedDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   xpGained: number;
+  currentXP: number;
+  currentLevel: number;
   onContinue?: () => void;
 }
 
-export function XPGainedDialog({ open, onOpenChange, xpGained, onContinue }: XPGainedDialogProps) {
+// Level thresholds matching server/level-system.ts
+const LEVEL_THRESHOLDS: { [level: number]: number } = {
+  1: 0,
+  2: 100,
+  3: 500,
+  4: 1000,
+  5: 2000,
+  6: 3500,
+  7: 5500,
+  8: 8000,
+  9: 11000,
+  10: 15000,
+  11: 20000,
+  12: 26000,
+  13: 33000,
+  14: 41000,
+  15: 50000,
+};
+
+function getPointsForNextLevel(currentLevel: number): number {
+  if (currentLevel >= 50) {
+    return 995000 + (currentLevel - 49) * 50000;
+  }
+  return LEVEL_THRESHOLDS[currentLevel + 1] || 15000;
+}
+
+function calculateProgress(currentXP: number, xpGained: number, currentLevel: number) {
+  const pointsForCurrentLevel = LEVEL_THRESHOLDS[currentLevel] || 0;
+  const pointsForNextLevel = getPointsForNextLevel(currentLevel);
+  const pointsNeededForLevel = pointsForNextLevel - pointsForCurrentLevel;
+  
+  // Calculate old progress (before XP gain)
+  const oldPointsIntoLevel = currentXP - pointsForCurrentLevel;
+  const oldProgress = (oldPointsIntoLevel / pointsNeededForLevel) * 100;
+  
+  // Calculate new progress (after XP gain)
+  const newPointsIntoLevel = (currentXP + xpGained) - pointsForCurrentLevel;
+  const newProgress = Math.min(100, (newPointsIntoLevel / pointsNeededForLevel) * 100);
+  
+  return { oldProgress, newProgress };
+}
+
+export function XPGainedDialog({ 
+  open, 
+  onOpenChange, 
+  xpGained, 
+  currentXP, 
+  currentLevel,
+  onContinue 
+}: XPGainedDialogProps) {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     if (open) {
-      setProgress(0);
+      const { oldProgress, newProgress } = calculateProgress(currentXP, xpGained, currentLevel);
+      
+      // Start from old progress
+      setProgress(oldProgress);
+      
+      // Animate to new progress
       const timer = setTimeout(() => {
-        setProgress(100);
+        setProgress(newProgress);
       }, 100);
+      
       return () => clearTimeout(timer);
     }
-  }, [open]);
+  }, [open, currentXP, xpGained, currentLevel]);
 
   const handleContinue = () => {
     onOpenChange(false);
@@ -32,8 +89,9 @@ export function XPGainedDialog({ open, onOpenChange, xpGained, onContinue }: XPG
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogOverlay className="bg-black/80 backdrop-blur-sm" />
       <DialogContent 
-        className="sm:max-w-md border-none bg-gradient-to-br from-green-950 to-green-900 p-12"
+        className="sm:max-w-md border-none bg-black/40 backdrop-blur-md p-12"
       >
         <div className="flex flex-col items-center justify-center space-y-6">
           {/* Circular progress ring */}

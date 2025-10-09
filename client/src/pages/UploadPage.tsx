@@ -1967,6 +1967,8 @@ const UploadPage = () => {
         open={xpDialogOpen}
         onOpenChange={setXpDialogOpen}
         xpGained={xpGained}
+        currentXP={user?.totalXP || 0}
+        currentLevel={user?.level || 1}
         onContinue={() => {
           // Navigate after XP dialog closes
           if (uploadSuccessData) {
