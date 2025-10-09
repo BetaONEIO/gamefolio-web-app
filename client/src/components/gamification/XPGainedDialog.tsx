@@ -91,7 +91,13 @@ export function XPGainedDialog({
     <Dialog open={open} onOpenChange={() => {}}>
       <DialogOverlay className="bg-black/80 backdrop-blur-sm" />
       <DialogContent 
-        className="sm:max-w-md !border-none !bg-transparent p-12 !shadow-none [&>button]:hidden"
+        className="sm:max-w-md !border-none p-12 !shadow-none [&>button]:hidden"
+        style={{ 
+          background: 'transparent',
+          backgroundColor: 'transparent',
+          border: 'none',
+          boxShadow: 'none'
+        }}
       >
         <div className="flex flex-col items-center justify-center space-y-6">
           {/* Circular progress ring */}
