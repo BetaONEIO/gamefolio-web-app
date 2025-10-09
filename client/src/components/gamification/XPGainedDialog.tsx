@@ -43,13 +43,16 @@ function calculateProgress(currentXP: number, xpGained: number, currentLevel: nu
   const pointsForNextLevel = getPointsForNextLevel(currentLevel);
   const pointsNeededForLevel = pointsForNextLevel - pointsForCurrentLevel;
   
+  // currentXP might already include the new XP, so calculate the old XP
+  const oldXP = currentXP - xpGained;
+  
   // Calculate old progress (before XP gain)
-  const oldPointsIntoLevel = currentXP - pointsForCurrentLevel;
-  const oldProgress = (oldPointsIntoLevel / pointsNeededForLevel) * 100;
+  const oldPointsIntoLevel = oldXP - pointsForCurrentLevel;
+  const oldProgress = Math.max(0, (oldPointsIntoLevel / pointsNeededForLevel) * 100);
   
   // Calculate new progress (after XP gain)
-  const newPointsIntoLevel = (currentXP + xpGained) - pointsForCurrentLevel;
-  const newProgress = Math.min(100, (newPointsIntoLevel / pointsNeededForLevel) * 100);
+  const newPointsIntoLevel = currentXP - pointsForCurrentLevel;
+  const newProgress = Math.min(100, Math.max(0, (newPointsIntoLevel / pointsNeededForLevel) * 100));
   
   return { oldProgress, newProgress };
 }
