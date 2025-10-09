@@ -364,13 +364,16 @@ const UploadPage = () => {
       
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       console.log('Screenshot upload success data:', data);
       
       // Invalidate all relevant queries to ensure the new screenshot appears everywhere
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/screenshots`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/screenshots`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
+      
+      // Refetch user data to get updated XP and level BEFORE opening dialog
+      await queryClient.refetchQueries({ queryKey: ['/api/user'] });
       
       // Reset form first
       resetScreenshotForm();
@@ -511,11 +514,14 @@ const UploadPage = () => {
         }
       });
     },
-    onSuccess: (data: any) => {
+    onSuccess: async (data: any) => {
       // Invalidate all relevant queries to ensure the new clip appears everywhere
       queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/clips`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
+      
+      // Refetch user data to get updated XP and level BEFORE opening dialog
+      await queryClient.refetchQueries({ queryKey: ['/api/user'] });
       
       setIsUploading(false);
       setUploadProgress(0);
