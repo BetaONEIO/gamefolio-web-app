@@ -126,6 +126,8 @@ const UploadPage = () => {
   // XP Dialog state
   const [xpDialogOpen, setXpDialogOpen] = useState(false);
   const [xpGained, setXpGained] = useState(0);
+  const [userXP, setUserXP] = useState(0);
+  const [userLevel, setUserLevel] = useState(1);
   const [uploadSuccessData, setUploadSuccessData] = useState<any>(null);
   
   // Video editing state
@@ -372,9 +374,6 @@ const UploadPage = () => {
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/screenshots`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
       
-      // Refetch user data to get updated XP and level BEFORE opening dialog
-      await queryClient.refetchQueries({ queryKey: ['/api/user'] });
-      
       // Reset form first
       resetScreenshotForm();
       
@@ -384,6 +383,13 @@ const UploadPage = () => {
         id: data.screenshot?.id
       });
       setXpGained(data.xpGained || 5);
+      setUserXP(data.userXP || 0);
+      setUserLevel(data.userLevel || 1);
+      
+      // Refetch user data for UI updates
+      queryClient.refetchQueries({ queryKey: ['/api/user'] });
+      
+      // Open dialog with updated XP data from backend
       setXpDialogOpen(true);
     },
     onError: (error: Error) => {
@@ -520,9 +526,6 @@ const UploadPage = () => {
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/clips`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
       
-      // Refetch user data to get updated XP and level BEFORE opening dialog
-      await queryClient.refetchQueries({ queryKey: ['/api/user'] });
-      
       setIsUploading(false);
       setUploadProgress(0);
       
@@ -538,6 +541,13 @@ const UploadPage = () => {
         id: contentId
       });
       setXpGained(data.xpGained || 5);
+      setUserXP(data.clip?.userXP || data.userXP || 0);
+      setUserLevel(data.clip?.userLevel || data.userLevel || 1);
+      
+      // Refetch user data for UI updates
+      queryClient.refetchQueries({ queryKey: ['/api/user'] });
+      
+      // Open dialog with updated XP data from backend
       setXpDialogOpen(true);
     },
     onError: (error: Error) => {
@@ -1986,8 +1996,8 @@ const UploadPage = () => {
         open={xpDialogOpen}
         onOpenChange={setXpDialogOpen}
         xpGained={xpGained}
-        currentXP={user?.totalXP || 0}
-        currentLevel={user?.level || 1}
+        currentXP={userXP}
+        currentLevel={userLevel}
         onContinue={() => {
           // Navigate after XP dialog closes
           if (uploadSuccessData) {

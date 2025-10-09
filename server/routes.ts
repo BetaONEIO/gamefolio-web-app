@@ -3410,6 +3410,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'upload',
         `Upload: ${clipData.videoType === 'reel' ? 'Reel' : 'Clip'} - ${title}`
       );
+      
+      // Get updated user data to return current XP and level
+      const updatedUser = await storage.getUserById(userId);
 
       // Parse mentions from clip title and description and create mention records
       const titleMentions = await mentionService.parseMentions(title);
@@ -3512,12 +3515,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ...updatedClip,
               qrCode: qrCodeDataUrl,
               socialMediaLinks,
-              xpGained: 5 // Upload XP reward
+              xpGained: 5, // Upload XP reward
+              userXP: updatedUser?.totalXP || 0,
+              userLevel: updatedUser?.level || 1
             });
           } catch (qrError) {
             console.error('Error generating QR code or social links:', qrError);
             // Return without QR code if generation fails
-            res.status(201).json({ ...updatedClip, xpGained: 5 });
+            res.status(201).json({ 
+              ...updatedClip, 
+              xpGained: 5,
+              userXP: updatedUser?.totalXP || 0,
+              userLevel: updatedUser?.level || 1
+            });
           }
         } else {
           // No custom thumbnail - use auto-generated one with multiple options
@@ -3553,7 +3563,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               qrCode: qrCodeDataUrl,
               socialMediaLinks,
               thumbnailOptions: thumbnailOptions || [],
-              xpGained: 5 // Upload XP reward
+              xpGained: 5, // Upload XP reward
+              userXP: updatedUser?.totalXP || 0,
+              userLevel: updatedUser?.level || 1
             });
           } catch (qrError) {
             console.error('Error generating QR code or social links:', qrError);
@@ -3561,7 +3573,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             res.status(201).json({
               ...updatedClip,
               thumbnailOptions: thumbnailOptions || [],
-              xpGained: 5 // Upload XP reward
+              xpGained: 5, // Upload XP reward
+              userXP: updatedUser?.totalXP || 0,
+              userLevel: updatedUser?.level || 1
             });
           }
         }
@@ -3569,7 +3583,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Error processing video:", processingError);
         console.log("Falling back to original video without processing");
         // Return the clip with original video if processing fails
-        res.status(201).json({ ...clip, xpGained: 5 });
+        res.status(201).json({ 
+          ...clip, 
+          xpGained: 5,
+          userXP: updatedUser?.totalXP || 0,
+          userLevel: updatedUser?.level || 1
+        });
       } finally {
         // Clean up temporary file
         try {
@@ -5292,6 +5311,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'upload',
         `Upload: Screenshot - ${title}`
       );
+      
+      // Get updated user data to return current XP and level
+      const updatedUser = await storage.getUserById(userId);
 
       // Clean up original unoptimized file
       await fsPromises.unlink(originalPath);
@@ -5317,7 +5339,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         qrCode: qrCodeDataUrl,
         socialMediaLinks,
         screenshotUrl,
-        xpGained: 5 // Upload XP reward
+        xpGained: 5, // Upload XP reward
+        userXP: updatedUser?.totalXP || 0,
+        userLevel: updatedUser?.level || 1
       });
 
     } catch (err) {
