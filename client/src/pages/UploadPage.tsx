@@ -193,7 +193,7 @@ const UploadPage = () => {
     setScreenshotTags([]);
     setShowScreenshotShareDialog(false);
     setUploadedScreenshot(null);
-    navigate("/");
+    // Note: Navigation is now handled in XP dialog onContinue callback
   };
 
   // Create stable video preview URL that doesn't change on re-renders
