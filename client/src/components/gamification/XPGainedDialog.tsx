@@ -142,6 +142,11 @@ export function XPGainedDialog({
             </div>
           </div>
 
+          {/* Level progression text */}
+          <div className="text-white/80 text-lg font-medium">
+            Level {currentLevel} → Level {currentLevel + 1}
+          </div>
+
           {/* Continue button */}
           <Button
             onClick={handleContinue}
