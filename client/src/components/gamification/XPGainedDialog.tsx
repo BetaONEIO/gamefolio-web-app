@@ -69,7 +69,18 @@ export function XPGainedDialog({
 
   useEffect(() => {
     if (open) {
+      console.log('XP Dialog Props:', {
+        currentXP,
+        xpGained,
+        currentLevel
+      });
+      
       const { oldProgress, newProgress } = calculateProgress(currentXP, xpGained, currentLevel);
+      
+      console.log('XP Progress:', {
+        oldProgress,
+        newProgress
+      });
       
       // Start from old progress
       setProgress(oldProgress);
