@@ -34,7 +34,6 @@ export function XPGainedDialog({ open, onOpenChange, xpGained, onContinue }: XPG
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
         className="sm:max-w-md border-none bg-gradient-to-br from-green-950 to-green-900 p-12"
-        hideClose
       >
         <div className="flex flex-col items-center justify-center space-y-6">
           {/* Circular progress ring */}

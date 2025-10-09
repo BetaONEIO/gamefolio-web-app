@@ -3511,12 +3511,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             res.status(201).json({
               ...updatedClip,
               qrCode: qrCodeDataUrl,
-              socialMediaLinks
+              socialMediaLinks,
+              xpGained: 5 // Upload XP reward
             });
           } catch (qrError) {
             console.error('Error generating QR code or social links:', qrError);
             // Return without QR code if generation fails
-            res.status(201).json(updatedClip);
+            res.status(201).json({ ...updatedClip, xpGained: 5 });
           }
         } else {
           // No custom thumbnail - use auto-generated one with multiple options
@@ -3551,14 +3552,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ...updatedClip,
               qrCode: qrCodeDataUrl,
               socialMediaLinks,
-              thumbnailOptions: thumbnailOptions || []
+              thumbnailOptions: thumbnailOptions || [],
+              xpGained: 5 // Upload XP reward
             });
           } catch (qrError) {
             console.error('Error generating QR code or social links:', qrError);
             // Return without QR code if generation fails
             res.status(201).json({
               ...updatedClip,
-              thumbnailOptions: thumbnailOptions || []
+              thumbnailOptions: thumbnailOptions || [],
+              xpGained: 5 // Upload XP reward
             });
           }
         }
@@ -3566,7 +3569,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Error processing video:", processingError);
         console.log("Falling back to original video without processing");
         // Return the clip with original video if processing fails
-        res.status(201).json(clip);
+        res.status(201).json({ ...clip, xpGained: 5 });
       } finally {
         // Clean up temporary file
         try {
@@ -5313,7 +5316,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         screenshot,
         qrCode: qrCodeDataUrl,
         socialMediaLinks,
-        screenshotUrl
+        screenshotUrl,
+        xpGained: 5 // Upload XP reward
       });
 
     } catch (err) {
