@@ -46,6 +46,7 @@ import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
 import SimpleVideoPlayer from "@/components/shared/SimpleVideoPlayer";
 import { ShareDialog } from "@/components/shared/ShareDialog";
+import { XPGainedDialog } from "@/components/gamification/XPGainedDialog";
 
 // Define filter options
 const FILTERS = [
@@ -121,6 +122,11 @@ const UploadPage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  
+  // XP Dialog state
+  const [xpDialogOpen, setXpDialogOpen] = useState(false);
+  const [xpGained, setXpGained] = useState(0);
+  const [uploadSuccessData, setUploadSuccessData] = useState<any>(null);
   
   // Video editing state
   const [showEditingTools, setShowEditingTools] = useState(false);
@@ -361,11 +367,6 @@ const UploadPage = () => {
     onSuccess: (data) => {
       console.log('Screenshot upload success data:', data);
       
-      toast({
-        title: "Success!",
-        description: "Your screenshot has been uploaded successfully.",
-      });
-      
       // Invalidate all relevant queries to ensure the new screenshot appears everywhere
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/screenshots`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/screenshots`] });
@@ -374,13 +375,13 @@ const UploadPage = () => {
       // Reset form first
       resetScreenshotForm();
       
-      // Navigate to user's profile page with uploaded screenshot highlighted
-      if (user?.username && data.screenshot?.id) {
-        navigate(`/profile/${user.username}#screenshot-${data.screenshot.id}`);
-      } else {
-        // Fallback to upload success page if we don't have user data
-        navigate(`/upload-success?type=screenshot&id=${data.screenshot.id}`);
-      }
+      // Show XP dialog with navigation data stored for later
+      setUploadSuccessData({
+        type: 'screenshot',
+        id: data.screenshot?.id
+      });
+      setXpGained(data.xpGained || 5);
+      setXpDialogOpen(true);
     },
     onError: (error: Error) => {
       toast({
@@ -511,12 +512,6 @@ const UploadPage = () => {
       });
     },
     onSuccess: (data: any) => {
-      
-      toast({
-        title: "Success!",
-        description: "Your clip has been uploaded successfully.",
-      });
-      
       // Invalidate all relevant queries to ensure the new clip appears everywhere
       queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/clips`] });
@@ -528,16 +523,16 @@ const UploadPage = () => {
       // Reset form first
       resetFormAndNavigate();
       
-      // Navigate to user's profile page with uploaded content highlighted
+      // Store upload success data for navigation after XP dialog
       const uploadedContentType = contentType === 'reels' ? 'reel' : 'clip';
       const contentId = data.clip?.id || data.id;
       
-      if (user?.username && contentId) {
-        navigate(`/profile/${user.username}#${uploadedContentType}-${contentId}`);
-      } else {
-        // Fallback to upload success page if we don't have user data
-        navigate(`/upload-success/${uploadedContentType}/${contentId}`);
-      }
+      setUploadSuccessData({
+        type: uploadedContentType,
+        id: contentId
+      });
+      setXpGained(data.xpGained || 5);
+      setXpDialogOpen(true);
     },
     onError: (error: Error) => {
       console.error('Upload mutation error:', error);
@@ -1965,6 +1960,29 @@ const UploadPage = () => {
         socialMediaLinks={uploadedScreenshot?.socialMediaLinks || {}}
         contentType="screenshot"
         previewUrl={uploadedScreenshot?.screenshotUrl || ''}
+      />
+      
+      {/* XP Gained Dialog */}
+      <XPGainedDialog
+        open={xpDialogOpen}
+        onOpenChange={setXpDialogOpen}
+        xpGained={xpGained}
+        onContinue={() => {
+          // Navigate after XP dialog closes
+          if (uploadSuccessData) {
+            if (uploadSuccessData.type === 'screenshot') {
+              if (user?.username && uploadSuccessData.id) {
+                navigate(`/profile/${user.username}#screenshot-${uploadSuccessData.id}`);
+              }
+            } else {
+              if (user?.username && uploadSuccessData.id) {
+                navigate(`/profile/${user.username}#${uploadSuccessData.type}-${uploadSuccessData.id}`);
+              }
+            }
+          }
+          // Clear success data
+          setUploadSuccessData(null);
+        }}
       />
     </div>
   );
