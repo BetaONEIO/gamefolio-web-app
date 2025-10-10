@@ -5,6 +5,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useMobile } from "@/hooks/use-mobile";
+import { formatDuration } from "@/lib/constants";
 
 export default function LatestReelsPage() {
   const { data: latestReels, isLoading } = useQuery<ClipWithUser[]>({
@@ -65,10 +66,10 @@ export default function LatestReelsPage() {
 
         {latestReels && latestReels.length > 0 ? (
           isMobile ? (
-            // Mobile: Masonry grid with 2 columns
-            <div className="columns-2 gap-1">
+            // Mobile: Instagram/TikTok style 2-column masonry grid using CSS columns
+            <div className="columns-2 gap-1 space-y-1">
               {latestReels.map((reel, index) => {
-                const aspectRatios = ['aspect-[9/14]', 'aspect-[9/16]', 'aspect-[9/18]'];
+                const aspectRatios = ['aspect-[9/16]', 'aspect-[3/4]', 'aspect-[2/3]', 'aspect-[9/14]', 'aspect-[3/5]', 'aspect-[4/5]'];
                 const aspectRatio = aspectRatios[index % aspectRatios.length];
 
                 return (
@@ -163,6 +164,16 @@ export default function LatestReelsPage() {
                           <path d="M8 5v14l11-7z"/>
                         </svg>
                       </div>
+                    </div>
+
+                    {/* Duration badge */}
+                    <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                      {(() => {
+                        const actualDuration = reel.trimEnd && reel.trimEnd > 0 
+                          ? reel.trimEnd - (reel.trimStart || 0)
+                          : reel.duration || 0;
+                        return formatDuration(actualDuration);
+                      })()}
                     </div>
 
                     {/* Content overlay */}
