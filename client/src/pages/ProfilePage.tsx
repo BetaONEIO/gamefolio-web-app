@@ -1112,22 +1112,22 @@ const ProfilePage = () => {
                 <div className="w-full h-full rounded-full bg-background"></div>
               </div>
               <div 
-                className="relative z-10 border-4 border-primary shadow-2xl cursor-pointer hover:opacity-90 transition-opacity w-32 h-32"
+                className="relative z-10 border-4 border-primary shadow-2xl cursor-pointer hover:opacity-90 transition-opacity w-32 h-32 rounded-lg overflow-hidden"
                 style={{ 
-                  borderRadius: '8px',
                   boxShadow: `0 0 30px hsl(var(--primary) / 0.5), 0 0 60px hsl(var(--primary) / 0.2)`
                 }}
                 onClick={() => profile.avatarUrl && openLightbox(profile.avatarUrl, profile.displayName, profile.username)}
               >
                 <Avatar 
-                  className="w-full h-full"
-                  style={{ 
-                    borderRadius: '8px'
-                  }}
+                  className="w-full h-full rounded-lg [&>span]:rounded-lg"
                 >
-                  <AvatarImage src={profile.avatarUrl || undefined} alt={profile.displayName} />
+                  <AvatarImage 
+                    src={profile.avatarUrl || undefined} 
+                    alt={profile.displayName}
+                    className="rounded-lg object-cover"
+                  />
                   <AvatarFallback
-                    className="text-3xl text-primary-foreground font-bold bg-primary"
+                    className="text-3xl text-primary-foreground font-bold bg-primary rounded-lg"
                   >
                     {profile.displayName.charAt(0)}
                   </AvatarFallback>
@@ -1384,22 +1384,22 @@ const ProfilePage = () => {
               <div className="w-full h-full rounded-full bg-background"></div>
             </div>
             <div 
-              className="relative z-10 border-4 border-primary shadow-2xl cursor-pointer hover:opacity-90 transition-opacity w-56 h-56"
+              className="relative z-10 border-4 border-primary shadow-2xl cursor-pointer hover:opacity-90 transition-opacity w-56 h-56 rounded-lg overflow-hidden"
               style={{ 
-                borderRadius: '8px',
                 boxShadow: `0 0 30px hsl(var(--primary) / 0.5), 0 0 60px hsl(var(--primary) / 0.2)`
               }}
               onClick={() => profile.avatarUrl && openLightbox(profile.avatarUrl, profile.displayName, profile.username)}
             >
               <Avatar 
-                className="w-full h-full"
-                style={{ 
-                  borderRadius: '8px'
-                }}
+                className="w-full h-full rounded-lg [&>span]:rounded-lg"
               >
-                <AvatarImage src={profile.avatarUrl || undefined} alt={profile.displayName} />
+                <AvatarImage 
+                  src={profile.avatarUrl || undefined} 
+                  alt={profile.displayName}
+                  className="rounded-lg object-cover"
+                />
                 <AvatarFallback
-                  className="text-3xl text-primary-foreground font-bold bg-primary"
+                  className="text-3xl text-primary-foreground font-bold bg-primary rounded-lg"
                 >
                   {profile.displayName.charAt(0)}
                 </AvatarFallback>
