@@ -86,7 +86,7 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
         {/* Username removed from thumbnail as requested */}
         
         {/* Top right badges: duration and views */}
-        <div className="absolute top-2 right-2 flex items-center gap-1">
+        <div className="absolute top-2 right-2 flex items-center gap-1 z-20">
           {/* Duration badge */}
           {(clip.trimEnd || clip.duration) && (
             <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium">
