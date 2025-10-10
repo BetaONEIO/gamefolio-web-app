@@ -156,14 +156,10 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
       
       {/* Top right badges: duration and views - same structure as VideoClipGridItem */}
       <div className="absolute top-2 right-2 flex items-center gap-1">
-        {/* Duration badge */}
-        {(clip.trimEnd || clip.duration) && (
+        {/* Duration badge - use actual duration from database */}
+        {clip.duration && clip.duration > 0 && (
           <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium">
-            {formatDuration(
-              clip.trimEnd && clip.trimEnd > 0 
-                ? clip.trimEnd - (clip.trimStart || 0)
-                : clip.duration || 0
-            )}
+            {formatDuration(clip.duration)}
           </div>
         )}
         {/* View count badge */}

@@ -134,15 +134,12 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
 
       {/* Top right section with stats - matches VideoClipCard styling */}
       <div className={`absolute top-2 ${canDelete ? 'right-12' : 'right-2'} flex items-center gap-1`}>
-        {/* Duration badge */}
-        <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium">
-          {(() => {
-            const actualDuration = clip.trimEnd && clip.trimEnd > 0 
-              ? clip.trimEnd - (clip.trimStart || 0)
-              : clip.duration || 0;
-            return `${Math.floor(actualDuration / 60)}:${(actualDuration % 60).toString().padStart(2, '0')}`;
-          })()}
-        </div>
+        {/* Duration badge - use actual duration from database */}
+        {clip.duration && clip.duration > 0 && (
+          <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium">
+            {`${Math.floor(clip.duration / 60)}:${(clip.duration % 60).toString().padStart(2, '0')}`}
+          </div>
+        )}
 
         {/* View count with icon */}
         <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium flex items-center gap-1">
