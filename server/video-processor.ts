@@ -27,7 +27,7 @@ export class VideoProcessor {
     generateThumbnail: boolean = true,
     userId: number = 0,
     videoType: 'clip' | 'reel' = 'clip'
-  ): Promise<{ videoUrl: string; thumbnailUrl?: string; thumbnailOptions?: string[] }> {
+  ): Promise<{ videoUrl: string; thumbnailUrl?: string; thumbnailOptions?: string[]; duration: number }> {
     await this.ensureDirectories();
 
     const filename = `clip_${clipId}.mp4`;
@@ -40,7 +40,11 @@ export class VideoProcessor {
       await this.trimVideo(originalVideoPath, processedVideoPath, trimStart, trimEnd);
     }
     
-    // Step 2: Upload processed video to Supabase
+    // Step 2: Get the actual duration of the processed video
+    const videoInfo = await this.getVideoInfo(processedVideoPath);
+    const actualDuration = Math.round(videoInfo.duration);
+    
+    // Step 3: Upload processed video to Supabase
     const videoBuffer = await fs.readFile(processedVideoPath);
     const { url: videoUrl } = await supabaseStorage.uploadBuffer(
       videoBuffer,
@@ -122,7 +126,8 @@ export class VideoProcessor {
     return {
       videoUrl,
       thumbnailUrl,
-      thumbnailOptions
+      thumbnailOptions,
+      duration: actualDuration
     };
   }
 
