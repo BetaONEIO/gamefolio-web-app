@@ -153,11 +153,11 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
           </div>
         </div>
         
-        {/* Top right badges: duration and views - positioned after overlays for proper stacking */}
-        <div className="absolute top-2 right-2 flex items-center gap-1">
+        {/* Top right badges: duration and views - using z-30 to ensure visibility */}
+        <div className="absolute top-2 right-2 flex items-center gap-1 z-30 pointer-events-none">
           {/* Duration badge */}
           {(clip.trimEnd || clip.duration) && (
-            <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium">
+            <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium pointer-events-auto">
               {formatDuration(
                 clip.trimEnd && clip.trimEnd > 0 
                   ? clip.trimEnd - (clip.trimStart || 0)
@@ -166,7 +166,7 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
             </div>
           )}
           {/* View count badge */}
-          <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium flex items-center gap-1">
+          <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium flex items-center gap-1 pointer-events-auto">
             <Eye className="h-3 w-3" />
             {(clip.views ?? 0) > 1000 ? `${((clip.views ?? 0) / 1000).toFixed(1)}K` : (clip.views ?? 0)}
           </div>
