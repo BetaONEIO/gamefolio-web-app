@@ -607,7 +607,7 @@ router.post('/process-video', fullAccessMiddleware, async (req, res) => {
         if (videoType === 'reel') {
           // For reels: Process video with 9:16 cropping, using actual duration
           console.log('Processing reel with 9:16 aspect ratio cropping');
-          const { videoUrl: croppedVideoUrl, thumbnailUrl: reelThumbnailUrl } = await VideoProcessor.processVideo(
+          const { videoUrl: croppedVideoUrl, thumbnailUrl: reelThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
             tempVideoPath,
             tempClipId,
             0, // trimStart
@@ -618,6 +618,7 @@ router.post('/process-video', fullAccessMiddleware, async (req, res) => {
           );
           processedVideoUrl = croppedVideoUrl;
           thumbnailUrl = reelThumbnailUrl || '';
+          actualDuration = processedDuration; // Use the duration from processed video
         } else {
           // For clips: Just generate thumbnail, keep original video
           thumbnailUrl = await VideoProcessor.generateAutoThumbnail(

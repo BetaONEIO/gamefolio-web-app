@@ -3484,7 +3484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           // Process video without generating new thumbnail
-          const { videoUrl } = await VideoProcessor.processVideo(
+          const { videoUrl, duration } = await VideoProcessor.processVideo(
             req.file.path,
             clip.id,
             trimStart,
@@ -3494,14 +3494,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             clipData.videoType as 'clip' | 'reel'
           );
 
-          console.log(`Video processed successfully. Video: ${videoUrl}, Thumbnail: ${finalThumbnailUrl}`);
+          console.log(`Video processed successfully. Video: ${videoUrl}, Thumbnail: ${finalThumbnailUrl}, Duration: ${duration}s`);
 
-          // Update the clip with the processed video and user thumbnail URLs
+          // Update the clip with the processed video, user thumbnail URLs, and actual duration
           const updatedClip = await storage.updateClip(clip.id, {
             videoUrl,
             thumbnailUrl: finalThumbnailUrl,
             trimStart,
-            trimEnd
+            trimEnd,
+            duration
           });
 
           // Generate QR code and social media links
@@ -3531,7 +3532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } else {
           // No custom thumbnail - use auto-generated one with multiple options
-          const { videoUrl, thumbnailUrl, thumbnailOptions } = await VideoProcessor.processVideo(
+          const { videoUrl, thumbnailUrl, thumbnailOptions, duration } = await VideoProcessor.processVideo(
             req.file.path,
             clip.id,
             trimStart,
@@ -3541,14 +3542,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             clipData.videoType as 'clip' | 'reel'
           );
 
-          console.log(`Video processed successfully. Video: ${videoUrl}, Thumbnail: ${thumbnailUrl}`);
+          console.log(`Video processed successfully. Video: ${videoUrl}, Thumbnail: ${thumbnailUrl}, Duration: ${duration}s`);
 
-          // Update the clip with the processed video and thumbnail URLs
+          // Update the clip with the processed video, thumbnail URLs, and actual duration
           const updatedClip = await storage.updateClip(clip.id, {
             videoUrl,
             thumbnailUrl,
             trimStart,
-            trimEnd
+            trimEnd,
+            duration
           });
 
           // Generate QR code and social media links
