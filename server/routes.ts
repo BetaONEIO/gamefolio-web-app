@@ -3471,7 +3471,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } catch (thumbnailError) {
             console.error("Error uploading user thumbnail:", thumbnailError);
             // Fall back to auto-generated thumbnail
-            const { videoUrl, thumbnailUrl } = await VideoProcessor.processVideo(
+            const { videoUrl, thumbnailUrl, duration: fallbackDuration } = await VideoProcessor.processVideo(
               req.file.path,
               clip.id,
               trimStart,
@@ -3481,6 +3481,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               clipData.videoType as 'clip' | 'reel'
             );
             finalThumbnailUrl = thumbnailUrl;
+            // Note: In this fallback path, the video is processed twice,
+            // but the duration from the second process will be used
           }
 
           // Process video without generating new thumbnail
