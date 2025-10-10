@@ -53,12 +53,12 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
 
   return (
     <div 
-      className="overflow-hidden relative group bg-[#1E2327] rounded-sm cursor-pointer"
+      className="overflow-hidden relative group bg-[#1E2327] rounded-sm cursor-pointer aspect-square"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleClipClick}
     >
-      <div className="aspect-square relative overflow-hidden"> 
+      <div className="relative overflow-hidden w-full h-full"> 
         {/* Video element for hover playback */}
         <video 
           ref={videoRef}
@@ -152,24 +152,24 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
             </div>
           </div>
         </div>
-        
-        {/* Top right badges: duration and views - using z-30 to ensure visibility */}
-        <div className="absolute top-2 right-2 flex items-center gap-1 z-30 pointer-events-none">
-          {/* Duration badge */}
-          {(clip.trimEnd || clip.duration) && (
-            <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium pointer-events-auto">
-              {formatDuration(
-                clip.trimEnd && clip.trimEnd > 0 
-                  ? clip.trimEnd - (clip.trimStart || 0)
-                  : clip.duration || 0
-              )}
-            </div>
-          )}
-          {/* View count badge */}
-          <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium flex items-center gap-1 pointer-events-auto">
-            <Eye className="h-3 w-3" />
-            {(clip.views ?? 0) > 1000 ? `${((clip.views ?? 0) / 1000).toFixed(1)}K` : (clip.views ?? 0)}
+      </div>
+      
+      {/* Top right badges: duration and views - same structure as VideoClipGridItem */}
+      <div className="absolute top-2 right-2 flex items-center gap-1">
+        {/* Duration badge */}
+        {(clip.trimEnd || clip.duration) && (
+          <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium">
+            {formatDuration(
+              clip.trimEnd && clip.trimEnd > 0 
+                ? clip.trimEnd - (clip.trimStart || 0)
+                : clip.duration || 0
+            )}
           </div>
+        )}
+        {/* View count badge */}
+        <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium flex items-center gap-1">
+          <Eye className="h-3 w-3" />
+          {(clip.views ?? 0) > 1000 ? `${((clip.views ?? 0) / 1000).toFixed(1)}K` : (clip.views ?? 0)}
         </div>
       </div>
     </div>
