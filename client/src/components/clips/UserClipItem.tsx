@@ -85,25 +85,6 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
         
         {/* Username removed from thumbnail as requested */}
         
-        {/* Top right badges: duration and views */}
-        <div className="absolute top-2 right-2 flex items-center gap-1 z-20">
-          {/* Duration badge */}
-          {(clip.trimEnd || clip.duration) && (
-            <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium">
-              {formatDuration(
-                clip.trimEnd && clip.trimEnd > 0 
-                  ? clip.trimEnd - (clip.trimStart || 0)
-                  : clip.duration || 0
-              )}
-            </div>
-          )}
-          {/* View count badge */}
-          <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium flex items-center gap-1">
-            <Eye className="h-3 w-3" />
-            {(clip.views ?? 0) > 1000 ? `${((clip.views ?? 0) / 1000).toFixed(1)}K` : (clip.views ?? 0)}
-          </div>
-        </div>
-        
         {/* Play overlay on hover */}
         <div className={cn(
           "absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 transition-opacity duration-200",
@@ -169,6 +150,25 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
                 <QuickShareButton clipId={clip.id} clipTitle={clip.title} size="sm" />
               </span>
             </div>
+          </div>
+        </div>
+        
+        {/* Top right badges: duration and views - positioned after overlays for proper stacking */}
+        <div className="absolute top-2 right-2 flex items-center gap-1">
+          {/* Duration badge */}
+          {(clip.trimEnd || clip.duration) && (
+            <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium">
+              {formatDuration(
+                clip.trimEnd && clip.trimEnd > 0 
+                  ? clip.trimEnd - (clip.trimStart || 0)
+                  : clip.duration || 0
+              )}
+            </div>
+          )}
+          {/* View count badge */}
+          <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium flex items-center gap-1">
+            <Eye className="h-3 w-3" />
+            {(clip.views ?? 0) > 1000 ? `${((clip.views ?? 0) / 1000).toFixed(1)}K` : (clip.views ?? 0)}
           </div>
         </div>
       </div>
