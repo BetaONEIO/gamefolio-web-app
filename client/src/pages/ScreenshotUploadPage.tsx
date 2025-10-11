@@ -181,32 +181,60 @@ const ScreenshotUploadPage: React.FC = () => {
             <Label>
               Screenshots ({selectedFiles.length}/3 selected)
             </Label>
-            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-muted-foreground/50 transition-colors">
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="hidden"
-                id="screenshot-upload"
-                disabled={isUploading || selectedFiles.length >= 3}
-                data-testid="input-screenshot-upload"
-              />
-              <label
-                htmlFor="screenshot-upload"
-                className={`cursor-pointer flex flex-col items-center space-y-4 ${selectedFiles.length >= 3 ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <Upload className="h-12 w-12 text-muted-foreground" />
-                <div className="space-y-2">
-                  <p className="text-lg font-medium">
-                    {selectedFiles.length >= 3 ? 'Maximum files selected' : selectedFiles.length > 0 ? 'Add more screenshots (click or drop)' : 'Drop files here or click to browse'}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedFiles.length >= 3 ? 'Remove a file to add another' : 'Select up to 3 screenshots • PNG, JPG, JPEG • Hold Ctrl/Cmd to select multiple'}
-                  </p>
-                </div>
-              </label>
-            </div>
+            {selectedFiles.length === 0 ? (
+              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-muted-foreground/50 transition-colors">
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  id="screenshot-upload"
+                  disabled={isUploading}
+                  data-testid="input-screenshot-upload"
+                />
+                <label
+                  htmlFor="screenshot-upload"
+                  className="cursor-pointer flex flex-col items-center space-y-4"
+                >
+                  <Upload className="h-12 w-12 text-muted-foreground" />
+                  <div className="space-y-2">
+                    <p className="text-lg font-medium">Drop files here or click to browse</p>
+                    <p className="text-sm text-muted-foreground">
+                      Select up to 3 screenshots • PNG, JPG, JPEG • Hold Ctrl/Cmd to select multiple
+                    </p>
+                  </div>
+                </label>
+              </div>
+            ) : selectedFiles.length < 3 && (
+              <div className="flex justify-center">
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  id="screenshot-upload-add"
+                  disabled={isUploading}
+                  data-testid="input-screenshot-upload-add"
+                />
+                <label htmlFor="screenshot-upload-add">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    disabled={isUploading}
+                    data-testid="button-add-another"
+                    asChild
+                  >
+                    <span className="cursor-pointer">
+                      <Upload className="mr-2 h-4 w-4" />
+                      Add Another Screenshot ({3 - selectedFiles.length} remaining)
+                    </span>
+                  </Button>
+                </label>
+              </div>
+            )}
           </div>
 
           {/* Preview Grid */}
