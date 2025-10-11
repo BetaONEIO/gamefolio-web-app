@@ -75,7 +75,7 @@ export class VideoProcessor {
           try {
             const thumbnailFilename = `thumb_${clipId}_${i}.jpg`;
             const thumbnailPath = path.join(this.TEMP_DIR, thumbnailFilename);
-            await this.generateThumbnail(processedVideoPath, thumbnailPath, thumbnailTimes[i]);
+            await this.generateThumbnail(processedVideoPath, thumbnailPath, thumbnailTimes[i], videoType);
             
             // Upload thumbnail to Supabase
             const thumbnailBuffer = await fs.readFile(thumbnailPath);
@@ -107,12 +107,12 @@ export class VideoProcessor {
         // If no thumbnails were generated, create a fallback
         if (!thumbnailUrl) {
           console.warn('All thumbnail generation attempts failed, creating fallback thumbnail');
-          thumbnailUrl = await this.generateFallbackThumbnail(userId, clipId);
+          thumbnailUrl = await this.generateFallbackThumbnail(userId, clipId, videoType);
         }
       } catch (thumbnailError) {
         console.error('Thumbnail generation completely failed:', thumbnailError);
         // Generate a fallback thumbnail
-        thumbnailUrl = await this.generateFallbackThumbnail(userId, clipId);
+        thumbnailUrl = await this.generateFallbackThumbnail(userId, clipId, videoType);
       }
     }
 
@@ -170,7 +170,8 @@ export class VideoProcessor {
   static async generateAutoThumbnail(
     videoPath: string,
     userId: number,
-    filePrefix: string = 'auto_thumb'
+    filePrefix: string = 'auto_thumb',
+    videoType: 'clip' | 'reel' = 'clip'
   ): Promise<string> {
     await this.ensureDirectories();
     
@@ -196,11 +197,15 @@ export class VideoProcessor {
         const maxTime = Math.min(duration - 1, duration * 0.9);
         const randomTime = Math.random() * (maxTime - minTime) + minTime;
 
+        // Use appropriate size based on video type
+        // Reels: 9:16 (720x1280), Clips: 16:9 (1280x720)
+        const thumbnailSize = videoType === 'reel' ? '720x1280' : '1280x720';
+
         // Generate thumbnail at random timestamp
         ffmpeg(videoPath)
           .seekInput(randomTime)
           .frames(1)
-          .size('1280x720')
+          .size(thumbnailSize)
           .outputOptions(['-q:v 2']) // High quality JPEG
           .output(thumbnailPath)
           .on('end', async () => {
@@ -392,15 +397,20 @@ export class VideoProcessor {
   private static async generateThumbnail(
     videoPath: string,
     thumbnailPath: string,
-    timeOffset: number = 1
+    timeOffset: number = 1,
+    videoType: 'clip' | 'reel' = 'clip'
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       console.log(`Generating thumbnail from trimmed video: ${videoPath}`);
       
+      // Use appropriate aspect ratio based on video type
+      // Reels: 9:16 (180x320), Clips: 16:9 (320x180)
+      const thumbnailSize = videoType === 'reel' ? '180x320' : '320x180';
+      
       ffmpeg(videoPath)
         .seekInput(1) // 1 second into the trimmed video
         .frames(1)
-        .size('320x180')
+        .size(thumbnailSize)
         .output(thumbnailPath)
         .on('start', (commandLine: string) => {
           console.log('FFmpeg thumbnail command:', commandLine);
@@ -436,23 +446,30 @@ export class VideoProcessor {
   /**
    * Generate a fallback thumbnail when video thumbnail generation fails
    */
-  private static async generateFallbackThumbnail(userId: number, clipId: number): Promise<string> {
+  private static async generateFallbackThumbnail(userId: number, clipId: number, videoType: 'clip' | 'reel' = 'clip'): Promise<string> {
     try {
+      // Use appropriate dimensions based on video type
+      // Reels: 9:16 (720x1280), Clips: 16:9 (1280x720)
+      const width = videoType === 'reel' ? 720 : 1280;
+      const height = videoType === 'reel' ? 1280 : 720;
+      const centerX = width / 2;
+      const centerY = height / 2;
+      
       // Create a simple colored thumbnail with Sharp
       const thumbnailBuffer = await sharp({
         create: {
-          width: 1280,
-          height: 720,
+          width,
+          height,
           channels: 3,
           background: { r: 30, g: 30, b: 30 }
         }
       })
       .composite([{
         input: Buffer.from(`
-          <svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg">
-            <rect width="1280" height="720" fill="#1e1e1e"/>
-            <circle cx="640" cy="360" r="80" fill="#10b981"/>
-            <polygon points="600,320 600,400 680,360" fill="white"/>
+          <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+            <rect width="${width}" height="${height}" fill="#1e1e1e"/>
+            <circle cx="${centerX}" cy="${centerY}" r="80" fill="#10b981"/>
+            <polygon points="${centerX-40},${centerY-40} ${centerX-40},${centerY+40} ${centerX+40},${centerY}" fill="white"/>
           </svg>
         `),
         top: 0,
