@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import { Link } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
@@ -29,7 +29,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
           <h2 className="text-xl sm:text-2xl font-bold">Recommended for You</h2>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {Array(4).fill(0).map((_, i) => (
             <Skeleton key={i} className="aspect-video rounded-lg" />
           ))}
@@ -44,21 +44,12 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
 
   return (
     <section className="px-2 sm:px-4 md:px-6 mb-6 sm:mb-8" data-testid="recommended-for-you-section">
-      <div className="flex justify-between items-center mb-4 sm:mb-6 md:mb-8">
-        <div className="flex items-center gap-2">
-          <Star className="h-5 w-5 text-primary" />
-          <h2 className="text-xl sm:text-2xl font-bold">Recommended for You</h2>
-        </div>
-        <Link 
-          href="/explore" 
-          className="text-primary text-sm font-medium hover:underline flex items-center"
-          data-testid="link-view-all-recommended"
-        >
-          View all <ChevronRight className="h-4 w-4 ml-1" />
-        </Link>
+      <div className="flex items-center gap-2 mb-4 sm:mb-6 md:mb-8">
+        <Star className="h-5 w-5 text-primary" />
+        <h2 className="text-xl sm:text-2xl font-bold">Recommended for You</h2>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
         {recommendedClips.slice(0, 4).map((clip) => (
           <VideoClipGridItem 
             key={`recommended-clip-${clip.id}`}
