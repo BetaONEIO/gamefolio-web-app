@@ -38,7 +38,8 @@ import {
   SkipForward,
   StopCircle,
   Pause,
-  RotateCcw
+  RotateCcw,
+  X
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -95,9 +96,9 @@ const UploadPage = () => {
     }
   }, []);
   
-  // Screenshot-specific state
-  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
-  const [screenshotPreview, setScreenshotPreview] = useState<string>("");
+  // Screenshot-specific state - supports multiple screenshots (up to 3)
+  const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
+  const [screenshotPreviews, setScreenshotPreviews] = useState<string[]>([]);
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
   const [cropPosition, setCropPosition] = useState({ x: 0, y: 0 });
   const [cropSize, setCropSize] = useState({ width: 100, height: 100 });
@@ -187,8 +188,11 @@ const UploadPage = () => {
 
   // Reset screenshot form function
   const resetScreenshotForm = () => {
-    setScreenshotFile(null);
-    setScreenshotPreview("");
+    // Revoke all blob URLs to free memory
+    screenshotPreviews.forEach(url => URL.revokeObjectURL(url));
+    
+    setScreenshotFiles([]);
+    setScreenshotPreviews([]);
     setScreenshotTitle("");
     setScreenshotDescription("");
     setScreenshotSelectedGame(null);
@@ -312,59 +316,99 @@ const UploadPage = () => {
     return Math.abs(aspectRatio - targetRatio) <= tolerance ? 'reel' : 'clip';
   };
 
-  // Screenshot file handling
+  // Screenshot file handling - supports adding multiple files (up to 3)
   const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
     
     setScreenshotError(null);
     
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
-    if (!allowedTypes.includes(selectedFile.type)) {
-      setScreenshotError("Please upload a valid image file (JPEG, PNG, or JPG)");
+    // Validate total number of files
+    if (screenshotFiles.length + files.length > 3) {
+      toast({
+        title: "Too many files",
+        description: "You can upload a maximum of 3 screenshots at once",
+        variant: "destructive",
+      });
       return;
     }
     
-    // Validate file size (20MB limit for images)
-    const maxSize = 20 * 1024 * 1024;
-    if (selectedFile.size > maxSize) {
-      setScreenshotError("Image size must be less than 20MB");
-      return;
+    // Validate each file
+    for (const file of files) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+      if (!allowedTypes.includes(file.type)) {
+        setScreenshotError("Please upload valid image files (JPEG, PNG, or JPG)");
+        return;
+      }
+      
+      // Validate file size (20MB limit for images)
+      const maxSize = 20 * 1024 * 1024;
+      if (file.size > maxSize) {
+        setScreenshotError("Each image must be less than 20MB");
+        return;
+      }
     }
     
-    setScreenshotFile(selectedFile);
-    const previewUrl = URL.createObjectURL(selectedFile);
-    setScreenshotPreview(previewUrl);
+    // Add files and create previews synchronously to keep them in sync
+    const newFiles = [...screenshotFiles, ...files];
+    const newPreviews = [...screenshotPreviews, ...files.map(file => URL.createObjectURL(file))];
+    
+    setScreenshotFiles(newFiles);
+    setScreenshotPreviews(newPreviews);
+    
+    // Clear the input so the same file can be selected again if needed
+    e.target.value = '';
+  };
+  
+  // Remove screenshot from array
+  const removeScreenshot = (index: number) => {
+    // Revoke the blob URL to free memory
+    if (screenshotPreviews[index]) {
+      URL.revokeObjectURL(screenshotPreviews[index]);
+    }
+    
+    const newFiles = screenshotFiles.filter((_, i) => i !== index);
+    const newPreviews = screenshotPreviews.filter((_, i) => i !== index);
+    setScreenshotFiles(newFiles);
+    setScreenshotPreviews(newPreviews);
   };
 
-  // Screenshot upload mutation - Updated to use new upload API
+  // Screenshot upload mutation - Updated to handle multiple screenshots
   const screenshotUploadMutation = useMutation({
     mutationFn: async () => {
-      if (!screenshotFile) throw new Error("No screenshot selected");
+      if (screenshotFiles.length === 0) throw new Error("No screenshots selected");
       if (!user) throw new Error("You must be logged in to upload screenshots");
       
-      const formData = new FormData();
-      formData.append("title", screenshotTitle.trim());
-      formData.append("description", screenshotDescription.trim());
-      if (screenshotSelectedGame) {
-        formData.append("gameId", screenshotSelectedGame.id.toString());
-      }
-      formData.append("tags", JSON.stringify(screenshotTags));
-      formData.append("screenshot", screenshotFile);
-      
-      const response = await fetch("/api/upload/screenshot", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
+      // Upload each screenshot separately
+      const uploadPromises = screenshotFiles.map(async (file) => {
+        const formData = new FormData();
+        formData.append("title", screenshotTitle.trim());
+        formData.append("description", screenshotDescription.trim());
+        if (screenshotSelectedGame) {
+          formData.append("gameId", screenshotSelectedGame.id.toString());
+          formData.append("gameName", screenshotSelectedGame.name);
+          formData.append("gameImageUrl", screenshotSelectedGame.imageUrl || '');
+        }
+        formData.append("tags", JSON.stringify(screenshotTags));
+        formData.append("screenshot", file);
+        
+        const response = await fetch("/api/screenshots/upload", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || "Failed to upload screenshot");
+        }
+        
+        return response.json();
       });
       
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to upload screenshot");
-      }
-      
-      return response.json();
+      const results = await Promise.all(uploadPromises);
+      return results[results.length - 1]; // Return the last result for consistency
     },
     onSuccess: async (data) => {
       console.log('Screenshot upload success data:', data);
@@ -1752,10 +1796,10 @@ const UploadPage = () => {
               <form onSubmit={(e) => {
                 e.preventDefault();
                 
-                if (!screenshotFile) {
+                if (screenshotFiles.length === 0) {
                   toast({
                     title: "No screenshot selected",
-                    description: "Please select a screenshot to upload.",
+                    description: "Please select at least one screenshot to upload.",
                     variant: "gamefolioError",
                   });
                   return;
@@ -1764,7 +1808,7 @@ const UploadPage = () => {
                 if (!screenshotTitle.trim()) {
                   toast({
                     title: "Title required",
-                    description: "Please enter a title for your screenshot.",
+                    description: "Please enter a title for your screenshots.",
                     variant: "gamefolioError",
                   });
                   return;
@@ -1773,7 +1817,7 @@ const UploadPage = () => {
                 if (!screenshotSelectedGame) {
                   toast({
                     title: "Game required",
-                    description: "Please select a game for your screenshot.",
+                    description: "Please select a game for your screenshots.",
                     variant: "gamefolioError",
                   });
                   return;
@@ -1782,7 +1826,7 @@ const UploadPage = () => {
                 if (screenshotTags.length < 2) {
                   toast({
                     title: "Tags required",
-                    description: "Please add at least 2 tags for your screenshot.",
+                    description: "Please add at least 2 tags for your screenshots.",
                     variant: "gamefolioError",
                   });
                   return;
@@ -1792,78 +1836,93 @@ const UploadPage = () => {
               }} className="space-y-6">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="screenshot">Screenshot File</Label>
+                    <Label htmlFor="screenshot">Screenshot Files ({screenshotFiles.length}/3)</Label>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div className="flex items-center text-xs text-muted-foreground">
                             <Info className="h-3 w-3 mr-1" />
-                            <span>Maximum 20MB</span>
+                            <span>Maximum 20MB each</span>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Supports JPEG, PNG, or JPG formats</p>
+                          <p>Supports JPEG, PNG, or JPG formats • Up to 3 screenshots</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </div>
                   
-                  <div 
-                    className={`border-2 border-dashed ${screenshotError ? 'border-destructive' : 'border-muted'} rounded-lg p-8 text-center ${!screenshotFile ? 'cursor-pointer hover:border-primary transition-colors' : ''}`}
-                    onClick={!screenshotFile ? () => document.getElementById('screenshot')?.click() : undefined}
-                  >
-                    <input
-                      type="file"
-                      id="screenshot"
-                      accept="image/jpeg,image/png,image/jpg"
-                      onChange={handleScreenshotChange}
-                      className="hidden"
-                    />
-                    
-                    {screenshotFile && screenshotPreview ? (
-                      <div className="space-y-4">
-                        {/* Screenshot Preview */}
-                        <div className="w-full max-w-2xl mx-auto mb-6">
-                          <div className="relative bg-black rounded-lg overflow-hidden">
+                  {/* Hidden file input */}
+                  <input
+                    type="file"
+                    id="screenshot"
+                    accept="image/jpeg,image/png,image/jpg"
+                    onChange={handleScreenshotChange}
+                    className="hidden"
+                    multiple
+                    data-testid="input-screenshot"
+                  />
+                  
+                  {screenshotFiles.length === 0 ? (
+                    <label 
+                      htmlFor="screenshot"
+                      className="border-2 border-dashed border-muted rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors flex flex-col items-center"
+                    >
+                      <Image className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
+                      <p className="font-medium">Drag and drop your screenshots or click to browse</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        JPEG, PNG, or JPG up to 20MB • Select up to 3 screenshots
+                      </p>
+                    </label>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Screenshot Previews Grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {screenshotPreviews.map((preview, index) => (
+                          <div key={index} className="relative group">
                             <img
-                              src={screenshotPreview}
-                              alt="Screenshot preview"
-                              className="w-full h-auto max-h-96 object-contain"
+                              src={preview}
+                              alt={`Preview ${index + 1}`}
+                              className="w-full h-32 object-cover rounded-lg border"
+                              data-testid={`img-screenshot-preview-${index}`}
                             />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="absolute -top-2 -right-2 h-7 w-7 rounded-full p-0 shadow-lg"
+                              onClick={() => removeScreenshot(index)}
+                              data-testid={`button-remove-screenshot-${index}`}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                            <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                              #{index + 1}
+                            </div>
                           </div>
-                        </div>
+                        ))}
+                      </div>
 
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="font-medium text-foreground mb-1">{screenshotFile.name}</p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {(screenshotFile.size / (1024 * 1024)).toFixed(2)} MB • {screenshotFile.type}
-                            </p>
-                          </div>
+                      {/* Add Another Button */}
+                      {screenshotFiles.length < 3 && (
+                        <label htmlFor="screenshot" className="block">
                           <Button
                             type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setScreenshotFile(null);
-                              setScreenshotPreview("");
-                              URL.revokeObjectURL(screenshotPreview);
-                            }}
+                            variant="default"
+                            size="lg"
+                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                            data-testid="button-add-another-screenshot"
+                            asChild
                           >
-                            Remove
+                            <span className="cursor-pointer flex items-center justify-center gap-2">
+                              <Upload className="h-5 w-5" />
+                              Add Another Screenshot ({3 - screenshotFiles.length} remaining)
+                            </span>
                           </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        <Image className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
-                        <p className="font-medium">Drag and drop your screenshot or click to browse</p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          JPEG, PNG, or JPG up to 20MB
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                        </label>
+                      )}
+                    </div>
+                  )}
                   
                   {screenshotError && (
                     <Alert variant="gamefolioError" className="mt-2">
@@ -1938,7 +1997,8 @@ const UploadPage = () => {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={!screenshotFile || !screenshotTitle.trim() || !screenshotSelectedGame || screenshotTags.length < 2 || screenshotUploadMutation.isPending}
+                    disabled={screenshotFiles.length === 0 || !screenshotTitle.trim() || !screenshotSelectedGame || screenshotTags.length < 2 || screenshotUploadMutation.isPending}
+                    data-testid="button-upload-screenshots"
                   >
                     {screenshotUploadMutation.isPending ? (
                       <div className="flex items-center">
@@ -1946,12 +2006,12 @@ const UploadPage = () => {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        <span className="hidden sm:inline">Uploading...</span>
+                        <span className="hidden sm:inline">Uploading {screenshotFiles.length} screenshot{screenshotFiles.length > 1 ? 's' : ''}...</span>
                         <span className="inline sm:hidden">...</span>
                       </div>
                     ) : (
                       <>
-                        <span className="hidden sm:inline">Upload Screenshot</span>
+                        <span className="hidden sm:inline">Upload {screenshotFiles.length > 0 ? `${screenshotFiles.length} Screenshot${screenshotFiles.length > 1 ? 's' : ''}` : 'Screenshots'}</span>
                         <span className="inline sm:hidden">Upload</span>
                       </>
                     )}
