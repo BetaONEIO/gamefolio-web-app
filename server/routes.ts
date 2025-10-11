@@ -5512,6 +5512,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.warn("Could not delete screenshot files from Supabase:", fileErr);
       }
 
+      // Verify screenshot still exists before deleting
+      console.log(`🔍 Re-verifying screenshot ${screenshotId} exists before deletion`);
+      const screenshotCheck = await storage.getScreenshot(screenshotId);
+      if (!screenshotCheck) {
+        console.error(`❌ Screenshot ${screenshotId} no longer exists in database!`);
+        return res.status(500).json({ message: "Screenshot was already deleted or doesn't exist" });
+      }
+      console.log(`✅ Screenshot ${screenshotId} confirmed to exist, proceeding with deletion`);
+
       // Delete from database
       console.log(`🗑️ Deleting screenshot ${screenshotId} from database`);
       const success = await storage.deleteScreenshot(screenshotId);
