@@ -178,7 +178,9 @@ const ScreenshotUploadPage: React.FC = () => {
         <CardContent className="space-y-6">
           {/* File Upload Area */}
           <div className="space-y-2">
-            <Label>Screenshots (Max 3 files)</Label>
+            <Label>
+              Screenshots ({selectedFiles.length}/3 selected)
+            </Label>
             <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-muted-foreground/50 transition-colors">
               <input
                 type="file"
@@ -187,17 +189,20 @@ const ScreenshotUploadPage: React.FC = () => {
                 onChange={handleFileSelect}
                 className="hidden"
                 id="screenshot-upload"
-                disabled={isUploading}
+                disabled={isUploading || selectedFiles.length >= 3}
+                data-testid="input-screenshot-upload"
               />
               <label
                 htmlFor="screenshot-upload"
-                className="cursor-pointer flex flex-col items-center space-y-4"
+                className={`cursor-pointer flex flex-col items-center space-y-4 ${selectedFiles.length >= 3 ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <Upload className="h-12 w-12 text-muted-foreground" />
                 <div className="space-y-2">
-                  <p className="text-lg font-medium">Drop files here or click to browse</p>
+                  <p className="text-lg font-medium">
+                    {selectedFiles.length >= 3 ? 'Maximum files selected' : selectedFiles.length > 0 ? 'Add more screenshots (click or drop)' : 'Drop files here or click to browse'}
+                  </p>
                   <p className="text-sm text-muted-foreground">
-                    Supports PNG, JPG, JPEG files up to 10MB each
+                    {selectedFiles.length >= 3 ? 'Remove a file to add another' : 'Select up to 3 screenshots • PNG, JPG, JPEG • Hold Ctrl/Cmd to select multiple'}
                   </p>
                 </div>
               </label>
@@ -207,24 +212,29 @@ const ScreenshotUploadPage: React.FC = () => {
           {/* Preview Grid */}
           {previews.length > 0 && (
             <div className="space-y-2">
-              <Label>Preview ({selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''})</Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <Label>Selected Screenshots ({selectedFiles.length}/3)</Label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {previews.map((preview, index) => (
                   <div key={index} className="relative group">
                     <img
                       src={preview}
                       alt={`Preview ${index + 1}`}
-                      className="w-full h-24 object-cover rounded-lg border"
+                      className="w-full h-32 object-cover rounded-lg border"
+                      data-testid={`img-preview-${index}`}
                     />
                     <Button
                       type="button"
                       variant="destructive"
                       size="sm"
-                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute -top-2 -right-2 h-7 w-7 rounded-full p-0 shadow-lg"
                       onClick={() => removeFile(index)}
+                      data-testid={`button-remove-${index}`}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-4 w-4" />
                     </Button>
+                    <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                      #{index + 1}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -235,7 +245,7 @@ const ScreenshotUploadPage: React.FC = () => {
           <div className="space-y-2">
             <Label htmlFor="game-select">Game *</Label>
             <Select value={selectedGameId} onValueChange={setSelectedGameId}>
-              <SelectTrigger>
+              <SelectTrigger data-testid="select-game">
                 <SelectValue placeholder="Select a game" />
               </SelectTrigger>
               <SelectContent>
@@ -258,6 +268,7 @@ const ScreenshotUploadPage: React.FC = () => {
               onChange={(e) => setTitle(e.target.value)}
               maxLength={100}
               required
+              data-testid="input-title"
             />
           </div>
 
@@ -270,6 +281,7 @@ const ScreenshotUploadPage: React.FC = () => {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
+              data-testid="input-description"
             />
           </div>
 
@@ -279,6 +291,7 @@ const ScreenshotUploadPage: React.FC = () => {
             disabled={selectedFiles.length === 0 || !selectedGameId || !title.trim() || isUploading}
             className="w-full"
             size="lg"
+            data-testid="button-upload"
           >
             {isUploading ? (
               <>
@@ -288,7 +301,7 @@ const ScreenshotUploadPage: React.FC = () => {
             ) : (
               <>
                 <ImageIcon className="mr-2 h-4 w-4" />
-                Upload Screenshots
+                Upload {selectedFiles.length > 0 ? `${selectedFiles.length} Screenshot${selectedFiles.length > 1 ? 's' : ''}` : 'Screenshots'}
               </>
             )}
           </Button>
