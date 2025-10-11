@@ -57,10 +57,10 @@ const ScreenshotUploadPage: React.FC = () => {
       return;
     }
 
-    if (selectedFiles.length + imageFiles.length > 5) {
+    if (selectedFiles.length + imageFiles.length > 3) {
       toast({
         title: "Too many files",
-        description: "You can upload a maximum of 5 screenshots at once",
+        description: "You can upload a maximum of 3 screenshots at once",
         variant: "destructive",
       });
       return;
@@ -178,7 +178,7 @@ const ScreenshotUploadPage: React.FC = () => {
         <CardContent className="space-y-6">
           {/* File Upload Area */}
           <div className="space-y-2">
-            <Label>Screenshots (Max 5 files)</Label>
+            <Label>Screenshots (Max 3 files)</Label>
             <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-muted-foreground/50 transition-colors">
               <input
                 type="file"
