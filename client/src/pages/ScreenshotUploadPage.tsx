@@ -177,11 +177,9 @@ const ScreenshotUploadPage: React.FC = () => {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* File Upload Area */}
-          <div className="space-y-2">
-            <Label>
-              Screenshots ({selectedFiles.length}/3 selected)
-            </Label>
-            {selectedFiles.length === 0 ? (
+          {selectedFiles.length === 0 ? (
+            <div className="space-y-2">
+              <Label>Screenshots (0/3 selected)</Label>
               <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-muted-foreground/50 transition-colors">
                 <input
                   type="file"
@@ -206,67 +204,70 @@ const ScreenshotUploadPage: React.FC = () => {
                   </div>
                 </label>
               </div>
-            ) : selectedFiles.length < 3 && (
-              <div className="flex justify-center">
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  id="screenshot-upload-add"
-                  disabled={isUploading}
-                  data-testid="input-screenshot-upload-add"
-                />
-                <label htmlFor="screenshot-upload-add">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    disabled={isUploading}
-                    data-testid="button-add-another"
-                    asChild
-                  >
-                    <span className="cursor-pointer">
-                      <Upload className="mr-2 h-4 w-4" />
-                      Add Another Screenshot ({3 - selectedFiles.length} remaining)
-                    </span>
-                  </Button>
-                </label>
+            </div>
+          ) : (
+            <>
+              {/* Preview Grid */}
+              <div className="space-y-2">
+                <Label>Selected Screenshots ({selectedFiles.length}/3)</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {previews.map((preview, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={preview}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg border"
+                        data-testid={`img-preview-${index}`}
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute -top-2 -right-2 h-7 w-7 rounded-full p-0 shadow-lg"
+                        onClick={() => removeFile(index)}
+                        data-testid={`button-remove-${index}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                      <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                        #{index + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* Preview Grid */}
-          {previews.length > 0 && (
-            <div className="space-y-2">
-              <Label>Selected Screenshots ({selectedFiles.length}/3)</Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {previews.map((preview, index) => (
-                  <div key={index} className="relative group">
-                    <img
-                      src={preview}
-                      alt={`Preview ${index + 1}`}
-                      className="w-full h-32 object-cover rounded-lg border"
-                      data-testid={`img-preview-${index}`}
-                    />
+              {/* Add Another Button */}
+              {selectedFiles.length < 3 && (
+                <div className="flex justify-center">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    id="screenshot-upload-add"
+                    disabled={isUploading}
+                    data-testid="input-screenshot-upload-add"
+                  />
+                  <label htmlFor="screenshot-upload-add" className="w-full">
                     <Button
                       type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="absolute -top-2 -right-2 h-7 w-7 rounded-full p-0 shadow-lg"
-                      onClick={() => removeFile(index)}
-                      data-testid={`button-remove-${index}`}
+                      variant="outline"
+                      className="w-full"
+                      disabled={isUploading}
+                      data-testid="button-add-another"
+                      asChild
                     >
-                      <X className="h-4 w-4" />
+                      <span className="cursor-pointer">
+                        <Upload className="mr-2 h-4 w-4" />
+                        Add Another Screenshot ({3 - selectedFiles.length} remaining)
+                      </span>
                     </Button>
-                    <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
-                      #{index + 1}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+                  </label>
+                </div>
+              )}
+            </>
           )}
 
           {/* Game Selection */}
