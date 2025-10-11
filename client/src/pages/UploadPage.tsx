@@ -426,8 +426,10 @@ const UploadPage = () => {
         type: 'screenshot',
         id: data.screenshot?.id
       });
-      setXpGained(data.xpGained || 5);
-      setUserXP(data.userXP || 0);
+      const gainedXP = data.xpGained || 5;
+      const currentXP = (data.userXP || 0) + gainedXP;
+      setXpGained(gainedXP);
+      setUserXP(currentXP);
       setUserLevel(data.userLevel || 1);
       
       // Refetch user data for UI updates
@@ -581,8 +583,10 @@ const UploadPage = () => {
         type: uploadedContentType,
         id: contentId
       });
-      setXpGained(data.xpGained || 5);
-      setUserXP(data.clip?.userXP || data.userXP || 0);
+      const gainedXP = data.xpGained || 5;
+      const currentXP = (data.clip?.userXP || data.userXP || 0) + gainedXP;
+      setXpGained(gainedXP);
+      setUserXP(currentXP);
       setUserLevel(data.clip?.userLevel || data.userLevel || 1);
       
       // Refetch user data for UI updates

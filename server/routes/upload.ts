@@ -427,6 +427,7 @@ router.post('/screenshot', fullAccessMiddleware, screenshotUpload.single('screen
 
     // Get username for URL and fetch updated user data with new XP/level
     const user = await storage.getUser(req.user!.id);
+    console.log(`🎯 XP Debug - User after screenshot award: ID=${user?.id}, totalXP=${user?.totalXP}, level=${user?.level}`);
     const username = user?.username || 'unknown';
     const screenshotUrl = `${baseUrl}/@${username}/screenshot/${screenshot.shareCode}`;
     const qrCodeDataUrl = await QRCode.toDataURL(screenshotUrl);
@@ -438,7 +439,7 @@ router.post('/screenshot', fullAccessMiddleware, screenshotUpload.single('screen
       discord: screenshotUrl // User will copy this manually for Discord
     };
 
-    res.json({
+    const responseData = {
       success: true,
       screenshot: {
         ...screenshot,
@@ -450,7 +451,11 @@ router.post('/screenshot', fullAccessMiddleware, screenshotUpload.single('screen
       userXP: user?.totalXP || 0,
       userLevel: user?.level || 1,
       message: 'Screenshot uploaded successfully'
-    });
+    };
+    
+    console.log(`🎯 XP Debug - Screenshot response: xpGained=${responseData.xpGained}, userXP=${responseData.userXP}, userLevel=${responseData.userLevel}`);
+    
+    res.json(responseData);
 
   } catch (error) {
     console.error('Screenshot upload error:', error);
@@ -756,6 +761,7 @@ router.post('/process-video', fullAccessMiddleware, async (req, res) => {
 
     // Get username for URL and fetch updated user data with new XP/level
     const user = await storage.getUser(req.user!.id);
+    console.log(`🎯 XP Debug - User after award: ID=${user?.id}, totalXP=${user?.totalXP}, level=${user?.level}`);
     const username = user?.username || 'unknown';
     const contentType = videoType === 'reel' ? 'reel' : 'clip';
     const clipUrl = `${baseUrl}/@${username}/${contentType}/${clip.shareCode}`;
@@ -768,7 +774,7 @@ router.post('/process-video', fullAccessMiddleware, async (req, res) => {
       discord: clipUrl // User will copy this manually for Discord
     };
 
-    res.json({
+    const responseData = {
       success: true,
       clip: {
         ...clip,
@@ -780,7 +786,11 @@ router.post('/process-video', fullAccessMiddleware, async (req, res) => {
       userXP: user?.totalXP || 0,
       userLevel: user?.level || 1,
       message: 'Video processed successfully'
-    });
+    };
+    
+    console.log(`🎯 XP Debug - Response data: xpGained=${responseData.xpGained}, userXP=${responseData.userXP}, userLevel=${responseData.userLevel}`);
+    
+    res.json(responseData);
 
   } catch (error) {
     console.error('Video processing error:', error);
