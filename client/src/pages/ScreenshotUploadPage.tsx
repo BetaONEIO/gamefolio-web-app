@@ -180,8 +180,7 @@ const ScreenshotUploadPage: React.FC = () => {
           <div className="space-y-4">
             <Label>Screenshots ({selectedFiles.length}/3 selected)</Label>
             
-            {/* Initial Upload or Add More */}
-            {selectedFiles.length < 3 && (
+            {selectedFiles.length === 0 ? (
               <div>
                 <input
                   type="file"
@@ -193,42 +192,22 @@ const ScreenshotUploadPage: React.FC = () => {
                   disabled={isUploading}
                   data-testid="input-screenshot-upload"
                 />
-                {selectedFiles.length === 0 ? (
-                  <label
-                    htmlFor="screenshot-upload"
-                    className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-muted-foreground/50 transition-colors cursor-pointer flex flex-col items-center space-y-4"
-                  >
-                    <Upload className="h-12 w-12 text-muted-foreground" />
-                    <div className="space-y-2">
-                      <p className="text-lg font-medium">Drop files here or click to browse</p>
-                      <p className="text-sm text-muted-foreground">
-                        Select up to 3 screenshots • PNG, JPG, JPEG • Hold Ctrl/Cmd to select multiple
-                      </p>
-                    </div>
-                  </label>
-                ) : (
-                  <label htmlFor="screenshot-upload">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      disabled={isUploading}
-                      data-testid="button-add-another"
-                      asChild
-                    >
-                      <span className="cursor-pointer flex items-center justify-center">
-                        <Upload className="mr-2 h-4 w-4" />
-                        Add Another Screenshot ({3 - selectedFiles.length} remaining)
-                      </span>
-                    </Button>
-                  </label>
-                )}
+                <label
+                  htmlFor="screenshot-upload"
+                  className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-muted-foreground/50 transition-colors cursor-pointer flex flex-col items-center space-y-4"
+                >
+                  <Upload className="h-12 w-12 text-muted-foreground" />
+                  <div className="space-y-2">
+                    <p className="text-lg font-medium">Drop files here or click to browse</p>
+                    <p className="text-sm text-muted-foreground">
+                      Select up to 3 screenshots • PNG, JPG, JPEG • Hold Ctrl/Cmd to select multiple
+                    </p>
+                  </div>
+                </label>
               </div>
-            )}
-
-            {/* Preview Grid */}
-            {previews.length > 0 && (
-              <div className="space-y-2">
+            ) : (
+              <>
+                {/* Preview Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {previews.map((preview, index) => (
                     <div key={index} className="relative group">
@@ -254,7 +233,38 @@ const ScreenshotUploadPage: React.FC = () => {
                     </div>
                   ))}
                 </div>
-              </div>
+
+                {/* Add Another Button - Below previews */}
+                {selectedFiles.length < 3 && (
+                  <div>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      id="screenshot-upload"
+                      disabled={isUploading}
+                      data-testid="input-screenshot-upload"
+                    />
+                    <label htmlFor="screenshot-upload">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        disabled={isUploading}
+                        data-testid="button-add-another"
+                        asChild
+                      >
+                        <span className="cursor-pointer flex items-center justify-center">
+                          <Upload className="mr-2 h-4 w-4" />
+                          Add Another Screenshot ({3 - selectedFiles.length} remaining)
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
