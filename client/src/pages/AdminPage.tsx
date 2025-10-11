@@ -93,10 +93,7 @@ function BannerManagement() {
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      await apiRequest('/api/admin/banner-settings', {
-        method: 'PUT',
-        body: formData,
-      });
+      await apiRequest('PUT', '/api/admin/banner-settings', formData);
 
       toast({
         title: "Banner updated",
@@ -122,9 +119,7 @@ function BannerManagement() {
   const handleReset = async () => {
     setIsLoading(true);
     try {
-      await apiRequest('/api/admin/banner-settings/reset', {
-        method: 'POST',
-      });
+      await apiRequest('POST', '/api/admin/banner-settings/reset');
 
       toast({
         title: "Banner reset",
