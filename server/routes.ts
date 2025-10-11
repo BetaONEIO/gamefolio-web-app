@@ -3679,6 +3679,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Failed to delete clip" });
       }
 
+      // Deduct upload points (5 XP for clips/reels)
+      await LeaderboardService.deductPoints(
+        clip.userId,
+        'upload',
+        `Deleted: ${clip.videoType === 'reel' ? 'Reel' : 'Clip'} - ${clip.title}`
+      );
+
       res.status(200).json({ message: "Clip deleted successfully" });
     } catch (err) {
       console.error("Error deleting clip:", err);
@@ -5506,6 +5513,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(500).json({ message: "Failed to delete screenshot" });
       }
+
+      // Deduct upload points (2 XP for screenshots)
+      await LeaderboardService.deductPoints(
+        screenshot.userId,
+        'screenshot_upload',
+        `Deleted: Screenshot - ${screenshot.title}`
+      );
 
       res.status(200).json({ message: "Screenshot deleted successfully" });
     } catch (err) {

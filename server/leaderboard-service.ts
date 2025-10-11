@@ -66,6 +66,37 @@ export class LeaderboardService {
     ]);
   }
 
+  // Deduct points from a user when they delete content
+  static async deductPoints(
+    userId: number,
+    action: keyof typeof POINT_VALUES,
+    description?: string,
+    timestamp?: Date
+  ): Promise<void> {
+    const points = POINT_VALUES[action];
+    
+    // Record the point deduction in history (negative points)
+    const pointsHistory: InsertUserPointsHistory = {
+      userId,
+      action,
+      points: -points, // Negative to indicate deduction
+      description: description || `Points deducted for deleting ${action}`,
+      createdAt: timestamp,
+    };
+    
+    await storage.addUserPointsHistory(pointsHistory);
+    
+    // Deduct from user's total points and recalculate level
+    await storage.incrementUserPoints(userId, -points); // Negative to deduct
+    await this.updateUserLevel(userId);
+    
+    // Update both monthly and weekly leaderboards using the timestamp
+    await Promise.all([
+      this.updateMonthlyLeaderboard(userId, action, -points, timestamp),
+      this.updateWeeklyLeaderboard(userId, action, -points, timestamp)
+    ]);
+  }
+
   // Update user's level based on their total points
   static async updateUserLevel(userId: number): Promise<void> {
     try {
