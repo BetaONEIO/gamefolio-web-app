@@ -5483,19 +5483,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/screenshots/:id", authMiddleware, async (req, res) => {
     try {
       const screenshotId = parseInt(req.params.id);
+      console.log(`🗑️ Attempting to delete screenshot ${screenshotId}`);
 
       // Get screenshot to check ownership
       const screenshot = await storage.getScreenshot(screenshotId);
       if (!screenshot) {
+        console.log(`❌ Screenshot ${screenshotId} not found`);
         return res.status(404).json({ message: "Screenshot not found" });
       }
 
       // Check if user owns the screenshot or is admin
       if (screenshot.userId !== req.user!.id && req.user!.role !== 'admin') {
+        console.log(`❌ User ${req.user!.id} not authorized to delete screenshot ${screenshotId}`);
         return res.status(403).json({ message: "You can only delete your own screenshots" });
       }
 
       // Delete screenshot files from Supabase storage
+      console.log(`🗑️ Deleting files from Supabase for screenshot ${screenshotId}`);
       try {
         if (screenshot.imageUrl) {
           await supabaseStorage.deleteFile(screenshot.imageUrl);
@@ -5503,28 +5507,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (screenshot.thumbnailUrl) {
           await supabaseStorage.deleteFile(screenshot.thumbnailUrl);
         }
+        console.log(`✅ Files deleted from Supabase`);
       } catch (fileErr) {
         console.warn("Could not delete screenshot files from Supabase:", fileErr);
       }
 
       // Delete from database
+      console.log(`🗑️ Deleting screenshot ${screenshotId} from database`);
       const success = await storage.deleteScreenshot(screenshotId);
 
       if (!success) {
-        return res.status(500).json({ message: "Failed to delete screenshot" });
+        console.error(`❌ Failed to delete screenshot ${screenshotId} from database`);
+        return res.status(500).json({ message: "Failed to delete screenshot from database" });
       }
+      console.log(`✅ Screenshot ${screenshotId} deleted from database`);
 
       // Deduct upload points (2 XP for screenshots)
-      await LeaderboardService.deductPoints(
-        screenshot.userId,
-        'screenshot_upload',
-        `Deleted: Screenshot - ${screenshot.title}`
-      );
+      console.log(`📉 Deducting points for screenshot deletion`);
+      try {
+        await LeaderboardService.deductPoints(
+          screenshot.userId,
+          'screenshot_upload',
+          `Deleted: Screenshot - ${screenshot.title}`
+        );
+        console.log(`✅ Points deducted successfully`);
+      } catch (pointsErr) {
+        console.error("Error deducting points (continuing anyway):", pointsErr);
+        // Continue even if points deduction fails
+      }
 
+      console.log(`✅ Screenshot ${screenshotId} deleted successfully`);
       res.status(200).json({ message: "Screenshot deleted successfully" });
     } catch (err) {
-      console.error("Error deleting screenshot:", err);
-      return res.status(500).json({ message: "Error deleting screenshot" });
+      console.error("❌ Error deleting screenshot:", err);
+      console.error("Error stack:", err instanceof Error ? err.stack : "No stack trace");
+      return res.status(500).json({ 
+        message: "Error deleting screenshot",
+        error: err instanceof Error ? err.message : String(err)
+      });
     }
   });
 
