@@ -396,17 +396,17 @@ router.post('/screenshot', fullAccessMiddleware, screenshotUpload.single('screen
 
     const screenshot = await storage.createScreenshot(screenshotDataWithShareCode);
 
-    // Award upload points to the user
+    // Award upload points to the user (screenshots are worth 2 XP)
     await LeaderboardService.awardPoints(
       req.user!.id,
-      'upload',
+      'screenshot_upload',
       `Upload: Screenshot - ${screenshot.title}`
     );
 
     // Generate QR code and sharing data for screenshot
     const baseUrl = 'https://app.gamefolio.com';
 
-    // Get username for URL - need to fetch from user
+    // Get username for URL and fetch updated user data with new XP/level
     const user = await storage.getUser(req.user!.id);
     const username = user?.username || 'unknown';
     const screenshotUrl = `${baseUrl}/@${username}/screenshot/${screenshot.shareCode}`;
@@ -427,6 +427,9 @@ router.post('/screenshot', fullAccessMiddleware, screenshotUpload.single('screen
         shareUrl: screenshotUrl,
         socialMediaLinks
       },
+      xpGained: 2,
+      userXP: user?.totalXP || 0,
+      userLevel: user?.level || 1,
       message: 'Screenshot uploaded successfully'
     });
 
@@ -732,7 +735,7 @@ router.post('/process-video', fullAccessMiddleware, async (req, res) => {
     // Generate QR code and sharing data
     const baseUrl = 'https://app.gamefolio.com';
 
-    // Get username for URL - need to fetch from user
+    // Get username for URL and fetch updated user data with new XP/level
     const user = await storage.getUser(req.user!.id);
     const username = user?.username || 'unknown';
     const contentType = videoType === 'reel' ? 'reel' : 'clip';
@@ -754,6 +757,9 @@ router.post('/process-video', fullAccessMiddleware, async (req, res) => {
         shareUrl: clipUrl,
         socialMediaLinks
       },
+      xpGained: 5,
+      userXP: user?.totalXP || 0,
+      userLevel: user?.level || 1,
       message: 'Video processed successfully'
     });
 
