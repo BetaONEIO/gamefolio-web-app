@@ -1422,7 +1422,10 @@ export class DatabaseStorage implements IStorage {
         or(
           ilike(users.username, `%${search}%`),
           ilike(users.displayName, `%${search}%`),
-          ilike(users.email, `%${search}%`)
+          and(
+            isNotNull(users.email),
+            ilike(users.email, `%${search}%`)
+          )
         )
       ) as any;
     }
@@ -1464,7 +1467,10 @@ export class DatabaseStorage implements IStorage {
         or(
           ilike(users.username, `%${search}%`),
           ilike(users.displayName, `%${search}%`),
-          ilike(users.email, `%${search}%`)
+          and(
+            isNotNull(users.email),
+            ilike(users.email, `%${search}%`)
+          )
         )
       ) as any;
     }
