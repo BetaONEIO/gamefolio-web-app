@@ -5,11 +5,12 @@ import { InsertUserPointsHistory, InsertWeeklyLeaderboard, InsertTopContributor 
 // Points are used for BOTH leaderboards AND leveling
 // Every point earned contributes to user's level progression
 export const POINT_VALUES = {
-  upload: 5,    // 5 points for uploading content
-  like: 1,      // 1 point for liking content
-  comment: 1,   // 1 point for commenting
-  fire: 3,      // 3 points for fire reactions
-  view: 1,      // 1 point per view on uploaded content
+  upload: 5,              // 5 points for uploading clips/reels
+  screenshot_upload: 2,   // 2 points for uploading screenshots
+  like: 1,                // 1 point for liking content
+  comment: 1,             // 1 point for commenting
+  fire: 3,                // 3 points for fire reactions
+  view: 1,                // 1 point per view on uploaded content
 } as const;
 
 export class LeaderboardService {

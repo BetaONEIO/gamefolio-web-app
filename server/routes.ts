@@ -1734,13 +1734,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         pointValues: {
           upload: 5,
-          like: 2,
-          comment: 5,
+          screenshot_upload: 2,
+          like: 1,
+          comment: 1,
           fire: 3,
           view: 1
         },
         description: {
-          upload: "Points awarded for uploading clips, reels, or screenshots",
+          upload: "Points awarded for uploading clips or reels",
+          screenshot_upload: "Points awarded for uploading screenshots",
           like: "Points awarded for liking content",
           comment: "Points awarded for commenting on content",
           fire: "Points awarded for fire reactions",
@@ -1785,11 +1787,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Award points for each screenshot (5 points per upload) using the actual upload date
+      // Award points for each screenshot (2 points per upload) using the actual upload date
       for (const screenshot of allScreenshots) {
         await LeaderboardService.awardPoints(
           screenshot.userId,
-          'upload',
+          'screenshot_upload',
           `Historic Migration: Screenshot - ${screenshot.title}`,
           screenshot.createdAt
         );
@@ -5309,10 +5311,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const screenshot = await storage.createScreenshot(screenshotData);
 
-      // Award upload points to the user
+      // Award upload points to the user (2 XP for screenshots)
       await LeaderboardService.awardPoints(
         userId,
-        'upload',
+        'screenshot_upload',
         `Upload: Screenshot - ${title}`
       );
       
