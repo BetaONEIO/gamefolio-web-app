@@ -236,17 +236,18 @@ const ScreenshotUploadPage: React.FC = () => {
 
                 {/* Add Another Button - Below previews */}
                 {selectedFiles.length < 3 && (
-                  <label htmlFor="screenshot-upload">
+                  <label htmlFor="screenshot-upload" className="block">
                     <Button
                       type="button"
-                      variant="outline"
-                      className="w-full"
+                      variant="default"
+                      size="lg"
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
                       disabled={isUploading}
                       data-testid="button-add-another"
                       asChild
                     >
-                      <span className="cursor-pointer flex items-center justify-center">
-                        <Upload className="mr-2 h-4 w-4" />
+                      <span className="cursor-pointer flex items-center justify-center gap-2">
+                        <Upload className="h-5 w-5" />
                         Add Another Screenshot ({3 - selectedFiles.length} remaining)
                       </span>
                     </Button>
