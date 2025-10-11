@@ -5298,7 +5298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create screenshot record in database
       const screenshotData = {
         userId,
-        gameId: parseInt(gameId),
+        gameId: game.id, // Use the local database game ID, not the Twitch ID
         title: title.trim(),
         imageUrl,
         thumbnailUrl,
