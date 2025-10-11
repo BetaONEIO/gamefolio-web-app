@@ -1165,4 +1165,23 @@ adminRouter.post("/fix-leaderboard", async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/admin/regenerate-reel-thumbnails - Regenerate all reel thumbnails with correct 9:16 aspect ratio
+adminRouter.post("/regenerate-reel-thumbnails", async (req: Request, res: Response) => {
+  try {
+    const { regenerateReelThumbnails } = await import('../scripts/regenerate-reel-thumbnails');
+    await regenerateReelThumbnails();
+    res.json({ 
+      success: true, 
+      message: "Reel thumbnails have been successfully regenerated with correct 9:16 aspect ratio" 
+    });
+  } catch (err) {
+    console.error("Error regenerating reel thumbnails:", err);
+    res.status(500).json({ 
+      success: false,
+      message: "Error regenerating reel thumbnails",
+      error: err instanceof Error ? err.message : String(err)
+    });
+  }
+});
+
 export default adminRouter;

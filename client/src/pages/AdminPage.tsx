@@ -1933,6 +1933,54 @@ const AdminPage = () => {
                 </div>
               </div>
 
+              {/* Regenerate Reel Thumbnails */}
+              <div className="border rounded-lg p-4 bg-purple-50 dark:bg-purple-950">
+                <div className="flex items-start gap-4">
+                  <div className="flex-1">
+                    <h4 className="font-semibold mb-1">Regenerate Reel Thumbnails</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Regenerate all reel thumbnails with correct 9:16 aspect ratio. 
+                      This will fix thumbnails created before the aspect ratio fix.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={async () => {
+                      const confirmed = window.confirm(
+                        "This will regenerate thumbnails for all reels with the correct 9:16 aspect ratio. This may take a while. Continue?"
+                      );
+                      if (!confirmed) return;
+
+                      try {
+                        toast({
+                          title: "Processing...",
+                          description: "Regenerating reel thumbnails. This may take a few minutes.",
+                        });
+
+                        const response = await apiRequest("/api/admin/regenerate-reel-thumbnails", {
+                          method: "POST",
+                        }) as { success: boolean; message: string };
+
+                        toast({
+                          title: "Success",
+                          description: response.message || "Reel thumbnails regenerated successfully",
+                          variant: "gamefolioSuccess",
+                        });
+                      } catch (error: any) {
+                        toast({
+                          title: "Error",
+                          description: error.message || "Failed to regenerate reel thumbnails",
+                          variant: "gamefolioError",
+                        });
+                      }
+                    }}
+                    data-testid="button-regenerate-reel-thumbnails"
+                  >
+                    <Video className="h-4 w-4 mr-2" />
+                    Regenerate Reel Thumbnails
+                  </Button>
+                </div>
+              </div>
+
               {/* User Search Section */}
               <div className="space-y-4">
                 <div className="space-y-2">
