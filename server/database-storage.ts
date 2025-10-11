@@ -1633,16 +1633,12 @@ export class DatabaseStorage implements IStorage {
 
   async deleteScreenshot(id: number): Promise<boolean> {
     try {
-      console.log(`🗄️ Attempting to delete screenshot ${id} from database`);
-      const result = await db.delete(screenshots).where(eq(screenshots.id, id));
-      console.log(`🗄️ Delete result:`, result);
-      const success = Array.isArray(result) ? result.length > 0 : (result as any).count > 0;
-      console.log(`🗄️ Delete success:`, success);
-      return success;
+      const result = await db.delete(screenshots).where(eq(screenshots.id, id)).returning();
+      return result.length > 0;
     } catch (error) {
       console.error(`❌ Error in deleteScreenshot for ID ${id}:`, error);
       console.error("Error details:", error instanceof Error ? error.stack : error);
-      throw error; // Re-throw to let the caller handle it
+      throw error;
     }
   }
 
