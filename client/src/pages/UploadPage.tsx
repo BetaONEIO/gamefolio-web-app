@@ -475,88 +475,85 @@ const UploadPage = () => {
       
       console.log('Final video type for upload:', videoType);
 
-      // Direct upload using FormData
+      // Direct Supabase upload (bypasses all backend size limits)
       setIsUploading(true);
       setUploadProgress(0);
 
       return new Promise(async (resolve, reject) => {
         try {
-          // Create FormData
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('uploadType', videoType);
-          formData.append('filename', file.name);
-          formData.append('filetype', file.type);
+          console.log('Starting direct Supabase upload from client');
           
-          console.log('Starting direct upload to /api/upload/video-direct');
+          // Step 1: Get upload URL from backend
+          const timestamp = Date.now();
+          const randomId = Math.random().toString(36).substring(2, 15);
+          const extension = file.name.split('.').pop();
+          const prefix = videoType === 'reel' ? 'reels' : 'videos';
+          const fileName = `${prefix}/${timestamp}-${randomId}.${extension}`;
+          const filePath = `users/${user.id}/${fileName}`;
           
-          // Step 1: Upload video file
-          const xhr = new XMLHttpRequest();
+          setUploadProgress(10);
           
-          xhr.upload.addEventListener('progress', (e) => {
-            if (e.lengthComputable) {
-              const percentComplete = Math.round((e.loaded / e.total) * 50); // 50% for upload
-              console.log('Upload progress:', percentComplete + '%');
-              setUploadProgress(percentComplete);
+          // Step 2: Get Supabase upload credentials
+          const credsResponse = await fetch('/api/upload/supabase-creds', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filePath, contentType: file.type })
+          });
+          
+          if (!credsResponse.ok) {
+            throw new Error('Failed to get upload credentials');
+          }
+          
+          const credsData = await credsResponse.json();
+          const { uploadUrl, publicUrl } = credsData;
+          console.log('Got upload URL for direct upload');
+          setUploadProgress(20);
+          
+          // Step 3: Upload directly to Supabase (client-side, bypasses all backend limits)
+          const uploadResponse = await fetch(uploadUrl, {
+            method: 'PUT',
+            body: file,
+            headers: {
+              'Content-Type': file.type,
+              'x-upsert': 'false'
             }
           });
           
-          xhr.addEventListener('load', async () => {
-            if (xhr.status === 200) {
-              try {
-                const uploadResult = JSON.parse(xhr.responseText);
-                console.log('Upload complete:', uploadResult);
-                
-                // Step 2: Process the uploaded video
-                setUploadProgress(75); // 75% after upload complete
-                
-                const processData = {
-                  uploadResult: uploadResult.result,
-                  title: titleRef.current || title,
-                  description: descriptionRef.current || description,
-                  gameId: selectedGame ? parseInt(selectedGame.id.toString()) : null,
-                  tags,
-                  videoType
-                };
-                
-                const processResponse = await fetch('/api/upload/process-video', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  credentials: 'include',
-                  body: JSON.stringify(processData),
-                });
-                
-                if (!processResponse.ok) {
-                  const errorData = await processResponse.json();
-                  throw new Error(errorData.error || 'Video processing failed');
-                }
-                
-                const processResult = await processResponse.json();
-                setUploadProgress(100);
-                console.log('Video processing successful:', processResult);
-                
-                resolve(processResult);
-              } catch (error) {
-                console.error('Processing error:', error);
-                reject(error);
-              }
-            } else {
-              const errorText = xhr.responseText;
-              console.error('Upload failed:', errorText);
-              reject(new Error(`Upload failed: ${errorText}`));
-            }
+          if (!uploadResponse.ok) {
+            const errorText = await uploadResponse.text();
+            console.error('Supabase upload error:', errorText);
+            throw new Error(`Direct upload to Supabase failed: ${uploadResponse.status}`);
+          }
+          
+          console.log('Direct Supabase upload complete');
+          setUploadProgress(70);
+          
+          // Step 4: Process the uploaded video
+          const processData = {
+            uploadResult: { url: publicUrl, path: filePath },
+            title: titleRef.current || title,
+            description: descriptionRef.current || description,
+            gameId: selectedGame ? parseInt(selectedGame.id.toString()) : null,
+            tags,
+            videoType
+          };
+          
+          const processResponse = await fetch('/api/upload/process-video', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(processData),
           });
           
-          xhr.addEventListener('error', () => {
-            console.error('Upload network error');
-            reject(new Error('Network error during upload'));
-          });
+          if (!processResponse.ok) {
+            const errorData = await processResponse.json();
+            throw new Error(errorData.error || 'Video processing failed');
+          }
           
-          xhr.open('POST', '/api/upload/video-direct');
-          xhr.withCredentials = true;
-          xhr.send(formData);
+          const processResult = await processResponse.json();
+          setUploadProgress(100);
+          console.log('Video processing successful:', processResult);
+          
+          resolve(processResult);
           
         } catch (error) {
           console.error('Upload error:', error);

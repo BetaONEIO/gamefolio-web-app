@@ -209,6 +209,38 @@ export class SupabaseStorage {
   }
 
   /**
+   * Get signed URL for direct client-side upload to Supabase
+   */
+  async getSignedUploadUrl(filePath: string, contentType: string): Promise<{ uploadUrl: string; publicUrl: string }> {
+    try {
+      this.validateBucketAccess(this.bucketName);
+      
+      // Create a signed upload URL
+      const { data, error } = await this.supabase.storage
+        .from(this.bucketName)
+        .createSignedUploadUrl(filePath);
+      
+      if (error) {
+        console.error('Error creating signed upload URL:', error);
+        throw error;
+      }
+      
+      // Get the public URL for this file
+      const { data: { publicUrl } } = this.supabase.storage
+        .from(this.bucketName)
+        .getPublicUrl(filePath);
+      
+      return {
+        uploadUrl: data.signedUrl,
+        publicUrl: publicUrl
+      };
+    } catch (error) {
+      console.error('Error generating signed upload URL:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Delete a file from Supabase storage
    */
   async deleteFile(filePath: string): Promise<boolean> {

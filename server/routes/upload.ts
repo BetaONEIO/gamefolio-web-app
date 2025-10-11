@@ -222,6 +222,25 @@ router.post('/video-direct', fullAccessMiddleware, upload.single('file'), async 
   }
 });
 
+// Get Supabase upload credentials for direct client-side upload
+router.post('/upload/supabase-creds', fullAccessMiddleware, async (req, res) => {
+  try {
+    const { filePath, contentType } = req.body;
+    
+    if (!filePath || !contentType) {
+      return res.status(400).json({ error: 'Missing filePath or contentType' });
+    }
+    
+    // Generate signed upload URL for Supabase
+    const { uploadUrl, publicUrl } = await supabaseStorage.getSignedUploadUrl(filePath, contentType);
+    
+    res.json({ uploadUrl, publicUrl });
+  } catch (error) {
+    console.error('Error generating Supabase upload credentials:', error);
+    res.status(500).json({ error: 'Failed to generate upload credentials' });
+  }
+});
+
 // TUS endpoints (keep for future use)
 router.all('/tus/*', fullAccessMiddleware, (req, res) => {
   return tusServer.handle(req, res);
