@@ -155,16 +155,13 @@ export function XPGainedDialog({
 
             {/* Center content */}
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <CloudUpload className="w-20 h-20 text-white mb-4" strokeWidth={2} />
-              <div className="text-4xl font-bold text-green-400 animate-pulse">
-                +{xpGained} xp
+              <div className="text-5xl font-bold text-white mb-2">
+                Level {currentLevel}
+              </div>
+              <div className="text-3xl font-bold text-green-400 animate-pulse">
+                +{xpGained} XP
               </div>
             </div>
-          </div>
-
-          {/* Current level text */}
-          <div className="text-3xl font-bold text-white">
-            Level {currentLevel}
           </div>
 
           {/* Continue button */}
