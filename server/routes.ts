@@ -5345,7 +5345,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         qrCode: qrCodeDataUrl,
         socialMediaLinks,
         screenshotUrl,
-        xpGained: 5, // Upload XP reward
+        xpGained: 2, // Screenshot upload XP reward (changed from 5 to 2)
         userXP: updatedUser?.totalXP || 0,
         userLevel: updatedUser?.level || 1
       });
