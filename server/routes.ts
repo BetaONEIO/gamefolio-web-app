@@ -180,7 +180,7 @@ const screenshotStorage = multer.diskStorage({
 const screenshotUpload = multer({
   storage: screenshotStorage,
   limits: {
-    fileSize: 20 * 1024 * 1024, // 20MB for screenshots
+    fileSize: 100 * 1024 * 1024, // 100MB for screenshots
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {

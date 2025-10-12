@@ -342,10 +342,10 @@ const UploadPage = () => {
         return;
       }
       
-      // Validate file size (20MB limit for images)
-      const maxSize = 20 * 1024 * 1024;
+      // Validate file size (100MB limit for images)
+      const maxSize = 100 * 1024 * 1024;
       if (file.size > maxSize) {
-        setScreenshotError("Each image must be less than 20MB");
+        setScreenshotError("Each image must be less than 100MB");
         return;
       }
     }
@@ -1843,7 +1843,7 @@ const UploadPage = () => {
                         <TooltipTrigger asChild>
                           <div className="flex items-center text-xs text-muted-foreground">
                             <Info className="h-3 w-3 mr-1" />
-                            <span>Maximum 20MB each</span>
+                            <span>Maximum 100MB each</span>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -1872,7 +1872,7 @@ const UploadPage = () => {
                       <Image className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
                       <p className="font-medium">Drag and drop your screenshots or click to browse</p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        JPEG, PNG, or JPG up to 20MB • Select up to 3 screenshots
+                        JPEG, PNG, or JPG up to 100MB • Select up to 3 screenshots
                       </p>
                     </label>
                   ) : (

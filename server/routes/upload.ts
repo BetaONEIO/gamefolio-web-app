@@ -63,7 +63,7 @@ const screenshotStorage = multer.diskStorage({
 const screenshotUpload = multer({
   storage: screenshotStorage,
   limits: {
-    fileSize: 20 * 1024 * 1024, // 20MB for screenshots
+    fileSize: 100 * 1024 * 1024, // 100MB for screenshots
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -880,7 +880,7 @@ router.get('/config', fullAccessMiddleware, (req, res) => {
         protocol: 'TUS'
       },
       screenshot: {
-        maxSizeMB: 20,
+        maxSizeMB: 100,
         protocol: 'standard'
       }
     },
@@ -957,25 +957,44 @@ router.post('/avatar', fullAccessMiddleware, avatarUpload.single('file'), async 
 // Global error handler for multer errors
 router.use((error: any, req: any, res: any, next: any) => {
   if (error instanceof multer.MulterError) {
+    // Try to get file size from multiple sources
+    let fileSizeMB = 'N/A';
+    let attemptedFileSize = 'Unknown';
+    
+    if (req.file?.size) {
+      fileSizeMB = `${(req.file.size / (1024 * 1024)).toFixed(2)} MB`;
+      attemptedFileSize = fileSizeMB;
+    } else if (req.headers['content-length']) {
+      const contentLength = parseInt(req.headers['content-length'], 10);
+      attemptedFileSize = `${(contentLength / (1024 * 1024)).toFixed(2)} MB`;
+    }
+    
     console.error('❌ Multer upload error:', {
       code: error.code,
       field: error.field,
       message: error.message,
-      file: req.file?.originalname,
-      fileSize: req.file?.size ? `${(req.file.size / (1024 * 1024)).toFixed(2)} MB` : 'N/A',
+      file: req.file?.originalname || 'Unknown filename',
+      fileSize: fileSizeMB,
+      attemptedUploadSize: attemptedFileSize,
+      contentLength: req.headers['content-length'],
       endpoint: req.path,
-      userId: req.user?.id
+      userId: req.user?.id,
+      timestamp: new Date().toISOString()
     });
 
     if (error.code === 'LIMIT_FILE_SIZE') {
       const limit = error.message.includes('500') ? '500MB' : 
+                    error.message.includes('100') ? '100MB' :
                     error.message.includes('20') ? '20MB' : 
                     error.message.includes('5') ? '5MB' : 'the allowed size';
+      
+      console.error(`📊 File size limit exceeded: User attempted to upload ${attemptedFileSize}, limit is ${limit}`);
       
       return res.status(413).json({
         error: `File too large. Maximum size is ${limit}.`,
         code: 'LIMIT_FILE_SIZE',
-        details: error.message
+        details: error.message,
+        attemptedSize: attemptedFileSize
       });
     }
 
