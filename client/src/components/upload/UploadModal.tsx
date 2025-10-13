@@ -42,6 +42,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'processing' | 'success' | 'error'>('idle');
   const [uploadResult, setUploadResult] = useState<any>(null);
+  const [isDragging, setIsDragging] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -163,6 +164,54 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
     }
 
     setSelectedFile(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      const isVideo = file.type.startsWith('video/');
+      const isImage = file.type.startsWith('image/');
+
+      if (!isVideo && !isImage) {
+        toast({ title: 'Error', description: 'Please drop a video or image file', variant: 'gamefolioError' });
+        return;
+      }
+
+      // Auto-detect upload type based on file
+      if (isImage) {
+        setUploadType('screenshot');
+      } else if (isVideo) {
+        // Keep current video/reel selection or default to video
+        if (uploadType === 'screenshot') {
+          setUploadType('video');
+        }
+      }
+
+      setSelectedFile(file);
+    }
   };
 
   const validateFile = () => {
@@ -308,7 +357,12 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent 
+        className="max-w-md"
+        data-testid="upload-dialog"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {getUploadIcon()}
@@ -335,18 +389,30 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
           {/* File Selection */}
           <div>
             <label className="block text-sm font-medium mb-2">File</label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+            <div 
+              data-testid="drop-zone"
+              className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+                isDragging 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border-gray-300'
+              }`}
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
               <input
                 ref={fileInputRef}
                 type="file"
                 accept={uploadType === 'screenshot' ? 'image/*' : 'video/*'}
                 onChange={handleFileSelect}
                 className="hidden"
+                data-testid="input-file"
               />
               {selectedFile ? (
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">{selectedFile.name}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm font-medium" data-testid="text-filename">{selectedFile.name}</p>
+                  <p className="text-xs text-gray-500" data-testid="text-filesize">
                     {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
                   </p>
                 </div>
@@ -354,7 +420,10 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
                 <div className="space-y-2">
                   <UploadIcon className="h-8 w-8 mx-auto text-gray-400" />
                   <p className="text-sm text-gray-500">
-                    Click to select {uploadType === 'screenshot' ? 'an image' : 'a video'} file
+                    {isDragging 
+                      ? 'Drop file here' 
+                      : `Drag and drop or click to select ${uploadType === 'screenshot' ? 'an image' : 'a video'} file`
+                    }
                   </p>
                 </div>
               )}
@@ -364,6 +433,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
                 size="sm"
                 className="mt-2"
                 onClick={() => fileInputRef.current?.click()}
+                data-testid="button-choose-file"
               >
                 Choose File
               </Button>
