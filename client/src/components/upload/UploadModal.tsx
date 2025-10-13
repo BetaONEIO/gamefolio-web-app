@@ -45,6 +45,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
   const [isDragging, setIsDragging] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -54,16 +55,38 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
     if (!isOpen) return;
 
     const preventDefaults = (e: DragEvent) => {
+      // Don't prevent if event is on the drop zone
+      if (dropZoneRef.current && dropZoneRef.current.contains(e.target as Node)) {
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
     };
 
-    window.addEventListener('dragover', preventDefaults);
-    window.addEventListener('drop', preventDefaults);
+    // Use capture phase to catch events early
+    const options = { capture: true };
+    
+    window.addEventListener('dragenter', preventDefaults, options);
+    window.addEventListener('dragover', preventDefaults, options);
+    window.addEventListener('dragleave', preventDefaults, options);
+    window.addEventListener('drop', preventDefaults, options);
+
+    // Also prevent on document
+    document.addEventListener('dragenter', preventDefaults, options);
+    document.addEventListener('dragover', preventDefaults, options);
+    document.addEventListener('dragleave', preventDefaults, options);
+    document.addEventListener('drop', preventDefaults, options);
 
     return () => {
-      window.removeEventListener('dragover', preventDefaults);
-      window.removeEventListener('drop', preventDefaults);
+      window.removeEventListener('dragenter', preventDefaults, options);
+      window.removeEventListener('dragover', preventDefaults, options);
+      window.removeEventListener('dragleave', preventDefaults, options);
+      window.removeEventListener('drop', preventDefaults, options);
+      
+      document.removeEventListener('dragenter', preventDefaults, options);
+      document.removeEventListener('dragover', preventDefaults, options);
+      document.removeEventListener('dragleave', preventDefaults, options);
+      document.removeEventListener('drop', preventDefaults, options);
     };
   }, [isOpen]);
 
@@ -408,6 +431,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
           <div>
             <label className="block text-sm font-medium mb-2">File</label>
             <div 
+              ref={dropZoneRef}
               data-testid="drop-zone"
               className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
                 isDragging 
