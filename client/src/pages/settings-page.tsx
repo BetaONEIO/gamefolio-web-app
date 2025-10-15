@@ -74,6 +74,9 @@ export default function SettingsPage() {
   // Track if banner was manually uploaded to prevent useEffect override
   const [uploadedBannerUrl, setUploadedBannerUrl] = useState<string>('');
 
+  // Track previous avatarUrl to detect successful uploads
+  const prevAvatarUrl = React.useRef(user?.avatarUrl);
+
   // Update profile data when user data changes (preserve uploaded banners)
   useEffect(() => {
     if (user) {
@@ -112,17 +115,20 @@ export default function SettingsPage() {
           bio: user.bio || "",
           backgroundColor: user.backgroundColor || "#0B2232",
           accentColor: user.accentColor || "#4ADE80",
-          bannerUrl: finalBannerUrl
+          bannerUrl: finalBannerUrl,
+          avatarUrl: user.avatarUrl || ""
         };
       });
       
-      // Clear avatar upload state when user data updates (after successful upload)
-      if (user.avatarUrl && avatarFile) {
+      // Only clear avatar upload state if the avatarUrl actually changed (successful upload)
+      if (avatarFile && user.avatarUrl && user.avatarUrl !== prevAvatarUrl.current) {
+        console.log('✅ Avatar successfully uploaded, clearing upload state');
         setAvatarFile(null);
         setAvatarPreview('');
+        prevAvatarUrl.current = user.avatarUrl;
       }
     }
-  }, [user, avatarFile, uploadedBannerUrl]);
+  }, [user, uploadedBannerUrl]);
 
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
   const [showAccentPicker, setShowAccentPicker] = useState(false);
