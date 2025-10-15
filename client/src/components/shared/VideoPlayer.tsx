@@ -45,9 +45,17 @@ const VideoPlayer = ({
   // Use shared audio preferences across all video players
   const { muted: isMuted, volume, setMuted, setVolume: setGlobalVolume, toggleMuted, isInitialized } = useVideoAudioPreference();
   
+  // Reset view tracking when clipId changes
+  useEffect(() => {
+    hasTrackedView.current = false;
+  }, [clipId]);
+  
   // Function to track video view
   const trackView = async () => {
     if (!clipId || hasTrackedView.current) return;
+    
+    // Set the flag immediately to prevent race conditions
+    hasTrackedView.current = true;
     
     try {
       const response = await fetch(`/api/clips/${clipId}/views`, {
@@ -56,11 +64,15 @@ const VideoPlayer = ({
       });
       
       if (response.ok) {
-        hasTrackedView.current = true;
         console.log('Video view tracked for clip:', clipId);
+      } else {
+        // Reset flag if the request failed so it can be retried
+        hasTrackedView.current = false;
       }
     } catch (error) {
       console.error('Failed to track video view:', error);
+      // Reset flag on error so it can be retried
+      hasTrackedView.current = false;
     }
   };
   
