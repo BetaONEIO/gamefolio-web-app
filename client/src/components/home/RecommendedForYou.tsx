@@ -94,10 +94,10 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
   if (isLoading) {
     return (
       <section className="px-2 sm:px-4 md:px-6 mb-6 sm:mb-8">
-        <div className="flex items-center justify-between mb-4 sm:mb-6 md:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4 sm:mb-6 md:mb-8">
           <div className="flex items-center gap-2">
-            <Star className="h-5 w-5 text-primary" />
-            <h2 className="text-xl sm:text-2xl font-bold">Recommended for You</h2>
+            <Star className="h-5 w-5 text-primary flex-shrink-0" />
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold">Recommended for You</h2>
           </div>
           
           {/* Toggle between clips and reels */}
@@ -110,7 +110,8 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
               data-testid="button-clips-toggle"
             >
               <Video className="h-4 w-4" />
-              Clips
+              <span className="hidden xs:inline">Clips</span>
+              <span className="xs:hidden">Clips</span>
             </Button>
             <Button
               variant={contentType === 'reels' ? 'default' : 'outline'}
@@ -120,7 +121,8 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
               data-testid="button-reels-toggle"
             >
               <Camera className="h-4 w-4" />
-              Reels
+              <span className="hidden xs:inline">Reels</span>
+              <span className="xs:hidden">Reels</span>
             </Button>
           </div>
         </div>
@@ -150,10 +152,10 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
 
   return (
     <section className="px-2 sm:px-4 md:px-6 mb-6 sm:mb-8" data-testid="recommended-for-you-section">
-      <div className="flex items-center justify-between mb-4 sm:mb-6 md:mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4 sm:mb-6 md:mb-8">
         <div className="flex items-center gap-2">
-          <Star className="h-5 w-5 text-primary" />
-          <h2 className="text-xl sm:text-2xl font-bold">Recommended for You</h2>
+          <Star className="h-5 w-5 text-primary flex-shrink-0" />
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold">Recommended for You</h2>
         </div>
         
         {/* Toggle between clips and reels */}
@@ -166,7 +168,8 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
             data-testid="button-clips-toggle"
           >
             <Video className="h-4 w-4" />
-            Clips
+            <span className="hidden xs:inline">Clips</span>
+            <span className="xs:hidden">Clips</span>
           </Button>
           <Button
             variant={contentType === 'reels' ? 'default' : 'outline'}
@@ -176,7 +179,8 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
             data-testid="button-reels-toggle"
           >
             <Camera className="h-4 w-4" />
-            Reels
+            <span className="hidden xs:inline">Reels</span>
+            <span className="xs:hidden">Reels</span>
           </Button>
         </div>
       </div>
