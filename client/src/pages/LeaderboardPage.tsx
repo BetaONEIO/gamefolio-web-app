@@ -109,7 +109,7 @@ const LeaderboardPage = () => {
   const getRankRowColor = (rank: number, isCurrentUser: boolean) => {
     if (rank === 1) return "bg-gradient-to-r from-yellow-500/20 to-yellow-600/10 border-yellow-500/30";
     if (rank === 2) return "bg-gradient-to-r from-gray-400/20 to-gray-500/10 border-gray-400/30";
-    if (rank === 3) return "bg-gradient-to-r from-amber-500/20 to-amber-600/10 border-amber-500/30";
+    if (rank === 3) return "bg-gradient-to-r from-orange-600/20 to-orange-700/10 border-orange-600/30";
     return isCurrentUser ? 'bg-primary/5 border-primary/20' : 'bg-muted/30';
   };
 
