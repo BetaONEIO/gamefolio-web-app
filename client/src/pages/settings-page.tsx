@@ -147,6 +147,14 @@ export default function SettingsPage() {
     profileData.accentColor !== (user?.accentColor || "#4ADE80") ||
     normalizeValue(profileData.bannerUrl) !== normalizeValue(user?.bannerUrl) ||
     avatarFile !== null;
+  
+  // Debug logging
+  console.log('💾 Save button state:', { 
+    hasUnsavedChanges, 
+    avatarFile: avatarFile?.name || 'none',
+    displayNameChanged: normalizeValue(profileData.displayName) !== normalizeValue(user?.displayName),
+    bioChanged: normalizeValue(profileData.bio) !== normalizeValue(user?.bio)
+  });
 
   // Handle avatar file selection
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,14 +180,22 @@ export default function SettingsPage() {
         return;
       }
 
+      console.log('🖼️ Avatar file selected:', file.name, 'Size:', file.size);
       setAvatarFile(file);
       
       // Create preview URL
       const reader = new FileReader();
       reader.onload = (e) => {
         setAvatarPreview(e.target?.result as string);
+        console.log('✅ Avatar preview created');
       };
       reader.readAsDataURL(file);
+      
+      toast({
+        title: "Avatar selected",
+        description: "Click 'Save Changes' to upload your new profile picture",
+        variant: "gamefolioSuccess",
+      });
     }
   };
 
