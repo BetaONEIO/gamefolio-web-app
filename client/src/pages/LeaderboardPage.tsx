@@ -106,6 +106,13 @@ const LeaderboardPage = () => {
     return "bg-gradient-to-r from-blue-500 to-purple-600";
   };
 
+  const getRankRowColor = (rank: number, isCurrentUser: boolean) => {
+    if (rank === 1) return "bg-gradient-to-r from-yellow-500/20 to-yellow-600/10 border-yellow-500/30";
+    if (rank === 2) return "bg-gradient-to-r from-gray-400/20 to-gray-500/10 border-gray-400/30";
+    if (rank === 3) return "bg-gradient-to-r from-amber-500/20 to-amber-600/10 border-amber-500/30";
+    return isCurrentUser ? 'bg-primary/5 border-primary/20' : 'bg-muted/30';
+  };
+
   const AllTimeLeaderboardTable = ({ data, isLoading }: { data: PointsLeaderboardEntry[] | undefined, isLoading: boolean }) => (
     <Card>
       <CardHeader>
@@ -149,7 +156,7 @@ const LeaderboardPage = () => {
               <div 
                 key={entry.user.id}
                 className={`flex items-center gap-2 sm:gap-4 p-3 sm:p-4 rounded-lg border transition-all hover:shadow-md cursor-pointer hover:scale-[1.02] ${
-                  user?.id === entry.user.id ? 'bg-primary/5 border-primary/20' : 'bg-muted/30'
+                  getRankRowColor(entry.rank, user?.id === entry.user.id)
                 }`}
                 data-testid={`leaderboard-entry-${entry.user.id}`}
                 onClick={() => window.location.href = `/profile/${entry.user.username}`}
@@ -276,7 +283,7 @@ const LeaderboardPage = () => {
               <div 
                 key={entry.userId}
                 className={`flex items-center gap-2 sm:gap-4 p-3 sm:p-4 rounded-lg border transition-all hover:shadow-md cursor-pointer hover:scale-[1.02] ${
-                  user?.id === entry.userId ? 'bg-primary/5 border-primary/20' : 'bg-muted/30'
+                  getRankRowColor(entry.rank, user?.id === entry.userId)
                 }`}
                 data-testid={`leaderboard-entry-${entry.userId}`}
                 onClick={() => window.location.href = `/profile/${entry.user.username}`}
@@ -392,7 +399,7 @@ const LeaderboardPage = () => {
                 <div 
                   key={entry.id}
                   className={`flex items-center gap-2 sm:gap-4 p-3 sm:p-4 rounded-lg border transition-all hover:shadow-md cursor-pointer hover:scale-[1.02] ${
-                    user?.id === entry.id ? 'bg-primary/5 border-primary/20' : 'bg-muted/30'
+                    getRankRowColor(rank, user?.id === entry.id)
                   }`}
                   data-testid={`xp-leaderboard-entry-${entry.id}`}
                   onClick={() => window.location.href = `/profile/${entry.username}`}

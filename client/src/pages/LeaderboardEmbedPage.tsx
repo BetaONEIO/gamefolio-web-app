@@ -48,6 +48,13 @@ const LeaderboardEmbedPage = () => {
     return "bg-gradient-to-r from-blue-500 to-purple-600";
   };
 
+  const getRankRowColor = (rank: number) => {
+    if (rank === 1) return "bg-gradient-to-r from-yellow-500/20 to-yellow-600/10 border-yellow-500/30";
+    if (rank === 2) return "bg-gradient-to-r from-gray-400/20 to-gray-500/10 border-gray-400/30";
+    if (rank === 3) return "bg-gradient-to-r from-amber-500/20 to-amber-600/10 border-amber-500/30";
+    return 'bg-muted/30';
+  };
+
   return (
     <div className="min-h-screen bg-background/95 backdrop-blur-sm p-4">
       <Card className="max-w-4xl mx-auto border-2 border-primary/20 shadow-xl">
@@ -94,7 +101,7 @@ const LeaderboardEmbedPage = () => {
                 <div 
                   key={entry.user.id}
                   className={`flex items-center gap-4 p-3 rounded-lg border transition-all ${
-                    entry.rank <= 3 ? 'bg-gradient-to-r from-primary/5 to-secondary/5 border-primary/30' : 'bg-muted/30'
+                    getRankRowColor(entry.rank)
                   }`}
                   data-testid={`embed-leaderboard-entry-${entry.user.id}`}
                 >
