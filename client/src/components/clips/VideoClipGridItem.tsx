@@ -133,30 +133,30 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
       )}
 
       {/* Top right section with stats - matches VideoClipCard styling */}
-      <div className={`absolute top-2 ${canDelete ? 'right-12' : 'right-2'} flex items-center gap-1`}>
+      <div className={`absolute top-1.5 md:top-2 ${canDelete ? 'right-12' : 'right-1.5 md:right-2'} flex items-center gap-0.5 md:gap-1`}>
         {/* Duration badge - use actual duration from database */}
         {clip.duration && clip.duration > 0 && (
-          <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium">
+          <div className="bg-black/70 backdrop-blur-sm text-white px-1 py-0.5 md:px-1.5 md:py-0.5 text-[9px] md:text-[10px] rounded font-medium">
             {`${Math.floor(clip.duration / 60)}:${(clip.duration % 60).toString().padStart(2, '0')}`}
           </div>
         )}
 
         {/* View count with icon */}
-        <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium flex items-center gap-1">
-          <Eye className="h-3 w-3" />
+        <div className="bg-black/70 backdrop-blur-sm text-white px-1 py-0.5 md:px-1.5 md:py-0.5 text-[9px] md:text-[10px] rounded font-medium flex items-center gap-0.5">
+          <Eye className="h-2.5 w-2.5 md:h-3 md:w-3" />
           {(clip.views ?? 0) > 1000 ? `${((clip.views ?? 0) / 1000).toFixed(1)}K` : (clip.views ?? 0)}
         </div>
       </div>
 
       {/* Bottom right badges container - smaller for reels */}
-      <div className="absolute bottom-2 right-2 flex items-center gap-1">
+      <div className="absolute bottom-1.5 md:bottom-2 right-1.5 md:right-2 flex items-center gap-0.5 md:gap-1">
         {/* Game name badge - green color, positioned next to NEW badge, smaller for reels */}
         {clip.gameId && clip.game && (
           <Link 
             href={`/games/${clip.gameId}/clips`}
             onClick={(e) => e.stopPropagation()}
             className={`bg-green-600 text-white rounded font-bold hover:bg-green-500 transition-all duration-300 ${
-              isReel ? 'text-[9px] px-1.5 py-0.5' : compact ? 'text-[10px] px-2 py-0.5' : 'text-xs px-2.5 py-1'
+              isReel ? 'text-[8px] px-1 py-0.5 md:text-[9px] md:px-1.5' : compact ? 'text-[9px] px-1.5 py-0.5 md:text-[10px] md:px-2' : 'text-[10px] px-1.5 py-0.5 md:text-xs md:px-2 md:py-1'
             }`}
           >
             {clip.game.name}
@@ -166,7 +166,7 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         {/* Latest clip indicator - smaller for compact mode and reels */}
         {clip.createdAt && Date.now() - new Date(clip.createdAt).getTime() < 86400000 * 3 && (
           <div className={`bg-gray-600 text-white font-bold transform rotate-1 shadow-lg ${
-            isReel ? 'text-[9px] px-1.5 py-0.5 rounded' : compact ? 'text-[10px] px-2 py-0.5 rounded' : 'text-xs px-2.5 py-1 rounded-md'
+            isReel ? 'text-[8px] px-1 py-0.5 rounded md:text-[9px] md:px-1.5' : compact ? 'text-[9px] px-1.5 py-0.5 rounded md:text-[10px] md:px-2' : 'text-[10px] px-1.5 py-0.5 rounded md:text-xs md:px-2 md:py-1 md:rounded-md'
           }`}>
             NEW
           </div>
