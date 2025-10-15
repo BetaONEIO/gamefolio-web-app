@@ -1176,7 +1176,7 @@ const AppearanceSettingsPage: React.FC = () => {
           <Button 
             type="submit" 
             form="profile-form"
-            disabled={!appearanceForm.formState.isDirty || updateProfile.isPending}
+            disabled={(!appearanceForm.formState.isDirty && !avatarFile) || updateProfile.isPending}
           >
             {updateProfile.isPending ? (
               <>
