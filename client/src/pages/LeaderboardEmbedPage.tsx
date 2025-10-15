@@ -137,7 +137,7 @@ const LeaderboardEmbedPage = () => {
                     className={`${getRankBadgeColor(entry.rank)} text-white font-bold px-3 py-2 text-base`}
                     data-testid={`embed-score-${entry.user.id}`}
                   >
-                    {entry.totalScore}
+                    {Math.round(entry.totalScore)}
                   </Badge>
                 </div>
               ))}

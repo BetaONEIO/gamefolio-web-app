@@ -215,7 +215,7 @@ const LeaderboardPage = () => {
                   className={`${getRankBadgeColor(entry.rank)} text-white font-bold px-2 sm:px-3 py-1 text-xs sm:text-sm flex-shrink-0`}
                   data-testid={`score-${entry.user.id}`}
                 >
-                  {entry.totalPoints}
+                  {Math.round(entry.totalPoints)}
                 </Badge>
               </div>
             ))}
@@ -342,7 +342,7 @@ const LeaderboardPage = () => {
                   className={`${getRankBadgeColor(entry.rank)} text-white font-bold px-2 sm:px-3 py-1 text-xs sm:text-sm flex-shrink-0`}
                   data-testid={`score-${entry.userId}`}
                 >
-                  {entry.totalPoints}
+                  {Math.round(entry.totalPoints)}
                 </Badge>
               </div>
             ))}
@@ -492,7 +492,7 @@ const LeaderboardPage = () => {
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-foreground truncate">{contributor.user.displayName}</div>
                       <div className="text-xs sm:text-sm text-muted-foreground truncate">
-                        {formatPeriod(contributor.period, contributor.periodType)} • {contributor.totalPoints} points
+                        {formatPeriod(contributor.period, contributor.periodType)} • {Math.round(contributor.totalPoints)} points
                       </div>
                     </div>
 
@@ -516,7 +516,7 @@ const LeaderboardPage = () => {
                     </div>
 
                     <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-bold" data-testid={`historic-monthly-score-${index}`}>
-                      {contributor.totalPoints}
+                      {Math.round(contributor.totalPoints)}
                     </Badge>
                   </div>
                 ))}
@@ -575,7 +575,7 @@ const LeaderboardPage = () => {
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-foreground truncate">{contributor.user.displayName}</div>
                       <div className="text-xs sm:text-sm text-muted-foreground truncate">
-                        {formatPeriod(contributor.period, contributor.periodType)} • {contributor.totalPoints} points
+                        {formatPeriod(contributor.period, contributor.periodType)} • {Math.round(contributor.totalPoints)} points
                       </div>
                     </div>
 
@@ -599,7 +599,7 @@ const LeaderboardPage = () => {
                     </div>
 
                     <Badge className="bg-gradient-to-r from-gray-300 to-gray-500 text-white font-bold" data-testid={`historic-weekly-score-${index}`}>
-                      {contributor.totalPoints}
+                      {Math.round(contributor.totalPoints)}
                     </Badge>
                   </div>
                 ))}
