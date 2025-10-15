@@ -129,8 +129,8 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
         
         <div className="overflow-x-auto pb-2 -mx-2 sm:-mx-4 md:-mx-6 px-2 sm:px-4 md:px-6" style={{ scrollbarWidth: 'thin' }}>
           <div className={contentType === 'reels' 
-            ? "grid grid-flow-col auto-cols-[calc(50%-0.375rem)] sm:auto-cols-[calc(33.333%-0.667rem)] lg:auto-cols-[calc(25%-0.75rem)] xl:auto-cols-[calc(20%-0.8rem)] 2xl:auto-cols-[calc(20%-0.8rem)] gap-3 md:gap-4" 
-            : "grid grid-flow-col auto-cols-[calc(50%-0.375rem)] sm:auto-cols-[calc(33.333%-0.667rem)] lg:auto-cols-[calc(25%-0.75rem)] xl:auto-cols-[calc(20%-0.8rem)] 2xl:auto-cols-[calc(16.666%-0.833rem)] gap-3 md:gap-4"
+            ? "grid grid-flow-col auto-cols-[calc(50%-0.375rem)] sm:auto-cols-[calc(33.333%-0.5rem)] md:auto-cols-[calc(33.333%-0.667rem)] lg:auto-cols-[calc(25%-0.75rem)] xl:auto-cols-[calc(20%-0.8rem)] 2xl:auto-cols-[calc(20%-0.8rem)] gap-3 md:gap-4" 
+            : "grid grid-flow-col auto-cols-[calc(50%-0.375rem)] sm:auto-cols-[calc(33.333%-0.5rem)] md:auto-cols-[calc(33.333%-0.667rem)] lg:auto-cols-[calc(25%-0.75rem)] xl:auto-cols-[calc(20%-0.8rem)] 2xl:auto-cols-[calc(16.666%-0.833rem)] gap-3 md:gap-4"
           } style={{ minWidth: "100%", width: "max-content" }}>
             {Array(6).fill(0).map((_, i) => (
               <Skeleton key={i} className={contentType === 'reels' ? "aspect-[9/16] rounded-lg" : "aspect-video rounded-lg"} />
@@ -183,8 +183,8 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
       {filteredContent.length > 0 ? (
         <div className="overflow-x-auto pb-2 -mx-2 sm:-mx-4 md:-mx-6 px-2 sm:px-4 md:px-6" ref={containerRef} style={{ scrollbarWidth: 'thin' }}>
           <div className={contentType === 'reels' 
-            ? "grid grid-flow-col auto-cols-[calc(50%-0.375rem)] sm:auto-cols-[calc(33.333%-0.667rem)] lg:auto-cols-[calc(25%-0.75rem)] xl:auto-cols-[calc(20%-0.8rem)] 2xl:auto-cols-[calc(20%-0.8rem)] gap-3 md:gap-4" 
-            : "grid grid-flow-col auto-cols-[calc(50%-0.375rem)] sm:auto-cols-[calc(33.333%-0.667rem)] lg:auto-cols-[calc(25%-0.75rem)] xl:auto-cols-[calc(20%-0.8rem)] 2xl:auto-cols-[calc(16.666%-0.833rem)] gap-3 md:gap-4"
+            ? "grid grid-flow-col auto-cols-[calc(50%-0.375rem)] sm:auto-cols-[calc(33.333%-0.5rem)] md:auto-cols-[calc(33.333%-0.667rem)] lg:auto-cols-[calc(25%-0.75rem)] xl:auto-cols-[calc(20%-0.8rem)] 2xl:auto-cols-[calc(20%-0.8rem)] gap-3 md:gap-4" 
+            : "grid grid-flow-col auto-cols-[calc(50%-0.375rem)] sm:auto-cols-[calc(33.333%-0.5rem)] md:auto-cols-[calc(33.333%-0.667rem)] lg:auto-cols-[calc(25%-0.75rem)] xl:auto-cols-[calc(20%-0.8rem)] 2xl:auto-cols-[calc(16.666%-0.833rem)] gap-3 md:gap-4"
           } style={{ minWidth: "100%", width: "max-content" }}>
             {filteredContent.map((clip) => (
               <VideoClipGridItem 
