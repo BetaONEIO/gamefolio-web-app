@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useMobile } from "@/hooks/use-mobile";
 import { formatDuration } from "@/lib/constants";
+import { useState } from "react";
+import { GameFilter } from "@/components/filters/GameFilter";
 
 export default function LatestReelsPage() {
   const { data: latestReels, isLoading } = useQuery<ClipWithUser[]>({
@@ -13,6 +15,14 @@ export default function LatestReelsPage() {
   });
   const { openClipDialog } = useClipDialog();
   const isMobile = useMobile();
+  const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
+
+  // Filter reels by selected game
+  const filteredReels = latestReels
+    ? selectedGameId
+      ? latestReels.filter((reel) => reel.game?.id === selectedGameId)
+      : latestReels
+    : [];
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
@@ -49,33 +59,44 @@ export default function LatestReelsPage() {
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
       <div className="w-full">
-        <div className="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:gap-4 md:mb-8">
-          <Link href="/">
-            <Button variant="ghost" size="sm" className="flex items-center gap-2 w-fit" data-testid="button-back-home">
-              <ChevronLeft size={20} />
-              Back to Home
-            </Button>
-          </Link>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl md:text-3xl font-bold text-white" data-testid="text-page-title">Latest Reels</h1>
-            <span className="text-muted-foreground text-sm md:text-base" data-testid="text-reels-count">
-              {latestReels?.length || 0} reels
-            </span>
+        <div className="space-y-4 mb-6 md:mb-8">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="flex items-center gap-2 w-fit" data-testid="button-back-home">
+                <ChevronLeft size={20} />
+                Back to Home
+              </Button>
+            </Link>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl md:text-3xl font-bold text-white" data-testid="text-page-title">Latest Reels</h1>
+              <span className="text-muted-foreground text-sm md:text-base" data-testid="text-reels-count">
+                {filteredReels.length} reels
+              </span>
+            </div>
           </div>
+          
+          {/* Game Filter */}
+          {latestReels && latestReels.length > 0 && (
+            <GameFilter
+              clips={latestReels}
+              selectedGameId={selectedGameId}
+              onGameSelect={setSelectedGameId}
+            />
+          )}
         </div>
 
-        {latestReels && latestReels.length > 0 ? (
+        {filteredReels.length > 0 ? (
           isMobile ? (
             // Mobile: Instagram/TikTok style 2-column masonry grid using CSS columns
             <div className="columns-2 gap-1 space-y-1">
-              {latestReels.map((reel, index) => {
+              {filteredReels.map((reel, index) => {
                 const aspectRatios = ['aspect-[9/16]', 'aspect-[3/4]', 'aspect-[2/3]', 'aspect-[9/14]', 'aspect-[3/5]', 'aspect-[4/5]'];
                 const aspectRatio = aspectRatios[index % aspectRatios.length];
 
                 return (
                   <div 
                     key={reel.id}
-                    onClick={() => openClipDialog(reel.id, latestReels)}
+                    onClick={() => openClipDialog(reel.id, filteredReels)}
                     className="break-inside-avoid mb-1"
                   >
                     <div className={`relative ${aspectRatio} w-full rounded-sm overflow-hidden cursor-pointer group`}>
@@ -136,10 +157,10 @@ export default function LatestReelsPage() {
           ) : (
             // Desktop: Grid with 4 columns
             <div className="grid grid-cols-4 gap-4 w-full">
-              {latestReels.map((reel) => (
+              {filteredReels.map((reel) => (
                 <div 
                   key={reel.id}
-                  onClick={() => openClipDialog(reel.id, latestReels)}
+                  onClick={() => openClipDialog(reel.id, filteredReels)}
                   className="group relative bg-black rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
                 >
                   {/* Thumbnail/Video */}
@@ -225,6 +246,17 @@ export default function LatestReelsPage() {
               ))}
             </div>
           )
+        ) : latestReels && latestReels.length > 0 ? (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">🎮</div>
+            <h2 className="text-2xl font-semibold text-white mb-2" data-testid="text-no-reels-filtered">No reels found for this game</h2>
+            <p className="text-muted-foreground mb-6">
+              Try selecting a different game or view all reels
+            </p>
+            <Button onClick={() => setSelectedGameId(null)} data-testid="button-clear-filter">
+              Clear Filter
+            </Button>
+          </div>
         ) : (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">📱</div>
@@ -233,7 +265,7 @@ export default function LatestReelsPage() {
               Be the first to share a reel on Gamefolio!
             </p>
             <Link href="/upload">
-              <Button>Upload Your First Reel</Button>
+              <Button data-testid="button-upload-first-reel">Upload Your First Reel</Button>
             </Link>
           </div>
         )}

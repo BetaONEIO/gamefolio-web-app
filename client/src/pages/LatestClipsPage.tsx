@@ -87,7 +87,7 @@ const LatestClipsPage = () => {
               key={clip.id}
               clip={clip}
               userId={user?.id || undefined}
-              clipsList={clipsData || []}
+              clipsList={filteredClips}
             />
           ))
         ) : clipsData && clipsData.length > 0 ? (
