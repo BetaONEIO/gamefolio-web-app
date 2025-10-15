@@ -1522,6 +1522,7 @@ export class DatabaseStorage implements IStorage {
       .from(clips)
       .leftJoin(users, eq(clips.userId, users.id))
       .leftJoin(games, eq(clips.gameId, games.id))
+      .where(eq(clips.videoType, 'clip'))
       .orderBy(desc(clips.createdAt), desc(clips.id))
       .limit(limit)
       .offset(offset);
