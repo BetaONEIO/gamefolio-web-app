@@ -361,12 +361,14 @@ const AppearanceSettingsPage: React.FC = () => {
         return;
       }
 
+      console.log('🖼️ Avatar file selected:', file.name, file.size);
       setAvatarFile(file);
 
       // Create preview URL
       const reader = new FileReader();
       reader.onload = (e) => {
         setAvatarPreview(e.target?.result as string);
+        console.log('✅ Avatar preview set, avatarFile state should now be truthy');
       };
       reader.readAsDataURL(file);
     }
@@ -1176,7 +1178,16 @@ const AppearanceSettingsPage: React.FC = () => {
           <Button 
             type="submit" 
             form="profile-form"
-            disabled={(!appearanceForm.formState.isDirty && !avatarFile) || updateProfile.isPending}
+            disabled={(() => {
+              const isDisabled = (!appearanceForm.formState.isDirty && !avatarFile) || updateProfile.isPending;
+              console.log('🔘 Button state:', { 
+                isDirty: appearanceForm.formState.isDirty, 
+                hasAvatarFile: !!avatarFile, 
+                isPending: updateProfile.isPending,
+                isDisabled 
+              });
+              return isDisabled;
+            })()}
           >
             {updateProfile.isPending ? (
               <>
