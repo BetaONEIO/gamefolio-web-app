@@ -118,12 +118,12 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         </div>
       </div>
 
-      {/* Delete button for clip owner - positioned independently in top right corner */}
+      {/* Delete button for clip owner - positioned in top left corner to avoid overlap */}
       {canDelete && (
         <Button
           size="sm"
           variant="destructive"
-          className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 h-9 w-9 md:h-8 md:w-8"
+          className="absolute top-2 left-2 bg-red-600 hover:bg-red-700 text-white p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 h-9 w-9 md:h-8 md:w-8"
           onClick={handleDeleteClick}
           title="Delete clip"
           data-testid="button-delete-clip"
@@ -133,7 +133,7 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
       )}
 
       {/* Top right section with stats - matches VideoClipCard styling */}
-      <div className={`absolute top-1.5 md:top-2 ${canDelete ? 'right-12' : 'right-1.5 md:right-2'} flex items-center gap-0.5 md:gap-1`}>
+      <div className="absolute top-1.5 md:top-2 right-1.5 md:right-2 flex items-center gap-0.5 md:gap-1 z-10">
         {/* Duration badge - use actual duration from database */}
         {clip.duration && clip.duration > 0 && (
           <div className="bg-black/70 backdrop-blur-sm text-white px-1 py-0.5 md:px-1.5 md:py-0.5 text-[9px] md:text-[10px] rounded font-medium">
