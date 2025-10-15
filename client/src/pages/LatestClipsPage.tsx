@@ -6,11 +6,13 @@ import VideoClipCard from "@/components/clips/VideoClipCard";
 import { ArrowLeft, Video } from "lucide-react";
 import { useLocation } from "wouter";
 import { ClipWithUser } from "@shared/schema";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { GameFilter } from "@/components/filters/GameFilter";
 
 const LatestClipsPage = () => {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
 
   // Set navigation context when page loads
   useEffect(() => {
@@ -27,25 +29,44 @@ const LatestClipsPage = () => {
     },
   });
 
+  // Filter clips by selected game
+  const filteredClips = clipsData
+    ? selectedGameId
+      ? clipsData.filter((clip) => clip.game?.id === selectedGameId)
+      : clipsData
+    : [];
+
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setLocation('/')}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">Latest Clips</h1>
-          <p className="text-muted-foreground">
-            Discover the newest gaming clips from the community
-          </p>
+      <div className="space-y-4 mb-8">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLocation('/')}
+            className="flex items-center gap-2"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold" data-testid="text-page-title">Latest Clips</h1>
+            <p className="text-muted-foreground">
+              Discover the newest gaming clips from the community
+            </p>
+          </div>
         </div>
+        
+        {/* Game Filter */}
+        {clipsData && clipsData.length > 0 && (
+          <GameFilter
+            clips={clipsData}
+            selectedGameId={selectedGameId}
+            onGameSelect={setSelectedGameId}
+          />
+        )}
       </div>
 
       {/* Clips Grid - 3 columns layout */}
@@ -60,15 +81,26 @@ const LatestClipsPage = () => {
               </div>
             </div>
           ))
-        ) : clipsData && clipsData.length > 0 ? (
-          clipsData.map((clip) => (
+        ) : filteredClips.length > 0 ? (
+          filteredClips.map((clip) => (
             <VideoClipCard
               key={clip.id}
               clip={clip}
               userId={user?.id || undefined}
-              clipsList={clipsData}
+              clipsList={clipsData || []}
             />
           ))
+        ) : clipsData && clipsData.length > 0 ? (
+          <div className="col-span-full text-center py-12">
+            <Video className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2" data-testid="text-no-clips-filtered">No clips found for this game</h3>
+            <p className="text-muted-foreground mb-4">
+              Try selecting a different game or view all clips
+            </p>
+            <Button onClick={() => setSelectedGameId(null)} data-testid="button-clear-filter">
+              Clear Filter
+            </Button>
+          </div>
         ) : (
           <div className="col-span-full text-center py-12">
             <Video className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
@@ -76,7 +108,7 @@ const LatestClipsPage = () => {
             <p className="text-muted-foreground mb-4">
               Be the first to upload a gaming clip!
             </p>
-            <Button onClick={() => setLocation('/upload')}>
+            <Button onClick={() => setLocation('/upload')} data-testid="button-upload-first-clip">
               Upload Your First Clip
             </Button>
           </div>
