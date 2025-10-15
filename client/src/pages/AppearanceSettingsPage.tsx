@@ -339,8 +339,10 @@ const AppearanceSettingsPage: React.FC = () => {
 
   // Handle avatar file selection
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('🎯 NEW CODE LOADED - handleAvatarChange triggered');
     const file = event.target.files?.[0];
     if (file) {
+      console.log('📸 File selected:', file.name, 'avatarFile state will update');
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast({
@@ -362,11 +364,13 @@ const AppearanceSettingsPage: React.FC = () => {
       }
 
       setAvatarFile(file);
+      console.log('✅ avatarFile state updated, button should now be enabled');
 
       // Create preview URL
       const reader = new FileReader();
       reader.onload = (e) => {
         setAvatarPreview(e.target?.result as string);
+        console.log('🖼️ Preview created');
       };
       reader.readAsDataURL(file);
     }
@@ -1176,7 +1180,14 @@ const AppearanceSettingsPage: React.FC = () => {
           <Button 
             type="submit" 
             form="profile-form"
-            disabled={(!appearanceForm.formState.isDirty && !avatarFile) || updateProfile.isPending}
+            disabled={(() => {
+              const isFormDirty = appearanceForm.formState.isDirty;
+              const hasAvatar = !!avatarFile;
+              const isPending = updateProfile.isPending;
+              const shouldDisable = (!isFormDirty && !hasAvatar) || isPending;
+              console.log('🔘 Button render:', { isFormDirty, hasAvatar, isPending, shouldDisable });
+              return shouldDisable;
+            })()}
             data-testid="button-save-profile-appearance"
           >
             {updateProfile.isPending ? (
