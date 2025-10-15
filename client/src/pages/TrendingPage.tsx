@@ -583,7 +583,7 @@ const TrendingPage: React.FC = () => {
                         <UserIcon className="h-5 w-5 text-muted-foreground" />
                       )}
                     </div>
-                    <Link href={`/@${selectedScreenshot.user.username}`}>
+                    <Link href={`/profile/${selectedScreenshot.user.username}`}>
                       <div className="font-medium flex items-center hover:text-primary transition-colors cursor-pointer">
                         @{selectedScreenshot.user.username}
                       </div>
