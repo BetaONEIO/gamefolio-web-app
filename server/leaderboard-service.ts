@@ -10,7 +10,7 @@ export const POINT_VALUES = {
   like: 1,                // 1 point for liking content
   comment: 1,             // 1 point for commenting
   fire: 3,                // 3 points for fire reactions
-  view: 1,                // 1 point per view on uploaded content
+  view: 0.01,             // 0.01 points per view (1 point per 100 views)
 } as const;
 
 export class LeaderboardService {

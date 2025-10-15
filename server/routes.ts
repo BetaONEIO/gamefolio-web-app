@@ -1738,7 +1738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           like: 1,
           comment: 1,
           fire: 3,
-          view: 1
+          view: 0.01
         },
         description: {
           upload: "Points awarded for uploading clips or reels",
@@ -1746,7 +1746,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           like: "Points awarded for liking content",
           comment: "Points awarded for commenting on content",
           fire: "Points awarded for fire reactions",
-          view: "Points awarded when content receives views (also awards 1 XP)"
+          view: "Points awarded when content receives views (0.01 points per view, 1 point per 100 views)"
         }
       });
     } catch (error) {

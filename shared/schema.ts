@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, unique, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -47,7 +47,7 @@ export const users = pgTable("users", {
   messagingEnabled: boolean("messaging_enabled").default(true),
   isPrivate: boolean("is_private").default(false),
   // XP System
-  totalXP: integer("total_xp").default(0).notNull(), // Total experience points earned from views
+  totalXP: real("total_xp").default(0).notNull(), // Total experience points earned from views
   level: integer("level").default(1).notNull(), // User level based on XP
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -570,7 +570,7 @@ export const monthlyLeaderboard = pgTable("monthly_leaderboard", {
   commentsCount: integer("comments_count").default(0).notNull(),
   firesGivenCount: integer("fires_given_count").default(0).notNull(),
   viewsCount: integer("views_count").default(0).notNull(),
-  totalPoints: integer("total_points").default(0).notNull(),
+  totalPoints: real("total_points").default(0).notNull(),
   rank: integer("rank").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -583,7 +583,7 @@ export const userPointsHistory = pgTable("user_points_history", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   action: text("action").notNull(), // "upload", "like", "comment", "fire"
-  points: integer("points").notNull(),
+  points: real("points").notNull(),
   description: text("description"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -610,7 +610,7 @@ export const weeklyLeaderboard = pgTable("weekly_leaderboard", {
   commentsCount: integer("comments_count").default(0).notNull(),
   firesGivenCount: integer("fires_given_count").default(0).notNull(),
   viewsCount: integer("views_count").default(0).notNull(),
-  totalPoints: integer("total_points").default(0).notNull(),
+  totalPoints: real("total_points").default(0).notNull(),
   rank: integer("rank").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -625,7 +625,7 @@ export const topContributors = pgTable("top_contributors", {
   periodType: text("period_type").notNull(), // "weekly" or "monthly"
   period: text("period").notNull(), // Format: "2024-W01" for weekly, "2024-01" for monthly
   year: integer("year").notNull(),
-  totalPoints: integer("total_points").notNull(),
+  totalPoints: real("total_points").notNull(),
   uploadsCount: integer("uploads_count").default(0).notNull(),
   likesGivenCount: integer("likes_given_count").default(0).notNull(),
   commentsCount: integer("comments_count").default(0).notNull(),
