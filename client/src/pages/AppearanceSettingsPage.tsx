@@ -361,16 +361,21 @@ const AppearanceSettingsPage: React.FC = () => {
         return;
       }
 
-      console.log('🖼️ Avatar file selected:', file.name, file.size);
       setAvatarFile(file);
 
       // Create preview URL
       const reader = new FileReader();
       reader.onload = (e) => {
         setAvatarPreview(e.target?.result as string);
-        console.log('✅ Avatar preview set, avatarFile state should now be truthy');
       };
       reader.readAsDataURL(file);
+      
+      // IMPORTANT: Mark the form as dirty so Save button becomes enabled
+      // We do this by touching the displayName field (or any field)
+      appearanceForm.setValue('displayName', appearanceForm.getValues('displayName'), { 
+        shouldDirty: true,
+        shouldTouch: true
+      });
     }
   };
 
@@ -1178,16 +1183,8 @@ const AppearanceSettingsPage: React.FC = () => {
           <Button 
             type="submit" 
             form="profile-form"
-            disabled={(() => {
-              const isDisabled = (!appearanceForm.formState.isDirty && !avatarFile) || updateProfile.isPending;
-              console.log('🔘 Button state:', { 
-                isDirty: appearanceForm.formState.isDirty, 
-                hasAvatarFile: !!avatarFile, 
-                isPending: updateProfile.isPending,
-                isDisabled 
-              });
-              return isDisabled;
-            })()}
+            disabled={!appearanceForm.formState.isDirty || updateProfile.isPending}
+            data-testid="button-save-profile-appearance"
           >
             {updateProfile.isPending ? (
               <>
