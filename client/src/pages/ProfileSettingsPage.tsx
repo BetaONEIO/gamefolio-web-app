@@ -118,8 +118,8 @@ const ProfileSettingsPage: React.FC = () => {
       const objectUrl = URL.createObjectURL(file);
       setAvatarPreview(objectUrl);
       
-      // Update the form value with the server path
-      profileForm.setValue('avatarUrl', data.avatarUrl);
+      // Update the form value with the server path and mark it as dirty
+      profileForm.setValue('avatarUrl', data.avatarUrl, { shouldDirty: true, shouldValidate: true });
       
       toast({
         title: "Avatar uploaded",
@@ -781,8 +781,8 @@ const ProfileSettingsPage: React.FC = () => {
         onClose={() => setShowAvatarSelector(false)}
         currentAvatarUrl={profileForm.watch('avatarUrl') || user?.avatarUrl || ''}
         onAvatarSelect={(avatarUrl: string) => {
-          // Update form field
-          profileForm.setValue('avatarUrl', avatarUrl);
+          // Update form field and mark it as dirty so the save button becomes enabled
+          profileForm.setValue('avatarUrl', avatarUrl, { shouldDirty: true, shouldValidate: true });
           // Update preview immediately
           setAvatarPreview(avatarUrl);
           
