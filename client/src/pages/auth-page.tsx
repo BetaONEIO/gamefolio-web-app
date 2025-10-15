@@ -112,7 +112,7 @@ export default function AuthPage() {
               className="h-36 w-auto drop-shadow-lg"
             />
             <div className="mt-3 px-3 py-1 bg-orange-500 text-white text-sm font-bold rounded-full shadow-lg">
-              Alpha 1.2 • Oct 02, 2025
+              Alpha 1.3 - Oct 15, 2025
             </div>
           </div>
         </div>
