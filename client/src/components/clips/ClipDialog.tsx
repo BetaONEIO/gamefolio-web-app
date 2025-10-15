@@ -278,18 +278,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
 
   // Share functionality replaced by ShareMenu component
 
-  // Record view when dialog opens
-  useEffect(() => {
-    if (isOpen && clipId) {
-      // Record view
-      fetch(`/api/clips/${clipId}/views`, {
-        method: 'POST',
-        credentials: 'include',
-      }).catch(console.error);
-    }
-  }, [isOpen, clipId]);
-
-
   // Touch navigation for mobile
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!showNavigation || (clip?.videoType === 'reel' && isMobile && showComments)) return;
