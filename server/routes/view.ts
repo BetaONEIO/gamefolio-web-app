@@ -76,15 +76,6 @@ router.get('/:id', async (req, res) => {
       return res.redirect(`/clips/${clipId}`); // Still redirect to clip page, let it handle the error
     }
 
-    try {
-      // Increment view count (don't fail if this errors)
-      if (clipId < 10000) { // Only increment for non-demo clips
-        await storage.incrementClipViews(clipId);
-      }
-    } catch (viewError) {
-      console.log(`⚠️ Warning: Could not increment view count for clip ${clipId}:`, viewError);
-    }
-
     // Check if this is a reel or clip to redirect appropriately
     const redirectUrl = clip?.videoType === 'reel' ? `/reels/${clipId}` : `/clips/${clipId}`;
     console.log(`✅ View route: Redirecting to ${redirectUrl}`);
