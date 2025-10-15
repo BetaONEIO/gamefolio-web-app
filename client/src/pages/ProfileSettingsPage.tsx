@@ -282,7 +282,7 @@ const ProfileSettingsPage: React.FC = () => {
                     >
                       {avatarPreview || user.avatarUrl ? (
                         <img
-                          src={avatarPreview || user.avatarUrl}
+                          src={avatarPreview || user.avatarUrl || ''}
                           alt={user.displayName}
                           className="w-full h-full object-cover"
                           style={{ 
@@ -313,19 +313,38 @@ const ProfileSettingsPage: React.FC = () => {
                     <div className="space-y-2">
                       <h3 className="text-base font-medium">Profile Picture</h3>
                       <p className="text-sm text-muted-foreground">Your profile picture is visible to other users.</p>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Button
                           variant="outline"
                           onClick={() => setShowAvatarSelector(true)}
+                          type="button"
                           className="max-w-xs"
                           data-testid="button-select-avatar"
                         >
                           Select Avatar
                         </Button>
+                        <Button
+                          variant="outline"
+                          type="button"
+                          onClick={() => document.getElementById('avatar-upload-input')?.click()}
+                          disabled={avatarUploading}
+                          className="max-w-xs"
+                          data-testid="button-upload-avatar"
+                        >
+                          Upload Custom
+                        </Button>
+                        <input
+                          id="avatar-upload-input"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAvatarUpload}
+                          className="hidden"
+                          data-testid="input-avatar-file"
+                        />
                         {avatarUploading && (
                           <div className="flex items-center">
                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            <span className="text-xs">Updating...</span>
+                            <span className="text-xs">Uploading...</span>
                           </div>
                         )}
                       </div>
