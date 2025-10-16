@@ -1,4 +1,4 @@
-# Gamefolio - Gaming Social Platform
+# Gamefolio
 
 Instagram-style social gaming platform where users can create profiles to showcase gaming clips, reels, and screenshots. The platform includes email verification, video upload with FFmpeg processing, profile customization with colors and banners, social features (likes, comments, follows), admin dashboard, Google authentication, and a YouTube Shorts-style trending page.
 
