@@ -3383,23 +3383,34 @@ export class DatabaseStorage implements IStorage {
   // Recommendation operations
   async getRecommendedClips(userId: number, limit: number = 8): Promise<ClipWithUser[]> {
     try {
+      // Get games from clips the user has liked
+      const likedClipsGames = await db
+        .selectDistinct({ gameId: clips.gameId })
+        .from(likes)
+        .innerJoin(clips, eq(likes.clipId, clips.id))
+        .where(
+          and(
+            eq(likes.userId, userId),
+            isNotNull(clips.gameId)
+          )
+        );
+      
       // Get user's favorite games
       const favoriteGames = await this.getUserGameFavorites(userId);
       
-      if (!favoriteGames || favoriteGames.length === 0) {
-        // If user has no favorite games, return trending clips
+      // Combine game IDs from both liked clips and favorite games
+      const gameIdsFromLikes = likedClipsGames.map(item => item.gameId).filter(id => id != null) as number[];
+      const gameIdsFromFavorites = favoriteGames.map(game => game.id).filter(id => id != null && id !== undefined);
+      
+      // Merge and deduplicate game IDs
+      const allGameIds = Array.from(new Set([...gameIdsFromLikes, ...gameIdsFromFavorites]));
+      
+      // If no game IDs from interactions or favorites, fallback to trending clips
+      if (allGameIds.length === 0) {
         return this.getTrendingClips('day', limit, undefined, userId);
       }
       
-      // Get game IDs from favorite games, filtering out any null/undefined values
-      const gameIds = favoriteGames
-        .map(game => game.id)
-        .filter(id => id != null && id !== undefined);
-      
-      // If no valid game IDs, fallback to trending clips
-      if (gameIds.length === 0) {
-        return this.getTrendingClips('day', limit, undefined, userId);
-      }
+      const gameIds = allGameIds;
       
       // Find clips from those games, excluding the user's own clips
       const recommendedClips = await db
