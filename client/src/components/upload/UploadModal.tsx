@@ -55,10 +55,6 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
     if (!isOpen) return;
 
     const preventDefaults = (e: DragEvent) => {
-      // Don't prevent if event is on the drop zone
-      if (dropZoneRef.current && dropZoneRef.current.contains(e.target as Node)) {
-        return;
-      }
       e.preventDefault();
       e.stopPropagation();
     };
