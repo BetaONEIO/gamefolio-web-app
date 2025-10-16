@@ -56,6 +56,7 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
 ## External Dependencies
 - **Supabase**: Primary database (PostgreSQL), authentication services, and storage for user-uploaded content.
 - **Twitch API**: Used for fetching game data and populating game information within the platform.
+- **Crossmint** (In Development): Blockchain wallet infrastructure for Web3 gaming features, NFT minting, and digital asset ownership.
 - **bad-words (NPM package)**: Utilized for content filtering and profanity detection.
 - **TUS (protocol/system)**: Used for robust video upload and processing, especially for reels with specific aspect ratios.
 - **connect-pg-simple**: For managing user sessions persistently in the PostgreSQL database.
@@ -66,4 +67,15 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
 - **Shadcn/ui**: Component library built on Tailwind CSS.
 - **React Hook Form**: For form validation and submission.
 - **Postgres (NPM package)**: Direct PostgreSQL client for database interaction.
+
+## Crossmint Wallet Integration
+- **Wallet Management**: Users can create blockchain wallets to own digital gaming assets
+- **Database Schema**: User table includes `walletAddress`, `walletChain`, and `walletCreatedAt` fields
+- **Frontend Provider**: `CrossmintProvider` manages wallet state globally across the application
+- **Wallet Page**: Complete UI at `/wallet` for creating wallets, viewing addresses, and accessing blockchain explorers
+- **API Endpoints**: 
+  - `POST /api/wallet/create` - Creates new wallet for authenticated user
+  - `GET /api/wallet/info` - Retrieves wallet information for authenticated user
+- **Current Status**: Using placeholder wallet addresses; awaiting Crossmint API keys for production integration
+- **Future Features**: NFT minting for clips, marketplace trading, crypto rewards, multi-chain support
 ```
