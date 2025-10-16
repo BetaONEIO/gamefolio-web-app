@@ -5,7 +5,7 @@ import { ClipWithUser } from "@shared/schema";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
-import { useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 
 interface RecommendedForYouProps {
@@ -15,6 +15,7 @@ interface RecommendedForYouProps {
 const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
   const { user } = useAuth();
   const actualUserId = userId || user?.id;
+  const containerRef = useRef<HTMLDivElement>(null);
   const [contentType, setContentType] = useState<'clips' | 'reels'>('clips');
 
   // Fetch recommended clips based on user's favorite games
@@ -33,6 +34,61 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
       return recommendedClips.filter(clip => clip.videoType !== 'reel');
     }
   }, [recommendedClips, contentType]);
+
+  // Grab scroll behavior for recommended clips
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let isDown = false;
+    let startX: number;
+    let scrollLeft: number;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      // Only enable drag if clicking on the container itself, not on video items
+      if ((e.target as HTMLElement).closest('[data-testid*="clip-recommended-"]')) {
+        return;
+      }
+      isDown = true;
+      startX = e.pageX - container.offsetLeft;
+      scrollLeft = container.scrollLeft;
+      container.style.cursor = 'grabbing';
+      container.style.userSelect = 'none';
+    };
+
+    const handleMouseLeave = () => {
+      isDown = false;
+      container.style.cursor = 'grab';
+      container.style.userSelect = 'auto';
+    };
+
+    const handleMouseUp = () => {
+      isDown = false;
+      container.style.cursor = 'grab';
+      container.style.userSelect = 'auto';
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - container.offsetLeft;
+      const walk = (x - startX) * 2; // Scroll speed
+      container.scrollLeft = scrollLeft - walk;
+    };
+
+    container.style.cursor = 'grab';
+    container.addEventListener('mousedown', handleMouseDown);
+    container.addEventListener('mouseleave', handleMouseLeave);
+    container.addEventListener('mouseup', handleMouseUp);
+    container.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      container.removeEventListener('mousedown', handleMouseDown);
+      container.removeEventListener('mouseleave', handleMouseLeave);
+      container.removeEventListener('mouseup', handleMouseUp);
+      container.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, []);
 
   // Don't render if loading or no clips
   if (isLoading) {
@@ -71,12 +127,20 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
           </div>
         </div>
         
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-4">
-          {Array(6).fill(0).map((_, i) => (
-            <div key={i} className={contentType === 'reels' ? "aspect-[9/16] rounded-lg overflow-hidden" : "aspect-video rounded-lg overflow-hidden"}>
-              <Skeleton className="w-full h-full" />
-            </div>
-          ))}
+        <div className="overflow-x-auto pb-2 -mx-2 sm:-mx-4 md:-mx-6 px-2 sm:px-4 md:px-6" style={{ scrollbarWidth: 'thin' }}>
+          <div className="flex gap-3 md:gap-4" style={{ minWidth: "100%", width: "max-content" }}>
+            {Array(6).fill(0).map((_, i) => (
+              <div 
+                key={i}
+                className={contentType === 'reels'
+                  ? "w-36 sm:w-40 lg:w-44 xl:w-48 flex-shrink-0"
+                  : "w-44 sm:w-52 lg:w-60 xl:w-64 2xl:w-72 flex-shrink-0"
+                }
+              >
+                <Skeleton className={contentType === 'reels' ? "aspect-[9/16] rounded-lg" : "aspect-video rounded-lg"} />
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     );
@@ -122,16 +186,25 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
       </div>
 
       {filteredContent.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-4">
-          {filteredContent.map((clip) => (
-            <VideoClipGridItem 
-              key={`recommended-clip-${clip.id}`}
-              clip={clip}
-              userId={actualUserId}
-              data-testid={`clip-recommended-${clip.id}`}
-              compact={contentType === 'clips'}
-            />
-          ))}
+        <div className="overflow-x-auto pb-2 -mx-2 sm:-mx-4 md:-mx-6 px-2 sm:px-4 md:px-6" ref={containerRef} style={{ scrollbarWidth: 'thin' }}>
+          <div className="flex gap-3 md:gap-4" style={{ minWidth: "100%", width: "max-content" }}>
+            {filteredContent.map((clip) => (
+              <div 
+                key={`recommended-clip-${clip.id}`}
+                className={contentType === 'reels'
+                  ? "w-36 sm:w-40 lg:w-44 xl:w-48 flex-shrink-0"
+                  : "w-44 sm:w-52 lg:w-60 xl:w-64 2xl:w-72 flex-shrink-0"
+                }
+              >
+                <VideoClipGridItem 
+                  clip={clip}
+                  userId={actualUserId}
+                  data-testid={`clip-recommended-${clip.id}`}
+                  compact={contentType === 'clips'}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <div className="text-center py-8 sm:py-12 bg-card/50 rounded-xl border border-border/50 mx-2">
