@@ -6656,6 +6656,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Note: Server-side redirects removed - frontend handles shareCode URLs directly now
 
+  // ==========================================
+  // Crossmint Wallet Routes
+  // ==========================================
+
+  // Create wallet for authenticated user
+  app.post("/api/wallet/create", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+
+      // Check if user already has a wallet
+      const existingUser = await storage.getUser(userId);
+      if (existingUser?.walletAddress) {
+        return res.status(400).json({ message: "Wallet already exists" });
+      }
+
+      // For now, we'll generate a placeholder wallet address
+      // In production, this would use the Crossmint API
+      const walletAddress = `0x${randomBytes(20).toString('hex')}`;
+      const walletChain = 'polygon';
+      
+      // Update user with wallet information
+      await storage.updateUser(userId, {
+        walletAddress,
+        walletChain,
+        walletCreatedAt: new Date(),
+      });
+
+      res.json({
+        walletAddress,
+        walletChain,
+        message: "Wallet created successfully"
+      });
+    } catch (error) {
+      console.error("Error creating wallet:", error);
+      res.status(500).json({ error: "Failed to create wallet" });
+    }
+  });
+
+  // Get wallet info for authenticated user
+  app.get("/api/wallet/info", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = await storage.getUser(userId);
+
+      if (!user?.walletAddress) {
+        return res.status(404).json({ message: "No wallet found" });
+      }
+
+      res.json({
+        address: user.walletAddress,
+        chain: user.walletChain || 'polygon',
+        createdAt: user.walletCreatedAt,
+      });
+    } catch (error) {
+      console.error("Error fetching wallet info:", error);
+      res.status(500).json({ error: "Failed to fetch wallet info" });
+    }
+  });
 
   return httpServer;
 }

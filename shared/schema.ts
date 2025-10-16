@@ -49,6 +49,10 @@ export const users = pgTable("users", {
   // XP System
   totalXP: real("total_xp").default(0).notNull(), // Total experience points earned from views
   level: integer("level").default(1).notNull(), // User level based on XP
+  // Crossmint Wallet
+  walletAddress: text("wallet_address"),
+  walletChain: text("wallet_chain").default("polygon"),
+  walletCreatedAt: timestamp("wallet_created_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

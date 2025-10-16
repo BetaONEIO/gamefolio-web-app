@@ -11,6 +11,8 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@crossmint/client-sdk-react-ui": "^2.5.7",
+    "@crossmint/client-sdk-smart-wallet": "^0.3.37",
     "@emailjs/browser": "^4.4.1",
     "@firebase/auth": "^1.10.6",
     "@getbrevo/brevo": "^2.5.0",
