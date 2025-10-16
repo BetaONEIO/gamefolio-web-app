@@ -787,6 +787,25 @@ const UploadPage = () => {
                   <div 
                     className={`border-2 border-dashed ${fileError ? 'border-destructive' : 'border-muted'} rounded-lg p-8 text-center ${!file ? 'cursor-pointer hover:border-primary transition-colors' : ''}`}
                     onClick={!file ? triggerFileInput : undefined}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDragEnter={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (!file && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                        const droppedFile = e.dataTransfer.files[0];
+                        const fakeEvent = {
+                          target: { files: [droppedFile] }
+                        } as React.ChangeEvent<HTMLInputElement>;
+                        handleFileChange(fakeEvent);
+                      }
+                    }}
                   >
                     <input
                       ref={fileInputRef}
@@ -1341,6 +1360,25 @@ const UploadPage = () => {
                   <div 
                     className={`border-2 border-dashed ${fileError ? 'border-destructive' : 'border-muted'} rounded-lg p-8 text-center ${!file ? 'cursor-pointer hover:border-primary transition-colors' : ''}`}
                     onClick={!file ? triggerFileInput : undefined}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDragEnter={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (!file && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                        const droppedFile = e.dataTransfer.files[0];
+                        const fakeEvent = {
+                          target: { files: [droppedFile] }
+                        } as React.ChangeEvent<HTMLInputElement>;
+                        handleFileChange(fakeEvent);
+                      }
+                    }}
                   >
                     <input
                       ref={fileInputRef}
@@ -1868,6 +1906,24 @@ const UploadPage = () => {
                     <label 
                       htmlFor="screenshot"
                       className="border-2 border-dashed border-muted rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors flex flex-col items-center"
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onDragEnter={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                          const fakeEvent = {
+                            target: { files: e.dataTransfer.files }
+                          } as React.ChangeEvent<HTMLInputElement>;
+                          handleScreenshotChange(fakeEvent);
+                        }
+                      }}
                     >
                       <Image className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
                       <p className="font-medium">Drag and drop your screenshots or click to browse</p>
