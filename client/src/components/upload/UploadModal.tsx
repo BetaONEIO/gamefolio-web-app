@@ -55,34 +55,20 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
     if (!isOpen) return;
 
     const preventDefaults = (e: DragEvent) => {
+      // Don't prevent if event is on the drop zone
+      if (dropZoneRef.current && e.composedPath().includes(dropZoneRef.current)) {
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
     };
-
-    // Use capture phase to catch events early
-    const options = { capture: true };
     
-    window.addEventListener('dragenter', preventDefaults, options);
-    window.addEventListener('dragover', preventDefaults, options);
-    window.addEventListener('dragleave', preventDefaults, options);
-    window.addEventListener('drop', preventDefaults, options);
-
-    // Also prevent on document
-    document.addEventListener('dragenter', preventDefaults, options);
-    document.addEventListener('dragover', preventDefaults, options);
-    document.addEventListener('dragleave', preventDefaults, options);
-    document.addEventListener('drop', preventDefaults, options);
+    window.addEventListener('dragover', preventDefaults);
+    window.addEventListener('drop', preventDefaults);
 
     return () => {
-      window.removeEventListener('dragenter', preventDefaults, options);
-      window.removeEventListener('dragover', preventDefaults, options);
-      window.removeEventListener('dragleave', preventDefaults, options);
-      window.removeEventListener('drop', preventDefaults, options);
-      
-      document.removeEventListener('dragenter', preventDefaults, options);
-      document.removeEventListener('dragover', preventDefaults, options);
-      document.removeEventListener('dragleave', preventDefaults, options);
-      document.removeEventListener('drop', preventDefaults, options);
+      window.removeEventListener('dragover', preventDefaults);
+      window.removeEventListener('drop', preventDefaults);
     };
   }, [isOpen]);
 
@@ -397,8 +383,6 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
       <DialogContent 
         className="max-w-md"
         data-testid="upload-dialog"
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => e.preventDefault()}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
