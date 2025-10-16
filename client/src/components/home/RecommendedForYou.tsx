@@ -134,7 +134,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
                 key={i}
                 className={contentType === 'reels'
                   ? "w-36 sm:w-40 lg:w-44 xl:w-48 flex-shrink-0"
-                  : "w-52 sm:w-64 lg:w-72 xl:w-80 2xl:w-96 flex-shrink-0"
+                  : "w-64 sm:w-72 lg:w-80 xl:w-96 2xl:w-[400px] flex-shrink-0"
                 }
               >
                 <Skeleton className={contentType === 'reels' ? "aspect-[9/16] rounded-lg" : "aspect-video rounded-lg"} />
@@ -193,7 +193,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
                 key={`recommended-clip-${clip.id}`}
                 className={contentType === 'reels'
                   ? "w-36 sm:w-40 lg:w-44 xl:w-48 flex-shrink-0"
-                  : "w-52 sm:w-64 lg:w-72 xl:w-80 2xl:w-96 flex-shrink-0"
+                  : "w-64 sm:w-72 lg:w-80 xl:w-96 2xl:w-[400px] flex-shrink-0"
                 }
               >
                 <VideoClipGridItem 
