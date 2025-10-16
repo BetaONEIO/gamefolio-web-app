@@ -15,7 +15,8 @@ import {
   Check,
   Trash2,
   HelpCircle,
-  ShoppingBag
+  ShoppingBag,
+  Wallet
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Game } from "@shared/schema";
@@ -232,6 +233,7 @@ const Sidebar = () => {
     { icon: Flame, label: "Trending", href: "/trending" },
     { icon: Trophy, label: "Leaderboard", href: "/leaderboard" },
     { icon: ShoppingBag, label: "Store", href: "/store" },
+    { icon: Wallet, label: "Wallet", href: "/wallet" },
 
     // Only show Messages link if user has messaging enabled - default to true for demo user
     ...(user && user.messagingEnabled !== false ? [{ icon: MessageSquare, label: "Messages", href: "/messages" }] : []),
