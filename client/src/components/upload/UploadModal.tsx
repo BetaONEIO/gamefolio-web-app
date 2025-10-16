@@ -50,27 +50,6 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  // Prevent browser from opening files when dragging anywhere on the page
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const preventDefaults = (e: DragEvent) => {
-      // Don't prevent if event is on the drop zone
-      if (dropZoneRef.current && e.composedPath().includes(dropZoneRef.current)) {
-        return;
-      }
-      e.preventDefault();
-      e.stopPropagation();
-    };
-    
-    window.addEventListener('dragover', preventDefaults);
-    window.addEventListener('drop', preventDefaults);
-
-    return () => {
-      window.removeEventListener('dragover', preventDefaults);
-      window.removeEventListener('drop', preventDefaults);
-    };
-  }, [isOpen]);
 
   // Get upload configuration
   const { data: uploadConfig } = useQuery<UploadConfig>({
