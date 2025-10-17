@@ -71,7 +71,7 @@ export default function StoragePage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10" data-testid="avatar-user">
-                <AvatarImage src={user?.profilePic || undefined} />
+                <AvatarImage src={user?.avatarUrl || undefined} />
                 <AvatarFallback className="bg-gray-800">
                   {user?.username?.[0]?.toUpperCase() || "U"}
                 </AvatarFallback>
