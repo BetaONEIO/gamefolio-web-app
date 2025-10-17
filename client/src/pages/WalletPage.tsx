@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { ArrowLeft, Wallet, Copy, ExternalLink, CheckCircle2, Loader2, LogIn } from "lucide-react";
+import { ArrowLeft, Wallet, Copy, ExternalLink, CheckCircle2, Loader2, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCrossmint } from "@/hooks/use-crossmint";
@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function WalletPage() {
   const { user } = useAuth();
-  const { wallet, isLoading, createWallet, loginToWallet } = useCrossmint();
+  const { wallet, isLoading, isConnected, createWallet, loginToWallet, logoutWallet } = useCrossmint();
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
@@ -177,16 +177,54 @@ export default function WalletPage() {
                   </div>
                 </div>
 
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Connection Status
+                  </label>
+                  <div className="mt-1">
+                    <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
+                      isConnected 
+                        ? 'bg-green-500/10 text-green-600 dark:text-green-400' 
+                        : 'bg-muted text-muted-foreground'
+                    }`} data-testid="text-connection-status">
+                      <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-muted-foreground'}`} />
+                      {isConnected ? 'Connected' : 'Disconnected'}
+                    </span>
+                  </div>
+                </div>
+
                 <div className="pt-2 space-y-2">
-                  <Button
-                    variant="default"
-                    className="w-full"
-                    onClick={loginToWallet}
-                    data-testid="button-login-wallet"
-                  >
-                    <LogIn className="w-4 h-4 mr-2" />
-                    Connect to Wallet
-                  </Button>
+                  {!isConnected ? (
+                    <Button
+                      variant="default"
+                      className="w-full"
+                      onClick={loginToWallet}
+                      disabled={isLoading}
+                      data-testid="button-login-wallet"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Connecting...
+                        </>
+                      ) : (
+                        <>
+                          <LogIn className="w-4 h-4 mr-2" />
+                          Connect to Wallet
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={logoutWallet}
+                      data-testid="button-logout-wallet"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Disconnect Wallet
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     className="w-full"
