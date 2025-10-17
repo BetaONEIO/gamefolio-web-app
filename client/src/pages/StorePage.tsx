@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useCrossmint } from "@/hooks/use-crossmint";
 import { Link } from "wouter";
-import { ShoppingCart, DollarSign, Sparkles, Wallet, Menu, ChevronDown } from "lucide-react";
+import { ShoppingCart, DollarSign, Sparkles, Wallet, Menu, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,6 +12,13 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type TabType = "buy" | "sell" | "mint";
 
@@ -20,6 +27,10 @@ export default function StorePage() {
   const { wallet } = useCrossmint();
   const [activeTab, setActiveTab] = useState<TabType>("buy");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [rarityFilter, setRarityFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [priceFilter, setPriceFilter] = useState<string>("all");
+  const [mintFilter, setMintFilter] = useState<string>("all");
 
   // Mock Gamefolio NFT Collection data
   const gamefolioNFTs = [
@@ -77,8 +88,8 @@ export default function StorePage() {
 
   const SidebarContent = () => (
     <div className="space-y-2">
-      <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent" data-testid="text-store-title">
-        NFT Store
+      <h2 className="text-2xl font-bold mb-6 text-white" data-testid="text-store-title">
+        Store
       </h2>
       
       <Button
@@ -162,8 +173,8 @@ export default function StorePage() {
           <Collapsible open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <div className="p-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                  NFT Store
+                <h2 className="text-xl font-bold text-white">
+                  Store
                 </h2>
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
@@ -261,11 +272,6 @@ export default function StorePage() {
           <div className="mb-6 md:mb-8">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold mb-2" data-testid="heading-section">
-                  {activeTab === "buy" && "Buy NFT Profile Pictures"}
-                  {activeTab === "sell" && "Sell Your NFTs"}
-                  {activeTab === "mint" && "Mint New NFTs"}
-                </h1>
                 <p className="text-sm md:text-base text-gray-400" data-testid="text-section-description">
                   {activeTab === "buy" && "Browse and purchase exclusive Gamefolio NFT avatars for your profile"}
                   {activeTab === "sell" && "List your NFTs for sale in the Gamefolio marketplace"}
@@ -291,12 +297,76 @@ export default function StorePage() {
           {activeTab === "buy" && (
             <div>
               <div className="mb-4 md:mb-6">
-                <h2 className="text-lg md:text-xl font-semibold mb-2" data-testid="heading-collection">
+                <h2 className="text-lg md:text-xl font-semibold mb-4" data-testid="heading-collection">
                   Gamefolio Collection
                 </h2>
-                <p className="text-xs md:text-sm text-gray-400" data-testid="text-collection-info">
-                  Exclusive NFT avatars you can use as your profile picture
-                </p>
+
+                {/* Category Filters */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Rarity</label>
+                    <Select value={rarityFilter} onValueChange={setRarityFilter}>
+                      <SelectTrigger className="bg-gray-800 border-gray-700" data-testid="select-rarity">
+                        <SelectValue placeholder="All Rarities" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-gray-700">
+                        <SelectItem value="all">All Rarities</SelectItem>
+                        <SelectItem value="common">Common</SelectItem>
+                        <SelectItem value="rare">Rare</SelectItem>
+                        <SelectItem value="epic">Epic</SelectItem>
+                        <SelectItem value="legendary">Legendary</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Type</label>
+                    <Select value={typeFilter} onValueChange={setTypeFilter}>
+                      <SelectTrigger className="bg-gray-800 border-gray-700" data-testid="select-type">
+                        <SelectValue placeholder="All Types" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-gray-700">
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="badge">Badge</SelectItem>
+                        <SelectItem value="collectible">Collectible</SelectItem>
+                        <SelectItem value="skin">Skin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Price</label>
+                    <Select value={priceFilter} onValueChange={setPriceFilter}>
+                      <SelectTrigger className="bg-gray-800 border-gray-700" data-testid="select-price">
+                        <SelectValue placeholder="All Prices" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-gray-700">
+                        <SelectItem value="all">All Prices</SelectItem>
+                        <SelectItem value="low">Low to High</SelectItem>
+                        <SelectItem value="high">High to Low</SelectItem>
+                        <SelectItem value="under-0.05">Under 0.05 ETH</SelectItem>
+                        <SelectItem value="0.05-0.1">0.05 - 0.1 ETH</SelectItem>
+                        <SelectItem value="over-0.1">Over 0.1 ETH</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Mint Number</label>
+                    <Select value={mintFilter} onValueChange={setMintFilter}>
+                      <SelectTrigger className="bg-gray-800 border-gray-700" data-testid="select-mint">
+                        <SelectValue placeholder="All Numbers" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-gray-700">
+                        <SelectItem value="all">All Numbers</SelectItem>
+                        <SelectItem value="1-100">1 - 100</SelectItem>
+                        <SelectItem value="101-500">101 - 500</SelectItem>
+                        <SelectItem value="501-1000">501 - 1000</SelectItem>
+                        <SelectItem value="1000+">1000+</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
