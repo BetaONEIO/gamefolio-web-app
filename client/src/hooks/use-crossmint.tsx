@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { CrossmintProvider as CrossmintSDKProvider, useWallet as useCrossmintWallet } from '@crossmint/client-sdk-react-ui';
 import { useAuth } from './use-auth';
 import { useToast } from './use-toast';
+import { apiRequest } from '@/lib/queryClient';
 
 interface CrossmintWallet {
   address: string;
@@ -17,11 +19,12 @@ interface CrossmintContextType {
 
 const CrossmintContext = createContext<CrossmintContextType | undefined>(undefined);
 
-export function CrossmintProvider({ children }: { children: ReactNode }) {
+function CrossmintWalletManager({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [wallet, setWallet] = useState<CrossmintWallet | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { getOrCreateWallet, wallet: crossmintWallet, status } = useCrossmintWallet();
 
   // Load wallet info from user data
   useEffect(() => {
@@ -35,6 +38,27 @@ export function CrossmintProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
+  // Sync Crossmint wallet with backend
+  useEffect(() => {
+    if (crossmintWallet?.address && user && !user.walletAddress) {
+      // Save wallet address to backend
+      apiRequest('/api/wallet/save', {
+        method: 'POST',
+        body: JSON.stringify({
+          walletAddress: crossmintWallet.address,
+          walletChain: 'polygon',
+        }),
+      }).then(() => {
+        setWallet({
+          address: crossmintWallet.address,
+          chain: 'polygon',
+        });
+      }).catch((error) => {
+        console.error('Failed to save wallet:', error);
+      });
+    }
+  }, [crossmintWallet, user]);
+
   const createWallet = async () => {
     if (!user) {
       toast({
@@ -47,22 +71,8 @@ export function CrossmintProvider({ children }: { children: ReactNode }) {
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/wallet/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create wallet');
-      }
-
-      const data = await response.json();
-      setWallet({
-        address: data.walletAddress,
-        chain: data.walletChain,
-      });
-
+      await getOrCreateWallet();
+      
       toast({
         title: "Wallet created!",
         description: "Your blockchain wallet has been created successfully",
@@ -103,9 +113,26 @@ export function CrossmintProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <CrossmintContext.Provider value={{ wallet, isLoading, createWallet, refreshWallet }}>
+    <CrossmintContext.Provider value={{ wallet, isLoading: isLoading || status === 'loading', createWallet, refreshWallet }}>
       {children}
     </CrossmintContext.Provider>
+  );
+}
+
+export function CrossmintProvider({ children }: { children: ReactNode }) {
+  const apiKey = import.meta.env.VITE_CROSSMINT_API_KEY;
+
+  if (!apiKey) {
+    console.warn('VITE_CROSSMINT_API_KEY not found');
+    return <>{children}</>;
+  }
+
+  return (
+    <CrossmintSDKProvider apiKey={apiKey}>
+      <CrossmintWalletManager>
+        {children}
+      </CrossmintWalletManager>
+    </CrossmintSDKProvider>
   );
 }
 
