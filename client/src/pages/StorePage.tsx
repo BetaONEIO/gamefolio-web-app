@@ -1,13 +1,17 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useCrossmint } from "@/hooks/use-crossmint";
 import { Link } from "wouter";
-import { ShoppingCart, DollarSign, Sparkles, Wallet, Menu, X } from "lucide-react";
+import { ShoppingCart, DollarSign, Sparkles, Wallet, Menu, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 type TabType = "buy" | "sell" | "mint";
 
@@ -153,33 +157,102 @@ export default function StorePage() {
           <SidebarContent />
         </aside>
 
-        {/* Mobile Header with Menu */}
-        <div className="md:hidden sticky top-0 z-40 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800 p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-              NFT Store
-            </h2>
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
-                  <Menu className="h-6 w-6" />
+        {/* Mobile Header with Dropdown Menu */}
+        <div className="md:hidden sticky top-0 z-40 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800">
+          <Collapsible open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <div className="p-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                  NFT Store
+                </h2>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
+                    <Menu className="h-6 w-6" />
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+              
+              {/* Mobile Tab Indicator */}
+              <div className="mt-3 flex items-center gap-2 text-sm text-gray-400">
+                <span>Current:</span>
+                <span className="text-blue-400 font-semibold">
+                  {activeTab === "buy" && "Buy NFT"}
+                  {activeTab === "sell" && "Sell NFT"}
+                  {activeTab === "mint" && "Mint NFT"}
+                </span>
+              </div>
+            </div>
+
+            <CollapsibleContent className="border-t border-gray-800">
+              <div className="p-4 space-y-2">
+                <Button
+                  variant={activeTab === "buy" ? "default" : "ghost"}
+                  className={`w-full justify-start gap-3 ${
+                    activeTab === "buy" 
+                      ? "bg-blue-600 hover:bg-blue-700" 
+                      : "hover:bg-gray-800"
+                  }`}
+                  onClick={() => {
+                    setActiveTab("buy");
+                    setMobileMenuOpen(false);
+                  }}
+                  data-testid="button-tab-buy-mobile"
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  Buy NFT
                 </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-64 bg-gray-900 border-gray-800 p-6">
-                <SidebarContent />
-              </SheetContent>
-            </Sheet>
-          </div>
-          
-          {/* Mobile Tab Indicator */}
-          <div className="mt-3 flex items-center gap-2 text-sm text-gray-400">
-            <span>Current:</span>
-            <span className="text-blue-400 font-semibold">
-              {activeTab === "buy" && "Buy NFT"}
-              {activeTab === "sell" && "Sell NFT"}
-              {activeTab === "mint" && "Mint NFT"}
-            </span>
-          </div>
+
+                <Button
+                  variant={activeTab === "sell" ? "default" : "ghost"}
+                  className={`w-full justify-start gap-3 ${
+                    activeTab === "sell" 
+                      ? "bg-blue-600 hover:bg-blue-700" 
+                      : "hover:bg-gray-800"
+                  }`}
+                  onClick={() => {
+                    setActiveTab("sell");
+                    setMobileMenuOpen(false);
+                  }}
+                  data-testid="button-tab-sell-mobile"
+                >
+                  <DollarSign className="h-5 w-5" />
+                  Sell NFT
+                </Button>
+
+                <Button
+                  variant={activeTab === "mint" ? "default" : "ghost"}
+                  className={`w-full justify-start gap-3 ${
+                    activeTab === "mint" 
+                      ? "bg-blue-600 hover:bg-blue-700" 
+                      : "hover:bg-gray-800"
+                  }`}
+                  onClick={() => {
+                    setActiveTab("mint");
+                    setMobileMenuOpen(false);
+                  }}
+                  data-testid="button-tab-mint-mobile"
+                >
+                  <Sparkles className="h-5 w-5" />
+                  Mint NFT
+                </Button>
+
+                <div className="mt-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Wallet className="h-5 w-5 text-blue-400" />
+                    <span className="text-sm text-gray-400">Your Balance</span>
+                  </div>
+                  <p className="text-xl font-bold" data-testid="text-wallet-balance-mobile">{walletBalance}</p>
+                  {!wallet?.address && (
+                    <Link href="/wallet">
+                      <Button size="sm" variant="outline" className="w-full mt-3" data-testid="button-create-wallet-mobile">
+                        Create Wallet
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
 
         {/* Main Content Area */}
@@ -226,7 +299,7 @@ export default function StorePage() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
                 {gamefolioNFTs.map((nft) => (
                   <Card
                     key={nft.id}
@@ -239,17 +312,17 @@ export default function StorePage() {
                         alt={nft.name}
                         className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
                       />
-                      <Badge className="absolute top-3 right-3 bg-blue-600 text-xs">
+                      <Badge className="absolute top-2 right-2 bg-blue-600 text-xs">
                         For Sale
                       </Badge>
                     </div>
                     
-                    <div className="p-3 md:p-4 space-y-2 md:space-y-3">
+                    <div className="p-3 space-y-2">
                       <div>
-                        <h3 className="font-semibold text-base md:text-lg mb-1" data-testid={`text-nft-name-${nft.id}`}>
+                        <h3 className="font-semibold text-sm md:text-base mb-1 line-clamp-1" data-testid={`text-nft-name-${nft.id}`}>
                           {nft.name}
                         </h3>
-                        <p className="text-xs md:text-sm text-gray-400" data-testid={`text-nft-description-${nft.id}`}>
+                        <p className="text-xs text-gray-400 line-clamp-2" data-testid={`text-nft-description-${nft.id}`}>
                           {nft.description}
                         </p>
                       </div>
@@ -257,17 +330,17 @@ export default function StorePage() {
                       <div className="flex items-center justify-between pt-2 border-t border-gray-700">
                         <div>
                           <p className="text-xs text-gray-400">Price</p>
-                          <p className="text-base md:text-lg font-bold text-blue-400" data-testid={`text-nft-price-${nft.id}`}>
+                          <p className="text-sm md:text-base font-bold text-blue-400" data-testid={`text-nft-price-${nft.id}`}>
                             {nft.price}
                           </p>
                         </div>
                         
                         <Button
                           size="sm"
-                          className="bg-blue-600 hover:bg-blue-700"
+                          className="bg-blue-600 hover:bg-blue-700 text-xs"
                           data-testid={`button-buy-nft-${nft.id}`}
                         >
-                          <ShoppingCart className="h-4 w-4 mr-2" />
+                          <ShoppingCart className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                           Buy
                         </Button>
                       </div>
