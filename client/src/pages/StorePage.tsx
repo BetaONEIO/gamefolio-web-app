@@ -1,12 +1,13 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useCrossmint } from "@/hooks/use-crossmint";
 import { Link } from "wouter";
-import { ShoppingCart, DollarSign, Sparkles, Wallet } from "lucide-react";
+import { ShoppingCart, DollarSign, Sparkles, Wallet, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 type TabType = "buy" | "sell" | "mint";
 
@@ -14,6 +15,7 @@ export default function StorePage() {
   const { user } = useAuth();
   const { wallet } = useCrossmint();
   const [activeTab, setActiveTab] = useState<TabType>("buy");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Mock Gamefolio NFT Collection data
   const gamefolioNFTs = [
@@ -69,87 +71,129 @@ export default function StorePage() {
 
   const walletBalance = wallet?.address ? "2.786 ETH" : "0 ETH";
 
+  const SidebarContent = () => (
+    <div className="space-y-2">
+      <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent" data-testid="text-store-title">
+        NFT Store
+      </h2>
+      
+      <Button
+        variant={activeTab === "buy" ? "default" : "ghost"}
+        className={`w-full justify-start gap-3 ${
+          activeTab === "buy" 
+            ? "bg-blue-600 hover:bg-blue-700" 
+            : "hover:bg-gray-800"
+        }`}
+        onClick={() => {
+          setActiveTab("buy");
+          setMobileMenuOpen(false);
+        }}
+        data-testid="button-tab-buy"
+      >
+        <ShoppingCart className="h-5 w-5" />
+        Buy NFT
+      </Button>
+
+      <Button
+        variant={activeTab === "sell" ? "default" : "ghost"}
+        className={`w-full justify-start gap-3 ${
+          activeTab === "sell" 
+            ? "bg-blue-600 hover:bg-blue-700" 
+            : "hover:bg-gray-800"
+        }`}
+        onClick={() => {
+          setActiveTab("sell");
+          setMobileMenuOpen(false);
+        }}
+        data-testid="button-tab-sell"
+      >
+        <DollarSign className="h-5 w-5" />
+        Sell NFT
+      </Button>
+
+      <Button
+        variant={activeTab === "mint" ? "default" : "ghost"}
+        className={`w-full justify-start gap-3 ${
+          activeTab === "mint" 
+            ? "bg-blue-600 hover:bg-blue-700" 
+            : "hover:bg-gray-800"
+        }`}
+        onClick={() => {
+          setActiveTab("mint");
+          setMobileMenuOpen(false);
+        }}
+        data-testid="button-tab-mint"
+      >
+        <Sparkles className="h-5 w-5" />
+        Mint NFT
+      </Button>
+
+      <div className="mt-8 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+        <div className="flex items-center gap-2 mb-2">
+          <Wallet className="h-5 w-5 text-blue-400" />
+          <span className="text-sm text-gray-400">Your Balance</span>
+        </div>
+        <p className="text-xl font-bold" data-testid="text-wallet-balance">{walletBalance}</p>
+        {!wallet?.address && (
+          <Link href="/wallet">
+            <Button size="sm" variant="outline" className="w-full mt-3" data-testid="button-create-wallet">
+              Create Wallet
+            </Button>
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white">
-      <div className="flex">
-        {/* Left Sidebar */}
-        <aside className="w-64 min-h-screen bg-gray-900/50 backdrop-blur-sm border-r border-gray-800 p-6">
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent" data-testid="text-store-title">
-              NFT Store
-            </h2>
-            
-            <Button
-              variant={activeTab === "buy" ? "default" : "ghost"}
-              className={`w-full justify-start gap-3 ${
-                activeTab === "buy" 
-                  ? "bg-blue-600 hover:bg-blue-700" 
-                  : "hover:bg-gray-800"
-              }`}
-              onClick={() => setActiveTab("buy")}
-              data-testid="button-tab-buy"
-            >
-              <ShoppingCart className="h-5 w-5" />
-              Buy NFT
-            </Button>
-
-            <Button
-              variant={activeTab === "sell" ? "default" : "ghost"}
-              className={`w-full justify-start gap-3 ${
-                activeTab === "sell" 
-                  ? "bg-blue-600 hover:bg-blue-700" 
-                  : "hover:bg-gray-800"
-              }`}
-              onClick={() => setActiveTab("sell")}
-              data-testid="button-tab-sell"
-            >
-              <DollarSign className="h-5 w-5" />
-              Sell NFT
-            </Button>
-
-            <Button
-              variant={activeTab === "mint" ? "default" : "ghost"}
-              className={`w-full justify-start gap-3 ${
-                activeTab === "mint" 
-                  ? "bg-blue-600 hover:bg-blue-700" 
-                  : "hover:bg-gray-800"
-              }`}
-              onClick={() => setActiveTab("mint")}
-              data-testid="button-tab-mint"
-            >
-              <Sparkles className="h-5 w-5" />
-              Mint NFT
-            </Button>
-          </div>
-
-          <div className="mt-8 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-            <div className="flex items-center gap-2 mb-2">
-              <Wallet className="h-5 w-5 text-blue-400" />
-              <span className="text-sm text-gray-400">Your Balance</span>
-            </div>
-            <p className="text-xl font-bold" data-testid="text-wallet-balance">{walletBalance}</p>
-            {!wallet?.address && (
-              <Link href="/wallet">
-                <Button size="sm" variant="outline" className="w-full mt-3" data-testid="button-create-wallet">
-                  Create Wallet
-                </Button>
-              </Link>
-            )}
-          </div>
+      <div className="flex flex-col md:flex-row">
+        {/* Desktop Sidebar */}
+        <aside className="hidden md:block w-64 min-h-screen bg-gray-900/50 backdrop-blur-sm border-r border-gray-800 p-6">
+          <SidebarContent />
         </aside>
 
+        {/* Mobile Header with Menu */}
+        <div className="md:hidden sticky top-0 z-40 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800 p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+              NFT Store
+            </h2>
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
+                  <Menu className="h-6 w-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64 bg-gray-900 border-gray-800 p-6">
+                <SidebarContent />
+              </SheetContent>
+            </Sheet>
+          </div>
+          
+          {/* Mobile Tab Indicator */}
+          <div className="mt-3 flex items-center gap-2 text-sm text-gray-400">
+            <span>Current:</span>
+            <span className="text-blue-400 font-semibold">
+              {activeTab === "buy" && "Buy NFT"}
+              {activeTab === "sell" && "Sell NFT"}
+              {activeTab === "mint" && "Mint NFT"}
+            </span>
+          </div>
+        </div>
+
         {/* Main Content Area */}
-        <main className="flex-1 p-8">
+        <main className="flex-1 p-4 md:p-8">
           {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between">
+          <div className="mb-6 md:mb-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold mb-2" data-testid="heading-section">
+                <h1 className="text-2xl md:text-3xl font-bold mb-2" data-testid="heading-section">
                   {activeTab === "buy" && "Buy NFT Profile Pictures"}
                   {activeTab === "sell" && "Sell Your NFTs"}
                   {activeTab === "mint" && "Mint New NFTs"}
                 </h1>
-                <p className="text-gray-400" data-testid="text-section-description">
+                <p className="text-sm md:text-base text-gray-400" data-testid="text-section-description">
                   {activeTab === "buy" && "Browse and purchase exclusive Gamefolio NFT avatars for your profile"}
                   {activeTab === "sell" && "List your NFTs for sale in the Gamefolio marketplace"}
                   {activeTab === "mint" && "Create and mint your own custom NFT avatars"}
@@ -157,13 +201,13 @@ export default function StorePage() {
               </div>
               
               <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10" data-testid="avatar-user">
+                <Avatar className="h-8 w-8 md:h-10 md:w-10" data-testid="avatar-user">
                   <AvatarImage src={user?.avatarUrl || undefined} />
                   <AvatarFallback className="bg-gray-800">
                     {user?.username?.[0]?.toUpperCase() || "U"}
                   </AvatarFallback>
                 </Avatar>
-                <span className="text-sm text-gray-400" data-testid="text-username">
+                <span className="text-xs md:text-sm text-gray-400" data-testid="text-username">
                   {user?.username || "Guest"}
                 </span>
               </div>
@@ -173,16 +217,16 @@ export default function StorePage() {
           {/* Buy NFT Section */}
           {activeTab === "buy" && (
             <div>
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-2" data-testid="heading-collection">
+              <div className="mb-4 md:mb-6">
+                <h2 className="text-lg md:text-xl font-semibold mb-2" data-testid="heading-collection">
                   Gamefolio Collection
                 </h2>
-                <p className="text-sm text-gray-400" data-testid="text-collection-info">
+                <p className="text-xs md:text-sm text-gray-400" data-testid="text-collection-info">
                   Exclusive NFT avatars you can use as your profile picture
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {gamefolioNFTs.map((nft) => (
                   <Card
                     key={nft.id}
@@ -195,17 +239,17 @@ export default function StorePage() {
                         alt={nft.name}
                         className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
                       />
-                      <Badge className="absolute top-3 right-3 bg-blue-600">
+                      <Badge className="absolute top-3 right-3 bg-blue-600 text-xs">
                         For Sale
                       </Badge>
                     </div>
                     
-                    <div className="p-4 space-y-3">
+                    <div className="p-3 md:p-4 space-y-2 md:space-y-3">
                       <div>
-                        <h3 className="font-semibold text-lg mb-1" data-testid={`text-nft-name-${nft.id}`}>
+                        <h3 className="font-semibold text-base md:text-lg mb-1" data-testid={`text-nft-name-${nft.id}`}>
                           {nft.name}
                         </h3>
-                        <p className="text-sm text-gray-400" data-testid={`text-nft-description-${nft.id}`}>
+                        <p className="text-xs md:text-sm text-gray-400" data-testid={`text-nft-description-${nft.id}`}>
                           {nft.description}
                         </p>
                       </div>
@@ -213,17 +257,18 @@ export default function StorePage() {
                       <div className="flex items-center justify-between pt-2 border-t border-gray-700">
                         <div>
                           <p className="text-xs text-gray-400">Price</p>
-                          <p className="text-lg font-bold text-blue-400" data-testid={`text-nft-price-${nft.id}`}>
+                          <p className="text-base md:text-lg font-bold text-blue-400" data-testid={`text-nft-price-${nft.id}`}>
                             {nft.price}
                           </p>
                         </div>
                         
                         <Button
+                          size="sm"
                           className="bg-blue-600 hover:bg-blue-700"
                           data-testid={`button-buy-nft-${nft.id}`}
                         >
                           <ShoppingCart className="h-4 w-4 mr-2" />
-                          Buy Now
+                          Buy
                         </Button>
                       </div>
                     </div>
@@ -235,15 +280,15 @@ export default function StorePage() {
 
           {/* Sell NFT Section */}
           {activeTab === "sell" && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh]">
-              <DollarSign className="h-20 w-20 text-gray-600 mb-4" />
-              <h3 className="text-2xl font-semibold mb-2" data-testid="heading-sell-coming-soon">
+            <div className="flex flex-col items-center justify-center min-h-[50vh] md:min-h-[60vh] px-4">
+              <DollarSign className="h-16 w-16 md:h-20 md:w-20 text-gray-600 mb-4" />
+              <h3 className="text-xl md:text-2xl font-semibold mb-2 text-center" data-testid="heading-sell-coming-soon">
                 Sell Your NFTs
               </h3>
-              <p className="text-gray-400 text-center max-w-md" data-testid="text-sell-description">
+              <p className="text-sm md:text-base text-gray-400 text-center max-w-md" data-testid="text-sell-description">
                 List your owned NFTs for sale in the Gamefolio marketplace. This feature is coming soon!
               </p>
-              <Button className="mt-6" variant="outline" data-testid="button-view-inventory">
+              <Button className="mt-6" variant="outline" size="sm" data-testid="button-view-inventory">
                 View Your Inventory
               </Button>
             </div>
@@ -251,15 +296,15 @@ export default function StorePage() {
 
           {/* Mint NFT Section */}
           {activeTab === "mint" && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh]">
-              <Sparkles className="h-20 w-20 text-gray-600 mb-4" />
-              <h3 className="text-2xl font-semibold mb-2" data-testid="heading-mint-coming-soon">
+            <div className="flex flex-col items-center justify-center min-h-[50vh] md:min-h-[60vh] px-4">
+              <Sparkles className="h-16 w-16 md:h-20 md:w-20 text-gray-600 mb-4" />
+              <h3 className="text-xl md:text-2xl font-semibold mb-2 text-center" data-testid="heading-mint-coming-soon">
                 Mint Your Own NFT
               </h3>
-              <p className="text-gray-400 text-center max-w-md" data-testid="text-mint-description">
+              <p className="text-sm md:text-base text-gray-400 text-center max-w-md" data-testid="text-mint-description">
                 Create and mint custom NFT avatars for your profile. Upload your gaming clips or artwork to mint as NFTs!
               </p>
-              <Button className="mt-6" variant="outline" data-testid="button-start-minting">
+              <Button className="mt-6" variant="outline" size="sm" data-testid="button-start-minting">
                 Start Minting
               </Button>
             </div>
