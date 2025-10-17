@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { ArrowLeft, Wallet, Copy, ExternalLink, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowLeft, Wallet, Copy, ExternalLink, CheckCircle2, Loader2, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCrossmint } from "@/hooks/use-crossmint";
@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function WalletPage() {
   const { user } = useAuth();
-  const { wallet, isLoading, createWallet } = useCrossmint();
+  const { wallet, isLoading, createWallet, loginToWallet } = useCrossmint();
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
@@ -177,7 +177,16 @@ export default function WalletPage() {
                   </div>
                 </div>
 
-                <div className="pt-2">
+                <div className="pt-2 space-y-2">
+                  <Button
+                    variant="default"
+                    className="w-full"
+                    onClick={loginToWallet}
+                    data-testid="button-login-wallet"
+                  >
+                    <LogIn className="w-4 h-4 mr-2" />
+                    Connect to Wallet
+                  </Button>
                   <Button
                     variant="outline"
                     className="w-full"
