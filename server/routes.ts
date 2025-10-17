@@ -6660,21 +6660,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Crossmint Wallet Routes
   // ==========================================
 
-  // Create wallet for authenticated user
-  app.post("/api/wallet/create", authMiddleware, async (req, res) => {
+  // Store wallet address after client-side creation
+  app.post("/api/wallet/save", authMiddleware, async (req, res) => {
     try {
       const userId = req.user!.id;
+      const { walletAddress, walletChain } = req.body;
+
+      if (!walletAddress || !walletChain) {
+        return res.status(400).json({ message: "Wallet address and chain are required" });
+      }
 
       // Check if user already has a wallet
       const existingUser = await storage.getUser(userId);
       if (existingUser?.walletAddress) {
         return res.status(400).json({ message: "Wallet already exists" });
       }
-
-      // For now, we'll generate a placeholder wallet address
-      // In production, this would use the Crossmint API
-      const walletAddress = `0x${randomBytes(20).toString('hex')}`;
-      const walletChain = 'polygon';
       
       // Update user with wallet information
       await storage.updateUser(userId, {
@@ -6686,11 +6686,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         walletAddress,
         walletChain,
-        message: "Wallet created successfully"
+        message: "Wallet saved successfully"
       });
     } catch (error) {
-      console.error("Error creating wallet:", error);
-      res.status(500).json({ error: "Failed to create wallet" });
+      console.error("Error saving wallet:", error);
+      res.status(500).json({ error: "Failed to save wallet" });
     }
   });
 
