@@ -42,8 +42,10 @@ function CrossmintWalletManager({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (crossmintWallet?.address && user && !user.walletAddress) {
       // Save wallet address to backend
-      apiRequest('/api/wallet/save', {
+      fetch('/api/wallet/save', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           walletAddress: crossmintWallet.address,
           walletChain: 'polygon',
@@ -71,12 +73,14 @@ function CrossmintWalletManager({ children }: { children: ReactNode }) {
 
     setIsLoading(true);
     try {
-      await getOrCreateWallet();
+      const result = await getOrCreateWallet({ type: 'evm-smart-wallet' });
       
-      toast({
-        title: "Wallet created!",
-        description: "Your blockchain wallet has been created successfully",
-      });
+      if (result?.address) {
+        toast({
+          title: "Wallet created!",
+          description: "Your blockchain wallet has been created successfully",
+        });
+      }
     } catch (error) {
       console.error('Failed to create wallet:', error);
       toast({
@@ -113,7 +117,7 @@ function CrossmintWalletManager({ children }: { children: ReactNode }) {
   };
 
   return (
-    <CrossmintContext.Provider value={{ wallet, isLoading: isLoading || status === 'loading', createWallet, refreshWallet }}>
+    <CrossmintContext.Provider value={{ wallet, isLoading: isLoading || status === 'in-progress', createWallet, refreshWallet }}>
       {children}
     </CrossmintContext.Provider>
   );
