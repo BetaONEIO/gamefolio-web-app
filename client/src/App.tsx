@@ -68,6 +68,7 @@ const HelpPage = React.lazy(() => import("./pages/help-page"));
 const LeaderboardEmbedPage = React.lazy(() => import("./pages/LeaderboardEmbedPage"));
 const StorePage = React.lazy(() => import("./pages/StorePage"));
 const WalletPage = React.lazy(() => import("./pages/WalletPage"));
+const StoragePage = React.lazy(() => import("./pages/StoragePage"));
 
 // Loading component for lazy-loaded routes
 function RouteLoader() {
@@ -288,6 +289,7 @@ function Router() {
           <Route path="/help" component={HelpPage} />
           <Route path="/store" component={StorePage} />
           <Route path="/wallet" component={WalletPage} />
+          <Route path="/storage" component={StoragePage} />
           <Route path="/leaderboard/embed" component={LeaderboardEmbedPage} />
 
           {/* Public view routes for shareable content */}
