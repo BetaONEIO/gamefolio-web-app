@@ -173,12 +173,10 @@ export default function StorePage() {
           <Collapsible open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <div className="p-4">
               <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white">
+                  Store
+                </h2>
                 <div className="flex items-center gap-3">
-                  <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
-                      <Menu className="h-6 w-6" />
-                    </Button>
-                  </CollapsibleTrigger>
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8" data-testid="avatar-user-mobile">
                       <AvatarImage src={user?.avatarUrl || undefined} />
@@ -190,10 +188,12 @@ export default function StorePage() {
                       {user?.username || "Guest"}
                     </span>
                   </div>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
+                      <Menu className="h-6 w-6" />
+                    </Button>
+                  </CollapsibleTrigger>
                 </div>
-                <h2 className="text-xl font-bold text-white">
-                  Store
-                </h2>
               </div>
               
               {/* Mobile Tab Indicator */}
