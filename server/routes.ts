@@ -16,6 +16,7 @@ import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSche
 import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { nanoid } from "nanoid";
+import jwt from "jsonwebtoken";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { users } from "@shared/schema";
@@ -6659,6 +6660,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==========================================
   // Crossmint Wallet Routes
   // ==========================================
+
+  // Generate JWT token for Crossmint authentication
+  app.get("/api/wallet/jwt", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = await storage.getUser(userId);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Generate JWT token for Crossmint
+      const userIdentifier = user.email || `${user.username}@gamefolio.app`;
+      
+      // Create JWT with user information
+      const token = jwt.sign(
+        {
+          sub: userIdentifier,
+          email: user.email || userIdentifier,
+          userId: user.id,
+          username: user.username,
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24), // 24 hours
+        },
+        process.env.SESSION_SECRET || 'gamefolio-secret-key',
+        { algorithm: 'HS256' }
+      );
+
+      res.json({ jwt: token });
+    } catch (error) {
+      console.error("Error generating JWT:", error);
+      res.status(500).json({ error: "Failed to generate JWT" });
+    }
+  });
 
   // Store wallet address after client-side creation
   app.post("/api/wallet/save", authMiddleware, async (req, res) => {
