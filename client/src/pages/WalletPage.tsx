@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function WalletPage() {
   const { user } = useAuth();
-  const { wallet, isLoading, isConnected, createWallet, loginToWallet, logoutWallet } = useCrossmint();
+  const { wallet, isLoading, createWallet, loginToWallet } = useCrossmint();
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
@@ -177,54 +177,16 @@ export default function WalletPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Connection Status
-                  </label>
-                  <div className="mt-1">
-                    <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
-                      isConnected 
-                        ? 'bg-green-500/10 text-green-600 dark:text-green-400' 
-                        : 'bg-muted text-muted-foreground'
-                    }`} data-testid="text-connection-status">
-                      <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-muted-foreground'}`} />
-                      {isConnected ? 'Connected' : 'Disconnected'}
-                    </span>
-                  </div>
-                </div>
-
                 <div className="pt-2 space-y-2">
-                  {!isConnected ? (
-                    <Button
-                      variant="default"
-                      className="w-full"
-                      onClick={loginToWallet}
-                      disabled={isLoading}
-                      data-testid="button-login-wallet"
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Connecting...
-                        </>
-                      ) : (
-                        <>
-                          <LogIn className="w-4 h-4 mr-2" />
-                          Connect to Wallet
-                        </>
-                      )}
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={logoutWallet}
-                      data-testid="button-logout-wallet"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Disconnect Wallet
-                    </Button>
-                  )}
+                  <Button
+                    variant="default"
+                    className="w-full"
+                    onClick={loginToWallet}
+                    data-testid="button-login-wallet"
+                  >
+                    <LogIn className="w-4 h-4 mr-2" />
+                    Login to Crossmint Dashboard
+                  </Button>
                   <Button
                     variant="outline"
                     className="w-full"
@@ -240,37 +202,40 @@ export default function WalletPage() {
               </CardContent>
             </Card>
 
-            <Card data-testid="card-features">
+            <Card data-testid="card-wallet-management">
               <CardHeader>
-                <CardTitle>Coming Soon</CardTitle>
+                <CardTitle>Wallet Management</CardTitle>
                 <CardDescription>
-                  Exciting features in development
+                  Access full wallet features in Crossmint
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Click "Login to Crossmint Dashboard" to access your wallet's full capabilities, including:
+                </p>
                 <ul className="space-y-3 text-sm">
                   <li className="flex items-start gap-2">
                     <div className="mt-0.5 text-primary">•</div>
                     <div>
-                      <strong>NFT Minting:</strong> Turn your best gaming clips into unique NFTs
+                      <strong>Transaction Management:</strong> Send and receive cryptocurrency
                     </div>
                   </li>
                   <li className="flex items-start gap-2">
                     <div className="mt-0.5 text-primary">•</div>
                     <div>
-                      <strong>Asset Trading:</strong> Buy and sell gaming content on the marketplace
+                      <strong>NFT Viewing:</strong> View and manage your NFT collection
                     </div>
                   </li>
                   <li className="flex items-start gap-2">
                     <div className="mt-0.5 text-primary">•</div>
                     <div>
-                      <strong>Rewards Program:</strong> Earn cryptocurrency for your gaming achievements
+                      <strong>Transaction History:</strong> Track all your wallet activity
                     </div>
                   </li>
                   <li className="flex items-start gap-2">
                     <div className="mt-0.5 text-primary">•</div>
                     <div>
-                      <strong>Multi-chain Support:</strong> Access assets across different blockchains
+                      <strong>Multi-chain Assets:</strong> Manage assets across different blockchains
                     </div>
                   </li>
                 </ul>

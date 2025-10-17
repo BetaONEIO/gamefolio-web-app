@@ -6661,8 +6661,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Crossmint Wallet Routes
   // ==========================================
 
-  // Generate JWT token for Crossmint authentication
-  app.get("/api/wallet/jwt", authMiddleware, async (req, res) => {
+  // Create wallet via Crossmint API (server-side only for security)
+  app.post("/api/wallet/create", authMiddleware, async (req, res) => {
     try {
       const userId = req.user!.id;
       const user = await storage.getUser(userId);
@@ -6671,27 +6671,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Generate JWT token for Crossmint
-      const userIdentifier = user.email || `${user.username}@gamefolio.app`;
-      
-      // Create JWT with user information
-      const token = jwt.sign(
-        {
-          sub: userIdentifier,
-          email: user.email || userIdentifier,
-          userId: user.id,
-          username: user.username,
-          iat: Math.floor(Date.now() / 1000),
-          exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24), // 24 hours
-        },
-        process.env.SESSION_SECRET || 'gamefolio-secret-key',
-        { algorithm: 'HS256' }
-      );
+      // Check if user already has a wallet
+      if (user.walletAddress) {
+        return res.status(400).json({ 
+          message: "Wallet already exists",
+          address: user.walletAddress,
+          chain: user.walletChain
+        });
+      }
 
-      res.json({ jwt: token });
+      // Get Crossmint API key from environment (server-side only, no VITE_ prefix)
+      const apiKey = process.env.CROSSMINT_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ message: "Crossmint API key not configured" });
+      }
+
+      const userEmail = user.email || `${user.username}@gamefolio.app`;
+
+      // Call Crossmint API to create wallet
+      const crossmintResponse = await fetch('https://www.crossmint.com/api/v1-alpha2/wallets', {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'evm-smart-wallet',
+          linkedUser: userEmail,
+          config: {
+            adminSigner: {
+              type: 'evm-fireblocks-custodial'
+            }
+          }
+        }),
+      });
+
+      if (!crossmintResponse.ok) {
+        const errorText = await crossmintResponse.text();
+        console.error("Crossmint API error:", errorText);
+        return res.status(500).json({ message: `Crossmint API error: ${errorText}` });
+      }
+
+      const walletData = await crossmintResponse.json();
+
+      // Save wallet to database
+      await storage.updateUser(userId, {
+        walletAddress: walletData.address,
+        walletChain: 'polygon',
+        walletCreatedAt: new Date(),
+      });
+
+      res.json({
+        address: walletData.address,
+        chain: 'polygon',
+        message: "Wallet created successfully"
+      });
     } catch (error) {
-      console.error("Error generating JWT:", error);
-      res.status(500).json({ error: "Failed to generate JWT" });
+      console.error("Error creating wallet:", error);
+      res.status(500).json({ error: "Failed to create wallet" });
     }
   });
 
