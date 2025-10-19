@@ -76,8 +76,8 @@ export interface IStorage {
   // Clip operations
   getClip(id: number): Promise<Clip | null>;
   getClipWithUser(id: number): Promise<ClipWithUser | null>;
+  getClipByShareCode(shareCode: string): Promise<Clip | null>;
   createClip(clipData: InsertClip): Promise<Clip>;
-  createClipWithId(clipData: InsertClip & { id: number }): Promise<Clip>;
   updateClip(id: number, clip: Partial<Clip>): Promise<Clip | null>;
   updateClipDuration(id: number, duration: number): Promise<boolean>;
   deleteClip(id: number): Promise<boolean>;
@@ -168,9 +168,9 @@ export interface IStorage {
   addUserPointsHistory(pointsHistory: InsertUserPointsHistory): Promise<UserPointsHistory>;
   deleteHistoricMigrationPoints(): Promise<void>;
   rebuildLeaderboards(): Promise<void>;
-  getMonthlyLeaderboardEntry(userId: number, month: string, year: number): Promise<MonthlyLeaderboard | null>;
+  getMonthlyLeaderboardEntry(userId: number, month: string, year: number): Promise<MonthlyLeaderboard | undefined>;
   createMonthlyLeaderboardEntry(entry: InsertMonthlyLeaderboard): Promise<MonthlyLeaderboard>;
-  updateMonthlyLeaderboardEntry(id: number, updates: Partial<MonthlyLeaderboard>): Promise<MonthlyLeaderboard | null>;
+  updateMonthlyLeaderboardEntry(id: number, updates: Partial<MonthlyLeaderboard>): Promise<MonthlyLeaderboard | undefined>;
   getMonthlyLeaderboard(month: string, year: number, limit?: number): Promise<(MonthlyLeaderboard & { user: User })[]>;
   recalculateMonthlyRankings(month: string, year: number): Promise<void>;
   getAllTimeLeaderboard(limit?: number): Promise<Array<{
@@ -275,10 +275,7 @@ export interface IStorage {
   }>>;
   getScreenshotCount(): Promise<number>;
   createScreenshot(screenshotData: InsertScreenshotData): Promise<Screenshot>;
-  createScreenshotWithId(screenshotData: InsertScreenshotData & { id: number }): Promise<Screenshot>;
-  updateScreenshot(id: number, screenshot: Partial<Screenshot>): Promise<Screenshot | null>;
   deleteScreenshot(id: number): Promise<boolean>;
-  getScreenshotsByClipId(clipId: number): Promise<Screenshot[]>;
 
 
   // Content reporting operations

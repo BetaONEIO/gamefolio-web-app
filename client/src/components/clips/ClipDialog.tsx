@@ -366,7 +366,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           {clip ? `Video by ${clip.user?.displayName || clip.user?.username || 'Unknown user'}` : 'Video content viewer'}
         </DialogDescription>
         <DialogClose className={cn(
-          "absolute z-10 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
+          "absolute z-[60] rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
           isMobile 
             ? "right-2 top-2 p-3 bg-black/30 backdrop-blur-sm hover:bg-black/50" // Larger touch target with better visibility on mobile
             : "right-4 top-4 p-2"

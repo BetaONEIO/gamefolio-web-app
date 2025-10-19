@@ -9,6 +9,8 @@ import authRoutes from './routes/auth-routes';
 import adminRoutes from './routes/admin';
 import uploadRoutes from './routes/upload';
 import twitchGamesRoutes from './routes/twitch-games';
+import { createOGMetaMiddleware } from './og-meta';
+import { storage } from './storage';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -187,6 +189,10 @@ app.use((req, res, next) => {
       }
     });
 
+    // Open Graph meta tags middleware for clips, reels, and screenshots
+    // In development, only serves OG meta HTML to social bots
+    // Regular users get the normal Vite-served app
+    app.use(createOGMetaMiddleware(storage));
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;

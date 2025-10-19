@@ -7,6 +7,7 @@ import { X, Search, Home, Compass, Flame, User, Settings, LogOut, MessageSquare,
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import gamefolioLogo from '@assets/gamefolio social logo 3d circle web.png';
 
 const MobileMenu = () => {
   const { isOpen, close } = useMobileMenu();
@@ -73,7 +74,11 @@ const MobileMenu = () => {
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="p-4 border-b border-border flex justify-between items-center">
-            <h2 className="text-lg font-bold">Menu</h2>
+            <img 
+              src={gamefolioLogo} 
+              alt="Gamefolio Logo" 
+              className="h-8 w-8 object-contain"
+            />
             <Button variant="ghost" size="icon" onClick={close}>
               <X className="h-5 w-5" />
             </Button>

@@ -63,6 +63,7 @@ import { adminMiddleware } from "./middleware/admin";
 import QRCode from "qrcode";
 import { supabaseStorage } from "./supabase-storage";
 import { contentFilterService } from "./services/content-filter";
+import { addPlayButtonOverlay } from "./og-thumbnail";
 
 // Import upload middlewares from upload router
 import multer from "multer";
@@ -485,7 +486,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!isMatch) {
           console.log(`❌ Password mismatch for user ${user.username}`);
-          return done(null, false, { message: "Incorrect username or password" });
+          return done(null, false, { message: "Incorrect password" });
         }
 
         console.log(`✅ Authentication successful for user ${user.username}`);
@@ -2234,6 +2235,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error generating social preview image:', error);
       res.status(500).json({ error: 'Failed to generate preview image' });
+    }
+  });
+
+  // OG thumbnail with play button overlay for clips/reels
+  app.get('/api/og-thumbnail/:shareCode', async (req: Request, res: Response) => {
+    try {
+      const { shareCode } = req.params;
+      console.log(`🎬 Generating OG thumbnail with play button for shareCode: ${shareCode}`);
+      
+      // Try to find the clip by share code
+      const clip = await storage.getClipByShareCode(shareCode);
+      if (!clip) {
+        return res.status(404).json({ error: 'Clip not found' });
+      }
+
+      // Get the full clip with user data
+      const fullClip = await storage.getClipWithUser(clip.id);
+      if (!fullClip || !fullClip.thumbnailUrl) {
+        return res.status(404).json({ error: 'Clip thumbnail not found' });
+      }
+
+      // Generate thumbnail with play button overlay
+      const thumbnailWithPlayButton = await addPlayButtonOverlay(fullClip.thumbnailUrl);
+
+      // Set appropriate headers for image response with long cache
+      res.setHeader('Content-Type', 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); // Cache for 1 year
+      console.log(`✅ OG thumbnail with play button generated for ${shareCode}`);
+      res.send(thumbnailWithPlayButton);
+      
+    } catch (error) {
+      console.error('Error generating OG thumbnail with play button:', error);
+      res.status(500).json({ error: 'Failed to generate thumbnail' });
     }
   });
 
