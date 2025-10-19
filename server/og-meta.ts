@@ -138,12 +138,11 @@ export function createOGMetaMiddleware(storage: IStorage) {
       if (ogTags) {
         const __filename = fileURLToPath(import.meta.url);
         const __dirname = dirname(__filename);
-        const clientTemplate = path.resolve(
-          __dirname,
-          "..",
-          "client",
-          "index.html",
-        );
+        
+        // Use the correct index.html based on environment
+        const clientTemplate = process.env.NODE_ENV === 'production'
+          ? path.resolve(__dirname, "public", "index.html")
+          : path.resolve(__dirname, "..", "client", "index.html");
 
         let html = await fs.promises.readFile(clientTemplate, "utf-8");
         
