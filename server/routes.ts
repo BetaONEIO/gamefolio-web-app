@@ -484,7 +484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!isMatch) {
           console.log(`❌ Password mismatch for user ${user.username}`);
-          return done(null, false, { message: "Incorrect username or password" });
+          return done(null, false, { message: "Incorrect password" });
         }
 
         console.log(`✅ Authentication successful for user ${user.username}`);
