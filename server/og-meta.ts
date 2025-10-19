@@ -29,7 +29,8 @@ export function createOGMetaMiddleware(storage: IStorage) {
     }
 
     // Skip static assets (JS, CSS, images, fonts, etc.)
-    if (/\.(js|jsx|ts|tsx|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|mp4|webm|ogg|mp3|wav|pdf|zip)$/i.test(url)) {
+    // Match file extensions with or without query parameters/hash fragments
+    if (/\.(js|jsx|ts|tsx|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|mp4|webm|ogg|mp3|wav|pdf|zip)(\?|#|$)/i.test(url)) {
       return next();
     }
 
