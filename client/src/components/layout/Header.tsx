@@ -386,7 +386,10 @@ const Header = () => {
 
                     <DropdownMenuSeparator />
                     {user.role === "admin" && (
-                      <DropdownMenuItem onClick={() => window.location.href = "/admin"}>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setLocation("/admin")}
+                      >
                         <ShieldCheck className="mr-2 h-4 w-4" />
                         Admin Panel
                       </DropdownMenuItem>
