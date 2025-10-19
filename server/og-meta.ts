@@ -1,0 +1,169 @@
+import { Request, Response, NextFunction } from 'express';
+import { IStorage } from './storage';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+interface OGMetaTags {
+  title: string;
+  description: string;
+  image: string;
+  url: string;
+  type: string;
+  videoUrl?: string;
+}
+
+export function createOGMetaMiddleware(storage: IStorage) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const url = req.originalUrl;
+    
+    // Only process GET requests
+    if (req.method !== 'GET') {
+      return next();
+    }
+
+    // Skip API routes
+    if (url.startsWith('/api/')) {
+      return next();
+    }
+
+    try {
+      let ogTags: OGMetaTags | null = null;
+
+      // Match clip/reel URLs: /@username/clip/:id or /@username/reel/:id
+      const clipMatch = url.match(/^\/@([^/]+)\/(clip|reel)s?\/([^/?]+)/);
+      if (clipMatch) {
+        const [, username, type, idOrShareCode] = clipMatch;
+        
+        // Try to get clip by ID first, then by share code
+        let clip = null;
+        const parsedId = parseInt(idOrShareCode);
+        
+        if (!isNaN(parsedId)) {
+          clip = await storage.getClipWithUser(parsedId);
+        }
+        
+        // If not found by ID, try share code
+        if (!clip) {
+          const clipByShareCode = await storage.getClipByShareCode(idOrShareCode);
+          if (clipByShareCode) {
+            // Get full clip with user data
+            clip = await storage.getClipWithUser(clipByShareCode.id);
+          }
+        }
+
+        if (clip && clip.user) {
+          const contentType = type === 'reel' ? 'Reel' : 'Clip';
+          ogTags = {
+            title: `${clip.title} - ${clip.user.displayName || clip.user.username} | Gamefolio`,
+            description: clip.description || `Watch this amazing ${contentType.toLowerCase()} by ${clip.user.displayName || clip.user.username} on Gamefolio`,
+            image: clip.thumbnailUrl || '',
+            url: `https://${req.get('host')}${url}`,
+            type: 'video.other',
+            videoUrl: clip.videoUrl
+          };
+        }
+      }
+
+      // Match screenshot URLs: /@username/screenshot/:id
+      const screenshotMatch = url.match(/^\/@([^/]+)\/screenshots?\/([^/?]+)/);
+      if (screenshotMatch && !ogTags) {
+        const [, username, idOrShareCode] = screenshotMatch;
+        
+        // Try to get screenshot by ID first, then by share code
+        let screenshot = null;
+        const parsedId = parseInt(idOrShareCode);
+        
+        if (!isNaN(parsedId)) {
+          screenshot = await storage.getScreenshot(parsedId);
+        }
+        
+        // If not found by ID, try share code
+        if (!screenshot) {
+          screenshot = await storage.getScreenshotByShareCode(idOrShareCode);
+        }
+
+        if (screenshot) {
+          // Get user data
+          const user = await storage.getUser(screenshot.userId);
+          
+          if (user) {
+            ogTags = {
+              title: `${screenshot.title} - ${user.displayName || user.username} | Gamefolio`,
+              description: screenshot.description || `Check out this screenshot by ${user.displayName || user.username} on Gamefolio`,
+              image: screenshot.thumbnailUrl || screenshot.imageUrl || '',
+              url: `https://${req.get('host')}${url}`,
+              type: 'website'
+            };
+          }
+        }
+      }
+
+      // If we have OG tags, inject them into the HTML
+      if (ogTags) {
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = dirname(__filename);
+        const clientTemplate = path.resolve(
+          __dirname,
+          "..",
+          "client",
+          "index.html",
+        );
+
+        let html = await fs.promises.readFile(clientTemplate, "utf-8");
+        
+        // Generate meta tags
+        const metaTags = `
+    <title>${escapeHtml(ogTags.title)}</title>
+    <meta name="description" content="${escapeHtml(ogTags.description)}" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="${ogTags.type}" />
+    <meta property="og:url" content="${escapeHtml(ogTags.url)}" />
+    <meta property="og:title" content="${escapeHtml(ogTags.title)}" />
+    <meta property="og:description" content="${escapeHtml(ogTags.description)}" />
+    <meta property="og:image" content="${escapeHtml(ogTags.image)}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="Gamefolio" />
+    ${ogTags.videoUrl ? `<meta property="og:video" content="${escapeHtml(ogTags.videoUrl)}" />` : ''}
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="${ogTags.videoUrl ? 'player' : 'summary_large_image'}" />
+    <meta name="twitter:url" content="${escapeHtml(ogTags.url)}" />
+    <meta name="twitter:title" content="${escapeHtml(ogTags.title)}" />
+    <meta name="twitter:description" content="${escapeHtml(ogTags.description)}" />
+    <meta name="twitter:image" content="${escapeHtml(ogTags.image)}" />
+    ${ogTags.videoUrl ? `<meta name="twitter:player" content="${escapeHtml(ogTags.videoUrl)}" />` : ''}
+`;
+
+        // Inject meta tags after the charset meta tag
+        html = html.replace(
+          /<meta name="viewport"[^>]*>/,
+          `<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />${metaTags}`
+        );
+
+        res.status(200).set({ "Content-Type": "text/html" }).send(html);
+        return;
+      }
+    } catch (error) {
+      console.error('Error generating OG meta tags:', error);
+      // Continue to next middleware on error
+    }
+
+    next();
+  };
+}
+
+// Helper function to escape HTML entities
+function escapeHtml(text: string): string {
+  const map: { [key: string]: string } = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, (m) => map[m]);
+}
