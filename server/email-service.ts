@@ -293,4 +293,97 @@ export class EmailService {
       html,
     });
   }
+
+  static async sendNewUserNotification(userData: {
+    username: string;
+    email: string;
+    displayName: string;
+    authProvider?: string;
+  }): Promise<boolean> {
+    const { username, email, displayName, authProvider = 'local' } = userData;
+    const notificationEmail = 'hello@gamefolio.com';
+    const registrationTime = new Date().toLocaleString();
+    const authMethod = authProvider === 'local' ? 'Email/Password' : authProvider.charAt(0).toUpperCase() + authProvider.slice(1);
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>New User Registration - Gamefolio</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { text-align: center; margin-bottom: 30px; background-color: #4C8; color: white; padding: 20px; border-radius: 8px; }
+            .logo { color: #ffffff; font-size: 24px; font-weight: bold; }
+            .content { background-color: #ffffff; padding: 30px; border-radius: 8px; border: 1px solid #ddd; }
+            .user-details { background-color: #f8f9fa; padding: 20px; border-radius: 6px; margin: 20px 0; }
+            .detail-row { padding: 8px 0; border-bottom: 1px solid #eee; }
+            .detail-row:last-child { border-bottom: none; }
+            .label { font-weight: bold; color: #555; display: inline-block; width: 140px; }
+            .value { color: #333; }
+            .button { display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin: 10px 5px; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">🎮 New User Registration</div>
+              <p style="margin: 10px 0 0 0;">Gamefolio Platform</p>
+            </div>
+            <div class="content">
+              <h1 style="color: #4C8;">New User Joined!</h1>
+              <p>A new user has successfully registered on the Gamefolio platform.</p>
+              
+              <div class="user-details">
+                <h3>User Information</h3>
+                <div class="detail-row">
+                  <span class="label">Username:</span>
+                  <span class="value">${username}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Display Name:</span>
+                  <span class="value">${displayName}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Email:</span>
+                  <span class="value">${email}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Registration Method:</span>
+                  <span class="value">${authMethod}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Registration Time:</span>
+                  <span class="value">${registrationTime}</span>
+                </div>
+              </div>
+
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${SITE_URL}/${username}" class="button">View Profile</a>
+                <a href="${SITE_URL}/admin" class="button" style="background-color: #28a745;">Admin Panel</a>
+              </div>
+            </div>
+            <div class="footer">
+              <p>This is an automated notification from the Gamefolio registration system.</p>
+              <p>Notification sent at ${registrationTime}</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    try {
+      return await sendEmail({
+        to: notificationEmail,
+        subject: `🎮 New User Registration: ${username} (${displayName})`,
+        html,
+      });
+    } catch (error) {
+      console.error('Failed to send new user notification:', error);
+      return false;
+    }
+  }
 }

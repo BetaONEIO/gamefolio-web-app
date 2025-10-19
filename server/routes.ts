@@ -705,6 +705,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await EmailService.sendWelcomeEmail(user.email, user.displayName || user.username);
         }
 
+        // Send new user notification to admin
+        if (user.email) {
+          try {
+            await EmailService.sendNewUserNotification({
+              username: user.username,
+              email: user.email,
+              displayName: user.displayName,
+              authProvider: 'google'
+            });
+            console.log(`New user notification sent for ${user.username}`);
+          } catch (error) {
+            console.error('Failed to send new user notification:', error);
+          }
+        }
+
         // Log user in
         req.login(user as any, (err) => {
           if (err) {
@@ -874,6 +889,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
+        // Send new user notification to admin
+        if (user.email) {
+          try {
+            await EmailService.sendNewUserNotification({
+              username: user.username,
+              email: user.email,
+              displayName: user.displayName,
+              authProvider: 'discord'
+            });
+            console.log(`New user notification sent for ${user.username}`);
+          } catch (error) {
+            console.error('Failed to send new user notification:', error);
+          }
+        }
+
         // Log user in
         req.login(user as any, (err) => {
           if (err) {
@@ -993,6 +1023,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Verification email sent to ${user.email}`);
       } else {
         console.warn(`Failed to send verification email to ${user.email}`);
+      }
+
+      // Send new user notification to admin
+      if (user.email) {
+        try {
+          await EmailService.sendNewUserNotification({
+            username: user.username,
+            email: user.email,
+            displayName: user.displayName,
+            authProvider: 'local'
+          });
+          console.log(`New user notification sent for ${user.username}`);
+        } catch (error) {
+          console.error('Failed to send new user notification:', error);
+        }
       }
 
       // Remove password from response
