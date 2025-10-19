@@ -28,6 +28,16 @@ export function createOGMetaMiddleware(storage: IStorage) {
       return next();
     }
 
+    // Skip static assets (JS, CSS, images, fonts, etc.)
+    if (/\.(js|jsx|ts|tsx|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|mp4|webm|ogg|mp3|wav|pdf|zip)$/i.test(url)) {
+      return next();
+    }
+
+    // Skip @vite and @fs paths used by Vite dev server
+    if (url.startsWith('/@vite') || url.startsWith('/@fs') || url.startsWith('/@id')) {
+      return next();
+    }
+
     try {
       let ogTags: OGMetaTags | null = null;
 
