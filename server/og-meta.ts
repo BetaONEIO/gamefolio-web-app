@@ -38,6 +38,18 @@ export function createOGMetaMiddleware(storage: IStorage) {
       return next();
     }
 
+    // In development mode, only serve OG meta HTML for social media bots
+    // Regular users should get the normal Vite-served app
+    if (process.env.NODE_ENV === 'development') {
+      const userAgent = req.headers['user-agent'] || '';
+      const isSocialBot = /facebookexternalhit|twitterbot|LinkedInBot|WhatsApp|TelegramBot|discordbot|Slackbot|redditbot|SkypeUriPreview/i.test(userAgent);
+      
+      if (!isSocialBot) {
+        // Not a bot in dev mode, let Vite handle it
+        return next();
+      }
+    }
+
     try {
       let ogTags: OGMetaTags | null = null;
 
@@ -148,7 +160,7 @@ export function createOGMetaMiddleware(storage: IStorage) {
     ${ogTags.videoUrl ? `<meta name="twitter:player" content="${escapeHtml(ogTags.videoUrl)}" />` : ''}
 `;
 
-        // Inject meta tags after the charset meta tag
+        // Inject meta tags after the viewport meta tag
         html = html.replace(
           /<meta name="viewport"[^>]*>/,
           `<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />${metaTags}`
