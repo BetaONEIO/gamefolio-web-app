@@ -77,10 +77,12 @@ export function createOGMetaMiddleware(storage: IStorage) {
 
         if (clip && clip.user) {
           const contentType = type === 'reel' ? 'Reel' : 'Clip';
+          // Use thumbnailUrl, fallback to game image or user avatar
+          const imageUrl = clip.thumbnailUrl || clip.gameImageUrl || clip.user.avatarUrl || '';
           ogTags = {
             title: `${clip.title} - ${clip.user.displayName || clip.user.username} | Gamefolio`,
             description: clip.description || `Watch this amazing ${contentType.toLowerCase()} by ${clip.user.displayName || clip.user.username} on Gamefolio`,
-            image: clip.thumbnailUrl || '',
+            image: imageUrl,
             url: `https://${req.get('host')}${url}`,
             type: 'video.other',
             videoUrl: clip.videoUrl
@@ -146,18 +148,28 @@ export function createOGMetaMiddleware(storage: IStorage) {
     <meta property="og:title" content="${escapeHtml(ogTags.title)}" />
     <meta property="og:description" content="${escapeHtml(ogTags.description)}" />
     <meta property="og:image" content="${escapeHtml(ogTags.image)}" />
+    <meta property="og:image:secure_url" content="${escapeHtml(ogTags.image)}" />
+    <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="${escapeHtml(ogTags.title)}" />
     <meta property="og:site_name" content="Gamefolio" />
-    ${ogTags.videoUrl ? `<meta property="og:video" content="${escapeHtml(ogTags.videoUrl)}" />` : ''}
+    ${ogTags.videoUrl ? `<meta property="og:video" content="${escapeHtml(ogTags.videoUrl)}" />
+    <meta property="og:video:secure_url" content="${escapeHtml(ogTags.videoUrl)}" />
+    <meta property="og:video:type" content="video/mp4" />
+    <meta property="og:video:width" content="1280" />
+    <meta property="og:video:height" content="720" />` : ''}
     
     <!-- Twitter -->
-    <meta name="twitter:card" content="${ogTags.videoUrl ? 'player' : 'summary_large_image'}" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:url" content="${escapeHtml(ogTags.url)}" />
     <meta name="twitter:title" content="${escapeHtml(ogTags.title)}" />
     <meta name="twitter:description" content="${escapeHtml(ogTags.description)}" />
     <meta name="twitter:image" content="${escapeHtml(ogTags.image)}" />
-    ${ogTags.videoUrl ? `<meta name="twitter:player" content="${escapeHtml(ogTags.videoUrl)}" />` : ''}
+    <meta name="twitter:image:alt" content="${escapeHtml(ogTags.title)}" />
+    ${ogTags.videoUrl ? `<meta name="twitter:player" content="${escapeHtml(ogTags.videoUrl)}" />
+    <meta name="twitter:player:width" content="1280" />
+    <meta name="twitter:player:height" content="720" />` : ''}
 `;
 
         // Inject meta tags after the viewport meta tag
