@@ -16,9 +16,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Component to display trending games in a grid
 interface TrendingGamesGridProps {
   onSelectGame: (game: TwitchGame) => void;
+  selectedGames: Game[];
 }
 
-function TrendingGamesGrid({ onSelectGame }: TrendingGamesGridProps) {
+function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridProps) {
   const { data: trendingGames, isLoading } = useQuery<TwitchGame[]>({
     queryKey: ["/api/twitch/games/top"],
     queryFn: async () => {
@@ -52,30 +53,50 @@ function TrendingGamesGrid({ onSelectGame }: TrendingGamesGridProps) {
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-      {trendingGames.map((game) => (
-        <button
-          key={game.id}
-          onClick={() => onSelectGame(game)}
-          className="group flex flex-col items-center p-2 rounded-lg transition-all hover:bg-primary/20 focus:outline-none focus:ring-2 focus:ring-primary/50"
-        >
-          <div className="relative h-20 w-20 mb-2 overflow-hidden rounded-md">
-            <img
-              src={game.box_art_url ? game.box_art_url.replace('{width}', '200').replace('{height}', '200') : "https://placehold.co/80x80?text=Game"}
-              alt={game.name}
-              className="h-full w-full object-cover transition-transform group-hover:scale-110"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = "https://placehold.co/80x80?text=Game";
-              }}
-            />
-            <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Plus className="h-8 w-8 text-white" />
+      {trendingGames.map((game) => {
+        const isSelected = selectedGames.some(g => g.id === parseInt(game.id));
+        
+        return (
+          <button
+            key={game.id}
+            onClick={() => onSelectGame(game)}
+            className={`group flex flex-col items-center p-2 rounded-lg transition-all focus:outline-none focus:ring-2 ${
+              isSelected 
+                ? 'bg-green-500/20 border-2 border-green-500 ring-2 ring-green-500/50' 
+                : 'hover:bg-primary/20 border-2 border-transparent focus:ring-primary/50'
+            }`}
+          >
+            <div className="relative h-20 w-20 mb-2 overflow-hidden rounded-md">
+              <img
+                src={game.box_art_url ? game.box_art_url.replace('{width}', '200').replace('{height}', '200') : "https://placehold.co/80x80?text=Game"}
+                alt={game.name}
+                className="h-full w-full object-cover transition-transform group-hover:scale-110"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "https://placehold.co/80x80?text=Game";
+                }}
+              />
+              <div className={`absolute inset-0 flex items-center justify-center transition-opacity ${
+                isSelected 
+                  ? 'bg-green-500/30 opacity-100' 
+                  : 'bg-black/50 opacity-0 group-hover:opacity-100'
+              }`}>
+                {isSelected ? (
+                  <Check className="h-8 w-8 text-green-500" />
+                ) : (
+                  <Plus className="h-8 w-8 text-white" />
+                )}
+              </div>
             </div>
-          </div>
-          <span className="text-xs text-center text-gray-300 line-clamp-2 group-hover:text-primary transition-colors">
-            {game.name}
-          </span>
-        </button>
-      ))}
+            <span className={`text-xs text-center line-clamp-2 transition-colors ${
+              isSelected 
+                ? 'text-green-500 font-semibold' 
+                : 'text-gray-300 group-hover:text-primary'
+            }`}>
+              {game.name}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -212,6 +233,7 @@ export default function OnboardingFlow({
         id: parseInt(game.id), // Using Twitch game ID as our ID
         name: game.name,
         imageUrl: game.box_art_url ? game.box_art_url.replace('{width}', '285').replace('{height}', '380') : null,
+        twitchId: game.id,
         createdAt: new Date()
       }));
       
@@ -271,6 +293,7 @@ export default function OnboardingFlow({
         id: parseInt(game.id),
         name: game.name,
         imageUrl: game.box_art_url ? game.box_art_url.replace('{width}', '285').replace('{height}', '380') : null,
+        twitchId: game.id,
         createdAt: new Date()
       }));
       
@@ -305,6 +328,7 @@ export default function OnboardingFlow({
       id: parseInt(game.id),
       name: game.name,
       imageUrl: game.box_art_url ? game.box_art_url.replace('{width}', '285').replace('{height}', '380') : null,
+      twitchId: game.id,
       createdAt: new Date()
     };
     
@@ -798,7 +822,7 @@ export default function OnboardingFlow({
                     </TooltipContent>
                   </Tooltip>
                 </div>
-                <TrendingGamesGrid onSelectGame={handleTwitchGameSelect} />
+                <TrendingGamesGrid onSelectGame={handleTwitchGameSelect} selectedGames={selectedGames} />
               </div>
               
               {/* Show selected games */}
