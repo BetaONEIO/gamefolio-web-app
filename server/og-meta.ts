@@ -77,8 +77,17 @@ export function createOGMetaMiddleware(storage: IStorage) {
 
         if (clip && clip.user) {
           const contentType = type === 'reel' ? 'Reel' : 'Clip';
-          // Use thumbnailUrl, fallback to game image or user avatar
-          const imageUrl = clip.thumbnailUrl || clip.gameImageUrl || clip.user.avatarUrl || '';
+          
+          // Use OG thumbnail endpoint with play button overlay for clips/reels
+          // Fallback to original thumbnail, then game image or user avatar
+          const baseHost = `https://${req.get('host')}`;
+          let imageUrl = clip.thumbnailUrl || clip.gameImageUrl || clip.user.avatarUrl || '';
+          
+          // If clip has a share code, use the OG thumbnail endpoint for play button overlay
+          if (clip.shareCode && clip.thumbnailUrl) {
+            imageUrl = `${baseHost}/api/og-thumbnail/${clip.shareCode}`;
+          }
+          
           ogTags = {
             title: `${clip.title} - ${clip.user.displayName || clip.user.username} | Gamefolio`,
             description: clip.description || `Watch this amazing ${contentType.toLowerCase()} by ${clip.user.displayName || clip.user.username} on Gamefolio`,
