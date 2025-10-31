@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, User as UserIcon, Settings, LogOut, CheckCircle2, Palette, UserCog, Menu, ShieldCheck } from "lucide-react";
+import { Search, Plus, User as UserIcon, Settings, LogOut, CheckCircle2, Palette, UserCog, Menu, ShieldCheck, Flame } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
@@ -349,10 +349,18 @@ const Header = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 mt-2">
                     <div className="px-4 py-3 border-b">
-                      <div className="flex items-center">
-                        <p className="text-sm font-medium">{user.displayName}</p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium">{user.displayName}</p>
+                          <p className="text-sm text-muted-foreground">@{user.username}</p>
+                        </div>
+                        {user.currentStreak && user.currentStreak > 0 && (
+                          <div className="flex items-center gap-1 bg-orange-500/10 px-2 py-1 rounded-md">
+                            <Flame className="h-4 w-4 text-orange-500" />
+                            <span className="text-sm font-semibold text-orange-500">{user.currentStreak}</span>
+                          </div>
+                        )}
                       </div>
-                      <p className="text-sm text-muted-foreground">@{user.username}</p>
                     </div>
 
                     <DropdownMenuItem

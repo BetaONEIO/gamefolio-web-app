@@ -1157,7 +1157,7 @@ const ProfilePage = () => {
           </div>
 
           {/* Stats under username on mobile */}
-          <div className="flex justify-center gap-8 mb-4">
+          <div className="flex justify-center gap-6 mb-4">
             <div className="flex flex-col items-center">
               <span className="font-bold text-xl">{Number(profile._count?.clips || 0)}</span>
               <span className="text-muted-foreground text-sm">Clips</span>
@@ -1169,6 +1169,13 @@ const ProfilePage = () => {
             <div className="flex flex-col items-center">
               <span className="font-bold text-xl">{Number(profile._count?.following || 0)}</span>
               <span className="text-muted-foreground text-sm">Following</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="font-bold text-xl flex items-center gap-1">
+                <Flame className="h-5 w-5 text-orange-500" />
+                {Number(profile.currentStreak || 0)}
+              </span>
+              <span className="text-muted-foreground text-sm">Day Streak</span>
             </div>
           </div>
 
@@ -1442,6 +1449,18 @@ const ProfilePage = () => {
                     <span className="font-semibold">{Number(profile._count?.following || 0)}</span>
                     <span className="text-muted-foreground">Following</span>
                   </div>
+                  <div className="flex items-center gap-1">
+                    <Flame className="h-4 w-4 text-orange-500" />
+                    <span className="font-semibold">{Number(profile.currentStreak || 0)}</span>
+                    <span className="text-muted-foreground">Day Streak</span>
+                  </div>
+                  {profile.longestStreak && profile.longestStreak > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Trophy className="h-4 w-4 text-yellow-500" />
+                      <span className="font-semibold">{Number(profile.longestStreak)}</span>
+                      <span className="text-muted-foreground">Best Streak</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Member since date */}

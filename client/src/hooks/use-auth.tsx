@@ -76,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
 
           const userData = await response.json();
+          const streakInfo = userData.streakInfo;
           queryClient.setQueryData(["/api/user"], userData);
 
           // Handle routing based on user status
@@ -102,6 +103,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               description: `You're now signed in with Google.`,
               variant: "gamefolioSuccess",
             });
+            
+            // Show streak bonus notification if earned
+            if (streakInfo && streakInfo.bonusAwarded > 0) {
+              setTimeout(() => {
+                toast({
+                  title: "🔥 Login Streak Bonus!",
+                  description: streakInfo.message,
+                  variant: "gamefolioSuccess",
+                  duration: 5000,
+                });
+              }, 1500);
+            }
+            
             setLocation("/");
           }
         } catch (error) {
@@ -147,15 +161,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return await res.json();
     },
-    onSuccess: async (user: User) => {
+    onSuccess: async (responseData: any) => {
+      const user = responseData as User;
+      const streakInfo = responseData.streakInfo;
+      
       // Use centralized refreshUser to ensure cache consistency
       await refreshUser();
 
+      // Show welcome back message
       toast({
         title: "Welcome back!",
         description: `You are now logged in as ${user.displayName || user.username}`,
         variant: "gamefolioSuccess",
       });
+
+      // Show streak bonus notification if earned
+      if (streakInfo && streakInfo.bonusAwarded > 0) {
+        setTimeout(() => {
+          toast({
+            title: "🔥 Login Streak Bonus!",
+            description: streakInfo.message,
+            variant: "gamefolioSuccess",
+            duration: 5000,
+          });
+        }, 1500);
+      }
 
       // Check if user needs onboarding
       const needsOnboarding = !user.userType || !user.ageRange;
