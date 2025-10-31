@@ -49,6 +49,10 @@ export const users = pgTable("users", {
   // XP System
   totalXP: real("total_xp").default(0).notNull(), // Total experience points earned from views
   level: integer("level").default(1).notNull(), // User level based on XP
+  // Login Streak System
+  currentStreak: integer("current_streak").default(0).notNull(), // Current consecutive login days
+  longestStreak: integer("longest_streak").default(0).notNull(), // Longest streak ever achieved
+  lastStreakUpdate: timestamp("last_streak_update"), // Last date streak was updated
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
