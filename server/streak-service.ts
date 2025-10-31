@@ -14,14 +14,24 @@ const STREAK_BONUSES = {
 };
 
 export class StreakService {
-  // Check if two dates are on consecutive days
+  // Get calendar date (normalized to midnight) for comparison
+  private static getCalendarDate(date: Date): Date {
+    const normalized = new Date(date);
+    normalized.setHours(0, 0, 0, 0);
+    return normalized;
+  }
+
+  // Check if two dates are on consecutive calendar days
   private static areConsecutiveDays(date1: Date, date2: Date): boolean {
+    const cal1 = this.getCalendarDate(date1);
+    const cal2 = this.getCalendarDate(date2);
     const oneDay = 24 * 60 * 60 * 1000;
-    const diffDays = Math.round((date2.getTime() - date1.getTime()) / oneDay);
+    const diffMs = cal2.getTime() - cal1.getTime();
+    const diffDays = Math.round(diffMs / oneDay);
     return diffDays === 1;
   }
 
-  // Check if two dates are on the same day
+  // Check if two dates are on the same calendar day
   private static isSameDay(date1: Date, date2: Date): boolean {
     return (
       date1.getFullYear() === date2.getFullYear() &&

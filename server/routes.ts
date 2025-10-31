@@ -11,6 +11,7 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage } from "./storage";
 import { LeaderboardService } from "./leaderboard-service";
+import { StreakService } from "./streak-service";
 import { createInsertSchema } from "drizzle-zod";
 import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema } from "@shared/schema";
 import { promisify } from "util";
@@ -721,7 +722,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Log user in
-        req.login(user as any, (err) => {
+        req.login(user as any, async (err) => {
           if (err) {
             console.error("Login error:", err);
             return res.status(500).json({ message: "Login failed" });
@@ -730,11 +731,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Track login time for session security
           req.session.loginTime = Date.now();
 
+          // Update user's login streak for new Google users
+          let streakInfo;
+          try {
+            streakInfo = await StreakService.updateLoginStreak(user!.id);
+            if (streakInfo.bonusAwarded > 0) {
+              console.log(`🎉 Streak bonus for ${user!.username}: ${streakInfo.message}`);
+            }
+          } catch (error) {
+            console.error("Error updating login streak:", error);
+          }
+
           // Return user data with needsOnboarding flag
           res.status(200).json({
             ...user,
             needsOnboarding: true,
-            isNewGoogleUser: true
+            isNewGoogleUser: true,
+            ...(streakInfo && {
+              streakInfo: {
+                currentStreak: streakInfo.currentStreak,
+                bonusAwarded: streakInfo.bonusAwarded,
+                message: streakInfo.message,
+                isNewMilestone: streakInfo.isNewMilestone
+              }
+            })
           });
         });
       } else {
@@ -751,7 +771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Log user in
-        req.login(user as any, (err) => {
+        req.login(user as any, async (err) => {
           if (err) {
             console.error("Login error:", err);
             return res.status(500).json({ message: "Login failed" });
@@ -760,10 +780,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Track login time for session security
           req.session.loginTime = Date.now();
 
+          // Update user's login streak for existing Google users
+          let streakInfo;
+          try {
+            streakInfo = await StreakService.updateLoginStreak(user!.id);
+            if (streakInfo.bonusAwarded > 0) {
+              console.log(`🎉 Streak bonus for ${user!.username}: ${streakInfo.message}`);
+            }
+          } catch (error) {
+            console.error("Error updating login streak:", error);
+          }
+
           // Return user data with onboarding status
           res.status(200).json({
             ...user,
-            needsOnboarding
+            needsOnboarding,
+            ...(streakInfo && {
+              streakInfo: {
+                currentStreak: streakInfo.currentStreak,
+                bonusAwarded: streakInfo.bonusAwarded,
+                message: streakInfo.message,
+                isNewMilestone: streakInfo.isNewMilestone
+              }
+            })
           });
         });
       }
@@ -905,17 +944,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Log user in
-        req.login(user as any, (err) => {
+        req.login(user as any, async (err) => {
           if (err) {
             console.error("Login error:", err);
             return res.status(500).json({ message: "Login failed" });
+          }
+
+          // Update user's login streak for new Discord users
+          let streakInfo;
+          try {
+            streakInfo = await StreakService.updateLoginStreak(user!.id);
+            if (streakInfo.bonusAwarded > 0) {
+              console.log(`🎉 Streak bonus for ${user!.username}: ${streakInfo.message}`);
+            }
+          } catch (error) {
+            console.error("Error updating login streak:", error);
           }
 
           // Return user data with needsOnboarding flag
           res.status(200).json({
             ...user,
             needsOnboarding: true,
-            isNewDiscordUser: true
+            isNewDiscordUser: true,
+            ...(streakInfo && {
+              streakInfo: {
+                currentStreak: streakInfo.currentStreak,
+                bonusAwarded: streakInfo.bonusAwarded,
+                message: streakInfo.message,
+                isNewMilestone: streakInfo.isNewMilestone
+              }
+            })
           });
         });
       } else {
@@ -933,16 +991,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Log user in
-        req.login(user as any, (err) => {
+        req.login(user as any, async (err) => {
           if (err) {
             console.error("Login error:", err);
             return res.status(500).json({ message: "Login failed" });
           }
 
+          // Update user's login streak for existing Discord users
+          let streakInfo;
+          try {
+            streakInfo = await StreakService.updateLoginStreak(user!.id);
+            if (streakInfo.bonusAwarded > 0) {
+              console.log(`🎉 Streak bonus for ${user!.username}: ${streakInfo.message}`);
+            }
+          } catch (error) {
+            console.error("Error updating login streak:", error);
+          }
+
           // Return user data with onboarding status
           res.status(200).json({
             ...user,
-            needsOnboarding
+            needsOnboarding,
+            ...(streakInfo && {
+              streakInfo: {
+                currentStreak: streakInfo.currentStreak,
+                bonusAwarded: streakInfo.bonusAwarded,
+                message: streakInfo.message,
+                isNewMilestone: streakInfo.isNewMilestone
+              }
+            })
           });
         });
       }
@@ -1116,10 +1193,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Don't fail the login if this update fails
         }
 
+        // Update user's login streak and award bonus points if applicable
+        let streakInfo;
+        try {
+          streakInfo = await StreakService.updateLoginStreak(user.id);
+          if (streakInfo.bonusAwarded > 0) {
+            console.log(`🎉 Streak bonus for ${user.username}: ${streakInfo.message}`);
+          }
+        } catch (error) {
+          console.error("Error updating login streak:", error);
+          // Don't fail the login if streak update fails
+        }
+
         // Remove password from response
         const { password, ...userWithoutPassword } = user;
         console.log("Login successful for user:", user.username);
-        return res.json(userWithoutPassword);
+        
+        // Include streak info in response if available
+        const response = streakInfo ? {
+          ...userWithoutPassword,
+          streakInfo: {
+            currentStreak: streakInfo.currentStreak,
+            bonusAwarded: streakInfo.bonusAwarded,
+            message: streakInfo.message,
+            isNewMilestone: streakInfo.isNewMilestone
+          }
+        } : userWithoutPassword;
+        
+        return res.json(response);
       });
     })(req, res, next);
   });
