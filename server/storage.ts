@@ -52,6 +52,7 @@ export interface IStorage {
   deleteUser(id: number): Promise<boolean>;
   getUserWithStats(id: number): Promise<UserWithStats | null>;
   getFeaturedUsers(limit?: number): Promise<User[]>;
+  updateUserStreak?(data: {userId: number, currentStreak: number, longestStreak: number, lastStreakUpdate: Date}): Promise<void>;
 
   // Admin operations
   getAllUsers(limit?: number, offset?: number, search?: string): Promise<UserWithBadges[]>;

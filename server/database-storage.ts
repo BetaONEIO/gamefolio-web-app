@@ -207,6 +207,29 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async updateUserStreak(data: {
+    userId: number;
+    currentStreak: number;
+    longestStreak: number;
+    lastStreakUpdate: Date;
+  }): Promise<void> {
+    try {
+      await db
+        .update(users)
+        .set({
+          currentStreak: data.currentStreak,
+          longestStreak: data.longestStreak,
+          lastStreakUpdate: data.lastStreakUpdate,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, data.userId));
+      console.log(`✅ Updated streak for user ${data.userId}: ${data.currentStreak} days`);
+    } catch (error) {
+      console.error("Error updating user streak:", error);
+      throw error;
+    }
+  }
+
   async deleteUser(id: number): Promise<boolean> {
     try {
       // Delete all related data first to maintain referential integrity
