@@ -5,7 +5,7 @@ import { InsertUserPointsHistory, InsertWeeklyLeaderboard, InsertTopContributor 
 // Points are used for BOTH leaderboards AND leveling
 // Every point earned contributes to user's level progression
 export const POINT_VALUES = {
-  upload: 5,              // 5 points for uploading clips/reels
+  upload: 10,             // 10 points for uploading clips/reels
   screenshot_upload: 2,   // 2 points for uploading screenshots
   like: 1,                // 1 point for liking content
   comment: 1,             // 1 point for commenting
