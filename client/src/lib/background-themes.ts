@@ -2,7 +2,7 @@ export interface BackgroundTheme {
   id: string;
   name: string;
   type: 'solid' | 'gradient' | 'animated';
-  animation?: 'none' | 'particles' | 'waves' | 'gradient-shift' | 'starfield' | 'fireflies' | 'digital-rain' | 'neon-pulse' | 'cosmic-dust' | 'snake' | 'color-panels' | 'pacman' | 'tetris' | 'space-invaders' | 'pong';
+  animation?: 'none' | 'particles' | 'waves' | 'gradient-shift' | 'starfield' | 'fireflies' | 'digital-rain' | 'digital-rain-femme' | 'neon-pulse' | 'cosmic-dust' | 'snake' | 'color-panels' | 'pacman' | 'tetris' | 'space-invaders' | 'pong';
   preview: string;
   gradient?: {
     from: string;
@@ -143,6 +143,14 @@ export const backgroundThemes: BackgroundTheme[] = [
     animation: 'digital-rain',
     preview: '#001a00',
     solid: '#001a00'
+  },
+  {
+    id: 'digital-rain-femme',
+    name: 'Digital Rain Femme',
+    type: 'animated',
+    animation: 'digital-rain-femme',
+    preview: '#1a0010',
+    solid: '#1a0010'
   },
   {
     id: 'neon-pulse',

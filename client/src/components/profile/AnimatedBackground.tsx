@@ -250,6 +250,31 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
         animationFrameId = requestAnimationFrame(animate);
       };
       animate();
+    } else if (theme === 'digital-rain-femme') {
+      const columns = Math.floor(canvas.width / 20);
+      const drops: number[] = Array(columns).fill(1);
+      const chars = '01アイウエオカキクケコサシスセソタチツテト'.split('');
+
+      const animate = () => {
+        ctx.fillStyle = 'rgba(26, 0, 16, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#ff69b4';
+        ctx.font = '15px monospace';
+
+        for (let i = 0; i < drops.length; i++) {
+          const char = chars[Math.floor(Math.random() * chars.length)];
+          ctx.fillText(char, i * 20, drops[i] * 20);
+
+          if (drops[i] * 20 > canvas.height && Math.random() > 0.975) {
+            drops[i] = 0;
+          }
+          drops[i]++;
+        }
+
+        animationFrameId = requestAnimationFrame(animate);
+      };
+      animate();
     } else if (theme === 'neon-pulse') {
       let time = 0;
       const rings: Array<{ radius: number; alpha: number; color: string }> = [];
