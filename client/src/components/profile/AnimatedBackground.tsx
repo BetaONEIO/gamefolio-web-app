@@ -566,49 +566,130 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
     } else if (theme === 'tetris') {
       const blockSize = 30;
       const cols = Math.floor(canvas.width / blockSize);
-      const blocks: Array<{ x: number; y: number; color: string; landed: boolean }> = [];
+      const rows = Math.floor(canvas.height / blockSize);
       const colors = ['#00F0F0', '#F0F000', '#F000F0', '#00F000', '#F00000', '#0000F0', '#F0A000'];
+      
+      const grid: Array<Array<string | null>> = [];
+      for (let r = 0; r < rows; r++) {
+        grid[r] = [];
+        for (let c = 0; c < cols; c++) {
+          grid[r][c] = null;
+        }
+      }
+
+      let currentBlock: { col: number; row: number; color: string } | null = null;
       let frame = 0;
+      let clearingRows: number[] = [];
+      let clearFrame = 0;
 
       const spawnBlock = () => {
         const col = Math.floor(Math.random() * cols);
-        blocks.push({
-          x: col * blockSize,
-          y: -blockSize,
-          color: colors[Math.floor(Math.random() * colors.length)],
-          landed: false
+        currentBlock = {
+          col,
+          row: 0,
+          color: colors[Math.floor(Math.random() * colors.length)]
+        };
+      };
+
+      const checkCompleteRows = () => {
+        const completeRows: number[] = [];
+        for (let r = 0; r < rows; r++) {
+          if (grid[r].every(cell => cell !== null)) {
+            completeRows.push(r);
+          }
+        }
+        return completeRows;
+      };
+
+      const clearRows = (rowsToClear: number[]) => {
+        rowsToClear.forEach(r => {
+          grid.splice(r, 1);
+          grid.unshift(Array(cols).fill(null));
         });
       };
 
-      for (let i = 0; i < 5; i++) spawnBlock();
+      const resetBoard = () => {
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            grid[r][c] = null;
+          }
+        }
+      };
+
+      spawnBlock();
 
       const animate = () => {
-        ctx.fillStyle = 'rgba(26, 26, 46, 0.1)';
+        ctx.fillStyle = 'rgba(26, 26, 46, 0.3)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        frame++;
-        if (frame % 60 === 0 && Math.random() > 0.5) {
-          spawnBlock();
-        }
-
-        blocks.forEach((block, i) => {
-          if (!block.landed) {
-            block.y += 2;
-            if (block.y >= canvas.height - blockSize) {
-              block.landed = true;
+        if (clearingRows.length > 0) {
+          clearFrame++;
+          if (clearFrame > 30) {
+            clearRows(clearingRows);
+            clearingRows = [];
+            clearFrame = 0;
+          }
+        } else {
+          frame++;
+          
+          if (currentBlock && frame % 30 === 0) {
+            const nextRow = currentBlock.row + 1;
+            
+            if (nextRow >= rows || grid[nextRow][currentBlock.col] !== null) {
+              grid[currentBlock.row][currentBlock.col] = currentBlock.color;
+              
+              const completeRows = checkCompleteRows();
+              if (completeRows.length > 0) {
+                clearingRows = completeRows;
+              }
+              
+              const filledCount = grid.flat().filter(cell => cell !== null).length;
+              if (filledCount > cols * rows * 0.7) {
+                resetBoard();
+              }
+              
+              currentBlock = null;
+              setTimeout(() => spawnBlock(), 100);
+            } else {
+              currentBlock.row = nextRow;
             }
           }
+        }
 
-          ctx.fillStyle = block.color;
-          ctx.fillRect(block.x + 2, block.y + 2, blockSize - 4, blockSize - 4);
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            if (grid[r][c]) {
+              const isClearing = clearingRows.includes(r);
+              const alpha = isClearing ? Math.sin(clearFrame * 0.3) * 0.5 + 0.5 : 1;
+              
+              ctx.fillStyle = grid[r][c]!;
+              ctx.globalAlpha = alpha;
+              ctx.fillRect(c * blockSize + 2, r * blockSize + 2, blockSize - 4, blockSize - 4);
+              ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+              ctx.lineWidth = 2;
+              ctx.strokeRect(c * blockSize + 2, r * blockSize + 2, blockSize - 4, blockSize - 4);
+              ctx.globalAlpha = 1;
+            }
+          }
+        }
+
+        if (currentBlock) {
+          ctx.fillStyle = currentBlock.color;
+          ctx.fillRect(
+            currentBlock.col * blockSize + 2,
+            currentBlock.row * blockSize + 2,
+            blockSize - 4,
+            blockSize - 4
+          );
           ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
           ctx.lineWidth = 2;
-          ctx.strokeRect(block.x + 2, block.y + 2, blockSize - 4, blockSize - 4);
-
-          if (block.y > canvas.height + 100) {
-            blocks.splice(i, 1);
-          }
-        });
+          ctx.strokeRect(
+            currentBlock.col * blockSize + 2,
+            currentBlock.row * blockSize + 2,
+            blockSize - 4,
+            blockSize - 4
+          );
+        }
 
         animationFrameId = requestAnimationFrame(animate);
       };
