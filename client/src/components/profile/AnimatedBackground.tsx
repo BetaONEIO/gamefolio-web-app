@@ -256,7 +256,7 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
       const chars = '01アイウエオカキクケコサシスセソタチツテト'.split('');
 
       const animate = () => {
-        ctx.fillStyle = 'rgba(26, 0, 16, 0.05)';
+        ctx.fillStyle = 'rgba(255, 209, 220, 0.05)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         ctx.fillStyle = '#ff69b4';
