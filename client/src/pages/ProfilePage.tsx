@@ -1157,39 +1157,39 @@ const ProfilePage = () => {
           </div>
 
           {/* Stats under username on mobile */}
-          <div className="flex justify-center gap-6 mb-4">
-            <div className="flex flex-col items-center">
-              <span className="font-bold text-xl">{Number(profile._count?.clips || 0)}</span>
-              <span className="text-muted-foreground text-sm">Clips</span>
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-3 mb-4 px-2">
+            <div className="flex flex-col items-center min-w-[60px]">
+              <span className="font-bold text-lg">{Number(profile._count?.clips || 0)}</span>
+              <span className="text-muted-foreground text-xs">Clips</span>
             </div>
-            <div className="flex flex-col items-center">
-              <span className="font-bold text-xl">{Number(profile._count?.followers || 0)}</span>
-              <span className="text-muted-foreground text-sm">Followers</span>
+            <div className="flex flex-col items-center min-w-[60px]">
+              <span className="font-bold text-lg">{Number(profile._count?.followers || 0)}</span>
+              <span className="text-muted-foreground text-xs">Followers</span>
             </div>
-            <div className="flex flex-col items-center">
-              <span className="font-bold text-xl">{Number(profile._count?.following || 0)}</span>
-              <span className="text-muted-foreground text-sm">Following</span>
+            <div className="flex flex-col items-center min-w-[60px]">
+              <span className="font-bold text-lg">{Number(profile._count?.following || 0)}</span>
+              <span className="text-muted-foreground text-xs">Following</span>
             </div>
-            <div className="flex flex-col items-center" data-testid="stat-likes-received-mobile">
-              <span className="font-bold text-xl flex items-center gap-1">
-                <Heart className="h-5 w-5 text-red-500" />
+            <div className="flex flex-col items-center min-w-[60px]" data-testid="stat-likes-received-mobile">
+              <span className="font-bold text-lg flex items-center gap-1">
+                <Heart className="h-4 w-4 text-red-500" />
                 {Number(profile._count?.likesReceived || 0)}
               </span>
-              <span className="text-muted-foreground text-sm">Likes</span>
+              <span className="text-muted-foreground text-xs">Likes</span>
             </div>
-            <div className="flex flex-col items-center" data-testid="stat-fires-received-mobile">
-              <span className="font-bold text-xl flex items-center gap-1">
-                <Flame className="h-5 w-5 text-orange-500" />
+            <div className="flex flex-col items-center min-w-[60px]" data-testid="stat-fires-received-mobile">
+              <span className="font-bold text-lg flex items-center gap-1">
+                <Flame className="h-4 w-4 text-orange-500" />
                 {Number(profile._count?.firesReceived || 0)}
               </span>
-              <span className="text-muted-foreground text-sm">Fires</span>
+              <span className="text-muted-foreground text-xs">Fires</span>
             </div>
-            <div className="flex flex-col items-center" data-testid="stat-streak-mobile">
-              <span className="font-bold text-xl flex items-center gap-1">
-                <Flame className="h-5 w-5 text-orange-500" />
+            <div className="flex flex-col items-center min-w-[60px]" data-testid="stat-streak-mobile">
+              <span className="font-bold text-lg flex items-center gap-1">
+                <Flame className="h-4 w-4 text-orange-500" />
                 {Number(profile.currentStreak || 0)}
               </span>
-              <span className="text-muted-foreground text-sm">Streak</span>
+              <span className="text-muted-foreground text-xs">Streak</span>
             </div>
           </div>
 
