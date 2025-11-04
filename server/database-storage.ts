@@ -340,6 +340,23 @@ export class DatabaseStorage implements IStorage {
       .from(clips)
       .where(eq(clips.userId, id));
 
+    // Get total likes received on user's clips
+    const likesReceivedResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(likes)
+      .leftJoin(clips, eq(likes.clipId, clips.id))
+      .where(eq(clips.userId, id));
+
+    // Get total fires received on user's clips (clip reactions with fire emoji)
+    const firesReceivedResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(clipReactions)
+      .leftJoin(clips, eq(clipReactions.clipId, clips.id))
+      .where(and(
+        eq(clips.userId, id),
+        eq(clipReactions.emoji, '🔥')
+      ));
+
     // Get favorite games
     const favoriteGames = await this.getUserGameFavorites(id);
 
@@ -349,7 +366,9 @@ export class DatabaseStorage implements IStorage {
         followers: followersCount[0].count || 0,
         following: followingCount[0].count || 0,
         clips: clipsCount[0].count || 0,
-        clipViews: viewsResult[0].total || 0
+        clipViews: viewsResult[0].total || 0,
+        likesReceived: likesReceivedResult[0].count || 0,
+        firesReceived: firesReceivedResult[0].count || 0
       },
       favoriteGames
     };

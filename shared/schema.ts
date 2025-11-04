@@ -912,6 +912,8 @@ export type UserWithStats = User & {
     following: number;
     clips: number;
     clipViews: number;
+    likesReceived: number;
+    firesReceived: number;
   };
   favoriteGames?: Game[];
 };
