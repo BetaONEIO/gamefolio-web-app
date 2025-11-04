@@ -2,7 +2,7 @@ export interface BackgroundTheme {
   id: string;
   name: string;
   type: 'solid' | 'gradient' | 'animated';
-  animation?: 'none' | 'particles' | 'waves' | 'gradient-shift' | 'starfield' | 'fireflies' | 'digital-rain' | 'neon-pulse' | 'cosmic-dust';
+  animation?: 'none' | 'particles' | 'waves' | 'gradient-shift' | 'starfield' | 'fireflies' | 'digital-rain' | 'neon-pulse' | 'cosmic-dust' | 'snake' | 'color-panels';
   preview: string;
   gradient?: {
     from: string;
@@ -159,6 +159,22 @@ export const backgroundThemes: BackgroundTheme[] = [
     animation: 'cosmic-dust',
     preview: '#0d1117',
     solid: '#0d1117'
+  },
+  {
+    id: 'snake',
+    name: 'Snake',
+    type: 'animated',
+    animation: 'snake',
+    preview: '#0a0a14',
+    solid: '#0a0a14'
+  },
+  {
+    id: 'color-panels',
+    name: 'Color Panels',
+    type: 'animated',
+    animation: 'color-panels',
+    preview: '#1a1a1a',
+    solid: '#1a1a1a'
   }
 ];
 

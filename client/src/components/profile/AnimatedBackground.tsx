@@ -359,6 +359,144 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
         animationFrameId = requestAnimationFrame(animate);
       };
       animate();
+    } else if (theme === 'snake') {
+      const snake: Array<{ x: number; y: number; hue: number }> = [];
+      const gridSize = 20;
+      let direction = { x: 1, y: 0 };
+      let nextDirection = { x: 1, y: 0 };
+      let hue = 0;
+      let frame = 0;
+      
+      const startX = Math.floor(canvas.width / gridSize / 2);
+      const startY = Math.floor(canvas.height / gridSize / 2);
+      
+      for (let i = 0; i < 20; i++) {
+        snake.push({ x: startX - i, y: startY, hue: (hue - i * 10) % 360 });
+      }
+
+      const animate = () => {
+        ctx.fillStyle = 'rgba(10, 10, 20, 0.1)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        frame++;
+        if (frame % 5 === 0) {
+          direction = nextDirection;
+          const head = snake[0];
+          const newHead = {
+            x: head.x + direction.x,
+            y: head.y + direction.y,
+            hue: hue % 360
+          };
+
+          const cols = Math.floor(canvas.width / gridSize);
+          const rows = Math.floor(canvas.height / gridSize);
+          
+          if (newHead.x < 0) newHead.x = cols - 1;
+          if (newHead.x >= cols) newHead.x = 0;
+          if (newHead.y < 0) newHead.y = rows - 1;
+          if (newHead.y >= rows) newHead.y = 0;
+
+          snake.unshift(newHead);
+          snake.pop();
+
+          hue += 2;
+
+          if (Math.random() < 0.1) {
+            const directions = [
+              { x: 1, y: 0 },
+              { x: -1, y: 0 },
+              { x: 0, y: 1 },
+              { x: 0, y: -1 }
+            ];
+            nextDirection = directions[Math.floor(Math.random() * directions.length)];
+          }
+        }
+
+        snake.forEach((segment, i) => {
+          const alpha = 1 - (i / snake.length) * 0.5;
+          ctx.fillStyle = `hsla(${segment.hue}, 70%, 50%, ${alpha})`;
+          ctx.fillRect(
+            segment.x * gridSize,
+            segment.y * gridSize,
+            gridSize - 2,
+            gridSize - 2
+          );
+        });
+
+        animationFrameId = requestAnimationFrame(animate);
+      };
+      animate();
+    } else if (theme === 'color-panels') {
+      const gridSize = 60;
+      const cols = Math.ceil(canvas.width / gridSize);
+      const rows = Math.ceil(canvas.height / gridSize);
+      const panels: Array<{ row: number; col: number; hue: number; targetHue: number; transitioning: boolean }> = [];
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const hue = Math.random() * 360;
+          panels.push({
+            row,
+            col,
+            hue,
+            targetHue: hue,
+            transitioning: false
+          });
+        }
+      }
+
+      let lastUpdate = Date.now();
+
+      const animate = () => {
+        const now = Date.now();
+
+        if (now - lastUpdate > 100) {
+          const randomPanel = panels[Math.floor(Math.random() * panels.length)];
+          if (!randomPanel.transitioning) {
+            randomPanel.targetHue = Math.random() * 360;
+            randomPanel.transitioning = true;
+          }
+          lastUpdate = now;
+        }
+
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        panels.forEach(panel => {
+          if (panel.transitioning) {
+            const diff = panel.targetHue - panel.hue;
+            const shortestDiff = ((diff + 180) % 360) - 180;
+            panel.hue += shortestDiff * 0.1;
+
+            if (Math.abs(panel.hue - panel.targetHue) < 1) {
+              panel.hue = panel.targetHue;
+              panel.transitioning = false;
+            }
+          }
+
+          const x = panel.col * gridSize;
+          const y = panel.row * gridSize;
+
+          ctx.fillStyle = `hsl(${panel.hue}, 70%, 40%)`;
+          ctx.fillRect(x + 2, y + 2, gridSize - 4, gridSize - 4);
+
+          const gradient = ctx.createRadialGradient(
+            x + gridSize / 2,
+            y + gridSize / 2,
+            0,
+            x + gridSize / 2,
+            y + gridSize / 2,
+            gridSize / 2
+          );
+          gradient.addColorStop(0, `hsla(${panel.hue}, 70%, 60%, 0.3)`);
+          gradient.addColorStop(1, 'transparent');
+          ctx.fillStyle = gradient;
+          ctx.fillRect(x + 2, y + 2, gridSize - 4, gridSize - 4);
+        });
+
+        animationFrameId = requestAnimationFrame(animate);
+      };
+      animate();
     }
 
     return () => {
