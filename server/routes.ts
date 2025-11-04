@@ -742,9 +742,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error("Error updating login streak:", error);
           }
 
+          // Fetch updated user data to get the latest streak information
+          const updatedUser = await storage.getUserById(user!.id);
+          const userToReturn = updatedUser || user;
+
           // Return user data with needsOnboarding flag
           res.status(200).json({
-            ...user,
+            ...userToReturn,
             needsOnboarding: true,
             isNewGoogleUser: true,
             ...(streakInfo && {
@@ -791,9 +795,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error("Error updating login streak:", error);
           }
 
+          // Fetch updated user data to get the latest streak information
+          const updatedUser = await storage.getUserById(user!.id);
+          const userToReturn = updatedUser || user;
+
           // Return user data with onboarding status
           res.status(200).json({
-            ...user,
+            ...userToReturn,
             needsOnboarding,
             ...(streakInfo && {
               streakInfo: {
@@ -961,9 +969,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error("Error updating login streak:", error);
           }
 
+          // Fetch updated user data to get the latest streak information
+          const updatedUser = await storage.getUserById(user!.id);
+          const userToReturn = updatedUser || user;
+
           // Return user data with needsOnboarding flag
           res.status(200).json({
-            ...user,
+            ...userToReturn,
             needsOnboarding: true,
             isNewDiscordUser: true,
             ...(streakInfo && {
@@ -1008,9 +1020,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error("Error updating login streak:", error);
           }
 
+          // Fetch updated user data to get the latest streak information
+          const updatedUser = await storage.getUserById(user!.id);
+          const userToReturn = updatedUser || user;
+
           // Return user data with onboarding status
           res.status(200).json({
-            ...user,
+            ...userToReturn,
             needsOnboarding,
             ...(streakInfo && {
               streakInfo: {
@@ -1205,9 +1221,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Don't fail the login if streak update fails
         }
 
+        // Fetch updated user data to get the latest streak information
+        const updatedUser = await storage.getUserById(user.id);
+        const userToReturn = updatedUser || user;
+
         // Remove password from response
-        const { password, ...userWithoutPassword } = user;
-        console.log("Login successful for user:", user.username);
+        const { password, ...userWithoutPassword } = userToReturn;
+        console.log("Login successful for user:", userToReturn.username);
         
         // Include streak info in response if available
         const response = streakInfo ? {
