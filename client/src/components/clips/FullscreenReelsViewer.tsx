@@ -176,11 +176,11 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         {reels.map((reel, index) => (
           <div 
             key={reel.id}
-            className="snap-start snap-always h-screen flex items-center justify-center py-4 md:py-6"
+            className="snap-start snap-always h-screen w-full flex items-center justify-center"
           >
             {/* Video player */}
-            <div className="relative w-full h-full max-w-sm mx-auto md:max-w-md lg:max-w-lg px-4 md:px-0 pointer-events-none">
-              <div className="w-full h-full pointer-events-auto">
+            <div className="relative w-full h-full max-w-sm mx-auto md:max-w-md lg:max-w-lg pointer-events-none">
+              <div className="w-full h-full pointer-events-auto flex items-center justify-center">
                 <VideoPlayer
                   videoUrl={reel.videoUrl}
                   thumbnailUrl={reel.thumbnailUrl || undefined}
@@ -188,6 +188,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                   className="w-full h-full"
                   objectFit="cover"
                   clipId={reel.id}
+                  disableAspectRatio={true}
                   onEnded={() => {
                     if (index < reels.length - 1 && containerRef.current) {
                       containerRef.current.scrollTo({ top: (index + 1) * window.innerHeight, behavior: 'smooth' });
