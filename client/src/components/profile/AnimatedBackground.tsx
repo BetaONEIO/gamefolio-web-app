@@ -682,13 +682,15 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
                 clearingRows = completeRows;
               }
               
-              const filledCount = grid.flat().filter(cell => cell !== null).length;
-              if (filledCount > cols * rows * 0.75) {
-                resetBoard();
-              }
-              
               currentPiece = null;
-              setTimeout(() => spawnPiece(), 100);
+              
+              setTimeout(() => {
+                spawnPiece();
+                if (currentPiece && !canPlacePiece(currentPiece)) {
+                  resetBoard();
+                  spawnPiece();
+                }
+              }, 100);
             } else {
               currentPiece.row++;
             }
@@ -699,12 +701,12 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
           for (let c = 0; c < cols; c++) {
             if (grid[r][c]) {
               const isClearing = clearingRows.includes(r);
-              const baseAlpha = isClearing ? Math.sin(clearFrame * 0.3) * 0.3 + 0.3 : 0.5;
+              const baseAlpha = isClearing ? Math.sin(clearFrame * 0.3) * 0.15 + 0.15 : 0.25;
               
               ctx.fillStyle = grid[r][c]!;
               ctx.globalAlpha = baseAlpha;
               ctx.fillRect(c * blockSize + 2, r * blockSize + 2, blockSize - 4, blockSize - 4);
-              ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+              ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
               ctx.lineWidth = 2;
               ctx.strokeRect(c * blockSize + 2, r * blockSize + 2, blockSize - 4, blockSize - 4);
               ctx.globalAlpha = 1;
@@ -713,7 +715,7 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
         }
 
         if (currentPiece) {
-          ctx.globalAlpha = 0.5;
+          ctx.globalAlpha = 0.25;
           ctx.fillStyle = currentPiece.shape.color;
           for (const [dr, dc] of currentPiece.shape.blocks) {
             const r = currentPiece.row + dr;
@@ -725,7 +727,7 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
                 blockSize - 4,
                 blockSize - 4
               );
-              ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+              ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
               ctx.lineWidth = 2;
               ctx.strokeRect(
                 c * blockSize + 2,
