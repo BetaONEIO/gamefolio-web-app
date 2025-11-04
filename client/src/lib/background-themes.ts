@@ -149,8 +149,8 @@ export const backgroundThemes: BackgroundTheme[] = [
     name: 'Digital Rain Femme',
     type: 'animated',
     animation: 'digital-rain-femme',
-    preview: '#FFD1DC',
-    solid: '#FFD1DC'
+    preview: '#1a0010',
+    solid: '#1a0010'
   },
   {
     id: 'neon-pulse',
