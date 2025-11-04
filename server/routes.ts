@@ -3644,6 +3644,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         trimStart: req.body.trimStart ? parseInt(req.body.trimStart) : 0,
         trimEnd: req.body.trimEnd ? parseInt(req.body.trimEnd) : 30,
         videoType: req.body.videoType || "clip", // "clip" or "reel"
+        ageRestricted: req.body.ageRestricted === 'true' || req.body.ageRestricted === true,
         shareCode: generateShareCode(), // This generates 8-character alphanumeric codes
       };
 
@@ -5557,6 +5558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         thumbnailUrl,
         description: description || null,
         tags: tags ? JSON.parse(tags) : [],
+        ageRestricted: req.body.ageRestricted === 'true' || req.body.ageRestricted === true,
         shareCode: generateShareCode()
       };
 
