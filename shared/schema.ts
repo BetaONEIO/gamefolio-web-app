@@ -20,6 +20,10 @@ export const users = pgTable("users", {
   cardColor: text("card_color").default("#1E3A8A"), // Default card background
   avatarBorderColor: text("avatar_border_color").default("#4ADE80"), // Default avatar border color
   layoutStyle: text("layout_style").default("grid"), // grid, masonry, classic
+  // Profile background customization
+  profileBackgroundType: text("profile_background_type").default("solid"), // solid, gradient, theme, animated, image
+  profileBackgroundTheme: text("profile_background_theme").default("default"), // Theme preset name
+  profileBackgroundAnimation: text("profile_background_animation").default("none"), // none, particles, waves, gradient-shift
   // Platform connections
   steamUsername: text("steam_username"),
   xboxUsername: text("xbox_username"),

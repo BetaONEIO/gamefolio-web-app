@@ -73,6 +73,8 @@ import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { formatDistance } from "date-fns";
 import { cn } from "@/lib/utils";
 import NotFound from "./not-found";
+import { AnimatedBackground } from "@/components/profile/AnimatedBackground";
+import { backgroundThemes, getBackgroundStyle } from "@/lib/background-themes";
 
 const ProfilePage = () => {
   const params = useParams();
@@ -967,16 +969,34 @@ const ProfilePage = () => {
   // Debug: Log the actual colors being used
   console.log('Profile colors:', { accentColor, backgroundColor, bgRgb, accentRgb });
 
+  // Get user's background preferences
+  const profileBackgroundType = (profile as any)?.profileBackgroundType || 'solid';
+  const profileBackgroundTheme = (profile as any)?.profileBackgroundTheme || 'default';
+  const profileBackgroundAnimation = (profile as any)?.profileBackgroundAnimation || 'none';
+
+  // Find the selected background theme
+  const selectedBgTheme = backgroundThemes.find(theme => theme.id === profileBackgroundTheme);
+  const bgStyle = getBackgroundStyle(selectedBgTheme || null, backgroundColor);
+
   return (
     <div 
       className="min-h-screen pb-12 relative profile-theme-scope" 
       ref={profileThemeScopeRef}
       style={{ 
-        background: '#101D27',
+        ...bgStyle,
         position: 'relative',
         zIndex: 1
       }}
     >
+      {/* Animated Background Component */}
+      {profileBackgroundType === 'animated' && profileBackgroundAnimation !== 'none' && (
+        <AnimatedBackground 
+          type={profileBackgroundType}
+          theme={profileBackgroundAnimation}
+          baseColor={backgroundColor}
+          accentColor={accentColor}
+        />
+      )}
       {/* Enhanced Banner with global theme colors */}
       <div 
         className={`h-52 sm:h-64 md:h-96 bg-cover bg-center overflow-hidden profile-banner relative -mx-4 md:-mx-8 border-b-4 border-primary ${profile?.bannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}

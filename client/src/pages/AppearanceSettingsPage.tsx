@@ -34,6 +34,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { BannerUploadPreview } from '@/components/BannerUploadPreview';
+import { backgroundThemes, getBackgroundStyle } from '@/lib/background-themes';
 
 // Define ProfileBanner type
 type ProfileBanner = {
@@ -212,6 +213,9 @@ const AppearanceSettingsPage: React.FC = () => {
     bannerUrl: z.string().optional().nullable(),
     displayName: z.string().min(2, 'Display name must be at least 2 characters'),
     bio: z.string().max(500, 'Bio cannot exceed 500 characters').optional().or(z.literal('')),
+    profileBackgroundType: z.string().default('solid'),
+    profileBackgroundTheme: z.string().default('default'),
+    profileBackgroundAnimation: z.string().default('none'),
   });
 
   // Theme presets
@@ -291,6 +295,9 @@ const AppearanceSettingsPage: React.FC = () => {
       bannerUrl: user?.bannerUrl || '',
       displayName: user?.displayName || '',
       bio: user?.bio || '',
+      profileBackgroundType: (user as any)?.profileBackgroundType || 'solid',
+      profileBackgroundTheme: (user as any)?.profileBackgroundTheme || 'default',
+      profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || 'none',
     },
     mode: 'onChange', // Enable real-time validation
   });
@@ -313,6 +320,9 @@ const AppearanceSettingsPage: React.FC = () => {
         bannerUrl: user.bannerUrl || '',
         displayName: user.displayName || '',
         bio: user.bio || '',
+        profileBackgroundType: (user as any)?.profileBackgroundType || 'solid',
+        profileBackgroundTheme: (user as any)?.profileBackgroundTheme || 'default',
+        profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || 'none',
       };
 
       // Only reset form if colors are different (prevents reversion after save)
@@ -414,7 +424,11 @@ const AppearanceSettingsPage: React.FC = () => {
         avatarBorderColor: values.avatarBorderColor,
         backgroundColor: values.primaryColor, // Map primaryColor to backgroundColor for API compatibility
         // Banner URL - preserve existing if form value is empty
-        bannerUrl: values.bannerUrl || user.bannerUrl || ''
+        bannerUrl: values.bannerUrl || user.bannerUrl || '',
+        // Profile background customization
+        profileBackgroundType: values.profileBackgroundType,
+        profileBackgroundTheme: values.profileBackgroundTheme,
+        profileBackgroundAnimation: values.profileBackgroundAnimation
       };
 
       console.log('💾 FORM SUBMISSION - Preserving all user data:', updateData);
@@ -786,6 +800,66 @@ const AppearanceSettingsPage: React.FC = () => {
                           <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                             <div className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide shadow-lg border-2 border-white">
                               SELECTED
+                            </div>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Profile Background Customization */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Profile Background</h3>
+                <p className="text-sm text-muted-foreground">
+                  Choose a background theme for your profile page. Animated backgrounds add dynamic visual effects.
+                </p>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {backgroundThemes.map((theme) => {
+                    const isActive = appearanceForm.watch('profileBackgroundTheme') === theme.id;
+                    
+                    return (
+                      <button
+                        key={theme.id}
+                        type="button"
+                        onClick={() => {
+                          appearanceForm.setValue('profileBackgroundType', theme.type, { shouldDirty: true });
+                          appearanceForm.setValue('profileBackgroundTheme', theme.id, { shouldDirty: true });
+                          appearanceForm.setValue('profileBackgroundAnimation', theme.animation || 'none', { shouldDirty: true });
+                          
+                          toast({
+                            title: "Background updated",
+                            description: `${theme.name} background selected. Click "Save Profile & Appearance" to apply changes.`,
+                            duration: 3000,
+                          });
+                        }}
+                        className={`relative p-4 rounded-lg transition-all text-left overflow-hidden ${
+                          isActive 
+                            ? 'ring-2 ring-primary shadow-lg' 
+                            : 'hover:ring-1 hover:ring-primary/50'
+                        }`}
+                        style={{ 
+                          background: theme.preview,
+                          minHeight: '100px'
+                        }}
+                      >
+                        {/* Theme name */}
+                        <div className="absolute bottom-2 left-2 right-2">
+                          <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 rounded text-xs font-medium">
+                            {theme.name}
+                            {theme.type === 'animated' && (
+                              <span className="ml-1 text-primary">✨</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Active indicator */}
+                        {isActive && (
+                          <div className="absolute top-2 right-2">
+                            <div className="flex items-center justify-center w-6 h-6 bg-primary rounded-full">
+                              <Check className="w-4 h-4 text-white" />
                             </div>
                           </div>
                         )}
