@@ -2,7 +2,7 @@ export interface BackgroundTheme {
   id: string;
   name: string;
   type: 'solid' | 'gradient' | 'animated';
-  animation?: 'none' | 'particles' | 'waves' | 'gradient-shift';
+  animation?: 'none' | 'particles' | 'waves' | 'gradient-shift' | 'starfield' | 'fireflies' | 'digital-rain' | 'neon-pulse' | 'cosmic-dust';
   preview: string;
   gradient?: {
     from: string;
@@ -119,6 +119,46 @@ export const backgroundThemes: BackgroundTheme[] = [
     animation: 'gradient-shift',
     preview: '#0B2232',
     solid: '#0B2232'
+  },
+  {
+    id: 'starfield',
+    name: 'Starfield',
+    type: 'animated',
+    animation: 'starfield',
+    preview: '#000814',
+    solid: '#000814'
+  },
+  {
+    id: 'fireflies',
+    name: 'Fireflies',
+    type: 'animated',
+    animation: 'fireflies',
+    preview: '#0a1f1f',
+    solid: '#0a1f1f'
+  },
+  {
+    id: 'digital-rain',
+    name: 'Digital Rain',
+    type: 'animated',
+    animation: 'digital-rain',
+    preview: '#001a00',
+    solid: '#001a00'
+  },
+  {
+    id: 'neon-pulse',
+    name: 'Neon Pulse',
+    type: 'animated',
+    animation: 'neon-pulse',
+    preview: '#1a0033',
+    solid: '#1a0033'
+  },
+  {
+    id: 'cosmic-dust',
+    name: 'Cosmic Dust',
+    type: 'animated',
+    animation: 'cosmic-dust',
+    preview: '#0d1117',
+    solid: '#0d1117'
   }
 ];
 
