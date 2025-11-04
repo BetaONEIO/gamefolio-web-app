@@ -107,6 +107,18 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
             @{clip.user.username}
           </p>
         </Link>
+        {/* Game name below username */}
+        {clip.gameId && clip.game && (
+          <Link 
+            href={`/games/${clip.gameId}/clips`}
+            onClick={(e) => e.stopPropagation()}
+            className={`inline-block mt-1 bg-green-600 text-white rounded font-bold hover:bg-green-500 transition-all duration-300 ${
+              isReel ? 'text-[8px] px-1 py-0.5 md:text-[9px] md:px-1.5' : compact ? 'text-[9px] px-1.5 py-0.5 md:text-[10px] md:px-2' : 'text-[10px] px-1.5 py-0.5 md:text-xs md:px-2 md:py-1'
+            }`}
+          >
+            {clip.game.name}
+          </Link>
+        )}
       </div>
 
       {/* Enhanced play button with pulse effect */}
@@ -150,19 +162,6 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
 
       {/* Bottom right badges container - smaller for reels */}
       <div className="absolute bottom-1.5 md:bottom-2 right-1.5 md:right-2 flex items-center gap-0.5 md:gap-1">
-        {/* Game name badge - green color, positioned next to NEW badge, smaller for reels */}
-        {clip.gameId && clip.game && (
-          <Link 
-            href={`/games/${clip.gameId}/clips`}
-            onClick={(e) => e.stopPropagation()}
-            className={`bg-green-600 text-white rounded font-bold hover:bg-green-500 transition-all duration-300 ${
-              isReel ? 'text-[8px] px-1 py-0.5 md:text-[9px] md:px-1.5' : compact ? 'text-[9px] px-1.5 py-0.5 md:text-[10px] md:px-2' : 'text-[10px] px-1.5 py-0.5 md:text-xs md:px-2 md:py-1'
-            }`}
-          >
-            {clip.game.name}
-          </Link>
-        )}
-
         {/* Latest clip indicator - smaller for compact mode and reels */}
         {clip.createdAt && Date.now() - new Date(clip.createdAt).getTime() < 86400000 * 3 && (
           <div className={`bg-gray-600 text-white font-bold transform rotate-1 shadow-lg ${
