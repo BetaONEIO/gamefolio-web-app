@@ -567,7 +567,16 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
       const blockSize = 30;
       const cols = Math.floor(canvas.width / blockSize);
       const rows = Math.floor(canvas.height / blockSize);
-      const colors = ['#00F0F0', '#F0F000', '#F000F0', '#00F000', '#F00000', '#0000F0', '#F0A000'];
+      
+      const shapes = [
+        { blocks: [[0,0], [0,1], [0,2], [0,3]], color: '#00F0F0' }, // I
+        { blocks: [[0,0], [0,1], [1,0], [1,1]], color: '#F0F000' }, // O
+        { blocks: [[0,1], [1,0], [1,1], [1,2]], color: '#F000F0' }, // T
+        { blocks: [[0,1], [0,2], [1,0], [1,1]], color: '#00F000' }, // S
+        { blocks: [[0,0], [0,1], [1,1], [1,2]], color: '#F00000' }, // Z
+        { blocks: [[0,0], [1,0], [1,1], [1,2]], color: '#0000F0' }, // J
+        { blocks: [[0,2], [1,0], [1,1], [1,2]], color: '#F0A000' }, // L
+      ];
       
       const grid: Array<Array<string | null>> = [];
       for (let r = 0; r < rows; r++) {
@@ -577,18 +586,44 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
         }
       }
 
-      let currentBlock: { col: number; row: number; color: string } | null = null;
+      let currentPiece: { col: number; row: number; shape: {blocks: number[][], color: string} } | null = null;
       let frame = 0;
       let clearingRows: number[] = [];
       let clearFrame = 0;
 
-      const spawnBlock = () => {
-        const col = Math.floor(Math.random() * cols);
-        currentBlock = {
+      const spawnPiece = () => {
+        const shape = shapes[Math.floor(Math.random() * shapes.length)];
+        const col = Math.floor(Math.random() * (cols - 4)) + 1;
+        currentPiece = {
           col,
           row: 0,
-          color: colors[Math.floor(Math.random() * colors.length)]
+          shape
         };
+      };
+
+      const canPlacePiece = (piece: typeof currentPiece): boolean => {
+        if (!piece) return false;
+        
+        for (const [dr, dc] of piece.shape.blocks) {
+          const r = piece.row + dr;
+          const c = piece.col + dc;
+          
+          if (r >= rows || c < 0 || c >= cols) return false;
+          if (r >= 0 && grid[r][c] !== null) return false;
+        }
+        return true;
+      };
+
+      const placePiece = (piece: typeof currentPiece) => {
+        if (!piece) return;
+        
+        for (const [dr, dc] of piece.shape.blocks) {
+          const r = piece.row + dr;
+          const c = piece.col + dc;
+          if (r >= 0 && r < rows && c >= 0 && c < cols) {
+            grid[r][c] = piece.shape.color;
+          }
+        }
       };
 
       const checkCompleteRows = () => {
@@ -602,6 +637,7 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
       };
 
       const clearRows = (rowsToClear: number[]) => {
+        rowsToClear.sort((a, b) => b - a);
         rowsToClear.forEach(r => {
           grid.splice(r, 1);
           grid.unshift(Array(cols).fill(null));
@@ -616,7 +652,7 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
         }
       };
 
-      spawnBlock();
+      spawnPiece();
 
       const animate = () => {
         ctx.fillStyle = 'rgba(26, 26, 46, 0.3)';
@@ -624,7 +660,7 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
 
         if (clearingRows.length > 0) {
           clearFrame++;
-          if (clearFrame > 30) {
+          if (clearFrame > 20) {
             clearRows(clearingRows);
             clearingRows = [];
             clearFrame = 0;
@@ -632,11 +668,11 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
         } else {
           frame++;
           
-          if (currentBlock && frame % 30 === 0) {
-            const nextRow = currentBlock.row + 1;
+          if (currentPiece && frame % 10 === 0) {
+            const testPiece = { ...currentPiece, row: currentPiece.row + 1 };
             
-            if (nextRow >= rows || grid[nextRow][currentBlock.col] !== null) {
-              grid[currentBlock.row][currentBlock.col] = currentBlock.color;
+            if (!canPlacePiece(testPiece)) {
+              placePiece(currentPiece);
               
               const completeRows = checkCompleteRows();
               if (completeRows.length > 0) {
@@ -644,14 +680,14 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
               }
               
               const filledCount = grid.flat().filter(cell => cell !== null).length;
-              if (filledCount > cols * rows * 0.7) {
+              if (filledCount > cols * rows * 0.75) {
                 resetBoard();
               }
               
-              currentBlock = null;
-              setTimeout(() => spawnBlock(), 100);
+              currentPiece = null;
+              setTimeout(() => spawnPiece(), 100);
             } else {
-              currentBlock.row = nextRow;
+              currentPiece.row++;
             }
           }
         }
@@ -673,22 +709,28 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
           }
         }
 
-        if (currentBlock) {
-          ctx.fillStyle = currentBlock.color;
-          ctx.fillRect(
-            currentBlock.col * blockSize + 2,
-            currentBlock.row * blockSize + 2,
-            blockSize - 4,
-            blockSize - 4
-          );
-          ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(
-            currentBlock.col * blockSize + 2,
-            currentBlock.row * blockSize + 2,
-            blockSize - 4,
-            blockSize - 4
-          );
+        if (currentPiece) {
+          ctx.fillStyle = currentPiece.shape.color;
+          for (const [dr, dc] of currentPiece.shape.blocks) {
+            const r = currentPiece.row + dr;
+            const c = currentPiece.col + dc;
+            if (r >= 0) {
+              ctx.fillRect(
+                c * blockSize + 2,
+                r * blockSize + 2,
+                blockSize - 4,
+                blockSize - 4
+              );
+              ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+              ctx.lineWidth = 2;
+              ctx.strokeRect(
+                c * blockSize + 2,
+                r * blockSize + 2,
+                blockSize - 4,
+                blockSize - 4
+              );
+            }
+          }
         }
 
         animationFrameId = requestAnimationFrame(animate);
