@@ -580,12 +580,6 @@ export default function SettingsPage() {
                               profileBackgroundTheme: theme.id,
                               profileBackgroundAnimation: theme.animation || 'none'
                             }));
-                            
-                            toast({
-                              title: "Background updated",
-                              description: `${theme.name} background selected. Click "Save Changes" to apply.`,
-                              duration: 3000,
-                            });
                           }}
                           className={`relative p-4 rounded-lg transition-all text-left overflow-hidden ${
                             isActive 
