@@ -161,6 +161,9 @@ export default function SettingsPage() {
     profileData.backgroundColor !== (user?.backgroundColor || "#0B2232") ||
     profileData.accentColor !== (user?.accentColor || "#4ADE80") ||
     normalizeValue(profileData.bannerUrl) !== normalizeValue(user?.bannerUrl) ||
+    profileData.profileBackgroundType !== ((user as any)?.profileBackgroundType || "solid") ||
+    profileData.profileBackgroundTheme !== ((user as any)?.profileBackgroundTheme || "default") ||
+    profileData.profileBackgroundAnimation !== ((user as any)?.profileBackgroundAnimation || "none") ||
     avatarFile !== null;
   
   // Debug logging
