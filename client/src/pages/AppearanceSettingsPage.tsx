@@ -35,6 +35,7 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { BannerUploadPreview } from '@/components/BannerUploadPreview';
 import { backgroundThemes, getBackgroundStyle } from '@/lib/background-themes';
+import { AnimatedBackground } from '@/components/profile/AnimatedBackground';
 
 // Define ProfileBanner type
 type ProfileBanner = {
@@ -869,194 +870,52 @@ const AppearanceSettingsPage: React.FC = () => {
                 </div>
               </div>
 
-              <h3 className="text-lg font-semibold">Custom Colors</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <FormField
-                  control={appearanceForm.control}
-                  name="accentColor"
-                  render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel>Accent Color</FormLabel>
-                      <FormControl>
-                        <div className="space-y-3">
-                          <div className="flex gap-2">
-                            <div 
-                              className="flex-1 h-10 rounded-md border border-input shadow-sm transition-all" 
-                              style={{ 
-                                backgroundColor: field.value,
-                                boxShadow: `0 0 0 2px ${field.value}20`
-                              }}
-                            />
-                            <div className="text-xs text-muted-foreground font-mono self-center">
-                              {field.value}
-                            </div>
-                          </div>
-                          <HexColorPicker 
-                            color={field.value} 
-                            onChange={(color) => {
-                              field.onChange(color);
-                              // Also update preview colors for accent color
-                              setPreviewColors(prev => ({
-                                ...prev,
-                                accentColor: color
-                              }));
-                            }}
-                            style={{ width: '100%' }}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormDescription>
-                        Choose an accent color for your profile highlights and buttons (profile page only).
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={appearanceForm.control}
-                  name="primaryColor"
-                  render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel>Primary Color</FormLabel>
-                      <FormControl>
-                        <div className="space-y-3">
-                          <div className="flex gap-2">
-                            <div 
-                              className="flex-1 h-10 rounded-md border border-input shadow-sm transition-all" 
-                              style={{ 
-                                backgroundColor: field.value,
-                                boxShadow: `0 0 0 2px ${field.value}30`
-                              }}
-                            />
-                            <div className="text-xs text-muted-foreground font-mono self-center">
-                              {field.value}
-                            </div>
-                          </div>
-                          <HexColorPicker 
-                            color={field.value} 
-                            onChange={(color) => {
-                              field.onChange(color);
-                              // Also update preview colors for primary color
-                              setPreviewColors(prev => ({
-                                ...prev,
-                                primaryColor: color
-                              }));
-                            }}
-                            style={{ width: '100%' }}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormDescription>
-                        Choose a primary color for your profile background elements (profile page only).
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={appearanceForm.control}
-                  name="avatarBorderColor"
-                  render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel>Avatar Border Color</FormLabel>
-                      <FormControl>
-                        <div className="space-y-3">
-                          <div className="flex gap-2">
-                            <div 
-                              className="flex-1 h-10 rounded-md border border-input shadow-sm transition-all" 
-                              style={{ 
-                                backgroundColor: field.value,
-                                boxShadow: `0 0 0 2px ${field.value}40, 0 0 20px ${field.value}30`
-                              }}
-                            />
-                            <div className="text-xs text-muted-foreground font-mono self-center">
-                              {field.value}
-                            </div>
-                          </div>
-                          <HexColorPicker 
-                            color={field.value} 
-                            onChange={(color) => {
-                              field.onChange(color);
-                              // Also update preview colors for avatar border color
-                              setPreviewColors(prev => ({
-                                ...prev,
-                                avatarBorderColor: color
-                              }));
-                            }}
-                            style={{ width: '100%' }}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormDescription>
-                        Choose a custom color for your profile picture's glowing border.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Theme Preview Section - Only show when changes are made */}
-              {appearanceForm.formState.isDirty && (
+              {/* Profile Background Preview Section - Show selected background theme */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Preview</h3>
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold">Background Preview</h3>
+                <p className="text-sm text-muted-foreground">
+                  Preview of your selected profile background theme
+                </p>
+                
+                {(() => {
+                  const selectedTheme = backgroundThemes.find(
+                    theme => theme.id === appearanceForm.watch('profileBackgroundTheme')
+                  );
+                  
+                  if (!selectedTheme) return null;
+                  
+                  return (
                     <div 
-                      className="w-6 h-6 rounded-full border-2 border-white shadow-md"
-                      style={{ backgroundColor: currentAccentColor }}
-                      title="Accent Colour"
-                    />
-                    <span className="text-sm font-medium">Accent Colour</span>
-                    <span className="text-xs text-muted-foreground font-mono">{currentAccentColor}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-6 h-6 rounded-full border-2 border-white shadow-md"
-                      style={{ backgroundColor: currentBgColor }}
-                      title="Background Colour"
-                    />
-                    <span className="text-sm font-medium">Background Colour</span>
-                    <span className="text-xs text-muted-foreground font-mono">{currentBgColor}</span>
-                  </div>
-                </div>
-                <div 
-                  className="relative p-8 rounded-lg border-2 border-border transition-all duration-300"
-                  style={{
-                    background: previewBgRgb 
-                      ? `linear-gradient(135deg, rgba(${previewBgRgb.r}, ${previewBgRgb.g}, ${previewBgRgb.b}, 1) 0%, rgba(${previewBgRgb.r}, ${previewBgRgb.g}, ${previewBgRgb.b}, 0.8) 100%)`
-                      : 'hsl(var(--background))'
-                  }}
-                >
-                  <div className="flex flex-col items-center space-y-4">
-                    <div 
-                      className="w-16 h-16 rounded-full border-4 bg-gradient-to-br from-gray-700 to-gray-900"
+                      className="relative rounded-lg border-2 border-border overflow-hidden"
                       style={{ 
-                        borderColor: currentAccentColor,
-                        boxShadow: `0 0 20px ${currentAccentColor}40`
-                      }}
-                    />
-                    <div className="text-center space-y-2">
-                      <div className="text-white font-semibold">Your Profile Preview</div>
-                      <div className="text-white/80 text-sm">This is how your theme will look</div>
-                    </div>
-                    <button
-                      type="button"
-                      className="px-6 py-2 rounded-md font-medium text-white transition-all duration-200 hover:scale-105"
-                      style={{ 
-                        backgroundColor: currentAccentColor,
-                        boxShadow: `0 4px 12px ${currentAccentColor}40`
+                        height: '300px',
+                        background: selectedTheme.type === 'animated' ? '#0B2232' : selectedTheme.preview
                       }}
                     >
-                      Sample Button
-                    </button>
-                  </div>
-                </div>
+                      {selectedTheme.type === 'animated' && selectedTheme.animation && (
+                        <AnimatedBackground
+                          type="animated"
+                          theme={selectedTheme.animation}
+                          baseColor="#0B2232"
+                          accentColor="#4ADE80"
+                          contained={true}
+                        />
+                      )}
+                      
+                      <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
+                        <div className="bg-black/50 backdrop-blur-sm px-6 py-3 rounded-lg">
+                          <div className="text-white font-semibold text-lg text-center">
+                            {selectedTheme.name}
+                          </div>
+                          <div className="text-white/80 text-sm text-center">
+                            {selectedTheme.type === 'animated' ? 'Animated Background ✨' : 'Static Background'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
-              )}
 
               {/* Profile Banner */}
               <FormField

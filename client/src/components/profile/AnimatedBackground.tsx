@@ -5,10 +5,12 @@ interface AnimatedBackgroundProps {
   theme: string;
   baseColor?: string;
   accentColor?: string;
+  contained?: boolean;
 }
 
-export const AnimatedBackground = ({ type, theme, baseColor, accentColor }: AnimatedBackgroundProps) => {
+export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contained = false }: AnimatedBackgroundProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (type !== 'animated' || !canvasRef.current) return;
@@ -18,8 +20,13 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor }: Anim
     if (!ctx) return;
 
     const setCanvasSize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      if (contained && containerRef.current) {
+        canvas.width = containerRef.current.clientWidth;
+        canvas.height = containerRef.current.clientHeight;
+      } else {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
     };
     setCanvasSize();
     window.addEventListener('resize', setCanvasSize);
@@ -137,9 +144,21 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor }: Anim
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [type, theme, baseColor, accentColor]);
+  }, [type, theme, baseColor, accentColor, contained]);
 
   if (type !== 'animated') return null;
+
+  if (contained) {
+    return (
+      <div ref={containerRef} className="absolute inset-0">
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 pointer-events-none"
+          style={{ width: '100%', height: '100%' }}
+        />
+      </div>
+    );
+  }
 
   return (
     <canvas
