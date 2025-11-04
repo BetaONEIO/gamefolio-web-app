@@ -130,7 +130,19 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         </div>
       </div>
 
-      {/* Delete button for clip owner - positioned in top left corner to avoid overlap */}
+      {/* Top left section */}
+      <div className="absolute top-1.5 md:top-2 left-1.5 md:left-2 flex items-center gap-1 z-10">
+        {/* NEW badge - shows for clips created within last 3 days */}
+        {clip.createdAt && Date.now() - new Date(clip.createdAt).getTime() < 86400000 * 3 && (
+          <div className={`bg-gray-600 text-white font-bold transform rotate-1 shadow-lg ${
+            isReel ? 'text-[8px] px-1 py-0.5 rounded md:text-[9px] md:px-1.5' : compact ? 'text-[9px] px-1.5 py-0.5 rounded md:text-[10px] md:px-2' : 'text-[10px] px-1.5 py-0.5 rounded md:text-xs md:px-2 md:py-1 md:rounded-md'
+          }`}>
+            NEW
+          </div>
+        )}
+      </div>
+
+      {/* Delete button for clip owner - positioned in top left corner, shows on hover */}
       {canDelete && (
         <Button
           size="sm"
@@ -160,17 +172,6 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         </div>
       </div>
 
-      {/* Bottom right badges container - smaller for reels */}
-      <div className="absolute bottom-1.5 md:bottom-2 right-1.5 md:right-2 flex items-center gap-0.5 md:gap-1">
-        {/* Latest clip indicator - smaller for compact mode and reels */}
-        {clip.createdAt && Date.now() - new Date(clip.createdAt).getTime() < 86400000 * 3 && (
-          <div className={`bg-gray-600 text-white font-bold transform rotate-1 shadow-lg ${
-            isReel ? 'text-[8px] px-1 py-0.5 rounded md:text-[9px] md:px-1.5' : compact ? 'text-[9px] px-1.5 py-0.5 rounded md:text-[10px] md:px-2' : 'text-[10px] px-1.5 py-0.5 rounded md:text-xs md:px-2 md:py-1 md:rounded-md'
-          }`}>
-            NEW
-          </div>
-        )}
-      </div>
     </div>
   );
 };
