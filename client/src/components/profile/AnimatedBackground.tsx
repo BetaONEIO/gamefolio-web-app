@@ -494,6 +494,9 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
           ctx.fillRect(x + 2, y + 2, gridSize - 4, gridSize - 4);
         });
 
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
         animationFrameId = requestAnimationFrame(animate);
       };
       animate();
@@ -696,10 +699,10 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
           for (let c = 0; c < cols; c++) {
             if (grid[r][c]) {
               const isClearing = clearingRows.includes(r);
-              const alpha = isClearing ? Math.sin(clearFrame * 0.3) * 0.5 + 0.5 : 1;
+              const baseAlpha = isClearing ? Math.sin(clearFrame * 0.3) * 0.3 + 0.3 : 0.5;
               
               ctx.fillStyle = grid[r][c]!;
-              ctx.globalAlpha = alpha;
+              ctx.globalAlpha = baseAlpha;
               ctx.fillRect(c * blockSize + 2, r * blockSize + 2, blockSize - 4, blockSize - 4);
               ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
               ctx.lineWidth = 2;
@@ -710,6 +713,7 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
         }
 
         if (currentPiece) {
+          ctx.globalAlpha = 0.5;
           ctx.fillStyle = currentPiece.shape.color;
           for (const [dr, dc] of currentPiece.shape.blocks) {
             const r = currentPiece.row + dr;
@@ -731,6 +735,7 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
               );
             }
           }
+          ctx.globalAlpha = 1;
         }
 
         animationFrameId = requestAnimationFrame(animate);
