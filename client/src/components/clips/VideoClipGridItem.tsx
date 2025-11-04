@@ -30,9 +30,11 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleOpenClip = () => {
-    // Use the same pattern as TrendingVideoCard - just call openClipDialog with clip ID
-    // This will open the clip in dialog format like trending clips do
-    openClipDialog(clip.id);
+    // If this is a reel and we have a reelsList, pass it for fullscreen navigation
+    // Otherwise if we have a clipsList, pass that for clip navigation
+    // This ensures the same pattern as LatestReelsPage and other pages
+    const contextList = reelsList || clipsList;
+    openClipDialog(clip.id, contextList);
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
