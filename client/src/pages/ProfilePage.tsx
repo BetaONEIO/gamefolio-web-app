@@ -327,6 +327,11 @@ const ProfilePage = () => {
       // Invalidate trending content cache so deleted clips don't show up
       queryClient.invalidateQueries({ queryKey: ['/api/clips/trending'] });
       queryClient.invalidateQueries({ queryKey: ['/api/clips/reels/trending'] });
+      
+      // Invalidate reels queries (for home page, trending page, etc.)
+      queryClient.invalidateQueries({ queryKey: ['/api/reels/latest'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reels/trending'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reels'] });
 
       toast({
         title: "Clip deleted",
