@@ -1184,6 +1184,13 @@ const ProfilePage = () => {
               </span>
               <span className="text-muted-foreground text-sm">Fires</span>
             </div>
+            <div className="flex flex-col items-center" data-testid="stat-streak-mobile">
+              <span className="font-bold text-xl flex items-center gap-1">
+                <Flame className="h-5 w-5 text-orange-500" />
+                {Number(profile.currentStreak || 0)}
+              </span>
+              <span className="text-muted-foreground text-sm">Streak</span>
+            </div>
           </div>
 
           {/* Bio and other content centered on mobile */}
@@ -1465,6 +1472,11 @@ const ProfilePage = () => {
                     <Flame className="h-4 w-4 text-orange-500" />
                     <span className="font-semibold">{Number(profile._count?.firesReceived || 0)}</span>
                     <span className="text-muted-foreground">Fires</span>
+                  </div>
+                  <div className="flex items-center gap-1" data-testid="stat-streak-desktop">
+                    <Flame className="h-4 w-4 text-orange-500" />
+                    <span className="font-semibold">{Number(profile.currentStreak || 0)}</span>
+                    <span className="text-muted-foreground">Streak</span>
                   </div>
                 </div>
 
