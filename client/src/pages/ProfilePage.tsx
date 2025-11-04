@@ -1196,7 +1196,13 @@ const ProfilePage = () => {
               </div>
               <div className="flex flex-col items-center min-w-[60px]" data-testid="stat-streak-mobile">
                 <span className="font-bold text-lg flex items-center gap-1">
-                  <Flame className="h-4 w-4 text-orange-500" />
+                  <Flame 
+                    className="h-4 w-4 text-orange-500" 
+                    fill="currentColor"
+                    style={{
+                      filter: 'drop-shadow(0 0 4px rgba(249, 115, 22, 0.6)) drop-shadow(0 0 8px rgba(249, 115, 22, 0.4))'
+                    }}
+                  />
                   {Number(profile.currentStreak || 0)}
                 </span>
                 <span className="text-muted-foreground text-xs">Streak</span>
@@ -1490,7 +1496,13 @@ const ProfilePage = () => {
                       <span className="text-muted-foreground">Fires</span>
                     </div>
                     <div className="flex items-center gap-1" data-testid="stat-streak-desktop">
-                      <Flame className="h-4 w-4 text-orange-500" />
+                      <Flame 
+                        className="h-4 w-4 text-orange-500" 
+                        fill="currentColor"
+                        style={{
+                          filter: 'drop-shadow(0 0 4px rgba(249, 115, 22, 0.6)) drop-shadow(0 0 8px rgba(249, 115, 22, 0.4))'
+                        }}
+                      />
                       <span className="font-semibold">{Number(profile.currentStreak || 0)}</span>
                       <span className="text-muted-foreground">Streak</span>
                     </div>
