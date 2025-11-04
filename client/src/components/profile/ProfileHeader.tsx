@@ -129,6 +129,22 @@ const ProfileHeader = ({
                 </span>
                 <span className="text-muted-foreground">Fires</span>
               </div>
+              <div className="text-center" data-testid="stat-streak">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <span className="font-bold block flex items-center gap-1 justify-center">
+                        <Flame className="w-3 h-3 text-orange-500" />
+                        {profile.currentStreak || 0}
+                      </span>
+                      <span className="text-muted-foreground">Streak</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-sm">Longest: {profile.longestStreak || 0} days</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <div className="text-center">
                 <TooltipProvider>
                   <Tooltip>
