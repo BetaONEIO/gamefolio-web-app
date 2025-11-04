@@ -135,7 +135,7 @@ export default function LatestReelsPage() {
                           <span>{formatNumber(reel.views || 0)}</span>
                         </div>
                         {reel.game && (
-                          <div className="bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full">
+                          <div className="bg-primary px-2 py-0.5 rounded-full">
                             {reel.game.name}
                           </div>
                         )}
@@ -235,7 +235,7 @@ export default function LatestReelsPage() {
 
                         {/* Game badge */}
                         {reel.game && (
-                          <div className="bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full">
+                          <div className="bg-primary text-white text-xs px-2 py-1 rounded-full">
                             {reel.game.name}
                           </div>
                         )}
