@@ -2,7 +2,7 @@ export interface BackgroundTheme {
   id: string;
   name: string;
   type: 'solid' | 'gradient' | 'animated';
-  animation?: 'none' | 'particles' | 'waves' | 'gradient-shift' | 'starfield' | 'fireflies' | 'digital-rain' | 'neon-pulse' | 'cosmic-dust' | 'snake' | 'color-panels';
+  animation?: 'none' | 'particles' | 'waves' | 'gradient-shift' | 'starfield' | 'fireflies' | 'digital-rain' | 'neon-pulse' | 'cosmic-dust' | 'snake' | 'color-panels' | 'pacman' | 'tetris' | 'space-invaders' | 'pong';
   preview: string;
   gradient?: {
     from: string;
@@ -175,6 +175,38 @@ export const backgroundThemes: BackgroundTheme[] = [
     animation: 'color-panels',
     preview: '#1a1a1a',
     solid: '#1a1a1a'
+  },
+  {
+    id: 'pacman',
+    name: 'Pac-Man',
+    type: 'animated',
+    animation: 'pacman',
+    preview: '#000000',
+    solid: '#000000'
+  },
+  {
+    id: 'tetris',
+    name: 'Tetris',
+    type: 'animated',
+    animation: 'tetris',
+    preview: '#1a1a2e',
+    solid: '#1a1a2e'
+  },
+  {
+    id: 'space-invaders',
+    name: 'Space Invaders',
+    type: 'animated',
+    animation: 'space-invaders',
+    preview: '#0a0a0a',
+    solid: '#0a0a0a'
+  },
+  {
+    id: 'pong',
+    name: 'Pong',
+    type: 'animated',
+    animation: 'pong',
+    preview: '#000000',
+    solid: '#000000'
   }
 ];
 

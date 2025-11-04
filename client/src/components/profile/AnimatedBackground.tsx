@@ -497,6 +497,274 @@ export const AnimatedBackground = ({ type, theme, baseColor, accentColor, contai
         animationFrameId = requestAnimationFrame(animate);
       };
       animate();
+    } else if (theme === 'pacman') {
+      const gridSize = 20;
+      const dots: Array<{ x: number; y: number; eaten: boolean }> = [];
+      const cols = Math.floor(canvas.width / gridSize);
+      const rows = Math.floor(canvas.height / gridSize);
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          if (Math.random() > 0.3) {
+            dots.push({ x: col * gridSize + gridSize / 2, y: row * gridSize + gridSize / 2, eaten: false });
+          }
+        }
+      }
+
+      let pacman = { x: gridSize * 5, y: gridSize * 5, direction: 1, mouthOpen: 0 };
+      let targetX = canvas.width / 2;
+      let targetY = canvas.height / 2;
+
+      const animate = () => {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        dots.forEach(dot => {
+          if (!dot.eaten) {
+            ctx.beginPath();
+            ctx.arc(dot.x, dot.y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFB8AE';
+            ctx.fill();
+
+            const dist = Math.sqrt((pacman.x - dot.x) ** 2 + (pacman.y - dot.y) ** 2);
+            if (dist < 15) dot.eaten = true;
+          }
+        });
+
+        const dx = targetX - pacman.x;
+        const dy = targetY - pacman.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < 20 || Math.random() < 0.01) {
+          targetX = Math.random() * canvas.width;
+          targetY = Math.random() * canvas.height;
+        }
+
+        pacman.x += (dx / distance) * 2;
+        pacman.y += (dy / distance) * 2;
+        pacman.direction = Math.atan2(dy, dx);
+        pacman.mouthOpen = (pacman.mouthOpen + 0.1) % (Math.PI * 2);
+
+        ctx.save();
+        ctx.translate(pacman.x, pacman.y);
+        ctx.rotate(pacman.direction);
+        ctx.beginPath();
+        const mouthAngle = 0.3 + Math.abs(Math.sin(pacman.mouthOpen)) * 0.3;
+        ctx.arc(0, 0, 15, mouthAngle, Math.PI * 2 - mouthAngle);
+        ctx.lineTo(0, 0);
+        ctx.fillStyle = '#FFFF00';
+        ctx.fill();
+        ctx.restore();
+
+        if (dots.every(dot => dot.eaten)) {
+          dots.forEach(dot => dot.eaten = false);
+        }
+
+        animationFrameId = requestAnimationFrame(animate);
+      };
+      animate();
+    } else if (theme === 'tetris') {
+      const blockSize = 30;
+      const cols = Math.floor(canvas.width / blockSize);
+      const blocks: Array<{ x: number; y: number; color: string; landed: boolean }> = [];
+      const colors = ['#00F0F0', '#F0F000', '#F000F0', '#00F000', '#F00000', '#0000F0', '#F0A000'];
+      let frame = 0;
+
+      const spawnBlock = () => {
+        const col = Math.floor(Math.random() * cols);
+        blocks.push({
+          x: col * blockSize,
+          y: -blockSize,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          landed: false
+        });
+      };
+
+      for (let i = 0; i < 5; i++) spawnBlock();
+
+      const animate = () => {
+        ctx.fillStyle = 'rgba(26, 26, 46, 0.1)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        frame++;
+        if (frame % 60 === 0 && Math.random() > 0.5) {
+          spawnBlock();
+        }
+
+        blocks.forEach((block, i) => {
+          if (!block.landed) {
+            block.y += 2;
+            if (block.y >= canvas.height - blockSize) {
+              block.landed = true;
+            }
+          }
+
+          ctx.fillStyle = block.color;
+          ctx.fillRect(block.x + 2, block.y + 2, blockSize - 4, blockSize - 4);
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(block.x + 2, block.y + 2, blockSize - 4, blockSize - 4);
+
+          if (block.y > canvas.height + 100) {
+            blocks.splice(i, 1);
+          }
+        });
+
+        animationFrameId = requestAnimationFrame(animate);
+      };
+      animate();
+    } else if (theme === 'space-invaders') {
+      const aliens: Array<{ x: number; y: number; frame: number }> = [];
+      const bullets: Array<{ x: number; y: number }> = [];
+      const rows = 3;
+      const cols = 8;
+      const spacing = 60;
+      let direction = 1;
+      let moveDown = false;
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          aliens.push({
+            x: col * spacing + 100,
+            y: row * spacing + 50,
+            frame: 0
+          });
+        }
+      }
+
+      const drawAlien = (x: number, y: number, frame: number) => {
+        ctx.fillStyle = '#00FF00';
+        const f = Math.floor(frame) % 2;
+        
+        if (f === 0) {
+          ctx.fillRect(x + 4, y, 16, 8);
+          ctx.fillRect(x, y + 8, 24, 8);
+          ctx.fillRect(x + 4, y + 16, 4, 4);
+          ctx.fillRect(x + 16, y + 16, 4, 4);
+        } else {
+          ctx.fillRect(x + 4, y, 16, 8);
+          ctx.fillRect(x, y + 8, 24, 8);
+          ctx.fillRect(x, y + 16, 4, 4);
+          ctx.fillRect(x + 20, y + 16, 4, 4);
+        }
+      };
+
+      let lastShot = 0;
+      const animate = () => {
+        ctx.fillStyle = 'rgba(10, 10, 10, 0.2)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        aliens.forEach((alien, i) => {
+          alien.frame += 0.05;
+          alien.x += direction * 0.5;
+          
+          if (moveDown) {
+            alien.y += 20;
+          }
+
+          drawAlien(alien.x, alien.y, alien.frame);
+
+          if (Date.now() - lastShot > 2000 && Math.random() < 0.001) {
+            bullets.push({ x: alien.x + 12, y: alien.y + 20 });
+            lastShot = Date.now();
+          }
+        });
+
+        if (aliens.length > 0) {
+          const leftmost = Math.min(...aliens.map(a => a.x));
+          const rightmost = Math.max(...aliens.map(a => a.x));
+
+          if (leftmost < 10 || rightmost > canvas.width - 40) {
+            direction *= -1;
+            moveDown = true;
+          } else {
+            moveDown = false;
+          }
+        }
+
+        bullets.forEach((bullet, i) => {
+          bullet.y += 3;
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(bullet.x, bullet.y, 2, 8);
+
+          if (bullet.y > canvas.height) {
+            bullets.splice(i, 1);
+          }
+        });
+
+        animationFrameId = requestAnimationFrame(animate);
+      };
+      animate();
+    } else if (theme === 'pong') {
+      const paddleWidth = 10;
+      const paddleHeight = 80;
+      const ballSize = 10;
+
+      let ball = {
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        dx: 3,
+        dy: 2
+      };
+
+      let leftPaddle = { y: canvas.height / 2 - paddleHeight / 2 };
+      let rightPaddle = { y: canvas.height / 2 - paddleHeight / 2 };
+
+      const animate = () => {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([10, 10]);
+        ctx.beginPath();
+        ctx.moveTo(canvas.width / 2, 0);
+        ctx.lineTo(canvas.width / 2, canvas.height);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ball.x += ball.dx;
+        ball.y += ball.dy;
+
+        if (ball.y <= 0 || ball.y >= canvas.height - ballSize) {
+          ball.dy *= -1;
+        }
+
+        if (ball.x <= paddleWidth + 20) {
+          if (ball.y >= leftPaddle.y && ball.y <= leftPaddle.y + paddleHeight) {
+            ball.dx *= -1;
+            ball.x = paddleWidth + 20;
+          }
+        }
+
+        if (ball.x >= canvas.width - paddleWidth - 20 - ballSize) {
+          if (ball.y >= rightPaddle.y && ball.y <= rightPaddle.y + paddleHeight) {
+            ball.dx *= -1;
+            ball.x = canvas.width - paddleWidth - 20 - ballSize;
+          }
+        }
+
+        if (ball.x < 0 || ball.x > canvas.width) {
+          ball.x = canvas.width / 2;
+          ball.y = canvas.height / 2;
+          ball.dx = (Math.random() > 0.5 ? 1 : -1) * 3;
+          ball.dy = (Math.random() - 0.5) * 4;
+        }
+
+        leftPaddle.y += (ball.y - leftPaddle.y - paddleHeight / 2) * 0.1;
+        rightPaddle.y += (ball.y - rightPaddle.y - paddleHeight / 2) * 0.1;
+
+        leftPaddle.y = Math.max(0, Math.min(canvas.height - paddleHeight, leftPaddle.y));
+        rightPaddle.y = Math.max(0, Math.min(canvas.height - paddleHeight, rightPaddle.y));
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(20, leftPaddle.y, paddleWidth, paddleHeight);
+        ctx.fillRect(canvas.width - 20 - paddleWidth, rightPaddle.y, paddleWidth, paddleHeight);
+        ctx.fillRect(ball.x, ball.y, ballSize, ballSize);
+
+        animationFrameId = requestAnimationFrame(animate);
+      };
+      animate();
     }
 
     return () => {
