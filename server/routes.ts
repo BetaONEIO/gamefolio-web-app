@@ -5519,13 +5519,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user!.id;
 
       // Optimize original image
-      const optimizedImageBuffer = await sharp(originalPath)
+      const optimizedImageBuffer = await sharp(originalPath, { failOn: 'none' })
         .jpeg({ quality: 85 })
         .resize(1920, 1080, { fit: 'inside', withoutEnlargement: true })
         .toBuffer();
 
       // Generate thumbnail
-      const thumbnailBuffer = await sharp(originalPath)
+      const thumbnailBuffer = await sharp(originalPath, { failOn: 'none' })
         .jpeg({ quality: 80 })
         .resize(400, 300, { fit: 'cover' })
         .toBuffer();
