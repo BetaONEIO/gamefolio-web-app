@@ -368,13 +368,13 @@ router.post('/screenshot', fullAccessMiddleware, screenshotUpload.single('screen
     }
 
     // Process and upload image
-    const processedBuffer = await sharp(req.file.path)
+    const processedBuffer = await sharp(req.file.path, { failOn: 'none' })
       .resize(1920, 1080, { fit: 'inside', withoutEnlargement: true })
       .jpeg({ quality: 90 })
       .toBuffer();
 
     // Create thumbnail
-    const thumbnailBuffer = await sharp(req.file.path)
+    const thumbnailBuffer = await sharp(req.file.path, { failOn: 'none' })
       .resize(320, 180, { fit: 'cover' })
       .jpeg({ quality: 80 })
       .toBuffer();
