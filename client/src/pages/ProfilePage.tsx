@@ -1170,12 +1170,19 @@ const ProfilePage = () => {
               <span className="font-bold text-xl">{Number(profile._count?.following || 0)}</span>
               <span className="text-muted-foreground text-sm">Following</span>
             </div>
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center" data-testid="stat-likes-received-mobile">
+              <span className="font-bold text-xl flex items-center gap-1">
+                <Heart className="h-5 w-5 text-red-500" />
+                {Number(profile._count?.likesReceived || 0)}
+              </span>
+              <span className="text-muted-foreground text-sm">Likes</span>
+            </div>
+            <div className="flex flex-col items-center" data-testid="stat-fires-received-mobile">
               <span className="font-bold text-xl flex items-center gap-1">
                 <Flame className="h-5 w-5 text-orange-500" />
-                {Number(profile.currentStreak || 0)}
+                {Number(profile._count?.firesReceived || 0)}
               </span>
-              <span className="text-muted-foreground text-sm">Day Streak</span>
+              <span className="text-muted-foreground text-sm">Fires</span>
             </div>
           </div>
 
@@ -1449,18 +1456,16 @@ const ProfilePage = () => {
                     <span className="font-semibold">{Number(profile._count?.following || 0)}</span>
                     <span className="text-muted-foreground">Following</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Flame className="h-4 w-4 text-orange-500" />
-                    <span className="font-semibold">{Number(profile.currentStreak || 0)}</span>
-                    <span className="text-muted-foreground">Day Streak</span>
+                  <div className="flex items-center gap-1" data-testid="stat-likes-received-desktop">
+                    <Heart className="h-4 w-4 text-red-500" />
+                    <span className="font-semibold">{Number(profile._count?.likesReceived || 0)}</span>
+                    <span className="text-muted-foreground">Likes</span>
                   </div>
-                  {profile.longestStreak && profile.longestStreak > 0 && (
-                    <div className="flex items-center gap-1">
-                      <Trophy className="h-4 w-4 text-yellow-500" />
-                      <span className="font-semibold">{Number(profile.longestStreak)}</span>
-                      <span className="text-muted-foreground">Best Streak</span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-1" data-testid="stat-fires-received-desktop">
+                    <Flame className="h-4 w-4 text-orange-500" />
+                    <span className="font-semibold">{Number(profile._count?.firesReceived || 0)}</span>
+                    <span className="text-muted-foreground">Fires</span>
+                  </div>
                 </div>
 
                 {/* Member since date */}
