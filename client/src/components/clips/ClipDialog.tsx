@@ -75,6 +75,18 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   // Access closeClipDialog from useClipDialog
   const { closeClipDialog } = useClipDialog();
 
+  // Only fetch if dialog is open and we have a clipId (MUST be before useEffects that use clip)
+  const { data: clip, isLoading } = useQuery<ClipWithUser>({
+    queryKey: [`/api/clips/${clipId}`],
+    enabled: isOpen && clipId !== null,
+  });
+
+  // Fetch comments for mobile overlay
+  const { data: comments } = useQuery<CommentWithUser[]>({
+    queryKey: [`/api/clips/${clipId}/comments`],
+    enabled: isOpen && clipId !== null,
+  });
+
   // Detect mobile device - use same breakpoint as useMobile hook
   useEffect(() => {
     const checkMobile = () => {
@@ -188,18 +200,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
       document.removeEventListener('keydown', handleKeyDown, { capture: true });
     };
   }, [isOpen, showNavigation, onNext, onPrevious, onClose, isTransitioning]);
-
-  // Only fetch if dialog is open and we have a clipId
-  const { data: clip, isLoading } = useQuery<ClipWithUser>({
-    queryKey: [`/api/clips/${clipId}`],
-    enabled: isOpen && clipId !== null,
-  });
-
-  // Fetch comments for mobile overlay
-  const { data: comments } = useQuery<CommentWithUser[]>({
-    queryKey: [`/api/clips/${clipId}/comments`],
-    enabled: isOpen && clipId !== null,
-  });
 
   // Follow functionality
   const queryClient = useQueryClient();
