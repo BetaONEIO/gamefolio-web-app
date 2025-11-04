@@ -1272,13 +1272,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get current user (supports guest access)
-  app.get("/api/user", (req, res) => {
+  app.get("/api/user", async (req, res) => {
     if (!req.user) {
       // Return null for guest users instead of 401 error
       return res.json(null);
     }
 
-    // Remove password from response
+    // Update streak when user accesses the app (daily check-in)
+    try {
+      const streakInfo = await StreakService.updateLoginStreak((req.user as any).id);
+      if (streakInfo.bonusAwarded > 0) {
+        console.log(`🎉 Daily check-in streak bonus for ${(req.user as any).username}: ${streakInfo.message}`);
+      }
+      
+      // Fetch fresh user data after streak update
+      const freshUser = await storage.getUserById((req.user as any).id);
+      if (freshUser) {
+        const { password, ...userWithoutPassword } = freshUser as any;
+        return res.json({
+          id: userWithoutPassword.id,
+          username: userWithoutPassword.username,
+          email: userWithoutPassword.email,
+          emailVerified: userWithoutPassword.emailVerified || false,
+          profilePictureUrl: userWithoutPassword.profilePictureUrl,
+          bio: userWithoutPassword.bio,
+          bannerUrl: userWithoutPassword.bannerUrl,
+          displayName: userWithoutPassword.displayName,
+          backgroundColor: userWithoutPassword.backgroundColor,
+          accentColor: userWithoutPassword.accentColor,
+          avatarUrl: userWithoutPassword.avatarUrl,
+          createdAt: userWithoutPassword.createdAt,
+          userType: userWithoutPassword.userType,
+          ageRange: userWithoutPassword.ageRange,
+          role: userWithoutPassword.role,
+          isAdmin: userWithoutPassword.isAdmin || false,
+          messagingEnabled: userWithoutPassword.messagingEnabled || false,
+          isPrivate: userWithoutPassword.isPrivate || false,
+          currentStreak: userWithoutPassword.currentStreak || 0,
+          longestStreak: userWithoutPassword.longestStreak || 0,
+          level: userWithoutPassword.level || 1,
+          totalXP: userWithoutPassword.totalXP || 0,
+        });
+      }
+    } catch (error) {
+      console.error("Error updating daily check-in streak:", error);
+    }
+
+    // Fallback to session user data if streak update fails
     const { password, ...userWithoutPassword } = req.user as any;
     return res.json({
       id: userWithoutPassword.id,
@@ -1299,6 +1339,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       isAdmin: userWithoutPassword.isAdmin || false,
       messagingEnabled: userWithoutPassword.messagingEnabled || false,
       isPrivate: userWithoutPassword.isPrivate || false,
+      currentStreak: userWithoutPassword.currentStreak || 0,
+      longestStreak: userWithoutPassword.longestStreak || 0,
+      level: userWithoutPassword.level || 1,
+      totalXP: userWithoutPassword.totalXP || 0,
     });
   });
 
