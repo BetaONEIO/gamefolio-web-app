@@ -4333,12 +4333,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         const like = await storage.createLike(likeData);
 
-        // Award points to the user for liking
-        await LeaderboardService.awardPoints(
-          userId,
-          'like',
-          `Liked clip #${clipId}`
-        );
+        // Award points to the user for liking (only if they haven't earned points for this clip before)
+        const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'like', 'clip', clipId);
+        if (!hasEarnedPoints) {
+          await LeaderboardService.awardPoints(
+            userId,
+            'like',
+            `Liked clip #${clipId}`
+          );
+        }
 
         // Create notification for the clip owner
         await NotificationService.createLikeNotification(clipId, userId);
@@ -4441,13 +4444,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const reaction = await storage.createClipReaction(reactionData);
       
-      // Award points if this is a fire reaction
+      // Award points if this is a fire reaction (only if they haven't earned points for this clip before)
       if (req.body.emoji === '🔥') {
-        await LeaderboardService.awardPoints(
-          userId,
-          'fire',
-          `Fire reaction given to clip #${clipId}`
-        );
+        const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'fire', 'clip', clipId);
+        if (!hasEarnedPoints) {
+          await LeaderboardService.awardPoints(
+            userId,
+            'fire',
+            `Fire reaction given to clip #${clipId}`
+          );
+        }
       }
       
       res.status(201).json(reaction);
@@ -6703,12 +6709,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Like the screenshot
         const like = await storage.createScreenshotLike(userId, screenshotId);
 
-        // Award points to the user for liking
-        await LeaderboardService.awardPoints(
-          userId,
-          'like',
-          `Liked screenshot #${screenshotId}`
-        );
+        // Award points to the user for liking (only if they haven't earned points for this screenshot before)
+        const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'like', 'screenshot', screenshotId);
+        if (!hasEarnedPoints) {
+          await LeaderboardService.awardPoints(
+            userId,
+            'like',
+            `Liked screenshot #${screenshotId}`
+          );
+        }
 
         // Create notification for the screenshot owner
         await NotificationService.createScreenshotLikeNotification(screenshotId, userId);
@@ -6780,13 +6789,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const reaction = await storage.createScreenshotReaction(reactionData);
         
-        // Award points if this is a fire reaction
+        // Award points if this is a fire reaction (only if they haven't earned points for this screenshot before)
         if (emoji === '🔥') {
-          await LeaderboardService.awardPoints(
-            userId,
-            'fire',
-            `Fire reaction given to screenshot #${screenshotId}`
-          );
+          const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'fire', 'screenshot', screenshotId);
+          if (!hasEarnedPoints) {
+            await LeaderboardService.awardPoints(
+              userId,
+              'fire',
+              `Fire reaction given to screenshot #${screenshotId}`
+            );
+          }
         }
         
         res.status(201).json({ message: "Reaction added", reacted: true, reaction });

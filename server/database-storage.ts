@@ -3133,6 +3133,24 @@ export class DatabaseStorage implements IStorage {
     return results;
   }
 
+  // Check if user has already earned points for a specific content
+  async hasUserEarnedPointsForContent(userId: number, action: string, contentType: string, contentId: number): Promise<boolean> {
+    const descriptionPattern = `%${contentType} #${contentId}%`;
+    const [result] = await db
+      .select()
+      .from(userPointsHistory)
+      .where(
+        and(
+          eq(userPointsHistory.userId, userId),
+          eq(userPointsHistory.action, action),
+          sql`${userPointsHistory.description} LIKE ${descriptionPattern}`
+        )
+      )
+      .limit(1);
+
+    return !!result;
+  }
+
   // Increment user's total points (stored in totalXP field for DB compatibility)
   async incrementUserPoints(userId: number, points: number): Promise<void> {
     await db

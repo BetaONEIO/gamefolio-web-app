@@ -207,6 +207,7 @@ export interface IStorage {
   // Points operations (primary system for leveling and leaderboards)
   getUserPointsHistory(userId: number, limit?: number): Promise<UserPointsHistory[]>;
   incrementUserPoints(userId: number, points: number): Promise<void>;
+  hasUserEarnedPointsForContent(userId: number, action: string, contentType: string, contentId: number): Promise<boolean>;
 
   // Notification operations
   createNotification(notification: InsertNotification): Promise<Notification>;
