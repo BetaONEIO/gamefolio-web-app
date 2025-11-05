@@ -70,7 +70,7 @@ import multer from "multer";
 
 // Rate limiting for likes and reactions to prevent spam
 const actionRateLimits = new Map<string, number>();
-const RATE_LIMIT_COOLDOWN = 2000; // 2 seconds between actions
+const RATE_LIMIT_COOLDOWN = 5000; // 5 seconds between actions
 
 function checkRateLimit(userId: number, contentType: string, contentId: number, actionType: string): boolean {
   const key = `${userId}:${contentType}:${contentId}:${actionType}`;
