@@ -68,6 +68,34 @@ import { addPlayButtonOverlay } from "./og-thumbnail";
 // Import upload middlewares from upload router
 import multer from "multer";
 
+// Rate limiting for likes and reactions to prevent spam
+const actionRateLimits = new Map<string, number>();
+const RATE_LIMIT_COOLDOWN = 2000; // 2 seconds between actions
+
+function checkRateLimit(userId: number, contentType: string, contentId: number, actionType: string): boolean {
+  const key = `${userId}:${contentType}:${contentId}:${actionType}`;
+  const now = Date.now();
+  const lastAction = actionRateLimits.get(key);
+  
+  if (lastAction && (now - lastAction) < RATE_LIMIT_COOLDOWN) {
+    return false;
+  }
+  
+  actionRateLimits.set(key, now);
+  
+  // Clean up old entries periodically (keep map size manageable)
+  if (actionRateLimits.size > 10000) {
+    const cutoff = now - RATE_LIMIT_COOLDOWN * 2;
+    for (const [k, v] of actionRateLimits.entries()) {
+      if (v < cutoff) {
+        actionRateLimits.delete(k);
+      }
+    }
+  }
+  
+  return true;
+}
+
 // Password hashing utilities
 const scryptAsync = promisify(scrypt);
 
@@ -4271,6 +4299,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const userId = req.user!.id;
+      
+      // Rate limit check to prevent spam
+      if (!checkRateLimit(userId, 'clip', clipId, 'like')) {
+        return res.status(429).json({ 
+          message: "Please wait a moment before liking again" 
+        });
+      }
+      
       // Check if the clip exists
       const clip = await storage.getClip(clipId);
       if (!clip) {
@@ -4367,6 +4403,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/clips/:id/reactions", emailVerificationMiddleware, async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);
+      const userId = req.user!.id;
+
+      // Rate limit check to prevent spam
+      if (!checkRateLimit(userId, 'clip', clipId, 'reaction')) {
+        return res.status(429).json({ 
+          message: "Please wait a moment before reacting again" 
+        });
+      }
 
       // Check if the clip exists
       const clip = await storage.getClip(clipId);
@@ -4375,7 +4419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Prevent users from reacting to their own content
-      if (clip.userId === req.user?.id) {
+      if (clip.userId === userId) {
         return res.status(400).json({ message: "Cannot react to your own content, casual!" });
       }
 
@@ -4389,7 +4433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate and create the reaction
       const reactionData = insertClipReactionSchema.parse({
         clipId,
-        userId: req.user?.id,
+        userId: userId,
         emoji: req.body.emoji,
         positionX: req.body.positionX || 50,
         positionY: req.body.positionY || 50,
@@ -4398,9 +4442,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const reaction = await storage.createClipReaction(reactionData);
       
       // Award points if this is a fire reaction
-      if (req.body.emoji === '🔥' && req.user?.id) {
+      if (req.body.emoji === '🔥') {
         await LeaderboardService.awardPoints(
-          req.user.id,
+          userId,
           'fire',
           `Fire reaction given to clip #${clipId}`
         );
@@ -6630,6 +6674,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const screenshotId = parseInt(req.params.id);
       const userId = req.user!.id;
 
+      // Rate limit check to prevent spam
+      if (!checkRateLimit(userId, 'screenshot', screenshotId, 'like')) {
+        return res.status(429).json({ 
+          message: "Please wait a moment before liking again" 
+        });
+      }
+
       // Check if the screenshot exists
       const screenshot = await storage.getScreenshot(screenshotId);
       if (!screenshot) {
@@ -6688,6 +6739,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const screenshotId = parseInt(req.params.id);
       const userId = req.user!.id;
       const { emoji } = req.body;
+
+      // Rate limit check to prevent spam
+      if (!checkRateLimit(userId, 'screenshot', screenshotId, 'reaction')) {
+        return res.status(429).json({ 
+          message: "Please wait a moment before reacting again" 
+        });
+      }
 
       // Check if the screenshot exists
       const screenshot = await storage.getScreenshot(screenshotId);
