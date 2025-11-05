@@ -80,6 +80,9 @@ export function ScreenshotCard({
       return;
     }
     
+    // Store the current count for rollback if needed
+    const previousCount = likeCount;
+    
     // Optimistically update like count
     setLikeCount(hasUserLiked ? likeCount - 1 : likeCount + 1);
     
@@ -92,12 +95,27 @@ export function ScreenshotCard({
     likeMutation.mutate({
       screenshotId: screenshot.id,
       unlike: hasUserLiked
-    });
-    
-    toast({
-      title: hasUserLiked ? "Unliked" : "Liked!",
-      description: hasUserLiked ? "Removed from your liked screenshots" : "Added to your liked screenshots ❤️",
-      variant: "default"
+    }, {
+      onSuccess: (data: any) => {
+        // Update with actual count from server if provided
+        if (data && typeof data.count === 'number') {
+          setLikeCount(data.count);
+        }
+        toast({
+          title: hasUserLiked ? "Unliked" : "Liked!",
+          description: hasUserLiked ? "Removed from your liked screenshots" : "Added to your liked screenshots ❤️",
+          variant: "default"
+        });
+      },
+      onError: (error: any) => {
+        // Rollback optimistic update on error
+        setLikeCount(previousCount);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to toggle like",
+          variant: "destructive"
+        });
+      }
     });
   };
 
