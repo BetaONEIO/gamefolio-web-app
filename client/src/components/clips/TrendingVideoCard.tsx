@@ -45,7 +45,7 @@ const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) 
             <LazyImage
               src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
               alt={clip.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${clip.ageRestricted ? 'blur-2xl' : ''}`}
               placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%23374151'/%3e%3c/svg%3e"
               showLoadingSpinner={true}
               rootMargin="50px"
@@ -58,6 +58,15 @@ const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) 
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-800">
               <Play className="h-12 w-12 text-gray-500" />
+            </div>
+          )}
+
+          {/* Age Restricted Overlay */}
+          {clip.ageRestricted && (
+            <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-10">
+              <div className="text-red-500 text-4xl mb-2">⚠️</div>
+              <div className="text-white font-bold text-sm mb-1">Age Restricted</div>
+              <div className="text-white/70 text-xs">18+ Content</div>
             </div>
           )}
           

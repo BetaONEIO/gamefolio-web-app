@@ -115,13 +115,22 @@ export function ScreenshotCard({
         <img 
           src={screenshot.imageUrl || undefined} 
           alt={screenshot.title}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${screenshot.ageRestricted ? 'blur-2xl' : ''}`}
         />
 
         {/* Age Restriction badge */}
         {screenshot.ageRestricted && (
-          <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded font-bold shadow-lg">
+          <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded font-bold shadow-lg z-20">
             18+
+          </div>
+        )}
+
+        {/* Age Restricted Overlay */}
+        {screenshot.ageRestricted && (
+          <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-10">
+            <div className="text-red-500 text-4xl mb-2">⚠️</div>
+            <div className="text-white font-bold text-sm mb-1">Age Restricted</div>
+            <div className="text-white/70 text-xs">18+ Content</div>
           </div>
         )}
 

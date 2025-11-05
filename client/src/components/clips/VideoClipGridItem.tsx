@@ -72,7 +72,7 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
       {hasNoThumbnail ? (
         <video
           src={clip.videoUrl}
-          className="w-full h-full object-cover"
+          className={`w-full h-full object-cover ${clip.ageRestricted ? 'blur-2xl' : ''}`}
           preload="metadata"
           muted
           playsInline
@@ -81,12 +81,21 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         <LazyImage
           src={thumbnailUrl}
           alt={clip.title || "Video clip thumbnail"}
-          className="w-full h-full object-cover"
+          className={`w-full h-full object-cover ${clip.ageRestricted ? 'blur-2xl' : ''}`}
           placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%23f3f4f6'/%3e%3c/svg%3e"
           showLoadingSpinner={true}
           rootMargin="100px"
           threshold={0.1}
         />
+      )}
+
+      {/* Age Restricted Overlay */}
+      {clip.ageRestricted && (
+        <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-10 pointer-events-none">
+          <div className="text-red-500 text-4xl mb-2">⚠️</div>
+          <div className="text-white font-bold text-sm mb-1">Age Restricted</div>
+          <div className="text-white/70 text-xs">18+ Content</div>
+        </div>
       )}
 
       {/* View count overlay on hover */}
