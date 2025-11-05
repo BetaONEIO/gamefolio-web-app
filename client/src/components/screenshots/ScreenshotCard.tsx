@@ -118,6 +118,13 @@ export function ScreenshotCard({
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
 
+        {/* Age Restriction badge */}
+        {screenshot.ageRestricted && (
+          <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded font-bold shadow-lg">
+            18+
+          </div>
+        )}
+
         {/* Action buttons for screenshots */}
         {isOwnProfile ? (
           <Button

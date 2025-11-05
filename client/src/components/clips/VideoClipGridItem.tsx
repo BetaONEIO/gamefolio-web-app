@@ -134,6 +134,14 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
 
       {/* Top left section */}
       <div className="absolute top-1.5 md:top-2 left-1.5 md:left-2 flex items-center gap-1 z-10">
+        {/* Age Restriction badge */}
+        {clip.ageRestricted && (
+          <div className={`bg-red-600 text-white font-bold shadow-lg ${
+            isReel ? 'text-[8px] px-1 py-0.5 rounded md:text-[9px] md:px-1.5' : compact ? 'text-[9px] px-1.5 py-0.5 rounded md:text-[10px] md:px-2' : 'text-[10px] px-1.5 py-0.5 rounded md:text-xs md:px-2 md:py-1 md:rounded-md'
+          }`}>
+            18+
+          </div>
+        )}
         {/* NEW badge - shows for clips created within last 3 days */}
         {clip.createdAt && Date.now() - new Date(clip.createdAt).getTime() < 86400000 * 3 && (
           <div className={`bg-gray-600 text-white font-bold transform rotate-1 shadow-lg ${

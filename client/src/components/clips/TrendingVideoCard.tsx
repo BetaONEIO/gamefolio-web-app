@@ -68,6 +68,13 @@ const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) 
             </div>
           </div>
 
+          {/* Age Restriction badge */}
+          {clip.ageRestricted && (
+            <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded font-bold shadow-lg">
+              18+
+            </div>
+          )}
+
           {/* Duration badge */}
           <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
             {(() => {
