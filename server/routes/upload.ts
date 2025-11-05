@@ -750,6 +750,7 @@ router.post('/process-video', fullAccessMiddleware, async (req, res) => {
       duration: actualDuration || 60, // Use actual duration or fallback to 60
       trimStart: req.body.trimStart ? parseInt(req.body.trimStart) : 0,
       trimEnd: req.body.trimEnd ? parseInt(req.body.trimEnd) : 30,
+      ageRestricted: ageRestricted === true || ageRestricted === 'true',
       shareCode: shareCode,
     };
 
