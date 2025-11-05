@@ -547,6 +547,12 @@ const UploadPage = () => {
             ageRestricted
           };
           
+          console.log('🔞 Age Restriction Debug - Sending to backend:', {
+            ageRestricted,
+            ageRestrictedType: typeof ageRestricted,
+            fullProcessData: processData
+          });
+          
           const processResponse = await fetch('/api/upload/process-video', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

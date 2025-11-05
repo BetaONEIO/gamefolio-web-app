@@ -3629,6 +3629,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create the clip (initially without thumbnail)
+      console.log('🔞 Age Restriction Debug - Backend received:', {
+        ageRestricted: req.body.ageRestricted,
+        ageRestrictedType: typeof req.body.ageRestricted,
+        evaluation: req.body.ageRestricted === 'true' || req.body.ageRestricted === true
+      });
+      
       const clipData = {
         userId,
         title,
