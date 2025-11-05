@@ -479,6 +479,13 @@ router.post('/process-video', fullAccessMiddleware, async (req, res) => {
   try {
     const { uploadResult, title, description, gameId, tags, videoType = 'clip', ageRestricted } = req.body;
 
+    console.log('🔞 Age Restriction Backend Debug:', {
+      ageRestricted,
+      ageRestrictedType: typeof ageRestricted,
+      rawBody: req.body,
+      evaluation: ageRestricted === true || ageRestricted === 'true'
+    });
+
     if (!uploadResult || !title) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
