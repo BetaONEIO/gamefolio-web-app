@@ -69,11 +69,13 @@ import { addPlayButtonOverlay } from "./og-thumbnail";
 import multer from "multer";
 
 // Rate limiting for likes and reactions to prevent spam
+// Global rate limiting: user can only perform ONE action every 5 seconds across ALL content
 const actionRateLimits = new Map<string, number>();
 const RATE_LIMIT_COOLDOWN = 5000; // 5 seconds between actions
 
 function checkRateLimit(userId: number, contentType: string, contentId: number, actionType: string): boolean {
-  const key = `${userId}:${contentType}:${contentId}:${actionType}`;
+  // Use global key per user for stricter rate limiting
+  const key = `${userId}:like-action`;
   const now = Date.now();
   const lastAction = actionRateLimits.get(key);
   
