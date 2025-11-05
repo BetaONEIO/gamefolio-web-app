@@ -4305,7 +4305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Rate limit check to prevent spam
       if (!checkRateLimit(userId, 'clip', clipId, 'like')) {
         return res.status(429).json({ 
-          message: "Please wait a moment before liking again" 
+          message: "Slow down! You can only like/unlike once every 5 seconds" 
         });
       }
       
@@ -4422,7 +4422,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Rate limit check to prevent spam
       if (!checkRateLimit(userId, 'clip', clipId, 'reaction')) {
         return res.status(429).json({ 
-          message: "Please wait a moment before reacting again" 
+          message: "Slow down! You can only add/remove reactions once every 5 seconds" 
         });
       }
 
@@ -6694,7 +6694,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Rate limit check to prevent spam
       if (!checkRateLimit(userId, 'screenshot', screenshotId, 'like')) {
         return res.status(429).json({ 
-          message: "Please wait a moment before liking again" 
+          message: "Slow down! You can only like/unlike once every 5 seconds" 
         });
       }
 
@@ -6801,7 +6801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Rate limit check to prevent spam
       if (!checkRateLimit(userId, 'screenshot', screenshotId, 'reaction')) {
         return res.status(429).json({ 
-          message: "Please wait a moment before reacting again" 
+          message: "Slow down! You can only add/remove reactions once every 5 seconds" 
         });
       }
 
