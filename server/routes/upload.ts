@@ -257,7 +257,7 @@ router.post('/screenshot', fullAccessMiddleware, screenshotUpload.single('screen
       return res.status(400).json({ error: 'No screenshot file provided' });
     }
 
-    const { title, description, gameId, tags } = req.body;
+    const { title, description, gameId, tags, ageRestricted } = req.body;
 
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
@@ -347,6 +347,7 @@ router.post('/screenshot', fullAccessMiddleware, screenshotUpload.single('screen
       tags: tags ? JSON.parse(tags) : [],
       imageUrl: '', // Will be set after upload
       thumbnailUrl: '', // Will be set after processing
+      ageRestricted: ageRestricted === true || ageRestricted === 'true',
     };
 
     // Validate screenshot data with detailed error logging
@@ -476,7 +477,7 @@ router.post('/screenshot', fullAccessMiddleware, screenshotUpload.single('screen
 // Video/Reel processing endpoint (called after TUS upload completes)
 router.post('/process-video', fullAccessMiddleware, async (req, res) => {
   try {
-    const { uploadResult, title, description, gameId, tags, videoType = 'clip' } = req.body;
+    const { uploadResult, title, description, gameId, tags, videoType = 'clip', ageRestricted } = req.body;
 
     if (!uploadResult || !title) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -577,6 +578,7 @@ router.post('/process-video', fullAccessMiddleware, async (req, res) => {
       videoType,
       thumbnailUrl: '', // Will be generated
       duration: 0, // Will be determined during processing
+      ageRestricted: ageRestricted === true || ageRestricted === 'true',
     };
 
     // Validate clip data with detailed error logging
