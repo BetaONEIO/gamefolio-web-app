@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MentionInput } from "@/components/ui/mention-input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import * as tus from "tus-js-client";
 import {
   Card,
@@ -107,6 +108,7 @@ const UploadPage = () => {
   const [screenshotDescription, setScreenshotDescription] = useState("");
   const [screenshotSelectedGame, setScreenshotSelectedGame] = useState<Game | null>(null);
   const [screenshotTags, setScreenshotTags] = useState<string[]>([]);
+  const [screenshotAgeRestricted, setScreenshotAgeRestricted] = useState(false);
   
   // Use refs for form fields to prevent video rerendering on each keystroke
   const titleRef = useRef<string>("");
@@ -120,6 +122,7 @@ const UploadPage = () => {
   const [fileError, setFileError] = useState<string | null>(null);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [tags, setTags] = useState<string[]>([]);
+  const [ageRestricted, setAgeRestricted] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
@@ -176,6 +179,7 @@ const UploadPage = () => {
     setDescription("");
     setSelectedGame(null);
     setTags([]);
+    setAgeRestricted(false);
     setShowEditingTools(false);
     setGeneratedThumbnails([]);
     setThumbnailUrl("");
@@ -197,6 +201,7 @@ const UploadPage = () => {
     setScreenshotDescription("");
     setScreenshotSelectedGame(null);
     setScreenshotTags([]);
+    setScreenshotAgeRestricted(false);
     setShowScreenshotShareDialog(false);
     setUploadedScreenshot(null);
     // Note: Navigation is now handled in XP dialog onContinue callback
@@ -391,6 +396,7 @@ const UploadPage = () => {
           formData.append("gameImageUrl", screenshotSelectedGame.imageUrl || '');
         }
         formData.append("tags", JSON.stringify(screenshotTags));
+        formData.append("ageRestricted", screenshotAgeRestricted.toString());
         formData.append("screenshot", file);
         
         const response = await fetch("/api/screenshots/upload", {
@@ -537,7 +543,8 @@ const UploadPage = () => {
             description: descriptionRef.current || description,
             gameId: selectedGame ? parseInt(selectedGame.id.toString()) : null,
             tags,
-            videoType
+            videoType,
+            ageRestricted
           };
           
           const processResponse = await fetch('/api/upload/process-video', {
@@ -1202,6 +1209,26 @@ const UploadPage = () => {
                   )}
                 </div>
 
+                <div className="flex items-center space-x-2 p-3 rounded-lg border border-muted bg-muted/20">
+                  <Checkbox
+                    id="age-restricted"
+                    checked={ageRestricted}
+                    onCheckedChange={(checked) => setAgeRestricted(checked as boolean)}
+                    data-testid="checkbox-age-restricted"
+                  />
+                  <div className="flex-1">
+                    <Label
+                      htmlFor="age-restricted"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      Age-Restricted Content
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Mark this clip if it contains content that may not be suitable for all audiences
+                    </p>
+                  </div>
+                </div>
+
                 {/* Enhanced Upload Progress Visualization */}
                 {isUploading && (
                   <div className="space-y-4 p-6 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border border-primary/30 rounded-lg shadow-lg">
@@ -1705,6 +1732,26 @@ const UploadPage = () => {
                   />
                 </div>
 
+                <div className="flex items-center space-x-2 p-3 rounded-lg border border-muted bg-muted/20">
+                  <Checkbox
+                    id="reel-age-restricted"
+                    checked={ageRestricted}
+                    onCheckedChange={(checked) => setAgeRestricted(checked as boolean)}
+                    data-testid="checkbox-reel-age-restricted"
+                  />
+                  <div className="flex-1">
+                    <Label
+                      htmlFor="reel-age-restricted"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      Age-Restricted Content
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Mark this reel if it contains content that may not be suitable for all audiences
+                    </p>
+                  </div>
+                </div>
+
                 {/* Enhanced Upload Progress Visualization for Reels */}
                 {isUploading && (
                   <div className="space-y-4 p-6 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border border-primary/30 rounded-lg shadow-lg">
@@ -2042,6 +2089,26 @@ const UploadPage = () => {
                     maxTags={5}
                     placeholder="Add at least 2 tags and press Enter"
                   />
+                </div>
+
+                <div className="flex items-center space-x-2 p-3 rounded-lg border border-muted bg-muted/20">
+                  <Checkbox
+                    id="screenshot-age-restricted"
+                    checked={screenshotAgeRestricted}
+                    onCheckedChange={(checked) => setScreenshotAgeRestricted(checked as boolean)}
+                    data-testid="checkbox-screenshot-age-restricted"
+                  />
+                  <div className="flex-1">
+                    <Label
+                      htmlFor="screenshot-age-restricted"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      Age-Restricted Content
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Mark this screenshot if it contains content that may not be suitable for all audiences
+                    </p>
+                  </div>
                 </div>
                 
                 <div className="flex justify-end space-x-2">
