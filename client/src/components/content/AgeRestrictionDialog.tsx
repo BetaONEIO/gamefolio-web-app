@@ -20,7 +20,7 @@ export function AgeRestrictionDialog({
   isOpen,
   onAccept,
   onDecline,
-  contentType = 'content',
+  contentType = 'clip',
 }: AgeRestrictionDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
