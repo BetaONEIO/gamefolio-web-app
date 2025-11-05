@@ -17,8 +17,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { BannerUploadPreview } from "@/components/BannerUploadPreview";
 import { BannerPositionPreview } from "@/components/BannerPositionPreview";
 import { BlockedUsersSection } from "@/components/settings/blocked-users-section";
-import { backgroundThemes } from "@/lib/background-themes";
-import { AnimatedBackground } from "@/components/profile/AnimatedBackground";
 import { Check } from "lucide-react";
 
 const PRESET_THEMES = [
@@ -554,116 +552,6 @@ export default function SettingsPage() {
                     </div>
                   </CardContent>
                 </Card>
-
-              {/* Profile Background Themes */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Profile Background</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Choose a background theme for your profile page. Animated backgrounds add dynamic visual effects.
-                  </p>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {backgroundThemes.map((theme) => {
-                      const isActive = profileData.profileBackgroundTheme === theme.id;
-                      
-                      return (
-                        <button
-                          key={theme.id}
-                          type="button"
-                          onClick={() => {
-                            setProfileData(prev => ({
-                              ...prev,
-                              profileBackgroundType: theme.type,
-                              profileBackgroundTheme: theme.id,
-                              profileBackgroundAnimation: theme.animation || 'none'
-                            }));
-                          }}
-                          className={`relative p-4 rounded-lg transition-all text-left overflow-hidden ${
-                            isActive 
-                              ? 'ring-2 ring-primary shadow-lg' 
-                              : 'hover:ring-1 hover:ring-primary/50'
-                          }`}
-                          style={{ 
-                            background: theme.preview,
-                            minHeight: '100px'
-                          }}
-                        >
-                          <div className="absolute bottom-2 left-2 right-2">
-                            <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 rounded text-xs font-medium">
-                              {theme.name}
-                              {theme.type === 'animated' && (
-                                <span className="ml-1 text-primary">✨</span>
-                              )}
-                            </div>
-                          </div>
-
-                          {isActive && (
-                            <div className="absolute top-2 right-2">
-                              <div className="flex items-center justify-center w-6 h-6 bg-primary rounded-full">
-                                <Check className="w-4 h-4 text-white" />
-                              </div>
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Background Preview */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Background Preview</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Preview of your selected profile background theme
-                  </p>
-                  
-                  {(() => {
-                    const selectedTheme = backgroundThemes.find(
-                      theme => theme.id === profileData.profileBackgroundTheme
-                    );
-                    
-                    if (!selectedTheme) return null;
-                    
-                    return (
-                      <div 
-                        className="relative rounded-lg border-2 border-border overflow-hidden"
-                        style={{ 
-                          height: '300px',
-                          background: selectedTheme.type === 'animated' ? '#0B2232' : selectedTheme.preview
-                        }}
-                      >
-                        {selectedTheme.type === 'animated' && selectedTheme.animation && (
-                          <AnimatedBackground
-                            type="animated"
-                            theme={selectedTheme.animation}
-                            baseColor="#0B2232"
-                            accentColor="#4ADE80"
-                            contained={true}
-                          />
-                        )}
-                        
-                        <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
-                          <div className="bg-black/50 backdrop-blur-sm px-6 py-3 rounded-lg">
-                            <div className="text-white font-semibold text-lg text-center">
-                              {selectedTheme.name}
-                            </div>
-                            <div className="text-white/80 text-sm text-center">
-                              {selectedTheme.type === 'animated' ? 'Animated Background ✨' : 'Static Background'}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </CardContent>
-              </Card>
             </div>
             </div>
           </TabsContent>

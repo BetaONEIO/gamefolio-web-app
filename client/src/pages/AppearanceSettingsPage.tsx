@@ -34,8 +34,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { BannerUploadPreview } from '@/components/BannerUploadPreview';
-import { backgroundThemes, getBackgroundStyle } from '@/lib/background-themes';
-import { AnimatedBackground } from '@/components/profile/AnimatedBackground';
 
 // Define ProfileBanner type
 type ProfileBanner = {
@@ -214,9 +212,6 @@ const AppearanceSettingsPage: React.FC = () => {
     bannerUrl: z.string().optional().nullable(),
     displayName: z.string().min(2, 'Display name must be at least 2 characters'),
     bio: z.string().max(500, 'Bio cannot exceed 500 characters').optional().or(z.literal('')),
-    profileBackgroundType: z.string().default('solid'),
-    profileBackgroundTheme: z.string().default('default'),
-    profileBackgroundAnimation: z.string().default('none'),
   });
 
   // Theme presets
@@ -296,9 +291,6 @@ const AppearanceSettingsPage: React.FC = () => {
       bannerUrl: user?.bannerUrl || '',
       displayName: user?.displayName || '',
       bio: user?.bio || '',
-      profileBackgroundType: (user as any)?.profileBackgroundType || 'solid',
-      profileBackgroundTheme: (user as any)?.profileBackgroundTheme || 'default',
-      profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || 'none',
     },
     mode: 'onChange', // Enable real-time validation
   });
@@ -321,9 +313,6 @@ const AppearanceSettingsPage: React.FC = () => {
         bannerUrl: user.bannerUrl || '',
         displayName: user.displayName || '',
         bio: user.bio || '',
-        profileBackgroundType: (user as any)?.profileBackgroundType || 'solid',
-        profileBackgroundTheme: (user as any)?.profileBackgroundTheme || 'default',
-        profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || 'none',
       };
 
       // Only reset form if colors are different (prevents reversion after save)
@@ -426,10 +415,6 @@ const AppearanceSettingsPage: React.FC = () => {
         backgroundColor: values.primaryColor, // Map primaryColor to backgroundColor for API compatibility
         // Banner URL - preserve existing if form value is empty
         bannerUrl: values.bannerUrl || user.bannerUrl || '',
-        // Profile background customization
-        profileBackgroundType: values.profileBackgroundType,
-        profileBackgroundTheme: values.profileBackgroundTheme,
-        profileBackgroundAnimation: values.profileBackgroundAnimation
       };
 
       console.log('💾 FORM SUBMISSION - Preserving all user data:', updateData);
@@ -808,113 +793,6 @@ const AppearanceSettingsPage: React.FC = () => {
                     );
                   })}
                 </div>
-              </div>
-
-              {/* Profile Background Customization */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Profile Background</h3>
-                <p className="text-sm text-muted-foreground">
-                  Choose a background theme for your profile page. Animated backgrounds add dynamic visual effects.
-                </p>
-                
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {backgroundThemes.map((theme) => {
-                    const isActive = appearanceForm.watch('profileBackgroundTheme') === theme.id;
-                    
-                    return (
-                      <button
-                        key={theme.id}
-                        type="button"
-                        onClick={() => {
-                          appearanceForm.setValue('profileBackgroundType', theme.type, { shouldDirty: true });
-                          appearanceForm.setValue('profileBackgroundTheme', theme.id, { shouldDirty: true });
-                          appearanceForm.setValue('profileBackgroundAnimation', theme.animation || 'none', { shouldDirty: true });
-                          
-                          toast({
-                            title: "Background updated",
-                            description: `${theme.name} background selected. Click "Save Profile & Appearance" to apply changes.`,
-                            duration: 3000,
-                          });
-                        }}
-                        className={`relative p-4 rounded-lg transition-all text-left overflow-hidden ${
-                          isActive 
-                            ? 'ring-2 ring-primary shadow-lg' 
-                            : 'hover:ring-1 hover:ring-primary/50'
-                        }`}
-                        style={{ 
-                          background: theme.preview,
-                          minHeight: '100px'
-                        }}
-                      >
-                        {/* Theme name */}
-                        <div className="absolute bottom-2 left-2 right-2">
-                          <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 rounded text-xs font-medium">
-                            {theme.name}
-                            {theme.type === 'animated' && (
-                              <span className="ml-1 text-primary">✨</span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Active indicator */}
-                        {isActive && (
-                          <div className="absolute top-2 right-2">
-                            <div className="flex items-center justify-center w-6 h-6 bg-primary rounded-full">
-                              <Check className="w-4 h-4 text-white" />
-                            </div>
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Profile Background Preview Section - Show selected background theme */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Background Preview</h3>
-                <p className="text-sm text-muted-foreground">
-                  Preview of your selected profile background theme
-                </p>
-                
-                {(() => {
-                  const selectedTheme = backgroundThemes.find(
-                    theme => theme.id === appearanceForm.watch('profileBackgroundTheme')
-                  );
-                  
-                  if (!selectedTheme) return null;
-                  
-                  return (
-                    <div 
-                      className="relative rounded-lg border-2 border-border overflow-hidden"
-                      style={{ 
-                        height: '300px',
-                        background: selectedTheme.type === 'animated' ? '#0B2232' : selectedTheme.preview
-                      }}
-                    >
-                      {selectedTheme.type === 'animated' && selectedTheme.animation && (
-                        <AnimatedBackground
-                          type="animated"
-                          theme={selectedTheme.animation}
-                          baseColor="#0B2232"
-                          accentColor="#4ADE80"
-                          contained={true}
-                        />
-                      )}
-                      
-                      <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
-                        <div className="bg-black/50 backdrop-blur-sm px-6 py-3 rounded-lg">
-                          <div className="text-white font-semibold text-lg text-center">
-                            {selectedTheme.name}
-                          </div>
-                          <div className="text-white/80 text-sm text-center">
-                            {selectedTheme.type === 'animated' ? 'Animated Background ✨' : 'Static Background'}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
               </div>
 
               {/* Profile Banner */}
