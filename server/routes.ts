@@ -6730,6 +6730,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Unlike screenshot (DELETE endpoint for backward compatibility)
+  app.delete("/api/screenshots/:id/likes", emailVerificationMiddleware, async (req, res) => {
+    try {
+      const screenshotId = parseInt(req.params.id);
+      if (isNaN(screenshotId)) {
+        return res.status(400).json({ error: "Invalid screenshot ID" });
+      }
+
+      const userId = req.user!.id;
+      // Check if the user has liked this screenshot
+      const hasLiked = await storage.hasUserLikedScreenshot(userId, screenshotId);
+      if (!hasLiked) {
+        return res.status(400).json({ message: "You have not liked this screenshot" });
+      }
+
+      // Delete the like
+      const success = await storage.deleteScreenshotLike(userId, screenshotId);
+
+      if (!success) {
+        return res.status(500).json({ message: "Failed to unlike screenshot" });
+      }
+
+      res.status(200).json({ message: "Screenshot unliked successfully", liked: false });
+    } catch (error) {
+      console.error("Error unliking screenshot:", error);
+      res.status(500).json({ error: "Failed to unlike screenshot" });
+    }
+  });
+
   // Get screenshot reactions
   app.get("/api/screenshots/:id/reactions", async (req, res) => {
     try {
