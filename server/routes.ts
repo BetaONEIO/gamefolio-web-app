@@ -4324,7 +4324,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (hasLiked) {
         // Unlike the clip
         await storage.deleteLike(userId, clipId);
-        res.json({ message: "Clip unliked", liked: false });
+        
+        // Get actual like count after deletion
+        const likes = await storage.getLikesByClipId(clipId);
+        const likeCount = likes.length;
+        
+        res.json({ message: "Clip unliked", liked: false, count: likeCount });
       } else {
         // Like the clip
         const likeData = insertLikeSchema.parse({
@@ -4346,7 +4351,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create notification for the clip owner
         await NotificationService.createLikeNotification(clipId, userId);
 
-        res.status(201).json({ message: "Clip liked", liked: true, like });
+        // Get actual like count after adding
+        const likes = await storage.getLikesByClipId(clipId);
+        const likeCount = likes.length;
+
+        res.status(201).json({ message: "Clip liked", liked: true, like, count: likeCount });
       }
     } catch (error) {
       console.error("Error toggling clip like:", error);
@@ -6704,7 +6713,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (hasLiked) {
         // Unlike the screenshot
         await storage.deleteScreenshotLike(userId, screenshotId);
-        res.json({ message: "Screenshot unliked", liked: false });
+        
+        // Get actual like count after deletion
+        const likes = await storage.getScreenshotLikes(screenshotId);
+        const likeCount = likes.length;
+        
+        res.json({ message: "Screenshot unliked", liked: false, count: likeCount });
       } else {
         // Like the screenshot
         const like = await storage.createScreenshotLike(userId, screenshotId);
@@ -6722,7 +6736,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create notification for the screenshot owner
         await NotificationService.createScreenshotLikeNotification(screenshotId, userId);
 
-        res.status(201).json({ message: "Screenshot liked", liked: true, like });
+        // Get actual like count after adding
+        const likes = await storage.getScreenshotLikes(screenshotId);
+        const likeCount = likes.length;
+
+        res.status(201).json({ message: "Screenshot liked", liked: true, like, count: likeCount });
       }
     } catch (error) {
       console.error("Error toggling screenshot like:", error);

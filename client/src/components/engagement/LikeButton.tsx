@@ -76,7 +76,12 @@ export function LikeButton({
       // Update local state based on response
       if ('liked' in result) {
         setLiked(result.liked);
-        setCount(prevCount => result.liked ? prevCount + 1 : Math.max(0, prevCount - 1));
+        // Use actual count from server if provided, otherwise calculate
+        if ('count' in result && typeof result.count === 'number') {
+          setCount(result.count);
+        } else {
+          setCount(prevCount => result.liked ? prevCount + 1 : Math.max(0, prevCount - 1));
+        }
       } else {
         // Fallback for endpoints that don't return liked status
         setLiked(!liked);
