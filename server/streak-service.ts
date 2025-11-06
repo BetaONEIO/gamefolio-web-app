@@ -77,10 +77,10 @@ export class StreakService {
           message: "Already logged in today"
         };
       }
-      // If user logged in yesterday, increment streak
-      else if (this.areConsecutiveDays(lastStreakUpdate, now)) {
+      // Any login on a different day increments the streak (no reset for gaps)
+      else {
         currentStreak++;
-        message = `${currentStreak} day streak! Keep it up!`;
+        message = `${currentStreak} day streak! Keep going!`;
 
         // Check if this is a milestone and award bonus points
         if (STREAK_BONUSES[currentStreak as keyof typeof STREAK_BONUSES]) {
@@ -95,12 +95,6 @@ export class StreakService {
             `Login streak milestone: ${currentStreak} days (${bonusAwarded} bonus points)`
           );
         }
-      }
-      // If user missed a day, reset streak
-      else {
-        const previousStreak = currentStreak;
-        currentStreak = 1;
-        message = `Streak reset. Your previous streak was ${previousStreak} days. Starting fresh!`;
       }
 
       // Update longest streak if current is higher
