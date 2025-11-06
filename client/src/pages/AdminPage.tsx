@@ -876,7 +876,7 @@ const AdminPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-10">
+        <TabsList className="grid w-full grid-cols-11">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
@@ -884,6 +884,7 @@ const AdminPage = () => {
           <TabsTrigger value="banner">Banner</TabsTrigger>
           <TabsTrigger value="badges">Badges</TabsTrigger>
           <TabsTrigger value="levels">Levels</TabsTrigger>
+          <TabsTrigger value="streaks">Streaks</TabsTrigger>
           <TabsTrigger value="points">Points</TabsTrigger>
           <TabsTrigger value="hero-text">Hero Text</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
