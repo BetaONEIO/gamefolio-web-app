@@ -4133,7 +4133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete comment
-  app.delete("/api/comments/:id", authMiddleware, async (req, res) => {
+  app.delete("/api/clips/:clipId/comments/:id", authMiddleware, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const comment = await storage.getComment(commentId);
