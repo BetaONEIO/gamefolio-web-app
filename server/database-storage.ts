@@ -1647,9 +1647,9 @@ export class DatabaseStorage implements IStorage {
     const results = await db
       .select({
         screenshot: screenshots,
-        likesCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotLikes} WHERE ${screenshotLikes.screenshotId} = ${screenshots.id}), 0)`,
-        reactionsCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotReactions} WHERE ${screenshotReactions.screenshotId} = ${screenshots.id}), 0)`,
-        commentsCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotComments} WHERE ${screenshotComments.screenshotId} = ${screenshots.id}), 0)`
+        likesCount: sql<number>`COALESCE((SELECT COUNT(*)::int FROM screenshot_likes WHERE screenshot_likes.screenshot_id = screenshots.id), 0)`,
+        reactionsCount: sql<number>`COALESCE((SELECT COUNT(*)::int FROM screenshot_reactions WHERE screenshot_reactions.screenshot_id = screenshots.id), 0)`,
+        commentsCount: sql<number>`COALESCE((SELECT COUNT(*)::int FROM screenshot_comments WHERE screenshot_comments.screenshot_id = screenshots.id), 0)`
       })
       .from(screenshots)
       .where(eq(screenshots.userId, userId))
@@ -1658,9 +1658,9 @@ export class DatabaseStorage implements IStorage {
     return results.map(row => ({
       ...row.screenshot,
       _count: {
-        likes: row.likesCount,
-        reactions: row.reactionsCount,
-        comments: row.commentsCount
+        likes: Number(row.likesCount),
+        reactions: Number(row.reactionsCount),
+        comments: Number(row.commentsCount)
       }
     })) as any;
   }
