@@ -226,20 +226,23 @@ adminRouter.patch("/users/:id/streak", async (req: Request, res: Response) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Update user streaks using the storage interface
+    // Update user streaks while preserving the existing lastStreakUpdate
+    // This ensures the user can still earn their daily streak increment
+    const existingLastUpdate = user.lastStreakUpdate || new Date();
+    
     if (storage.updateUserStreak) {
       await storage.updateUserStreak({
         userId,
         currentStreak: parseInt(currentStreak),
         longestStreak: parseInt(longestStreak),
-        lastStreakUpdate: new Date()
+        lastStreakUpdate: existingLastUpdate
       });
     } else {
       // Fallback if updateUserStreak is not available
       await storage.updateUser(userId, {
         currentStreak: parseInt(currentStreak),
         longestStreak: parseInt(longestStreak),
-        lastStreakUpdate: new Date()
+        lastStreakUpdate: existingLastUpdate
       });
     }
 

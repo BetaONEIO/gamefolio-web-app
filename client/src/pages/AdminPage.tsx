@@ -1144,19 +1144,21 @@ const AdminPage = () => {
                       <TableHead>Role</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Privacy</TableHead>
+                      <TableHead>Current Streak</TableHead>
+                      <TableHead>Longest Streak</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {usersLoading ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center">
+                        <TableCell colSpan={8} className="text-center">
                           Loading users...
                         </TableCell>
                       </TableRow>
                     ) : usersData?.users?.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center">
+                        <TableCell colSpan={8} className="text-center">
                           No users found
                         </TableCell>
                       </TableRow>
@@ -1187,6 +1189,18 @@ const AdminPage = () => {
                             <Badge variant={user.isPrivate ? "secondary" : "outline"}>
                               {user.isPrivate ? "Private" : "Public"}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1" data-testid={`streak-current-${user.id}`}>
+                              <Flame className="h-3 w-3 text-orange-500" />
+                              <span>{user.currentStreak || 0} days</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1" data-testid={`streak-longest-${user.id}`}>
+                              <Trophy className="h-3 w-3 text-yellow-500" />
+                              <span>{user.longestStreak || 0} days</span>
+                            </div>
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end space-x-1">
