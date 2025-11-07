@@ -27,7 +27,7 @@ export class JWTService {
     const payload: TokenPayload = {
       userId: user.id,
       username: user.username,
-      email: user.email,
+      email: user.email || '',
       role: user.role || undefined,
     };
 
@@ -45,7 +45,7 @@ export class JWTService {
     const payload: TokenPayload = {
       userId: user.id,
       username: user.username,
-      email: user.email,
+      email: user.email || '',
       role: user.role || undefined,
     };
 
