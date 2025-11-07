@@ -21,7 +21,10 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
 ### Backend (Node.js/Express)
 - **Framework**: Express server with TypeScript.
 - **Session Management**: `connect-pg-simple` for PostgreSQL-backed sessions.
-- **Authentication**: `passport-local` for user authentication.
+- **Authentication**: Hybrid authentication system supporting both session-based (web) and JWT token-based (desktop/mobile) authentication.
+  - **Web**: `passport-local` for session-based user authentication.
+  - **Desktop/Mobile**: JWT tokens (7-day access, 30-day refresh) via `jsonwebtoken`.
+  - **Hybrid Middleware**: Accepts both session cookies and Bearer tokens for maximum flexibility.
 - **File Uploads**: Handled via `multer` and Supabase storage.
 - **Email Verification**: Token-based system for user verification.
 - **Content Filtering**: Integrated `bad-words` library with custom Supabase `banned_words` table for real-time content moderation across all user inputs.
