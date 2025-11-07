@@ -61,6 +61,7 @@ import { NotificationService } from "./notification-service";
 import { MentionService } from "./mention-service";
 import { initializeRealtimeNotificationService } from './realtime-notification-service';
 import { adminMiddleware } from "./middleware/admin";
+import { optionalHybridAuth } from "./middleware/optional-hybrid-auth";
 import QRCode from "qrcode";
 import { supabaseStorage } from "./supabase-storage";
 import { contentFilterService } from "./services/content-filter";
@@ -1303,7 +1304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get current user (supports guest access)
-  app.get("/api/user", async (req, res) => {
+  app.get("/api/user", optionalHybridAuth, async (req, res) => {
     if (!req.user) {
       // Return null for guest users instead of 401 error
       return res.json(null);

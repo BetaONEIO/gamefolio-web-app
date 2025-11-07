@@ -138,10 +138,16 @@ router.post('/auth/token/refresh', async (req: Request, res: Response) => {
     // Verify refresh token
     const payload = JWTService.verifyToken(refreshToken);
 
-    // Fetch current user data
-    const user = await storage.getUserById(payload.userId);
-    if (!user) {
-      return res.status(401).json({ message: 'User not found' });
+    // Special handling for demo user (ID 999) - not in database
+    let user;
+    if (Number(payload.userId) === 999) {
+      user = getDemoUser();
+    } else {
+      // Fetch current user data from database
+      user = await storage.getUserById(payload.userId);
+      if (!user) {
+        return res.status(401).json({ message: 'User not found' });
+      }
     }
 
     // Generate new tokens

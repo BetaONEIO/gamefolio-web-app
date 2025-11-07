@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { JWTService } from '../services/jwt-service';
 import { storage } from '../storage';
+import { getDemoUser } from '../demo-user';
 
 /**
  * Hybrid authentication middleware that supports both session-based and JWT token authentication
@@ -25,11 +26,17 @@ export const hybridAuth = async (req: Request, res: Response, next: NextFunction
     // Verify JWT token
     const payload = JWTService.verifyToken(token);
     
-    // Fetch user from database
-    const user = await storage.getUserById(payload.userId);
-    
-    if (!user) {
-      return res.status(401).json({ message: 'User not found' });
+    // Special handling for demo user (ID 999) - not in database
+    let user;
+    if (Number(payload.userId) === 999) {
+      user = getDemoUser();
+    } else {
+      // Fetch regular user from database
+      user = await storage.getUserById(payload.userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: 'User not found' });
+      }
     }
 
     // Attach user to request object (similar to Passport session)
