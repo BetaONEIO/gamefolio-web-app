@@ -46,6 +46,7 @@ import adminRouter from "./routes/admin";
 import adminContentFilterRouter from "./routes/admin-content-filter";
 import twitchGamesRouter from "./routes/twitch-games";
 import authRouter from "./routes/auth-routes";
+import tokenAuthRouter from "./routes/token-auth";
 import uploadRouter from "./routes/upload";
 import migrationRouter from "./routes/migration";
 import viewRouter from "./routes/view";
@@ -7021,6 +7022,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register authentication routes for email verification and password reset
   app.use('/api', authRouter);
+
+  // Register token-based authentication routes for desktop apps
+  app.use('/api', tokenAuthRouter);
 
   // Register view routes for shareable content
   app.use('/api/view', viewRouter);
