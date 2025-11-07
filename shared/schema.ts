@@ -895,6 +895,7 @@ export type ClipWithUser = Clip & {
   _count?: {
     likes: number;
     comments: number;
+    reactions: number;
   };
 };
 

@@ -478,7 +478,8 @@ export class DatabaseStorage implements IStorage {
         game: game?.id ? { ...game } : null,
         _count: {
           likes: parseInt(likesResult[0]?.count.toString() || '0'),
-          comments: parseInt(commentsResult[0]?.count.toString() || '0')
+          comments: parseInt(commentsResult[0]?.count.toString() || '0'),
+          reactions: parseInt(reactionsResult[0]?.count.toString() || '0')
         }
       };
     } catch (error) {
@@ -782,13 +783,15 @@ export class DatabaseStorage implements IStorage {
         },
         engagement: sql<number>`cast(count(distinct ${likes.id}) + count(distinct ${comments.id}) as integer)`.as('engagement'),
         likesCount: sql<number>`count(distinct ${likes.id})`.as('likesCount'),
-        commentsCount: sql<number>`count(distinct ${comments.id})`.as('commentsCount')
+        commentsCount: sql<number>`count(distinct ${comments.id})`.as('commentsCount'),
+        reactionsCount: sql<number>`count(distinct ${clipReactions.id})`.as('reactionsCount')
       })
       .from(clips)
       .leftJoin(users, eq(clips.userId, users.id))
       .leftJoin(games, eq(clips.gameId, games.id))
       .leftJoin(likes, eq(clips.id, likes.clipId))
       .leftJoin(comments, eq(clips.id, comments.clipId))
+      .leftJoin(clipReactions, eq(clips.id, clipReactions.clipId))
       .leftJoin(follows, and(
         eq(follows.followingId, users.id),
         currentUserId ? eq(follows.followerId, currentUserId) : sql`false`
@@ -821,7 +824,8 @@ export class DatabaseStorage implements IStorage {
       game: row.game?.id ? { ...row.game } : null,
       _count: {
         likes: parseInt(row.likesCount?.toString() || '0'),
-        comments: parseInt(row.commentsCount?.toString() || '0')
+        comments: parseInt(row.commentsCount?.toString() || '0'),
+        reactions: parseInt(row.reactionsCount?.toString() || '0')
       }
     }));
   }
@@ -846,13 +850,15 @@ export class DatabaseStorage implements IStorage {
           createdAt: games.createdAt,
         },
         likesCount: sql<number>`count(distinct ${likes.id})`.as('likesCount'),
-        commentsCount: sql<number>`count(distinct ${comments.id})`.as('commentsCount')
+        commentsCount: sql<number>`count(distinct ${comments.id})`.as('commentsCount'),
+        reactionsCount: sql<number>`count(distinct ${clipReactions.id})`.as('reactionsCount')
       })
       .from(clips)
       .leftJoin(users, eq(clips.userId, users.id))
       .leftJoin(games, eq(clips.gameId, games.id))
       .leftJoin(likes, eq(clips.id, likes.clipId))
       .leftJoin(comments, eq(clips.id, comments.clipId))
+      .leftJoin(clipReactions, eq(clips.id, clipReactions.clipId))
       .leftJoin(follows, and(
         eq(follows.followingId, users.id),
         currentUserId ? eq(follows.followerId, currentUserId) : sql`false`
@@ -883,7 +889,8 @@ export class DatabaseStorage implements IStorage {
       game: row.game?.id ? { ...row.game } : null,
       _count: {
         likes: parseInt(row.likesCount?.toString() || '0'),
-        comments: parseInt(row.commentsCount?.toString() || '0')
+        comments: parseInt(row.commentsCount?.toString() || '0'),
+        reactions: parseInt(row.reactionsCount?.toString() || '0')
       }
     }));
   }

@@ -244,7 +244,7 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
               contentType="clip"
               contentOwnerId={clip.userId}
               initialFired={false}
-              initialCount={0}
+              initialCount={clip._count?.reactions || 0}
               size="sm"
               onUnauthenticatedAction={() => openDialog('general')}
             />

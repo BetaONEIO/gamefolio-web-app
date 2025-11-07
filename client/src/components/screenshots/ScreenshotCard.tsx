@@ -235,6 +235,16 @@ export function ScreenshotCard({
               <span>{likeCount}</span>
             </button>
             
+            <FireButton 
+              contentId={screenshot.id}
+              contentType="screenshot"
+              contentOwnerId={screenshot.userId}
+              initialFired={false}
+              initialCount={(screenshot as any)._count?.reactions || 0}
+              size="sm"
+              showCount={true}
+            />
+            
             <div className="flex items-center gap-1">
               <MessageSquare className="h-4 w-4" />
               <span>{(screenshot as any)._count?.comments || 0}</span>

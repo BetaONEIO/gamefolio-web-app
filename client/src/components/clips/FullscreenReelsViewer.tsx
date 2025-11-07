@@ -316,7 +316,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                       contentId={reel.id}
                       contentType="clip"
                       contentOwnerId={reel.userId}
-                      initialCount={0}
+                      initialCount={parseInt(reel._count?.reactions?.toString() || '0')}
                       size="lg"
                       showCount={true}
                       variant="vertical"

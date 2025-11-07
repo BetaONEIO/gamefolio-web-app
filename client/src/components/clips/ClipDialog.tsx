@@ -493,7 +493,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           contentType="clip"
                           contentOwnerId={clip.userId}
                           initialFired={false}
-                          initialCount={0}
+                          initialCount={clip._count?.reactions || 0}
                           size="lg"
                           variant="vertical"
                           onUnauthenticatedAction={() => openDialog('general')}
@@ -749,7 +749,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           contentType="clip"
                           contentOwnerId={clip.userId}
                           initialFired={false}
-                          initialCount={0}
+                          initialCount={clip._count?.reactions || 0}
                           size="lg"
                           onUnauthenticatedAction={() => openDialog('general')}
                         />
