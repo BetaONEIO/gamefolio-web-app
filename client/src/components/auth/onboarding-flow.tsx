@@ -1455,6 +1455,32 @@ export default function OnboardingFlow({
             ) : (
               <div className="mb-6 space-y-3">
                 <Button
+                  onClick={handleCreateWallet}
+                  disabled={isCreatingWallet}
+                  className="w-full h-auto py-4 px-6 bg-primary hover:bg-primary/90 text-white"
+                  data-testid="button-create-wallet"
+                >
+                  <div className="flex items-start gap-3 text-left w-full">
+                    <Plus className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="font-semibold mb-1">
+                        {isCreatingWallet ? (
+                          <span className="flex items-center">
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Creating wallet...
+                          </span>
+                        ) : (
+                          "Create a wallet"
+                        )}
+                      </div>
+                      <div className="text-sm text-white/80 font-normal">
+                        We'll create a new wallet for you via Crossmint
+                      </div>
+                    </div>
+                  </div>
+                </Button>
+
+                <Button
                   onClick={() => setShowWalletInput(true)}
                   variant="outline"
                   className="w-full h-auto py-4 px-6"
@@ -1472,33 +1498,6 @@ export default function OnboardingFlow({
                 </Button>
 
                 <Button
-                  onClick={handleCreateWallet}
-                  disabled={isCreatingWallet}
-                  variant="outline"
-                  className="w-full h-auto py-4 px-6"
-                  data-testid="button-create-wallet"
-                >
-                  <div className="flex items-start gap-3 text-left w-full">
-                    <Plus className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <div className="font-semibold text-white mb-1">
-                        {isCreatingWallet ? (
-                          <span className="flex items-center">
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Creating wallet...
-                          </span>
-                        ) : (
-                          "I don't have a wallet and I'd like one"
-                        )}
-                      </div>
-                      <div className="text-sm text-gray-400 font-normal">
-                        We'll create a new wallet for you via Crossmint
-                      </div>
-                    </div>
-                  </div>
-                </Button>
-
-                <Button
                   onClick={goToNextStep}
                   variant="ghost"
                   className="w-full h-auto py-4 px-6 text-gray-400 hover:text-white"
@@ -1507,7 +1506,7 @@ export default function OnboardingFlow({
                   <div className="flex items-start gap-3 text-left w-full">
                     <ArrowRight className="h-5 w-5 mt-0.5 flex-shrink-0" />
                     <div>
-                      <div className="font-semibold mb-1">No, I don't want to do that right now</div>
+                      <div className="font-semibold mb-1">Not right now - thank you</div>
                       <div className="text-sm font-normal">
                         You can set this up later from your profile
                       </div>
