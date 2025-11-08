@@ -49,7 +49,7 @@ export function CrossmintProvider({ children }: { children: ReactNode }) {
 
     setIsLoading(true);
     try {
-      // Call backend to create wallet (API key stays server-side)
+      // Call backend to get or create wallet (API key stays server-side)
       const createResponse = await fetch('/api/wallet/create', {
         method: 'POST',
         credentials: 'include',
@@ -57,7 +57,7 @@ export function CrossmintProvider({ children }: { children: ReactNode }) {
 
       if (!createResponse.ok) {
         const errorData = await createResponse.json();
-        throw new Error(errorData.message || 'Failed to create wallet');
+        throw new Error(errorData.message || 'Failed to connect wallet');
       }
 
       const walletData = await createResponse.json();
@@ -67,14 +67,18 @@ export function CrossmintProvider({ children }: { children: ReactNode }) {
         chain: walletData.chain || 'polygon',
       });
 
+      // Show appropriate message based on whether wallet was created or retrieved
+      const isExisting = walletData.isExisting || false;
       toast({
-        title: "Wallet created!",
-        description: "Your blockchain wallet has been created successfully",
+        title: isExisting ? "Wallet connected!" : "Wallet created!",
+        description: isExisting 
+          ? "Connected to your existing Crossmint wallet"
+          : "Your new Crossmint wallet has been created successfully",
       });
     } catch (error: any) {
       console.error('Failed to create wallet:', error);
       toast({
-        title: "Failed to create wallet",
+        title: "Failed to connect wallet",
         description: error.message || "Please try again later",
         variant: "destructive",
       });

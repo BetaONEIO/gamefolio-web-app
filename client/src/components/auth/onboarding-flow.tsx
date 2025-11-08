@@ -237,7 +237,7 @@ export default function OnboardingFlow({
     loadExistingWallet();
   }, [currentStep, walletAddress]);
 
-  // Create wallet via Crossmint API
+  // Get or create wallet via Crossmint API
   const handleCreateWallet = async () => {
     setIsCreatingWallet(true);
     
@@ -247,29 +247,33 @@ export default function OnboardingFlow({
         credentials: 'include',
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to connect wallet');
+      }
+
       const walletData = await response.json();
 
-      if (response.ok || response.status === 400) {
-        if (walletData.address) {
-          setWalletAddress(walletData.address);
-          
-          toast({
-            title: response.status === 400 ? "Wallet ready!" : "Wallet created!",
-            description: response.status === 400 
-              ? "You already have a blockchain wallet" 
-              : "Your blockchain wallet has been created successfully",
-            variant: "gamefolioSuccess",
-          });
-        } else {
-          throw new Error('No wallet address received');
-        }
+      if (walletData.address) {
+        setWalletAddress(walletData.address);
+        
+        // Use the isExisting flag from the API response
+        const isExisting = walletData.isExisting || false;
+        
+        toast({
+          title: isExisting ? "Wallet connected!" : "Wallet created!",
+          description: isExisting 
+            ? "Connected to your existing Crossmint wallet" 
+            : "Your new Crossmint wallet has been created successfully",
+          variant: "gamefolioSuccess",
+        });
       } else {
-        throw new Error(walletData.message || 'Failed to create wallet');
+        throw new Error('No wallet address received');
       }
     } catch (error: any) {
       console.error('Failed to create wallet:', error);
       toast({
-        title: "Failed to create wallet",
+        title: "Failed to connect wallet",
         description: error.message || "Please try again later",
         variant: "gamefolioError",
       });
@@ -1376,7 +1380,7 @@ export default function OnboardingFlow({
               </Tooltip>
             </div>
             <p className="text-gray-300 mb-6">
-              We've integrated Crossmint so you can fund a crypto wallet and purchase exclusive NFTs. Set up your wallet now or skip and do it later.
+              Connect a crypto wallet to unlock future NFT features and rewards. You can create one now via Crossmint, connect an existing external wallet, or skip this step.
             </p>
             {walletAddress ? (
               <div className="mb-6">
@@ -1466,14 +1470,14 @@ export default function OnboardingFlow({
                         {isCreatingWallet ? (
                           <span className="flex items-center">
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Creating wallet...
+                            Connecting to Crossmint...
                           </span>
                         ) : (
-                          "Create a wallet"
+                          "Create/Connect Crossmint wallet"
                         )}
                       </div>
                       <div className="text-sm text-white/80 font-normal">
-                        We'll create a new wallet for you via Crossmint
+                        Get or connect your Crossmint wallet (creates new if needed)
                       </div>
                     </div>
                   </div>
@@ -1488,9 +1492,9 @@ export default function OnboardingFlow({
                   <div className="flex items-start gap-3 text-left w-full">
                     <Wallet className="h-5 w-5 mt-0.5 flex-shrink-0" />
                     <div>
-                      <div className="font-semibold text-white mb-1">I already have a wallet (Crossmint)</div>
+                      <div className="font-semibold text-white mb-1">Connect external wallet</div>
                       <div className="text-sm text-gray-400 font-normal">
-                        Connect your existing wallet address
+                        Enter address from MetaMask, WalletConnect, etc.
                       </div>
                     </div>
                   </div>
@@ -1505,7 +1509,7 @@ export default function OnboardingFlow({
                   <div className="flex items-start gap-3 text-left w-full">
                     <ArrowRight className="h-5 w-5 mt-0.5 flex-shrink-0" />
                     <div>
-                      <div className="font-semibold mb-1">Not right now - thank you</div>
+                      <div className="font-semibold mb-1">Skip for now</div>
                       <div className="text-sm font-normal">
                         You can set this up later from your profile
                       </div>
