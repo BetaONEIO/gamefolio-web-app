@@ -203,10 +203,7 @@ export default function OnboardingFlow({
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [ageRange, setAgeRange] = useState<"13-17" | "18-24" | "25-34" | "35-44" | "45-54" | "55+" | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [showWalletInput, setShowWalletInput] = useState(false);
-  const [manualWalletAddress, setManualWalletAddress] = useState("");
   const [isCreatingWallet, setIsCreatingWallet] = useState(false);
-  const [isSavingWallet, setIsSavingWallet] = useState(false);
 
   // Auto-skip username step for non-Google users
   useEffect(() => {
@@ -282,64 +279,6 @@ export default function OnboardingFlow({
     }
   };
 
-  // Save manual wallet address
-  const handleSaveManualWallet = async () => {
-    if (!manualWalletAddress.trim()) {
-      toast({
-        title: "Wallet address required",
-        description: "Please enter a valid wallet address",
-        variant: "gamefolioError",
-      });
-      return;
-    }
-
-    // Basic validation for Ethereum-style addresses
-    if (!/^0x[a-fA-F0-9]{40}$/.test(manualWalletAddress.trim())) {
-      toast({
-        title: "Invalid wallet address",
-        description: "Please enter a valid Ethereum wallet address (starts with 0x)",
-        variant: "gamefolioError",
-      });
-      return;
-    }
-
-    setIsSavingWallet(true);
-
-    try {
-      const response = await fetch('/api/wallet/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          walletAddress: manualWalletAddress.trim(),
-          walletChain: 'polygon'
-        })
-      });
-
-      if (response.ok) {
-        setWalletAddress(manualWalletAddress.trim());
-        setShowWalletInput(false);
-        
-        toast({
-          title: "Wallet saved!",
-          description: "Your wallet address has been saved successfully",
-          variant: "gamefolioSuccess",
-        });
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to save wallet');
-      }
-    } catch (error: any) {
-      console.error('Failed to save wallet:', error);
-      toast({
-        title: "Failed to save wallet",
-        description: error.message || "Please try again later",
-        variant: "gamefolioError",
-      });
-    } finally {
-      setIsSavingWallet(false);
-    }
-  };
 
   // Load games using Twitch API
   const loadGames = async () => {
@@ -1380,7 +1319,7 @@ export default function OnboardingFlow({
               </Tooltip>
             </div>
             <p className="text-gray-300 mb-6">
-              Connect a crypto wallet to unlock future NFT features and rewards. You can create one now via Crossmint, connect an existing external wallet, or skip this step.
+              Connect a crypto wallet to unlock future NFT features and rewards. You can create one now via Crossmint or skip this step.
             </p>
             {walletAddress ? (
               <div className="mb-6">
@@ -1402,59 +1341,6 @@ export default function OnboardingFlow({
                   </CardContent>
                 </Card>
               </div>
-            ) : showWalletInput ? (
-              <div className="mb-6">
-                <Card className="bg-gray-800/50 border-gray-700">
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="font-semibold text-white mb-2">Enter Your Wallet Address</h3>
-                        <p className="text-sm text-gray-400 mb-4">
-                          Paste your existing Ethereum wallet address below
-                        </p>
-                      </div>
-                      <div className="space-y-3">
-                        <Input
-                          type="text"
-                          placeholder="0x..."
-                          value={manualWalletAddress}
-                          onChange={(e) => setManualWalletAddress(e.target.value)}
-                          className="font-mono text-sm"
-                          data-testid="input-wallet-address"
-                        />
-                        <div className="flex gap-3">
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              setShowWalletInput(false);
-                              setManualWalletAddress("");
-                            }}
-                            disabled={isSavingWallet}
-                            data-testid="button-cancel-wallet-input"
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            onClick={handleSaveManualWallet}
-                            disabled={isSavingWallet || !manualWalletAddress.trim()}
-                            className="flex-1"
-                            data-testid="button-save-wallet"
-                          >
-                            {isSavingWallet ? (
-                              <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Saving...
-                              </>
-                            ) : (
-                              "Save Wallet"
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
             ) : (
               <div className="mb-6 space-y-3">
                 <Button
@@ -1470,31 +1356,14 @@ export default function OnboardingFlow({
                         {isCreatingWallet ? (
                           <span className="flex items-center">
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Connecting to Crossmint...
+                            Creating wallet...
                           </span>
                         ) : (
-                          "Create/Connect Crossmint wallet"
+                          "Create Crossmint Wallet"
                         )}
                       </div>
                       <div className="text-sm text-white/80 font-normal">
-                        Get or connect your Crossmint wallet (creates new if needed)
-                      </div>
-                    </div>
-                  </div>
-                </Button>
-
-                <Button
-                  onClick={() => setShowWalletInput(true)}
-                  variant="outline"
-                  className="w-full h-auto py-4 px-6"
-                  data-testid="button-have-wallet"
-                >
-                  <div className="flex items-start gap-3 text-left w-full">
-                    <Wallet className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <div className="font-semibold text-white mb-1">Connect external wallet</div>
-                      <div className="text-sm text-gray-400 font-normal">
-                        Enter address from MetaMask, WalletConnect, etc.
+                        Get a secure blockchain wallet for NFTs and rewards
                       </div>
                     </div>
                   </div>
@@ -1518,20 +1387,18 @@ export default function OnboardingFlow({
                 </Button>
               </div>
             )}
-            {(walletAddress || showWalletInput) && (
+            {walletAddress && (
               <div className="flex gap-3">
-                <Button variant="outline" onClick={goToPrevStep} disabled={isSavingWallet}>
+                <Button variant="outline" onClick={goToPrevStep}>
                   Back
                 </Button>
-                {walletAddress && (
-                  <Button
-                    onClick={goToNextStep}
-                    className="flex-1"
-                    data-testid="button-next-from-wallet"
-                  >
-                    Next <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                )}
+                <Button
+                  onClick={goToNextStep}
+                  className="flex-1"
+                  data-testid="button-next-from-wallet"
+                >
+                  Next <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
               </div>
             )}
           </>
