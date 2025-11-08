@@ -7037,7 +7037,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Crossmint Wallet Routes
   // ==========================================
 
-  // Create wallet via Crossmint API (server-side only for security)
+  // Get or create wallet via Crossmint API (handles both new and existing wallets)
   app.post("/api/wallet/create", authMiddleware, async (req, res) => {
     try {
       const userId = req.user!.id;
@@ -7047,12 +7047,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Check if user already has a wallet
+      // If user already has a wallet saved in our DB, return it
       if (user.walletAddress) {
-        return res.status(400).json({ 
-          message: "Wallet already exists",
+        return res.json({ 
           address: user.walletAddress,
-          chain: user.walletChain
+          chain: user.walletChain || 'polygon',
+          message: "Wallet already exists",
+          isExisting: true
         });
       }
 
@@ -7064,7 +7065,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userEmail = user.email || `${user.username}@gamefolio.app`;
 
-      // Call Crossmint API to create wallet
+      // Call Crossmint API to get or create wallet
+      // This is idempotent - it will retrieve existing wallet or create new one
       const crossmintResponse = await fetch('https://www.crossmint.com/api/v1-alpha2/wallets', {
         method: 'POST',
         headers: {
@@ -7085,6 +7087,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!crossmintResponse.ok) {
         const errorText = await crossmintResponse.text();
         console.error("Crossmint API error:", errorText);
+        
+        // Check if error is because wallet already exists
+        if (errorText.includes('already exists') || errorText.includes('duplicate')) {
+          // Try to fetch the existing wallet
+          const getUserWalletResponse = await fetch(`https://www.crossmint.com/api/v1-alpha2/wallets?linkedUser=${encodeURIComponent(userEmail)}`, {
+            method: 'GET',
+            headers: {
+              'X-API-KEY': apiKey,
+            },
+          });
+
+          if (getUserWalletResponse.ok) {
+            const walletsData = await getUserWalletResponse.json();
+            if (walletsData && walletsData.length > 0) {
+              const existingWallet = walletsData[0];
+              
+              // Save to database
+              await storage.updateUser(userId, {
+                walletAddress: existingWallet.address,
+                walletChain: existingWallet.chain || 'polygon',
+                walletCreatedAt: new Date(),
+              });
+
+              return res.json({
+                address: existingWallet.address,
+                chain: existingWallet.chain || 'polygon',
+                message: "Connected to existing Crossmint wallet",
+                isExisting: true
+              });
+            }
+          }
+        }
+        
         return res.status(500).json({ message: `Crossmint API error: ${errorText}` });
       }
 
@@ -7093,14 +7128,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Save wallet to database
       await storage.updateUser(userId, {
         walletAddress: walletData.address,
-        walletChain: 'polygon',
+        walletChain: walletData.chain || 'polygon',
         walletCreatedAt: new Date(),
       });
 
       res.json({
         address: walletData.address,
-        chain: 'polygon',
-        message: "Wallet created successfully"
+        chain: walletData.chain || 'polygon',
+        message: "Wallet created successfully",
+        isExisting: false
       });
     } catch (error) {
       console.error("Error creating wallet:", error);
