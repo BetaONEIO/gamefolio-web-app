@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useCrossmint } from "@/hooks/use-crossmint";
 import { Link } from "wouter";
-import { ShoppingCart, DollarSign, Sparkles, Wallet, Menu, Filter } from "lucide-react";
+import { ShoppingCart, DollarSign, Sparkles, Wallet, Menu, Filter, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,6 +21,9 @@ import {
 } from "@/components/ui/select";
 import { NFTPurchaseDialog } from "@/components/store/NFTPurchaseDialog";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 type TabType = "buy" | "sell" | "mint";
 
@@ -40,6 +43,8 @@ interface NFT {
 export default function StorePage() {
   const { user } = useAuth();
   const { wallet } = useCrossmint();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabType>("buy");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [rarityFilter, setRarityFilter] = useState<string>("all");
@@ -48,6 +53,90 @@ export default function StorePage() {
   const [mintFilter, setMintFilter] = useState<string>("all");
   const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null);
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
+
+  // Fetch user's watchlist
+  const { data: watchlist = [] } = useQuery<any[]>({
+    queryKey: ["/api/nft/watchlist"],
+    enabled: !!user,
+  });
+
+  // Add to watchlist mutation
+  const addToWatchlistMutation = useMutation({
+    mutationFn: async (nft: NFT) => {
+      return await apiRequest("/api/nft/watchlist", {
+        method: "POST",
+        body: JSON.stringify({
+          nftId: nft.id,
+          nftName: nft.name,
+          nftImage: nft.image,
+          nftPrice: nft.price,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/nft/watchlist"] });
+      toast({
+        title: "Added to Watchlist",
+        description: "NFT has been added to your watchlist",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to add to watchlist",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Remove from watchlist mutation
+  const removeFromWatchlistMutation = useMutation({
+    mutationFn: async (nftId: number) => {
+      return await apiRequest(`/api/nft/watchlist/${nftId}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/nft/watchlist"] });
+      toast({
+        title: "Removed from Watchlist",
+        description: "NFT has been removed from your watchlist",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove from watchlist",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Check if NFT is in watchlist
+  const isInWatchlist = (nftId: number) => {
+    return watchlist.some((item: any) => item.nftId === nftId);
+  };
+
+  // Toggle watchlist
+  const toggleWatchlist = (nft: NFT) => {
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please login to add NFTs to your watchlist",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isInWatchlist(nft.id)) {
+      removeFromWatchlistMutation.mutate(nft.id);
+    } else {
+      addToWatchlistMutation.mutate(nft);
+    }
+  };
 
   // Mock Gamefolio NFT Collection data
   const gamefolioNFTs = [
@@ -456,6 +545,24 @@ export default function StorePage() {
                       <Badge className="absolute top-2 right-2 bg-blue-600 text-xs">
                         For Sale
                       </Badge>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="absolute top-2 left-2 h-8 w-8 bg-black/50 hover:bg-black/70"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleWatchlist(nft);
+                        }}
+                        data-testid={`button-watchlist-${nft.id}`}
+                      >
+                        <Heart
+                          className={`h-4 w-4 ${
+                            isInWatchlist(nft.id)
+                              ? "fill-red-500 text-red-500"
+                              : "text-white"
+                          }`}
+                        />
+                      </Button>
                     </div>
                     
                     <div className="p-3 space-y-2">
