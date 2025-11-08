@@ -234,84 +234,49 @@ export default function OnboardingFlow({
     loadExistingWallet();
   }, [currentStep, walletAddress]);
 
-  // Crossmint Login Component
-  const CrossmintLoginButton = () => {
-    const [isConnecting, setIsConnecting] = useState(false);
-    
-    const handleCrossmintLogin = () => {
-      setIsConnecting(true);
-      
-      // Open Crossmint in a new window for authentication
-      const crossmintUrl = `https://www.crossmint.com/signin?clientId=${import.meta.env.VITE_CROSSMINT_CLIENT_ID || ''}&redirectUrl=${encodeURIComponent(window.location.origin + '/onboarding')}`;
-      
-      const width = 500;
-      const height = 700;
-      const left = window.screen.width / 2 - width / 2;
-      const top = window.screen.height / 2 - height / 2;
+  // Crossmint information and link component
+  const CrossmintAuthButton = () => {
+    const handleOpenCrossmint = () => {
+      const width = 600;
+      const height = 800;
+      const left = (window.screen.width - width) / 2;
+      const top = (window.screen.height - height) / 2;
       
       const popup = window.open(
-        crossmintUrl,
-        'Crossmint Login',
-        `width=${width},height=${height},left=${left},top=${top},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
+        'https://www.crossmint.com/signin',
+        'crossmint-signup',
+        `width=${width},height=${height},left=${left},top=${top},popup=yes,toolbar=no,location=no,status=no`
       );
       
-      // Listen for the wallet address from the popup
-      const handleMessage = (event: MessageEvent) => {
-        if (event.origin === 'https://www.crossmint.com' && event.data?.walletAddress) {
-          setWalletAddress(event.data.walletAddress);
-          setIsConnecting(false);
-          popup?.close();
-          
-          toast({
-            title: "Connected to Crossmint!",
-            description: "Your wallet is ready to use",
-            variant: "gamefolioSuccess",
-          });
-          
-          // Save wallet to our backend
-          fetch('/api/wallet/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-              walletAddress: event.data.walletAddress,
-              walletChain: 'polygon'
-            })
-          }).catch(err => console.error('Failed to save wallet:', err));
-        }
-      };
-      
-      window.addEventListener('message', handleMessage);
-      
-      // Cleanup
-      const checkPopup = setInterval(() => {
-        if (popup?.closed) {
-          setIsConnecting(false);
-          clearInterval(checkPopup);
-          window.removeEventListener('message', handleMessage);
-        }
-      }, 500);
+      if (popup) {
+        toast({
+          title: "Crossmint Opened",
+          description: "Create or sign in to your Crossmint account in the new window",
+        });
+      } else {
+        toast({
+          title: "Popup Blocked",
+          description: "Please allow popups and try again",
+          variant: "gamefolioError",
+        });
+      }
     };
-    
+
     return (
-      <Button
-        onClick={handleCrossmintLogin}
-        disabled={isConnecting}
-        className="w-full bg-primary hover:bg-primary/90 text-white"
-        data-testid="button-connect-crossmint"
-      >
-        {isConnecting ? (
-          <>
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            Connecting to Crossmint...
-          </>
-        ) : (
-          <>
-            <LogIn className="h-4 w-4 mr-2" />
-            Connect with Crossmint
-          </>
-        )}
-      </Button>
+      <div className="w-full space-y-3">
+        <Button
+          onClick={handleOpenCrossmint}
+          className="w-full bg-primary hover:bg-primary/90 text-white"
+          data-testid="button-open-crossmint"
+        >
+          <LogIn className="h-4 w-4 mr-2" />
+          Create Crossmint Account
+        </Button>
+        <div className="text-xs text-gray-400 text-center space-y-1">
+          <p>Opens Crossmint in a new window</p>
+          <p className="text-gray-500">Full wallet integration coming soon</p>
+        </div>
+      </div>
     );
   };
 
@@ -1343,18 +1308,18 @@ export default function OnboardingFlow({
         return (
           <>
             <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-2xl font-bold text-white">Connect your Crossmint account</h2>
+              <h2 className="text-2xl font-bold text-white">Set up Crossmint (Optional)</h2>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Info className="h-5 w-5 text-gray-400 cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Connect with Crossmint to manage your digital assets and rewards</p>
+                  <p>Crossmint will enable digital wallet features in the future</p>
                 </TooltipContent>
               </Tooltip>
             </div>
             <p className="text-gray-300 mb-6">
-              Sign in or create a Crossmint account to get your blockchain wallet. Crossmint makes it easy to collect rewards, achievements, and NFTs.
+              Get ready for upcoming Web3 features by creating a Crossmint account. This is completely optional and you can set it up anytime from your profile.
             </p>
 
             {walletAddress ? (
@@ -1386,12 +1351,15 @@ export default function OnboardingFlow({
                         <Wallet className="h-8 w-8 text-gray-300" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-white mb-2">Login to Crossmint</h3>
-                        <p className="text-sm text-gray-400">
-                          Connect your Crossmint account to access your blockchain wallet and digital assets. If you don't have an account, one will be created for you.
+                        <h3 className="font-semibold text-white mb-2">Create Your Crossmint Account</h3>
+                        <p className="text-sm text-gray-400 mb-2">
+                          Crossmint provides blockchain wallet services for managing digital assets. Create an account now to be ready when we launch Web3 features.
+                        </p>
+                        <p className="text-xs text-gray-500 mb-3">
+                          Note: Account creation happens on Crossmint's website. Full integration is coming soon.
                         </p>
                       </div>
-                      <CrossmintLoginButton />
+                      <CrossmintAuthButton />
                     </div>
                   </CardContent>
                 </Card>
