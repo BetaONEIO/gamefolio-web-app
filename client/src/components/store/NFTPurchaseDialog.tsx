@@ -159,30 +159,25 @@ export function NFTPurchaseDialog({
             </div>
           </div>
 
-          {/* Wallet Connection */}
-          <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
-            <h4 className="text-sm font-medium mb-2">Connect Wallet</h4>
-            <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                  <Wallet className="w-4 h-4 text-white" />
+          {/* Wallet Connection - Only show if wallet not connected */}
+          {!wallet?.address && (
+            <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+              <h4 className="text-sm font-medium mb-2">Connect Wallet</h4>
+              <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                    <Wallet className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="font-medium text-sm">Crossmint</span>
                 </div>
-                <span className="font-medium text-sm">Crossmint</span>
-              </div>
-              {wallet?.address ? (
-                <Badge className="bg-blue-600 text-xs" data-testid="badge-wallet-connected">
-                  <Check className="w-3 h-3 mr-1" />
-                  Connected
-                </Badge>
-              ) : (
                 <Link href="/wallet">
                   <Button size="sm" className="bg-blue-600 hover:bg-blue-700" data-testid="button-connect-wallet">
                     Connect
                   </Button>
                 </Link>
-              )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Bid Amount */}
           <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700 space-y-2">
