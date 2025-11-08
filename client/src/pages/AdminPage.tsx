@@ -404,6 +404,7 @@ import {
   MessageCircle,
   Eye,
   Trophy,
+  Flame,
 } from "lucide-react";
 
 const AdminPage = () => {
@@ -431,6 +432,12 @@ const AdminPage = () => {
   const [selectedLevelUser, setSelectedLevelUser] = useState<any>(null);
   const [newLevel, setNewLevel] = useState("");
   const [newXP, setNewXP] = useState("");
+
+  // Streak management state
+  const [streakUserSearch, setStreakUserSearch] = useState("");
+  const [selectedStreakUser, setSelectedStreakUser] = useState<any>(null);
+  const [newCurrentStreak, setNewCurrentStreak] = useState("");
+  const [newLongestStreak, setNewLongestStreak] = useState("");
 
   // Badge creation state
   const [newBadgeName, setNewBadgeName] = useState("");
@@ -876,7 +883,7 @@ const AdminPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-10">
+        <TabsList className="grid w-full grid-cols-11">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
@@ -884,6 +891,7 @@ const AdminPage = () => {
           <TabsTrigger value="banner">Banner</TabsTrigger>
           <TabsTrigger value="badges">Badges</TabsTrigger>
           <TabsTrigger value="levels">Levels</TabsTrigger>
+          <TabsTrigger value="streaks">Streaks</TabsTrigger>
           <TabsTrigger value="points">Points</TabsTrigger>
           <TabsTrigger value="hero-text">Hero Text</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
@@ -1136,19 +1144,21 @@ const AdminPage = () => {
                       <TableHead>Role</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Privacy</TableHead>
+                      <TableHead>Current Streak</TableHead>
+                      <TableHead>Longest Streak</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {usersLoading ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center">
+                        <TableCell colSpan={8} className="text-center">
                           Loading users...
                         </TableCell>
                       </TableRow>
                     ) : usersData?.users?.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center">
+                        <TableCell colSpan={8} className="text-center">
                           No users found
                         </TableCell>
                       </TableRow>
@@ -1179,6 +1189,18 @@ const AdminPage = () => {
                             <Badge variant={user.isPrivate ? "secondary" : "outline"}>
                               {user.isPrivate ? "Private" : "Public"}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1" data-testid={`streak-current-${user.id}`}>
+                              <Flame className="h-3 w-3 text-orange-500" />
+                              <span>{user.currentStreak || 0} days</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1" data-testid={`streak-longest-${user.id}`}>
+                              <Trophy className="h-3 w-3 text-yellow-500" />
+                              <span>{user.longestStreak || 0} days</span>
+                            </div>
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end space-x-1">
@@ -2115,6 +2137,165 @@ const AdminPage = () => {
                   <div className="border-t pt-4">
                     <p className="text-xs text-muted-foreground">
                       <strong>Note:</strong> XP thresholds - Level 1: 0 XP, Level 2: 100 XP, Level 3: 500 XP, Level 4: 1000 XP, etc.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Streak Management Tab */}
+        <TabsContent value="streaks" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Flame className="h-5 w-5" />
+                Streak Management
+              </CardTitle>
+              <CardDescription>
+                View and manage user login streaks
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* User Search Section */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="streakUserSearch" className="text-sm font-medium">
+                    Search User
+                  </label>
+                  <Input
+                    id="streakUserSearch"
+                    placeholder="Search by username..."
+                    value={streakUserSearch}
+                    onChange={(e) => setStreakUserSearch(e.target.value)}
+                    data-testid="input-streak-user-search"
+                  />
+                </div>
+
+                {/* User Search Results */}
+                {streakUserSearch.length >= 2 && (
+                  <div className="border rounded-lg p-4 max-h-60 overflow-y-auto">
+                    <h4 className="font-medium mb-2">Search Results</h4>
+                    {badgeUsersData?.users.filter(u => 
+                      u.username.toLowerCase().includes(streakUserSearch.toLowerCase())
+                    ).map(user => (
+                      <div
+                        key={user.id}
+                        className="flex items-center justify-between p-2 hover:bg-muted rounded-md cursor-pointer"
+                        onClick={() => {
+                          setSelectedStreakUser(user);
+                          setNewCurrentStreak(user.currentStreak?.toString() || "0");
+                          setNewLongestStreak(user.longestStreak?.toString() || "0");
+                        }}
+                        data-testid={`user-streak-result-${user.id}`}
+                      >
+                        <div>
+                          <p className="font-medium">{user.username}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Current: {user.currentStreak || 0} days • Longest: {user.longestStreak || 0} days
+                          </p>
+                        </div>
+                        <Button size="sm" variant="outline">
+                          Select
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Selected User Edit Form */}
+              {selectedStreakUser && (
+                <div className="border rounded-lg p-4 space-y-4 bg-muted/50">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium text-lg">{selectedStreakUser.username}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Current Streak: {selectedStreakUser.currentStreak || 0} days • Longest Streak: {selectedStreakUser.longestStreak || 0} days
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedStreakUser(null);
+                        setNewCurrentStreak("");
+                        setNewLongestStreak("");
+                      }}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label htmlFor="newCurrentStreak" className="text-sm font-medium">
+                        Current Streak (days)
+                      </label>
+                      <Input
+                        id="newCurrentStreak"
+                        type="number"
+                        min="0"
+                        placeholder="Enter current streak"
+                        value={newCurrentStreak}
+                        onChange={(e) => setNewCurrentStreak(e.target.value)}
+                        data-testid="input-new-current-streak"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="newLongestStreak" className="text-sm font-medium">
+                        Longest Streak (days)
+                      </label>
+                      <Input
+                        id="newLongestStreak"
+                        type="number"
+                        min="0"
+                        placeholder="Enter longest streak"
+                        value={newLongestStreak}
+                        onChange={(e) => setNewLongestStreak(e.target.value)}
+                        data-testid="input-new-longest-streak"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={async () => {
+                        try {
+                          await apiRequest("PATCH", `/api/admin/users/${selectedStreakUser.id}/streak`, {
+                            currentStreak: parseInt(newCurrentStreak),
+                            longestStreak: parseInt(newLongestStreak),
+                          });
+                          toast({
+                            title: "Success",
+                            description: `Updated ${selectedStreakUser.username}'s streak to ${newCurrentStreak} days (longest: ${newLongestStreak})`,
+                            variant: "gamefolioSuccess",
+                          });
+                          queryClient.invalidateQueries({ queryKey: ["/api/admin/users"], exact: false });
+                          setSelectedStreakUser(null);
+                          setNewCurrentStreak("");
+                          setNewLongestStreak("");
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: "Failed to update user streak",
+                            variant: "gamefolioError",
+                          });
+                        }
+                      }}
+                      disabled={!newCurrentStreak || !newLongestStreak}
+                      data-testid="button-update-streak"
+                    >
+                      <Flame className="h-4 w-4 mr-2" />
+                      Update Streak
+                    </Button>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <p className="text-xs text-muted-foreground">
+                      <strong>Note:</strong> Streak milestones - 3, 7, 14, 30, 60, 90, 180, and 365 days award bonus points.
+                      Users now earn streak increments every time they use the application, regardless of gaps.
                     </p>
                   </div>
                 </div>

@@ -206,6 +206,55 @@ adminRouter.patch("/users/:id/level", async (req: Request, res: Response) => {
   }
 });
 
+// PATCH /api/admin/users/:id/streak - Update user streak
+adminRouter.patch("/users/:id/streak", async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { currentStreak, longestStreak } = req.body;
+
+    // Validate inputs
+    if (currentStreak === undefined || longestStreak === undefined) {
+      return res.status(400).json({ message: "currentStreak and longestStreak are required" });
+    }
+
+    if (currentStreak < 0 || longestStreak < 0) {
+      return res.status(400).json({ message: "Streaks must be at least 0" });
+    }
+
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update user streaks while preserving the existing lastStreakUpdate
+    // This ensures the user can still earn their daily streak increment
+    const existingLastUpdate = user.lastStreakUpdate || new Date();
+    
+    if (storage.updateUserStreak) {
+      await storage.updateUserStreak({
+        userId,
+        currentStreak: parseInt(currentStreak),
+        longestStreak: parseInt(longestStreak),
+        lastStreakUpdate: existingLastUpdate
+      });
+    } else {
+      // Fallback if updateUserStreak is not available
+      await storage.updateUser(userId, {
+        currentStreak: parseInt(currentStreak),
+        longestStreak: parseInt(longestStreak),
+        lastStreakUpdate: existingLastUpdate
+      });
+    }
+
+    // Fetch and return updated user
+    const updatedUser = await storage.getUser(userId);
+    res.json(updatedUser);
+  } catch (err) {
+    console.error("Error updating user streak:", err);
+    res.status(500).json({ message: "Error updating user streak" });
+  }
+});
+
 // POST /api/admin/users/:id/ban - Ban user
 adminRouter.post("/users/:id/ban", async (req: Request, res: Response) => {
   try {

@@ -207,6 +207,29 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async updateUserStreak(data: {
+    userId: number;
+    currentStreak: number;
+    longestStreak: number;
+    lastStreakUpdate: Date;
+  }): Promise<void> {
+    try {
+      await db
+        .update(users)
+        .set({
+          currentStreak: data.currentStreak,
+          longestStreak: data.longestStreak,
+          lastStreakUpdate: data.lastStreakUpdate,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, data.userId));
+      console.log(`✅ Updated streak for user ${data.userId}: ${data.currentStreak} days`);
+    } catch (error) {
+      console.error("Error updating user streak:", error);
+      throw error;
+    }
+  }
+
   async deleteUser(id: number): Promise<boolean> {
     try {
       // Delete all related data first to maintain referential integrity
@@ -317,6 +340,23 @@ export class DatabaseStorage implements IStorage {
       .from(clips)
       .where(eq(clips.userId, id));
 
+    // Get total likes received on user's clips
+    const likesReceivedResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(likes)
+      .leftJoin(clips, eq(likes.clipId, clips.id))
+      .where(eq(clips.userId, id));
+
+    // Get total fires received on user's clips (clip reactions with fire emoji)
+    const firesReceivedResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(clipReactions)
+      .leftJoin(clips, eq(clipReactions.clipId, clips.id))
+      .where(and(
+        eq(clips.userId, id),
+        eq(clipReactions.emoji, '🔥')
+      ));
+
     // Get favorite games
     const favoriteGames = await this.getUserGameFavorites(id);
 
@@ -326,7 +366,9 @@ export class DatabaseStorage implements IStorage {
         followers: followersCount[0].count || 0,
         following: followingCount[0].count || 0,
         clips: clipsCount[0].count || 0,
-        clipViews: viewsResult[0].total || 0
+        clipViews: viewsResult[0].total || 0,
+        likesReceived: likesReceivedResult[0].count || 0,
+        firesReceived: firesReceivedResult[0].count || 0
       },
       favoriteGames
     };
@@ -436,7 +478,8 @@ export class DatabaseStorage implements IStorage {
         game: game?.id ? { ...game } : null,
         _count: {
           likes: parseInt(likesResult[0]?.count.toString() || '0'),
-          comments: parseInt(commentsResult[0]?.count.toString() || '0')
+          comments: parseInt(commentsResult[0]?.count.toString() || '0'),
+          reactions: parseInt(reactionsResult[0]?.count.toString() || '0')
         }
       };
     } catch (error) {
@@ -740,13 +783,15 @@ export class DatabaseStorage implements IStorage {
         },
         engagement: sql<number>`cast(count(distinct ${likes.id}) + count(distinct ${comments.id}) as integer)`.as('engagement'),
         likesCount: sql<number>`count(distinct ${likes.id})`.as('likesCount'),
-        commentsCount: sql<number>`count(distinct ${comments.id})`.as('commentsCount')
+        commentsCount: sql<number>`count(distinct ${comments.id})`.as('commentsCount'),
+        reactionsCount: sql<number>`count(distinct ${clipReactions.id})`.as('reactionsCount')
       })
       .from(clips)
       .leftJoin(users, eq(clips.userId, users.id))
       .leftJoin(games, eq(clips.gameId, games.id))
       .leftJoin(likes, eq(clips.id, likes.clipId))
       .leftJoin(comments, eq(clips.id, comments.clipId))
+      .leftJoin(clipReactions, eq(clips.id, clipReactions.clipId))
       .leftJoin(follows, and(
         eq(follows.followingId, users.id),
         currentUserId ? eq(follows.followerId, currentUserId) : sql`false`
@@ -779,7 +824,8 @@ export class DatabaseStorage implements IStorage {
       game: row.game?.id ? { ...row.game } : null,
       _count: {
         likes: parseInt(row.likesCount?.toString() || '0'),
-        comments: parseInt(row.commentsCount?.toString() || '0')
+        comments: parseInt(row.commentsCount?.toString() || '0'),
+        reactions: parseInt(row.reactionsCount?.toString() || '0')
       }
     }));
   }
@@ -804,13 +850,15 @@ export class DatabaseStorage implements IStorage {
           createdAt: games.createdAt,
         },
         likesCount: sql<number>`count(distinct ${likes.id})`.as('likesCount'),
-        commentsCount: sql<number>`count(distinct ${comments.id})`.as('commentsCount')
+        commentsCount: sql<number>`count(distinct ${comments.id})`.as('commentsCount'),
+        reactionsCount: sql<number>`count(distinct ${clipReactions.id})`.as('reactionsCount')
       })
       .from(clips)
       .leftJoin(users, eq(clips.userId, users.id))
       .leftJoin(games, eq(clips.gameId, games.id))
       .leftJoin(likes, eq(clips.id, likes.clipId))
       .leftJoin(comments, eq(clips.id, comments.clipId))
+      .leftJoin(clipReactions, eq(clips.id, clipReactions.clipId))
       .leftJoin(follows, and(
         eq(follows.followingId, users.id),
         currentUserId ? eq(follows.followerId, currentUserId) : sql`false`
@@ -841,7 +889,8 @@ export class DatabaseStorage implements IStorage {
       game: row.game?.id ? { ...row.game } : null,
       _count: {
         likes: parseInt(row.likesCount?.toString() || '0'),
-        comments: parseInt(row.commentsCount?.toString() || '0')
+        comments: parseInt(row.commentsCount?.toString() || '0'),
+        reactions: parseInt(row.reactionsCount?.toString() || '0')
       }
     }));
   }
@@ -1605,9 +1654,9 @@ export class DatabaseStorage implements IStorage {
     const results = await db
       .select({
         screenshot: screenshots,
-        likesCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotLikes} WHERE ${screenshotLikes.screenshotId} = ${screenshots.id}), 0)`,
-        reactionsCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotReactions} WHERE ${screenshotReactions.screenshotId} = ${screenshots.id}), 0)`,
-        commentsCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotComments} WHERE ${screenshotComments.screenshotId} = ${screenshots.id}), 0)`
+        likesCount: sql<number>`COALESCE((SELECT COUNT(*)::int FROM screenshot_likes WHERE screenshot_likes.screenshot_id = screenshots.id), 0)`,
+        reactionsCount: sql<number>`COALESCE((SELECT COUNT(*)::int FROM screenshot_reactions WHERE screenshot_reactions.screenshot_id = screenshots.id), 0)`,
+        commentsCount: sql<number>`COALESCE((SELECT COUNT(*)::int FROM screenshot_comments WHERE screenshot_comments.screenshot_id = screenshots.id), 0)`
       })
       .from(screenshots)
       .where(eq(screenshots.userId, userId))
@@ -1616,9 +1665,9 @@ export class DatabaseStorage implements IStorage {
     return results.map(row => ({
       ...row.screenshot,
       _count: {
-        likes: row.likesCount,
-        reactions: row.reactionsCount,
-        comments: row.commentsCount
+        likes: Number(row.likesCount),
+        reactions: Number(row.reactionsCount),
+        comments: Number(row.commentsCount)
       }
     })) as any;
   }
@@ -3089,6 +3138,24 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
 
     return results;
+  }
+
+  // Check if user has already earned points for a specific content
+  async hasUserEarnedPointsForContent(userId: number, action: string, contentType: string, contentId: number): Promise<boolean> {
+    const descriptionPattern = `%${contentType} #${contentId}%`;
+    const [result] = await db
+      .select()
+      .from(userPointsHistory)
+      .where(
+        and(
+          eq(userPointsHistory.userId, userId),
+          eq(userPointsHistory.action, action),
+          sql`${userPointsHistory.description} LIKE ${descriptionPattern}`
+        )
+      )
+      .limit(1);
+
+    return !!result;
   }
 
   // Increment user's total points (stored in totalXP field for DB compatibility)

@@ -17,6 +17,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { BannerUploadPreview } from "@/components/BannerUploadPreview";
 import { BannerPositionPreview } from "@/components/BannerPositionPreview";
 import { BlockedUsersSection } from "@/components/settings/blocked-users-section";
+import { Check } from "lucide-react";
 
 const PRESET_THEMES = [
   {
@@ -64,7 +65,10 @@ export default function SettingsPage() {
     backgroundColor: user?.backgroundColor || "#0B2232",
     accentColor: user?.accentColor || "#4ADE80",
     bannerUrl: user?.bannerUrl || "",
-    avatarUrl: user?.avatarUrl || ""
+    avatarUrl: user?.avatarUrl || "",
+    profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
+    profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
+    profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none"
   });
   
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -116,7 +120,10 @@ export default function SettingsPage() {
           backgroundColor: user.backgroundColor || "#0B2232",
           accentColor: user.accentColor || "#4ADE80",
           bannerUrl: finalBannerUrl,
-          avatarUrl: user.avatarUrl || ""
+          avatarUrl: user.avatarUrl || "",
+          profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
+          profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
+          profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none"
         };
       });
       
@@ -152,6 +159,9 @@ export default function SettingsPage() {
     profileData.backgroundColor !== (user?.backgroundColor || "#0B2232") ||
     profileData.accentColor !== (user?.accentColor || "#4ADE80") ||
     normalizeValue(profileData.bannerUrl) !== normalizeValue(user?.bannerUrl) ||
+    profileData.profileBackgroundType !== ((user as any)?.profileBackgroundType || "solid") ||
+    profileData.profileBackgroundTheme !== ((user as any)?.profileBackgroundTheme || "default") ||
+    profileData.profileBackgroundAnimation !== ((user as any)?.profileBackgroundAnimation || "none") ||
     avatarFile !== null;
   
   // Debug logging
@@ -542,93 +552,6 @@ export default function SettingsPage() {
                     </div>
                   </CardContent>
                 </Card>
-
-              {/* Custom Colors */}
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Background Color */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Background Color</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="w-12 h-12 rounded-lg border cursor-pointer"
-                        style={{ backgroundColor: profileData.backgroundColor }}
-                        onClick={() => setShowBackgroundPicker(!showBackgroundPicker)}
-                      />
-                      <div className="flex-1">
-                        <Input
-                          value={profileData.backgroundColor}
-                          onChange={(e) => setProfileData(prev => ({ ...prev, backgroundColor: e.target.value }))}
-                          placeholder="#0B2232"
-                        />
-                      </div>
-                    </div>
-                    
-                    {showBackgroundPicker && (
-                      <div className="mt-4">
-                        <HexColorPicker
-                          color={profileData.backgroundColor}
-                          onChange={(color) => setProfileData(prev => ({ ...prev, backgroundColor: color }))}
-                        />
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Accent Color */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Accent Color</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="w-12 h-12 rounded-lg border cursor-pointer"
-                        style={{ backgroundColor: profileData.accentColor }}
-                        onClick={() => setShowAccentPicker(!showAccentPicker)}
-                      />
-                      <div className="flex-1">
-                        <Input
-                          value={profileData.accentColor}
-                          onChange={(e) => setProfileData(prev => ({ ...prev, accentColor: e.target.value }))}
-                          placeholder="#4ADE80"
-                        />
-                      </div>
-                    </div>
-                    
-                    {showAccentPicker && (
-                      <div className="mt-4">
-                        <HexColorPicker
-                          color={profileData.accentColor}
-                          onChange={(color) => setProfileData(prev => ({ ...prev, accentColor: color }))}
-                        />
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Preview */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Preview</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div
-                    className="h-32 rounded-lg p-4 flex items-center justify-center"
-                    style={{ backgroundColor: profileData.backgroundColor }}
-                  >
-                    <Button
-                      style={{ backgroundColor: profileData.accentColor }}
-                      className="text-white"
-                    >
-                      Sample Button
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
             </div>
           </TabsContent>

@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -38,6 +39,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
   const [description, setDescription] = useState('');
   const [gameId, setGameId] = useState<string>('');
   const [tags, setTags] = useState<string[]>([]);
+  const [ageRestricted, setAgeRestricted] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'processing' | 'success' | 'error'>('idle');
@@ -134,6 +136,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
     setDescription('');
     setGameId('');
     setTags([]);
+    setAgeRestricted(false);
     setUploadProgress(0);
     setIsUploading(false);
     setUploadStatus('idle');
@@ -273,7 +276,8 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
             description,
             gameId: gameId ? parseInt(gameId) : null,
             tags,
-            videoType: uploadType === 'reel' ? 'reel' : 'clip'
+            videoType: uploadType === 'reel' ? 'reel' : 'clip',
+            ageRestricted
           });
         } else {
           throw new Error('Upload failed');
@@ -308,6 +312,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
     formData.append('description', description);
     if (gameId) formData.append('gameId', gameId);
     if (tags.length > 0) formData.append('tags', JSON.stringify(tags));
+    formData.append('ageRestricted', String(ageRestricted));
 
     screenshotUpload.mutate(formData);
   };
@@ -478,6 +483,27 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Age Restriction */}
+          <div className="flex items-start space-x-3 p-3 rounded-lg bg-muted/50 dark:bg-muted/20">
+            <Checkbox
+              id="age-restricted"
+              checked={ageRestricted}
+              onCheckedChange={(checked) => setAgeRestricted(checked as boolean)}
+              data-testid="checkbox-age-restricted"
+            />
+            <div className="flex-1">
+              <label
+                htmlFor="age-restricted"
+                className="text-sm font-medium leading-none cursor-pointer"
+              >
+                Mark as age-restricted
+              </label>
+              <p className="text-xs text-muted-foreground mt-1">
+                This content may not be suitable for all audiences. Users will need to confirm before viewing.
+              </p>
+            </div>
           </div>
 
           {/* Upload Progress */}

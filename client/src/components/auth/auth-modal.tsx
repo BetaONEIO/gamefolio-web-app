@@ -69,9 +69,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                 alt="Gamefolio"
                 className="h-24 w-auto drop-shadow-lg"
               />
-              <div className="mt-3 px-3 py-1 bg-orange-500 text-white text-sm font-bold rounded-full shadow-lg">
-                Alpha 1.3.1 • Oct 19, 2025
-              </div>
+              <div className="mt-3 px-3 py-1 bg-orange-500 text-white text-sm font-bold rounded-full shadow-lg">Alpha 1.4.0 • Nov 06, 2025</div>
             </div>
           </div>
 

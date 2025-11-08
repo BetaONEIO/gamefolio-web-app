@@ -29,7 +29,8 @@ import {
   ChevronDown,
   UserPlus,
   UserMinus,
-  UserCheck
+  UserCheck,
+  AlertTriangle
 } from "lucide-react";
 import { formatDistance } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -45,6 +46,7 @@ import { FireButton } from "@/components/engagement/FireButton";
 import { FullscreenReelsViewer } from "./FullscreenReelsViewer";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { ReportDialog } from "@/components/content/ReportDialog";
+import { AgeRestrictionDialog } from "@/components/content/AgeRestrictionDialog";
 
 interface ClipDialogProps {
   clipId: number | null;
@@ -66,9 +68,24 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [previousClipId, setPreviousClipId] = useState<number | null>(null);
+  const [ageRestrictionAccepted, setAgeRestrictionAccepted] = useState(false);
+  const [showAgeRestrictionDialog, setShowAgeRestrictionDialog] = useState(false);
+  const isAcceptingRef = useRef(false);
 
   // Access closeClipDialog from useClipDialog
   const { closeClipDialog } = useClipDialog();
+
+  // Only fetch if dialog is open and we have a clipId (MUST be before useEffects that use clip)
+  const { data: clip, isLoading } = useQuery<ClipWithUser>({
+    queryKey: [`/api/clips/${clipId}`],
+    enabled: isOpen && clipId !== null,
+  });
+
+  // Fetch comments for mobile overlay
+  const { data: comments } = useQuery<CommentWithUser[]>({
+    queryKey: [`/api/clips/${clipId}/comments`],
+    enabled: isOpen && clipId !== null,
+  });
 
   // Detect mobile device - use same breakpoint as useMobile hook
   useEffect(() => {
@@ -85,8 +102,40 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   useEffect(() => {
     if (!isOpen) {
       setShowComments(false); // Reset comments visibility when dialog closes
+      setAgeRestrictionAccepted(false); // Reset age restriction acceptance
+      setShowAgeRestrictionDialog(false);
+      isAcceptingRef.current = false; // Reset accepting flag
     }
   }, [isOpen]);
+
+  // Check for age restriction when clip loads
+  useEffect(() => {
+    if (clip && clip.ageRestricted && !ageRestrictionAccepted) {
+      setShowAgeRestrictionDialog(true);
+    }
+  }, [clip, ageRestrictionAccepted]);
+
+  // Auto-close age restriction dialog after acceptance
+  useEffect(() => {
+    if (ageRestrictionAccepted && showAgeRestrictionDialog) {
+      const timer = setTimeout(() => {
+        setShowAgeRestrictionDialog(false);
+        // Reset accepting flag after dialog closes
+        setTimeout(() => {
+          isAcceptingRef.current = false;
+        }, 50);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [ageRestrictionAccepted, showAgeRestrictionDialog]);
+
+  // Reset age restriction state when clip changes
+  useEffect(() => {
+    if (clipId !== previousClipId) {
+      setAgeRestrictionAccepted(false);
+      setShowAgeRestrictionDialog(false);
+    }
+  }, [clipId, previousClipId]);
 
   // Handle clip transitions with fade effect
   useEffect(() => {
@@ -151,18 +200,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
       document.removeEventListener('keydown', handleKeyDown, { capture: true });
     };
   }, [isOpen, showNavigation, onNext, onPrevious, onClose, isTransitioning]);
-
-  // Only fetch if dialog is open and we have a clipId
-  const { data: clip, isLoading } = useQuery<ClipWithUser>({
-    queryKey: [`/api/clips/${clipId}`],
-    enabled: isOpen && clipId !== null,
-  });
-
-  // Fetch comments for mobile overlay
-  const { data: comments } = useQuery<CommentWithUser[]>({
-    queryKey: [`/api/clips/${clipId}/comments`],
-    enabled: isOpen && clipId !== null,
-  });
 
   // Follow functionality
   const queryClient = useQueryClient();
@@ -407,7 +444,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     : "w-full lg:w-[65%] h-[60vh] lg:h-full", // Desktop layout for regular clips
               isTransitioning ? "scale-95" : "scale-100"
             )}>
-              {clip.videoType === 'reel' && isMobile ? (
+              {/* Show content only if not age-restricted or if accepted */}
+              {(!clip.ageRestricted || ageRestrictionAccepted) ? (
+              clip.videoType === 'reel' && isMobile ? (
                 // Special mobile fullscreen layout for reels only
                 <div className="h-full flex items-center justify-center bg-black relative">
                   <div className="w-full max-w-full max-h-full aspect-[9/16] bg-black relative">
@@ -454,7 +493,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           contentType="clip"
                           contentOwnerId={clip.userId}
                           initialFired={false}
-                          initialCount={0}
+                          initialCount={clip._count?.reactions || 0}
                           size="lg"
                           variant="vertical"
                           onUnauthenticatedAction={() => openDialog('general')}
@@ -543,6 +582,16 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   objectFit="contain"
                   clipId={clip.id}
                 />
+              )
+              ) : (
+                // Age-restricted content placeholder
+                <div className="w-full h-full flex items-center justify-center text-white">
+                  <div className="text-center p-8">
+                    <AlertTriangle className="h-16 w-16 mx-auto mb-4 text-yellow-500" />
+                    <h3 className="text-xl font-semibold mb-2">Age-Restricted Content</h3>
+                    <p className="text-gray-300">Please accept the age restriction warning to view this content.</p>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -700,7 +749,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           contentType="clip"
                           contentOwnerId={clip.userId}
                           initialFired={false}
-                          initialCount={0}
+                          initialCount={clip._count?.reactions || 0}
                           size="lg"
                           onUnauthenticatedAction={() => openDialog('general')}
                         />
@@ -748,6 +797,25 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
         onOpenChange={closeDialog} 
         actionType={actionType} 
       />
+      
+      {clip && (
+        <AgeRestrictionDialog
+          isOpen={showAgeRestrictionDialog}
+          onAccept={() => {
+            isAcceptingRef.current = true;
+            setAgeRestrictionAccepted(true);
+            // Dialog will auto-close via useEffect
+          }}
+          onDecline={() => {
+            // Only close if we're not in the middle of accepting
+            if (!isAcceptingRef.current) {
+              setShowAgeRestrictionDialog(false);
+              onClose();
+            }
+          }}
+          contentType={clip.videoType === 'reel' ? 'reel' : 'clip'}
+        />
+      )}
     </Dialog>
   );
 };

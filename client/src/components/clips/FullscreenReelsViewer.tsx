@@ -12,6 +12,7 @@ import ShareMenu from "@/components/clips/ShareMenu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { ReportDialog } from "@/components/content/ReportDialog";
+import { AgeRestrictionDialog } from "@/components/content/AgeRestrictionDialog";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +27,9 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [showComments, setShowComments] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [ageRestrictionAccepted, setAgeRestrictionAccepted] = useState<Record<number, boolean>>({});
+  const [showAgeRestrictionDialog, setShowAgeRestrictionDialog] = useState(false);
+  const isAcceptingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -134,6 +138,26 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  // Check for age restriction when reel changes
+  useEffect(() => {
+    if (currentReel && currentReel.ageRestricted && !ageRestrictionAccepted[currentReel.id]) {
+      setShowAgeRestrictionDialog(true);
+    }
+  }, [currentReel, ageRestrictionAccepted]);
+
+  // Auto-close age restriction dialog after acceptance
+  useEffect(() => {
+    if (currentReel && ageRestrictionAccepted[currentReel.id] && showAgeRestrictionDialog) {
+      const timer = setTimeout(() => {
+        setShowAgeRestrictionDialog(false);
+        setTimeout(() => {
+          isAcceptingRef.current = false;
+        }, 100);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [ageRestrictionAccepted, showAgeRestrictionDialog, currentReel]);
+
   // Reset comments when switching reels
   useEffect(() => {
     setShowComments(false);
@@ -176,24 +200,34 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         {reels.map((reel, index) => (
           <div 
             key={reel.id}
-            className="snap-start snap-always h-screen flex items-center justify-center py-4 md:py-6"
+            className="snap-start snap-always h-screen w-full flex items-center justify-center"
           >
             {/* Video player */}
-            <div className="relative w-full h-full max-w-sm mx-auto md:max-w-md lg:max-w-lg px-4 md:px-0 pointer-events-none">
-              <div className="w-full h-full pointer-events-auto">
-                <VideoPlayer
-                  videoUrl={reel.videoUrl}
-                  thumbnailUrl={reel.thumbnailUrl || undefined}
-                  autoPlay={index === currentIndex}
-                  className="w-full h-full"
-                  objectFit="cover"
-                  clipId={reel.id}
-                  onEnded={() => {
-                    if (index < reels.length - 1 && containerRef.current) {
-                      containerRef.current.scrollTo({ top: (index + 1) * window.innerHeight, behavior: 'smooth' });
-                    }
-                  }}
-                />
+            <div className="relative w-full h-full max-w-sm mx-auto md:max-w-md lg:max-w-lg pointer-events-none">
+              <div className="w-full h-full pointer-events-auto flex items-center justify-center">
+                {(!reel.ageRestricted || ageRestrictionAccepted[reel.id]) ? (
+                  <VideoPlayer
+                    videoUrl={reel.videoUrl}
+                    thumbnailUrl={reel.thumbnailUrl || undefined}
+                    autoPlay={index === currentIndex}
+                    className="w-full h-full"
+                    objectFit="cover"
+                    clipId={reel.id}
+                    disableAspectRatio={true}
+                    onEnded={() => {
+                      if (index < reels.length - 1 && containerRef.current) {
+                        containerRef.current.scrollTo({ top: (index + 1) * window.innerHeight, behavior: 'smooth' });
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-black/80">
+                    <div className="text-center text-white p-6">
+                      <p className="text-lg font-semibold mb-2">Age-Restricted Content</p>
+                      <p className="text-sm text-white/70">This reel has been marked as age-restricted</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Video overlay content */}
@@ -282,7 +316,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                       contentId={reel.id}
                       contentType="clip"
                       contentOwnerId={reel.userId}
-                      initialCount={0}
+                      initialCount={parseInt(reel._count?.reactions?.toString() || '0')}
                       size="lg"
                       showCount={true}
                       variant="vertical"
@@ -386,6 +420,27 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             />
           </div>
         </div>
+      )}
+
+      {/* Age Restriction Dialog */}
+      {currentReel && (
+        <AgeRestrictionDialog
+          isOpen={showAgeRestrictionDialog}
+          onAccept={() => {
+            isAcceptingRef.current = true;
+            setAgeRestrictionAccepted(prev => ({
+              ...prev,
+              [currentReel.id]: true
+            }));
+          }}
+          onDecline={() => {
+            if (!isAcceptingRef.current) {
+              setShowAgeRestrictionDialog(false);
+              onClose();
+            }
+          }}
+          contentType="reel"
+        />
       )}
     </div>
   );

@@ -30,9 +30,11 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleOpenClip = () => {
-    // Use the same pattern as TrendingVideoCard - just call openClipDialog with clip ID
-    // This will open the clip in dialog format like trending clips do
-    openClipDialog(clip.id);
+    // If this is a reel and we have a reelsList, pass it for fullscreen navigation
+    // Otherwise if we have a clipsList, pass that for clip navigation
+    // This ensures the same pattern as LatestReelsPage and other pages
+    const contextList = reelsList || clipsList;
+    openClipDialog(clip.id, contextList);
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -70,7 +72,7 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
       {hasNoThumbnail ? (
         <video
           src={clip.videoUrl}
-          className="w-full h-full object-cover"
+          className={`w-full h-full object-cover ${clip.ageRestricted ? 'blur-2xl' : ''}`}
           preload="metadata"
           muted
           playsInline
@@ -79,12 +81,21 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         <LazyImage
           src={thumbnailUrl}
           alt={clip.title || "Video clip thumbnail"}
-          className="w-full h-full object-cover"
+          className={`w-full h-full object-cover ${clip.ageRestricted ? 'blur-2xl' : ''}`}
           placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%23f3f4f6'/%3e%3c/svg%3e"
           showLoadingSpinner={true}
           rootMargin="100px"
           threshold={0.1}
         />
+      )}
+
+      {/* Age Restricted Overlay */}
+      {clip.ageRestricted && (
+        <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-10 pointer-events-none">
+          <div className="text-red-500 text-4xl mb-2">⚠️</div>
+          <div className="text-white font-bold text-sm mb-1">Age Restricted</div>
+          <div className="text-white/70 text-xs">18+ Content</div>
+        </div>
       )}
 
       {/* View count overlay on hover */}
@@ -107,6 +118,18 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
             @{clip.user.username}
           </p>
         </Link>
+        {/* Game name below username */}
+        {clip.gameId && clip.game && (
+          <Link 
+            href={`/games/${clip.gameId}/clips`}
+            onClick={(e) => e.stopPropagation()}
+            className={`inline-block mt-1 bg-green-600 text-white rounded font-bold hover:bg-green-500 transition-all duration-300 ${
+              isReel ? 'text-[8px] px-1 py-0.5 md:text-[9px] md:px-1.5' : compact ? 'text-[9px] px-1.5 py-0.5 md:text-[10px] md:px-2' : 'text-[10px] px-1.5 py-0.5 md:text-xs md:px-2 md:py-1'
+            }`}
+          >
+            {clip.game.name}
+          </Link>
+        )}
       </div>
 
       {/* Enhanced play button with pulse effect */}
@@ -118,7 +141,27 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         </div>
       </div>
 
-      {/* Delete button for clip owner - positioned in top left corner to avoid overlap */}
+      {/* Top left section */}
+      <div className="absolute top-1.5 md:top-2 left-1.5 md:left-2 flex items-center gap-1 z-10">
+        {/* Age Restriction badge */}
+        {clip.ageRestricted && (
+          <div className={`bg-red-600 text-white font-bold shadow-lg ${
+            isReel ? 'text-[8px] px-1 py-0.5 rounded md:text-[9px] md:px-1.5' : compact ? 'text-[9px] px-1.5 py-0.5 rounded md:text-[10px] md:px-2' : 'text-[10px] px-1.5 py-0.5 rounded md:text-xs md:px-2 md:py-1 md:rounded-md'
+          }`}>
+            18+
+          </div>
+        )}
+        {/* NEW badge - shows for clips created within last 3 days */}
+        {clip.createdAt && Date.now() - new Date(clip.createdAt).getTime() < 86400000 * 3 && (
+          <div className={`bg-gray-600 text-white font-bold transform rotate-1 shadow-lg ${
+            isReel ? 'text-[8px] px-1 py-0.5 rounded md:text-[9px] md:px-1.5' : compact ? 'text-[9px] px-1.5 py-0.5 rounded md:text-[10px] md:px-2' : 'text-[10px] px-1.5 py-0.5 rounded md:text-xs md:px-2 md:py-1 md:rounded-md'
+          }`}>
+            NEW
+          </div>
+        )}
+      </div>
+
+      {/* Delete button for clip owner - positioned in top left corner, shows on hover */}
       {canDelete && (
         <Button
           size="sm"
@@ -148,30 +191,6 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         </div>
       </div>
 
-      {/* Bottom right badges container - smaller for reels */}
-      <div className="absolute bottom-1.5 md:bottom-2 right-1.5 md:right-2 flex items-center gap-0.5 md:gap-1">
-        {/* Game name badge - green color, positioned next to NEW badge, smaller for reels */}
-        {clip.gameId && clip.game && (
-          <Link 
-            href={`/games/${clip.gameId}/clips`}
-            onClick={(e) => e.stopPropagation()}
-            className={`bg-green-600 text-white rounded font-bold hover:bg-green-500 transition-all duration-300 ${
-              isReel ? 'text-[8px] px-1 py-0.5 md:text-[9px] md:px-1.5' : compact ? 'text-[9px] px-1.5 py-0.5 md:text-[10px] md:px-2' : 'text-[10px] px-1.5 py-0.5 md:text-xs md:px-2 md:py-1'
-            }`}
-          >
-            {clip.game.name}
-          </Link>
-        )}
-
-        {/* Latest clip indicator - smaller for compact mode and reels */}
-        {clip.createdAt && Date.now() - new Date(clip.createdAt).getTime() < 86400000 * 3 && (
-          <div className={`bg-gray-600 text-white font-bold transform rotate-1 shadow-lg ${
-            isReel ? 'text-[8px] px-1 py-0.5 rounded md:text-[9px] md:px-1.5' : compact ? 'text-[9px] px-1.5 py-0.5 rounded md:text-[10px] md:px-2' : 'text-[10px] px-1.5 py-0.5 rounded md:text-xs md:px-2 md:py-1 md:rounded-md'
-          }`}>
-            NEW
-          </div>
-        )}
-      </div>
     </div>
   );
 };

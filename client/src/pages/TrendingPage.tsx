@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLikeScreenshot } from '@/hooks/use-clips';
 import { useToast } from '@/hooks/use-toast';
 import { ClipWithUser } from '@shared/schema';
-import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Share2, Heart, Play, MessageCircle } from 'lucide-react';
+import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Share2, Heart, Play, MessageCircle, AlertTriangle } from 'lucide-react';
 import { formatDuration } from '@/lib/constants';
 import { formatDistance } from 'date-fns';
 import { useClipDialog } from '@/hooks/use-clip-dialog';
@@ -23,6 +23,7 @@ import { MobileTrendingViewer } from '@/components/clips/MobileTrendingViewer';
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
 import { UserIcon, X, Trash2 } from 'lucide-react';
 import { Link } from 'wouter';
+import { AgeRestrictionDialog } from '@/components/content/AgeRestrictionDialog';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { ScreenshotCard } from '@/components/screenshots/ScreenshotCard';
@@ -40,6 +41,7 @@ interface ScreenshotWithUser {
   thumbnailUrl?: string;
   tags?: string[];
   views: number;
+  ageRestricted?: boolean;
   createdAt: string;
   userId: number;
   user: {
@@ -172,8 +174,41 @@ const TrendingPage: React.FC = () => {
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('today');
   const [showMobileViewer, setShowMobileViewer] = useState(false);
   const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotWithUser | null>(null);
+  const [ageRestrictionAccepted, setAgeRestrictionAccepted] = useState(false);
+  const [showAgeRestrictionDialog, setShowAgeRestrictionDialog] = useState(false);
+  const isAcceptingRef = useRef(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Check for age restriction when screenshot is selected
+  useEffect(() => {
+    if (selectedScreenshot && (selectedScreenshot as any).ageRestricted && !ageRestrictionAccepted) {
+      setShowAgeRestrictionDialog(true);
+    }
+  }, [selectedScreenshot, ageRestrictionAccepted]);
+
+  // Auto-close age restriction dialog after acceptance
+  useEffect(() => {
+    if (ageRestrictionAccepted && showAgeRestrictionDialog) {
+      const timer = setTimeout(() => {
+        setShowAgeRestrictionDialog(false);
+        // Reset accepting flag after dialog closes
+        setTimeout(() => {
+          isAcceptingRef.current = false;
+        }, 50);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [ageRestrictionAccepted, showAgeRestrictionDialog]);
+
+  // Reset age restriction state when screenshot dialog is closed
+  useEffect(() => {
+    if (!selectedScreenshot) {
+      setAgeRestrictionAccepted(false);
+      setShowAgeRestrictionDialog(false);
+      isAcceptingRef.current = false; // Reset accepting flag
+    }
+  }, [selectedScreenshot]);
 
   // Delete screenshot mutation
   const deleteScreenshotMutation = useMutation({
@@ -560,11 +595,21 @@ const TrendingPage: React.FC = () => {
             <div className="flex flex-col lg:flex-row h-full">
               {/* Left side - Image display */}
               <div className="bg-black flex items-center justify-center w-full lg:w-[75%] h-[60vh] lg:h-full">
-                <img
-                  src={selectedScreenshot.imageUrl}
-                  alt={selectedScreenshot.title}
-                  className="max-w-full max-h-full object-contain"
-                />
+                {(!selectedScreenshot.ageRestricted || ageRestrictionAccepted) ? (
+                  <img
+                    src={selectedScreenshot.imageUrl}
+                    alt={selectedScreenshot.title}
+                    className="max-w-full max-h-full object-contain"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white">
+                    <div className="text-center p-8">
+                      <AlertTriangle className="h-16 w-16 mx-auto mb-4 text-yellow-500" />
+                      <h3 className="text-xl font-semibold mb-2">Age-Restricted Content</h3>
+                      <p className="text-gray-300">Please accept the age restriction warning to view this content.</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Right side - Info and engagement */}
@@ -688,6 +733,26 @@ const TrendingPage: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Age Restriction Dialog for Screenshots */}
+      {selectedScreenshot && (
+        <AgeRestrictionDialog
+          isOpen={showAgeRestrictionDialog}
+          onAccept={() => {
+            isAcceptingRef.current = true;
+            setAgeRestrictionAccepted(true);
+            // Dialog will auto-close via useEffect
+          }}
+          onDecline={() => {
+            // Only close if we're not in the middle of accepting
+            if (!isAcceptingRef.current) {
+              setShowAgeRestrictionDialog(false);
+              setSelectedScreenshot(null);
+            }
+          }}
+          contentType="screenshot"
+        />
+      )}
     </div>
   );
 };

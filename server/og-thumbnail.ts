@@ -16,7 +16,7 @@ export async function addPlayButtonOverlay(thumbnailUrl: string): Promise<Buffer
     const thumbnailBuffer = Buffer.from(await response.arrayBuffer());
     
     // Get image dimensions
-    const metadata = await sharp(thumbnailBuffer).metadata();
+    const metadata = await sharp(thumbnailBuffer, { failOn: 'none' }).metadata();
     const width = metadata.width || 1200;
     const height = metadata.height || 630;
     
@@ -44,7 +44,7 @@ export async function addPlayButtonOverlay(thumbnailUrl: string): Promise<Buffer
     `;
     
     // Composite the play button in the center
-    const result = await sharp(thumbnailBuffer)
+    const result = await sharp(thumbnailBuffer, { failOn: 'none' })
       .resize(1200, 630, { fit: 'cover', position: 'center' })
       .composite([{
         input: Buffer.from(playButtonSvg),

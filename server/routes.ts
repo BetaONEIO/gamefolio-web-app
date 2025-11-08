@@ -11,6 +11,7 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage } from "./storage";
 import { LeaderboardService } from "./leaderboard-service";
+import { StreakService } from "./streak-service";
 import { createInsertSchema } from "drizzle-zod";
 import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema } from "@shared/schema";
 import { promisify } from "util";
@@ -46,6 +47,7 @@ import adminRouter from "./routes/admin";
 import adminContentFilterRouter from "./routes/admin-content-filter";
 import twitchGamesRouter from "./routes/twitch-games";
 import authRouter from "./routes/auth-routes";
+import tokenAuthRouter from "./routes/token-auth";
 import uploadRouter from "./routes/upload";
 import migrationRouter from "./routes/migration";
 import viewRouter from "./routes/view";
@@ -60,6 +62,7 @@ import { NotificationService } from "./notification-service";
 import { MentionService } from "./mention-service";
 import { initializeRealtimeNotificationService } from './realtime-notification-service';
 import { adminMiddleware } from "./middleware/admin";
+import { optionalHybridAuth } from "./middleware/optional-hybrid-auth";
 import QRCode from "qrcode";
 import { supabaseStorage } from "./supabase-storage";
 import { contentFilterService } from "./services/content-filter";
@@ -67,6 +70,36 @@ import { addPlayButtonOverlay } from "./og-thumbnail";
 
 // Import upload middlewares from upload router
 import multer from "multer";
+
+// Rate limiting for likes and reactions to prevent spam
+// Global rate limiting: user can only perform ONE action every 5 seconds across ALL content
+const actionRateLimits = new Map<string, number>();
+const RATE_LIMIT_COOLDOWN = 5000; // 5 seconds between actions
+
+function checkRateLimit(userId: number, contentType: string, contentId: number, actionType: string): boolean {
+  // Use global key per user for stricter rate limiting
+  const key = `${userId}:like-action`;
+  const now = Date.now();
+  const lastAction = actionRateLimits.get(key);
+  
+  if (lastAction && (now - lastAction) < RATE_LIMIT_COOLDOWN) {
+    return false;
+  }
+  
+  actionRateLimits.set(key, now);
+  
+  // Clean up old entries periodically (keep map size manageable)
+  if (actionRateLimits.size > 10000) {
+    const cutoff = now - RATE_LIMIT_COOLDOWN * 2;
+    for (const [k, v] of actionRateLimits.entries()) {
+      if (v < cutoff) {
+        actionRateLimits.delete(k);
+      }
+    }
+  }
+  
+  return true;
+}
 
 // Password hashing utilities
 const scryptAsync = promisify(scrypt);
@@ -706,8 +739,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await EmailService.sendWelcomeEmail(user.email, user.displayName || user.username);
         }
 
+        // Send new user notification to admin
+        if (user.email) {
+          try {
+            await EmailService.sendNewUserNotification({
+              username: user.username,
+              email: user.email,
+              displayName: user.displayName,
+              authProvider: 'google'
+            });
+            console.log(`New user notification sent for ${user.username}`);
+          } catch (error) {
+            console.error('Failed to send new user notification:', error);
+          }
+        }
+
         // Log user in
-        req.login(user as any, (err) => {
+        req.login(user as any, async (err) => {
           if (err) {
             console.error("Login error:", err);
             return res.status(500).json({ message: "Login failed" });
@@ -716,11 +764,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Track login time for session security
           req.session.loginTime = Date.now();
 
+          // Update user's login streak for new Google users
+          let streakInfo;
+          try {
+            streakInfo = await StreakService.updateLoginStreak(user!.id);
+            if (streakInfo.bonusAwarded > 0) {
+              console.log(`🎉 Streak bonus for ${user!.username}: ${streakInfo.message}`);
+            }
+          } catch (error) {
+            console.error("Error updating login streak:", error);
+          }
+
+          // Fetch updated user data to get the latest streak information
+          const updatedUser = await storage.getUserById(user!.id);
+          const userToReturn = updatedUser || user;
+
           // Return user data with needsOnboarding flag
           res.status(200).json({
-            ...user,
+            ...userToReturn,
             needsOnboarding: true,
-            isNewGoogleUser: true
+            isNewGoogleUser: true,
+            ...(streakInfo && {
+              streakInfo: {
+                currentStreak: streakInfo.currentStreak,
+                bonusAwarded: streakInfo.bonusAwarded,
+                message: streakInfo.message,
+                isNewMilestone: streakInfo.isNewMilestone
+              }
+            })
           });
         });
       } else {
@@ -737,7 +808,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Log user in
-        req.login(user as any, (err) => {
+        req.login(user as any, async (err) => {
           if (err) {
             console.error("Login error:", err);
             return res.status(500).json({ message: "Login failed" });
@@ -746,10 +817,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Track login time for session security
           req.session.loginTime = Date.now();
 
+          // Update user's login streak for existing Google users
+          let streakInfo;
+          try {
+            streakInfo = await StreakService.updateLoginStreak(user!.id);
+            if (streakInfo.bonusAwarded > 0) {
+              console.log(`🎉 Streak bonus for ${user!.username}: ${streakInfo.message}`);
+            }
+          } catch (error) {
+            console.error("Error updating login streak:", error);
+          }
+
+          // Fetch updated user data to get the latest streak information
+          const updatedUser = await storage.getUserById(user!.id);
+          const userToReturn = updatedUser || user;
+
           // Return user data with onboarding status
           res.status(200).json({
-            ...user,
-            needsOnboarding
+            ...userToReturn,
+            needsOnboarding,
+            ...(streakInfo && {
+              streakInfo: {
+                currentStreak: streakInfo.currentStreak,
+                bonusAwarded: streakInfo.bonusAwarded,
+                message: streakInfo.message,
+                isNewMilestone: streakInfo.isNewMilestone
+              }
+            })
           });
         });
       }
@@ -875,18 +969,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
+        // Send new user notification to admin
+        if (user.email) {
+          try {
+            await EmailService.sendNewUserNotification({
+              username: user.username,
+              email: user.email,
+              displayName: user.displayName,
+              authProvider: 'discord'
+            });
+            console.log(`New user notification sent for ${user.username}`);
+          } catch (error) {
+            console.error('Failed to send new user notification:', error);
+          }
+        }
+
         // Log user in
-        req.login(user as any, (err) => {
+        req.login(user as any, async (err) => {
           if (err) {
             console.error("Login error:", err);
             return res.status(500).json({ message: "Login failed" });
           }
 
+          // Update user's login streak for new Discord users
+          let streakInfo;
+          try {
+            streakInfo = await StreakService.updateLoginStreak(user!.id);
+            if (streakInfo.bonusAwarded > 0) {
+              console.log(`🎉 Streak bonus for ${user!.username}: ${streakInfo.message}`);
+            }
+          } catch (error) {
+            console.error("Error updating login streak:", error);
+          }
+
+          // Fetch updated user data to get the latest streak information
+          const updatedUser = await storage.getUserById(user!.id);
+          const userToReturn = updatedUser || user;
+
           // Return user data with needsOnboarding flag
           res.status(200).json({
-            ...user,
+            ...userToReturn,
             needsOnboarding: true,
-            isNewDiscordUser: true
+            isNewDiscordUser: true,
+            ...(streakInfo && {
+              streakInfo: {
+                currentStreak: streakInfo.currentStreak,
+                bonusAwarded: streakInfo.bonusAwarded,
+                message: streakInfo.message,
+                isNewMilestone: streakInfo.isNewMilestone
+              }
+            })
           });
         });
       } else {
@@ -904,16 +1036,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Log user in
-        req.login(user as any, (err) => {
+        req.login(user as any, async (err) => {
           if (err) {
             console.error("Login error:", err);
             return res.status(500).json({ message: "Login failed" });
           }
 
+          // Update user's login streak for existing Discord users
+          let streakInfo;
+          try {
+            streakInfo = await StreakService.updateLoginStreak(user!.id);
+            if (streakInfo.bonusAwarded > 0) {
+              console.log(`🎉 Streak bonus for ${user!.username}: ${streakInfo.message}`);
+            }
+          } catch (error) {
+            console.error("Error updating login streak:", error);
+          }
+
+          // Fetch updated user data to get the latest streak information
+          const updatedUser = await storage.getUserById(user!.id);
+          const userToReturn = updatedUser || user;
+
           // Return user data with onboarding status
           res.status(200).json({
-            ...user,
-            needsOnboarding
+            ...userToReturn,
+            needsOnboarding,
+            ...(streakInfo && {
+              streakInfo: {
+                currentStreak: streakInfo.currentStreak,
+                bonusAwarded: streakInfo.bonusAwarded,
+                message: streakInfo.message,
+                isNewMilestone: streakInfo.isNewMilestone
+              }
+            })
           });
         });
       }
@@ -996,6 +1151,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.warn(`Failed to send verification email to ${user.email}`);
       }
 
+      // Send new user notification to admin
+      if (user.email) {
+        try {
+          await EmailService.sendNewUserNotification({
+            username: user.username,
+            email: user.email,
+            displayName: user.displayName,
+            authProvider: 'local'
+          });
+          console.log(`New user notification sent for ${user.username}`);
+        } catch (error) {
+          console.error('Failed to send new user notification:', error);
+        }
+      }
+
       // Remove password from response
       const { password, ...userWithoutPassword } = user;
 
@@ -1072,10 +1242,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Don't fail the login if this update fails
         }
 
+        // Update user's login streak and award bonus points if applicable
+        let streakInfo;
+        try {
+          streakInfo = await StreakService.updateLoginStreak(user.id);
+          if (streakInfo.bonusAwarded > 0) {
+            console.log(`🎉 Streak bonus for ${user.username}: ${streakInfo.message}`);
+          }
+        } catch (error) {
+          console.error("Error updating login streak:", error);
+          // Don't fail the login if streak update fails
+        }
+
+        // Fetch updated user data to get the latest streak information
+        const updatedUser = await storage.getUserById(user.id);
+        const userToReturn = updatedUser || user;
+
         // Remove password from response
-        const { password, ...userWithoutPassword } = user;
-        console.log("Login successful for user:", user.username);
-        return res.json(userWithoutPassword);
+        const { password, ...userWithoutPassword } = userToReturn;
+        console.log("Login successful for user:", userToReturn.username);
+        
+        // Include streak info in response if available
+        const response = streakInfo ? {
+          ...userWithoutPassword,
+          streakInfo: {
+            currentStreak: streakInfo.currentStreak,
+            bonusAwarded: streakInfo.bonusAwarded,
+            message: streakInfo.message,
+            isNewMilestone: streakInfo.isNewMilestone
+          }
+        } : userWithoutPassword;
+        
+        return res.json(response);
       });
     })(req, res, next);
   });
@@ -1107,13 +1305,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get current user (supports guest access)
-  app.get("/api/user", (req, res) => {
+  app.get("/api/user", optionalHybridAuth, async (req, res) => {
     if (!req.user) {
       // Return null for guest users instead of 401 error
       return res.json(null);
     }
 
-    // Remove password from response
+    // Update streak when user accesses the app (daily check-in)
+    try {
+      const streakInfo = await StreakService.updateLoginStreak((req.user as any).id);
+      if (streakInfo.bonusAwarded > 0) {
+        console.log(`🎉 Daily check-in streak bonus for ${(req.user as any).username}: ${streakInfo.message}`);
+      }
+      
+      // Fetch fresh user data after streak update
+      const freshUser = await storage.getUserById((req.user as any).id);
+      if (freshUser) {
+        const { password, ...userWithoutPassword } = freshUser as any;
+        return res.json({
+          id: userWithoutPassword.id,
+          username: userWithoutPassword.username,
+          email: userWithoutPassword.email,
+          emailVerified: userWithoutPassword.emailVerified || false,
+          profilePictureUrl: userWithoutPassword.profilePictureUrl,
+          bio: userWithoutPassword.bio,
+          bannerUrl: userWithoutPassword.bannerUrl,
+          displayName: userWithoutPassword.displayName,
+          backgroundColor: userWithoutPassword.backgroundColor,
+          accentColor: userWithoutPassword.accentColor,
+          avatarUrl: userWithoutPassword.avatarUrl,
+          createdAt: userWithoutPassword.createdAt,
+          userType: userWithoutPassword.userType,
+          ageRange: userWithoutPassword.ageRange,
+          role: userWithoutPassword.role,
+          isAdmin: userWithoutPassword.isAdmin || false,
+          messagingEnabled: userWithoutPassword.messagingEnabled || false,
+          isPrivate: userWithoutPassword.isPrivate || false,
+          currentStreak: userWithoutPassword.currentStreak || 0,
+          longestStreak: userWithoutPassword.longestStreak || 0,
+          level: userWithoutPassword.level || 1,
+          totalXP: userWithoutPassword.totalXP || 0,
+        });
+      }
+    } catch (error) {
+      console.error("Error updating daily check-in streak:", error);
+    }
+
+    // Fallback to session user data if streak update fails
     const { password, ...userWithoutPassword } = req.user as any;
     return res.json({
       id: userWithoutPassword.id,
@@ -1134,6 +1372,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       isAdmin: userWithoutPassword.isAdmin || false,
       messagingEnabled: userWithoutPassword.messagingEnabled || false,
       isPrivate: userWithoutPassword.isPrivate || false,
+      currentStreak: userWithoutPassword.currentStreak || 0,
+      longestStreak: userWithoutPassword.longestStreak || 0,
+      level: userWithoutPassword.level || 1,
+      totalXP: userWithoutPassword.totalXP || 0,
     });
   });
 
@@ -3420,6 +3662,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create the clip (initially without thumbnail)
+      console.log('🔞 Age Restriction Debug - Backend received:', {
+        ageRestricted: req.body.ageRestricted,
+        ageRestrictedType: typeof req.body.ageRestricted,
+        evaluation: req.body.ageRestricted === 'true' || req.body.ageRestricted === true
+      });
+      
       const clipData = {
         userId,
         title,
@@ -3435,6 +3683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         trimStart: req.body.trimStart ? parseInt(req.body.trimStart) : 0,
         trimEnd: req.body.trimEnd ? parseInt(req.body.trimEnd) : 30,
         videoType: req.body.videoType || "clip", // "clip" or "reel"
+        ageRestricted: req.body.ageRestricted === 'true' || req.body.ageRestricted === true,
         shareCode: generateShareCode(), // This generates 8-character alphanumeric codes
       };
 
@@ -3887,7 +4136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete comment
-  app.delete("/api/comments/:id", authMiddleware, async (req, res) => {
+  app.delete("/api/clips/:clipId/comments/:id", authMiddleware, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const comment = await storage.getComment(commentId);
@@ -4055,6 +4304,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const userId = req.user!.id;
+      
+      // Rate limit check to prevent spam
+      if (!checkRateLimit(userId, 'clip', clipId, 'like')) {
+        return res.status(429).json({ 
+          message: "Slow down! You can only like/unlike once every 5 seconds" 
+        });
+      }
+      
       // Check if the clip exists
       const clip = await storage.getClip(clipId);
       if (!clip) {
@@ -4072,7 +4329,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (hasLiked) {
         // Unlike the clip
         await storage.deleteLike(userId, clipId);
-        res.json({ message: "Clip unliked", liked: false });
+        
+        // Get actual like count after deletion
+        const likes = await storage.getLikesByClipId(clipId);
+        const likeCount = likes.length;
+        
+        res.json({ message: "Clip unliked", liked: false, count: likeCount });
       } else {
         // Like the clip
         const likeData = insertLikeSchema.parse({
@@ -4081,17 +4343,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         const like = await storage.createLike(likeData);
 
-        // Award points to the user for liking
-        await LeaderboardService.awardPoints(
-          userId,
-          'like',
-          `Liked clip #${clipId}`
-        );
+        // Award points to the user for liking (only if they haven't earned points for this clip before)
+        const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'like', 'clip', clipId);
+        if (!hasEarnedPoints) {
+          await LeaderboardService.awardPoints(
+            userId,
+            'like',
+            `Liked clip #${clipId}`
+          );
+        }
 
         // Create notification for the clip owner
         await NotificationService.createLikeNotification(clipId, userId);
 
-        res.status(201).json({ message: "Clip liked", liked: true, like });
+        // Get actual like count after adding
+        const likes = await storage.getLikesByClipId(clipId);
+        const likeCount = likes.length;
+
+        res.status(201).json({ message: "Clip liked", liked: true, like, count: likeCount });
       }
     } catch (error) {
       console.error("Error toggling clip like:", error);
@@ -4151,6 +4420,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/clips/:id/reactions", emailVerificationMiddleware, async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);
+      const userId = req.user!.id;
+
+      // Rate limit check to prevent spam
+      if (!checkRateLimit(userId, 'clip', clipId, 'reaction')) {
+        return res.status(429).json({ 
+          message: "Slow down! You can only add/remove reactions once every 5 seconds" 
+        });
+      }
 
       // Check if the clip exists
       const clip = await storage.getClip(clipId);
@@ -4159,7 +4436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Prevent users from reacting to their own content
-      if (clip.userId === req.user?.id) {
+      if (clip.userId === userId) {
         return res.status(400).json({ message: "Cannot react to your own content, casual!" });
       }
 
@@ -4173,7 +4450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate and create the reaction
       const reactionData = insertClipReactionSchema.parse({
         clipId,
-        userId: req.user?.id,
+        userId: userId,
         emoji: req.body.emoji,
         positionX: req.body.positionX || 50,
         positionY: req.body.positionY || 50,
@@ -4181,13 +4458,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const reaction = await storage.createClipReaction(reactionData);
       
-      // Award points if this is a fire reaction
-      if (req.body.emoji === '🔥' && req.user?.id) {
-        await LeaderboardService.awardPoints(
-          req.user.id,
-          'fire',
-          `Fire reaction given to clip #${clipId}`
-        );
+      // Award points if this is a fire reaction (only if they haven't earned points for this clip before)
+      if (req.body.emoji === '🔥') {
+        const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'fire', 'clip', clipId);
+        if (!hasEarnedPoints) {
+          await LeaderboardService.awardPoints(
+            userId,
+            'fire',
+            `Fire reaction given to clip #${clipId}`
+          );
+        }
       }
       
       res.status(201).json(reaction);
@@ -5310,13 +5590,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user!.id;
 
       // Optimize original image
-      const optimizedImageBuffer = await sharp(originalPath)
+      const optimizedImageBuffer = await sharp(originalPath, { failOn: 'none' })
         .jpeg({ quality: 85 })
         .resize(1920, 1080, { fit: 'inside', withoutEnlargement: true })
         .toBuffer();
 
       // Generate thumbnail
-      const thumbnailBuffer = await sharp(originalPath)
+      const thumbnailBuffer = await sharp(originalPath, { failOn: 'none' })
         .jpeg({ quality: 80 })
         .resize(400, 300, { fit: 'cover' })
         .toBuffer();
@@ -5348,6 +5628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         thumbnailUrl,
         description: description || null,
         tags: tags ? JSON.parse(tags) : [],
+        ageRestricted: req.body.ageRestricted === 'true' || req.body.ageRestricted === true,
         shareCode: generateShareCode()
       };
 
@@ -6413,6 +6694,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const screenshotId = parseInt(req.params.id);
       const userId = req.user!.id;
 
+      // Rate limit check to prevent spam
+      if (!checkRateLimit(userId, 'screenshot', screenshotId, 'like')) {
+        return res.status(429).json({ 
+          message: "Slow down! You can only like/unlike once every 5 seconds" 
+        });
+      }
+
       // Check if the screenshot exists
       const screenshot = await storage.getScreenshot(screenshotId);
       if (!screenshot) {
@@ -6430,26 +6718,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (hasLiked) {
         // Unlike the screenshot
         await storage.deleteScreenshotLike(userId, screenshotId);
-        res.json({ message: "Screenshot unliked", liked: false });
+        
+        // Get actual like count after deletion
+        const likes = await storage.getScreenshotLikes(screenshotId);
+        const likeCount = likes.length;
+        
+        res.json({ message: "Screenshot unliked", liked: false, count: likeCount });
       } else {
         // Like the screenshot
         const like = await storage.createScreenshotLike(userId, screenshotId);
 
-        // Award points to the user for liking
-        await LeaderboardService.awardPoints(
-          userId,
-          'like',
-          `Liked screenshot #${screenshotId}`
-        );
+        // Award points to the user for liking (only if they haven't earned points for this screenshot before)
+        const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'like', 'screenshot', screenshotId);
+        if (!hasEarnedPoints) {
+          await LeaderboardService.awardPoints(
+            userId,
+            'like',
+            `Liked screenshot #${screenshotId}`
+          );
+        }
 
         // Create notification for the screenshot owner
         await NotificationService.createScreenshotLikeNotification(screenshotId, userId);
 
-        res.status(201).json({ message: "Screenshot liked", liked: true, like });
+        // Get actual like count after adding
+        const likes = await storage.getScreenshotLikes(screenshotId);
+        const likeCount = likes.length;
+
+        res.status(201).json({ message: "Screenshot liked", liked: true, like, count: likeCount });
       }
     } catch (error) {
       console.error("Error toggling screenshot like:", error);
       res.status(500).json({ error: "Failed to toggle like" });
+    }
+  });
+
+  // Unlike screenshot (DELETE endpoint for backward compatibility)
+  app.delete("/api/screenshots/:id/likes", emailVerificationMiddleware, async (req, res) => {
+    try {
+      const screenshotId = parseInt(req.params.id);
+      if (isNaN(screenshotId)) {
+        return res.status(400).json({ error: "Invalid screenshot ID" });
+      }
+
+      const userId = req.user!.id;
+      // Check if the user has liked this screenshot
+      const hasLiked = await storage.hasUserLikedScreenshot(userId, screenshotId);
+      if (!hasLiked) {
+        return res.status(400).json({ message: "You have not liked this screenshot" });
+      }
+
+      // Delete the like
+      const success = await storage.deleteScreenshotLike(userId, screenshotId);
+
+      if (!success) {
+        return res.status(500).json({ message: "Failed to unlike screenshot" });
+      }
+
+      res.status(200).json({ message: "Screenshot unliked successfully", liked: false });
+    } catch (error) {
+      console.error("Error unliking screenshot:", error);
+      res.status(500).json({ error: "Failed to unlike screenshot" });
     }
   });
 
@@ -6471,6 +6800,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const screenshotId = parseInt(req.params.id);
       const userId = req.user!.id;
       const { emoji } = req.body;
+
+      // Rate limit check to prevent spam
+      if (!checkRateLimit(userId, 'screenshot', screenshotId, 'reaction')) {
+        return res.status(429).json({ 
+          message: "Slow down! You can only add/remove reactions once every 5 seconds" 
+        });
+      }
 
       // Check if the screenshot exists
       const screenshot = await storage.getScreenshot(screenshotId);
@@ -6505,13 +6841,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const reaction = await storage.createScreenshotReaction(reactionData);
         
-        // Award points if this is a fire reaction
+        // Award points if this is a fire reaction (only if they haven't earned points for this screenshot before)
         if (emoji === '🔥') {
-          await LeaderboardService.awardPoints(
-            userId,
-            'fire',
-            `Fire reaction given to screenshot #${screenshotId}`
-          );
+          const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'fire', 'screenshot', screenshotId);
+          if (!hasEarnedPoints) {
+            await LeaderboardService.awardPoints(
+              userId,
+              'fire',
+              `Fire reaction given to screenshot #${screenshotId}`
+            );
+          }
         }
         
         res.status(201).json({ message: "Reaction added", reacted: true, reaction });
@@ -6685,6 +7024,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register authentication routes for email verification and password reset
   app.use('/api', authRouter);
+
+  // Register token-based authentication routes for desktop apps
+  app.use('/api', tokenAuthRouter);
 
   // Register view routes for shareable content
   app.use('/api/view', viewRouter);

@@ -45,7 +45,7 @@ const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) 
             <LazyImage
               src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
               alt={clip.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${clip.ageRestricted ? 'blur-2xl' : ''}`}
               placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%23374151'/%3e%3c/svg%3e"
               showLoadingSpinner={true}
               rootMargin="50px"
@@ -60,6 +60,15 @@ const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) 
               <Play className="h-12 w-12 text-gray-500" />
             </div>
           )}
+
+          {/* Age Restricted Overlay */}
+          {clip.ageRestricted && (
+            <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-10">
+              <div className="text-red-500 text-4xl mb-2">⚠️</div>
+              <div className="text-white font-bold text-sm mb-1">Age Restricted</div>
+              <div className="text-white/70 text-xs">18+ Content</div>
+            </div>
+          )}
           
           {/* Play overlay */}
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
@@ -67,6 +76,13 @@ const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) 
               <Play className="h-6 w-6 text-white fill-white" />
             </div>
           </div>
+
+          {/* Age Restriction badge */}
+          {clip.ageRestricted && (
+            <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded font-bold shadow-lg">
+              18+
+            </div>
+          )}
 
           {/* Duration badge */}
           <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
@@ -110,6 +126,7 @@ const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) 
             
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span>♥ {formatNumber(parseInt(clip._count?.likes?.toString() || '0'))}</span>
+              <span>🔥 {formatNumber(parseInt(clip._count?.reactions?.toString() || '0'))}</span>
               <span>💬 {formatNumber(parseInt(clip._count?.comments?.toString() || '0'))}</span>
             </div>
           </div>

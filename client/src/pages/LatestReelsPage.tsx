@@ -135,7 +135,7 @@ export default function LatestReelsPage() {
                           <span>{formatNumber(reel.views || 0)}</span>
                         </div>
                         {reel.game && (
-                          <div className="bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full">
+                          <div className="bg-green-600 text-white px-2 py-0.5 rounded font-bold">
                             {reel.game.name}
                           </div>
                         )}
@@ -180,8 +180,8 @@ export default function LatestReelsPage() {
 
                     {/* Play button overlay */}
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="bg-white/20 backdrop-blur-sm rounded-full p-4">
-                        <svg className="w-8 h-8 text-white fill-white" viewBox="0 0 24 24">
+                      <div className="bg-primary backdrop-blur-sm rounded-full p-3">
+                        <svg className="w-6 h-6 text-white fill-white" viewBox="0 0 24 24">
                           <path d="M8 5v14l11-7z"/>
                         </svg>
                       </div>
@@ -235,7 +235,7 @@ export default function LatestReelsPage() {
 
                         {/* Game badge */}
                         {reel.game && (
-                          <div className="bg-primary/80 text-white text-xs px-2 py-1 rounded-full">
+                          <div className="bg-green-600 text-white text-xs px-2 py-1 rounded font-bold">
                             {reel.game.name}
                           </div>
                         )}

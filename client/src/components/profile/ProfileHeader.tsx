@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { UserWithStats } from "@shared/schema";
-import { Mail, UserPlus, UserCheck, Share2, CheckCircle2, MessageSquare, Trophy } from "lucide-react";
+import { Mail, UserPlus, UserCheck, Share2, CheckCircle2, MessageSquare, Trophy, Heart, Flame } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
@@ -114,6 +114,36 @@ const ProfileHeader = ({
               <div className="text-center">
                 <span className="font-bold block">{profile._count?.following || 0}</span>
                 <span className="text-muted-foreground">Following</span>
+              </div>
+              <div className="text-center" data-testid="stat-likes-received">
+                <span className="font-bold block flex items-center gap-1 justify-center">
+                  <Heart className="w-3 h-3 text-red-500" />
+                  {profile._count?.likesReceived || 0}
+                </span>
+                <span className="text-muted-foreground">Likes</span>
+              </div>
+              <div className="text-center" data-testid="stat-fires-received">
+                <span className="font-bold block flex items-center gap-1 justify-center">
+                  <Flame className="w-3 h-3 text-orange-500" />
+                  {profile._count?.firesReceived || 0}
+                </span>
+                <span className="text-muted-foreground">Fires</span>
+              </div>
+              <div className="text-center" data-testid="stat-streak">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <span className="font-bold block flex items-center gap-1 justify-center">
+                        <Flame className="w-3 h-3 text-orange-500" />
+                        {profile.currentStreak || 0}
+                      </span>
+                      <span className="text-muted-foreground">Streak</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-sm">Longest: {profile.longestStreak || 0} days</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <div className="text-center">
                 <TooltipProvider>

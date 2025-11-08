@@ -136,7 +136,7 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
                   contentId={clip.id} 
                   contentType="clip" 
                   contentOwnerId={clip.userId}
-                  initialCount={0}
+                  initialCount={parseInt(clip._count?.reactions?.toString() || '0')}
                   size="sm"
                 />
               </div>

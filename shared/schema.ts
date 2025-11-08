@@ -49,6 +49,10 @@ export const users = pgTable("users", {
   // XP System
   totalXP: real("total_xp").default(0).notNull(), // Total experience points earned from views
   level: integer("level").default(1).notNull(), // User level based on XP
+  // Login Streak System
+  currentStreak: integer("current_streak").default(0).notNull(), // Current consecutive login days
+  longestStreak: integer("longest_streak").default(0).notNull(), // Longest streak ever achieved
+  lastStreakUpdate: timestamp("last_streak_update"), // Last date streak was updated
   // Crossmint Wallet
   walletAddress: text("wallet_address"),
   walletChain: text("wallet_chain").default("polygon"),
@@ -84,6 +88,7 @@ export const clips = pgTable("clips", {
   trimStart: integer("trim_start").default(0),
   trimEnd: integer("trim_end").default(0),
   videoType: text("video_type").default("clip"), // "clip" or "reel"
+  ageRestricted: boolean("age_restricted").default(false).notNull(),
   shareCode: text("share_code").unique(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -125,6 +130,7 @@ export const screenshots = pgTable("screenshots", {
   thumbnailUrl: text("thumbnail_url"),
   tags: text("tags").array(),
   views: integer("views").default(0),
+  ageRestricted: boolean("age_restricted").default(false).notNull(),
   shareCode: text("share_code").unique(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -893,6 +899,7 @@ export type ClipWithUser = Clip & {
   _count?: {
     likes: number;
     comments: number;
+    reactions: number;
   };
 };
 
@@ -912,6 +919,8 @@ export type UserWithStats = User & {
     following: number;
     clips: number;
     clipViews: number;
+    likesReceived: number;
+    firesReceived: number;
   };
   favoriteGames?: Game[];
 };

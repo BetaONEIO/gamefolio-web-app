@@ -48,7 +48,7 @@ export class VideoThumbnailService {
             // Optimize the thumbnail with sharp (optional - skip if it fails)
             try {
               const optimizedPath = thumbnailPath.replace('.jpg', '_optimized.jpg');
-              await sharp(thumbnailPath)
+              await sharp(thumbnailPath, { failOn: 'none' })
                 .jpeg({ quality: 80, progressive: true })
                 .toFile(optimizedPath);
               

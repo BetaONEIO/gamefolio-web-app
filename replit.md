@@ -21,7 +21,10 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
 ### Backend (Node.js/Express)
 - **Framework**: Express server with TypeScript.
 - **Session Management**: `connect-pg-simple` for PostgreSQL-backed sessions.
-- **Authentication**: `passport-local` for user authentication.
+- **Authentication**: Hybrid authentication system supporting both session-based (web) and JWT token-based (desktop/mobile) authentication.
+  - **Web**: `passport-local` for session-based user authentication.
+  - **Desktop/Mobile**: JWT tokens (7-day access, 30-day refresh) via `jsonwebtoken`.
+  - **Hybrid Middleware**: Accepts both session cookies and Bearer tokens for maximum flexibility.
 - **File Uploads**: Handled via `multer` and Supabase storage.
 - **Email Verification**: Token-based system for user verification.
 - **Content Filtering**: Integrated `bad-words` library with custom Supabase `banned_words` table for real-time content moderation across all user inputs.
@@ -41,7 +44,8 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
 - **Points System**: Single unified points system for both leveling and leaderboards. Points earned: Uploads (5pts), Likes (1pt), Comments (1pt), Fire reactions (3pts), Views (1pt). Total points determine user level.
 - **Leveling System**: Progressive thresholds based on total points (Level 1: 0pts, Level 2: 100pts, Level 3: 500pts, etc.) with level display on user profiles marked with Trophy icon.
 - **Leaderboard System**: Weekly and monthly leaderboards tracking uploads, likes, comments, fires, and views with comprehensive ranking system.
-- **Admin Panel**: Comprehensive user management, content moderation, user deletion, and points/level synchronization tools.
+- **Streak System**: Continuous streak tracking where users earn +1 streak each time they use the application, regardless of gaps between logins. Milestone bonuses awarded at 3, 7, 14, 30, 60, 90, 180, and 365 days.
+- **Admin Panel**: Comprehensive user management, content moderation, user deletion, points/level synchronization, and streak management tools with dedicated tabs for each feature.
 - **Multi-game Support**: Integration with Twitch API for game data retrieval and automatic game creation.
 - **Adaptive URL Support**: Email verification URLs dynamically adapt to development, Replit, and custom production environments.
 - **Post-Upload Workflow**: Seamless redirection to user profile with automatic share dialog display after content uploads.

@@ -80,6 +80,9 @@ export function ScreenshotCard({
       return;
     }
     
+    // Store the current count for rollback if needed
+    const previousCount = likeCount;
+    
     // Optimistically update like count
     setLikeCount(hasUserLiked ? likeCount - 1 : likeCount + 1);
     
@@ -92,12 +95,27 @@ export function ScreenshotCard({
     likeMutation.mutate({
       screenshotId: screenshot.id,
       unlike: hasUserLiked
-    });
-    
-    toast({
-      title: hasUserLiked ? "Unliked" : "Liked!",
-      description: hasUserLiked ? "Removed from your liked screenshots" : "Added to your liked screenshots ❤️",
-      variant: "default"
+    }, {
+      onSuccess: (data: any) => {
+        // Update with actual count from server if provided
+        if (data && typeof data.count === 'number') {
+          setLikeCount(data.count);
+        }
+        toast({
+          title: hasUserLiked ? "Unliked" : "Liked!",
+          description: hasUserLiked ? "Removed from your liked screenshots" : "Added to your liked screenshots ❤️",
+          variant: "default"
+        });
+      },
+      onError: (error: any) => {
+        // Rollback optimistic update on error
+        setLikeCount(previousCount);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to toggle like",
+          variant: "destructive"
+        });
+      }
     });
   };
 
@@ -115,8 +133,24 @@ export function ScreenshotCard({
         <img 
           src={screenshot.imageUrl || undefined} 
           alt={screenshot.title}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${screenshot.ageRestricted ? 'blur-2xl' : ''}`}
         />
+
+        {/* Age Restriction badge */}
+        {screenshot.ageRestricted && (
+          <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded font-bold shadow-lg z-20">
+            18+
+          </div>
+        )}
+
+        {/* Age Restricted Overlay */}
+        {screenshot.ageRestricted && (
+          <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-10">
+            <div className="text-red-500 text-4xl mb-2">⚠️</div>
+            <div className="text-white font-bold text-sm mb-1">Age Restricted</div>
+            <div className="text-white/70 text-xs">18+ Content</div>
+          </div>
+        )}
 
         {/* Action buttons for screenshots */}
         {isOwnProfile ? (
@@ -200,6 +234,16 @@ export function ScreenshotCard({
               />
               <span>{likeCount}</span>
             </button>
+            
+            <FireButton 
+              contentId={screenshot.id}
+              contentType="screenshot"
+              contentOwnerId={screenshot.userId}
+              initialFired={false}
+              initialCount={(screenshot as any)._count?.reactions || 0}
+              size="sm"
+              showCount={true}
+            />
             
             <div className="flex items-center gap-1">
               <MessageSquare className="h-4 w-4" />
