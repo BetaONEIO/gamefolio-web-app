@@ -48,7 +48,7 @@ export function NFTPurchaseDialog({
   const queryClient = useQueryClient();
 
   const purchaseMutation = useMutation({
-    mutationFn: async (data: { nftId: number; price: number }) => {
+    mutationFn: async (data: { nftId: number }) => {
       return await apiRequest("/api/nft/purchase", {
         method: "POST",
         body: JSON.stringify(data),
@@ -107,7 +107,6 @@ export function NFTPurchaseDialog({
 
     purchaseMutation.mutate({
       nftId: nft.id,
-      price: nft.price,
     });
   };
 

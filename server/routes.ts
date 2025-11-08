@@ -7169,14 +7169,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // NFT Purchase Routes
   // ==========================================
 
+  // Mock NFT catalog (server-side source of truth for pricing)
+  const NFT_CATALOG = [
+    { id: 1, name: "Gamer Avatar #001", price: 250, priceUSD: 12.50, forSale: true },
+    { id: 2, name: "Gamer Avatar #002", price: 500, priceUSD: 25.00, forSale: true },
+    { id: 3, name: "Gamer Avatar #003", price: 350, priceUSD: 17.50, forSale: true },
+    { id: 4, name: "Gamer Avatar #004", price: 400, priceUSD: 20.00, forSale: true },
+    { id: 5, name: "Gamer Avatar #005", price: 600, priceUSD: 30.00, forSale: true },
+    { id: 6, name: "Gamer Avatar #006", price: 180, priceUSD: 9.00, forSale: true },
+  ];
+
   // Purchase NFT with GF tokens
   app.post("/api/nft/purchase", authMiddleware, async (req, res) => {
     try {
       const userId = req.user!.id;
-      const { nftId, price } = req.body;
+      const { nftId } = req.body;
 
-      if (!nftId || typeof price !== 'number' || price <= 0) {
-        return res.status(400).json({ message: "Invalid purchase data" });
+      if (!nftId || typeof nftId !== 'number') {
+        return res.status(400).json({ message: "Invalid NFT ID" });
+      }
+
+      // Look up NFT price from server-side catalog (prevents price manipulation)
+      const nft = NFT_CATALOG.find(n => n.id === nftId);
+      if (!nft) {
+        return res.status(404).json({ message: "NFT not found" });
+      }
+
+      if (!nft.forSale) {
+        return res.status(400).json({ message: "NFT is not for sale" });
       }
 
       const user = await storage.getUser(userId);
@@ -7189,18 +7209,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Wallet required to purchase NFTs" });
       }
 
-      // Check if user has enough GF tokens
+      // Check if user has enough GF tokens (use server-side price)
       const currentBalance = user.gfTokenBalance || 0;
-      if (currentBalance < price) {
+      if (currentBalance < nft.price) {
         return res.status(400).json({ 
           message: "Insufficient GF token balance",
           currentBalance,
-          required: price
+          required: nft.price
         });
       }
 
       // Deduct GF tokens
-      const newBalance = currentBalance - price;
+      const newBalance = currentBalance - nft.price;
       await storage.updateUser(userId, {
         gfTokenBalance: newBalance
       });
@@ -7214,7 +7234,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         message: "NFT purchased successfully",
         nftId,
-        pricePaid: price,
+        nftName: nft.name,
+        pricePaid: nft.price,
         newBalance,
         transactionId: `txn_${Date.now()}_${nftId}` // Mock transaction ID
       });
