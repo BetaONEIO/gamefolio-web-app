@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Progress } from "@/components/ui/progress";
-import { Check, Gamepad2, Upload, Share2, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Calendar, Loader2, Plus, User, Camera, HelpCircle, Info } from "lucide-react";
+import { Check, Gamepad2, Upload, Share2, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Calendar, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet } from "lucide-react";
 import { Game } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -109,7 +109,8 @@ enum OnboardingStep {
   Avatar = 3,
   UserType = 4,
   Age = 5,
-  Complete = 6,
+  Wallet = 6,
+  Complete = 7,
 }
 
 interface OnboardingStepIndicatorProps {
@@ -125,6 +126,7 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser }: OnboardingStepIn
     { id: OnboardingStep.Avatar, label: "Avatar" },
     { id: OnboardingStep.UserType, label: "User Type" },
     { id: OnboardingStep.Age, label: "Age" },
+    { id: OnboardingStep.Wallet, label: "Wallet" },
     { id: OnboardingStep.Complete, label: "Complete" },
   ];
 
@@ -200,6 +202,8 @@ export default function OnboardingFlow({
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [ageRange, setAgeRange] = useState<"13-17" | "18-24" | "25-34" | "35-44" | "45-54" | "55+" | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [isCreatingWallet, setIsCreatingWallet] = useState(false);
 
   // Auto-skip username step for non-Google users
   useEffect(() => {
@@ -207,6 +211,28 @@ export default function OnboardingFlow({
       setCurrentStep(OnboardingStep.Games);
     }
   }, [currentStep, isGoogleUser]);
+
+  // Load existing wallet when reaching wallet step
+  useEffect(() => {
+    const loadExistingWallet = async () => {
+      if (currentStep === OnboardingStep.Wallet && !walletAddress) {
+        try {
+          const response = await fetch('/api/wallet/info', {
+            credentials: 'include',
+          });
+          
+          if (response.ok) {
+            const walletData = await response.json();
+            setWalletAddress(walletData.address);
+          }
+        } catch (error) {
+          console.log('No existing wallet found');
+        }
+      }
+    };
+    
+    loadExistingWallet();
+  }, [currentStep, walletAddress]);
 
   // Load games using Twitch API
   const loadGames = async () => {
@@ -498,6 +524,48 @@ export default function OnboardingFlow({
       }
       
       handleAvatarUpload(file);
+    }
+  };
+
+  // Handle wallet creation
+  const handleCreateWallet = async () => {
+    setIsCreatingWallet(true);
+    
+    try {
+      const response = await fetch('/api/wallet/create', {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      const walletData = await response.json();
+
+      // Handle both success and "wallet already exists" as success
+      if (response.ok || response.status === 400) {
+        if (walletData.address) {
+          setWalletAddress(walletData.address);
+          
+          toast({
+            title: response.status === 400 ? "Wallet ready!" : "Wallet created!",
+            description: response.status === 400 
+              ? "You already have a blockchain wallet" 
+              : "Your blockchain wallet has been created successfully",
+            variant: "gamefolioSuccess",
+          });
+        } else {
+          throw new Error('No wallet address received');
+        }
+      } else {
+        throw new Error(walletData.message || 'Failed to create wallet');
+      }
+    } catch (error: any) {
+      console.error('Failed to create wallet:', error);
+      toast({
+        title: "Failed to create wallet",
+        description: error.message || "Please try again later",
+        variant: "gamefolioError",
+      });
+    } finally {
+      setIsCreatingWallet(false);
     }
   };
 
@@ -1226,6 +1294,102 @@ export default function OnboardingFlow({
                 className="flex-1"
               >
                 Next
+              </Button>
+            </div>
+          </>
+        );
+
+      case OnboardingStep.Wallet:
+        return (
+          <>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-2xl font-bold text-white">Set up your wallet</h2>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-5 w-5 text-gray-400 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Your wallet allows you to collect rewards and NFTs on Gamefolio</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <p className="text-gray-300 mb-6">
+              We'll create a secure blockchain wallet for you powered by Crossmint. This wallet will be used for rewards, achievements, and future features.
+            </p>
+
+            {walletAddress ? (
+              <div className="mb-6">
+                <Card className="bg-primary/10 border-primary/50">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="p-3 rounded-full bg-primary text-white">
+                        <Check className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-white mb-1">Wallet Created!</h3>
+                        <p className="text-sm text-gray-300">Your blockchain wallet is ready</p>
+                      </div>
+                    </div>
+                    <div className="bg-gray-900/50 rounded-lg p-3">
+                      <p className="text-xs text-gray-400 mb-1">Wallet Address</p>
+                      <p className="text-sm text-white font-mono break-all">{walletAddress}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <div className="mb-6">
+                <Card className="bg-gray-800/50 border-gray-700">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col items-center text-center space-y-4">
+                      <div className="p-4 rounded-full bg-gray-700">
+                        <Wallet className="h-8 w-8 text-gray-300" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-white mb-2">Create Your Wallet</h3>
+                        <p className="text-sm text-gray-400">
+                          Click the button below to create your secure blockchain wallet. This only takes a few seconds!
+                        </p>
+                      </div>
+                      <Button
+                        onClick={handleCreateWallet}
+                        disabled={isCreatingWallet}
+                        className="w-full bg-primary hover:bg-primary/90 text-white"
+                        data-testid="button-create-wallet"
+                      >
+                        {isCreatingWallet ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Creating Wallet...
+                          </>
+                        ) : (
+                          <>
+                            <Wallet className="h-4 w-4 mr-2" />
+                            Create Wallet
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={goToPrevStep} disabled={isCreatingWallet}>
+                Back
+              </Button>
+              <Button
+                onClick={goToNextStep}
+                disabled={isCreatingWallet}
+                className="flex-1"
+                data-testid="button-skip-wallet"
+              >
+                {walletAddress ? (
+                  <>Next <ArrowRight className="h-4 w-4 ml-2" /></>
+                ) : (
+                  "Skip for now"
+                )}
               </Button>
             </div>
           </>
