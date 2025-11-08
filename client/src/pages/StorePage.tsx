@@ -278,6 +278,24 @@ export default function StorePage() {
         Mint NFT
       </Button>
 
+      <div className="my-4 border-t border-gray-700" />
+
+      <Link href="/watchlist">
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-3 hover:bg-gray-800"
+          data-testid="button-watchlist"
+        >
+          <Heart className="h-5 w-5" />
+          My Watchlist
+          {watchlist.length > 0 && (
+            <Badge variant="secondary" className="ml-auto">
+              {watchlist.length}
+            </Badge>
+          )}
+        </Button>
+      </Link>
+
       <div className="mt-8 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
         <div className="flex items-center gap-2 mb-2">
           <img src={gfTokenLogo} alt="GF Token" className="w-5 h-5" />
@@ -400,6 +418,25 @@ export default function StorePage() {
                   <Sparkles className="h-5 w-5" />
                   Mint NFT
                 </Button>
+
+                <div className="my-4 border-t border-gray-700" />
+
+                <Link href="/watchlist">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-3 hover:bg-gray-800"
+                    onClick={() => setMobileMenuOpen(false)}
+                    data-testid="button-watchlist-mobile"
+                  >
+                    <Heart className="h-5 w-5" />
+                    My Watchlist
+                    {watchlist.length > 0 && (
+                      <Badge variant="secondary" className="ml-auto">
+                        {watchlist.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </Link>
 
                 <div className="mt-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
                   <div className="flex items-center gap-2 mb-2">
