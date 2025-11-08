@@ -5,14 +5,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Progress } from "@/components/ui/progress";
-import { Check, Gamepad2, Upload, Share2, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Calendar, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, LogIn } from "lucide-react";
+import { Check, Gamepad2, Upload, Share2, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Calendar, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet } from "lucide-react";
 import { Game } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import TwitchGameSearch, { TwitchGame } from "@/components/games/TwitchGameSearch";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CrossmintProvider, CrossmintAuthProvider, useAuth as useCrossmintAuth } from "@crossmint/client-sdk-react-ui";
 
 // Component to display trending games in a grid
 interface TrendingGamesGridProps {
@@ -204,6 +203,10 @@ export default function OnboardingFlow({
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [ageRange, setAgeRange] = useState<"13-17" | "18-24" | "25-34" | "35-44" | "45-54" | "55+" | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [showWalletInput, setShowWalletInput] = useState(false);
+  const [manualWalletAddress, setManualWalletAddress] = useState("");
+  const [isCreatingWallet, setIsCreatingWallet] = useState(false);
+  const [isSavingWallet, setIsSavingWallet] = useState(false);
 
   // Auto-skip username step for non-Google users
   useEffect(() => {
@@ -234,50 +237,104 @@ export default function OnboardingFlow({
     loadExistingWallet();
   }, [currentStep, walletAddress]);
 
-  // Crossmint information and link component
-  const CrossmintAuthButton = () => {
-    const handleOpenCrossmint = () => {
-      const width = 600;
-      const height = 800;
-      const left = (window.screen.width - width) / 2;
-      const top = (window.screen.height - height) / 2;
-      
-      const popup = window.open(
-        'https://www.crossmint.com/signin',
-        'crossmint-signup',
-        `width=${width},height=${height},left=${left},top=${top},popup=yes,toolbar=no,location=no,status=no`
-      );
-      
-      if (popup) {
+  // Create wallet via Crossmint API
+  const handleCreateWallet = async () => {
+    setIsCreatingWallet(true);
+    
+    try {
+      const response = await fetch('/api/wallet/create', {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      const walletData = await response.json();
+
+      if (response.ok || response.status === 400) {
+        if (walletData.address) {
+          setWalletAddress(walletData.address);
+          
+          toast({
+            title: response.status === 400 ? "Wallet ready!" : "Wallet created!",
+            description: response.status === 400 
+              ? "You already have a blockchain wallet" 
+              : "Your blockchain wallet has been created successfully",
+            variant: "gamefolioSuccess",
+          });
+        } else {
+          throw new Error('No wallet address received');
+        }
+      } else {
+        throw new Error(walletData.message || 'Failed to create wallet');
+      }
+    } catch (error: any) {
+      console.error('Failed to create wallet:', error);
+      toast({
+        title: "Failed to create wallet",
+        description: error.message || "Please try again later",
+        variant: "gamefolioError",
+      });
+    } finally {
+      setIsCreatingWallet(false);
+    }
+  };
+
+  // Save manual wallet address
+  const handleSaveManualWallet = async () => {
+    if (!manualWalletAddress.trim()) {
+      toast({
+        title: "Wallet address required",
+        description: "Please enter a valid wallet address",
+        variant: "gamefolioError",
+      });
+      return;
+    }
+
+    // Basic validation for Ethereum-style addresses
+    if (!/^0x[a-fA-F0-9]{40}$/.test(manualWalletAddress.trim())) {
+      toast({
+        title: "Invalid wallet address",
+        description: "Please enter a valid Ethereum wallet address (starts with 0x)",
+        variant: "gamefolioError",
+      });
+      return;
+    }
+
+    setIsSavingWallet(true);
+
+    try {
+      const response = await fetch('/api/wallet/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          walletAddress: manualWalletAddress.trim(),
+          walletChain: 'polygon'
+        })
+      });
+
+      if (response.ok) {
+        setWalletAddress(manualWalletAddress.trim());
+        setShowWalletInput(false);
+        
         toast({
-          title: "Crossmint Opened",
-          description: "Create or sign in to your Crossmint account in the new window",
+          title: "Wallet saved!",
+          description: "Your wallet address has been saved successfully",
+          variant: "gamefolioSuccess",
         });
       } else {
-        toast({
-          title: "Popup Blocked",
-          description: "Please allow popups and try again",
-          variant: "gamefolioError",
-        });
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to save wallet');
       }
-    };
-
-    return (
-      <div className="w-full space-y-3">
-        <Button
-          onClick={handleOpenCrossmint}
-          className="w-full bg-primary hover:bg-primary/90 text-white"
-          data-testid="button-open-crossmint"
-        >
-          <LogIn className="h-4 w-4 mr-2" />
-          Create Crossmint Account
-        </Button>
-        <div className="text-xs text-gray-400 text-center space-y-1">
-          <p>Opens Crossmint in a new window</p>
-          <p className="text-gray-500">Full wallet integration coming soon</p>
-        </div>
-      </div>
-    );
+    } catch (error: any) {
+      console.error('Failed to save wallet:', error);
+      toast({
+        title: "Failed to save wallet",
+        description: error.message || "Please try again later",
+        variant: "gamefolioError",
+      });
+    } finally {
+      setIsSavingWallet(false);
+    }
   };
 
   // Load games using Twitch API
@@ -1308,18 +1365,18 @@ export default function OnboardingFlow({
         return (
           <>
             <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-2xl font-bold text-white">Set up Crossmint (Optional)</h2>
+              <h2 className="text-2xl font-bold text-white">Crypto Wallet Setup</h2>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Info className="h-5 w-5 text-gray-400 cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Crossmint will enable digital wallet features in the future</p>
+                  <p>Connect a wallet to fund with crypto and purchase exclusive NFTs</p>
                 </TooltipContent>
               </Tooltip>
             </div>
             <p className="text-gray-300 mb-6">
-              Get ready for upcoming Web3 features by creating a Crossmint account. This is completely optional and you can set it up anytime from your profile.
+              We've integrated Crossmint so you can fund a crypto wallet and purchase exclusive NFTs. Set up your wallet now or skip and do it later.
             </p>
 
             {walletAddress ? (
@@ -1331,8 +1388,8 @@ export default function OnboardingFlow({
                         <Check className="h-6 w-6" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-white mb-1">Connected to Crossmint!</h3>
-                        <p className="text-sm text-gray-300">Your wallet is ready to use</p>
+                        <h3 className="font-semibold text-white mb-1">Wallet Connected!</h3>
+                        <p className="text-sm text-gray-300">You're ready for crypto and NFTs</p>
                       </div>
                     </div>
                     <div className="bg-gray-900/50 rounded-lg p-3">
@@ -1342,46 +1399,140 @@ export default function OnboardingFlow({
                   </CardContent>
                 </Card>
               </div>
-            ) : (
+            ) : showWalletInput ? (
               <div className="mb-6">
                 <Card className="bg-gray-800/50 border-gray-700">
                   <CardContent className="p-6">
-                    <div className="flex flex-col items-center text-center space-y-4">
-                      <div className="p-4 rounded-full bg-gray-700">
-                        <Wallet className="h-8 w-8 text-gray-300" />
-                      </div>
+                    <div className="space-y-4">
                       <div>
-                        <h3 className="font-semibold text-white mb-2">Create Your Crossmint Account</h3>
-                        <p className="text-sm text-gray-400 mb-2">
-                          Crossmint provides blockchain wallet services for managing digital assets. Create an account now to be ready when we launch Web3 features.
-                        </p>
-                        <p className="text-xs text-gray-500 mb-3">
-                          Note: Account creation happens on Crossmint's website. Full integration is coming soon.
+                        <h3 className="font-semibold text-white mb-2">Enter Your Wallet Address</h3>
+                        <p className="text-sm text-gray-400 mb-4">
+                          Paste your existing Ethereum wallet address below
                         </p>
                       </div>
-                      <CrossmintAuthButton />
+                      <div className="space-y-3">
+                        <Input
+                          type="text"
+                          placeholder="0x..."
+                          value={manualWalletAddress}
+                          onChange={(e) => setManualWalletAddress(e.target.value)}
+                          className="font-mono text-sm"
+                          data-testid="input-wallet-address"
+                        />
+                        <div className="flex gap-3">
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setShowWalletInput(false);
+                              setManualWalletAddress("");
+                            }}
+                            disabled={isSavingWallet}
+                            data-testid="button-cancel-wallet-input"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleSaveManualWallet}
+                            disabled={isSavingWallet || !manualWalletAddress.trim()}
+                            className="flex-1"
+                            data-testid="button-save-wallet"
+                          >
+                            {isSavingWallet ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Saving...
+                              </>
+                            ) : (
+                              "Save Wallet"
+                            )}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               </div>
+            ) : (
+              <div className="mb-6 space-y-3">
+                <Button
+                  onClick={() => setShowWalletInput(true)}
+                  variant="outline"
+                  className="w-full h-auto py-4 px-6"
+                  data-testid="button-have-wallet"
+                >
+                  <div className="flex items-start gap-3 text-left w-full">
+                    <Wallet className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="font-semibold text-white mb-1">I already have a wallet</div>
+                      <div className="text-sm text-gray-400 font-normal">
+                        Connect your existing wallet address
+                      </div>
+                    </div>
+                  </div>
+                </Button>
+
+                <Button
+                  onClick={handleCreateWallet}
+                  disabled={isCreatingWallet}
+                  variant="outline"
+                  className="w-full h-auto py-4 px-6"
+                  data-testid="button-create-wallet"
+                >
+                  <div className="flex items-start gap-3 text-left w-full">
+                    <Plus className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="font-semibold text-white mb-1">
+                        {isCreatingWallet ? (
+                          <span className="flex items-center">
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Creating wallet...
+                          </span>
+                        ) : (
+                          "I don't have a wallet and I'd like one"
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-400 font-normal">
+                        We'll create a new wallet for you via Crossmint
+                      </div>
+                    </div>
+                  </div>
+                </Button>
+
+                <Button
+                  onClick={goToNextStep}
+                  variant="ghost"
+                  className="w-full h-auto py-4 px-6 text-gray-400 hover:text-white"
+                  data-testid="button-skip-wallet"
+                >
+                  <div className="flex items-start gap-3 text-left w-full">
+                    <ArrowRight className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="font-semibold mb-1">No, I don't want to do that right now</div>
+                      <div className="text-sm font-normal">
+                        You can set this up later from your profile
+                      </div>
+                    </div>
+                  </div>
+                </Button>
+              </div>
             )}
 
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={goToPrevStep}>
-                Back
-              </Button>
-              <Button
-                onClick={goToNextStep}
-                className="flex-1"
-                data-testid="button-skip-wallet"
-              >
-                {walletAddress ? (
-                  <>Next <ArrowRight className="h-4 w-4 ml-2" /></>
-                ) : (
-                  "Skip for now"
+            {(walletAddress || showWalletInput) && (
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={goToPrevStep} disabled={isSavingWallet}>
+                  Back
+                </Button>
+                {walletAddress && (
+                  <Button
+                    onClick={goToNextStep}
+                    className="flex-1"
+                    data-testid="button-next-from-wallet"
+                  >
+                    Next <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
                 )}
-              </Button>
-            </div>
+              </div>
+            )}
           </>
         );
 

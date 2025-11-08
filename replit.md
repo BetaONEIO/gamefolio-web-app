@@ -73,16 +73,20 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
 - **Postgres (NPM package)**: Direct PostgreSQL client for database interaction.
 
 ## Crossmint Wallet Integration
-- **Authentication Approach**: Users sign in or register with Crossmint during onboarding (optional step)
+- **Wallet Setup Approach**: Three-option system during onboarding allows users to:
+  1. Connect an existing wallet by manually entering their address
+  2. Create a new wallet via Crossmint API
+  3. Skip wallet setup and configure later
 - **Onboarding Integration**: Wallet connection step appears after age selection in the onboarding flow
 - **Database Schema**: User table includes `walletAddress`, `walletChain`, and `walletCreatedAt` fields
 - **Frontend Provider**: `CrossmintProvider` manages wallet state globally across the application
 - **Wallet Page**: Complete UI at `/wallet` for viewing wallet information and accessing Crossmint dashboard
 - **API Endpoints**: 
-  - `POST /api/wallet/create` - Server-side wallet creation via Crossmint API (alternative path)
-  - `POST /api/wallet/save` - Saves wallet address after user authentication
+  - `POST /api/wallet/create` - Server-side wallet creation via Crossmint API
+  - `POST /api/wallet/save` - Saves manually entered wallet address
   - `GET /api/wallet/info` - Retrieves wallet information for authenticated user
-- **Current Implementation**: Opens Crossmint sign-in page in popup for user authentication
-- **Optional Feature**: Users can skip wallet setup during onboarding and set it up later
-- **Future Features**: Full OAuth integration with callback handling, NFT minting for clips, marketplace trading, crypto rewards, multi-chain support
+- **Current Implementation**: Users can create wallets via Crossmint, connect existing wallets, or skip setup entirely
+- **Wallet Validation**: Ethereum-style address validation (0x + 40 hex characters) for manual entries
+- **Optional Feature**: Users can skip wallet setup during onboarding and set it up later from profile
+- **Future Features**: NFT minting for clips, marketplace trading, crypto rewards, multi-chain support, enhanced wallet management
 ```
