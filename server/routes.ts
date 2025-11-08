@@ -7144,40 +7144,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Store wallet address after client-side creation
-  app.post("/api/wallet/save", authMiddleware, async (req, res) => {
-    try {
-      const userId = req.user!.id;
-      const { walletAddress, walletChain } = req.body;
-
-      if (!walletAddress || !walletChain) {
-        return res.status(400).json({ message: "Wallet address and chain are required" });
-      }
-
-      // Check if user already has a wallet
-      const existingUser = await storage.getUser(userId);
-      if (existingUser?.walletAddress) {
-        return res.status(400).json({ message: "Wallet already exists" });
-      }
-      
-      // Update user with wallet information
-      await storage.updateUser(userId, {
-        walletAddress,
-        walletChain,
-        walletCreatedAt: new Date(),
-      });
-
-      res.json({
-        walletAddress,
-        walletChain,
-        message: "Wallet saved successfully"
-      });
-    } catch (error) {
-      console.error("Error saving wallet:", error);
-      res.status(500).json({ error: "Failed to save wallet" });
-    }
-  });
-
   // Get wallet info for authenticated user
   app.get("/api/wallet/info", authMiddleware, async (req, res) => {
     try {
