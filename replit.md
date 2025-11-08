@@ -73,24 +73,22 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
 - **Postgres (NPM package)**: Direct PostgreSQL client for database interaction.
 
 ## Crossmint Wallet Integration
-- **Wallet Setup Approach**: Three-option system during onboarding allows users to:
-  1. **Create/Connect Crossmint wallet**: Uses `getOrCreateWallet()` API pattern - automatically retrieves existing wallet or creates new one
-  2. **Connect external wallet**: Manually enter address from MetaMask, WalletConnect, etc.
-  3. **Skip for now**: Configure wallet later from profile
+- **Wallet Setup Approach**: Simplified two-option system during onboarding:
+  1. **Create Crossmint wallet**: Uses `getOrCreateWallet()` API pattern - automatically retrieves existing wallet or creates new one
+  2. **Skip for now**: Configure wallet later from profile
 - **SDK Integration**: Uses official `@crossmint/wallets-sdk` for robust wallet operations
-- **Idempotent Wallet Creation**: Backend implements `getOrCreateWallet()` pattern that intelligently handles both scenarios without errors
+- **Idempotent Wallet Creation**: Backend implements `getOrCreateWallet()` pattern that intelligently handles both new wallet creation and existing wallet retrieval without errors
 - **Smart Response Handling**: API returns `isExisting` flag to differentiate between new wallet creation and existing wallet retrieval
 - **Context-Aware UX**: Toast messages adapt based on whether user connected to existing wallet ("Wallet connected!") or created new one ("Wallet created!")
-- **Onboarding Integration**: Wallet connection step appears after age selection in the onboarding flow with clear button labels
+- **Security Focus**: Manual wallet address entry removed to prevent spoofing attacks; all wallets created through verified Crossmint API
+- **Onboarding Integration**: Wallet creation step appears after age selection in the onboarding flow with streamlined interface
 - **Database Schema**: User table includes `walletAddress`, `walletChain`, and `walletCreatedAt` fields
 - **Frontend Provider**: `CrossmintProvider` manages wallet state globally across the application
 - **Wallet Page**: Complete UI at `/wallet` for viewing wallet information and accessing Crossmint dashboard
 - **API Endpoints**: 
   - `POST /api/wallet/create` - Idempotent wallet creation/retrieval via Crossmint SDK (returns `address`, `chain`, `isExisting`)
-  - `POST /api/wallet/save` - Saves manually entered wallet address
   - `GET /api/wallet/info` - Retrieves wallet information for authenticated user
-- **Current Implementation**: Users can create wallets via Crossmint, connect existing wallets, or skip setup entirely
-- **Wallet Validation**: Ethereum-style address validation (0x + 40 hex characters) for manual entries
+- **Current Implementation**: Users can create wallets via Crossmint or skip setup entirely
 - **Optional Feature**: Users can skip wallet setup during onboarding and set it up later from profile
-- **Future Features**: NFT minting for clips, marketplace trading, crypto rewards, multi-chain support, enhanced wallet management
+- **Future Features**: NFT minting for clips, marketplace trading, crypto rewards, multi-chain support, message signing for external wallet verification
 ```
