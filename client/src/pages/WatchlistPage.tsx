@@ -27,12 +27,13 @@ interface NFT {
   description: string;
   image: string;
   price: number;
-  priceUSD: string;
+  priceUSD: number;
   rarity: string;
   type: string;
   mintNumber: number;
   currentBid: number;
   owner: string;
+  forSale: boolean;
 }
 
 export default function WatchlistPage() {
@@ -51,9 +52,12 @@ export default function WatchlistPage() {
   // Remove from watchlist mutation
   const removeFromWatchlistMutation = useMutation({
     mutationFn: async (nftId: number) => {
-      return await apiRequest(`/api/nft/watchlist/${nftId}`, {
+      const response = await fetch(`/api/nft/watchlist/${nftId}`, {
         method: "DELETE",
+        credentials: "include",
       });
+      if (!response.ok) throw new Error("Failed to remove from watchlist");
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/nft/watchlist"] });
@@ -79,12 +83,13 @@ export default function WatchlistPage() {
       description: "",
       image: watchlistItem.nftImage,
       price: watchlistItem.nftPrice,
-      priceUSD: (watchlistItem.nftPrice * 0.05).toFixed(2),
+      priceUSD: watchlistItem.nftPrice * 0.05,
       rarity: "Epic",
       type: "Avatar",
       mintNumber: 1,
       currentBid: watchlistItem.nftPrice,
       owner: "Gamefolio",
+      forSale: true,
     };
     setSelectedNFT(nft);
     setPurchaseDialogOpen(true);
@@ -157,7 +162,7 @@ export default function WatchlistPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {watchlist.map((item) => (
+            {watchlist.map((item: WatchlistItem) => (
               <Card
                 key={item.id}
                 className="bg-gray-800/50 border-gray-700 overflow-hidden hover:border-blue-500 transition-all hover:shadow-lg hover:shadow-blue-500/20"
