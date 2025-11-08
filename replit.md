@@ -49,6 +49,7 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
 - **Multi-game Support**: Integration with Twitch API for game data retrieval and automatic game creation.
 - **Adaptive URL Support**: Email verification URLs dynamically adapt to development, Replit, and custom production environments.
 - **Post-Upload Workflow**: Seamless redirection to user profile with automatic share dialog display after content uploads.
+- **GF Token Economy**: In-app currency system (Gamefolio Tokens) for NFT purchases and marketplace transactions. Users start with 1,000 GF tokens (≈$50 USD value at $0.05/token).
 
 ### Verification & Access Control
 - **Registration Flow**: User registers, is automatically logged in, and a verification email is sent.
@@ -82,7 +83,7 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
 - **Context-Aware UX**: Toast messages adapt based on whether user connected to existing wallet ("Wallet connected!") or created new one ("Wallet created!")
 - **Security Focus**: Manual wallet address entry removed to prevent spoofing attacks; all wallets created through verified Crossmint API
 - **Onboarding Integration**: Wallet creation step appears after age selection in the onboarding flow with streamlined interface
-- **Database Schema**: User table includes `walletAddress`, `walletChain`, and `walletCreatedAt` fields
+- **Database Schema**: User table includes `walletAddress`, `walletChain`, `walletCreatedAt`, and `gfTokenBalance` fields
 - **Frontend Provider**: `CrossmintProvider` manages wallet state globally across the application
 - **Wallet Page**: Complete UI at `/wallet` for viewing wallet information and accessing Crossmint dashboard
 - **API Endpoints**: 
@@ -90,5 +91,26 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
   - `GET /api/wallet/info` - Retrieves wallet information for authenticated user
 - **Current Implementation**: Users can create wallets via Crossmint or skip setup entirely
 - **Optional Feature**: Users can skip wallet setup during onboarding and set it up later from profile
-- **Future Features**: NFT minting for clips, marketplace trading, crypto rewards, multi-chain support, message signing for external wallet verification
+
+## NFT Store & GF Token Economy
+- **GF Token System**: In-app currency (Gamefolio Tokens) for purchasing NFTs and future marketplace features
+  - **Starting Balance**: New users receive 1,000 GF tokens by default
+  - **Token Value**: Each GF token has an approximate value of $0.05 USD
+  - **Display**: GF token logo appears next to all prices and balances throughout the store
+- **NFT Marketplace**: 
+  - **Store Page**: Browse and purchase NFT avatars using GF tokens at `/store`
+  - **Purchase Dialog**: Modal interface for NFT bidding with wallet connection status, balance verification, and transaction summary
+  - **NFT Pricing**: All NFTs priced in GF tokens (e.g., 250 GF, 500 GF) with USD equivalent displayed
+  - **Balance Checks**: Real-time validation of user's GF token balance before purchase
+  - **Wallet Requirement**: Users must have a Crossmint wallet connected to purchase NFTs
+- **Purchase Flow**:
+  1. User clicks "Buy" on any NFT in the store
+  2. Purchase dialog opens showing NFT preview, current bid, and price in GF tokens
+  3. System checks wallet connection and GF token balance
+  4. User confirms purchase, GF tokens are deducted, NFT is transferred to wallet
+- **UI Components**:
+  - **NFTPurchaseDialog**: Complete purchase modal with wallet status, balance display, and bid placement
+  - **GF Token Logo**: Displayed alongside all currency amounts in store and dialogs
+  - **Balance Display**: Sidebar shows user's current GF token balance with USD equivalent
+- **Future Features**: NFT minting for gaming clips, user-to-user trading, earning GF tokens through engagement, token purchases with real currency, multi-chain NFT support
 ```

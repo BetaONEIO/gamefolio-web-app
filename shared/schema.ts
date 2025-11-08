@@ -57,6 +57,8 @@ export const users = pgTable("users", {
   walletAddress: text("wallet_address"),
   walletChain: text("wallet_chain").default("polygon"),
   walletCreatedAt: timestamp("wallet_created_at"),
+  // GF Token Balance
+  gfTokenBalance: real("gf_token_balance").default(1000).notNull(), // Starting balance of 1000 GF tokens
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -19,8 +19,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { NFTPurchaseDialog } from "@/components/store/NFTPurchaseDialog";
+import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 
 type TabType = "buy" | "sell" | "mint";
+
+interface NFT {
+  id: number;
+  name: string;
+  image: string;
+  price: number;
+  priceUSD: number;
+  description: string;
+  forSale: boolean;
+  rarity: string;
+  currentBid: number;
+  owner: string;
+}
 
 export default function StorePage() {
   const { user } = useAuth();
@@ -31,6 +46,8 @@ export default function StorePage() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [priceFilter, setPriceFilter] = useState<string>("all");
   const [mintFilter, setMintFilter] = useState<string>("all");
+  const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null);
+  const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
 
   // Mock Gamefolio NFT Collection data
   const gamefolioNFTs = [
@@ -38,53 +55,82 @@ export default function StorePage() {
       id: 1,
       name: "Gamer Avatar #001",
       image: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&h=400&fit=crop",
-      price: "0.05 ETH",
+      price: 250,
+      priceUSD: 12.50,
       description: "Epic gaming avatar with RGB effects",
       forSale: true,
+      rarity: "epic",
+      currentBid: 220,
+      owner: "GameMaster",
     },
     {
       id: 2,
       name: "Gamer Avatar #002",
       image: "https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&h=400&fit=crop",
-      price: "0.08 ETH",
+      price: 500,
+      priceUSD: 25.00,
       description: "Legendary warrior profile picture",
       forSale: true,
+      rarity: "legendary",
+      currentBid: 450,
+      owner: "WarriorKing",
     },
     {
       id: 3,
       name: "Gamer Avatar #003",
       image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop",
-      price: "0.06 ETH",
+      price: 350,
+      priceUSD: 17.50,
       description: "Futuristic cyber gamer avatar",
       forSale: true,
+      rarity: "rare",
+      currentBid: 320,
+      owner: "CyberNinja",
     },
     {
       id: 4,
       name: "Gamer Avatar #004",
       image: "https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=400&h=400&fit=crop",
-      price: "0.07 ETH",
+      price: 400,
+      priceUSD: 20.00,
       description: "Pro esports champion avatar",
       forSale: true,
+      rarity: "epic",
+      currentBid: 375,
+      owner: "ProGamer",
     },
     {
       id: 5,
       name: "Gamer Avatar #005",
       image: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=400&h=400&fit=crop",
-      price: "0.09 ETH",
+      price: 600,
+      priceUSD: 30.00,
       description: "Mystical mage gaming portrait",
       forSale: true,
+      rarity: "legendary",
+      currentBid: 550,
+      owner: "MysticMage",
     },
     {
       id: 6,
       name: "Gamer Avatar #006",
       image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop",
-      price: "0.04 ETH",
+      price: 180,
+      priceUSD: 9.00,
       description: "Cyberpunk warrior avatar",
       forSale: true,
+      rarity: "common",
+      currentBid: 160,
+      owner: "PunkWarrior",
     },
   ];
 
-  const walletBalance = wallet?.address ? "2.786 ETH" : "0 ETH";
+  const gfBalance = user?.gfTokenBalance || 0;
+
+  const handleBuyNFT = (nft: NFT) => {
+    setSelectedNFT(nft);
+    setPurchaseDialogOpen(true);
+  };
 
   const SidebarContent = () => (
     <div className="space-y-2">
@@ -145,10 +191,16 @@ export default function StorePage() {
 
       <div className="mt-8 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
         <div className="flex items-center gap-2 mb-2">
-          <Wallet className="h-5 w-5 text-blue-400" />
-          <span className="text-sm text-gray-400">Your Balance</span>
+          <img src={gfTokenLogo} alt="GF Token" className="w-5 h-5" />
+          <span className="text-sm text-gray-400">GF Balance</span>
         </div>
-        <p className="text-xl font-bold" data-testid="text-wallet-balance">{walletBalance}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-xl font-bold" data-testid="text-gf-balance">{gfBalance.toLocaleString()}</p>
+          <span className="text-sm text-gray-400">GF</span>
+        </div>
+        <p className="text-xs text-gray-500 mt-1" data-testid="text-gf-balance-usd">
+          ≈ ${(gfBalance * 0.05).toFixed(2)} USD
+        </p>
         {!wallet?.address && (
           <Link href="/wallet">
             <Button size="sm" variant="outline" className="w-full mt-3" data-testid="button-create-wallet">
@@ -262,10 +314,16 @@ export default function StorePage() {
 
                 <div className="mt-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
                   <div className="flex items-center gap-2 mb-2">
-                    <Wallet className="h-5 w-5 text-blue-400" />
-                    <span className="text-sm text-gray-400">Your Balance</span>
+                    <img src={gfTokenLogo} alt="GF Token" className="w-5 h-5" />
+                    <span className="text-sm text-gray-400">GF Balance</span>
                   </div>
-                  <p className="text-xl font-bold" data-testid="text-wallet-balance-mobile">{walletBalance}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xl font-bold" data-testid="text-gf-balance-mobile">{gfBalance.toLocaleString()}</p>
+                    <span className="text-sm text-gray-400">GF</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1" data-testid="text-gf-balance-usd-mobile">
+                    ≈ ${(gfBalance * 0.05).toFixed(2)} USD
+                  </p>
                   {!wallet?.address && (
                     <Link href="/wallet">
                       <Button size="sm" variant="outline" className="w-full mt-3" data-testid="button-create-wallet-mobile">
@@ -413,14 +471,21 @@ export default function StorePage() {
                       <div className="flex items-center justify-between pt-2 border-t border-gray-700">
                         <div>
                           <p className="text-xs text-gray-400">Price</p>
-                          <p className="text-sm md:text-base font-bold text-blue-400" data-testid={`text-nft-price-${nft.id}`}>
-                            {nft.price}
+                          <div className="flex items-center gap-1">
+                            <img src={gfTokenLogo} alt="GF Token" className="w-4 h-4" />
+                            <p className="text-sm md:text-base font-bold text-blue-400" data-testid={`text-nft-price-${nft.id}`}>
+                              {nft.price} GF
+                            </p>
+                          </div>
+                          <p className="text-xs text-gray-500" data-testid={`text-nft-price-usd-${nft.id}`}>
+                            ≈ ${nft.priceUSD}
                           </p>
                         </div>
                         
                         <Button
                           size="sm"
                           className="bg-blue-600 hover:bg-blue-700 text-xs"
+                          onClick={() => handleBuyNFT(nft)}
                           data-testid={`button-buy-nft-${nft.id}`}
                         >
                           <ShoppingCart className="h-3 w-3 md:h-4 md:w-4 mr-1" />
@@ -467,6 +532,16 @@ export default function StorePage() {
           )}
         </main>
       </div>
+
+      {/* NFT Purchase Dialog */}
+      <NFTPurchaseDialog
+        nft={selectedNFT}
+        open={purchaseDialogOpen}
+        onOpenChange={setPurchaseDialogOpen}
+        onPurchaseComplete={() => {
+          // Refresh user data or show success message
+        }}
+      />
     </div>
   );
 }
