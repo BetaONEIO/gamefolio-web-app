@@ -11,6 +11,8 @@ import { Wallet, Check, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useCrossmint } from "@/hooks/use-crossmint";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 
@@ -43,7 +45,39 @@ export function NFTPurchaseDialog({
   const { user } = useAuth();
   const { wallet } = useCrossmint();
   const { toast } = useToast();
-  const [isPurchasing, setIsPurchasing] = useState(false);
+  const queryClient = useQueryClient();
+
+  const purchaseMutation = useMutation({
+    mutationFn: async (data: { nftId: number; price: number }) => {
+      return await apiRequest("/api/nft/purchase", {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Purchase Successful!",
+        description: `You've purchased ${nft?.name} for ${nft?.price} GF tokens.`,
+      });
+
+      // Invalidate and refetch user data to update balance
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      
+      onOpenChange(false);
+      onPurchaseComplete?.();
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.message || "There was an error processing your purchase. Please try again.";
+      toast({
+        title: "Purchase Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    },
+  });
 
   if (!nft) return null;
 
@@ -71,28 +105,10 @@ export function NFTPurchaseDialog({
       return;
     }
 
-    setIsPurchasing(true);
-
-    try {
-      // TODO: Implement actual purchase logic with backend API
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      toast({
-        title: "Purchase Successful!",
-        description: `You've purchased ${nft.name} for ${nft.price} GF tokens.`,
-      });
-
-      onOpenChange(false);
-      onPurchaseComplete?.();
-    } catch (error) {
-      toast({
-        title: "Purchase Failed",
-        description: "There was an error processing your purchase. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsPurchasing(false);
-    }
+    purchaseMutation.mutate({
+      nftId: nft.id,
+      price: nft.price,
+    });
   };
 
   return (
@@ -226,10 +242,10 @@ export function NFTPurchaseDialog({
             className="w-full bg-blue-600 hover:bg-blue-700 font-semibold"
             size="lg"
             onClick={handlePurchase}
-            disabled={!hasEnoughBalance || !wallet?.address || isPurchasing}
+            disabled={!hasEnoughBalance || !wallet?.address || purchaseMutation.isPending}
             data-testid="button-place-bid"
           >
-            {isPurchasing ? "Processing..." : "Place a bid"}
+            {purchaseMutation.isPending ? "Processing..." : "Place a bid"}
           </Button>
         </div>
       </DialogContent>

@@ -7165,5 +7165,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==========================================
+  // NFT Purchase Routes
+  // ==========================================
+
+  // Purchase NFT with GF tokens
+  app.post("/api/nft/purchase", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { nftId, price } = req.body;
+
+      if (!nftId || typeof price !== 'number' || price <= 0) {
+        return res.status(400).json({ message: "Invalid purchase data" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check if user has a wallet
+      if (!user.walletAddress) {
+        return res.status(400).json({ message: "Wallet required to purchase NFTs" });
+      }
+
+      // Check if user has enough GF tokens
+      const currentBalance = user.gfTokenBalance || 0;
+      if (currentBalance < price) {
+        return res.status(400).json({ 
+          message: "Insufficient GF token balance",
+          currentBalance,
+          required: price
+        });
+      }
+
+      // Deduct GF tokens
+      const newBalance = currentBalance - price;
+      await storage.updateUser(userId, {
+        gfTokenBalance: newBalance
+      });
+
+      // TODO: In a real implementation, we would:
+      // 1. Save the NFT purchase record to database
+      // 2. Transfer the NFT to user's wallet via Crossmint API
+      // 3. Update NFT ownership in database
+
+      res.json({
+        success: true,
+        message: "NFT purchased successfully",
+        nftId,
+        pricePaid: price,
+        newBalance,
+        transactionId: `txn_${Date.now()}_${nftId}` // Mock transaction ID
+      });
+    } catch (error) {
+      console.error("Error purchasing NFT:", error);
+      res.status(500).json({ error: "Failed to purchase NFT" });
+    }
+  });
+
   return httpServer;
 }
