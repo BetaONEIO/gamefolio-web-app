@@ -1378,7 +1378,6 @@ export default function OnboardingFlow({
             <p className="text-gray-300 mb-6">
               We've integrated Crossmint so you can fund a crypto wallet and purchase exclusive NFTs. Set up your wallet now or skip and do it later.
             </p>
-
             {walletAddress ? (
               <div className="mb-6">
                 <Card className="bg-primary/10 border-primary/50">
@@ -1489,7 +1488,7 @@ export default function OnboardingFlow({
                   <div className="flex items-start gap-3 text-left w-full">
                     <Wallet className="h-5 w-5 mt-0.5 flex-shrink-0" />
                     <div>
-                      <div className="font-semibold text-white mb-1">I already have a wallet</div>
+                      <div className="font-semibold text-white mb-1">I already have a wallet (Crossmint)</div>
                       <div className="text-sm text-gray-400 font-normal">
                         Connect your existing wallet address
                       </div>
@@ -1515,7 +1514,6 @@ export default function OnboardingFlow({
                 </Button>
               </div>
             )}
-
             {(walletAddress || showWalletInput) && (
               <div className="flex gap-3">
                 <Button variant="outline" onClick={goToPrevStep} disabled={isSavingWallet}>
