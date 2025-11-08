@@ -74,15 +74,19 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
 
 ## Crossmint Wallet Integration
 - **Wallet Setup Approach**: Three-option system during onboarding allows users to:
-  1. Connect an existing wallet by manually entering their address
-  2. Create a new wallet via Crossmint API
-  3. Skip wallet setup and configure later
-- **Onboarding Integration**: Wallet connection step appears after age selection in the onboarding flow
+  1. **Create/Connect Crossmint wallet**: Uses `getOrCreateWallet()` API pattern - automatically retrieves existing wallet or creates new one
+  2. **Connect external wallet**: Manually enter address from MetaMask, WalletConnect, etc.
+  3. **Skip for now**: Configure wallet later from profile
+- **SDK Integration**: Uses official `@crossmint/wallets-sdk` for robust wallet operations
+- **Idempotent Wallet Creation**: Backend implements `getOrCreateWallet()` pattern that intelligently handles both scenarios without errors
+- **Smart Response Handling**: API returns `isExisting` flag to differentiate between new wallet creation and existing wallet retrieval
+- **Context-Aware UX**: Toast messages adapt based on whether user connected to existing wallet ("Wallet connected!") or created new one ("Wallet created!")
+- **Onboarding Integration**: Wallet connection step appears after age selection in the onboarding flow with clear button labels
 - **Database Schema**: User table includes `walletAddress`, `walletChain`, and `walletCreatedAt` fields
 - **Frontend Provider**: `CrossmintProvider` manages wallet state globally across the application
 - **Wallet Page**: Complete UI at `/wallet` for viewing wallet information and accessing Crossmint dashboard
 - **API Endpoints**: 
-  - `POST /api/wallet/create` - Server-side wallet creation via Crossmint API
+  - `POST /api/wallet/create` - Idempotent wallet creation/retrieval via Crossmint SDK (returns `address`, `chain`, `isExisting`)
   - `POST /api/wallet/save` - Saves manually entered wallet address
   - `GET /api/wallet/info` - Retrieves wallet information for authenticated user
 - **Current Implementation**: Users can create wallets via Crossmint, connect existing wallets, or skip setup entirely
