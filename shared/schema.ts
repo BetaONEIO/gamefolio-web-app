@@ -345,6 +345,20 @@ export const screenshotReports = pgTable("screenshot_reports", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// NFT Watchlist table - for tracking NFTs users want to watch
+export const nftWatchlist = pgTable("nft_watchlist", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  nftId: integer("nft_id").notNull(), // NFT identifier (for now just the ID from the NFT collection)
+  nftName: text("nft_name").notNull(),
+  nftImage: text("nft_image").notNull(),
+  nftPrice: real("nft_price").notNull(), // GF token price when added to watchlist
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  // Prevent duplicate watchlist entries for the same user and NFT
+  uniqueWatchlist: unique().on(table.userId, table.nftId),
+}));
+
 // Content filter settings and custom banned words table
 export const contentFilterSettings = pgTable("content_filter_settings", {
   id: serial("id").primaryKey(),
@@ -893,6 +907,15 @@ export type InsertCommentMention = z.infer<typeof insertCommentMentionSchema>;
 export type ScreenshotCommentMention = typeof screenshotCommentMentions.$inferSelect;
 export type InsertScreenshotCommentMention = z.infer<typeof insertScreenshotCommentMentionSchema>;
 
+// Schema for inserting NFT watchlist items
+export const insertNftWatchlistSchema = createInsertSchema(nftWatchlist).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for NFT watchlist
+export type NftWatchlist = typeof nftWatchlist.$inferSelect;
+export type InsertNftWatchlist = z.infer<typeof insertNftWatchlistSchema>;
 
 // Extended types with relational data
 export type ClipWithUser = Clip & {

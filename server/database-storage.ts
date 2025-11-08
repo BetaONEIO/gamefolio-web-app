@@ -32,6 +32,7 @@ import {
   ClipMention, InsertClipMention,
   CommentMention, InsertCommentMention,
   ScreenshotCommentMention, InsertScreenshotCommentMention,
+  NftWatchlist, InsertNftWatchlist,
   ClipWithUser,
   CommentWithUser,
   ScreenshotCommentWithUser,
@@ -73,6 +74,7 @@ import {
   bannerSettings,
   uploadedBanners,
   clipMentions,
+  nftWatchlist,
   commentMentions,
   screenshotCommentMentions
 } from "@shared/schema";
@@ -3445,6 +3447,46 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return created;
     }
+  }
+
+  // NFT Watchlist operations
+  async addToNftWatchlist(watchlistData: InsertNftWatchlist): Promise<NftWatchlist> {
+    const [result] = await db
+      .insert(nftWatchlist)
+      .values(watchlistData)
+      .returning();
+    return result;
+  }
+
+  async removeFromNftWatchlist(userId: number, nftId: number): Promise<boolean> {
+    const result = await db
+      .delete(nftWatchlist)
+      .where(and(
+        eq(nftWatchlist.userId, userId),
+        eq(nftWatchlist.nftId, nftId)
+      ));
+    return true;
+  }
+
+  async getNftWatchlist(userId: number): Promise<NftWatchlist[]> {
+    const results = await db
+      .select()
+      .from(nftWatchlist)
+      .where(eq(nftWatchlist.userId, userId))
+      .orderBy(desc(nftWatchlist.createdAt));
+    return results;
+  }
+
+  async isNftInWatchlist(userId: number, nftId: number): Promise<boolean> {
+    const [result] = await db
+      .select()
+      .from(nftWatchlist)
+      .where(and(
+        eq(nftWatchlist.userId, userId),
+        eq(nftWatchlist.nftId, nftId)
+      ))
+      .limit(1);
+    return !!result;
   }
 
   // Recommendation operations

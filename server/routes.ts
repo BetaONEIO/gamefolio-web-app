@@ -13,7 +13,7 @@ import { storage } from "./storage";
 import { LeaderboardService } from "./leaderboard-service";
 import { StreakService } from "./streak-service";
 import { createInsertSchema } from "drizzle-zod";
-import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema } from "@shared/schema";
+import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema } from "@shared/schema";
 import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { nanoid } from "nanoid";
@@ -7242,6 +7242,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error purchasing NFT:", error);
       res.status(500).json({ error: "Failed to purchase NFT" });
+    }
+  });
+
+  // Add NFT to watchlist
+  app.post("/api/nft/watchlist", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const validatedData = insertNftWatchlistSchema.parse({
+        ...req.body,
+        userId
+      });
+
+      const watchlistItem = await storage.addToNftWatchlist(validatedData);
+      res.json(watchlistItem);
+    } catch (error: any) {
+      // Handle duplicate entry error
+      if (error.code === '23505') {
+        return res.status(400).json({ message: "NFT already in watchlist" });
+      }
+      console.error("Error adding to NFT watchlist:", error);
+      res.status(500).json({ error: "Failed to add NFT to watchlist" });
+    }
+  });
+
+  // Remove NFT from watchlist
+  app.delete("/api/nft/watchlist/:nftId", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const nftId = parseInt(req.params.nftId);
+
+      if (isNaN(nftId)) {
+        return res.status(400).json({ message: "Invalid NFT ID" });
+      }
+
+      await storage.removeFromNftWatchlist(userId, nftId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing from NFT watchlist:", error);
+      res.status(500).json({ error: "Failed to remove NFT from watchlist" });
+    }
+  });
+
+  // Get user's NFT watchlist
+  app.get("/api/nft/watchlist", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const watchlist = await storage.getNftWatchlist(userId);
+      res.json(watchlist);
+    } catch (error) {
+      console.error("Error fetching NFT watchlist:", error);
+      res.status(500).json({ error: "Failed to fetch watchlist" });
+    }
+  });
+
+  // Check if NFT is in user's watchlist
+  app.get("/api/nft/watchlist/check/:nftId", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const nftId = parseInt(req.params.nftId);
+
+      if (isNaN(nftId)) {
+        return res.status(400).json({ message: "Invalid NFT ID" });
+      }
+
+      const isWatched = await storage.isNftInWatchlist(userId, nftId);
+      res.json({ isWatched });
+    } catch (error) {
+      console.error("Error checking NFT watchlist status:", error);
+      res.status(500).json({ error: "Failed to check watchlist status" });
     }
   });
 

@@ -1,7 +1,7 @@
 import {
   users, games, clips, likes, comments, userGameFavorites, follows, messages, profileBanners,
   monthlyLeaderboard, weeklyLeaderboard, topContributors, userPointsHistory, userXPHistory, notifications, userBadges, contentFilterSettings, bannedWords,
-  heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions,
+  heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions, nftWatchlist,
   type User, type InsertUser,
   type Game, type InsertGame,
   type Clip, type InsertClip,
@@ -27,6 +27,7 @@ import {
   type ClipMention, type InsertClipMention,
   type CommentMention, type InsertCommentMention,
   type ScreenshotCommentMention, type InsertScreenshotCommentMention,
+  type NftWatchlist, type InsertNftWatchlist,
   type ClipWithUser,
   type CommentWithUser,
   type UserWithStats,
@@ -293,6 +294,12 @@ export interface IStorage {
   // Hero text settings operations
   getHeroTextSettings(textType: string): Promise<HeroTextSettings | null>;
   updateHeroTextSettings(textType: string, settings: { title: string; subtitle: string; updatedBy: number }): Promise<HeroTextSettings>;
+
+  // NFT Watchlist operations
+  addToNftWatchlist(watchlistData: InsertNftWatchlist): Promise<NftWatchlist>;
+  removeFromNftWatchlist(userId: number, nftId: number): Promise<boolean>;
+  getNftWatchlist(userId: number): Promise<NftWatchlist[]>;
+  isNftInWatchlist(userId: number, nftId: number): Promise<boolean>;
 
   // Leaderboard operations
   getEngagementLeaderboard(limit?: number): Promise<Array<{
