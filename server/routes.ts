@@ -7064,6 +7064,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const userEmail = user.email || `${user.username}@gamefolio.app`;
+      // Crossmint requires the linkedUser to be prefixed with the type (e.g., 'email:')
+      const linkedUser = `email:${userEmail}`;
 
       // Call Crossmint API to get or create wallet
       // This is idempotent - it will retrieve existing wallet or create new one
@@ -7075,7 +7077,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         body: JSON.stringify({
           type: 'evm-smart-wallet',
-          linkedUser: userEmail,
+          linkedUser: linkedUser,
           config: {
             adminSigner: {
               type: 'evm-fireblocks-custodial'
@@ -7091,7 +7093,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Check if error is because wallet already exists
         if (errorText.includes('already exists') || errorText.includes('duplicate')) {
           // Try to fetch the existing wallet
-          const getUserWalletResponse = await fetch(`https://www.crossmint.com/api/v1-alpha2/wallets?linkedUser=${encodeURIComponent(userEmail)}`, {
+          const getUserWalletResponse = await fetch(`https://www.crossmint.com/api/v1-alpha2/wallets?linkedUser=${encodeURIComponent(linkedUser)}`, {
             method: 'GET',
             headers: {
               'X-API-KEY': apiKey,
