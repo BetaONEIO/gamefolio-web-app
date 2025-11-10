@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
+import { Link } from "wouter";
 
 interface RecentUpload {
+  clipId: number;
   username: string;
   clipTitle: string;
   uploadedAt: string;
@@ -46,14 +48,19 @@ export function ActivityScrollBanner() {
       >
         {duplicatedUploads.map((upload, index) => (
           <div
-            key={`${upload.username}-${index}`}
+            key={`${upload.clipId}-${index}`}
             className="inline-flex items-center gap-2 text-sm font-medium"
             data-testid={`activity-${index}`}
+            style={{ color: '#131E2B' }}
           >
-            <span className="text-blue-900">🎮</span>
-            <span className="text-blue-900 font-semibold">{upload.username}</span>
-            <span className="text-blue-900">has just uploaded a clip</span>
-            <span className="text-blue-800">"{upload.clipTitle}"</span>
+            <span>🎮</span>
+            <span className="font-semibold">{upload.username}</span>
+            <span>has just uploaded a clip</span>
+            <Link href={`/clip/${upload.clipId}`}>
+              <span className="hover:underline cursor-pointer font-semibold">
+                "{upload.clipTitle}"
+              </span>
+            </Link>
           </div>
         ))}
       </div>

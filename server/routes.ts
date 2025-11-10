@@ -3038,6 +3038,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const recentUploads = clips
         .filter(clip => clip.user && clip.title)
         .map(clip => ({
+          clipId: clip.id,
           username: clip.user.username,
           clipTitle: clip.title,
           uploadedAt: clip.createdAt,
