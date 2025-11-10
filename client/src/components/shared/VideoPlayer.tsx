@@ -170,6 +170,22 @@ const VideoPlayer = ({
     video.muted = isMuted;
   }, [volume, isMuted, isInitialized]);
 
+  // Effect to handle autoPlay prop changes - pause video when not the active reel
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (autoPlay && video.paused) {
+      video.play().catch(err => {
+        console.error("Video autoplay failed:", err);
+      });
+      setIsPlaying(true);
+    } else if (!autoPlay && !video.paused) {
+      video.pause();
+      setIsPlaying(false);
+    }
+  }, [autoPlay]);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
