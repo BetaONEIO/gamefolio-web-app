@@ -165,8 +165,8 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
       <Header />
 
-      {/* Activity Scroll Banner */}
-      <ActivityScrollBanner />
+      {/* Activity Scroll Banner - Only show on home page */}
+      {location === "/" && <ActivityScrollBanner />}
 
       {/* Dynamic Banner */}
       {!isLoadingBanner && bannerSettings && bannerSettings.isEnabled && !isBannerDismissed && (
