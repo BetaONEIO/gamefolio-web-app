@@ -3029,6 +3029,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Clip Routes
   // ==========================================
 
+  // Get recent clip uploads for activity banner
+  app.get("/api/recent-uploads", async (req, res) => {
+    try {
+      const limit = 15;
+      const clips = await storage.getAllClips(limit, 0);
+      
+      const recentUploads = clips
+        .filter(clip => clip.user && clip.title)
+        .map(clip => ({
+          username: clip.user.username,
+          clipTitle: clip.title,
+          uploadedAt: clip.createdAt,
+        }));
+      
+      res.json(recentUploads);
+    } catch (err) {
+      console.error("Error fetching recent uploads:", err);
+      return res.status(500).json({ message: "Error fetching recent uploads" });
+    }
+  });
+
   // Get all clips (latest first)
   app.get("/api/clips", async (req, res) => {
     try {

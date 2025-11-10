@@ -22,6 +22,7 @@ import Header from "./components/layout/Header";
 import Sidebar from "./components/layout/Sidebar";
 import MobileNav from "./components/layout/MobileNav";
 import MobileMenu from "./components/layout/MobileMenu";
+import { ActivityScrollBanner } from "./components/layout/ActivityScrollBanner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, X } from "lucide-react";
 import { Link } from "wouter";
@@ -163,6 +164,9 @@ function MainLayout({ children }: { children: React.ReactNode }) {
       <div className="fixed bottom-0 left-0 w-full h-full bg-gradient-to-tr from-transparent via-transparent to-primary/5 pointer-events-none"></div>
 
       <Header />
+
+      {/* Activity Scroll Banner */}
+      <ActivityScrollBanner />
 
       {/* Dynamic Banner */}
       {!isLoadingBanner && bannerSettings && bannerSettings.isEnabled && !isBannerDismissed && (
