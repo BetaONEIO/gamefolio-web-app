@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { CustomInput } from "@/components/ui/custom-input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Link } from "wouter";
 import {
   Send,
   Search,
@@ -785,12 +786,23 @@ const MessagesPage: React.FC = () => {
                     return (
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={avatarUrl} />
-                            <AvatarFallback>
-                              {displayName.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                          {username && username !== 'unknown' ? (
+                            <Link href={`/profile/${username}`} data-testid="link-profile-avatar">
+                              <Avatar className="h-10 w-10 cursor-pointer">
+                                <AvatarImage src={avatarUrl} />
+                                <AvatarFallback>
+                                  {displayName.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                            </Link>
+                          ) : (
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={avatarUrl} />
+                              <AvatarFallback>
+                                {displayName.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
                           <div>
                             <h2 className="font-semibold">{displayName}</h2>
                             <p className="text-sm text-muted-foreground">@{username}</p>
@@ -811,12 +823,23 @@ const MessagesPage: React.FC = () => {
                   return (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={avatarUrl} />
-                          <AvatarFallback>
-                            {displayName.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        {username && username !== 'unknown' ? (
+                          <Link href={`/profile/${username}`} data-testid="link-profile-avatar">
+                            <Avatar className="h-10 w-10 cursor-pointer">
+                              <AvatarImage src={avatarUrl} />
+                              <AvatarFallback>
+                                {displayName.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                          </Link>
+                        ) : (
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={avatarUrl} />
+                            <AvatarFallback>
+                              {displayName.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
                         <div>
                           <h2 className="font-semibold">{displayName}</h2>
                           <p className="text-sm text-muted-foreground">@{username}</p>
@@ -903,12 +926,23 @@ const MessagesPage: React.FC = () => {
                 return (
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={avatarUrl} />
-                        <AvatarFallback>
-                          {displayName.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      {username && username !== 'unknown' ? (
+                        <Link href={`/profile/${username}`} data-testid="link-profile-avatar">
+                          <Avatar className="h-10 w-10 cursor-pointer">
+                            <AvatarImage src={avatarUrl} />
+                            <AvatarFallback>
+                              {displayName.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        </Link>
+                      ) : (
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={avatarUrl} />
+                          <AvatarFallback>
+                            {displayName.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
                       <div>
                         <h2 className="font-semibold">{displayName}</h2>
                         <p className="text-sm text-muted-foreground">@{username}</p>
