@@ -696,7 +696,11 @@ export default function StorePage() {
                     className="bg-gray-800/50 border-gray-700 overflow-hidden hover:border-blue-500 transition-all hover:shadow-lg hover:shadow-blue-500/20"
                     data-testid={`card-nft-${nft.id}`}
                   >
-                    <div className="relative aspect-square overflow-hidden">
+                    <div 
+                      className="relative aspect-square overflow-hidden cursor-pointer"
+                      onClick={() => handleBuyNFT(nft)}
+                      data-testid={`img-nft-${nft.id}`}
+                    >
                       <img
                         src={nft.image}
                         alt={nft.name}
