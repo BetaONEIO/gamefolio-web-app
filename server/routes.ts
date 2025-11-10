@@ -7171,14 +7171,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // NFT Purchase Routes
   // ==========================================
 
-  // Mock NFT catalog (server-side source of truth for pricing)
+  // NFT catalog (server-side source of truth for pricing)
   const NFT_CATALOG = [
-    { id: 1, name: "Gamer Avatar #001", price: 250, priceUSD: 12.50, forSale: true },
-    { id: 2, name: "Gamer Avatar #002", price: 500, priceUSD: 25.00, forSale: true },
-    { id: 3, name: "Gamer Avatar #003", price: 350, priceUSD: 17.50, forSale: true },
-    { id: 4, name: "Gamer Avatar #004", price: 400, priceUSD: 20.00, forSale: true },
-    { id: 5, name: "Gamer Avatar #005", price: 600, priceUSD: 30.00, forSale: true },
-    { id: 6, name: "Gamer Avatar #006", price: 180, priceUSD: 9.00, forSale: true },
+    { id: 1, name: "Cyber Pilot #001", price: 250, priceUSD: 12.50, forSale: true },
+    { id: 2, name: "Divine Guardian #002", price: 800, priceUSD: 40.00, forSale: true },
+    { id: 3, name: "Street Samurai #003", price: 550, priceUSD: 27.50, forSale: true },
+    { id: 4, name: "Urban Rogue #004", price: 350, priceUSD: 17.50, forSale: true },
+    { id: 5, name: "Matrix Assassin #005", price: 700, priceUSD: 35.00, forSale: true },
+    { id: 6, name: "Golden Warrior #006", price: 600, priceUSD: 30.00, forSale: true },
+    { id: 7, name: "Cyber Ronin #007", price: 650, priceUSD: 32.50, forSale: true },
+    { id: 8, name: "Desert Wanderer #008", price: 400, priceUSD: 20.00, forSale: true },
+    { id: 9, name: "Space Mercenary #009", price: 500, priceUSD: 25.00, forSale: true },
+    { id: 10, name: "Crystal Knight #010", price: 750, priceUSD: 37.50, forSale: true },
+    { id: 11, name: "Retro Explorer #011", price: 300, priceUSD: 15.00, forSale: true },
+    { id: 12, name: "Eastern Mystic #012", price: 450, priceUSD: 22.50, forSale: true },
+    { id: 13, name: "Digital Miner #013", price: 350, priceUSD: 17.50, forSale: true },
+    { id: 14, name: "Tech Operative #014", price: 420, priceUSD: 21.00, forSale: true },
+    { id: 15, name: "Royal Outlaw #015", price: 900, priceUSD: 45.00, forSale: true },
   ];
 
   // Purchase NFT with GF tokens
