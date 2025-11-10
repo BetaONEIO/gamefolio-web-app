@@ -38,7 +38,7 @@ export function ActivityScrollBanner() {
   const duplicatedUploads = [...recentUploads, ...recentUploads];
 
   return (
-    <div className="bg-black/80 border-b border-green-500/30 overflow-hidden py-2">
+    <div className="bg-green-500 border-b border-green-600 overflow-hidden py-2">
       <div
         ref={scrollRef}
         className="flex gap-8 whitespace-nowrap overflow-hidden"
@@ -47,13 +47,13 @@ export function ActivityScrollBanner() {
         {duplicatedUploads.map((upload, index) => (
           <div
             key={`${upload.username}-${index}`}
-            className="inline-flex items-center gap-2 text-green-400 text-sm font-medium"
+            className="inline-flex items-center gap-2 text-sm font-medium"
             data-testid={`activity-${index}`}
           >
-            <span className="text-green-500">🎮</span>
-            <span className="text-green-300">{upload.username}</span>
-            <span className="text-green-400">has just uploaded a clip</span>
-            <span className="text-green-500/60">"{upload.clipTitle}"</span>
+            <span className="text-blue-900">🎮</span>
+            <span className="text-blue-900 font-semibold">{upload.username}</span>
+            <span className="text-blue-900">has just uploaded a clip</span>
+            <span className="text-blue-800">"{upload.clipTitle}"</span>
           </div>
         ))}
       </div>
