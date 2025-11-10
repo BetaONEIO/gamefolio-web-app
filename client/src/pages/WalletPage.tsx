@@ -88,50 +88,71 @@ export default function WalletPage() {
         </div>
 
         {!wallet ? (
-          <Card data-testid="card-create-wallet">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-primary" />
-                Create Your Wallet
-              </CardTitle>
-              <CardDescription>
-                Get started with blockchain-based gaming assets
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Create a secure blockchain wallet to own your gaming clips as NFTs, 
-                trade digital assets, and participate in the Web3 gaming economy.
-              </p>
-              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                <p className="text-sm font-medium">✨ What you get:</p>
-                <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                  <li>• Your own blockchain wallet address</li>
-                  <li>• Secure storage for digital assets</li>
-                  <li>• Ability to mint and trade NFTs</li>
-                  <li>• Multi-chain support (Polygon, Ethereum, Base)</li>
-                </ul>
+          <div className="bg-[#0a1929] border border-[#1e3a5f] rounded-2xl p-8 md:p-12" data-testid="card-create-wallet">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              {/* Left Content */}
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <h2 className="text-4xl md:text-5xl font-bold text-primary">
+                    Create Your Wallet
+                  </h2>
+                  <p className="text-gray-300 text-lg">
+                    Get started with blockchain-based gaming assets and own your digital items.
+                  </p>
+                </div>
+
+                <div className="border border-[#1e3a5f] rounded-xl p-6 space-y-4 bg-[#0d1f33]/50">
+                  <h3 className="text-primary text-xl font-semibold">
+                    What you get:
+                  </h3>
+                  <ul className="space-y-3 text-gray-300">
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary mt-1">•</span>
+                      <span>Your own blockchain wallet address</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary mt-1">•</span>
+                      <span>Secure storage for digital assets</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary mt-1">•</span>
+                      <span>Ability to mint and trade NFTs</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary mt-1">•</span>
+                      <span>Multi-chain support (Polygon, Ethereum, Base)</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <Button 
+                  onClick={createWallet} 
+                  disabled={isLoading}
+                  className="w-full md:w-auto px-12 py-6 text-lg font-semibold bg-primary hover:bg-primary/90 text-black rounded-lg"
+                  data-testid="button-create-wallet"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Creating Wallet...
+                    </>
+                  ) : (
+                    <>
+                      <Wallet className="w-5 h-5 mr-2" />
+                      Create Wallet
+                    </>
+                  )}
+                </Button>
               </div>
-              <Button 
-                onClick={createWallet} 
-                disabled={isLoading}
-                className="w-full"
-                data-testid="button-create-wallet"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating Wallet...
-                  </>
-                ) : (
-                  <>
-                    <Wallet className="w-4 h-4 mr-2" />
-                    Create Wallet
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
+
+              {/* Right Image */}
+              <div className="hidden md:flex items-center justify-center">
+                <div className="w-full max-w-md aspect-square bg-[#0d1f33]/30 rounded-xl flex items-center justify-center border border-[#1e3a5f]">
+                  <p className="text-gray-500 text-sm">Wallet Illustration</p>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           <Tabs defaultValue="wallet" className="space-y-6" data-testid="tabs-wallet">
             <TabsList className="grid w-full grid-cols-2">
