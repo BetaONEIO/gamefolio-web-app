@@ -16,6 +16,7 @@ export default function WalletPage() {
   const { wallet, isLoading, createWallet, loginToWallet } = useCrossmint();
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
+  const [showWalletDetails, setShowWalletDetails] = useState(false);
 
   const handleCopyAddress = async () => {
     if (wallet?.address) {
@@ -83,85 +84,270 @@ export default function WalletPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center" data-testid="card-create-wallet">
-          {/* Left column - Content without border */}
-          <div className="space-y-6">
-            {/* Header */}
-            <div>
-              <h2 className="text-3xl font-bold mb-3 text-white">
-                Welcome to your<br />Gamefolio Wallet
-              </h2>
-              <p className="text-lg" style={{ color: '#9ca3af' }}>
-                Store Gamefolio Tokens (GF) and NFT avatar profile pictures!
-              </p>
-            </div>
+        {!showWalletDetails ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center" data-testid="card-create-wallet">
+            {/* Left column - Content without border */}
+            <div className="space-y-6">
+              {/* Header */}
+              <div>
+                <h2 className="text-3xl font-bold mb-3 text-white">
+                  Welcome to your<br />Gamefolio Wallet
+                </h2>
+                <p className="text-lg" style={{ color: '#9ca3af' }}>
+                  Store Gamefolio Tokens (GF) and NFT avatar profile pictures!
+                </p>
+              </div>
 
-            {/* List */}
-            <ul className="space-y-3 text-white">
-              <li className="flex items-start gap-3">
-                <div className="mt-1" style={{ color: '#10b981' }}>✓</div>
-                <span>Secure storage for digital assets</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <div className="mt-1" style={{ color: '#10b981' }}>✓</div>
-                <span>Your own blockchain wallet address</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <div className="mt-1" style={{ color: '#10b981' }}>✓</div>
-                <span>Ability to mint and trade NFTs</span>
-              </li>
-            </ul>
+              {/* List */}
+              <ul className="space-y-3 text-white">
+                <li className="flex items-start gap-3">
+                  <div className="mt-1" style={{ color: '#10b981' }}>✓</div>
+                  <span>Secure storage for digital assets</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="mt-1" style={{ color: '#10b981' }}>✓</div>
+                  <span>Your own blockchain wallet address</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="mt-1" style={{ color: '#10b981' }}>✓</div>
+                  <span>Ability to mint and trade NFTs</span>
+                </li>
+              </ul>
 
-            {/* Button and Badge */}
-            <div className="space-y-4">
-              <Button 
-                onClick={wallet ? loginToWallet : createWallet} 
-                disabled={isLoading}
-                className="w-auto px-6 text-black font-semibold"
-                style={{ backgroundColor: '#fbbf24', color: '#000' }}
-                data-testid={wallet ? "button-access-wallet" : "button-create-wallet"}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {wallet ? "Loading..." : "Creating Wallet..."}
-                  </>
-                ) : (
-                  <>
-                    {wallet ? (
-                      <>
-                        <LogIn className="w-4 h-4 mr-2" />
-                        Access Wallet
-                      </>
-                    ) : (
-                      <>
-                        <Wallet className="w-4 h-4 mr-2" />
-                        Create Wallet
-                      </>
-                    )}
-                  </>
-                )}
-              </Button>
-              <div className="flex items-center justify-start">
-                <img 
-                  src={crossmintBadge} 
-                  alt="Powered by Crossmint" 
-                  className="h-8"
-                />
+              {/* Button and Badge */}
+              <div className="space-y-4">
+                <Button 
+                  onClick={wallet ? () => setShowWalletDetails(true) : createWallet} 
+                  disabled={isLoading}
+                  className="w-auto px-6 text-black font-semibold"
+                  style={{ backgroundColor: '#fbbf24', color: '#000' }}
+                  data-testid={wallet ? "button-continue-wallet" : "button-create-wallet"}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Creating Wallet...
+                    </>
+                  ) : (
+                    <>
+                      {wallet ? (
+                        <>
+                          <ArrowLeft className="w-4 h-4 mr-2 rotate-180" />
+                          Continue to Wallet
+                        </>
+                      ) : (
+                        <>
+                          <Wallet className="w-4 h-4 mr-2" />
+                          Create Wallet
+                        </>
+                      )}
+                    </>
+                  )}
+                </Button>
+                <div className="flex items-center justify-start">
+                  <img 
+                    src={crossmintBadge} 
+                    alt="Powered by Crossmint" 
+                    className="h-8"
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Right column - Image */}
-          <div className="flex items-center justify-center">
-            <img 
-              src={walletPromo} 
-              alt="Wallet NFT Promo" 
-              className="w-full h-auto object-contain"
-              style={{ maxHeight: '750px' }}
-            />
+            {/* Right column - Image */}
+            <div className="flex items-center justify-center">
+              <img 
+                src={walletPromo} 
+                alt="Wallet NFT Promo" 
+                className="w-full h-auto object-contain"
+                style={{ maxHeight: '750px' }}
+              />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div>
+            <Button 
+              variant="ghost" 
+              className="mb-6 text-white hover:bg-white/10" 
+              onClick={() => setShowWalletDetails(false)}
+              data-testid="button-back-to-welcome"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Welcome
+            </Button>
+            
+            <Tabs defaultValue="wallet" className="space-y-6" data-testid="tabs-wallet">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="wallet" data-testid="tab-wallet-info">
+                  <Wallet className="w-4 h-4 mr-2" />
+                  Wallet Info
+                </TabsTrigger>
+                <TabsTrigger value="nfts" data-testid="tab-owned-nfts">
+                  <Image className="w-4 h-4 mr-2" />
+                  Owned NFTs
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="wallet" className="space-y-6">
+                <Card data-testid="card-wallet-info">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Wallet className="w-5 h-5 text-primary" />
+                      Wallet Information
+                    </CardTitle>
+                    <CardDescription>
+                      Your blockchain wallet details
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Wallet Address
+                      </label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <code className="flex-1 text-sm bg-muted px-3 py-2 rounded-md font-mono break-all" data-testid="text-wallet-address">
+                          {wallet?.address}
+                        </code>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleCopyAddress}
+                          data-testid="button-copy-address"
+                        >
+                          {copied ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Blockchain Network
+                      </label>
+                      <div className="mt-1">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary" data-testid="text-wallet-chain">
+                          {wallet?.chain.charAt(0).toUpperCase() + wallet?.chain.slice(1)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        GF Token Balance
+                      </label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <img src={gfTokenLogo} alt="GF Token" className="w-6 h-6" />
+                        <span className="text-2xl font-bold" data-testid="text-gf-balance">
+                          {(user?.gfTokenBalance || 0).toLocaleString()} GF
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1" data-testid="text-gf-balance-usd">
+                        ≈ ${((user?.gfTokenBalance || 0) * 0.05).toFixed(2)} USD
+                      </p>
+                    </div>
+
+                    <div className="pt-2 space-y-2">
+                      <Button
+                        variant="default"
+                        className="w-full"
+                        onClick={loginToWallet}
+                        data-testid="button-login-wallet"
+                      >
+                        <LogIn className="w-4 h-4 mr-2" />
+                        Login to Crossmint Dashboard
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        asChild
+                        data-testid="button-view-explorer"
+                      >
+                        <a href={getExplorerUrl()} target="_blank" rel="noopener noreferrer">
+                          View on Block Explorer
+                          <ExternalLink className="w-4 h-4 ml-2" />
+                        </a>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="card-wallet-management">
+                  <CardHeader>
+                    <CardTitle>Wallet Management</CardTitle>
+                    <CardDescription>
+                      Access full wallet features in Crossmint
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Click "Login to Crossmint Dashboard" to access your wallet's full capabilities, including:
+                    </p>
+                    <ul className="space-y-3 text-sm">
+                      <li className="flex items-start gap-2">
+                        <div className="mt-0.5 text-primary">•</div>
+                        <div>
+                          <strong>Transaction Management:</strong> Send and receive cryptocurrency
+                        </div>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <div className="mt-0.5 text-primary">•</div>
+                        <div>
+                          <strong>NFT Viewing:</strong> View and manage your NFT collection
+                        </div>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <div className="mt-0.5 text-primary">•</div>
+                        <div>
+                          <strong>Transaction History:</strong> Track all your wallet activity
+                        </div>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <div className="mt-0.5 text-primary">•</div>
+                        <div>
+                          <strong>Multi-chain Assets:</strong> Manage assets across different blockchains
+                        </div>
+                      </li>
+                    </ul>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="nfts" className="space-y-6">
+                <Card data-testid="card-owned-nfts">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Image className="w-5 h-5 text-primary" />
+                      Your NFT Collection
+                    </CardTitle>
+                    <CardDescription>
+                      NFTs you own on the blockchain
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <Image className="w-16 h-16 text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-semibold mb-2" data-testid="heading-no-nfts">
+                        No NFTs Yet
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-6 max-w-md" data-testid="text-no-nfts-description">
+                        You haven't purchased any NFTs yet. Visit the store to browse and purchase NFT avatars with your GF tokens.
+                      </p>
+                      <Link href="/store">
+                        <Button data-testid="button-browse-store">
+                          <Wallet className="w-4 h-4 mr-2" />
+                          Browse NFT Store
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+        )}
       </div>
     </div>
   );
