@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
+import crossmintBadge from "@assets/badge-color-background_1762859702329.png";
 
 export default function WalletPage() {
   const { user } = useAuth();
@@ -108,15 +109,12 @@ export default function WalletPage() {
                   </>
                 )}
               </Button>
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <svg 
-                  viewBox="0 0 24 24" 
-                  className="w-4 h-4"
-                  fill="currentColor"
-                >
-                  <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
-                </svg>
-                <span>provided by crossmint</span>
+              <div className="flex items-center justify-center">
+                <img 
+                  src={crossmintBadge} 
+                  alt="Powered by Crossmint" 
+                  className="h-8"
+                />
               </div>
             </CardContent>
           </Card>
