@@ -111,44 +111,44 @@ export default function LatestReelsPage() {
                         }}
                       />
                       
-                      {/* Subtle gradient overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+                      {/* Gradient overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
                       
-                      {/* Username - top left */}
-                      <div className="absolute top-2 left-2 flex items-center gap-1.5">
-                        <div className="w-6 h-6 rounded-full overflow-hidden border border-white/50">
-                          <img
-                            src={reel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                            alt={reel.user.displayName}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <span className="text-white text-xs font-medium drop-shadow-lg">
-                          {reel.user.displayName || reel.user.username}
-                        </span>
+                      {/* Duration badge - top left */}
+                      <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold">
+                        {(() => {
+                          const actualDuration = reel.trimEnd && reel.trimEnd > 0 
+                            ? reel.trimEnd - (reel.trimStart || 0)
+                            : reel.duration || 0;
+                          return formatDuration(actualDuration);
+                        })()}
                       </div>
                       
-                      {/* View count and game - bottom left */}
-                      <div className="absolute bottom-2 left-2 flex items-center gap-2 text-white text-xs font-medium drop-shadow-lg">
-                        <div className="flex items-center gap-1">
-                          <Eye className="h-4 w-4" />
-                          <span>{formatNumber(reel.views || 0)}</span>
-                        </div>
+                      {/* View count - top right */}
+                      <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold flex items-center gap-1">
+                        <Eye className="h-3 w-3" />
+                        {formatNumber(reel.views || 0)}
+                      </div>
+                      
+                      {/* Content overlay - centered bottom */}
+                      <div className="absolute bottom-0 left-0 right-0 p-3 text-center">
+                        {/* Title */}
+                        <h3 className="text-white font-bold text-sm mb-1 drop-shadow-lg">
+                          {reel.title}
+                        </h3>
+
+                        {/* Username */}
+                        <p className="text-white text-xs mb-1.5 drop-shadow-lg">
+                          @{reel.user.username}
+                        </p>
+
+                        {/* Game badge underneath username */}
                         {reel.game && (
-                          <div className="bg-green-600 text-white px-2 py-0.5 rounded font-bold">
+                          <div className="inline-block bg-green-600 text-white text-xs px-2 py-0.5 rounded font-bold whitespace-nowrap">
                             {reel.game.name}
                           </div>
                         )}
                       </div>
-                      
-                      {/* Title overlay - some reels show title */}
-                      {index % 3 === 0 && (
-                        <div className="absolute bottom-8 left-2 right-2">
-                          <p className="text-white text-sm font-medium line-clamp-2 drop-shadow-lg">
-                            {reel.title}
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </div>
                 );
