@@ -90,7 +90,7 @@ export default function WalletPage() {
           <Card data-testid="card-create-wallet">
             <CardContent className="space-y-4 pt-6">
               {/* Wallet promo image */}
-              <div className="flex items-center justify-center">
+              <div className="flex items-center justify-center bg-black">
                 <img 
                   src={walletPromo} 
                   alt="Wallet NFT Promo" 
