@@ -88,47 +88,57 @@ export default function WalletPage() {
         </div>
 
         {!wallet ? (
-          <div className="bg-[#0a1929] border border-[#1e3a5f] rounded-2xl p-8 md:p-12" data-testid="card-create-wallet">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              {/* Left Content */}
-              <div className="space-y-6">
-                <div className="space-y-4">
-                  <h2 className="text-4xl md:text-5xl font-bold text-primary">
-                    Create Your Wallet
-                  </h2>
-                  <p className="text-gray-300 text-lg">
-                    Get started with blockchain-based gaming assets and own your digital items.
-                  </p>
-                </div>
+          <div 
+            className="relative rounded-2xl overflow-hidden min-h-[600px] flex items-center justify-center p-8"
+            style={{
+              background: 'linear-gradient(135deg, #0a4d3c 0%, #0d2d2d 50%, #0a1a1a 100%)'
+            }}
+            data-testid="card-create-wallet"
+          >
+            {/* Circular ring patterns */}
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] rounded-full border border-primary/20"></div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full border border-primary/15"></div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full border border-primary/10"></div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full border border-primary/5"></div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px] rounded-full border border-primary/5"></div>
+            </div>
 
-                <div className="border border-[#1e3a5f] rounded-xl p-6 space-y-4 bg-[#0d1f33]/50">
-                  <h3 className="text-primary text-xl font-semibold">
-                    What you get:
-                  </h3>
-                  <ul className="space-y-3 text-gray-300">
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary mt-1">•</span>
-                      <span>Your own blockchain wallet address</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary mt-1">•</span>
-                      <span>Secure storage for digital assets</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary mt-1">•</span>
-                      <span>Ability to mint and trade NFTs</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary mt-1">•</span>
-                      <span>Multi-chain support (Polygon, Ethereum, Base)</span>
-                    </li>
-                  </ul>
-                </div>
+            {/* Content */}
+            <div className="relative z-10 max-w-2xl mx-auto text-center space-y-8">
+              {/* Heading */}
+              <div className="space-y-4">
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
+                  Welcome to your<br />
+                  Gamefolio Wallet
+                </h1>
+                <p className="text-white/90 text-base md:text-lg">
+                  Store Gamefolio Tokens (GF) and NFT avatar profile pictures!
+                </p>
+              </div>
 
+              {/* Bullet Points */}
+              <div className="space-y-3 text-white/90 text-sm md:text-base max-w-md mx-auto">
+                <div className="flex items-center justify-center gap-2">
+                  <span>•</span>
+                  <span>Secure storage for digital assets</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <span>•</span>
+                  <span>Your own blockchain wallet address</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <span>•</span>
+                  <span>Ability to mint and trade NFTs</span>
+                </div>
+              </div>
+
+              {/* Button */}
+              <div className="pt-4">
                 <Button 
                   onClick={createWallet} 
                   disabled={isLoading}
-                  className="w-full md:w-auto px-12 py-6 text-lg font-semibold bg-primary hover:bg-primary/90 text-black rounded-lg"
+                  className="px-16 py-6 text-base md:text-lg font-semibold bg-primary hover:bg-primary/90 text-black rounded-xl shadow-lg hover:shadow-xl transition-all"
                   data-testid="button-create-wallet"
                 >
                   {isLoading ? (
@@ -137,19 +147,9 @@ export default function WalletPage() {
                       Creating Wallet...
                     </>
                   ) : (
-                    <>
-                      <Wallet className="w-5 h-5 mr-2" />
-                      Create Wallet
-                    </>
+                    "Get Started"
                   )}
                 </Button>
-              </div>
-
-              {/* Right Image */}
-              <div className="hidden md:flex items-center justify-center">
-                <div className="w-full max-w-md aspect-square bg-[#0d1f33]/30 rounded-xl flex items-center justify-center border border-[#1e3a5f]">
-                  <p className="text-gray-500 text-sm">Wallet Illustration</p>
-                </div>
               </div>
             </div>
           </div>
