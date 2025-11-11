@@ -123,7 +123,7 @@ export default function WalletPage() {
                     <Button 
                       onClick={createWallet} 
                       disabled={isLoading}
-                      className="w-full"
+                      className="w-auto px-6"
                       data-testid="button-create-wallet"
                     >
                       {isLoading ? (
