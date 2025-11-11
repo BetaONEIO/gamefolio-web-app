@@ -49,20 +49,20 @@ export default function WalletPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen" style={{ backgroundColor: '#1a2332' }}>
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8 max-w-6xl">
           <div className="mb-8">
             <Link href="/">
-              <Button variant="ghost" className="mb-4 text-white hover:bg-white/10" data-testid="button-back">
+              <Button variant="ghost" className="mb-4" data-testid="button-back">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Home
               </Button>
             </Link>
-            <h1 className="text-4xl font-bold text-white mb-2" data-testid="text-page-title">Wallet</h1>
+            <h1 className="text-4xl font-bold text-primary mb-2" data-testid="text-page-title">Wallet</h1>
           </div>
-          <Card style={{ backgroundColor: '#2d3748', borderColor: '#4a5568' }}>
+          <Card>
             <CardContent className="pt-6">
-              <p className="text-center" style={{ color: '#9ca3af' }}>
+              <p className="text-center text-muted-foreground">
                 Please log in to access your wallet
               </p>
             </CardContent>
@@ -73,11 +73,11 @@ export default function WalletPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#1a2332' }}>
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="mb-12">
           <Link href="/">
-            <Button variant="ghost" className="mb-4 text-white hover:bg-white/10" data-testid="button-back">
+            <Button variant="ghost" className="mb-4" data-testid="button-back">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Home
             </Button>
@@ -90,26 +90,26 @@ export default function WalletPage() {
             <div className="space-y-6">
               {/* Header */}
               <div>
-                <h2 className="text-4xl font-bold mb-4 text-white">
+                <h2 className="text-4xl font-bold mb-4">
                   Welcome to your<br />Gamefolio Wallet
                 </h2>
-                <p className="text-lg pr-8" style={{ color: '#9ca3af' }}>
+                <p className="text-lg pr-8 text-muted-foreground">
                   Store Gamefolio Tokens (GF) and NFT avatar profile pictures!
                 </p>
               </div>
 
               {/* List */}
-              <ul className="space-y-3 text-white">
+              <ul className="space-y-3">
                 <li className="flex items-start gap-3">
-                  <div className="mt-1" style={{ color: '#10b981' }}>✓</div>
+                  <div className="mt-1 text-primary">✓</div>
                   <span>Secure storage for digital assets</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <div className="mt-1" style={{ color: '#10b981' }}>✓</div>
+                  <div className="mt-1 text-primary">✓</div>
                   <span>Your own blockchain wallet address</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <div className="mt-1" style={{ color: '#10b981' }}>✓</div>
+                  <div className="mt-1 text-primary">✓</div>
                   <span>Ability to mint and trade NFTs</span>
                 </li>
               </ul>
@@ -119,8 +119,7 @@ export default function WalletPage() {
                 <Button 
                   onClick={wallet ? () => setShowWalletDetails(true) : createWallet} 
                   disabled={isLoading}
-                  className="w-auto px-6 text-black font-semibold"
-                  style={{ backgroundColor: '#fbbf24', color: '#000' }}
+                  className="w-auto px-6"
                   data-testid={wallet ? "button-continue-wallet" : "button-create-wallet"}
                 >
                   {isLoading ? (
@@ -168,7 +167,7 @@ export default function WalletPage() {
           <div>
             <Button 
               variant="ghost" 
-              className="mb-6 text-white hover:bg-white/10" 
+              className="mb-6" 
               onClick={() => setShowWalletDetails(false)}
               data-testid="button-back-to-welcome"
             >
