@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { Link } from "wouter";
+import { Upload } from "lucide-react";
 
 interface RecentUpload {
   clipId: number;
@@ -53,7 +54,7 @@ export function ActivityScrollBanner() {
             data-testid={`activity-${index}`}
             style={{ color: '#131E2B' }}
           >
-            <span>🎮</span>
+            <Upload className="h-4 w-4" />
             <span className="font-semibold">{upload.username}</span>
             <span>has just uploaded a clip</span>
             <Link href={`/clip/${upload.clipId}`}>
