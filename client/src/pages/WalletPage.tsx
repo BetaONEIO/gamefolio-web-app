@@ -89,15 +89,14 @@ export default function WalletPage() {
         {!wallet ? (
           <Card data-testid="card-create-wallet">
             <CardContent className="space-y-4 pt-6">
-              {/* Wallet promo image with green gradient */}
-              <div className="relative rounded-lg overflow-hidden bg-gradient-to-br from-green-500 via-green-600 to-emerald-700 p-8">
-                <div className="flex items-center justify-center">
-                  <img 
-                    src={walletPromo} 
-                    alt="Wallet NFT Promo" 
-                    className="max-w-full h-auto max-h-80 object-contain"
-                  />
-                </div>
+              {/* Wallet promo image */}
+              <div className="flex items-center justify-center">
+                <img 
+                  src={walletPromo} 
+                  alt="Wallet NFT Promo" 
+                  className="w-full h-auto object-contain"
+                  style={{ maxHeight: '600px' }}
+                />
               </div>
               
               <Button 
