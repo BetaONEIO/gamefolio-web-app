@@ -88,41 +88,75 @@ export default function WalletPage() {
 
         {!wallet ? (
           <Card data-testid="card-create-wallet">
-            <CardContent className="space-y-4 pt-6">
-              {/* Wallet promo image */}
-              <div className="flex items-center justify-center bg-black">
-                <img 
-                  src={walletPromo} 
-                  alt="Wallet NFT Promo" 
-                  className="w-full h-auto object-contain"
-                  style={{ maxHeight: '600px' }}
-                />
-              </div>
-              
-              <Button 
-                onClick={createWallet} 
-                disabled={isLoading}
-                className="w-full"
-                data-testid="button-create-wallet"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating Wallet...
-                  </>
-                ) : (
-                  <>
-                    <Wallet className="w-4 h-4 mr-2" />
-                    Create Wallet
-                  </>
-                )}
-              </Button>
-              <div className="flex items-center justify-center">
-                <img 
-                  src={crossmintBadge} 
-                  alt="Powered by Crossmint" 
-                  className="h-8"
-                />
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                {/* Left column - Content */}
+                <div className="space-y-6">
+                  {/* Header */}
+                  <div>
+                    <h2 className="text-3xl font-bold mb-3">
+                      Welcome to your<br />Gamefolio Wallet
+                    </h2>
+                    <p className="text-lg text-muted-foreground">
+                      Store Gamefolio Tokens (GF) and NFT avatar profile pictures!
+                    </p>
+                  </div>
+
+                  {/* List */}
+                  <ul className="space-y-3">
+                    <li className="flex items-start gap-3">
+                      <div className="mt-1 text-primary">✓</div>
+                      <span>Secure storage for digital assets</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="mt-1 text-primary">✓</div>
+                      <span>Your own blockchain wallet address</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="mt-1 text-primary">✓</div>
+                      <span>Ability to mint and trade NFTs</span>
+                    </li>
+                  </ul>
+
+                  {/* Button and Badge */}
+                  <div className="space-y-4">
+                    <Button 
+                      onClick={createWallet} 
+                      disabled={isLoading}
+                      className="w-full"
+                      data-testid="button-create-wallet"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Creating Wallet...
+                        </>
+                      ) : (
+                        <>
+                          <Wallet className="w-4 h-4 mr-2" />
+                          Create Wallet
+                        </>
+                      )}
+                    </Button>
+                    <div className="flex items-center justify-center">
+                      <img 
+                        src={crossmintBadge} 
+                        alt="Powered by Crossmint" 
+                        className="h-8"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right column - Image */}
+                <div className="flex items-center justify-center bg-black rounded-lg">
+                  <img 
+                    src={walletPromo} 
+                    alt="Wallet NFT Promo" 
+                    className="w-full h-auto object-contain"
+                    style={{ maxHeight: '600px' }}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
