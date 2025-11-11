@@ -84,7 +84,7 @@ export default function WalletPage() {
         </div>
 
         {!wallet ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center" data-testid="card-create-wallet">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center" data-testid="card-create-wallet">
             {/* Left column - Content without border */}
             <div className="space-y-6">
               {/* Header */}
