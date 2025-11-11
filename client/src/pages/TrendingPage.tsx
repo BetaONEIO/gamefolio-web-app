@@ -122,8 +122,8 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
           {formatNumber(reel.views || 0)}
         </div>
 
-        {/* Content overlay - centered bottom */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 text-center">
+        {/* Content overlay - left aligned bottom */}
+        <div className="absolute bottom-0 left-0 right-0 p-4">
           {/* Title */}
           <h3 className="text-white font-bold text-base mb-1 drop-shadow-lg">
             {reel.title}
@@ -402,8 +402,8 @@ const TrendingPage: React.FC = () => {
                       {formatNumber(reel.views || 0)}
                     </div>
                     
-                    {/* Content overlay - centered bottom */}
-                    <div className="absolute bottom-0 left-0 right-0 p-3 text-center">
+                    {/* Content overlay - left aligned bottom */}
+                    <div className="absolute bottom-0 left-0 right-0 p-3">
                       {/* Title */}
                       <h3 className="text-white font-bold text-sm mb-1 drop-shadow-lg">
                         {reel.title}
