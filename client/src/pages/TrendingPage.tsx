@@ -123,20 +123,20 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
         </div>
 
         {/* Content overlay - left aligned bottom */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
+        <div className="absolute bottom-0 left-0 right-0 p-3">
           {/* Title */}
-          <h3 className="text-white font-bold text-base mb-1 drop-shadow-lg">
+          <h3 className="text-white font-bold text-sm mb-0.5 drop-shadow-lg line-clamp-2">
             {reel.title}
           </h3>
 
           {/* Username */}
-          <p className="text-white text-sm mb-2 drop-shadow-lg">
+          <p className="text-white text-xs mb-1.5 drop-shadow-lg">
             @{reel.user.username}
           </p>
 
           {/* Game badge underneath username */}
           {reel.game && (
-            <div className="inline-block bg-green-600 text-white text-xs px-2.5 py-1 rounded font-bold whitespace-nowrap">
+            <div className="inline-block bg-green-600 text-white text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis">
               {reel.game.name}
             </div>
           )}
@@ -403,20 +403,20 @@ const TrendingPage: React.FC = () => {
                     </div>
                     
                     {/* Content overlay - left aligned bottom */}
-                    <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <div className="absolute bottom-0 left-0 right-0 p-2">
                       {/* Title */}
-                      <h3 className="text-white font-bold text-sm mb-1 drop-shadow-lg">
+                      <h3 className="text-white font-bold text-xs mb-0.5 drop-shadow-lg line-clamp-2">
                         {reel.title}
                       </h3>
 
                       {/* Username */}
-                      <p className="text-white text-xs mb-1.5 drop-shadow-lg">
+                      <p className="text-white text-[10px] mb-1 drop-shadow-lg">
                         @{reel.user.username}
                       </p>
 
                       {/* Game badge underneath username */}
                       {reel.game && (
-                        <div className="inline-block bg-green-600 text-white text-xs px-2 py-0.5 rounded font-bold whitespace-nowrap">
+                        <div className="inline-block bg-green-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis">
                           {reel.game.name}
                         </div>
                       )}
