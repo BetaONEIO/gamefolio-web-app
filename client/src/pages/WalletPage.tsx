@@ -176,52 +176,82 @@ export default function WalletPage() {
             </Button>
             
             <Tabs defaultValue="wallet" className="space-y-6" data-testid="tabs-wallet">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="wallet" data-testid="tab-wallet-info">
                   <Wallet className="w-4 h-4 mr-2" />
-                  Wallet Info
+                  Wallet
                 </TabsTrigger>
-                <TabsTrigger value="nfts" data-testid="tab-owned-nfts">
+                <TabsTrigger value="stake" data-testid="tab-stake">
+                  <Wallet className="w-4 h-4 mr-2" />
+                  Stake GF Token
+                </TabsTrigger>
+                <TabsTrigger value="nfts" data-testid="tab-nfts">
                   <Image className="w-4 h-4 mr-2" />
-                  Owned NFTs
+                  NFTs & Collectibles
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="wallet" className="space-y-6">
-                <Card data-testid="card-wallet-info">
+                <Card data-testid="card-gf-balance">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Wallet className="w-5 h-5 text-primary" />
-                      Wallet Information
-                    </CardTitle>
-                    <CardDescription>
-                      Your blockchain wallet details
-                    </CardDescription>
+                    <div className="flex items-center gap-4">
+                      <img src={gfTokenLogo} alt="GF Token" className="w-12 h-12" />
+                      <div>
+                        <CardTitle>GF Balance</CardTitle>
+                        <CardDescription>Your Gamefolio Token balance</CardDescription>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">
-                        Wallet Address
-                      </label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <code className="flex-1 text-sm bg-muted px-3 py-2 rounded-md font-mono break-all" data-testid="text-wallet-address">
-                          {wallet?.address}
-                        </code>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleCopyAddress}
-                          data-testid="button-copy-address"
-                        >
-                          {copied ? (
-                            <CheckCircle2 className="w-4 h-4 text-green-500" />
-                          ) : (
-                            <Copy className="w-4 h-4" />
-                          )}
-                        </Button>
+                      <div className="flex items-center gap-2">
+                        <span className="text-3xl font-bold" data-testid="text-gf-balance">
+                          {(user?.gfTokenBalance || 0).toLocaleString()} GF
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1" data-testid="text-gf-balance-usd">
+                        ≈ ${((user?.gfTokenBalance || 0) * 0.05).toFixed(2)} USD
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button variant="default" data-testid="button-buy-gf">
+                        Buy GF Token
+                      </Button>
+                      <Button variant="outline" data-testid="button-sell-gf">
+                        Sell GF Token
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="card-wallet-address">
+                  <CardHeader>
+                    <div className="flex items-center gap-4">
+                      <Wallet className="w-12 h-12 text-primary" />
+                      <div>
+                        <CardTitle>Wallet Address</CardTitle>
+                        <CardDescription>Your blockchain wallet address</CardDescription>
                       </div>
                     </div>
-
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-sm bg-muted px-3 py-2 rounded-md font-mono break-all" data-testid="text-wallet-address">
+                        {wallet?.address}
+                      </code>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCopyAddress}
+                        data-testid="button-copy-address"
+                      >
+                        {copied ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">
                         Blockchain Network
@@ -232,98 +262,97 @@ export default function WalletPage() {
                         </span>
                       </div>
                     </div>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      asChild
+                      data-testid="button-view-explorer"
+                    >
+                      <a href={getExplorerUrl()} target="_blank" rel="noopener noreferrer">
+                        View on Block Explorer
+                        <ExternalLink className="w-4 h-4 ml-2" />
+                      </a>
+                    </Button>
+                  </CardContent>
+                </Card>
 
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">
-                        GF Token Balance
-                      </label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <img src={gfTokenLogo} alt="GF Token" className="w-6 h-6" />
-                        <span className="text-2xl font-bold" data-testid="text-gf-balance">
-                          {(user?.gfTokenBalance || 0).toLocaleString()} GF
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1" data-testid="text-gf-balance-usd">
-                        ≈ ${((user?.gfTokenBalance || 0) * 0.05).toFixed(2)} USD
+                <Card data-testid="card-transaction-history">
+                  <CardHeader>
+                    <CardTitle>Transaction History</CardTitle>
+                    <CardDescription>Recent transactions on your wallet</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <p className="text-sm text-muted-foreground mb-4">
+                        No transactions yet. Buy or sell GF tokens to get started.
                       </p>
-                    </div>
-
-                    <div className="pt-2 space-y-2">
                       <Button
                         variant="default"
-                        className="w-full"
                         onClick={loginToWallet}
-                        data-testid="button-login-wallet"
+                        data-testid="button-view-full-history"
                       >
                         <LogIn className="w-4 h-4 mr-2" />
-                        Login to Crossmint Dashboard
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        asChild
-                        data-testid="button-view-explorer"
-                      >
-                        <a href={getExplorerUrl()} target="_blank" rel="noopener noreferrer">
-                          View on Block Explorer
-                          <ExternalLink className="w-4 h-4 ml-2" />
-                        </a>
+                        View Full History in Crossmint
                       </Button>
                     </div>
                   </CardContent>
                 </Card>
+              </TabsContent>
 
-                <Card data-testid="card-wallet-management">
+              <TabsContent value="stake" className="space-y-6">
+                <Card data-testid="card-stake-gf">
                   <CardHeader>
-                    <CardTitle>Wallet Management</CardTitle>
-                    <CardDescription>
-                      Access full wallet features in Crossmint
-                    </CardDescription>
+                    <div className="flex items-center gap-4">
+                      <img src={gfTokenLogo} alt="Stake GF Token" className="w-12 h-12" />
+                      <div>
+                        <CardTitle>Stake GF Token</CardTitle>
+                        <CardDescription>Stake GF token for exclusive rewards on our app</CardDescription>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Click "Login to Crossmint Dashboard" to access your wallet's full capabilities, including:
+                    <p className="text-muted-foreground">
+                      Lock your GF tokens to earn exclusive rewards, including bonus tokens, NFT drops, and special access to premium features.
                     </p>
-                    <ul className="space-y-3 text-sm">
-                      <li className="flex items-start gap-2">
-                        <div className="mt-0.5 text-primary">•</div>
-                        <div>
-                          <strong>Transaction Management:</strong> Send and receive cryptocurrency
-                        </div>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <div className="mt-0.5 text-primary">•</div>
-                        <div>
-                          <strong>NFT Viewing:</strong> View and manage your NFT collection
-                        </div>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <div className="mt-0.5 text-primary">•</div>
-                        <div>
-                          <strong>Transaction History:</strong> Track all your wallet activity
-                        </div>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <div className="mt-0.5 text-primary">•</div>
-                        <div>
-                          <strong>Multi-chain Assets:</strong> Manage assets across different blockchains
-                        </div>
-                      </li>
-                    </ul>
+                    <div className="space-y-2">
+                      <h4 className="font-semibold">Staking Benefits:</h4>
+                      <ul className="space-y-2 text-sm">
+                        <li className="flex items-start gap-2">
+                          <div className="mt-0.5 text-primary">•</div>
+                          <div>Earn up to 15% APY on staked tokens</div>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <div className="mt-0.5 text-primary">•</div>
+                          <div>Exclusive NFT lootbox rewards</div>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <div className="mt-0.5 text-primary">•</div>
+                          <div>Early access to new features and content</div>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <div className="mt-0.5 text-primary">•</div>
+                          <div>Voting rights on platform decisions</div>
+                        </li>
+                      </ul>
+                    </div>
+                    <Button className="w-full" data-testid="button-stake-tokens">
+                      <Wallet className="w-4 h-4 mr-2" />
+                      Start Staking
+                    </Button>
                   </CardContent>
                 </Card>
               </TabsContent>
 
               <TabsContent value="nfts" className="space-y-6">
-                <Card data-testid="card-owned-nfts">
+                <Card data-testid="card-nfts-collectibles">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Image className="w-5 h-5 text-primary" />
-                      Your NFT Collection
-                    </CardTitle>
-                    <CardDescription>
-                      NFTs you own on the blockchain
-                    </CardDescription>
+                    <div className="flex items-center gap-4">
+                      <Image className="w-12 h-12 text-primary" />
+                      <div>
+                        <CardTitle>NFTs & Collectibles</CardTitle>
+                        <CardDescription>Your digital collectibles and rewards</CardDescription>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -332,7 +361,7 @@ export default function WalletPage() {
                         No NFTs Yet
                       </h3>
                       <p className="text-sm text-muted-foreground mb-6 max-w-md" data-testid="text-no-nfts-description">
-                        You haven't purchased any NFTs yet. Visit the store to browse and purchase NFT avatars with your GF tokens.
+                        You haven't received any NFTs or collectibles yet. Browse the store to purchase NFT avatars or earn lootbox rewards through staking and platform activities.
                       </p>
                       <Link href="/store">
                         <Button data-testid="button-browse-store">
