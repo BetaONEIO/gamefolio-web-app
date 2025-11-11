@@ -87,79 +87,77 @@ export default function WalletPage() {
         </div>
 
         {!wallet ? (
-          <Card data-testid="card-create-wallet">
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                {/* Left column - Content */}
-                <div className="space-y-6">
-                  {/* Header */}
-                  <div>
-                    <h2 className="text-3xl font-bold mb-3">
-                      Welcome to your<br />Gamefolio Wallet
-                    </h2>
-                    <p className="text-lg text-muted-foreground">
-                      Store Gamefolio Tokens (GF) and NFT avatar profile pictures!
-                    </p>
-                  </div>
-
-                  {/* List */}
-                  <ul className="space-y-3">
-                    <li className="flex items-start gap-3">
-                      <div className="mt-1 text-primary">✓</div>
-                      <span>Secure storage for digital assets</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <div className="mt-1 text-primary">✓</div>
-                      <span>Your own blockchain wallet address</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <div className="mt-1 text-primary">✓</div>
-                      <span>Ability to mint and trade NFTs</span>
-                    </li>
-                  </ul>
-
-                  {/* Button and Badge */}
-                  <div className="space-y-4">
-                    <Button 
-                      onClick={createWallet} 
-                      disabled={isLoading}
-                      className="w-auto px-6"
-                      data-testid="button-create-wallet"
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Creating Wallet...
-                        </>
-                      ) : (
-                        <>
-                          <Wallet className="w-4 h-4 mr-2" />
-                          Create Wallet
-                        </>
-                      )}
-                    </Button>
-                    <div className="flex items-center justify-start">
-                      <img 
-                        src={crossmintBadge} 
-                        alt="Powered by Crossmint" 
-                        className="h-8"
-                      />
-                    </div>
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center" data-testid="card-create-wallet">
+            {/* Left column - Content with border */}
+            <Card>
+              <CardContent className="pt-6 space-y-6">
+                {/* Header */}
+                <div>
+                  <h2 className="text-3xl font-bold mb-3">
+                    Welcome to your<br />Gamefolio Wallet
+                  </h2>
+                  <p className="text-lg text-muted-foreground">
+                    Store Gamefolio Tokens (GF) and NFT avatar profile pictures!
+                  </p>
                 </div>
 
-                {/* Right column - Image */}
-                <div className="flex items-center justify-center">
-                  <img 
-                    src={walletPromo} 
-                    alt="Wallet NFT Promo" 
-                    className="w-full h-auto object-contain"
-                    style={{ maxHeight: '750px' }}
-                  />
+                {/* List */}
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-3">
+                    <div className="mt-1 text-primary">✓</div>
+                    <span>Secure storage for digital assets</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="mt-1 text-primary">✓</div>
+                    <span>Your own blockchain wallet address</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="mt-1 text-primary">✓</div>
+                    <span>Ability to mint and trade NFTs</span>
+                  </li>
+                </ul>
+
+                {/* Button and Badge */}
+                <div className="space-y-4">
+                  <Button 
+                    onClick={createWallet} 
+                    disabled={isLoading}
+                    className="w-auto px-6"
+                    data-testid="button-create-wallet"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Creating Wallet...
+                      </>
+                    ) : (
+                      <>
+                        <Wallet className="w-4 h-4 mr-2" />
+                        Create Wallet
+                      </>
+                    )}
+                  </Button>
+                  <div className="flex items-center justify-start">
+                    <img 
+                      src={crossmintBadge} 
+                      alt="Powered by Crossmint" 
+                      className="h-8"
+                    />
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            {/* Right column - Image without border */}
+            <div className="flex items-center justify-center">
+              <img 
+                src={walletPromo} 
+                alt="Wallet NFT Promo" 
+                className="w-full h-auto object-contain"
+                style={{ maxHeight: '750px' }}
+              />
+            </div>
+          </div>
         ) : (
           <Tabs defaultValue="wallet" className="space-y-6" data-testid="tabs-wallet">
             <TabsList className="grid w-full grid-cols-2">
