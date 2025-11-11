@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import crossmintBadge from "@assets/badge-color-background_1762859702329.png";
+import walletPromo from "@assets/Wallet promo_1762870555895.png";
 
 export default function WalletPage() {
   const { user } = useAuth();
@@ -88,6 +89,17 @@ export default function WalletPage() {
         {!wallet ? (
           <Card data-testid="card-create-wallet">
             <CardContent className="space-y-4 pt-6">
+              {/* Wallet promo image with green gradient */}
+              <div className="relative rounded-lg overflow-hidden bg-gradient-to-br from-green-500 via-green-600 to-emerald-700 p-8">
+                <div className="flex items-center justify-center">
+                  <img 
+                    src={walletPromo} 
+                    alt="Wallet NFT Promo" 
+                    className="max-w-full h-auto max-h-80 object-contain"
+                  />
+                </div>
+              </div>
+              
               <Button 
                 onClick={createWallet} 
                 disabled={isLoading}
