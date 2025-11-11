@@ -75,7 +75,7 @@ export default function WalletPage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#1a2332' }}>
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="mb-8">
+        <div className="mb-12">
           <Link href="/">
             <Button variant="ghost" className="mb-4 text-white hover:bg-white/10" data-testid="button-back">
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -90,10 +90,10 @@ export default function WalletPage() {
             <div className="space-y-6">
               {/* Header */}
               <div>
-                <h2 className="text-3xl font-bold mb-3 text-white">
+                <h2 className="text-4xl font-bold mb-4 text-white">
                   Welcome to your<br />Gamefolio Wallet
                 </h2>
-                <p className="text-lg" style={{ color: '#9ca3af' }}>
+                <p className="text-lg pr-8" style={{ color: '#9ca3af' }}>
                   Store Gamefolio Tokens (GF) and NFT avatar profile pictures!
                 </p>
               </div>
