@@ -80,9 +80,6 @@ export default function WalletPage() {
               Back to Home
             </Button>
           </Link>
-          <h1 className="text-4xl font-bold text-primary mb-2" data-testid="text-page-title">
-            Your Blockchain Wallet
-          </h1>
           <p className="text-muted-foreground" data-testid="text-page-description">
             Manage your gaming assets on the blockchain
           </p>
