@@ -9,7 +9,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import crossmintBadge from "@assets/badge-color-background_1762859702329.png";
-import walletPromo from "@assets/Wallet promo new_1762875190292.png";
+import walletPromo from "@assets/Wallet promo new_1762876533045.png";
 
 export default function WalletPage() {
   const { user } = useAuth();
