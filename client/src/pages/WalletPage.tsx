@@ -9,7 +9,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import crossmintBadge from "@assets/badge-color-background_1762859702329.png";
-import walletPromo from "@assets/Wallet promo_1762870555895.png";
+import walletPromo from "@assets/Wallet promo new_1762875190292.png";
 
 export default function WalletPage() {
   const { user } = useAuth();
@@ -138,7 +138,7 @@ export default function WalletPage() {
                         </>
                       )}
                     </Button>
-                    <div className="flex items-center justify-center">
+                    <div className="flex items-center justify-start">
                       <img 
                         src={crossmintBadge} 
                         alt="Powered by Crossmint" 
@@ -149,12 +149,12 @@ export default function WalletPage() {
                 </div>
 
                 {/* Right column - Image */}
-                <div className="flex items-center justify-center bg-black rounded-lg">
+                <div className="flex items-center justify-center">
                   <img 
                     src={walletPromo} 
                     alt="Wallet NFT Promo" 
                     className="w-full h-auto object-contain"
-                    style={{ maxHeight: '600px' }}
+                    style={{ maxHeight: '750px' }}
                   />
                 </div>
               </div>
