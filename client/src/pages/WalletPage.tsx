@@ -70,31 +70,15 @@ export default function WalletPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="mb-8">
-          <Link href="/">
-            <Button variant="ghost" className="mb-4" data-testid="button-back">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
-            </Button>
-          </Link>
-          <h1 className="text-4xl font-bold text-primary mb-2" data-testid="text-page-title">
-            Your Blockchain Wallet
-          </h1>
-          <p className="text-muted-foreground" data-testid="text-page-description">
-            Manage your gaming assets on the blockchain
-          </p>
-        </div>
-
-        {!wallet ? (
-          <div 
-            className="relative rounded-2xl overflow-hidden min-h-[700px] flex items-center justify-center p-8 md:p-12"
-            style={{
-              background: 'linear-gradient(to right, #0d3d33 0%, #0a2929 40%, #081818 100%)'
-            }}
-            data-testid="card-create-wallet"
-          >
+    <>
+      {!wallet ? (
+        <div 
+          className="relative min-h-screen w-full flex items-center justify-center overflow-hidden"
+          style={{
+            background: 'linear-gradient(to right, #0d3d33 0%, #0a2929 40%, #081818 100%)'
+          }}
+          data-testid="card-create-wallet"
+        >
             {/* Circular ring patterns */}
             <div className="absolute inset-0 overflow-hidden">
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] rounded-full border border-[#1a5047]/40"></div>
@@ -153,8 +137,25 @@ export default function WalletPage() {
               </div>
             </div>
           </div>
-        ) : (
-          <Tabs defaultValue="wallet" className="space-y-6" data-testid="tabs-wallet">
+      ) : (
+        <div className="min-h-screen bg-background">
+          <div className="container mx-auto px-4 py-8 max-w-6xl">
+            <div className="mb-8">
+              <Link href="/">
+                <Button variant="ghost" className="mb-4" data-testid="button-back">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Home
+                </Button>
+              </Link>
+              <h1 className="text-4xl font-bold text-primary mb-2" data-testid="text-page-title">
+                Your Blockchain Wallet
+              </h1>
+              <p className="text-muted-foreground" data-testid="text-page-description">
+                Manage your gaming assets on the blockchain
+              </p>
+            </div>
+            
+            <Tabs defaultValue="wallet" className="space-y-6" data-testid="tabs-wallet">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="wallet" data-testid="tab-wallet-info">
                 <Wallet className="w-4 h-4 mr-2" />
@@ -324,8 +325,9 @@ export default function WalletPage() {
               </Card>
             </TabsContent>
           </Tabs>
-        )}
-      </div>
-    </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
