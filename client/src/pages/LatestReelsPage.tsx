@@ -217,7 +217,7 @@ export default function LatestReelsPage() {
 
                       {/* Game badge */}
                       {reel.game && (
-                        <div className="inline-block bg-green-600 text-white text-xs px-3 py-1 rounded-md font-bold">
+                        <div className="inline-block bg-green-600 text-white text-xs px-3 py-1 rounded-md font-bold whitespace-nowrap">
                           {reel.game.name}
                         </div>
                       )}
