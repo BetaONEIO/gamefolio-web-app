@@ -124,8 +124,8 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
 
         {/* Content overlay - centered bottom */}
         <div className="absolute bottom-0 left-0 right-0 p-4 text-center">
-          {/* Title (game name style) */}
-          <h3 className="text-white font-bold text-lg mb-1 drop-shadow-lg">
+          {/* Title */}
+          <h3 className="text-white font-bold text-base mb-1 drop-shadow-lg">
             {reel.title}
           </h3>
 
@@ -134,9 +134,9 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
             @{reel.user.username}
           </p>
 
-          {/* Game badge */}
+          {/* Game badge underneath username */}
           {reel.game && (
-            <div className="inline-block bg-green-600 text-white text-xs px-3 py-1 rounded-md font-bold whitespace-nowrap">
+            <div className="inline-block bg-green-600 text-white text-xs px-2.5 py-1 rounded font-bold whitespace-nowrap">
               {reel.game.name}
             </div>
           )}
