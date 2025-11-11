@@ -70,92 +70,70 @@ export default function WalletPage() {
   }
 
   return (
-    <>
-      {!wallet ? (
-        <div 
-          className="relative min-h-screen w-full flex items-center justify-center overflow-hidden"
-          style={{
-            background: 'linear-gradient(to right, #0d3d33 0%, #0a2929 40%, #081818 100%)'
-          }}
-          data-testid="card-create-wallet"
-        >
-            {/* Circular ring patterns */}
-            <div className="absolute inset-0 overflow-hidden">
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] rounded-full border border-[#1a5047]/40"></div>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] rounded-full border border-[#1a5047]/30"></div>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full border border-[#1a5047]/20"></div>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px] rounded-full border border-[#1a5047]/15"></div>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1400px] h-[1400px] rounded-full border border-[#1a5047]/10"></div>
-            </div>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="mb-8">
+          <Link href="/">
+            <Button variant="ghost" className="mb-4" data-testid="button-back">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Home
+            </Button>
+          </Link>
+          <h1 className="text-4xl font-bold text-primary mb-2" data-testid="text-page-title">
+            Your Blockchain Wallet
+          </h1>
+          <p className="text-muted-foreground" data-testid="text-page-description">
+            Manage your gaming assets on the blockchain
+          </p>
+        </div>
 
-            {/* Content */}
-            <div className="relative z-10 max-w-3xl mx-auto text-center space-y-12 md:space-y-16">
-              {/* Heading */}
-              <div className="space-y-4 md:space-y-5">
-                <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-tight">
-                  Welcome to your<br />
-                  Gamefolio Wallet
-                </h1>
-                <p className="text-white text-base md:text-lg lg:text-xl">
-                  Store Gamefolio Tokens (GF) and NFT avatar profile pictures!
-                </p>
-              </div>
-
-              {/* Bullet Points */}
-              <div className="space-y-2 md:space-y-3 text-white text-sm md:text-base lg:text-lg max-w-lg mx-auto">
-                <div className="flex items-start gap-3">
-                  <span className="mt-1">•</span>
-                  <span className="text-left">Secure storage for digital assets</span>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="mt-1">•</span>
-                  <span className="text-left">Your own blockchain wallet address</span>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="mt-1">•</span>
-                  <span className="text-left">Ability to mint and trade NFTs</span>
-                </div>
-              </div>
-
-              {/* Button */}
-              <div className="pt-4 md:pt-8">
-                <Button 
-                  onClick={createWallet} 
-                  disabled={isLoading}
-                  className="px-20 md:px-28 py-5 md:py-6 text-base md:text-lg font-semibold bg-[#00ff88] hover:bg-[#00ff88]/90 text-black rounded-2xl shadow-lg hover:shadow-xl transition-all"
-                  data-testid="button-create-wallet"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Creating Wallet...
-                    </>
-                  ) : (
-                    "Get Started"
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-      ) : (
-        <div className="min-h-screen bg-background">
-          <div className="container mx-auto px-4 py-8 max-w-6xl">
-            <div className="mb-8">
-              <Link href="/">
-                <Button variant="ghost" className="mb-4" data-testid="button-back">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Home
-                </Button>
-              </Link>
-              <h1 className="text-4xl font-bold text-primary mb-2" data-testid="text-page-title">
-                Your Blockchain Wallet
-              </h1>
-              <p className="text-muted-foreground" data-testid="text-page-description">
-                Manage your gaming assets on the blockchain
+        {!wallet ? (
+          <Card data-testid="card-create-wallet">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wallet className="w-5 h-5 text-primary" />
+                Create Your Wallet
+              </CardTitle>
+              <CardDescription>
+                Get started with blockchain-based gaming assets
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Create a secure blockchain wallet to own your gaming clips as NFTs, 
+                trade digital assets, and participate in the Web3 gaming economy.
               </p>
-            </div>
-            
-            <Tabs defaultValue="wallet" className="space-y-6" data-testid="tabs-wallet">
+              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                <p className="text-sm font-medium">✨ What you get:</p>
+                <ul className="text-sm text-muted-foreground space-y-1 ml-4">
+                  <li>• Your own blockchain wallet address</li>
+                  <li>• Secure storage for digital assets</li>
+                  <li>• Ability to mint and trade NFTs</li>
+                  <li>• Multi-chain support (Polygon, Ethereum, Base)</li>
+                </ul>
+              </div>
+              <Button 
+                onClick={createWallet} 
+                disabled={isLoading}
+                className="w-full"
+                data-testid="button-create-wallet"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating Wallet...
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="w-4 h-4 mr-2" />
+                    Create Wallet
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Tabs defaultValue="wallet" className="space-y-6" data-testid="tabs-wallet">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="wallet" data-testid="tab-wallet-info">
                 <Wallet className="w-4 h-4 mr-2" />
@@ -325,9 +303,8 @@ export default function WalletPage() {
               </Card>
             </TabsContent>
           </Tabs>
-          </div>
-        </div>
-      )}
-    </>
+        )}
+      </div>
+    </div>
   );
 }
