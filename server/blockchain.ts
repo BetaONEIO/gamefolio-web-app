@@ -1,5 +1,4 @@
-import { createPublicClient, createWalletClient, http, parseUnits, formatUnits, Address } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
+import { createPublicClient, http, formatUnits, Address } from 'viem';
 import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } from '../shared/contracts';
 
 const publicClient = createPublicClient({
@@ -57,66 +56,6 @@ export async function getTokenInfo() {
     };
   } catch (error) {
     console.error('Error fetching token info:', error);
-    throw error;
-  }
-}
-
-export async function mintTokens(toAddress: string, amount: string, adminPrivateKey: string): Promise<string> {
-  try {
-    const account = privateKeyToAccount(adminPrivateKey as `0x${string}`);
-    
-    const walletClient = createWalletClient({
-      account,
-      chain: SKALE_NEBULA_TESTNET,
-      transport: http(),
-    });
-
-    const amountInWei = parseUnits(amount, 18);
-
-    const hash = await walletClient.writeContract({
-      address: GF_TOKEN_ADDRESS,
-      abi: GF_TOKEN_ABI,
-      functionName: 'mint',
-      args: [toAddress as Address, amountInWei],
-    });
-
-    await publicClient.waitForTransactionReceipt({ hash });
-    
-    return hash;
-  } catch (error) {
-    console.error('Error minting tokens:', error);
-    throw error;
-  }
-}
-
-export async function transferTokens(
-  fromPrivateKey: string,
-  toAddress: string,
-  amount: string
-): Promise<string> {
-  try {
-    const account = privateKeyToAccount(fromPrivateKey as `0x${string}`);
-    
-    const walletClient = createWalletClient({
-      account,
-      chain: SKALE_NEBULA_TESTNET,
-      transport: http(),
-    });
-
-    const amountInWei = parseUnits(amount, 18);
-
-    const hash = await walletClient.writeContract({
-      address: GF_TOKEN_ADDRESS,
-      abi: GF_TOKEN_ABI,
-      functionName: 'transfer',
-      args: [toAddress as Address, amountInWei],
-    });
-
-    await publicClient.waitForTransactionReceipt({ hash });
-    
-    return hash;
-  } catch (error) {
-    console.error('Error transferring tokens:', error);
     throw error;
   }
 }

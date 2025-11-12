@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { ArrowLeft, Wallet, Copy, ExternalLink, CheckCircle2, Loader2, LogIn, LogOut, Image } from "lucide-react";
+import { ArrowLeft, Wallet, Copy, ExternalLink, CheckCircle2, Loader2, LogIn, LogOut, Image, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,6 +7,7 @@ import { useCrossmint } from "@/hooks/use-crossmint";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useTokenBalance, useTokenInfo } from "@/hooks/use-token";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import crossmintBadge from "@assets/badge-color-background_1762859702329.png";
 import walletPromo from "@assets/Wallet promo new_1762876656607.png";
@@ -17,6 +18,8 @@ export default function WalletPage() {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
   const [showWalletDetails, setShowWalletDetails] = useState(false);
+  const { data: tokenBalance, isLoading: isLoadingBalance, refetch: refetchBalance } = useTokenBalance();
+  const { data: tokenInfo } = useTokenInfo();
 
   const handleCopyAddress = async () => {
     if (wallet?.address) {
@@ -202,25 +205,89 @@ export default function WalletPage() {
               <TabsContent value="wallet" className="space-y-6">
                 <Card data-testid="card-gf-balance">
                   <CardHeader>
-                    <div className="flex items-center gap-4">
-                      <img src={gfTokenLogo} alt="GF Token" className="w-12 h-12" />
-                      <div>
-                        <CardTitle>GF Balance</CardTitle>
-                        <CardDescription>Your Gamefolio Token balance</CardDescription>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <img src={gfTokenLogo} alt="GF Token" className="w-12 h-12" />
+                        <div>
+                          <CardTitle>GF Token Balance</CardTitle>
+                          <CardDescription>Your on-chain Gamefolio Token balance</CardDescription>
+                        </div>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => refetchBalance()}
+                        disabled={isLoadingBalance}
+                        data-testid="button-refresh-balance"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${isLoadingBalance ? 'animate-spin' : ''}`} />
+                      </Button>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-3xl font-bold" data-testid="text-gf-balance">
-                          {(user?.gfTokenBalance || 0).toLocaleString()} GF
-                        </span>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-muted-foreground">On-Chain Balance</span>
+                          <span className="text-xs text-muted-foreground">SKALE Network</span>
+                        </div>
+                        {isLoadingBalance ? (
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span className="text-sm text-muted-foreground">Loading balance...</span>
+                          </div>
+                        ) : tokenBalance ? (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <span className="text-3xl font-bold" data-testid="text-onchain-balance">
+                                {parseFloat(tokenBalance.balance).toLocaleString(undefined, { 
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 2 
+                                })} GF
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              ≈ ${(parseFloat(tokenBalance.balance) * 0.05).toFixed(2)} USD
+                            </p>
+                          </>
+                        ) : wallet ? (
+                          <p className="text-sm text-muted-foreground">0 GF</p>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Connect wallet to view balance</p>
+                        )}
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1" data-testid="text-gf-balance-usd">
-                        ≈ ${((user?.gfTokenBalance || 0) * 0.05).toFixed(2)} USD
-                      </p>
+
+                      <div className="p-4 rounded-lg bg-muted/50">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-muted-foreground">In-App Balance</span>
+                          <span className="text-xs text-muted-foreground">Off-Chain</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl font-bold" data-testid="text-gf-balance">
+                            {(user?.gfTokenBalance || 0).toLocaleString()} GF
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1" data-testid="text-gf-balance-usd">
+                          ≈ ${((user?.gfTokenBalance || 0) * 0.05).toFixed(2)} USD
+                        </p>
+                      </div>
                     </div>
+
+                    {tokenInfo && (
+                      <div className="pt-4 border-t space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Contract Address</span>
+                          <code className="text-xs font-mono bg-muted px-2 py-1 rounded">
+                            {tokenInfo.contractAddress.slice(0, 6)}...{tokenInfo.contractAddress.slice(-4)}
+                          </code>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Total Supply</span>
+                          <span className="font-medium">{parseFloat(tokenInfo.totalSupply).toLocaleString()} GF</span>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-2">
                       <Button variant="default" data-testid="button-buy-gf">
                         Buy GF Token

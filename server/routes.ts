@@ -67,6 +67,7 @@ import QRCode from "qrcode";
 import { supabaseStorage } from "./supabase-storage";
 import { contentFilterService } from "./services/content-filter";
 import { addPlayButtonOverlay } from "./og-thumbnail";
+import { getTokenBalance, getTokenInfo } from "./blockchain";
 
 // Import upload middlewares from upload router
 import multer from "multer";
@@ -7187,6 +7188,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching wallet info:", error);
       res.status(500).json({ error: "Failed to fetch wallet info" });
+    }
+  });
+
+  // ==========================================
+  // Blockchain Token Routes
+  // ==========================================
+
+  // Get GF token information from smart contract
+  app.get("/api/token/info", async (req, res) => {
+    try {
+      const tokenInfo = await getTokenInfo();
+      res.json(tokenInfo);
+    } catch (error) {
+      console.error("Error fetching token info:", error);
+      res.status(500).json({ error: "Failed to fetch token information" });
+    }
+  });
+
+  // Get user's on-chain GF token balance
+  app.get("/api/token/balance", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = await storage.getUser(userId);
+
+      if (!user?.walletAddress) {
+        return res.status(404).json({ 
+          message: "No wallet found",
+          balance: "0"
+        });
+      }
+
+      const balance = await getTokenBalance(user.walletAddress);
+      
+      res.json({
+        balance,
+        walletAddress: user.walletAddress,
+        contractAddress: "0x2Db1fFAbbc41b8667B408a5F5e0E42bB6c6BA7f7",
+      });
+    } catch (error) {
+      console.error("Error fetching token balance:", error);
+      res.status(500).json({ error: "Failed to fetch token balance" });
     }
   });
 
