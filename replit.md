@@ -98,10 +98,18 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
 - **SKALE Benefits**: Zero gas fees for transactions, instant finality, full Ethereum compatibility
 
 ## NFT Store & GF Token Economy
-- **GF Token System**: In-app currency (Gamefolio Tokens) for purchasing NFTs and future marketplace features
-  - **Starting Balance**: New users receive 1,000 GF tokens by default
+- **GF Token System**: Hybrid on-chain and off-chain currency system for purchasing NFTs and marketplace features
+  - **Starting Balance**: New users receive 1,000 GF tokens by default (off-chain database)
   - **Token Value**: Each GF token has an approximate value of $0.05 USD
   - **Display**: GF token logo appears next to all prices and balances throughout the store
+  - **Smart Contract**: Deployed ERC-20 token on SKALE Nebula Hub Testnet at `0x2Db1fFAbbc41b8667B408a5F5e0E42bB6c6BA7f7`
+  - **Blockchain Integration**: Uses viem library to read on-chain token balances from SKALE network
+  - **Dual Balance System**: 
+    - **On-Chain Balance**: Real GF tokens stored on SKALE blockchain (displayed in wallet page)
+    - **Off-Chain Balance**: Database-tracked tokens for in-app transactions
+  - **API Endpoints**:
+    - `GET /api/token/info` - Fetch token metadata from smart contract (name, symbol, decimals, total supply)
+    - `GET /api/token/balance` - Get user's on-chain GF token balance from SKALE
 - **NFT Marketplace**: 
   - **Store Page**: Browse and purchase NFT avatars using GF tokens at `/store`
   - **Purchase Dialog**: Modal interface for NFT bidding with wallet connection status, balance verification, and transaction summary
