@@ -7073,7 +7073,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (user.walletAddress) {
         return res.json({ 
           address: user.walletAddress,
-          chain: user.walletChain || 'polygon',
+          chain: user.walletChain || 'skale-nebula-testnet',
           message: "Wallet already exists",
           isExisting: true
         });
@@ -7089,7 +7089,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Crossmint requires the linkedUser to be prefixed with the type (e.g., 'email:')
       const linkedUser = `email:${userEmail}`;
 
-      // Call Crossmint API to get or create wallet
+      // Call Crossmint API to get or create wallet on SKALE Nebula Hub Testnet
       // This is idempotent - it will retrieve existing wallet or create new one
       const crossmintResponse = await fetch('https://www.crossmint.com/api/v1-alpha2/wallets', {
         method: 'POST',
@@ -7100,6 +7100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         body: JSON.stringify({
           type: 'evm-smart-wallet',
           linkedUser: linkedUser,
+          chain: 'skale-nebula-testnet',
           config: {
             adminSigner: {
               type: 'evm-fireblocks-custodial'
@@ -7130,13 +7131,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Save to database
               await storage.updateUser(userId, {
                 walletAddress: existingWallet.address,
-                walletChain: existingWallet.chain || 'polygon',
+                walletChain: existingWallet.chain || 'skale-nebula-testnet',
                 walletCreatedAt: new Date(),
               });
 
               return res.json({
                 address: existingWallet.address,
-                chain: existingWallet.chain || 'polygon',
+                chain: existingWallet.chain || 'skale-nebula-testnet',
                 message: "Connected to existing Crossmint wallet",
                 isExisting: true
               });
@@ -7152,13 +7153,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Save wallet to database
       await storage.updateUser(userId, {
         walletAddress: walletData.address,
-        walletChain: walletData.chain || 'polygon',
+        walletChain: walletData.chain || 'skale-nebula-testnet',
         walletCreatedAt: new Date(),
       });
 
       res.json({
         address: walletData.address,
-        chain: walletData.chain || 'polygon',
+        chain: walletData.chain || 'skale-nebula-testnet',
         message: "Wallet created successfully",
         isExisting: false
       });
@@ -7180,7 +7181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         address: user.walletAddress,
-        chain: user.walletChain || 'polygon',
+        chain: user.walletChain || 'skale-nebula-testnet',
         createdAt: user.walletCreatedAt,
       });
     } catch (error) {
