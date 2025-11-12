@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { ArrowLeft, Wallet, Copy, ExternalLink, CheckCircle2, Loader2, LogIn, Image, RefreshCw } from "lucide-react";
+import { ArrowLeft, Wallet, Copy, ExternalLink, CheckCircle2, Loader2, LogIn, Image, RefreshCw, Eye, EyeOff, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTokenBalance, useTokenInfo } from "@/hooks/use-token";
+import { motion, AnimatePresence } from "motion/react";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import crossmintBadge from "@assets/badge-color-background_1762859702329.png";
 import walletPromo from "@assets/Wallet promo new_1762876656607.png";
@@ -18,6 +19,7 @@ export default function WalletPage() {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
   const [showWalletDetails, setShowWalletDetails] = useState(false);
+  const [balanceVisible, setBalanceVisible] = useState(true);
   const { data: tokenBalance, isLoading: isLoadingBalance, refetch: refetchBalance } = useTokenBalance();
   const { data: tokenInfo } = useTokenInfo();
 
@@ -200,101 +202,163 @@ export default function WalletPage() {
                 </TabsList>
 
                 <TabsContent value="tokens" className="space-y-6">
-                <Card data-testid="card-gf-balance">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <img src={gfTokenLogo} alt="GF Token" className="w-12 h-12" />
-                        <div>
-                          <CardTitle>GF Token Balance</CardTitle>
-                          <CardDescription>Your on-chain Gamefolio Token balance</CardDescription>
-                        </div>
+                {/* 3D GF Token Balance Card */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  data-testid="card-gf-balance"
+                  className="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-3xl p-6 overflow-hidden"
+                >
+                  {/* Animated background circles */}
+                  <motion.div
+                    animate={{
+                      scale: [1, 1.2, 1],
+                      opacity: [0.3, 0.5, 0.3],
+                    }}
+                    transition={{
+                      duration: 4,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                    className="absolute -top-12 -right-12 w-48 h-48 bg-white/20 rounded-full blur-3xl"
+                  />
+                  <motion.div
+                    animate={{
+                      scale: [1, 1.3, 1],
+                      opacity: [0.2, 0.4, 0.2],
+                    }}
+                    transition={{
+                      duration: 5,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: 1,
+                    }}
+                    className="absolute -bottom-12 -left-12 w-48 h-48 bg-white/20 rounded-full blur-3xl"
+                  />
+
+                  <div className="relative z-10">
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-8">
+                      <div className="flex items-center gap-2">
+                        <img src={gfTokenLogo} alt="GF Token" className="w-8 h-8" />
+                        <span className="text-white/80 text-sm">GF Token Balance</span>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => refetchBalance()}
-                        disabled={isLoadingBalance}
-                        data-testid="button-refresh-balance"
-                      >
-                        <RefreshCw className={`w-4 h-4 ${isLoadingBalance ? 'animate-spin' : ''}`} />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => setBalanceVisible(!balanceVisible)}
+                          className="p-2 rounded-lg bg-white/10 backdrop-blur-sm"
+                        >
+                          {balanceVisible ? (
+                            <Eye className="w-5 h-5 text-white" />
+                          ) : (
+                            <EyeOff className="w-5 h-5 text-white" />
+                          )}
+                        </motion.button>
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => refetchBalance()}
+                          disabled={isLoadingBalance}
+                          className="p-2 rounded-lg bg-white/10 backdrop-blur-sm"
+                          data-testid="button-refresh-balance"
+                        >
+                          <RefreshCw className={`w-5 h-5 text-white ${isLoadingBalance ? 'animate-spin' : ''}`} />
+                        </motion.button>
+                      </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-muted-foreground">On-Chain Balance</span>
-                          <span className="text-xs text-muted-foreground">SKALE Network</span>
-                        </div>
-                        {isLoadingBalance ? (
-                          <div className="flex items-center gap-2">
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            <span className="text-sm text-muted-foreground">Loading balance...</span>
-                          </div>
-                        ) : tokenBalance ? (
-                          <>
-                            <div className="flex items-center gap-2">
-                              <span className="text-3xl font-bold" data-testid="text-onchain-balance">
-                                {parseFloat(tokenBalance.balance).toLocaleString(undefined, { 
+
+                    {/* Balance Display */}
+                    <AnimatePresence mode="wait">
+                      {balanceVisible ? (
+                        <motion.div
+                          key="visible"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          {isLoadingBalance ? (
+                            <div className="flex items-center gap-2 mb-2">
+                              <Loader2 className="w-6 h-6 animate-spin text-white" />
+                              <span className="text-white text-2xl">Loading...</span>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="text-5xl font-bold text-white mb-2">
+                                {tokenBalance ? parseFloat(tokenBalance.balance).toLocaleString(undefined, { 
                                   minimumFractionDigits: 0,
                                   maximumFractionDigits: 2 
-                                })} GF
-                              </span>
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              ≈ ${(parseFloat(tokenBalance.balance) * 0.05).toFixed(2)} USD
-                            </p>
-                          </>
-                        ) : wallet ? (
-                          <p className="text-sm text-muted-foreground">0 GF</p>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">Connect wallet to view balance</p>
-                        )}
-                      </div>
+                                }) : (user?.gfTokenBalance || 0).toLocaleString()} GF
+                              </div>
+                              <div className="flex items-center gap-2 text-white/80">
+                                <span className="text-sm">On-Chain: {tokenBalance ? parseFloat(tokenBalance.balance).toLocaleString() : '0'} GF</span>
+                                <span className="text-sm">•</span>
+                                <span className="text-sm">Off-Chain: {(user?.gfTokenBalance || 0).toLocaleString()} GF</span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-2">
+                                <TrendingUp className="w-4 h-4 text-green-300" />
+                                <span className="text-green-300">
+                                  ≈ ${((parseFloat(tokenBalance?.balance || '0') + (user?.gfTokenBalance || 0)) * 0.05).toFixed(2)} USD
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="hidden"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <div className="text-5xl font-bold text-white mb-2">
+                            ••••••
+                          </div>
+                          <div className="text-white/80 text-sm">Balance hidden</div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
-                      <div className="p-4 rounded-lg bg-muted/50">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-muted-foreground">In-App Balance</span>
-                          <span className="text-xs text-muted-foreground">Off-Chain</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl font-bold" data-testid="text-gf-balance">
-                            {(user?.gfTokenBalance || 0).toLocaleString()} GF
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1" data-testid="text-gf-balance-usd">
-                          ≈ ${((user?.gfTokenBalance || 0) * 0.05).toFixed(2)} USD
-                        </p>
-                      </div>
-                    </div>
-
+                    {/* Contract Info */}
                     {tokenInfo && (
-                      <div className="pt-4 border-t space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Contract Address</span>
-                          <code className="text-xs font-mono bg-muted px-2 py-1 rounded">
+                      <div className="mt-6 pt-4 border-t border-white/10 space-y-2">
+                        <div className="flex justify-between text-sm text-white/80">
+                          <span>Contract Address</span>
+                          <code className="text-xs font-mono bg-white/10 px-2 py-1 rounded">
                             {tokenInfo.contractAddress.slice(0, 6)}...{tokenInfo.contractAddress.slice(-4)}
                           </code>
                         </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Total Supply</span>
-                          <span className="font-medium">{parseFloat(tokenInfo.totalSupply).toLocaleString()} GF</span>
+                        <div className="flex justify-between text-sm text-white/80">
+                          <span>Total Supply</span>
+                          <span className="font-medium text-white">{parseFloat(tokenInfo.totalSupply).toLocaleString()} GF</span>
                         </div>
                       </div>
                     )}
+                  </div>
+                </motion.div>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button variant="default" data-testid="button-buy-gf">
-                        Buy GF Token
-                      </Button>
-                      <Button variant="outline" data-testid="button-sell-gf">
-                        Sell GF Token
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-3">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex items-center justify-center gap-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white py-4 rounded-2xl shadow-lg"
+                    data-testid="button-buy-gf"
+                  >
+                    <TrendingUp className="w-5 h-5" />
+                    <span>Buy GF Token</span>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex items-center justify-center gap-2 bg-white/10 dark:bg-white/5 backdrop-blur-sm text-foreground py-4 rounded-2xl border border-border"
+                    data-testid="button-sell-gf"
+                  >
+                    <Wallet className="w-5 h-5" />
+                    <span>Sell GF Token</span>
+                  </motion.button>
+                </div>
 
                 <Card data-testid="card-wallet-address">
                   <CardHeader>
