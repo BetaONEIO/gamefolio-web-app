@@ -73,24 +73,29 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
 - **React Hook Form**: For form validation and submission.
 - **Postgres (NPM package)**: Direct PostgreSQL client for database interaction.
 
-## Crossmint Wallet Integration
+## Crossmint Wallet Integration (SKALE Network)
+- **Blockchain Network**: SKALE Nebula Hub Testnet - zero gas fee blockchain optimized for gaming and Web3 applications
+- **Native Currency**: sFUEL (free gas token for SKALE network)
 - **Wallet Setup Approach**: Simplified two-option system during onboarding:
-  1. **Create Crossmint wallet**: Uses `getOrCreateWallet()` API pattern - automatically retrieves existing wallet or creates new one
+  1. **Create Crossmint wallet**: Uses `getOrCreateWallet()` API pattern - automatically retrieves existing wallet or creates new one on SKALE
   2. **Skip for now**: Configure wallet later from profile
-- **SDK Integration**: Uses official `@crossmint/wallets-sdk` for robust wallet operations
+- **SDK Integration**: Uses official `@crossmint/wallets-sdk` with SKALE support via Crossmint-SKALE partnership (December 2024)
+- **Chain Configuration**: Wallets created on `skale-nebula-testnet` chain with EVM smart wallet type
 - **Idempotent Wallet Creation**: Backend implements `getOrCreateWallet()` pattern that intelligently handles both new wallet creation and existing wallet retrieval without errors
 - **Smart Response Handling**: API returns `isExisting` flag to differentiate between new wallet creation and existing wallet retrieval
 - **Context-Aware UX**: Toast messages adapt based on whether user connected to existing wallet ("Wallet connected!") or created new one ("Wallet created!")
 - **Security Focus**: Manual wallet address entry removed to prevent spoofing attacks; all wallets created through verified Crossmint API
 - **Onboarding Integration**: Wallet creation step appears after age selection in the onboarding flow with streamlined interface
-- **Database Schema**: User table includes `walletAddress`, `walletChain`, `walletCreatedAt`, and `gfTokenBalance` fields
+- **Database Schema**: User table includes `walletAddress`, `walletChain` (defaults to `skale-nebula-testnet`), `walletCreatedAt`, and `gfTokenBalance` fields
 - **Frontend Provider**: `CrossmintProvider` manages wallet state globally across the application
-- **Wallet Page**: Complete UI at `/wallet` for viewing wallet information and accessing Crossmint dashboard
+- **Wallet Page**: Complete UI at `/wallet` for viewing wallet information, accessing SKALE block explorer, and Crossmint dashboard
+- **Block Explorer Support**: Integrated SKALE block explorers for all major hubs (Nebula, Calypso, Europa, Titan) for both mainnet and testnet
 - **API Endpoints**: 
-  - `POST /api/wallet/create` - Idempotent wallet creation/retrieval via Crossmint SDK (returns `address`, `chain`, `isExisting`)
+  - `POST /api/wallet/create` - Idempotent wallet creation/retrieval via Crossmint SDK on SKALE network (returns `address`, `chain`, `isExisting`)
   - `GET /api/wallet/info` - Retrieves wallet information for authenticated user
-- **Current Implementation**: Users can create wallets via Crossmint or skip setup entirely
+- **Current Implementation**: Users can create SKALE wallets via Crossmint or skip setup entirely
 - **Optional Feature**: Users can skip wallet setup during onboarding and set it up later from profile
+- **SKALE Benefits**: Zero gas fees for transactions, instant finality, full Ethereum compatibility
 
 ## NFT Store & GF Token Economy
 - **GF Token System**: In-app currency (Gamefolio Tokens) for purchasing NFTs and future marketplace features
