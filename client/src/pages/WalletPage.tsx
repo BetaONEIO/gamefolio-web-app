@@ -1,8 +1,7 @@
 import { Link } from "wouter";
-import { ArrowLeft, Wallet, Copy, ExternalLink, CheckCircle2, Loader2, LogIn, LogOut, Image, RefreshCw } from "lucide-react";
+import { ArrowLeft, Wallet, Copy, ExternalLink, CheckCircle2, Loader2, LogIn, Image, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCrossmint } from "@/hooks/use-crossmint";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
@@ -186,23 +185,9 @@ export default function WalletPage() {
               Back to Welcome
             </Button>
             
-            <Tabs defaultValue="wallet" className="space-y-6" data-testid="tabs-wallet">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="wallet" data-testid="tab-wallet-info">
-                  <Wallet className="w-4 h-4 mr-2" />
-                  Wallet
-                </TabsTrigger>
-                <TabsTrigger value="stake" data-testid="tab-stake">
-                  <Wallet className="w-4 h-4 mr-2" />
-                  Stake GF Token
-                </TabsTrigger>
-                <TabsTrigger value="nfts" data-testid="tab-nfts">
-                  <Image className="w-4 h-4 mr-2" />
-                  NFTs & Collectibles
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="wallet" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Column 1: Wallet Balance */}
+              <div className="border rounded-lg p-6 space-y-6" style={{ borderWidth: '1px' }} data-testid="section-wallet">
                 <Card data-testid="card-gf-balance">
                   <CardHeader>
                     <div className="flex items-center justify-between">
@@ -372,83 +357,77 @@ export default function WalletPage() {
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </div>
 
-              <TabsContent value="stake" className="space-y-6">
-                <Card data-testid="card-stake-gf">
-                  <CardHeader>
-                    <div className="flex items-center gap-4">
-                      <img src={gfTokenLogo} alt="Stake GF Token" className="w-12 h-12" />
-                      <div>
-                        <CardTitle>Stake GF Token</CardTitle>
-                        <CardDescription>Stake GF token for exclusive rewards on our app</CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-muted-foreground">
-                      Lock your GF tokens to earn exclusive rewards, including bonus tokens, NFT drops, and special access to premium features.
-                    </p>
-                    <div className="space-y-2">
-                      <h4 className="font-semibold">Staking Benefits:</h4>
-                      <ul className="space-y-2 text-sm">
-                        <li className="flex items-start gap-2">
-                          <div className="mt-0.5 text-primary">•</div>
-                          <div>Earn up to 15% APY on staked tokens</div>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <div className="mt-0.5 text-primary">•</div>
-                          <div>Exclusive NFT lootbox rewards</div>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <div className="mt-0.5 text-primary">•</div>
-                          <div>Early access to new features and content</div>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <div className="mt-0.5 text-primary">•</div>
-                          <div>Voting rights on platform decisions</div>
-                        </li>
-                      </ul>
-                    </div>
-                    <Button className="w-full" data-testid="button-stake-tokens">
+              {/* Column 2: Stake GF Token */}
+              <div className="border rounded-lg p-6 space-y-6" style={{ borderWidth: '1px' }} data-testid="section-stake">
+                <div className="flex items-center gap-4 mb-4">
+                  <img src={gfTokenLogo} alt="Stake GF Token" className="w-12 h-12" />
+                  <div>
+                    <h2 className="text-xl font-bold">Stake GF Token</h2>
+                    <p className="text-sm text-muted-foreground">Stake GF token for exclusive rewards on our app</p>
+                  </div>
+                </div>
+                
+                <p className="text-muted-foreground">
+                  Lock your GF tokens to earn exclusive rewards, including bonus tokens, NFT drops, and special access to premium features.
+                </p>
+                
+                <div className="space-y-2">
+                  <h4 className="font-semibold">Staking Benefits:</h4>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex items-start gap-2">
+                      <div className="mt-0.5 text-primary">•</div>
+                      <div>Earn up to 15% APY on staked tokens</div>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div className="mt-0.5 text-primary">•</div>
+                      <div>Exclusive NFT lootbox rewards</div>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div className="mt-0.5 text-primary">•</div>
+                      <div>Early access to new features and content</div>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div className="mt-0.5 text-primary">•</div>
+                      <div>Voting rights on platform decisions</div>
+                    </li>
+                  </ul>
+                </div>
+                
+                <Button className="w-full" data-testid="button-stake-tokens">
+                  <Wallet className="w-4 h-4 mr-2" />
+                  Start Staking
+                </Button>
+              </div>
+
+              {/* Column 3: NFTs & Collectibles */}
+              <div className="border rounded-lg p-6 space-y-6" style={{ borderWidth: '1px' }} data-testid="section-nfts">
+                <div className="flex items-center gap-4 mb-4">
+                  <Image className="w-12 h-12 text-primary" />
+                  <div>
+                    <h2 className="text-xl font-bold">NFTs & Collectibles</h2>
+                    <p className="text-sm text-muted-foreground">Your digital collectibles and rewards</p>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <Image className="w-16 h-16 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2" data-testid="heading-no-nfts">
+                    No NFTs Yet
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-6 max-w-md" data-testid="text-no-nfts-description">
+                    You haven't received any NFTs or collectibles yet. Browse the store to purchase NFT avatars or earn lootbox rewards through staking and platform activities.
+                  </p>
+                  <Link href="/store">
+                    <Button data-testid="button-browse-store">
                       <Wallet className="w-4 h-4 mr-2" />
-                      Start Staking
+                      Browse NFT Store
                     </Button>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="nfts" className="space-y-6">
-                <Card data-testid="card-nfts-collectibles">
-                  <CardHeader>
-                    <div className="flex items-center gap-4">
-                      <Image className="w-12 h-12 text-primary" />
-                      <div>
-                        <CardTitle>NFTs & Collectibles</CardTitle>
-                        <CardDescription>Your digital collectibles and rewards</CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <Image className="w-16 h-16 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-semibold mb-2" data-testid="heading-no-nfts">
-                        No NFTs Yet
-                      </h3>
-                      <p className="text-sm text-muted-foreground mb-6 max-w-md" data-testid="text-no-nfts-description">
-                        You haven't received any NFTs or collectibles yet. Browse the store to purchase NFT avatars or earn lootbox rewards through staking and platform activities.
-                      </p>
-                      <Link href="/store">
-                        <Button data-testid="button-browse-store">
-                          <Wallet className="w-4 h-4 mr-2" />
-                          Browse NFT Store
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+                  </Link>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
