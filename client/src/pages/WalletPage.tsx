@@ -32,7 +32,7 @@ export default function WalletPage() {
 
   const getExplorerUrl = () => {
     if (!wallet) return '';
-    const chain = wallet.chain || 'polygon';
+    const chain = wallet.chain || 'skale-nebula-testnet';
     
     const explorers: Record<string, string> = {
       'polygon': 'https://polygonscan.com',
@@ -41,9 +41,17 @@ export default function WalletPage() {
       'polygon-amoy': 'https://amoy.polygonscan.com',
       'base-sepolia': 'https://sepolia.basescan.org',
       'ethereum-sepolia': 'https://sepolia.etherscan.io',
+      'skale-nebula': 'https://lanky-ill-funny-testnet.explorer.mainnet.skalenodes.com',
+      'skale-nebula-testnet': 'https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com',
+      'skale-calypso': 'https://honorable-steel-rasalhague.explorer.mainnet.skalenodes.com',
+      'skale-calypso-testnet': 'https://giant-half-dual-testnet.explorer.testnet.skalenodes.com',
+      'skale-europa': 'https://elated-tan-skat.explorer.mainnet.skalenodes.com',
+      'skale-europa-testnet': 'https://juicy-low-small-testnet.explorer.testnet.skalenodes.com',
+      'skale-titan': 'https://parallel-stormy-spica.explorer.mainnet.skalenodes.com',
+      'skale-titan-testnet': 'https://aware-fake-trim-testnet.explorer.testnet.skalenodes.com',
     };
 
-    const baseUrl = explorers[chain] || explorers['polygon'];
+    const baseUrl = explorers[chain] || explorers['skale-nebula-testnet'];
     return `${baseUrl}/address/${wallet.address}`;
   };
 

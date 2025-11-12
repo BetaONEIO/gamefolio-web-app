@@ -30,7 +30,7 @@ export function CrossmintProvider({ children }: { children: ReactNode }) {
     if (user?.walletAddress) {
       setWallet({
         address: user.walletAddress,
-        chain: user.walletChain || 'polygon',
+        chain: user.walletChain || 'skale-nebula-testnet',
       });
     } else {
       setWallet(null);
@@ -64,7 +64,7 @@ export function CrossmintProvider({ children }: { children: ReactNode }) {
 
       setWallet({
         address: walletData.address,
-        chain: walletData.chain || 'polygon',
+        chain: walletData.chain || 'skale-nebula-testnet',
       });
 
       // Show appropriate message based on whether wallet was created or retrieved
@@ -137,7 +137,7 @@ export function CrossmintProvider({ children }: { children: ReactNode }) {
         const data = await response.json();
         setWallet({
           address: data.address,
-          chain: data.chain || 'polygon',
+          chain: data.chain || 'skale-nebula-testnet',
         });
       }
     } catch (error) {

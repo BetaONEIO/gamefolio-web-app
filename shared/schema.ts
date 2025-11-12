@@ -55,7 +55,7 @@ export const users = pgTable("users", {
   lastStreakUpdate: timestamp("last_streak_update"), // Last date streak was updated
   // Crossmint Wallet
   walletAddress: text("wallet_address"),
-  walletChain: text("wallet_chain").default("polygon"),
+  walletChain: text("wallet_chain").default("skale-nebula-testnet"),
   walletCreatedAt: timestamp("wallet_created_at"),
   // GF Token Balance
   gfTokenBalance: real("gf_token_balance").default(1000).notNull(), // Starting balance of 1000 GF tokens
