@@ -7390,5 +7390,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Purchase GF tokens
+  const purchaseRateLimits = new Map<number, number>();
+  const PURCHASE_RATE_LIMIT = 10000; // 10 seconds between purchases
+
+  app.post("/api/token/purchase", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { packageId, amount, price } = req.body;
+
+      // Validate input
+      if (!packageId || !amount || !price) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      if (typeof amount !== 'number' || amount <= 0) {
+        return res.status(400).json({ message: "Invalid token amount" });
+      }
+
+      if (typeof price !== 'number' || price <= 0) {
+        return res.status(400).json({ message: "Invalid price" });
+      }
+
+      // Rate limiting to prevent spam purchases
+      const now = Date.now();
+      const lastPurchase = purchaseRateLimits.get(userId);
+      
+      if (lastPurchase && (now - lastPurchase) < PURCHASE_RATE_LIMIT) {
+        return res.status(429).json({ 
+          message: "Please wait before making another purchase",
+          retryAfter: Math.ceil((PURCHASE_RATE_LIMIT - (now - lastPurchase)) / 1000)
+        });
+      }
+
+      // Get user
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Generate transaction ID with idempotency
+      const transactionId = `gf_${Date.now()}_${userId}_${nanoid(8)}`;
+
+      // Process purchase - in a real implementation, this would:
+      // 1. Call payment gateway (Stripe, PayPal, Crossmint, etc.)
+      // 2. Wait for payment confirmation
+      // 3. Only then update balance
+      
+      // For now, we'll simulate successful payment and update balance
+      const currentBalance = user.gfTokenBalance || 0;
+      const newBalance = currentBalance + amount;
+
+      // Update user balance in database
+      await storage.updateUser(userId, {
+        gfTokenBalance: newBalance
+      });
+
+      // Update rate limit
+      purchaseRateLimits.set(userId, now);
+
+      // Clean up old rate limit entries periodically
+      if (purchaseRateLimits.size > 1000) {
+        const cutoff = now - PURCHASE_RATE_LIMIT * 2;
+        for (const [uid, timestamp] of purchaseRateLimits.entries()) {
+          if (timestamp < cutoff) {
+            purchaseRateLimits.delete(uid);
+          }
+        }
+      }
+
+      // Log purchase for monitoring
+      console.log(`✅ GF Token Purchase: User ${userId} purchased ${amount} GF for $${price} (txn: ${transactionId})`);
+
+      res.json({
+        success: true,
+        message: "Purchase successful",
+        transactionId,
+        amount,
+        price,
+        newBalance,
+        packageId
+      });
+    } catch (error) {
+      console.error("Error processing GF token purchase:", error);
+      res.status(500).json({ error: "Failed to process purchase" });
+    }
+  });
+
   return httpServer;
 }
