@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTokenBalance, useTokenInfo } from "@/hooks/use-token";
 import { motion, AnimatePresence } from "motion/react";
+import BuyGFTokenDialog from "@/components/BuyGFTokenDialog";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import crossmintBadge from "@assets/badge-color-background_1762859702329.png";
 import walletPromo from "@assets/Wallet promo new_1762876656607.png";
@@ -20,6 +21,7 @@ export default function WalletPage() {
   const [copied, setCopied] = useState(false);
   const [showWalletDetails, setShowWalletDetails] = useState(false);
   const [balanceVisible, setBalanceVisible] = useState(true);
+  const [showBuyDialog, setShowBuyDialog] = useState(false);
   const { data: tokenBalance, isLoading: isLoadingBalance, refetch: refetchBalance } = useTokenBalance();
   const { data: tokenInfo } = useTokenInfo();
 
@@ -343,6 +345,7 @@ export default function WalletPage() {
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowBuyDialog(true)}
                     className="flex items-center justify-center gap-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white py-4 rounded-2xl shadow-lg"
                     data-testid="button-buy-gf"
                   >
@@ -512,6 +515,12 @@ export default function WalletPage() {
           </div>
         )}
       </div>
+
+      {/* Buy GF Token Dialog */}
+      <BuyGFTokenDialog 
+        open={showBuyDialog} 
+        onOpenChange={setShowBuyDialog}
+      />
     </div>
   );
 }
