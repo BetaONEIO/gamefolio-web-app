@@ -132,19 +132,19 @@ export default function WalletPage() {
               {/* Button and Badge */}
               <div className="space-y-4">
                 <Button 
-                  onClick={wallet ? () => setShowWalletDetails(true) : createWallet} 
+                  onClick={(wallet || user?.walletAddress) ? () => setShowWalletDetails(true) : createWallet} 
                   disabled={isLoading}
                   className="w-auto px-6"
-                  data-testid={wallet ? "button-continue-wallet" : "button-create-wallet"}
+                  data-testid={(wallet || user?.walletAddress) ? "button-continue-wallet" : "button-create-wallet"}
                 >
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Creating Wallet...
+                      {(wallet || user?.walletAddress) ? "Loading..." : "Creating Wallet..."}
                     </>
                   ) : (
                     <>
-                      {wallet ? (
+                      {(wallet || user?.walletAddress) ? (
                         <>
                           <ArrowLeft className="w-4 h-4 mr-2 rotate-180" />
                           Continue to Wallet

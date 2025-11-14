@@ -70,10 +70,10 @@ export function CrossmintProvider({ children }: { children: ReactNode }) {
       // Show appropriate message based on whether wallet was created or retrieved
       const isExisting = walletData.isExisting || false;
       toast({
-        title: isExisting ? "Wallet connected!" : "Wallet created!",
+        title: isExisting ? "Wallet loaded!" : "Wallet created!",
         description: isExisting 
-          ? "Connected to your existing Crossmint wallet"
-          : "Your new Crossmint wallet has been created successfully",
+          ? "Your Crossmint wallet has been loaded successfully"
+          : "Your new Crossmint wallet has been created on SKALE network",
       });
     } catch (error: any) {
       console.error('Failed to create wallet:', error);
