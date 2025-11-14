@@ -7390,38 +7390,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Purchase GF tokens
-  const purchaseRateLimits = new Map<number, number>();
-  const PURCHASE_RATE_LIMIT = 10000; // 10 seconds between purchases
+  // Server-side token package catalog (source of truth)
+  const TOKEN_PACKAGES = {
+    starter: { id: 'starter', amount: 10, price: 0.50, bonus: 0 },
+    popular: { id: 'popular', amount: 25, price: 1.00, bonus: 5 },
+    premium: { id: 'premium', amount: 50, price: 2.00, bonus: 10 },
+    ultimate: { id: 'ultimate', amount: 100, price: 3.50, bonus: 25 },
+  } as const;
 
-  app.post("/api/token/purchase", authMiddleware, async (req, res) => {
+  // Create Crossmint order for GF token purchase
+  app.post("/api/token/create-order", authMiddleware, async (req, res) => {
     try {
       const userId = req.user!.id;
-      const { packageId, amount, price } = req.body;
+      const { packageId } = req.body;
 
-      // Validate input
-      if (!packageId || !amount || !price) {
-        return res.status(400).json({ message: "Missing required fields" });
+      // Validate package ID exists in server catalog
+      if (!packageId || typeof packageId !== 'string') {
+        return res.status(400).json({ message: "Invalid package ID" });
       }
 
-      if (typeof amount !== 'number' || amount <= 0) {
-        return res.status(400).json({ message: "Invalid token amount" });
+      const packageData = TOKEN_PACKAGES[packageId as keyof typeof TOKEN_PACKAGES];
+      if (!packageData) {
+        console.error(`❌ Invalid package ID attempted: ${packageId} by user ${userId}`);
+        return res.status(400).json({ message: "Invalid package selected" });
       }
 
-      if (typeof price !== 'number' || price <= 0) {
-        return res.status(400).json({ message: "Invalid price" });
-      }
-
-      // Rate limiting to prevent spam purchases
-      const now = Date.now();
-      const lastPurchase = purchaseRateLimits.get(userId);
-      
-      if (lastPurchase && (now - lastPurchase) < PURCHASE_RATE_LIMIT) {
-        return res.status(429).json({ 
-          message: "Please wait before making another purchase",
-          retryAfter: Math.ceil((PURCHASE_RATE_LIMIT - (now - lastPurchase)) / 1000)
-        });
-      }
+      // Use ONLY server-side values (ignore client-provided amount/price)
+      const totalTokens = packageData.amount + packageData.bonus;
+      const priceUSD = packageData.price;
 
       // Get user
       const user = await storage.getUser(userId);
@@ -7429,51 +7425,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Generate transaction ID with idempotency
-      const transactionId = `gf_${Date.now()}_${userId}_${nanoid(8)}`;
+      // Check if user has a wallet
+      if (!user.walletAddress) {
+        return res.status(400).json({ 
+          message: "Wallet required",
+          code: "WALLET_REQUIRED"
+        });
+      }
 
-      // Process purchase - in a real implementation, this would:
-      // 1. Call payment gateway (Stripe, PayPal, Crossmint, etc.)
-      // 2. Wait for payment confirmation
-      // 3. Only then update balance
+      // Get Crossmint API key
+      const apiKey = process.env.CROSSMINT_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ message: "Crossmint API key not configured" });
+      }
+
+      const userEmail = user.email || `${user.username}@gamefolio.app`;
+
+      // Create Crossmint order for USDC purchase
+      // We're using USDC as the intermediate token which user pays for with fiat
+      const crossmintResponse = await fetch('https://staging.crossmint.com/api/2022-06-09/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+        },
+        body: JSON.stringify({
+          lineItems: [
+            {
+              tokenLocator: 'solana:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU', // USDC staging
+              executionParameters: {
+                mode: 'exact-in',
+                amount: priceUSD.toFixed(2), // Amount in USD
+              },
+            },
+          ],
+          payment: {
+            method: 'checkoutcom-flow',
+            receiptEmail: userEmail,
+          },
+          recipient: {
+            walletAddress: user.walletAddress,
+          },
+          metadata: {
+            userId: userId.toString(),
+            packageId,
+            gfTokenAmount: totalTokens.toString(),
+            serverValidated: 'true', // Flag to verify order came from our server
+          }
+        }),
+      });
+
+      if (!crossmintResponse.ok) {
+        const errorText = await crossmintResponse.text();
+        console.error('Crossmint order creation error:', errorText);
+        return res.status(500).json({ 
+          message: 'Failed to create payment order',
+          error: errorText 
+        });
+      }
+
+      const orderData = await crossmintResponse.json();
+
+      // Store pending order info
+      console.log(`📦 Crossmint Order Created: ${orderData.orderId} for user ${userId}`);
+
+      res.json({
+        orderId: orderData.orderId,
+        clientSecret: orderData.clientSecret,
+        packageId,
+        amount: totalTokens,
+        priceUSD,
+      });
+    } catch (error) {
+      console.error('Error creating Crossmint order:', error);
+      res.status(500).json({ error: 'Failed to create order' });
+    }
+  });
+
+  // Check Crossmint order status and deliver GF tokens
+  app.post("/api/token/complete-order", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { orderId } = req.body;
+
+      if (!orderId) {
+        return res.status(400).json({ message: "Order ID required" });
+      }
+
+      // Get Crossmint API key
+      const apiKey = process.env.CROSSMINT_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ message: "Crossmint API key not configured" });
+      }
+
+      // Check order status from Crossmint
+      const statusResponse = await fetch(
+        `https://staging.crossmint.com/api/2022-06-09/orders/${orderId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+          },
+        }
+      );
+
+      if (!statusResponse.ok) {
+        return res.status(500).json({ message: "Failed to check order status" });
+      }
+
+      const orderData = await statusResponse.json();
       
-      // For now, we'll simulate successful payment and update balance
-      const currentBalance = user.gfTokenBalance || 0;
-      const newBalance = currentBalance + amount;
+      // Check if order is completed
+      if (orderData.phase !== 'completed' && orderData.phase !== 'delivery') {
+        return res.json({
+          status: orderData.phase,
+          message: "Order not yet completed"
+        });
+      }
 
-      // Update user balance in database
+      // Verify order was created by our server (security check)
+      if (orderData.metadata?.serverValidated !== 'true') {
+        console.error(`❌ Order ${orderId} failed server validation check`);
+        return res.status(400).json({ message: "Invalid order source" });
+      }
+
+      // Re-validate package from server catalog (don't trust metadata blindly)
+      const packageId = orderData.metadata?.packageId;
+      const packageData = TOKEN_PACKAGES[packageId as keyof typeof TOKEN_PACKAGES];
+      
+      if (!packageData) {
+        console.error(`❌ Order ${orderId} has invalid packageId: ${packageId}`);
+        return res.status(400).json({ message: "Invalid package in order" });
+      }
+
+      // Use server-calculated token amount (defense in depth)
+      const gfTokenAmount = packageData.amount + packageData.bonus;
+      
+      // Double-check metadata matches expected amount
+      const metadataAmount = parseInt(orderData.metadata?.gfTokenAmount || '0');
+      if (metadataAmount !== gfTokenAmount) {
+        console.error(`❌ Order ${orderId} amount mismatch: expected ${gfTokenAmount}, got ${metadataAmount}`);
+        return res.status(400).json({ message: "Order amount validation failed" });
+      }
+
+      // Get user and update balance
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const currentBalance = user.gfTokenBalance || 0;
+      const newBalance = currentBalance + gfTokenAmount;
+
       await storage.updateUser(userId, {
         gfTokenBalance: newBalance
       });
 
-      // Update rate limit
-      purchaseRateLimits.set(userId, now);
-
-      // Clean up old rate limit entries periodically
-      if (purchaseRateLimits.size > 1000) {
-        const cutoff = now - PURCHASE_RATE_LIMIT * 2;
-        for (const [uid, timestamp] of purchaseRateLimits.entries()) {
-          if (timestamp < cutoff) {
-            purchaseRateLimits.delete(uid);
-          }
-        }
-      }
-
-      // Log purchase for monitoring
-      console.log(`✅ GF Token Purchase: User ${userId} purchased ${amount} GF for $${price} (txn: ${transactionId})`);
+      console.log(`✅ GF Tokens Delivered: User ${userId} received ${gfTokenAmount} GF (Order: ${orderId})`);
 
       res.json({
         success: true,
-        message: "Purchase successful",
-        transactionId,
-        amount,
-        price,
+        amount: gfTokenAmount,
         newBalance,
-        packageId
+        orderId
       });
     } catch (error) {
-      console.error("Error processing GF token purchase:", error);
-      res.status(500).json({ error: "Failed to process purchase" });
+      console.error("Error completing order:", error);
+      res.status(500).json({ error: "Failed to complete order" });
     }
   });
 

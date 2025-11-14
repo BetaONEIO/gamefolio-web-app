@@ -125,5 +125,21 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
   - **NFTPurchaseDialog**: Complete purchase modal with wallet status, balance display, and bid placement
   - **GF Token Logo**: Displayed alongside all currency amounts in store and dialogs
   - **Balance Display**: Sidebar shows user's current GF token balance with USD equivalent
-- **Future Features**: NFT minting for gaming clips, user-to-user trading, earning GF tokens through engagement, token purchases with real currency, multi-chain NFT support
+- **Crossmint Onramp Integration**: Real cryptocurrency payment flow for purchasing GF tokens
+  - **Payment Gateway**: Crossmint Onramp API for fiat-to-crypto purchases (credit cards, debit cards)
+  - **Token Packages**: 10 GF ($0.50), 25 GF ($1.00 + 5 bonus), 50 GF ($2.00 + 10 bonus), 100 GF ($3.50 + 25 bonus)
+  - **Payment Flow**:
+    1. User selects token package in BuyGFTokenDialog
+    2. Backend creates Crossmint order via `/api/token/create-order` endpoint
+    3. Frontend displays CrossmintEmbeddedCheckout widget for secure payment
+    4. User completes payment with credit card through Crossmint
+    5. Backend polls order status via `/api/token/complete-order`
+    6. GF tokens delivered to user's off-chain balance upon payment confirmation
+  - **API Endpoints**:
+    - `POST /api/token/create-order` - Creates Crossmint order for USDC purchase (staging)
+    - `POST /api/token/complete-order` - Checks order status and delivers GF tokens to user
+  - **Security**: Wallet address required before purchase, order metadata tracks GF token amount
+  - **UX Features**: Two-step checkout (package selection → payment), real-time order status polling, automatic balance updates
+  - **Environment**: Currently using Crossmint staging environment with USDC token locator
+- **Future Features**: NFT minting for gaming clips, user-to-user trading, earning GF tokens through engagement, multi-chain NFT support
 ```

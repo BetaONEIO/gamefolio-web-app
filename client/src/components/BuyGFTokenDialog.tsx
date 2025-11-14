@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Check, CreditCard, Wallet, Loader2 } from "lucide-react";
+import { Check, CreditCard, Wallet, Loader2, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { CrossmintProvider, CrossmintEmbeddedCheckout } from "@crossmint/client-sdk-react-ui";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 
 interface BuyGFTokenDialogProps {
@@ -51,14 +52,69 @@ const tokenPackages: TokenPackage[] = [
 export default function BuyGFTokenDialog({ open, onOpenChange }: BuyGFTokenDialogProps) {
   const [selectedPackage, setSelectedPackage] = useState<TokenPackage | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [checkoutStep, setCheckoutStep] = useState<"select" | "payment">("select");
+  const [walletError, setWalletError] = useState(false);
   const { toast } = useToast();
 
-  const handlePurchase = async () => {
+  const clientApiKey = import.meta.env.VITE_CROSSMINT_CLIENT_API_KEY;
+
+  useEffect(() => {
+    if (!open) {
+      setSelectedPackage(null);
+      setOrderId(null);
+      setClientSecret(null);
+      setCheckoutStep("select");
+      setWalletError(false);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (orderId && checkoutStep === "payment") {
+      const pollInterval = setInterval(async () => {
+        try {
+          const response = await fetch("/api/token/complete-order", {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ orderId }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              clearInterval(pollInterval);
+              
+              await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+              
+              toast({
+                title: "Purchase successful! 🎉",
+                description: `You received ${data.amount} GF tokens`,
+              });
+
+              onOpenChange(false);
+            }
+          }
+        } catch (error) {
+          console.error("Error polling order status:", error);
+        }
+      }, 5000);
+
+      return () => clearInterval(pollInterval);
+    }
+  }, [orderId, checkoutStep, onOpenChange, toast]);
+
+  const handleInitiatePayment = async () => {
     if (!selectedPackage) return;
 
     setIsProcessing(true);
+    setWalletError(false);
+
     try {
-      const response = await fetch("/api/token/purchase", {
+      const response = await fetch("/api/token/create-order", {
         method: "POST",
         credentials: "include",
         headers: {
@@ -66,35 +122,42 @@ export default function BuyGFTokenDialog({ open, onOpenChange }: BuyGFTokenDialo
         },
         body: JSON.stringify({
           packageId: selectedPackage.id,
-          amount: selectedPackage.amount + selectedPackage.bonus,
-          price: selectedPackage.price,
         }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        
-        await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-        
-        toast({
-          title: "Purchase successful! 🎉",
-          description: `You received ${selectedPackage.amount + selectedPackage.bonus} GF tokens`,
-        });
+      const data = await response.json();
 
-        onOpenChange(false);
-        setSelectedPackage(null);
+      if (response.ok) {
+        setOrderId(data.orderId);
+        setClientSecret(data.clientSecret);
+        setCheckoutStep("payment");
       } else {
-        throw new Error("Purchase failed");
+        if (data.code === "WALLET_REQUIRED") {
+          setWalletError(true);
+          toast({
+            title: "Wallet Required",
+            description: "Please create a wallet before purchasing GF tokens.",
+            variant: "destructive",
+          });
+        } else {
+          throw new Error(data.message || "Order creation failed");
+        }
       }
     } catch (error) {
       toast({
-        title: "Purchase failed",
-        description: "Unable to process your purchase. Please try again.",
+        title: "Order creation failed",
+        description: "Unable to create payment order. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleBackToSelection = () => {
+    setCheckoutStep("select");
+    setOrderId(null);
+    setClientSecret(null);
   };
 
   return (
@@ -103,13 +166,17 @@ export default function BuyGFTokenDialog({ open, onOpenChange }: BuyGFTokenDialo
         <DialogHeader>
           <div className="flex items-center gap-3">
             <img src={gfTokenLogo} alt="GF Token" className="w-10 h-10" />
-            <DialogTitle className="text-2xl">Buy GF Tokens</DialogTitle>
+            <DialogTitle className="text-2xl">
+              {checkoutStep === "select" ? "Buy GF Tokens" : "Complete Payment"}
+            </DialogTitle>
           </div>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Package Selection */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {checkoutStep === "select" ? (
+            <>
+              {/* Package Selection */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {tokenPackages.map((pkg, index) => (
               <motion.div
                 key={pkg.id}
@@ -220,35 +287,111 @@ export default function BuyGFTokenDialog({ open, onOpenChange }: BuyGFTokenDialo
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => onOpenChange(false)}
-              disabled={isProcessing}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="flex-1"
-              onClick={handlePurchase}
-              disabled={!selectedPackage || isProcessing}
-              data-testid="button-confirm-purchase"
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Wallet className="w-4 h-4 mr-2" />
-                  Complete Purchase
-                </>
+              {/* Wallet Error Warning */}
+              {walletError && (
+                <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-1">
+                        Wallet Required
+                      </h4>
+                      <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                        You need to create a wallet before purchasing GF tokens. Visit your wallet page to create one.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
-            </Button>
-          </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isProcessing}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleInitiatePayment}
+                  disabled={!selectedPackage || isProcessing}
+                  data-testid="button-confirm-purchase"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Creating Order...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Continue to Payment
+                    </>
+                  )}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Crossmint Checkout Widget */}
+              {orderId && clientSecret && clientApiKey ? (
+                <div className="space-y-4">
+                  <div className="bg-muted/50 rounded-xl p-6 space-y-3">
+                    <h3 className="font-semibold text-lg">Order Summary</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Package</span>
+                        <span className="font-medium">{selectedPackage?.amount.toLocaleString()} GF</span>
+                      </div>
+                      {selectedPackage && selectedPackage.bonus > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Bonus</span>
+                          <span className="font-medium text-green-600 dark:text-green-400">
+                            +{selectedPackage.bonus.toLocaleString()} GF
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between pt-2 border-t">
+                        <span className="font-semibold">Total</span>
+                        <span className="font-bold text-lg">${selectedPackage?.price.toFixed(2)} USD</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <CrossmintProvider apiKey={clientApiKey}>
+                    <div className="border rounded-xl overflow-hidden">
+                      <CrossmintEmbeddedCheckout
+                        orderId={orderId}
+                        clientSecret={clientSecret}
+                        payment={{
+                          crypto: { enabled: false },
+                          fiat: { enabled: true },
+                        }}
+                      />
+                    </div>
+                  </CrossmintProvider>
+
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={handleBackToSelection}
+                    >
+                      Back to Selection
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+                  <p className="text-muted-foreground">Loading checkout...</p>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>
