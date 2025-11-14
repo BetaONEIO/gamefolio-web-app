@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { X, Check, CreditCard, Wallet, Loader2 } from "lucide-react";
+import { Check, CreditCard, Wallet, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 
 interface BuyGFTokenDialogProps {
@@ -58,8 +58,12 @@ export default function BuyGFTokenDialog({ open, onOpenChange }: BuyGFTokenDialo
 
     setIsProcessing(true);
     try {
-      const response = await apiRequest("/api/token/purchase", {
+      const response = await fetch("/api/token/purchase", {
         method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           packageId: selectedPackage.id,
           amount: selectedPackage.amount + selectedPackage.bonus,
