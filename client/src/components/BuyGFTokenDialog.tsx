@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Check, CreditCard, Wallet, Loader2, AlertCircle } from "lucide-react";
+import { Check, CreditCard, Wallet, Loader2, AlertCircle, ExternalLink } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
-import { CrossmintProvider, CrossmintEmbeddedCheckout } from "@crossmint/client-sdk-react-ui";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 
 interface BuyGFTokenDialogProps {
@@ -57,8 +56,6 @@ export default function BuyGFTokenDialog({ open, onOpenChange }: BuyGFTokenDialo
   const [checkoutStep, setCheckoutStep] = useState<"select" | "payment">("select");
   const [walletError, setWalletError] = useState(false);
   const { toast } = useToast();
-
-  const clientApiKey = import.meta.env.VITE_CROSSMINT_CLIENT_API_KEY;
 
   useEffect(() => {
     if (!open) {
@@ -336,8 +333,8 @@ export default function BuyGFTokenDialog({ open, onOpenChange }: BuyGFTokenDialo
             </>
           ) : (
             <>
-              {/* Crossmint Checkout Widget */}
-              {orderId && clientSecret && clientApiKey ? (
+              {/* Crossmint Checkout via iframe */}
+              {orderId && clientSecret ? (
                 <div className="space-y-4">
                   <div className="bg-muted/50 rounded-xl p-6 space-y-3">
                     <h3 className="font-semibold text-lg">Order Summary</h3>
@@ -361,18 +358,29 @@ export default function BuyGFTokenDialog({ open, onOpenChange }: BuyGFTokenDialo
                     </div>
                   </div>
 
-                  <CrossmintProvider apiKey={clientApiKey}>
-                    <div className="border rounded-xl overflow-hidden">
-                      <CrossmintEmbeddedCheckout
-                        orderId={orderId}
-                        clientSecret={clientSecret}
-                        payment={{
-                          crypto: { enabled: false },
-                          fiat: { enabled: true },
-                        }}
-                      />
+                  {/* Crossmint Checkout iframe */}
+                  <div className="border rounded-xl overflow-hidden bg-white dark:bg-gray-900">
+                    <iframe
+                      src={`https://staging.crossmint.com/checkout/${orderId}?clientSecret=${clientSecret}`}
+                      className="w-full h-[500px] border-0"
+                      allow="payment"
+                      title="Crossmint Checkout"
+                    />
+                  </div>
+
+                  <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <Loader2 className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 animate-spin" />
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                          Waiting for Payment
+                        </h4>
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          Complete your payment in the checkout above. Your GF tokens will be delivered automatically.
+                        </p>
+                      </div>
                     </div>
-                  </CrossmintProvider>
+                  </div>
 
                   <div className="flex gap-3">
                     <Button
