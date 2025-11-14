@@ -23,28 +23,28 @@ interface TokenPackage {
 const tokenPackages: TokenPackage[] = [
   {
     id: "starter",
-    amount: 500,
-    price: 25,
+    amount: 10,
+    price: 0.50,
     bonus: 0,
   },
   {
     id: "popular",
-    amount: 1000,
-    price: 45,
-    bonus: 100,
+    amount: 25,
+    price: 1.00,
+    bonus: 5,
     popular: true,
   },
   {
     id: "premium",
-    amount: 2500,
-    price: 100,
-    bonus: 500,
+    amount: 50,
+    price: 2.00,
+    bonus: 10,
   },
   {
     id: "ultimate",
-    amount: 5000,
-    price: 180,
-    bonus: 1500,
+    amount: 100,
+    price: 3.50,
+    bonus: 25,
   },
 ];
 
