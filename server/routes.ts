@@ -7425,14 +7425,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Check if user has a wallet
-      if (!user.walletAddress) {
-        return res.status(400).json({ 
-          message: "Wallet required",
-          code: "WALLET_REQUIRED"
-        });
-      }
-
       // Get Crossmint API key
       const apiKey = process.env.CROSSMINT_API_KEY;
       if (!apiKey) {
@@ -7441,8 +7433,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userEmail = user.email || `${user.username}@gamefolio.app`;
 
-      // Create Crossmint order for USDC purchase
-      // We're using USDC as the intermediate token which user pays for with fiat
+      // Create Crossmint payment order (fiat-to-crypto gateway only)
+      // Note: We're using Crossmint as a payment processor, not for crypto delivery
+      // GF tokens are delivered off-chain to user's account balance
       const crossmintResponse = await fetch('https://www.crossmint.com/api/2022-06-09/orders', {
         method: 'POST',
         headers: {
@@ -7452,7 +7445,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         body: JSON.stringify({
           lineItems: [
             {
-              tokenLocator: 'solana:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU', // USDC staging
+              tokenLocator: 'solana:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU', // USDC on Solana (mainnet)
               executionParameters: {
                 mode: 'exact-in',
                 amount: priceUSD.toFixed(2), // Amount in USD
@@ -7462,9 +7455,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           payment: {
             method: 'checkoutcom-flow',
             receiptEmail: userEmail,
-          },
-          recipient: {
-            walletAddress: user.walletAddress,
           },
           metadata: {
             userId: userId.toString(),
