@@ -129,22 +129,22 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
   - **Balance Display**: Sidebar shows user's current GF token balance with USD equivalent
 - **Crossmint Onramp Integration**: Real cryptocurrency payment flow for purchasing GF tokens
   - **Payment Gateway**: Crossmint Onramp API for fiat-to-crypto purchases (credit cards, debit cards)
-  - **Blockchain**: Base (Ethereum L2) - Ethereum-compatible chain with low fees
-  - **Token Purchased**: USDC on Base (`base:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`)
+  - **Blockchain**: Base Sepolia Testnet (Ethereum L2) - Ethereum-compatible testnet chain
+  - **Token Purchased**: USDC on Base Sepolia (`base:0x036CbD53842c5426634e7929541eC2318f3dCF7e`)
   - **Token Packages**: 10 GF ($0.50), 25 GF ($1.00 + 5 bonus), 50 GF ($2.00 + 10 bonus), 100 GF ($3.50 + 25 bonus)
   - **Payment Flow**:
     1. User selects token package in BuyGFTokenDialog
     2. Backend creates Crossmint order via `/api/token/create-order` endpoint (requires wallet address)
     3. Frontend displays iframe-based Crossmint checkout for secure payment
     4. User completes payment with credit card through Crossmint
-    5. USDC delivered to user's Ethereum-compatible wallet on Base chain
+    5. USDC delivered to user's Ethereum-compatible wallet on Base Sepolia testnet
     6. Backend polls order status via `/api/token/complete-order`
     7. GF tokens delivered to user's off-chain balance upon payment confirmation
   - **API Endpoints**:
-    - `POST /api/token/create-order` - Creates Crossmint order for Base USDC purchase (production)
+    - `POST /api/token/create-order` - Creates Crossmint order for Base Sepolia USDC purchase (staging)
     - `POST /api/token/complete-order` - Checks order status and delivers GF tokens to user
   - **Security**: Wallet address required before purchase, server-side package validation, order metadata tracks GF token amount
   - **UX Features**: Two-step checkout (package selection → payment), wallet requirement validation, real-time order status polling, automatic balance updates
-  - **Environment**: Production Crossmint environment with Base mainnet USDC
+  - **Environment**: Staging Crossmint environment with Base Sepolia testnet USDC (production access requires contacting Crossmint sales)
 - **Future Features**: NFT minting for gaming clips, user-to-user trading, earning GF tokens through engagement, multi-chain NFT support
 ```

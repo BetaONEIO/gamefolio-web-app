@@ -7444,8 +7444,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create Crossmint payment order (fiat-to-crypto gateway)
       // Note: USDC will be delivered to user's wallet, then GF tokens credited to their account
-      // Using Base (Ethereum L2) as it's compatible with Ethereum addresses and supported by Crossmint
-      const crossmintResponse = await fetch('https://www.crossmint.com/api/2022-06-09/orders', {
+      // Using Base Sepolia testnet for staging (Ethereum L2 compatible)
+      const crossmintResponse = await fetch('https://staging.crossmint.com/api/2022-06-09/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -7454,7 +7454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         body: JSON.stringify({
           lineItems: [
             {
-              tokenLocator: 'base:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // USDC on Base mainnet (production)
+              tokenLocator: 'base:0x036CbD53842c5426634e7929541eC2318f3dCF7e', // USDC on Base Sepolia testnet (staging)
               executionParameters: {
                 mode: 'exact-in',
                 amount: priceUSD.toFixed(2), // Amount in USD
@@ -7522,7 +7522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check order status from Crossmint
       const statusResponse = await fetch(
-        `https://www.crossmint.com/api/2022-06-09/orders/${orderId}`,
+        `https://staging.crossmint.com/api/2022-06-09/orders/${orderId}`,
         {
           method: 'GET',
           headers: {
@@ -7612,7 +7612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Try to fetch wallets as a simple API test
       const testResponse = await fetch(
-        'https://www.crossmint.com/api/2022-06-09/orders?limit=1',
+        'https://staging.crossmint.com/api/2022-06-09/orders?limit=1',
         {
           method: 'GET',
           headers: {
@@ -7627,7 +7627,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({
           success: true,
           message: "Crossmint API key is valid and working!",
-          environment: "production",
+          environment: "staging",
           statusCode: testResponse.status
         });
       } else {
