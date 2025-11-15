@@ -7425,6 +7425,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
+      // Require user to have a wallet before purchasing tokens
+      if (!user.walletAddress) {
+        return res.status(400).json({ 
+          message: "Wallet required",
+          code: "WALLET_REQUIRED",
+          description: "Please create a Crossmint wallet before purchasing GF tokens"
+        });
+      }
+
       // Get Crossmint API key
       const apiKey = process.env.CROSSMINT_API_KEY;
       if (!apiKey) {
@@ -7433,9 +7442,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userEmail = user.email || `${user.username}@gamefolio.app`;
 
-      // Create Crossmint payment order (fiat-to-crypto gateway only)
-      // Note: We're using Crossmint as a payment processor, not for crypto delivery
-      // GF tokens are delivered off-chain to user's account balance
+      // Create Crossmint payment order (fiat-to-crypto gateway)
+      // Note: USDC will be delivered to user's wallet, then GF tokens credited to their account
       const crossmintResponse = await fetch('https://www.crossmint.com/api/2022-06-09/orders', {
         method: 'POST',
         headers: {
@@ -7445,7 +7453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         body: JSON.stringify({
           lineItems: [
             {
-              tokenLocator: 'solana:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU', // USDC on Solana (mainnet)
+              tokenLocator: 'ethereum:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC on Ethereum mainnet
               executionParameters: {
                 mode: 'exact-in',
                 amount: priceUSD.toFixed(2), // Amount in USD
@@ -7455,6 +7463,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           payment: {
             method: 'checkoutcom-flow',
             receiptEmail: userEmail,
+          },
+          recipient: {
+            walletAddress: user.walletAddress, // Required: user's Ethereum-compatible wallet
           },
           metadata: {
             userId: userId.toString(),
