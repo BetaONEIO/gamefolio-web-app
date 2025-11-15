@@ -7596,5 +7596,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test Crossmint API connection
+  app.get("/api/token/test-connection", authMiddleware, async (req, res) => {
+    try {
+      const apiKey = process.env.CROSSMINT_API_KEY;
+      
+      if (!apiKey) {
+        return res.status(500).json({ 
+          success: false, 
+          message: "Crossmint API key not configured" 
+        });
+      }
+
+      // Try to fetch wallets as a simple API test
+      const testResponse = await fetch(
+        'https://staging.crossmint.com/api/2022-06-09/orders?limit=1',
+        {
+          method: 'GET',
+          headers: {
+            'x-api-key': apiKey,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (testResponse.ok) {
+        console.log('✅ Crossmint API connection successful');
+        return res.json({
+          success: true,
+          message: "Crossmint API key is valid and working!",
+          environment: "staging",
+          statusCode: testResponse.status
+        });
+      } else {
+        const errorText = await testResponse.text();
+        console.error('❌ Crossmint API test failed:', errorText);
+        return res.status(testResponse.status).json({
+          success: false,
+          message: "API key invalid or unauthorized",
+          error: errorText,
+          statusCode: testResponse.status
+        });
+      }
+    } catch (error) {
+      console.error('Error testing Crossmint connection:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to test Crossmint connection",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   return httpServer;
 }
