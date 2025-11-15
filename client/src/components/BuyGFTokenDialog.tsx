@@ -361,7 +361,7 @@ export default function BuyGFTokenDialog({ open, onOpenChange }: BuyGFTokenDialo
                   {/* Crossmint Checkout iframe */}
                   <div className="border rounded-xl overflow-hidden bg-white dark:bg-gray-900">
                     <iframe
-                      src={`https://staging.crossmint.com/checkout/${orderId}?clientSecret=${clientSecret}`}
+                      src={`https://www.crossmint.com/checkout/${orderId}?clientSecret=${clientSecret}`}
                       className="w-full h-[500px] border-0"
                       allow="payment"
                       title="Crossmint Checkout"

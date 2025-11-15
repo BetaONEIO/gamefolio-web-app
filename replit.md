@@ -140,6 +140,6 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
     - `POST /api/token/complete-order` - Checks order status and delivers GF tokens to user
   - **Security**: Wallet address required before purchase, order metadata tracks GF token amount
   - **UX Features**: Two-step checkout (package selection → payment), real-time order status polling, automatic balance updates
-  - **Environment**: Currently using Crossmint staging environment with USDC token locator
+  - **Environment**: Currently using Crossmint production environment for real payments
 - **Future Features**: NFT minting for gaming clips, user-to-user trading, earning GF tokens through engagement, multi-chain NFT support
 ```

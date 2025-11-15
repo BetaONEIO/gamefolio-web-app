@@ -7443,7 +7443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create Crossmint order for USDC purchase
       // We're using USDC as the intermediate token which user pays for with fiat
-      const crossmintResponse = await fetch('https://staging.crossmint.com/api/2022-06-09/orders', {
+      const crossmintResponse = await fetch('https://www.crossmint.com/api/2022-06-09/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -7520,7 +7520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check order status from Crossmint
       const statusResponse = await fetch(
-        `https://staging.crossmint.com/api/2022-06-09/orders/${orderId}`,
+        `https://www.crossmint.com/api/2022-06-09/orders/${orderId}`,
         {
           method: 'GET',
           headers: {
@@ -7610,7 +7610,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Try to fetch wallets as a simple API test
       const testResponse = await fetch(
-        'https://staging.crossmint.com/api/2022-06-09/orders?limit=1',
+        'https://www.crossmint.com/api/2022-06-09/orders?limit=1',
         {
           method: 'GET',
           headers: {
@@ -7625,7 +7625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({
           success: true,
           message: "Crossmint API key is valid and working!",
-          environment: "staging",
+          environment: "production",
           statusCode: testResponse.status
         });
       } else {
