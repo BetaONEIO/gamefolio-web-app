@@ -7444,6 +7444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create Crossmint payment order (fiat-to-crypto gateway)
       // Note: USDC will be delivered to user's wallet, then GF tokens credited to their account
+      // Using Base (Ethereum L2) as it's compatible with Ethereum addresses and supported by Crossmint
       const crossmintResponse = await fetch('https://www.crossmint.com/api/2022-06-09/orders', {
         method: 'POST',
         headers: {
@@ -7453,7 +7454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         body: JSON.stringify({
           lineItems: [
             {
-              tokenLocator: 'ethereum:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC on Ethereum mainnet
+              tokenLocator: 'base:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // USDC on Base mainnet (production)
               executionParameters: {
                 mode: 'exact-in',
                 amount: priceUSD.toFixed(2), // Amount in USD

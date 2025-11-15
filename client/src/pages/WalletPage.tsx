@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCrossmint } from "@/hooks/use-crossmint";
 import { useAuth } from "@/hooks/use-auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTokenBalance, useTokenInfo } from "@/hooks/use-token";
 import { motion, AnimatePresence } from "motion/react";
@@ -24,6 +24,12 @@ export default function WalletPage() {
   const [showBuyDialog, setShowBuyDialog] = useState(false);
   const { data: tokenBalance, isLoading: isLoadingBalance, refetch: refetchBalance } = useTokenBalance();
   const { data: tokenInfo } = useTokenInfo();
+
+  useEffect(() => {
+    if (wallet || user?.walletAddress) {
+      setShowWalletDetails(true);
+    }
+  }, [wallet, user?.walletAddress]);
 
   const handleCopyAddress = async () => {
     if (wallet?.address) {

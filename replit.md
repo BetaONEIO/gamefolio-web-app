@@ -89,6 +89,8 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
 - **Database Schema**: User table includes `walletAddress`, `walletChain` (defaults to `skale-nebula-testnet`), `walletCreatedAt`, and `gfTokenBalance` fields
 - **Frontend Provider**: `CrossmintProvider` manages wallet state globally across the application
 - **Wallet Page**: Complete UI at `/wallet` for viewing wallet information, accessing SKALE block explorer, and Crossmint dashboard
+  - **Auto-Loading**: Wallet page automatically displays wallet details if user already has a wallet (no need to create each session)
+  - **Persistent Storage**: Wallet address saved in database and auto-loaded on every visit
 - **Block Explorer Support**: Integrated SKALE block explorers for all major hubs (Nebula, Calypso, Europa, Titan) for both mainnet and testnet
 - **API Endpoints**: 
   - `POST /api/wallet/create` - Idempotent wallet creation/retrieval via Crossmint SDK on SKALE network (returns `address`, `chain`, `isExisting`)
@@ -127,19 +129,22 @@ Gamefolio is a comprehensive gaming portfolio and social platform designed for g
   - **Balance Display**: Sidebar shows user's current GF token balance with USD equivalent
 - **Crossmint Onramp Integration**: Real cryptocurrency payment flow for purchasing GF tokens
   - **Payment Gateway**: Crossmint Onramp API for fiat-to-crypto purchases (credit cards, debit cards)
+  - **Blockchain**: Base (Ethereum L2) - Ethereum-compatible chain with low fees
+  - **Token Purchased**: USDC on Base (`base:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`)
   - **Token Packages**: 10 GF ($0.50), 25 GF ($1.00 + 5 bonus), 50 GF ($2.00 + 10 bonus), 100 GF ($3.50 + 25 bonus)
   - **Payment Flow**:
     1. User selects token package in BuyGFTokenDialog
-    2. Backend creates Crossmint order via `/api/token/create-order` endpoint
-    3. Frontend displays CrossmintEmbeddedCheckout widget for secure payment
+    2. Backend creates Crossmint order via `/api/token/create-order` endpoint (requires wallet address)
+    3. Frontend displays iframe-based Crossmint checkout for secure payment
     4. User completes payment with credit card through Crossmint
-    5. Backend polls order status via `/api/token/complete-order`
-    6. GF tokens delivered to user's off-chain balance upon payment confirmation
+    5. USDC delivered to user's Ethereum-compatible wallet on Base chain
+    6. Backend polls order status via `/api/token/complete-order`
+    7. GF tokens delivered to user's off-chain balance upon payment confirmation
   - **API Endpoints**:
-    - `POST /api/token/create-order` - Creates Crossmint order for USDC purchase (staging)
+    - `POST /api/token/create-order` - Creates Crossmint order for Base USDC purchase (production)
     - `POST /api/token/complete-order` - Checks order status and delivers GF tokens to user
-  - **Security**: Wallet address required before purchase, order metadata tracks GF token amount
-  - **UX Features**: Two-step checkout (package selection → payment), real-time order status polling, automatic balance updates
-  - **Environment**: Currently using Crossmint production environment for real payments
+  - **Security**: Wallet address required before purchase, server-side package validation, order metadata tracks GF token amount
+  - **UX Features**: Two-step checkout (package selection → payment), wallet requirement validation, real-time order status polling, automatic balance updates
+  - **Environment**: Production Crossmint environment with Base mainnet USDC
 - **Future Features**: NFT minting for gaming clips, user-to-user trading, earning GF tokens through engagement, multi-chain NFT support
 ```
