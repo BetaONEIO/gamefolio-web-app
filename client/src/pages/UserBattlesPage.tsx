@@ -34,6 +34,8 @@ export default function UserBattlesPage() {
   const [selectedUserIds, setSelectedUserIds] = useState<Set<number>>(new Set());
   const [showSetup, setShowSetup] = useState(false);
   const [userPositions, setUserPositions] = useState<Map<number, { x: number; y: number }>>(new Map());
+  const [projectiles, setProjectiles] = useState<Array<{ id: number; fromX: number; fromY: number; toX: number; toY: number; timestamp: number }>>([]);
+  const [explosions, setExplosions] = useState<Array<{ id: number; x: number; y: number; timestamp: number }>>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -126,6 +128,8 @@ export default function UserBattlesPage() {
     setEliminatedUsers(new Set());
     setWinner(null);
     setBattleActive(true);
+    setProjectiles([]);
+    setExplosions([]);
     
     // Initialize random positions for all users
     const initialPositions = new Map();
@@ -137,9 +141,11 @@ export default function UserBattlesPage() {
     const battleDuration = 8000;
     const eliminationInterval = 1500;
     const moveInterval = 300;
+    const attackInterval = 400;
     const eliminationsPerRound = 1;
 
     let currentEliminated = new Set<number>();
+    let currentPositions = initialPositions;
     const totalUsers = selectedUsers.length;
     
     // Movement animation interval
@@ -155,15 +161,46 @@ export default function UserBattlesPage() {
             });
           }
         });
+        currentPositions = newPositions;
         return newPositions;
       });
     }, moveInterval);
+    
+    // Attack/projectile animation interval
+    const attackTimer = setInterval(() => {
+      const aliveUsers = selectedUsers.filter(u => !currentEliminated.has(u.id));
+      if (aliveUsers.length > 1) {
+        const attacker = aliveUsers[Math.floor(Math.random() * aliveUsers.length)];
+        const target = aliveUsers.filter(u => u.id !== attacker.id)[Math.floor(Math.random() * (aliveUsers.length - 1))];
+        
+        const fromPos = currentPositions.get(attacker.id);
+        const toPos = currentPositions.get(target.id);
+        
+        if (fromPos && toPos) {
+          const projectileId = Date.now();
+          setProjectiles(prev => [...prev, {
+            id: projectileId,
+            fromX: fromPos.x,
+            fromY: fromPos.y,
+            toX: toPos.x,
+            toY: toPos.y,
+            timestamp: Date.now()
+          }]);
+          
+          // Remove projectile after animation
+          setTimeout(() => {
+            setProjectiles(prev => prev.filter(p => p.id !== projectileId));
+          }, 500);
+        }
+      }
+    }, attackInterval);
     
     // Elimination interval
     const eliminationTimer = setInterval(() => {
       if (currentEliminated.size >= totalUsers - 1) {
         clearInterval(eliminationTimer);
         clearInterval(movementTimer);
+        clearInterval(attackTimer);
         const survivingUser = selectedUsers.find(u => !currentEliminated.has(u.id));
         if (survivingUser) {
           setWinner(survivingUser);
@@ -182,6 +219,23 @@ export default function UserBattlesPage() {
         const eliminatedUser = availableUsers[randomIndex];
         currentEliminated.add(eliminatedUser.id);
         availableUsers.splice(randomIndex, 1);
+        
+        // Create explosion at eliminated user's position
+        const eliminatedPos = currentPositions.get(eliminatedUser.id);
+        if (eliminatedPos) {
+          const explosionId = Date.now() + i;
+          setExplosions(prev => [...prev, {
+            id: explosionId,
+            x: eliminatedPos.x,
+            y: eliminatedPos.y,
+            timestamp: Date.now()
+          }]);
+          
+          // Remove explosion after animation
+          setTimeout(() => {
+            setExplosions(prev => prev.filter(e => e.id !== explosionId));
+          }, 1000);
+        }
       }
       
       setEliminatedUsers(new Set(currentEliminated));
@@ -522,14 +576,82 @@ export default function UserBattlesPage() {
                 );
               })}
               
+              {/* Projectiles */}
+              {projectiles.map((projectile) => {
+                const angle = Math.atan2(projectile.toY - projectile.fromY, projectile.toX - projectile.fromX) * 180 / Math.PI;
+                const distance = Math.sqrt(
+                  Math.pow(projectile.toX - projectile.fromX, 2) + 
+                  Math.pow(projectile.toY - projectile.fromY, 2)
+                );
+                
+                return (
+                  <div
+                    key={projectile.id}
+                    className="absolute pointer-events-none"
+                    style={{
+                      left: `${projectile.fromX}%`,
+                      top: `${projectile.fromY}%`,
+                      transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+                    }}
+                  >
+                    <div className="relative">
+                      <div
+                        className="h-2 bg-gradient-to-r from-orange-500 via-yellow-400 to-transparent rounded-full shadow-lg shadow-orange-500/50 animate-pulse"
+                        style={{
+                          width: `${distance}%`,
+                          animation: 'projectile 0.5s ease-out forwards',
+                        }}
+                      />
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-yellow-400 rounded-full shadow-lg shadow-yellow-400/80" />
+                    </div>
+                  </div>
+                );
+              })}
+              
+              {/* Explosions */}
+              {explosions.map((explosion) => (
+                <div
+                  key={explosion.id}
+                  className="absolute pointer-events-none"
+                  style={{
+                    left: `${explosion.x}%`,
+                    top: `${explosion.y}%`,
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                >
+                  <div className="relative">
+                    <div className="absolute inset-0 w-32 h-32 -translate-x-1/2 -translate-y-1/2 rounded-full bg-orange-500 opacity-80 animate-ping" />
+                    <div className="absolute inset-0 w-24 h-24 -translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-400 opacity-60 animate-ping" style={{ animationDelay: '0.1s' }} />
+                    <div className="absolute inset-0 w-16 h-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-red-500 opacity-90 animate-ping" style={{ animationDelay: '0.2s' }} />
+                    <Flame className="w-20 h-20 text-orange-500 -translate-x-1/2 -translate-y-1/2 absolute animate-spin" />
+                    <Zap className="w-16 h-16 text-yellow-300 -translate-x-1/2 -translate-y-1/2 absolute animate-pulse" />
+                    
+                    {/* Explosion particles */}
+                    {[...Array(8)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="absolute w-3 h-3 bg-orange-500 rounded-full"
+                        style={{
+                          left: '50%',
+                          top: '50%',
+                          animation: `explode-particle 0.8s ease-out forwards`,
+                          animationDelay: `${i * 0.05}s`,
+                          transform: `rotate(${i * 45}deg) translateX(0)`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+              
               {/* Battle effects overlay */}
               {battleActive && (
                 <div className="absolute inset-0 pointer-events-none">
                   <div className="absolute top-0 left-0 w-full h-full">
-                    {[...Array(5)].map((_, i) => (
+                    {[...Array(8)].map((_, i) => (
                       <div
                         key={i}
-                        className="absolute w-2 h-2 bg-orange-500 rounded-full animate-ping"
+                        className="absolute w-2 h-2 bg-orange-400 rounded-full animate-ping"
                         style={{
                           left: `${Math.random() * 100}%`,
                           top: `${Math.random() * 100}%`,
