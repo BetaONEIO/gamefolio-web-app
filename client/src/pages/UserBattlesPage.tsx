@@ -33,6 +33,7 @@ export default function UserBattlesPage() {
   const [winner, setWinner] = useState<BattleUser | null>(null);
   const [selectedUserIds, setSelectedUserIds] = useState<Set<number>>(new Set());
   const [showSetup, setShowSetup] = useState(false);
+  const [userPositions, setUserPositions] = useState<Map<number, { x: number; y: number }>>(new Map());
   const { toast } = useToast();
 
   useEffect(() => {
@@ -106,6 +107,11 @@ export default function UserBattlesPage() {
     setSelectedUserIds(new Set());
   };
 
+  const getRandomPosition = () => ({
+    x: Math.random() * 80 + 10,
+    y: Math.random() * 80 + 10,
+  });
+
   const startBattle = () => {
     if (selectedUsers.length < 2) {
       toast({
@@ -121,15 +127,43 @@ export default function UserBattlesPage() {
     setWinner(null);
     setBattleActive(true);
     
+    // Initialize random positions for all users
+    const initialPositions = new Map();
+    selectedUsers.forEach(user => {
+      initialPositions.set(user.id, getRandomPosition());
+    });
+    setUserPositions(initialPositions);
+    
     const battleDuration = 8000;
-    const eliminationInterval = 1000;
+    const eliminationInterval = 1500;
+    const moveInterval = 300;
     const eliminationsPerRound = 1;
 
     let currentEliminated = new Set<number>();
     const totalUsers = selectedUsers.length;
-    const interval = setInterval(() => {
+    
+    // Movement animation interval
+    const movementTimer = setInterval(() => {
+      setUserPositions(prevPositions => {
+        const newPositions = new Map(prevPositions);
+        selectedUsers.forEach(user => {
+          if (!currentEliminated.has(user.id)) {
+            const current = newPositions.get(user.id) || getRandomPosition();
+            newPositions.set(user.id, {
+              x: Math.max(5, Math.min(95, current.x + (Math.random() - 0.5) * 15)),
+              y: Math.max(5, Math.min(95, current.y + (Math.random() - 0.5) * 15)),
+            });
+          }
+        });
+        return newPositions;
+      });
+    }, moveInterval);
+    
+    // Elimination interval
+    const eliminationTimer = setInterval(() => {
       if (currentEliminated.size >= totalUsers - 1) {
-        clearInterval(interval);
+        clearInterval(eliminationTimer);
+        clearInterval(movementTimer);
         const survivingUser = selectedUsers.find(u => !currentEliminated.has(u.id));
         if (survivingUser) {
           setWinner(survivingUser);
@@ -379,7 +413,7 @@ export default function UserBattlesPage() {
           </Button>
         </div>
 
-        <Card className="border-2 border-primary/30 bg-gradient-to-br from-background to-primary/5">
+        <Card className="border-2 border-primary/30 bg-gradient-to-br from-background to-primary/5 overflow-hidden">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
@@ -395,79 +429,117 @@ export default function UserBattlesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 p-4 bg-background/50 rounded-lg min-h-[400px] relative">
-              {selectedUsers.map((user, index) => {
+            <div 
+              className="relative w-full rounded-lg overflow-hidden"
+              style={{
+                height: '600px',
+                background: 'radial-gradient(circle at 50% 50%, hsl(var(--primary) / 0.1), hsl(var(--background)))',
+                backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 50px, hsl(var(--border) / 0.1) 50px, hsl(var(--border) / 0.1) 51px), repeating-linear-gradient(90deg, transparent, transparent 50px, hsl(var(--border) / 0.1) 50px, hsl(var(--border) / 0.1) 51px)',
+              }}
+            >
+              {selectedUsers.map((user) => {
                 const isEliminated = eliminatedUsers.has(user.id);
                 const isWinner = winner?.id === user.id;
+                const position = userPositions.get(user.id) || { x: 50, y: 50 };
                 
                 return (
                   <div
                     key={user.id}
-                    className={`flex flex-col items-center transition-all duration-500 ${
+                    className={`absolute flex flex-col items-center transition-all duration-300 ease-out ${
                       isEliminated 
-                        ? 'opacity-30 scale-75 grayscale blur-sm' 
+                        ? 'opacity-20 scale-50 grayscale' 
                         : isWinner
-                        ? 'scale-110 animate-bounce'
-                        : battleActive 
-                        ? 'animate-pulse' 
-                        : ''
+                        ? 'scale-150 z-50'
+                        : 'z-10'
                     }`}
                     style={{ 
-                      animationDelay: `${index * 100}ms`,
-                      transform: isEliminated ? 'rotate(15deg)' : 'none'
+                      left: `${position.x}%`,
+                      top: `${position.y}%`,
+                      transform: `translate(-50%, -50%) ${isEliminated ? 'rotate(180deg)' : ''}`,
                     }}
                     data-testid={`arena-user-${user.id}`}
                   >
                     <div className="relative">
-                      <Avatar className={`w-16 h-16 sm:w-20 sm:h-20 border-4 shadow-lg transition-all ${
+                      <Avatar className={`w-16 h-16 border-4 shadow-2xl transition-all ${
                         isEliminated 
-                          ? 'border-red-500' 
+                          ? 'border-red-500 shadow-red-500/50' 
                           : isWinner
-                          ? 'border-yellow-500 shadow-yellow-500/50 shadow-2xl'
-                          : 'border-green-500'
+                          ? 'border-yellow-500 shadow-yellow-500/80 animate-bounce'
+                          : 'border-green-500 shadow-green-500/50'
                       }`}>
                         <AvatarImage src={user.avatarUrl || undefined} />
-                        <AvatarFallback className="bg-primary/20 text-lg">
+                        <AvatarFallback className="bg-primary/20 text-lg font-bold">
                           {user.displayName[0]?.toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       
                       {isWinner && (
-                        <div className="absolute -top-2 -right-2">
-                          <Crown className="w-8 h-8 text-yellow-500 drop-shadow-lg" />
+                        <div className="absolute -top-3 -right-3">
+                          <Crown className="w-10 h-10 text-yellow-500 drop-shadow-2xl animate-pulse" />
                         </div>
                       )}
                       
                       {isEliminated && !isWinner && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-full h-1 bg-red-500 rotate-45 shadow-lg" />
-                          <div className="w-full h-1 bg-red-500 -rotate-45 shadow-lg absolute" />
-                        </div>
+                        <>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Zap className="w-12 h-12 text-red-500 animate-ping" />
+                          </div>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-full h-1 bg-red-600 rotate-45 shadow-lg" />
+                            <div className="w-full h-1 bg-red-600 -rotate-45 shadow-lg absolute" />
+                          </div>
+                        </>
                       )}
                       
                       {!isEliminated && !isWinner && battleActive && (
-                        <div className="absolute -top-1 -right-1">
-                          <div className="w-4 h-4 bg-green-500 rounded-full animate-ping" />
-                          <div className="w-4 h-4 bg-green-500 rounded-full absolute top-0" />
-                        </div>
+                        <>
+                          <div className="absolute -top-1 -right-1 z-10">
+                            <div className="w-3 h-3 bg-green-500 rounded-full animate-ping" />
+                            <div className="w-3 h-3 bg-green-500 rounded-full absolute top-0" />
+                          </div>
+                          <div className="absolute inset-0 rounded-full border-2 border-green-500 animate-pulse" />
+                        </>
                       )}
                     </div>
                     
-                    <p className={`text-xs font-medium mt-2 text-center truncate w-full ${
-                      isEliminated ? 'line-through' : ''
-                    }`}>
-                      {user.displayName}
-                    </p>
-                    
-                    <Badge 
-                      variant={isEliminated ? "destructive" : isWinner ? "default" : "secondary"} 
-                      className="mt-1 text-xs"
-                    >
-                      {isWinner ? '👑' : ''} Lvl {user.level || 1}
-                    </Badge>
+                    <div className={`mt-1 px-2 py-1 rounded-md ${
+                      isEliminated 
+                        ? 'bg-red-500/80' 
+                        : isWinner 
+                        ? 'bg-yellow-500/90'
+                        : 'bg-green-500/80'
+                    } backdrop-blur-sm`}>
+                      <p className={`text-xs font-bold text-white text-center whitespace-nowrap ${
+                        isEliminated ? 'line-through' : ''
+                      }`}>
+                        {user.displayName}
+                      </p>
+                      <p className="text-xs text-white/80 text-center">
+                        {isWinner ? '👑 ' : ''}Lvl {user.level || 1}
+                      </p>
+                    </div>
                   </div>
                 );
               })}
+              
+              {/* Battle effects overlay */}
+              {battleActive && (
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="absolute top-0 left-0 w-full h-full">
+                    {[...Array(5)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="absolute w-2 h-2 bg-orange-500 rounded-full animate-ping"
+                        style={{
+                          left: `${Math.random() * 100}%`,
+                          top: `${Math.random() * 100}%`,
+                          animationDelay: `${i * 200}ms`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
