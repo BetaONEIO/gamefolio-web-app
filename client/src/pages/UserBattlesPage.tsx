@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Lock, Trophy, Zap, Shield, Swords, Crown, Flame } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Lock, Trophy, Zap, Shield, Swords, Crown, Flame, Users, CheckCircle2, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface BattleUser {
@@ -29,6 +31,8 @@ export default function UserBattlesPage() {
   const [battleActive, setBattleActive] = useState(false);
   const [eliminatedUsers, setEliminatedUsers] = useState<Set<number>>(new Set());
   const [winner, setWinner] = useState<BattleUser | null>(null);
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<number>>(new Set());
+  const [showSetup, setShowSetup] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -38,11 +42,24 @@ export default function UserBattlesPage() {
     }
   }, []);
 
-  const { data: users = [], refetch } = useQuery<BattleUser[]>({
+  const { data: allUsers = [], refetch } = useQuery<BattleUser[]>({
     queryKey: ["/api/users/random"],
+    queryFn: async () => {
+      const response = await fetch("/api/users/random?limit=100");
+      return response.json();
+    },
     enabled: isAuthenticated,
     refetchInterval: false,
   });
+
+  // Initialize all users as selected when data loads
+  useEffect(() => {
+    if (allUsers.length > 0 && selectedUserIds.size === 0) {
+      setSelectedUserIds(new Set(allUsers.map(u => u.id)));
+    }
+  }, [allUsers]);
+
+  const selectedUsers = allUsers.filter(u => selectedUserIds.has(u.id));
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,9 +85,38 @@ export default function UserBattlesPage() {
     setBattleActive(false);
     setEliminatedUsers(new Set());
     setWinner(null);
+    setShowSetup(false);
+  };
+
+  const toggleUserSelection = (userId: number) => {
+    const newSelection = new Set(selectedUserIds);
+    if (newSelection.has(userId)) {
+      newSelection.delete(userId);
+    } else {
+      newSelection.add(userId);
+    }
+    setSelectedUserIds(newSelection);
+  };
+
+  const selectAll = () => {
+    setSelectedUserIds(new Set(allUsers.map(u => u.id)));
+  };
+
+  const deselectAll = () => {
+    setSelectedUserIds(new Set());
   };
 
   const startBattle = () => {
+    if (selectedUsers.length < 2) {
+      toast({
+        title: "Not enough fighters",
+        description: "Select at least 2 users to start the battle",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setShowSetup(false);
     setEliminatedUsers(new Set());
     setWinner(null);
     setBattleActive(true);
@@ -80,11 +126,11 @@ export default function UserBattlesPage() {
     const eliminationsPerRound = 1;
 
     let currentEliminated = new Set<number>();
-    const totalUsers = users.length;
+    const totalUsers = selectedUsers.length;
     const interval = setInterval(() => {
       if (currentEliminated.size >= totalUsers - 1) {
         clearInterval(interval);
-        const survivingUser = users.find(u => !currentEliminated.has(u.id));
+        const survivingUser = selectedUsers.find(u => !currentEliminated.has(u.id));
         if (survivingUser) {
           setWinner(survivingUser);
           setBattleActive(false);
@@ -96,7 +142,7 @@ export default function UserBattlesPage() {
         return;
       }
 
-      const availableUsers = users.filter(u => !currentEliminated.has(u.id));
+      const availableUsers = selectedUsers.filter(u => !currentEliminated.has(u.id));
       for (let i = 0; i < eliminationsPerRound && availableUsers.length > 1; i++) {
         const randomIndex = Math.floor(Math.random() * availableUsers.length);
         const eliminatedUser = availableUsers[randomIndex];
@@ -113,6 +159,7 @@ export default function UserBattlesPage() {
     setEliminatedUsers(new Set());
     setWinner(null);
     setBattleActive(false);
+    setSelectedUserIds(new Set(allUsers.map(u => u.id)));
   };
 
   if (!isAuthenticated) {
@@ -177,8 +224,8 @@ export default function UserBattlesPage() {
     );
   }
 
-  const aliveUsers = users.filter(u => !eliminatedUsers.has(u.id));
-  const deadUsers = users.filter(u => eliminatedUsers.has(u.id));
+  const aliveUsers = selectedUsers.filter(u => !eliminatedUsers.has(u.id));
+  const deadUsers = selectedUsers.filter(u => eliminatedUsers.has(u.id));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/10 p-4 md:p-8">
@@ -201,6 +248,65 @@ export default function UserBattlesPage() {
             Logout
           </Button>
         </div>
+
+        {showSetup && (
+          <Card className="border-primary/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Select Battle Participants ({selectedUserIds.size} of {allUsers.length} selected)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <Button onClick={selectAll} size="sm" variant="outline" data-testid="button-select-all">
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Select All
+                  </Button>
+                  <Button onClick={deselectAll} size="sm" variant="outline" data-testid="button-deselect-all">
+                    <XCircle className="w-4 h-4 mr-2" />
+                    Deselect All
+                  </Button>
+                </div>
+                <ScrollArea className="h-96 w-full rounded-md border p-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {allUsers.map((user) => (
+                      <div
+                        key={user.id}
+                        className={`flex flex-col items-center p-3 rounded-lg border cursor-pointer transition-all ${
+                          selectedUserIds.has(user.id)
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border bg-card hover:border-primary/50'
+                        }`}
+                        onClick={() => toggleUserSelection(user.id)}
+                        data-testid={`card-user-select-${user.id}`}
+                      >
+                        <Checkbox
+                          checked={selectedUserIds.has(user.id)}
+                          className="mb-2"
+                          data-testid={`checkbox-user-${user.id}`}
+                        />
+                        <Avatar className="w-12 h-12 mb-2">
+                          <AvatarImage src={user.avatarUrl || undefined} />
+                          <AvatarFallback className="bg-primary/20 text-xs">
+                            {user.displayName[0]?.toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <p className="text-xs font-medium text-center truncate w-full">
+                          {user.displayName}
+                        </p>
+                        <Badge variant="secondary" className="mt-1 text-xs">
+                          Lvl {user.level || 1}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="border-green-500/30 bg-green-500/5">
@@ -231,8 +337,8 @@ export default function UserBattlesPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Fighters</p>
-                  <p className="text-3xl font-bold text-yellow-500">{users.length}</p>
+                  <p className="text-sm text-muted-foreground">Selected Fighters</p>
+                  <p className="text-3xl font-bold text-yellow-500">{selectedUsers.length}</p>
                 </div>
                 <Trophy className="w-10 h-10 text-yellow-500" />
               </div>
@@ -240,10 +346,21 @@ export default function UserBattlesPage() {
           </Card>
         </div>
 
-        <div className="flex gap-4 justify-center">
+        <div className="flex gap-4 justify-center flex-wrap">
+          <Button
+            onClick={() => setShowSetup(!showSetup)}
+            variant="outline"
+            size="lg"
+            className="px-8"
+            disabled={battleActive}
+            data-testid="button-toggle-setup"
+          >
+            <Users className="w-5 h-5 mr-2" />
+            {showSetup ? "Hide" : "Select"} Fighters
+          </Button>
           <Button
             onClick={startBattle}
-            disabled={battleActive || users.length < 2}
+            disabled={battleActive || selectedUsers.length < 2}
             size="lg"
             className="px-8"
             data-testid="button-start-battle"
