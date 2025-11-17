@@ -297,6 +297,7 @@ function Router() {
           <Route path="/wallet" component={WalletPage} />
           <Route path="/storage" component={StoragePage} />
           <Route path="/watchlist" component={WatchlistPage} />
+          <Route path="/user-battles" component={UserBattlesPage} />
           <Route path="/leaderboard/embed" component={LeaderboardEmbedPage} />
 
           {/* Public view routes for shareable content */}
