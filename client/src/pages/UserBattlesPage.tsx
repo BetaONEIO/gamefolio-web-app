@@ -379,6 +379,99 @@ export default function UserBattlesPage() {
           </Button>
         </div>
 
+        <Card className="border-2 border-primary/30 bg-gradient-to-br from-background to-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Swords className="w-6 h-6 text-primary" />
+                Battle Arena
+              </span>
+              {battleActive && (
+                <Badge variant="destructive" className="animate-pulse">
+                  <Flame className="w-4 h-4 mr-1" />
+                  LIVE
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 p-4 bg-background/50 rounded-lg min-h-[400px] relative">
+              {selectedUsers.map((user, index) => {
+                const isEliminated = eliminatedUsers.has(user.id);
+                const isWinner = winner?.id === user.id;
+                
+                return (
+                  <div
+                    key={user.id}
+                    className={`flex flex-col items-center transition-all duration-500 ${
+                      isEliminated 
+                        ? 'opacity-30 scale-75 grayscale blur-sm' 
+                        : isWinner
+                        ? 'scale-110 animate-bounce'
+                        : battleActive 
+                        ? 'animate-pulse' 
+                        : ''
+                    }`}
+                    style={{ 
+                      animationDelay: `${index * 100}ms`,
+                      transform: isEliminated ? 'rotate(15deg)' : 'none'
+                    }}
+                    data-testid={`arena-user-${user.id}`}
+                  >
+                    <div className="relative">
+                      <Avatar className={`w-16 h-16 sm:w-20 sm:h-20 border-4 shadow-lg transition-all ${
+                        isEliminated 
+                          ? 'border-red-500' 
+                          : isWinner
+                          ? 'border-yellow-500 shadow-yellow-500/50 shadow-2xl'
+                          : 'border-green-500'
+                      }`}>
+                        <AvatarImage src={user.avatarUrl || undefined} />
+                        <AvatarFallback className="bg-primary/20 text-lg">
+                          {user.displayName[0]?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      {isWinner && (
+                        <div className="absolute -top-2 -right-2">
+                          <Crown className="w-8 h-8 text-yellow-500 drop-shadow-lg" />
+                        </div>
+                      )}
+                      
+                      {isEliminated && !isWinner && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-full h-1 bg-red-500 rotate-45 shadow-lg" />
+                          <div className="w-full h-1 bg-red-500 -rotate-45 shadow-lg absolute" />
+                        </div>
+                      )}
+                      
+                      {!isEliminated && !isWinner && battleActive && (
+                        <div className="absolute -top-1 -right-1">
+                          <div className="w-4 h-4 bg-green-500 rounded-full animate-ping" />
+                          <div className="w-4 h-4 bg-green-500 rounded-full absolute top-0" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    <p className={`text-xs font-medium mt-2 text-center truncate w-full ${
+                      isEliminated ? 'line-through' : ''
+                    }`}>
+                      {user.displayName}
+                    </p>
+                    
+                    <Badge 
+                      variant={isEliminated ? "destructive" : isWinner ? "default" : "secondary"} 
+                      className="mt-1 text-xs"
+                    >
+                      {isWinner ? '👑' : ''} Lvl {user.level || 1}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
         {winner && (
           <Card className="border-4 border-yellow-500 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 animate-in fade-in zoom-in duration-500">
             <CardContent className="p-8 text-center">
