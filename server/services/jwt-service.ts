@@ -73,3 +73,38 @@ export function verifyRefreshToken(token: string): number | null {
     return null;
   }
 }
+
+/**
+ * JWTService class for token-based authentication
+ * Used by desktop/mobile apps for session-less authentication
+ */
+export class JWTService {
+  /**
+   * Generate access and refresh token pair for a user
+   */
+  static generateTokenPair(user: { id: number }): { accessToken: string; refreshToken: string } {
+    return {
+      accessToken: generateAccessToken(user.id),
+      refreshToken: generateRefreshToken(user.id),
+    };
+  }
+
+  /**
+   * Verify a token and return the payload
+   * Throws an error if token is invalid or expired
+   */
+  static verifyToken(token: string): TokenPayload {
+    try {
+      const payload = jwt.verify(token, JWT_SECRET) as TokenPayload;
+      return payload;
+    } catch (error) {
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new Error('Token has expired');
+      }
+      if (error instanceof jwt.JsonWebTokenError) {
+        throw new Error('Invalid token');
+      }
+      throw error;
+    }
+  }
+}
