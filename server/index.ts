@@ -34,14 +34,16 @@ app.use((req, res, next) => {
   const allowedOrigins = ['.replit.app', 'localhost', '.repl.co'];
   const isAllowedOrigin = origin && allowedOrigins.some(allowed => origin.includes(allowed));
   
-  // Mobile apps don't send origin header, so we need to allow those too
-  if (isAllowedOrigin) {
+  // Always set CORS headers for maximum compatibility
+  if (origin && isAllowedOrigin) {
+    // Web browsers from allowed origins
     res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  } else if (origin) {
+    // Other web browsers - still allow but don't use credentials
+    res.setHeader('Access-Control-Allow-Origin', origin);
   } else {
-    // For mobile apps and other clients without origin
+    // Mobile apps and other clients that don't send origin header
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Credentials', 'false'); // Can't use credentials with *
   }
   
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
