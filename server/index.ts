@@ -34,14 +34,19 @@ app.use((req, res, next) => {
   const allowedOrigins = ['.replit.app', 'localhost', '.repl.co'];
   const isAllowedOrigin = origin && allowedOrigins.some(allowed => origin.includes(allowed));
   
-  if (isAllowedOrigin || !origin) {
-    // Allow the origin or use * for mobile apps without origin
-    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  // Mobile apps don't send origin header, so we need to allow those too
+  if (isAllowedOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Upload-Type, Upload-Length, Upload-Offset, Upload-Metadata, Tus-Resumable, Upload-Defer-Length, Upload-Checksum');
-    res.setHeader('Access-Control-Expose-Headers', 'Upload-Offset, Upload-Length, Tus-Resumable, Upload-Metadata, Upload-Result');
+  } else {
+    // For mobile apps and other clients without origin
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'false'); // Can't use credentials with *
   }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Upload-Type, Upload-Length, Upload-Offset, Upload-Metadata, Tus-Resumable, Upload-Defer-Length, Upload-Checksum');
+  res.setHeader('Access-Control-Expose-Headers', 'Upload-Offset, Upload-Length, Tus-Resumable, Upload-Metadata, Upload-Result');
 
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);
