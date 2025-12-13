@@ -26,10 +26,23 @@ if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
 
-// CORS configuration for production
+// CORS configuration for production and mobile apps
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin && (origin.includes('.replit.app') || origin.includes('localhost'))) {
+  const allowedOrigins = [
+    '.replit.app',
+    'localhost',
+    '.gamefolio.com',
+    'gamefolio.com',
+    '.exp.direct',      // Expo development
+    'exp.direct',       // Expo development
+    '.expo.dev',        // Expo development
+    'expo.dev',         // Expo development
+  ];
+  
+  const isAllowed = origin && allowedOrigins.some(allowed => origin.includes(allowed));
+  
+  if (isAllowed) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
