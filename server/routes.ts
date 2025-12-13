@@ -63,6 +63,7 @@ import { MentionService } from "./mention-service";
 import { initializeRealtimeNotificationService } from './realtime-notification-service';
 import { adminMiddleware } from "./middleware/admin";
 import { optionalHybridAuth } from "./middleware/optional-hybrid-auth";
+import { hybridAuth } from "./middleware/hybrid-auth";
 import QRCode from "qrcode";
 import { supabaseStorage } from "./supabase-storage";
 import { contentFilterService } from "./services/content-filter";
@@ -5945,7 +5946,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==========================================
 
   // Get conversations for current user
-  app.get("/api/messages/conversations", authMiddleware, async (req, res) => {
+  app.get("/api/messages/conversations", hybridAuth, async (req, res) => {
     try {
       // Check if user has messaging enabled
       if (!req.user.messagingEnabled) {
@@ -5961,7 +5962,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get messages between current user and another user
-  app.get("/api/messages/:otherUserId", authMiddleware, async (req, res) => {
+  app.get("/api/messages/:otherUserId", hybridAuth, async (req, res) => {
     try {
       const otherUserId = parseInt(req.params.otherUserId);
       if (isNaN(otherUserId)) {
@@ -6014,7 +6015,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Send a message
-  app.post("/api/messages", emailVerificationMiddleware, async (req, res) => {
+  app.post("/api/messages", hybridAuth, async (req, res) => {
     try {
       // Validate content for profanity and inappropriate language
       const contentValidation = await contentFilterService.validateContent(req.body.content, 'message');
@@ -6080,7 +6081,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete a message
-  app.delete("/api/messages/:messageId", authMiddleware, async (req, res) => {
+  app.delete("/api/messages/:messageId", hybridAuth, async (req, res) => {
     try {
       const messageId = parseInt(req.params.messageId);
       if (isNaN(messageId)) {
@@ -6129,7 +6130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Start a new conversation with username lookup
-  app.post("/api/messages/start", emailVerificationMiddleware, async (req, res) => {
+  app.post("/api/messages/start", hybridAuth, async (req, res) => {
     try {
       const { username } = req.body;
       let { content } = req.body;
