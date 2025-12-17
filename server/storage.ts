@@ -1,7 +1,7 @@
 import {
   users, games, clips, likes, comments, userGameFavorites, follows, messages, profileBanners,
   monthlyLeaderboard, weeklyLeaderboard, topContributors, userPointsHistory, userXPHistory, notifications, userBadges, contentFilterSettings, bannedWords,
-  heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions, nftWatchlist,
+  heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions, nftWatchlist, assetRewards, assetRewardClaims,
   type User, type InsertUser,
   type Game, type InsertGame,
   type Clip, type InsertClip,
@@ -28,6 +28,9 @@ import {
   type CommentMention, type InsertCommentMention,
   type ScreenshotCommentMention, type InsertScreenshotCommentMention,
   type NftWatchlist, type InsertNftWatchlist,
+  type AssetReward, type InsertAssetReward,
+  type AssetRewardClaim, type InsertAssetRewardClaim,
+  type AssetRewardWithClaims,
   type ClipWithUser,
   type CommentWithUser,
   type UserWithStats,
@@ -313,6 +316,16 @@ export interface IStorage {
 
   // Recommendation operations
   getRecommendedClips(userId: number, limit?: number): Promise<ClipWithUser[]>;
+
+  // Asset reward operations
+  createAssetReward(reward: InsertAssetReward): Promise<AssetReward>;
+  getAllAssetRewards(): Promise<AssetReward[]>;
+  getAssetReward(id: number): Promise<AssetReward | null>;
+  getAssetRewardWithClaims(id: number): Promise<AssetRewardWithClaims | null>;
+  updateAssetReward(id: number, updates: Partial<AssetReward>): Promise<AssetReward | null>;
+  deleteAssetReward(id: number): Promise<boolean>;
+  createAssetRewardClaim(claim: InsertAssetRewardClaim): Promise<AssetRewardClaim>;
+  getAssetRewardClaims(rewardId: number): Promise<(AssetRewardClaim & { user: User })[]>;
 
   // Unified content moderation operations  
   getRecentContent(limit?: number, offset?: number, contentType?: string): Promise<Array<{

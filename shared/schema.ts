@@ -779,6 +779,27 @@ export const insertUserBadgeSchema = createInsertSchema(userBadges).omit({
   createdAt: true,
 });
 
+// Asset rewards table for loot box rewards
+export const assetRewards = pgTable("asset_rewards", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  imageUrl: text("image_url").notNull(),
+  unlockChance: real("unlock_chance").notNull().default(10), // Percentage chance (0-100)
+  timesRewarded: integer("times_rewarded").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Asset reward claims - tracks who received which rewards
+export const assetRewardClaims = pgTable("asset_reward_claims", {
+  id: serial("id").primaryKey(),
+  rewardId: integer("reward_id").notNull().references(() => assetRewards.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  claimedAt: timestamp("claimed_at").defaultNow().notNull(),
+});
+
 // Hero text settings table for customizable homepage text
 export const heroTextSettings = pgTable("hero_text_settings", {
   id: serial("id").primaryKey(),
@@ -799,6 +820,20 @@ export const insertHeroTextSettingsSchema = createInsertSchema(heroTextSettings)
   id: true,
   createdAt: true,
   updatedAt: true,
+});
+
+// Schema for inserting asset rewards
+export const insertAssetRewardSchema = createInsertSchema(assetRewards).omit({
+  id: true,
+  timesRewarded: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Schema for inserting asset reward claims
+export const insertAssetRewardClaimSchema = createInsertSchema(assetRewardClaims).omit({
+  id: true,
+  claimedAt: true,
 });
 
 
@@ -958,4 +993,15 @@ export type BadgeWithStats = Badge & {
   _count: {
     users: number;
   };
+};
+
+// Types for asset rewards
+export type AssetReward = typeof assetRewards.$inferSelect;
+export type InsertAssetReward = z.infer<typeof insertAssetRewardSchema>;
+export type AssetRewardClaim = typeof assetRewardClaims.$inferSelect;
+export type InsertAssetRewardClaim = z.infer<typeof insertAssetRewardClaimSchema>;
+
+// Extended type for asset reward with claim info
+export type AssetRewardWithClaims = AssetReward & {
+  claims: (AssetRewardClaim & { user: User })[];
 };

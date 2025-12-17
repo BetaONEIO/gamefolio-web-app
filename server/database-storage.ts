@@ -33,6 +33,9 @@ import {
   CommentMention, InsertCommentMention,
   ScreenshotCommentMention, InsertScreenshotCommentMention,
   NftWatchlist, InsertNftWatchlist,
+  AssetReward, InsertAssetReward,
+  AssetRewardClaim, InsertAssetRewardClaim,
+  AssetRewardWithClaims,
   ClipWithUser,
   CommentWithUser,
   ScreenshotCommentWithUser,
@@ -76,7 +79,9 @@ import {
   clipMentions,
   nftWatchlist,
   commentMentions,
-  screenshotCommentMentions
+  screenshotCommentMentions,
+  assetRewards,
+  assetRewardClaims
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, isNotNull, getTableColumns } from "drizzle-orm";
@@ -4031,5 +4036,115 @@ export class DatabaseStorage implements IStorage {
       console.error('Error updating banner settings:', error);
       return null;
     }
+  }
+
+  // Asset reward operations
+  async createAssetReward(reward: InsertAssetReward): Promise<AssetReward> {
+    const [created] = await db
+      .insert(assetRewards)
+      .values(reward)
+      .returning();
+    return created;
+  }
+
+  async getAllAssetRewards(): Promise<AssetReward[]> {
+    return await db
+      .select()
+      .from(assetRewards)
+      .orderBy(desc(assetRewards.createdAt));
+  }
+
+  async getAssetReward(id: number): Promise<AssetReward | null> {
+    const [reward] = await db
+      .select()
+      .from(assetRewards)
+      .where(eq(assetRewards.id, id));
+    return reward || null;
+  }
+
+  async getAssetRewardWithClaims(id: number): Promise<AssetRewardWithClaims | null> {
+    const reward = await this.getAssetReward(id);
+    if (!reward) return null;
+
+    const claimsWithUsers = await db
+      .select({
+        id: assetRewardClaims.id,
+        rewardId: assetRewardClaims.rewardId,
+        userId: assetRewardClaims.userId,
+        claimedAt: assetRewardClaims.claimedAt,
+        user: users,
+      })
+      .from(assetRewardClaims)
+      .innerJoin(users, eq(assetRewardClaims.userId, users.id))
+      .where(eq(assetRewardClaims.rewardId, id))
+      .orderBy(desc(assetRewardClaims.claimedAt));
+
+    return {
+      ...reward,
+      claims: claimsWithUsers.map(c => ({
+        id: c.id,
+        rewardId: c.rewardId,
+        userId: c.userId,
+        claimedAt: c.claimedAt,
+        user: c.user,
+      })),
+    };
+  }
+
+  async updateAssetReward(id: number, updates: Partial<AssetReward>): Promise<AssetReward | null> {
+    const [updated] = await db
+      .update(assetRewards)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(assetRewards.id, id))
+      .returning();
+    return updated || null;
+  }
+
+  async deleteAssetReward(id: number): Promise<boolean> {
+    const result = await db
+      .delete(assetRewards)
+      .where(eq(assetRewards.id, id));
+    return true;
+  }
+
+  async createAssetRewardClaim(claim: InsertAssetRewardClaim): Promise<AssetRewardClaim> {
+    const [created] = await db
+      .insert(assetRewardClaims)
+      .values(claim)
+      .returning();
+    
+    // Increment the times rewarded counter
+    await db
+      .update(assetRewards)
+      .set({ 
+        timesRewarded: sql`${assetRewards.timesRewarded} + 1`,
+        updatedAt: new Date() 
+      })
+      .where(eq(assetRewards.id, claim.rewardId));
+
+    return created;
+  }
+
+  async getAssetRewardClaims(rewardId: number): Promise<(AssetRewardClaim & { user: User })[]> {
+    const claims = await db
+      .select({
+        id: assetRewardClaims.id,
+        rewardId: assetRewardClaims.rewardId,
+        userId: assetRewardClaims.userId,
+        claimedAt: assetRewardClaims.claimedAt,
+        user: users,
+      })
+      .from(assetRewardClaims)
+      .innerJoin(users, eq(assetRewardClaims.userId, users.id))
+      .where(eq(assetRewardClaims.rewardId, rewardId))
+      .orderBy(desc(assetRewardClaims.claimedAt));
+
+    return claims.map(c => ({
+      id: c.id,
+      rewardId: c.rewardId,
+      userId: c.userId,
+      claimedAt: c.claimedAt,
+      user: c.user,
+    }));
   }
 }
