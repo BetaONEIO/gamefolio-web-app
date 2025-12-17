@@ -51,6 +51,28 @@ interface HeroTextData {
   targetAudience?: string;
 }
 
+interface AssetReward {
+  id: number;
+  name: string;
+  imageUrl: string;
+  unlockChance: number;
+  timesRewarded: number;
+  isActive: boolean;
+  createdBy: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface AssetRewardWithClaims extends AssetReward {
+  claims: Array<{
+    id: number;
+    rewardId: number;
+    userId: number;
+    claimedAt: string;
+    user: { id: number; username: string; displayName: string; avatarUrl?: string | null };
+  }>;
+}
+
 // Banner Management Component
 function BannerManagement() {
   const { toast } = useToast();
@@ -456,6 +478,16 @@ const AdminPage = () => {
   const [pointsAdjustment, setPointsAdjustment] = useState<number | null>(null);
   const [pointsAdjustmentReason, setPointsAdjustmentReason] = useState("");
 
+  // Asset rewards state
+  const [newRewardName, setNewRewardName] = useState("");
+  const [newRewardImageUrl, setNewRewardImageUrl] = useState("");
+  const [newRewardChance, setNewRewardChance] = useState("10");
+  const [createRewardLoading, setCreateRewardLoading] = useState(false);
+  const [selectedReward, setSelectedReward] = useState<AssetRewardWithClaims | null>(null);
+  const [rewardDialogOpen, setRewardDialogOpen] = useState(false);
+  const [editingReward, setEditingReward] = useState<AssetReward | null>(null);
+  const [editRewardDialogOpen, setEditRewardDialogOpen] = useState(false);
+
   // Access check is now handled by AdminProtectedRoute
 
   // Fetch admin stats
@@ -491,6 +523,11 @@ const AdminPage = () => {
   // Badge management queries
   const { data: badgesData, isLoading: badgesLoading, refetch: refetchBadges } = useQuery<BadgeType[]>({
     queryKey: ["/api/admin/badges"],
+  });
+
+  // Asset rewards queries
+  const { data: assetRewardsData, isLoading: rewardsLoading, refetch: refetchRewards } = useQuery<AssetReward[]>({
+    queryKey: ["/api/admin/asset-rewards"],
   });
 
   // Update form fields when data loads
@@ -883,7 +920,7 @@ const AdminPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-11">
+        <TabsList className="grid w-full grid-cols-12">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
@@ -894,6 +931,7 @@ const AdminPage = () => {
           <TabsTrigger value="streaks">Streaks</TabsTrigger>
           <TabsTrigger value="points">Points</TabsTrigger>
           <TabsTrigger value="hero-text">Hero Text</TabsTrigger>
+          <TabsTrigger value="asset-rewards">Rewards</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -2790,6 +2828,358 @@ const AdminPage = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Asset Rewards Tab */}
+        <TabsContent value="asset-rewards" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Asset Rewards Management</CardTitle>
+              <CardDescription>
+                Manage loot box rewards for the mobile app
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Create new reward form */}
+                <div className="border rounded-lg p-4 bg-muted/30">
+                  <h3 className="font-medium mb-4">Create New Reward</h3>
+                  <div className="grid gap-4 md:grid-cols-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reward-name">Reward Name</Label>
+                      <Input
+                        id="reward-name"
+                        placeholder="e.g., Golden Sword"
+                        value={newRewardName}
+                        onChange={(e) => setNewRewardName(e.target.value)}
+                        data-testid="input-reward-name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reward-image">Image URL</Label>
+                      <Input
+                        id="reward-image"
+                        placeholder="https://example.com/image.png"
+                        value={newRewardImageUrl}
+                        onChange={(e) => setNewRewardImageUrl(e.target.value)}
+                        data-testid="input-reward-image"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reward-chance">Unlock Chance (%)</Label>
+                      <Input
+                        id="reward-chance"
+                        type="number"
+                        min="0.01"
+                        max="100"
+                        step="0.01"
+                        placeholder="10"
+                        value={newRewardChance}
+                        onChange={(e) => setNewRewardChance(e.target.value)}
+                        data-testid="input-reward-chance"
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <Button
+                        onClick={async () => {
+                          if (!newRewardName.trim() || !newRewardImageUrl.trim()) {
+                            toast({
+                              title: "Missing fields",
+                              description: "Please provide a name and image URL",
+                              variant: "gamefolioError",
+                            });
+                            return;
+                          }
+                          setCreateRewardLoading(true);
+                          try {
+                            await apiRequest('POST', '/api/admin/asset-rewards', {
+                              name: newRewardName.trim(),
+                              imageUrl: newRewardImageUrl.trim(),
+                              unlockChance: parseFloat(newRewardChance) || 10,
+                            });
+                            toast({
+                              title: "Reward created",
+                              description: "New reward has been added successfully.",
+                              variant: "gamefolioSuccess",
+                            });
+                            setNewRewardName("");
+                            setNewRewardImageUrl("");
+                            setNewRewardChance("10");
+                            refetchRewards();
+                          } catch (error: any) {
+                            toast({
+                              title: "Error",
+                              description: error.message || "Failed to create reward",
+                              variant: "gamefolioError",
+                            });
+                          } finally {
+                            setCreateRewardLoading(false);
+                          }
+                        }}
+                        disabled={createRewardLoading || !newRewardName.trim() || !newRewardImageUrl.trim()}
+                        data-testid="button-create-reward"
+                      >
+                        {createRewardLoading ? "Creating..." : <><Plus className="h-4 w-4 mr-2" /> Add Reward</>}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Rewards list */}
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Image</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Unlock Chance</TableHead>
+                        <TableHead>Times Rewarded</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {rewardsLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center">
+                            Loading rewards...
+                          </TableCell>
+                        </TableRow>
+                      ) : !assetRewardsData || assetRewardsData.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-muted-foreground">
+                            No rewards created yet. Create your first reward above.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        assetRewardsData.map((reward: AssetReward) => (
+                          <TableRow key={reward.id} data-testid={`row-reward-${reward.id}`}>
+                            <TableCell>
+                              <img
+                                src={reward.imageUrl}
+                                alt={reward.name}
+                                className="w-12 h-12 object-cover rounded"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = "https://via.placeholder.com/48?text=?";
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell className="font-medium">{reward.name}</TableCell>
+                            <TableCell>{reward.unlockChance}%</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="cursor-pointer" onClick={async () => {
+                                try {
+                                  const response = await apiRequest('GET', `/api/admin/asset-rewards/${reward.id}`);
+                                  const data = await response.json();
+                                  setSelectedReward(data);
+                                  setRewardDialogOpen(true);
+                                } catch (error) {
+                                  console.error("Failed to fetch reward details:", error);
+                                }
+                              }}>
+                                {reward.timesRewarded} users
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={reward.isActive ? "default" : "secondary"}>
+                                {reward.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingReward(reward);
+                                  setEditRewardDialogOpen(true);
+                                }}
+                                data-testid={`button-edit-reward-${reward.id}`}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={async () => {
+                                  await apiRequest('PATCH', `/api/admin/asset-rewards/${reward.id}`, {
+                                    isActive: !reward.isActive,
+                                  });
+                                  refetchRewards();
+                                }}
+                                data-testid={`button-toggle-reward-${reward.id}`}
+                              >
+                                {reward.isActive ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={async () => {
+                                  if (confirm(`Are you sure you want to delete "${reward.name}"?`)) {
+                                    await apiRequest('DELETE', `/api/admin/asset-rewards/${reward.id}`);
+                                    toast({
+                                      title: "Reward deleted",
+                                      description: "The reward has been deleted.",
+                                    });
+                                    refetchRewards();
+                                  }
+                                }}
+                                data-testid={`button-delete-reward-${reward.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Reward Details Dialog */}
+          <Dialog open={rewardDialogOpen} onOpenChange={setRewardDialogOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Reward Details: {selectedReward?.name}</DialogTitle>
+                <DialogDescription>
+                  View who has received this reward
+                </DialogDescription>
+              </DialogHeader>
+              {selectedReward && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={selectedReward.imageUrl}
+                      alt={selectedReward.name}
+                      className="w-20 h-20 object-cover rounded"
+                    />
+                    <div>
+                      <p><strong>Unlock Chance:</strong> {selectedReward.unlockChance}%</p>
+                      <p><strong>Times Rewarded:</strong> {selectedReward.timesRewarded}</p>
+                      <p><strong>Status:</strong> {selectedReward.isActive ? "Active" : "Inactive"}</p>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-medium mb-2">Users who received this reward:</h4>
+                    {selectedReward.claims && selectedReward.claims.length > 0 ? (
+                      <ScrollArea className="h-[300px]">
+                        <div className="space-y-2">
+                          {selectedReward.claims.map((claim) => (
+                            <div key={claim.id} className="flex items-center gap-3 p-2 border rounded">
+                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                                {claim.user.avatarUrl ? (
+                                  <img src={claim.user.avatarUrl} alt={claim.user.username} className="w-full h-full object-cover" />
+                                ) : (
+                                  <User className="h-4 w-4" />
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-medium">{claim.user.displayName}</p>
+                                <p className="text-sm text-muted-foreground">@{claim.user.username}</p>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {new Date(claim.claimedAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    ) : (
+                      <p className="text-muted-foreground">No users have received this reward yet.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit Reward Dialog */}
+          <Dialog open={editRewardDialogOpen} onOpenChange={setEditRewardDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Reward</DialogTitle>
+                <DialogDescription>
+                  Update reward details
+                </DialogDescription>
+              </DialogHeader>
+              {editingReward && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-reward-name">Name</Label>
+                    <Input
+                      id="edit-reward-name"
+                      value={editingReward.name}
+                      onChange={(e) => setEditingReward({ ...editingReward, name: e.target.value })}
+                      data-testid="input-edit-reward-name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-reward-image">Image URL</Label>
+                    <Input
+                      id="edit-reward-image"
+                      value={editingReward.imageUrl}
+                      onChange={(e) => setEditingReward({ ...editingReward, imageUrl: e.target.value })}
+                      data-testid="input-edit-reward-image"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-reward-chance">Unlock Chance (%)</Label>
+                    <Input
+                      id="edit-reward-chance"
+                      type="number"
+                      min="0.01"
+                      max="100"
+                      step="0.01"
+                      value={editingReward.unlockChance}
+                      onChange={(e) => setEditingReward({ ...editingReward, unlockChance: parseFloat(e.target.value) })}
+                      data-testid="input-edit-reward-chance"
+                    />
+                  </div>
+                  {editingReward.imageUrl && (
+                    <div className="flex justify-center">
+                      <img
+                        src={editingReward.imageUrl}
+                        alt="Preview"
+                        className="w-24 h-24 object-cover rounded border"
+                      />
+                    </div>
+                  )}
+                  <Button
+                    className="w-full"
+                    onClick={async () => {
+                      try {
+                        await apiRequest('PATCH', `/api/admin/asset-rewards/${editingReward.id}`, {
+                          name: editingReward.name,
+                          imageUrl: editingReward.imageUrl,
+                          unlockChance: editingReward.unlockChance,
+                        });
+                        toast({
+                          title: "Reward updated",
+                          description: "The reward has been updated successfully.",
+                          variant: "gamefolioSuccess",
+                        });
+                        setEditRewardDialogOpen(false);
+                        setEditingReward(null);
+                        refetchRewards();
+                      } catch (error: any) {
+                        toast({
+                          title: "Error",
+                          description: error.message || "Failed to update reward",
+                          variant: "gamefolioError",
+                        });
+                      }
+                    }}
+                    data-testid="button-save-reward"
+                  >
+                    Save Changes
+                  </Button>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         {/* Settings Tab */}
