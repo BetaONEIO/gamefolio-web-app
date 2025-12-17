@@ -5,9 +5,42 @@ import { randomBytes } from "crypto";
 import { VideoProcessor } from '../video-processor';
 import path from 'path';
 import fs from 'fs';
+import multer from 'multer';
 import { ContentFilterService } from '../services/content-filter';
 import { insertBannerSettingsSchema, insertAssetRewardSchema } from '@shared/schema';
 import { z } from 'zod';
+import { supabaseStorage } from '../supabase-storage';
+
+// Temporary directory for processing
+const tempDir = path.join(process.cwd(), "temp");
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
+}
+
+// Configure multer for reward image uploads
+const rewardImageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, tempDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueId = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'reward-' + uniqueId + path.extname(file.originalname));
+  }
+});
+
+const rewardImageUpload = multer({
+  storage: rewardImageStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB for reward images
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed for rewards'));
+    }
+  }
+});
 
 // Create admin router
 const adminRouter = Router();
@@ -1234,6 +1267,34 @@ adminRouter.post("/regenerate-reel-thumbnails", async (req: Request, res: Respon
 });
 
 // ============ Asset Rewards Routes ============
+
+// POST /api/admin/asset-rewards/upload-image - Upload reward image
+adminRouter.post("/asset-rewards/upload-image", rewardImageUpload.single('image'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No image file provided" });
+    }
+
+    const userId = req.user!.id;
+    
+    // Upload to Supabase storage
+    const result = await supabaseStorage.uploadFile(req.file, 'image', userId);
+    
+    // Clean up temp file
+    const fs = await import('fs');
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    res.json({ 
+      imageUrl: result.url,
+      path: result.path 
+    });
+  } catch (err) {
+    console.error("Error uploading reward image:", err);
+    res.status(500).json({ message: "Error uploading image" });
+  }
+});
 
 // GET /api/admin/asset-rewards - Get all asset rewards
 adminRouter.get("/asset-rewards", async (req: Request, res: Response) => {

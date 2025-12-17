@@ -481,8 +481,10 @@ const AdminPage = () => {
   // Asset rewards state
   const [newRewardName, setNewRewardName] = useState("");
   const [newRewardImageUrl, setNewRewardImageUrl] = useState("");
+  const [newRewardImageFile, setNewRewardImageFile] = useState<File | null>(null);
   const [newRewardRarity, setNewRewardRarity] = useState<"common" | "rare" | "epic" | "legendary">("common");
   const [createRewardLoading, setCreateRewardLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   
   // Rarity to unlock chance mapping
   const rarityChanceMap: Record<string, number> = {
@@ -491,10 +493,83 @@ const AdminPage = () => {
     epic: 12,
     legendary: 3,
   };
+  
+  // Handle reward image upload
+  const handleRewardImageUpload = async (file: File) => {
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const response = await fetch('/api/admin/asset-rewards/upload-image', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+      
+      const data = await response.json();
+      setNewRewardImageUrl(data.imageUrl);
+      setNewRewardImageFile(file);
+      toast({
+        title: "Image uploaded",
+        description: "Reward image uploaded successfully.",
+        variant: "gamefolioSuccess",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload image",
+        variant: "gamefolioError",
+      });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
   const [selectedReward, setSelectedReward] = useState<AssetRewardWithClaims | null>(null);
   const [rewardDialogOpen, setRewardDialogOpen] = useState(false);
   const [editingReward, setEditingReward] = useState<AssetReward | null>(null);
   const [editRewardDialogOpen, setEditRewardDialogOpen] = useState(false);
+  const [editUploadingImage, setEditUploadingImage] = useState(false);
+  
+  // Handle edit reward image upload
+  const handleEditRewardImageUpload = async (file: File) => {
+    if (!editingReward) return;
+    setEditUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const response = await fetch('/api/admin/asset-rewards/upload-image', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+      
+      const data = await response.json();
+      setEditingReward({ ...editingReward, imageUrl: data.imageUrl });
+      toast({
+        title: "Image uploaded",
+        description: "Reward image updated successfully.",
+        variant: "gamefolioSuccess",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload image",
+        variant: "gamefolioError",
+      });
+    } finally {
+      setEditUploadingImage(false);
+    }
+  };
 
   // Access check is now handled by AdminProtectedRoute
 
@@ -2864,14 +2939,33 @@ const AdminPage = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="reward-image">Image URL</Label>
-                      <Input
-                        id="reward-image"
-                        placeholder="https://example.com/image.png"
-                        value={newRewardImageUrl}
-                        onChange={(e) => setNewRewardImageUrl(e.target.value)}
-                        data-testid="input-reward-image"
-                      />
+                      <Label htmlFor="reward-image">Reward Image</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="reward-image"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              handleRewardImageUpload(file);
+                            }
+                          }}
+                          disabled={uploadingImage}
+                          data-testid="input-reward-image"
+                          className="cursor-pointer"
+                        />
+                        {uploadingImage && <span className="text-sm text-muted-foreground">Uploading...</span>}
+                      </div>
+                      {newRewardImageUrl && (
+                        <div className="mt-2">
+                          <img 
+                            src={newRewardImageUrl} 
+                            alt="Preview" 
+                            className="w-16 h-16 object-cover rounded border"
+                          />
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="reward-rarity">Rarity (sets drop chance)</Label>
@@ -2913,10 +3007,10 @@ const AdminPage = () => {
                     <div className="flex items-end">
                       <Button
                         onClick={async () => {
-                          if (!newRewardName.trim() || !newRewardImageUrl.trim()) {
+                          if (!newRewardName.trim() || !newRewardImageUrl) {
                             toast({
                               title: "Missing fields",
-                              description: "Please provide a name and image URL",
+                              description: "Please provide a name and upload an image",
                               variant: "gamefolioError",
                             });
                             return;
@@ -2925,7 +3019,7 @@ const AdminPage = () => {
                           try {
                             await apiRequest('POST', '/api/admin/asset-rewards', {
                               name: newRewardName.trim(),
-                              imageUrl: newRewardImageUrl.trim(),
+                              imageUrl: newRewardImageUrl,
                               rarity: newRewardRarity,
                               unlockChance: rarityChanceMap[newRewardRarity],
                             });
@@ -2936,7 +3030,11 @@ const AdminPage = () => {
                             });
                             setNewRewardName("");
                             setNewRewardImageUrl("");
+                            setNewRewardImageFile(null);
                             setNewRewardRarity("common");
+                            // Reset file input
+                            const fileInput = document.getElementById('reward-image') as HTMLInputElement;
+                            if (fileInput) fileInput.value = '';
                             refetchRewards();
                           } catch (error: any) {
                             toast({
@@ -2948,7 +3046,7 @@ const AdminPage = () => {
                             setCreateRewardLoading(false);
                           }
                         }}
-                        disabled={createRewardLoading || !newRewardName.trim() || !newRewardImageUrl.trim()}
+                        disabled={createRewardLoading || uploadingImage || !newRewardName.trim() || !newRewardImageUrl}
                         data-testid="button-create-reward"
                       >
                         {createRewardLoading ? "Creating..." : <><Plus className="h-4 w-4 mr-2" /> Add Reward</>}
@@ -3168,13 +3266,25 @@ const AdminPage = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-reward-image">Image URL</Label>
-                    <Input
-                      id="edit-reward-image"
-                      value={editingReward.imageUrl}
-                      onChange={(e) => setEditingReward({ ...editingReward, imageUrl: e.target.value })}
-                      data-testid="input-edit-reward-image"
-                    />
+                    <Label htmlFor="edit-reward-image">Reward Image</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="edit-reward-image"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleEditRewardImageUpload(file);
+                          }
+                        }}
+                        disabled={editUploadingImage}
+                        data-testid="input-edit-reward-image"
+                        className="cursor-pointer"
+                      />
+                      {editUploadingImage && <span className="text-sm text-muted-foreground">Uploading...</span>}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Upload a new image to replace the current one</p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-reward-rarity">Rarity (sets drop chance)</Label>
