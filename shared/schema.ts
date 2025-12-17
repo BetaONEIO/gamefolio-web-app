@@ -779,11 +779,16 @@ export const insertUserBadgeSchema = createInsertSchema(userBadges).omit({
   createdAt: true,
 });
 
+// Rarity tiers for asset rewards
+export const rarityTiers = ["common", "rare", "epic", "legendary"] as const;
+export type RarityTier = typeof rarityTiers[number];
+
 // Asset rewards table for loot box rewards
 export const assetRewards = pgTable("asset_rewards", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   imageUrl: text("image_url").notNull(),
+  rarity: text("rarity").notNull().default("common"), // common, rare, epic, legendary
   unlockChance: real("unlock_chance").notNull().default(10), // Percentage chance (0-100)
   timesRewarded: integer("times_rewarded").default(0).notNull(),
   isActive: boolean("is_active").default(true).notNull(),

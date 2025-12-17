@@ -481,6 +481,7 @@ const AdminPage = () => {
   // Asset rewards state
   const [newRewardName, setNewRewardName] = useState("");
   const [newRewardImageUrl, setNewRewardImageUrl] = useState("");
+  const [newRewardRarity, setNewRewardRarity] = useState<"common" | "rare" | "epic" | "legendary">("common");
   const [newRewardChance, setNewRewardChance] = useState("10");
   const [createRewardLoading, setCreateRewardLoading] = useState(false);
   const [selectedReward, setSelectedReward] = useState<AssetRewardWithClaims | null>(null);
@@ -2844,7 +2845,7 @@ const AdminPage = () => {
                 {/* Create new reward form */}
                 <div className="border rounded-lg p-4 bg-muted/30">
                   <h3 className="font-medium mb-4">Create New Reward</h3>
-                  <div className="grid gap-4 md:grid-cols-4">
+                  <div className="grid gap-4 md:grid-cols-5">
                     <div className="space-y-2">
                       <Label htmlFor="reward-name">Reward Name</Label>
                       <Input
@@ -2864,6 +2865,43 @@ const AdminPage = () => {
                         onChange={(e) => setNewRewardImageUrl(e.target.value)}
                         data-testid="input-reward-image"
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reward-rarity">Rarity</Label>
+                      <Select
+                        value={newRewardRarity}
+                        onValueChange={(value: "common" | "rare" | "epic" | "legendary") => setNewRewardRarity(value)}
+                      >
+                        <SelectTrigger data-testid="select-reward-rarity">
+                          <SelectValue placeholder="Select rarity" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="common">
+                            <span className="flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full bg-gray-400"></span>
+                              Common
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="rare">
+                            <span className="flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                              Rare
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="epic">
+                            <span className="flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full bg-purple-500"></span>
+                              Epic
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="legendary">
+                            <span className="flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
+                              Legendary
+                            </span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="reward-chance">Unlock Chance (%)</Label>
@@ -2895,6 +2933,7 @@ const AdminPage = () => {
                             await apiRequest('POST', '/api/admin/asset-rewards', {
                               name: newRewardName.trim(),
                               imageUrl: newRewardImageUrl.trim(),
+                              rarity: newRewardRarity,
                               unlockChance: parseFloat(newRewardChance) || 10,
                             });
                             toast({
@@ -2904,6 +2943,7 @@ const AdminPage = () => {
                             });
                             setNewRewardName("");
                             setNewRewardImageUrl("");
+                            setNewRewardRarity("common");
                             setNewRewardChance("10");
                             refetchRewards();
                           } catch (error: any) {
@@ -2932,6 +2972,7 @@ const AdminPage = () => {
                       <TableRow>
                         <TableHead>Image</TableHead>
                         <TableHead>Name</TableHead>
+                        <TableHead>Rarity</TableHead>
                         <TableHead>Unlock Chance</TableHead>
                         <TableHead>Times Rewarded</TableHead>
                         <TableHead>Status</TableHead>
@@ -2941,13 +2982,13 @@ const AdminPage = () => {
                     <TableBody>
                       {rewardsLoading ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center">
+                          <TableCell colSpan={7} className="text-center">
                             Loading rewards...
                           </TableCell>
                         </TableRow>
                       ) : !assetRewardsData || assetRewardsData.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center text-muted-foreground">
+                          <TableCell colSpan={7} className="text-center text-muted-foreground">
                             No rewards created yet. Create your first reward above.
                           </TableCell>
                         </TableRow>
@@ -2965,6 +3006,18 @@ const AdminPage = () => {
                               />
                             </TableCell>
                             <TableCell className="font-medium">{reward.name}</TableCell>
+                            <TableCell>
+                              <Badge 
+                                className={
+                                  reward.rarity === 'legendary' ? 'bg-yellow-500 text-black' :
+                                  reward.rarity === 'epic' ? 'bg-purple-500' :
+                                  reward.rarity === 'rare' ? 'bg-blue-500' :
+                                  'bg-gray-400'
+                                }
+                              >
+                                {reward.rarity ? reward.rarity.charAt(0).toUpperCase() + reward.rarity.slice(1) : 'Common'}
+                              </Badge>
+                            </TableCell>
                             <TableCell>{reward.unlockChance}%</TableCell>
                             <TableCell>
                               <Badge variant="outline" className="cursor-pointer" onClick={async () => {
@@ -3056,6 +3109,12 @@ const AdminPage = () => {
                       className="w-20 h-20 object-cover rounded"
                     />
                     <div>
+                      <p><strong>Rarity:</strong> <Badge className={
+                        selectedReward.rarity === 'legendary' ? 'bg-yellow-500 text-black' :
+                        selectedReward.rarity === 'epic' ? 'bg-purple-500' :
+                        selectedReward.rarity === 'rare' ? 'bg-blue-500' :
+                        'bg-gray-400'
+                      }>{selectedReward.rarity ? selectedReward.rarity.charAt(0).toUpperCase() + selectedReward.rarity.slice(1) : 'Common'}</Badge></p>
                       <p><strong>Unlock Chance:</strong> {selectedReward.unlockChance}%</p>
                       <p><strong>Times Rewarded:</strong> {selectedReward.timesRewarded}</p>
                       <p><strong>Status:</strong> {selectedReward.isActive ? "Active" : "Inactive"}</p>
@@ -3126,6 +3185,43 @@ const AdminPage = () => {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="edit-reward-rarity">Rarity</Label>
+                    <Select
+                      value={editingReward.rarity || "common"}
+                      onValueChange={(value: string) => setEditingReward({ ...editingReward, rarity: value })}
+                    >
+                      <SelectTrigger data-testid="select-edit-reward-rarity">
+                        <SelectValue placeholder="Select rarity" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="common">
+                          <span className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-gray-400"></span>
+                            Common
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="rare">
+                          <span className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                            Rare
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="epic">
+                          <span className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-purple-500"></span>
+                            Epic
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="legendary">
+                          <span className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
+                            Legendary
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="edit-reward-chance">Unlock Chance (%)</Label>
                     <Input
                       id="edit-reward-chance"
@@ -3154,6 +3250,7 @@ const AdminPage = () => {
                         await apiRequest('PATCH', `/api/admin/asset-rewards/${editingReward.id}`, {
                           name: editingReward.name,
                           imageUrl: editingReward.imageUrl,
+                          rarity: editingReward.rarity,
                           unlockChance: editingReward.unlockChance,
                         });
                         toast({
