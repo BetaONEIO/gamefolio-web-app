@@ -482,8 +482,15 @@ const AdminPage = () => {
   const [newRewardName, setNewRewardName] = useState("");
   const [newRewardImageUrl, setNewRewardImageUrl] = useState("");
   const [newRewardRarity, setNewRewardRarity] = useState<"common" | "rare" | "epic" | "legendary">("common");
-  const [newRewardChance, setNewRewardChance] = useState("10");
   const [createRewardLoading, setCreateRewardLoading] = useState(false);
+  
+  // Rarity to unlock chance mapping
+  const rarityChanceMap: Record<string, number> = {
+    common: 60,
+    rare: 25,
+    epic: 12,
+    legendary: 3,
+  };
   const [selectedReward, setSelectedReward] = useState<AssetRewardWithClaims | null>(null);
   const [rewardDialogOpen, setRewardDialogOpen] = useState(false);
   const [editingReward, setEditingReward] = useState<AssetReward | null>(null);
@@ -2845,7 +2852,7 @@ const AdminPage = () => {
                 {/* Create new reward form */}
                 <div className="border rounded-lg p-4 bg-muted/30">
                   <h3 className="font-medium mb-4">Create New Reward</h3>
-                  <div className="grid gap-4 md:grid-cols-5">
+                  <div className="grid gap-4 md:grid-cols-4">
                     <div className="space-y-2">
                       <Label htmlFor="reward-name">Reward Name</Label>
                       <Input
@@ -2867,7 +2874,7 @@ const AdminPage = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="reward-rarity">Rarity</Label>
+                      <Label htmlFor="reward-rarity">Rarity (sets drop chance)</Label>
                       <Select
                         value={newRewardRarity}
                         onValueChange={(value: "common" | "rare" | "epic" | "legendary") => setNewRewardRarity(value)}
@@ -2879,43 +2886,29 @@ const AdminPage = () => {
                           <SelectItem value="common">
                             <span className="flex items-center gap-2">
                               <span className="w-3 h-3 rounded-full bg-gray-400"></span>
-                              Common
+                              Common (60%)
                             </span>
                           </SelectItem>
                           <SelectItem value="rare">
                             <span className="flex items-center gap-2">
                               <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                              Rare
+                              Rare (25%)
                             </span>
                           </SelectItem>
                           <SelectItem value="epic">
                             <span className="flex items-center gap-2">
                               <span className="w-3 h-3 rounded-full bg-purple-500"></span>
-                              Epic
+                              Epic (12%)
                             </span>
                           </SelectItem>
                           <SelectItem value="legendary">
                             <span className="flex items-center gap-2">
                               <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
-                              Legendary
+                              Legendary (3%)
                             </span>
                           </SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="reward-chance">Unlock Chance (%)</Label>
-                      <Input
-                        id="reward-chance"
-                        type="number"
-                        min="0.01"
-                        max="100"
-                        step="0.01"
-                        placeholder="10"
-                        value={newRewardChance}
-                        onChange={(e) => setNewRewardChance(e.target.value)}
-                        data-testid="input-reward-chance"
-                      />
                     </div>
                     <div className="flex items-end">
                       <Button
@@ -2934,7 +2927,7 @@ const AdminPage = () => {
                               name: newRewardName.trim(),
                               imageUrl: newRewardImageUrl.trim(),
                               rarity: newRewardRarity,
-                              unlockChance: parseFloat(newRewardChance) || 10,
+                              unlockChance: rarityChanceMap[newRewardRarity],
                             });
                             toast({
                               title: "Reward created",
@@ -2944,7 +2937,6 @@ const AdminPage = () => {
                             setNewRewardName("");
                             setNewRewardImageUrl("");
                             setNewRewardRarity("common");
-                            setNewRewardChance("10");
                             refetchRewards();
                           } catch (error: any) {
                             toast({
@@ -3185,10 +3177,14 @@ const AdminPage = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-reward-rarity">Rarity</Label>
+                    <Label htmlFor="edit-reward-rarity">Rarity (sets drop chance)</Label>
                     <Select
                       value={editingReward.rarity || "common"}
-                      onValueChange={(value: string) => setEditingReward({ ...editingReward, rarity: value })}
+                      onValueChange={(value: string) => setEditingReward({ 
+                        ...editingReward, 
+                        rarity: value,
+                        unlockChance: rarityChanceMap[value] 
+                      })}
                     >
                       <SelectTrigger data-testid="select-edit-reward-rarity">
                         <SelectValue placeholder="Select rarity" />
@@ -3197,42 +3193,29 @@ const AdminPage = () => {
                         <SelectItem value="common">
                           <span className="flex items-center gap-2">
                             <span className="w-3 h-3 rounded-full bg-gray-400"></span>
-                            Common
+                            Common (60%)
                           </span>
                         </SelectItem>
                         <SelectItem value="rare">
                           <span className="flex items-center gap-2">
                             <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                            Rare
+                            Rare (25%)
                           </span>
                         </SelectItem>
                         <SelectItem value="epic">
                           <span className="flex items-center gap-2">
                             <span className="w-3 h-3 rounded-full bg-purple-500"></span>
-                            Epic
+                            Epic (12%)
                           </span>
                         </SelectItem>
                         <SelectItem value="legendary">
                           <span className="flex items-center gap-2">
                             <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
-                            Legendary
+                            Legendary (3%)
                           </span>
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-reward-chance">Unlock Chance (%)</Label>
-                    <Input
-                      id="edit-reward-chance"
-                      type="number"
-                      min="0.01"
-                      max="100"
-                      step="0.01"
-                      value={editingReward.unlockChance}
-                      onChange={(e) => setEditingReward({ ...editingReward, unlockChance: parseFloat(e.target.value) })}
-                      data-testid="input-edit-reward-chance"
-                    />
                   </div>
                   {editingReward.imageUrl && (
                     <div className="flex justify-center">
@@ -3247,11 +3230,12 @@ const AdminPage = () => {
                     className="w-full"
                     onClick={async () => {
                       try {
+                        const rarity = editingReward.rarity || "common";
                         await apiRequest('PATCH', `/api/admin/asset-rewards/${editingReward.id}`, {
                           name: editingReward.name,
                           imageUrl: editingReward.imageUrl,
-                          rarity: editingReward.rarity,
-                          unlockChance: editingReward.unlockChance,
+                          rarity: rarity,
+                          unlockChance: rarityChanceMap[rarity],
                         });
                         toast({
                           title: "Reward updated",
