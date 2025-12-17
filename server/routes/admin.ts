@@ -6,7 +6,7 @@ import { VideoProcessor } from '../video-processor';
 import path from 'path';
 import fs from 'fs';
 import { ContentFilterService } from '../services/content-filter';
-import { insertBannerSettingsSchema } from '@shared/schema';
+import { insertBannerSettingsSchema, insertAssetRewardSchema } from '@shared/schema';
 import { z } from 'zod';
 
 // Create admin router
@@ -1230,6 +1230,119 @@ adminRouter.post("/regenerate-reel-thumbnails", async (req: Request, res: Respon
       message: "Error regenerating reel thumbnails",
       error: err instanceof Error ? err.message : String(err)
     });
+  }
+});
+
+// ============ Asset Rewards Routes ============
+
+// GET /api/admin/asset-rewards - Get all asset rewards
+adminRouter.get("/asset-rewards", async (req: Request, res: Response) => {
+  try {
+    const rewards = await storage.getAllAssetRewards();
+    res.json(rewards);
+  } catch (err) {
+    console.error("Error fetching asset rewards:", err);
+    res.status(500).json({ message: "Error fetching asset rewards" });
+  }
+});
+
+// GET /api/admin/asset-rewards/:id - Get single asset reward with claims
+adminRouter.get("/asset-rewards/:id", async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid reward ID" });
+    }
+
+    const reward = await storage.getAssetRewardWithClaims(id);
+    if (!reward) {
+      return res.status(404).json({ message: "Asset reward not found" });
+    }
+
+    res.json(reward);
+  } catch (err) {
+    console.error("Error fetching asset reward:", err);
+    res.status(500).json({ message: "Error fetching asset reward" });
+  }
+});
+
+// POST /api/admin/asset-rewards - Create new asset reward
+adminRouter.post("/asset-rewards", async (req: Request, res: Response) => {
+  try {
+    const validatedData = insertAssetRewardSchema.parse({
+      ...req.body,
+      createdBy: req.user!.id,
+    });
+
+    const reward = await storage.createAssetReward(validatedData);
+    res.status(201).json(reward);
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ 
+        message: "Invalid input", 
+        errors: err.errors 
+      });
+    }
+    console.error("Error creating asset reward:", err);
+    res.status(500).json({ message: "Error creating asset reward" });
+  }
+});
+
+// PATCH /api/admin/asset-rewards/:id - Update asset reward
+adminRouter.patch("/asset-rewards/:id", async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid reward ID" });
+    }
+
+    const existing = await storage.getAssetReward(id);
+    if (!existing) {
+      return res.status(404).json({ message: "Asset reward not found" });
+    }
+
+    const updated = await storage.updateAssetReward(id, req.body);
+    res.json(updated);
+  } catch (err) {
+    console.error("Error updating asset reward:", err);
+    res.status(500).json({ message: "Error updating asset reward" });
+  }
+});
+
+// DELETE /api/admin/asset-rewards/:id - Delete asset reward
+adminRouter.delete("/asset-rewards/:id", async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid reward ID" });
+    }
+
+    const existing = await storage.getAssetReward(id);
+    if (!existing) {
+      return res.status(404).json({ message: "Asset reward not found" });
+    }
+
+    await storage.deleteAssetReward(id);
+    res.json({ success: true, message: "Asset reward deleted" });
+  } catch (err) {
+    console.error("Error deleting asset reward:", err);
+    res.status(500).json({ message: "Error deleting asset reward" });
+  }
+});
+
+// GET /api/admin/asset-rewards/:id/claims - Get claims for a specific reward
+adminRouter.get("/asset-rewards/:id/claims", async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid reward ID" });
+    }
+
+    const claims = await storage.getAssetRewardClaims(id);
+    res.json(claims);
+  } catch (err) {
+    console.error("Error fetching asset reward claims:", err);
+    res.status(500).json({ message: "Error fetching asset reward claims" });
   }
 });
 
