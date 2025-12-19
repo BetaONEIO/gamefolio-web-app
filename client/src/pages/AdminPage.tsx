@@ -3,7 +3,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
 import AdminContentFilter from "./AdminContentFilter";
-import { UserWithBadges, BannerSettings, Badge as BadgeType } from "@shared/schema";
+import { UserWithBadges, BannerSettings, Badge as BadgeType, assetTypes, AssetType } from "@shared/schema";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -55,6 +55,8 @@ interface AssetReward {
   id: number;
   name: string;
   imageUrl: string;
+  assetType: string;
+  rarity: string;
   unlockChance: number;
   timesRewarded: number;
   isActive: boolean;
@@ -483,8 +485,20 @@ const AdminPage = () => {
   const [newRewardImageUrl, setNewRewardImageUrl] = useState("");
   const [newRewardImageFile, setNewRewardImageFile] = useState<File | null>(null);
   const [newRewardRarity, setNewRewardRarity] = useState<"common" | "rare" | "epic" | "legendary">("common");
+  const [newRewardAssetType, setNewRewardAssetType] = useState<AssetType>("other");
   const [createRewardLoading, setCreateRewardLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  
+  // Asset type display names
+  const assetTypeDisplayNames: Record<string, string> = {
+    avatar_border: "Avatar Border",
+    profile_banner: "Profile Banner",
+    profile_background: "Profile Background",
+    badge: "Badge",
+    emoji: "Emoji",
+    sound_effect: "Sound Effect",
+    other: "Other",
+  };
   
   // Rarity to unlock chance mapping
   const rarityChanceMap: Record<string, number> = {
@@ -3004,6 +3018,24 @@ const AdminPage = () => {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reward-asset-type">Asset Type (where it's used)</Label>
+                      <Select
+                        value={newRewardAssetType}
+                        onValueChange={(value: AssetType) => setNewRewardAssetType(value)}
+                      >
+                        <SelectTrigger data-testid="select-reward-asset-type">
+                          <SelectValue placeholder="Select asset type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {assetTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {assetTypeDisplayNames[type]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="flex items-end">
                       <Button
                         onClick={async () => {
@@ -3021,6 +3053,7 @@ const AdminPage = () => {
                               name: newRewardName.trim(),
                               imageUrl: newRewardImageUrl,
                               rarity: newRewardRarity,
+                              assetType: newRewardAssetType,
                               unlockChance: rarityChanceMap[newRewardRarity],
                             });
                             toast({
@@ -3032,6 +3065,7 @@ const AdminPage = () => {
                             setNewRewardImageUrl("");
                             setNewRewardImageFile(null);
                             setNewRewardRarity("common");
+                            setNewRewardAssetType("other");
                             // Reset file input
                             const fileInput = document.getElementById('reward-image') as HTMLInputElement;
                             if (fileInput) fileInput.value = '';
@@ -3062,6 +3096,7 @@ const AdminPage = () => {
                       <TableRow>
                         <TableHead>Image</TableHead>
                         <TableHead>Name</TableHead>
+                        <TableHead>Asset Type</TableHead>
                         <TableHead>Rarity</TableHead>
                         <TableHead>Unlock Chance</TableHead>
                         <TableHead>Times Rewarded</TableHead>
@@ -3072,13 +3107,13 @@ const AdminPage = () => {
                     <TableBody>
                       {rewardsLoading ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center">
+                          <TableCell colSpan={8} className="text-center">
                             Loading rewards...
                           </TableCell>
                         </TableRow>
                       ) : !assetRewardsData || assetRewardsData.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center text-muted-foreground">
+                          <TableCell colSpan={8} className="text-center text-muted-foreground">
                             No rewards created yet. Create your first reward above.
                           </TableCell>
                         </TableRow>
@@ -3096,6 +3131,11 @@ const AdminPage = () => {
                               />
                             </TableCell>
                             <TableCell className="font-medium">{reward.name}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {assetTypeDisplayNames[reward.assetType] || reward.assetType || 'Other'}
+                              </Badge>
+                            </TableCell>
                             <TableCell>
                               <Badge 
                                 className={
@@ -3327,6 +3367,27 @@ const AdminPage = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-reward-asset-type">Asset Type (where it's used)</Label>
+                    <Select
+                      value={editingReward.assetType || "other"}
+                      onValueChange={(value: string) => setEditingReward({ 
+                        ...editingReward, 
+                        assetType: value 
+                      })}
+                    >
+                      <SelectTrigger data-testid="select-edit-reward-asset-type">
+                        <SelectValue placeholder="Select asset type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {assetTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {assetTypeDisplayNames[type]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   {editingReward.imageUrl && (
                     <div className="flex justify-center">
                       <img
@@ -3345,6 +3406,7 @@ const AdminPage = () => {
                           name: editingReward.name,
                           imageUrl: editingReward.imageUrl,
                           rarity: rarity,
+                          assetType: editingReward.assetType || "other",
                           unlockChance: rarityChanceMap[rarity],
                         });
                         toast({
