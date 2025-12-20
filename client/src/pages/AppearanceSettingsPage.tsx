@@ -191,8 +191,8 @@ const UploadedBannersSection: React.FC<{
   );
 };
 
-// Avatar Border Section Component
-const AvatarBorderSection: React.FC<{
+// Profile Picture Border Section Component
+const ProfilePictureBorderSection: React.FC<{
   userId?: number;
   currentBorderId?: number | null;
 }> = ({ userId, currentBorderId }) => {
@@ -217,15 +217,15 @@ const AvatarBorderSection: React.FC<{
         queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}/avatar-border`] });
       }
       toast({
-        title: "Avatar border updated",
-        description: "Your new avatar border has been applied.",
+        title: "Profile picture border updated",
+        description: "Your new border has been applied.",
         variant: "gamefolioSuccess",
       });
     },
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update avatar border.",
+        description: error.message || "Failed to update profile picture border.",
         variant: "destructive",
       });
     },
@@ -254,10 +254,10 @@ const AvatarBorderSection: React.FC<{
       <div>
         <h3 className="text-lg font-medium flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-primary" />
-          Avatar Border
+          Profile Picture Border
         </h3>
         <p className="text-sm text-muted-foreground">
-          Select an avatar border from your unlocked lootbox rewards.
+          Select a border from your unlocked lootbox rewards.
         </p>
       </div>
 
@@ -269,7 +269,7 @@ const AvatarBorderSection: React.FC<{
         <div className="p-4 bg-muted/50 rounded-lg border text-center">
           <Sparkles className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            No avatar borders unlocked yet. Open lootboxes to unlock special avatar borders!
+            No profile picture borders unlocked yet. Open lootboxes to unlock special borders!
           </p>
         </div>
       ) : (
@@ -737,9 +737,6 @@ const AppearanceSettingsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Avatar Border Section */}
-              <AvatarBorderSection userId={user?.id} currentBorderId={user?.selectedAvatarBorderId} />
-
               {/* Display Name */}
               <FormField
                 control={appearanceForm.control}
@@ -793,11 +790,14 @@ const AppearanceSettingsPage: React.FC = () => {
         </CardHeader>
 
         <CardContent>
+          {/* Profile Picture Border Section */}
+          <ProfilePictureBorderSection userId={user?.id} currentBorderId={user?.selectedAvatarBorderId} />
+          
           <Form {...appearanceForm}>
             <form 
               id="appearance-form" 
               onSubmit={appearanceForm.handleSubmit(onAppearanceSubmit)} 
-              className="space-y-6"
+              className="space-y-6 mt-6"
             >
               {/* Theme Presets */}
               <div className="space-y-4">
