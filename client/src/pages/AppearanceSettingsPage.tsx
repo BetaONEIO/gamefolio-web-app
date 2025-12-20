@@ -8,11 +8,12 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest, getQueryFn, queryClient } from '@/lib/queryClient';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Redirect } from 'wouter';
-import { Loader2, Upload, Camera, Trash2, Check } from 'lucide-react';
+import { Loader2, Upload, Camera, Trash2, Check, Sparkles, X } from 'lucide-react';
 import { HexColorPicker } from "react-colorful";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import type { AssetReward } from '@shared/schema';
 
 import {
   Card,
@@ -186,6 +187,165 @@ const UploadedBannersSection: React.FC<{
           ))}
         </div>
       </div>
+    </div>
+  );
+};
+
+// Avatar Border Section Component
+const AvatarBorderSection: React.FC<{
+  userId?: number;
+  currentBorderId?: number | null;
+}> = ({ userId, currentBorderId }) => {
+  const { toast } = useToast();
+
+  // Fetch user's unlocked avatar borders
+  const { data: unlockedBorders = [], isLoading } = useQuery<AssetReward[]>({
+    queryKey: ['/api/user/avatar-borders'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!userId,
+  });
+
+  // Mutation to update selected avatar border
+  const updateBorderMutation = useMutation({
+    mutationFn: async (avatarBorderId: number | null) => {
+      const response = await fetch('/api/user/avatar-border', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ avatarBorderId }),
+      });
+      if (!response.ok) throw new Error('Failed to update avatar border');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      toast({
+        title: "Avatar border updated",
+        description: "Your new avatar border has been applied.",
+        variant: "gamefolioSuccess",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update avatar border.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const getRarityColor = (rarity: string) => {
+    switch (rarity) {
+      case 'legendary': return 'from-yellow-400 to-yellow-600';
+      case 'epic': return 'from-purple-400 to-purple-600';
+      case 'rare': return 'from-blue-400 to-blue-600';
+      default: return 'from-gray-400 to-gray-600';
+    }
+  };
+
+  const getRarityBorderColor = (rarity: string) => {
+    switch (rarity) {
+      case 'legendary': return 'border-yellow-500';
+      case 'epic': return 'border-purple-500';
+      case 'rare': return 'border-blue-500';
+      default: return 'border-gray-500';
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-lg font-medium flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-primary" />
+          Avatar Border
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Select an avatar border from your unlocked lootbox rewards.
+        </p>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      ) : unlockedBorders.length === 0 ? (
+        <div className="p-4 bg-muted/50 rounded-lg border text-center">
+          <Sparkles className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            No avatar borders unlocked yet. Open lootboxes to unlock special avatar borders!
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {/* Remove Border Option */}
+          {currentBorderId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => updateBorderMutation.mutate(null)}
+              disabled={updateBorderMutation.isPending}
+              className="w-full"
+              data-testid="button-remove-avatar-border"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Remove Current Border
+            </Button>
+          )}
+
+          {/* Available Borders Grid */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+            {unlockedBorders.map((border) => {
+              const isSelected = currentBorderId === border.id;
+              return (
+                <button
+                  key={border.id}
+                  type="button"
+                  onClick={() => updateBorderMutation.mutate(border.id)}
+                  disabled={updateBorderMutation.isPending}
+                  className={`
+                    relative p-2 rounded-lg transition-all transform hover:scale-105
+                    ${isSelected 
+                      ? `ring-2 ring-primary bg-primary/20 ${getRarityBorderColor(border.rarity || 'common')}` 
+                      : 'border border-border hover:border-primary/50'}
+                  `}
+                  data-testid={`button-select-border-${border.id}`}
+                >
+                  {/* Border Preview */}
+                  <div className="relative aspect-square rounded-full overflow-hidden">
+                    <img
+                      src={border.imageUrl}
+                      alt={border.name}
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Rarity Glow Effect */}
+                    <div 
+                      className={`absolute inset-0 rounded-full bg-gradient-to-br ${getRarityColor(border.rarity || 'common')} opacity-20`}
+                    />
+                  </div>
+
+                  {/* Border Name */}
+                  <p className="text-xs font-medium text-center mt-1 truncate">
+                    {border.name}
+                  </p>
+
+                  {/* Rarity Badge */}
+                  <div 
+                    className={`absolute -top-1 -right-1 w-3 h-3 rounded-full bg-gradient-to-br ${getRarityColor(border.rarity || 'common')}`}
+                    title={border.rarity || 'common'}
+                  />
+
+                  {/* Selected Indicator */}
+                  {isSelected && (
+                    <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full p-1">
+                      <Check className="h-3 w-3" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -579,6 +739,9 @@ const AppearanceSettingsPage: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Avatar Border Section */}
+              <AvatarBorderSection userId={user?.id} currentBorderId={user?.selectedAvatarBorderId} />
 
               {/* Display Name */}
               <FormField
