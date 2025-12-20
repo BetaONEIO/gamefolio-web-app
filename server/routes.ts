@@ -5535,6 +5535,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==========================================
+  // Avatar Border Routes (Lootbox Rewards)
+  // ==========================================
+
+  // Get user's unlocked avatar borders
+  app.get("/api/user/avatar-borders", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const unlockedBorders = await storage.getUserUnlockedAvatarBorders(req.user.id);
+      res.json(unlockedBorders);
+    } catch (err) {
+      console.error("Error fetching unlocked avatar borders:", err);
+      return res.status(500).json({ message: "Error fetching unlocked avatar borders" });
+    }
+  });
+
+  // Set selected avatar border
+  app.put("/api/user/avatar-border", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const { avatarBorderId } = req.body;
+      
+      // Allow null to remove the border
+      if (avatarBorderId !== null) {
+        // Verify user has unlocked this border
+        const hasUnlocked = await storage.userHasUnlockedReward(req.user.id, avatarBorderId);
+        if (!hasUnlocked) {
+          return res.status(403).json({ message: "You haven't unlocked this avatar border" });
+        }
+        
+        // Verify it's actually an avatar border type
+        const reward = await storage.getAssetReward(avatarBorderId);
+        if (!reward || reward.assetType !== "avatar_border") {
+          return res.status(400).json({ message: "Invalid avatar border" });
+        }
+      }
+
+      await storage.updateUserAvatarBorder(req.user.id, avatarBorderId);
+      res.json({ message: "Avatar border updated successfully" });
+    } catch (err) {
+      console.error("Error updating avatar border:", err);
+      return res.status(500).json({ message: "Error updating avatar border" });
+    }
+  });
+
+  // Get user's selected avatar border (for profile display)
+  app.get("/api/user/:userId/avatar-border", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (!user.selectedAvatarBorderId) {
+        return res.json({ avatarBorder: null });
+      }
+
+      const avatarBorder = await storage.getAssetReward(user.selectedAvatarBorderId);
+      res.json({ avatarBorder });
+    } catch (err) {
+      console.error("Error fetching user avatar border:", err);
+      return res.status(500).json({ message: "Error fetching user avatar border" });
+    }
+  });
+
+  // ==========================================
   // Screenshot Upload Routes
   // ==========================================
 

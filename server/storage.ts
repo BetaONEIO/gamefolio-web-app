@@ -326,6 +326,9 @@ export interface IStorage {
   deleteAssetReward(id: number): Promise<boolean>;
   createAssetRewardClaim(claim: InsertAssetRewardClaim): Promise<AssetRewardClaim>;
   getAssetRewardClaims(rewardId: number): Promise<(AssetRewardClaim & { user: User })[]>;
+  getUserUnlockedAvatarBorders(userId: number): Promise<AssetReward[]>;
+  userHasUnlockedReward(userId: number, rewardId: number): Promise<boolean>;
+  updateUserAvatarBorder(userId: number, avatarBorderId: number | null): Promise<void>;
 
   // Unified content moderation operations  
   getRecentContent(limit?: number, offset?: number, contentType?: string): Promise<Array<{

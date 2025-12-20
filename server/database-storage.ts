@@ -4147,4 +4147,49 @@ export class DatabaseStorage implements IStorage {
       user: c.user,
     }));
   }
+
+  // Get user's unlocked avatar borders
+  async getUserUnlockedAvatarBorders(userId: number): Promise<AssetReward[]> {
+    const claims = await db
+      .select({
+        reward: assetRewards,
+      })
+      .from(assetRewardClaims)
+      .innerJoin(assetRewards, eq(assetRewardClaims.rewardId, assetRewards.id))
+      .where(
+        and(
+          eq(assetRewardClaims.userId, userId),
+          eq(assetRewards.assetType, "avatar_border"),
+          eq(assetRewards.isActive, true)
+        )
+      );
+
+    return claims.map(c => c.reward);
+  }
+
+  // Check if user has unlocked a specific reward
+  async userHasUnlockedReward(userId: number, rewardId: number): Promise<boolean> {
+    const [claim] = await db
+      .select()
+      .from(assetRewardClaims)
+      .where(
+        and(
+          eq(assetRewardClaims.userId, userId),
+          eq(assetRewardClaims.rewardId, rewardId)
+        )
+      );
+
+    return !!claim;
+  }
+
+  // Update user's selected avatar border
+  async updateUserAvatarBorder(userId: number, avatarBorderId: number | null): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        selectedAvatarBorderId: avatarBorderId,
+        updatedAt: new Date() 
+      })
+      .where(eq(users.id, userId));
+  }
 }
