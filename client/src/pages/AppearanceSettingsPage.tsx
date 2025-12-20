@@ -208,27 +208,24 @@ const AvatarBorderSection: React.FC<{
   // Mutation to update selected avatar border
   const updateBorderMutation = useMutation({
     mutationFn: async (avatarBorderId: number | null) => {
-      const response = await fetch('/api/user/avatar-border', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ avatarBorderId }),
-      });
-      if (!response.ok) throw new Error('Failed to update avatar border');
-      return response.json();
+      const response = await apiRequest('PUT', '/api/user/avatar-border', { avatarBorderId });
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}/avatar-border`] });
+      }
       toast({
         title: "Avatar border updated",
         description: "Your new avatar border has been applied.",
         variant: "gamefolioSuccess",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to update avatar border.",
+        description: error.message || "Failed to update avatar border.",
         variant: "destructive",
       });
     },
