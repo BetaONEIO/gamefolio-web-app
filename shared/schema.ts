@@ -59,6 +59,8 @@ export const users = pgTable("users", {
   walletCreatedAt: timestamp("wallet_created_at"),
   // GF Token Balance
   gfTokenBalance: real("gf_token_balance").default(1000).notNull(), // Starting balance of 1000 GF tokens
+  // Selected Avatar Border (from lootbox rewards)
+  selectedAvatarBorderId: integer("selected_avatar_border_id"), // References asset_rewards table
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
