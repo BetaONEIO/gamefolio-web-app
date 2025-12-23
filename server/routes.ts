@@ -7041,6 +7041,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==========================================
+  // Admin Lootbox Management Routes
+  // ==========================================
+
+  // Get all lootbox opens (admin only)
+  app.get("/api/admin/lootbox/opens", adminMiddleware, async (req, res) => {
+    try {
+      const opens = await storage.getAllLootboxOpens();
+      res.json(opens);
+    } catch (error) {
+      console.error("Error fetching lootbox opens:", error);
+      res.status(500).json({ error: "Failed to fetch lootbox opens" });
+    }
+  });
+
+  // Reset user's lootbox (admin only) - allows user to open again today
+  app.post("/api/admin/lootbox/reset/:userId", adminMiddleware, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const success = await storage.resetUserLootbox(userId);
+      
+      if (success) {
+        res.json({ message: "User lootbox reset successfully. They can now open another lootbox." });
+      } else {
+        res.status(404).json({ message: "User lootbox record not found" });
+      }
+    } catch (error) {
+      console.error("Error resetting user lootbox:", error);
+      res.status(500).json({ error: "Failed to reset user lootbox" });
+    }
+  });
+
+  // ==========================================
   // Upload Success Routes
   // ==========================================
 

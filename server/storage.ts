@@ -335,6 +335,18 @@ export interface IStorage {
   openDailyLootbox(userId: number): Promise<AssetReward | null>;
   getUserClaimedRewards(userId: number): Promise<AssetReward[]>;
   getActiveRewardsForLootbox(): Promise<AssetReward[]>;
+  
+  // Admin lootbox operations
+  getAllLootboxOpens(): Promise<Array<{
+    id: number;
+    userId: number;
+    lastOpenedAt: Date;
+    rewardId: number | null;
+    openCount: number;
+    user: { id: number; username: string; displayName: string; avatarUrl: string | null };
+    reward: { id: number; name: string; rarity: string; imageUrl: string } | null;
+  }>>;
+  resetUserLootbox(userId: number): Promise<boolean>;
 
   // Unified content moderation operations  
   getRecentContent(limit?: number, offset?: number, contentType?: string): Promise<Array<{

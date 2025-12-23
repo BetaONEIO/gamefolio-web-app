@@ -4306,4 +4306,66 @@ export class DatabaseStorage implements IStorage {
       .where(eq(assetRewards.isActive, true))
       .orderBy(assetRewards.rarity);
   }
+
+  // Admin lootbox operations
+  async getAllLootboxOpens(): Promise<Array<{
+    id: number;
+    userId: number;
+    lastOpenedAt: Date;
+    rewardId: number | null;
+    openCount: number;
+    user: { id: number; username: string; displayName: string; avatarUrl: string | null };
+    reward: { id: number; name: string; rarity: string; imageUrl: string } | null;
+  }>> {
+    const records = await db
+      .select({
+        id: userDailyLootbox.id,
+        userId: userDailyLootbox.userId,
+        lastOpenedAt: userDailyLootbox.lastOpenedAt,
+        rewardId: userDailyLootbox.rewardId,
+        openCount: userDailyLootbox.openCount,
+        user: {
+          id: users.id,
+          username: users.username,
+          displayName: users.displayName,
+          avatarUrl: users.avatarUrl,
+        },
+        reward: {
+          id: assetRewards.id,
+          name: assetRewards.name,
+          rarity: assetRewards.rarity,
+          imageUrl: assetRewards.imageUrl,
+        },
+      })
+      .from(userDailyLootbox)
+      .innerJoin(users, eq(userDailyLootbox.userId, users.id))
+      .leftJoin(assetRewards, eq(userDailyLootbox.rewardId, assetRewards.id))
+      .orderBy(desc(userDailyLootbox.lastOpenedAt));
+
+    return records.map(r => ({
+      id: r.id,
+      userId: r.userId,
+      lastOpenedAt: r.lastOpenedAt,
+      rewardId: r.rewardId,
+      openCount: r.openCount,
+      user: r.user,
+      reward: r.reward?.id ? r.reward : null,
+    }));
+  }
+
+  async resetUserLootbox(userId: number): Promise<boolean> {
+    // Set lastOpenedAt to yesterday to allow another open today
+    // This preserves the openCount and history while resetting the daily lockout
+    const yesterday = new Date();
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    yesterday.setUTCHours(0, 0, 0, 0);
+    
+    const result = await db
+      .update(userDailyLootbox)
+      .set({ lastOpenedAt: yesterday })
+      .where(eq(userDailyLootbox.userId, userId));
+    
+    // Check if any rows were affected
+    return (result.rowCount ?? 0) > 0;
+  }
 }
