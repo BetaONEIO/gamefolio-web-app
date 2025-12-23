@@ -1202,20 +1202,20 @@ const AdminPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-13 text-xs">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="content">Content</TabsTrigger>
-          <TabsTrigger value="content-filter">Filter</TabsTrigger>
-          <TabsTrigger value="banner">Banner</TabsTrigger>
-          <TabsTrigger value="badges">Badges</TabsTrigger>
-          <TabsTrigger value="levels">Levels</TabsTrigger>
-          <TabsTrigger value="streaks">Streaks</TabsTrigger>
-          <TabsTrigger value="points">Points</TabsTrigger>
-          <TabsTrigger value="hero-text">Hero</TabsTrigger>
-          <TabsTrigger value="asset-rewards">Rewards</TabsTrigger>
-          <TabsTrigger value="lootbox">Lootbox</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
+        <TabsList className="flex flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="dashboard" className="text-xs px-3 py-1.5">Dashboard</TabsTrigger>
+          <TabsTrigger value="users" className="text-xs px-3 py-1.5">Users</TabsTrigger>
+          <TabsTrigger value="content" className="text-xs px-3 py-1.5">Content</TabsTrigger>
+          <TabsTrigger value="content-filter" className="text-xs px-3 py-1.5">Filter</TabsTrigger>
+          <TabsTrigger value="banner" className="text-xs px-3 py-1.5">Banner</TabsTrigger>
+          <TabsTrigger value="badges" className="text-xs px-3 py-1.5">Badges</TabsTrigger>
+          <TabsTrigger value="levels" className="text-xs px-3 py-1.5">Levels</TabsTrigger>
+          <TabsTrigger value="streaks" className="text-xs px-3 py-1.5">Streaks</TabsTrigger>
+          <TabsTrigger value="points" className="text-xs px-3 py-1.5">Points</TabsTrigger>
+          <TabsTrigger value="hero-text" className="text-xs px-3 py-1.5">Hero</TabsTrigger>
+          <TabsTrigger value="asset-rewards" className="text-xs px-3 py-1.5">Rewards</TabsTrigger>
+          <TabsTrigger value="lootbox" className="text-xs px-3 py-1.5">Lootbox</TabsTrigger>
+          <TabsTrigger value="settings" className="text-xs px-3 py-1.5">Settings</TabsTrigger>
         </TabsList>
 
         {/* Dashboard Tab */}
