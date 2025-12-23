@@ -4354,18 +4354,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async resetUserLootbox(userId: number): Promise<boolean> {
+    // First check if the user has a lootbox record
+    const [existing] = await db
+      .select({ id: userDailyLootbox.id })
+      .from(userDailyLootbox)
+      .where(eq(userDailyLootbox.userId, userId))
+      .limit(1);
+    
+    if (!existing) {
+      return false;
+    }
+    
     // Set lastOpenedAt to yesterday to allow another open today
     // This preserves the openCount and history while resetting the daily lockout
     const yesterday = new Date();
     yesterday.setUTCDate(yesterday.getUTCDate() - 1);
     yesterday.setUTCHours(0, 0, 0, 0);
     
-    const result = await db
+    await db
       .update(userDailyLootbox)
       .set({ lastOpenedAt: yesterday })
       .where(eq(userDailyLootbox.userId, userId));
     
-    // Check if any rows were affected
-    return (result.rowCount ?? 0) > 0;
+    return true;
   }
 }
