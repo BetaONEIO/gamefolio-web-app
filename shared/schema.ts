@@ -786,7 +786,7 @@ export const rarityTiers = ["common", "rare", "epic", "legendary"] as const;
 export type RarityTier = typeof rarityTiers[number];
 
 // Asset types for categorizing where rewards are used
-export const assetTypes = ["avatar_border", "profile_banner", "profile_background", "badge", "emoji", "sound_effect", "other"] as const;
+export const assetTypes = ["avatar_border", "profile_banner", "profile_background", "badge", "emoji", "sound_effect", "xp_reward", "gf_tokens", "other"] as const;
 export type AssetType = typeof assetTypes[number];
 
 // Asset rewards table for loot box rewards
@@ -794,9 +794,10 @@ export const assetRewards = pgTable("asset_rewards", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   imageUrl: text("image_url").notNull(),
-  assetType: text("asset_type").notNull().default("other"), // avatar_border, profile_banner, profile_background, badge, emoji, sound_effect, other
+  assetType: text("asset_type").notNull().default("other"), // avatar_border, profile_banner, profile_background, badge, emoji, sound_effect, xp_reward, gf_tokens, other
   rarity: text("rarity").notNull().default("common"), // common, rare, epic, legendary
   unlockChance: real("unlock_chance").notNull().default(10), // Percentage chance (0-100)
+  rewardValue: integer("reward_value"), // For consumable rewards like XP or GF tokens - the amount to grant
   timesRewarded: integer("times_rewarded").default(0).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   createdBy: integer("created_by").references(() => users.id),

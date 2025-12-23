@@ -4231,7 +4231,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async openDailyLootbox(userId: number): Promise<{ reward: AssetReward; isDuplicate: boolean } | null> {
+  async openDailyLootbox(userId: number): Promise<{ reward: AssetReward; isDuplicate: boolean; consumed: boolean } | null> {
     // Check if user can open
     const status = await this.getDailyLootboxStatus(userId);
     if (!status.canOpen) {
@@ -4264,15 +4264,45 @@ export class DatabaseStorage implements IStorage {
       selectedReward = rewards[0];
     }
 
-    // Check if user already has this reward BEFORE creating claim
-    const alreadyHas = await this.userHasUnlockedReward(userId, selectedReward.id);
-    
-    if (!alreadyHas) {
-      // Create the reward claim only if user doesn't have it
+    // Check if this is a consumable reward (XP, GF tokens)
+    const isConsumable = selectedReward.assetType === 'xp_reward' || selectedReward.assetType === 'gf_tokens';
+    let alreadyHas = false;
+    let consumed = false;
+
+    if (isConsumable) {
+      // Consumable rewards are always granted (never duplicates)
+      const rewardValue = selectedReward.rewardValue || 0;
+      
+      if (selectedReward.assetType === 'xp_reward' && rewardValue > 0) {
+        // Grant XP to user
+        await db.update(users)
+          .set({ totalXP: sql`COALESCE(${users.totalXP}, 0) + ${rewardValue}` })
+          .where(eq(users.id, userId));
+        consumed = true;
+      } else if (selectedReward.assetType === 'gf_tokens' && rewardValue > 0) {
+        // Grant GF tokens to user
+        await db.update(users)
+          .set({ gfTokenBalance: sql`COALESCE(${users.gfTokenBalance}, 0) + ${rewardValue}` })
+          .where(eq(users.id, userId));
+        consumed = true;
+      }
+      
+      // Still create a claim record to track history
       await this.createAssetRewardClaim({
         rewardId: selectedReward.id,
         userId: userId,
       });
+    } else {
+      // For collectible rewards, check if user already has it
+      alreadyHas = await this.userHasUnlockedReward(userId, selectedReward.id);
+      
+      if (!alreadyHas) {
+        // Create the reward claim only if user doesn't have it
+        await this.createAssetRewardClaim({
+          rewardId: selectedReward.id,
+          userId: userId,
+        });
+      }
     }
 
     // Record the lootbox open
@@ -4283,7 +4313,7 @@ export class DatabaseStorage implements IStorage {
       openCount: 1,
     });
 
-    return { reward: selectedReward, isDuplicate: alreadyHas };
+    return { reward: selectedReward, isDuplicate: alreadyHas, consumed };
   }
 
   async getUserClaimedRewards(userId: number): Promise<AssetReward[]> {

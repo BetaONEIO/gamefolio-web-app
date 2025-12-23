@@ -7795,11 +7795,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "No rewards available in lootbox" });
       }
 
-      // Use the isDuplicate flag returned from openDailyLootbox (checked BEFORE claim creation)
+      // Determine the appropriate message based on reward type
+      let message: string;
+      if (result.consumed) {
+        // Consumable reward (XP, GF tokens) was granted
+        const value = result.reward.rewardValue || 0;
+        if (result.reward.assetType === 'xp_reward') {
+          message = `You earned ${value} XP!`;
+        } else if (result.reward.assetType === 'gf_tokens') {
+          message = `You earned ${value} GF Tokens!`;
+        } else {
+          message = "Reward claimed!";
+        }
+      } else if (result.isDuplicate) {
+        message = "You already have this reward!";
+      } else {
+        message = "Congratulations! New reward unlocked!";
+      }
+      
       res.json({ 
         reward: result.reward,
         isDuplicate: result.isDuplicate,
-        message: result.isDuplicate ? "You already have this reward!" : "Congratulations! New reward unlocked!"
+        consumed: result.consumed,
+        message
       });
     } catch (error) {
       console.error("Error opening lootbox:", error);
