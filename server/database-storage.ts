@@ -4231,7 +4231,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async openDailyLootbox(userId: number): Promise<AssetReward | null> {
+  async openDailyLootbox(userId: number): Promise<{ reward: AssetReward; isDuplicate: boolean } | null> {
     // Check if user can open
     const status = await this.getDailyLootboxStatus(userId);
     if (!status.canOpen) {
@@ -4264,11 +4264,11 @@ export class DatabaseStorage implements IStorage {
       selectedReward = rewards[0];
     }
 
-    // Check if user already has this reward
+    // Check if user already has this reward BEFORE creating claim
     const alreadyHas = await this.userHasUnlockedReward(userId, selectedReward.id);
     
     if (!alreadyHas) {
-      // Create the reward claim
+      // Create the reward claim only if user doesn't have it
       await this.createAssetRewardClaim({
         rewardId: selectedReward.id,
         userId: userId,
@@ -4283,7 +4283,7 @@ export class DatabaseStorage implements IStorage {
       openCount: 1,
     });
 
-    return selectedReward;
+    return { reward: selectedReward, isDuplicate: alreadyHas };
   }
 
   async getUserClaimedRewards(userId: number): Promise<AssetReward[]> {

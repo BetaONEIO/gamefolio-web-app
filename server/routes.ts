@@ -7789,19 +7789,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const reward = await storage.openDailyLootbox(userId);
+      const result = await storage.openDailyLootbox(userId);
       
-      if (!reward) {
+      if (!result) {
         return res.status(404).json({ message: "No rewards available in lootbox" });
       }
 
-      // Check if user already had this reward
-      const alreadyHad = await storage.userHasUnlockedReward(userId, reward.id);
-      
+      // Use the isDuplicate flag returned from openDailyLootbox (checked BEFORE claim creation)
       res.json({ 
-        reward,
-        isDuplicate: alreadyHad,
-        message: alreadyHad ? "You already have this reward!" : "Congratulations! New reward unlocked!"
+        reward: result.reward,
+        isDuplicate: result.isDuplicate,
+        message: result.isDuplicate ? "You already have this reward!" : "Congratulations! New reward unlocked!"
       });
     } catch (error) {
       console.error("Error opening lootbox:", error);

@@ -332,7 +332,7 @@ export interface IStorage {
 
   // Daily lootbox operations
   getDailyLootboxStatus(userId: number): Promise<{ canOpen: boolean; lastOpenedAt: Date | null; nextOpenAt: Date | null }>;
-  openDailyLootbox(userId: number): Promise<AssetReward | null>;
+  openDailyLootbox(userId: number): Promise<{ reward: AssetReward; isDuplicate: boolean } | null>;
   getUserClaimedRewards(userId: number): Promise<AssetReward[]>;
   getActiveRewardsForLootbox(): Promise<AssetReward[]>;
   
