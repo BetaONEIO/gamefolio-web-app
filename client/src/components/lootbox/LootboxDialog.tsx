@@ -59,14 +59,14 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
       }
       return response.json() as Promise<LootboxOpenResult>;
     },
-    onSuccess: (data) => {
+    onSuccess: (data: LootboxOpenResult) => {
       setReward(data.reward);
       setIsDuplicate(data.isDuplicate);
       setTimeout(() => setPhase("reveal"), 1500);
       queryClient.invalidateQueries({ queryKey: ["/api/lootbox/status"] });
       queryClient.invalidateQueries({ queryKey: ["/api/lootbox/rewards"] });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Failed to open lootbox:", error);
       setPhase("idle");
     },
