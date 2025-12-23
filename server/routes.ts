@@ -7724,5 +7724,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== DAILY LOOTBOX ROUTES ====================
+
+  // Get lootbox status - check if user can open today's lootbox
+  app.get("/api/lootbox/status", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const status = await storage.getDailyLootboxStatus(userId);
+      res.json(status);
+    } catch (error) {
+      console.error("Error getting lootbox status:", error);
+      res.status(500).json({ message: "Failed to get lootbox status" });
+    }
+  });
+
+  // Open daily lootbox
+  app.post("/api/lootbox/open", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      
+      // Check if user can open
+      const status = await storage.getDailyLootboxStatus(userId);
+      if (!status.canOpen) {
+        return res.status(400).json({ 
+          message: "You've already opened today's lootbox!", 
+          nextOpenAt: status.nextOpenAt 
+        });
+      }
+
+      const reward = await storage.openDailyLootbox(userId);
+      
+      if (!reward) {
+        return res.status(404).json({ message: "No rewards available in lootbox" });
+      }
+
+      // Check if user already had this reward
+      const alreadyHad = await storage.userHasUnlockedReward(userId, reward.id);
+      
+      res.json({ 
+        reward,
+        isDuplicate: alreadyHad,
+        message: alreadyHad ? "You already have this reward!" : "Congratulations! New reward unlocked!"
+      });
+    } catch (error) {
+      console.error("Error opening lootbox:", error);
+      res.status(500).json({ message: "Failed to open lootbox" });
+    }
+  });
+
+  // Get user's claimed rewards
+  app.get("/api/lootbox/rewards", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const rewards = await storage.getUserClaimedRewards(userId);
+      res.json(rewards);
+    } catch (error) {
+      console.error("Error getting user rewards:", error);
+      res.status(500).json({ message: "Failed to get rewards" });
+    }
+  });
+
+  // Get available rewards for lootbox (public)
+  app.get("/api/lootbox/available-rewards", async (req, res) => {
+    try {
+      const rewards = await storage.getActiveRewardsForLootbox();
+      res.json(rewards);
+    } catch (error) {
+      console.error("Error getting available rewards:", error);
+      res.status(500).json({ message: "Failed to get available rewards" });
+    }
+  });
+
   return httpServer;
 }
