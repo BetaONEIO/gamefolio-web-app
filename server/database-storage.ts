@@ -36,6 +36,7 @@ import {
   AssetReward, InsertAssetReward,
   AssetRewardClaim, InsertAssetRewardClaim,
   AssetRewardWithClaims,
+  UserDailyLootbox, InsertUserDailyLootbox,
   ClipWithUser,
   CommentWithUser,
   ScreenshotCommentWithUser,
@@ -81,7 +82,8 @@ import {
   commentMentions,
   screenshotCommentMentions,
   assetRewards,
-  assetRewardClaims
+  assetRewardClaims,
+  userDailyLootbox
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, isNotNull, getTableColumns } from "drizzle-orm";
@@ -4191,5 +4193,117 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date() 
       })
       .where(eq(users.id, userId));
+  }
+
+  // Daily lootbox operations
+  async getDailyLootboxStatus(userId: number): Promise<{ canOpen: boolean; lastOpenedAt: Date | null; nextOpenAt: Date | null }> {
+    const [record] = await db
+      .select()
+      .from(userDailyLootbox)
+      .where(eq(userDailyLootbox.userId, userId))
+      .orderBy(desc(userDailyLootbox.lastOpenedAt))
+      .limit(1);
+
+    if (!record) {
+      return { canOpen: true, lastOpenedAt: null, nextOpenAt: null };
+    }
+
+    const now = new Date();
+    const lastOpened = new Date(record.lastOpenedAt);
+    
+    // Reset at midnight UTC
+    const todayMidnight = new Date(now);
+    todayMidnight.setUTCHours(0, 0, 0, 0);
+    
+    const lastOpenedDate = new Date(lastOpened);
+    lastOpenedDate.setUTCHours(0, 0, 0, 0);
+    
+    const canOpen = lastOpenedDate < todayMidnight;
+    
+    // Calculate next open time (next midnight UTC)
+    const nextOpenAt = new Date(todayMidnight);
+    nextOpenAt.setUTCDate(nextOpenAt.getUTCDate() + 1);
+
+    return { 
+      canOpen, 
+      lastOpenedAt: record.lastOpenedAt, 
+      nextOpenAt: canOpen ? null : nextOpenAt 
+    };
+  }
+
+  async openDailyLootbox(userId: number): Promise<AssetReward | null> {
+    // Check if user can open
+    const status = await this.getDailyLootboxStatus(userId);
+    if (!status.canOpen) {
+      return null;
+    }
+
+    // Get all active rewards
+    const rewards = await this.getActiveRewardsForLootbox();
+    if (rewards.length === 0) {
+      return null;
+    }
+
+    // Calculate total weight based on unlock chance
+    const totalWeight = rewards.reduce((sum, r) => sum + r.unlockChance, 0);
+    
+    // Random weighted selection
+    let random = Math.random() * totalWeight;
+    let selectedReward: AssetReward | null = null;
+    
+    for (const reward of rewards) {
+      random -= reward.unlockChance;
+      if (random <= 0) {
+        selectedReward = reward;
+        break;
+      }
+    }
+    
+    // Fallback to first reward if none selected
+    if (!selectedReward) {
+      selectedReward = rewards[0];
+    }
+
+    // Check if user already has this reward
+    const alreadyHas = await this.userHasUnlockedReward(userId, selectedReward.id);
+    
+    if (!alreadyHas) {
+      // Create the reward claim
+      await this.createAssetRewardClaim({
+        rewardId: selectedReward.id,
+        userId: userId,
+      });
+    }
+
+    // Record the lootbox open
+    await db.insert(userDailyLootbox).values({
+      userId,
+      lastOpenedAt: new Date(),
+      rewardId: selectedReward.id,
+      openCount: 1,
+    });
+
+    return selectedReward;
+  }
+
+  async getUserClaimedRewards(userId: number): Promise<AssetReward[]> {
+    const claims = await db
+      .select({
+        reward: assetRewards,
+      })
+      .from(assetRewardClaims)
+      .innerJoin(assetRewards, eq(assetRewardClaims.rewardId, assetRewards.id))
+      .where(eq(assetRewardClaims.userId, userId))
+      .orderBy(desc(assetRewardClaims.claimedAt));
+
+    return claims.map(c => c.reward);
+  }
+
+  async getActiveRewardsForLootbox(): Promise<AssetReward[]> {
+    return db
+      .select()
+      .from(assetRewards)
+      .where(eq(assetRewards.isActive, true))
+      .orderBy(assetRewards.rarity);
   }
 }

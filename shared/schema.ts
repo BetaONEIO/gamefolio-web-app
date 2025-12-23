@@ -848,6 +848,20 @@ export const insertAssetRewardClaimSchema = createInsertSchema(assetRewardClaims
   claimedAt: true,
 });
 
+// Daily lootbox tracking table
+export const userDailyLootbox = pgTable("user_daily_lootbox", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  lastOpenedAt: timestamp("last_opened_at").defaultNow().notNull(),
+  rewardId: integer("reward_id").references(() => assetRewards.id),
+  openCount: integer("open_count").default(1).notNull(),
+});
+
+// Schema for inserting daily lootbox record
+export const insertUserDailyLootboxSchema = createInsertSchema(userDailyLootbox).omit({
+  id: true,
+});
+
 
 
 // Extended types for frontend use
@@ -1012,6 +1026,8 @@ export type AssetReward = typeof assetRewards.$inferSelect;
 export type InsertAssetReward = z.infer<typeof insertAssetRewardSchema>;
 export type AssetRewardClaim = typeof assetRewardClaims.$inferSelect;
 export type InsertAssetRewardClaim = z.infer<typeof insertAssetRewardClaimSchema>;
+export type UserDailyLootbox = typeof userDailyLootbox.$inferSelect;
+export type InsertUserDailyLootbox = z.infer<typeof insertUserDailyLootboxSchema>;
 
 // Extended type for asset reward with claim info
 export type AssetRewardWithClaims = AssetReward & {

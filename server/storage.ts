@@ -330,6 +330,12 @@ export interface IStorage {
   userHasUnlockedReward(userId: number, rewardId: number): Promise<boolean>;
   updateUserAvatarBorder(userId: number, avatarBorderId: number | null): Promise<void>;
 
+  // Daily lootbox operations
+  getDailyLootboxStatus(userId: number): Promise<{ canOpen: boolean; lastOpenedAt: Date | null; nextOpenAt: Date | null }>;
+  openDailyLootbox(userId: number): Promise<AssetReward | null>;
+  getUserClaimedRewards(userId: number): Promise<AssetReward[]>;
+  getActiveRewardsForLootbox(): Promise<AssetReward[]>;
+
   // Unified content moderation operations  
   getRecentContent(limit?: number, offset?: number, contentType?: string): Promise<Array<{
     id: number;
