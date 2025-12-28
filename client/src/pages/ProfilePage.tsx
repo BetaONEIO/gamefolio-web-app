@@ -18,6 +18,7 @@ import {
   Users, 
   Youtube, 
   Gamepad,
+  Gamepad2,
   UserCog,
   Share,
   X,
@@ -34,8 +35,14 @@ import {
   Home,
   Search,
   Loader2,
-  Trophy
+  Trophy,
+  Video,
+  Upload,
+  Code,
+  Coffee,
+  Scroll
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { 
   SiSteam,
   SiPlaystation,
@@ -73,6 +80,17 @@ import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { formatDistance } from "date-fns";
 import { cn } from "@/lib/utils";
 import NotFound from "./not-found";
+
+const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
+  streamer: { label: "Streamer", icon: Video, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
+  gamer: { label: "Gamer", icon: Gamepad2, color: "bg-green-500/20 text-green-400 border-green-500/30" },
+  professional_gamer: { label: "Pro Gamer", icon: Trophy, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
+  content_creator: { label: "Creator", icon: Upload, color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+  indie_developer: { label: "Indie Dev", icon: Code, color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
+  viewer: { label: "Viewer", icon: Eye, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
+  filthy_casual: { label: "Casual", icon: Coffee, color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
+  doom_scroller: { label: "Doom Scroller", icon: Scroll, color: "bg-red-500/20 text-red-400 border-red-500/30" },
+};
 
 const ProfilePage = () => {
   const params = useParams();
@@ -1153,6 +1171,19 @@ const ProfilePage = () => {
           <div className="flex flex-col items-center gap-1 mb-3 text-center" style={{ marginTop: '-20px' }}>
             <div className="flex items-center gap-2 flex-wrap justify-center">
               <h1 className="text-xl font-bold">{profile.displayName}</h1>
+              {profile.userType && profile.showUserType !== false && userTypeConfig[profile.userType] && (() => {
+                const config = userTypeConfig[profile.userType!];
+                const IconComponent = config.icon;
+                return (
+                  <Badge 
+                    variant="outline" 
+                    className={`${config.color} border text-xs font-medium px-2 py-0.5`}
+                  >
+                    <IconComponent className="w-3 h-3 mr-1" />
+                    {config.label}
+                  </Badge>
+                );
+              })()}
               <span className="text-lg text-white/70 font-normal">@{profile.username}</span>
               <ModeratorBadge 
                 isModerator={profile.role === "moderator" || profile.role === "admin"} 
@@ -1459,6 +1490,19 @@ const ProfilePage = () => {
               <div className="flex flex-col flex-1">
                 <div className="flex items-center gap-4">
                   <h1 className="text-3xl font-bold">{profile.displayName}</h1>
+                  {profile.userType && profile.showUserType !== false && userTypeConfig[profile.userType] && (() => {
+                    const config = userTypeConfig[profile.userType!];
+                    const IconComponent = config.icon;
+                    return (
+                      <Badge 
+                        variant="outline" 
+                        className={`${config.color} border text-xs font-medium px-2 py-0.5`}
+                      >
+                        <IconComponent className="w-3 h-3 mr-1" />
+                        {config.label}
+                      </Badge>
+                    );
+                  })()}
                   <span className="text-xl text-white/70 font-normal">@{profile.username}</span>
                   <ModeratorBadge 
                     isModerator={profile.role === "moderator" || profile.role === "admin"} 
