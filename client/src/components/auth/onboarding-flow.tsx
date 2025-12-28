@@ -197,7 +197,7 @@ export default function OnboardingFlow({
   const [games, setGames] = useState<Game[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [userTypes, setUserTypes] = useState<("streamer" | "gamer" | "professional_gamer" | "content_creator" | "indie_developer" | "filthy_casual" | "viewer" | "doom_scroller")[]>([]);
+  const [userType, setUserType] = useState<"streamer" | "gamer" | "professional_gamer" | "content_creator" | "indie_developer" | "filthy_casual" | "viewer" | "doom_scroller" | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -585,8 +585,7 @@ export default function OnboardingFlow({
         username: formUsername,
         displayName: formUsername,
         bio: "Just joined Gamefolio!",
-        // Store user types as comma-separated string for now
-        userType: userTypes.length > 0 ? userTypes.join(",") : "viewer",
+        userType: userType || "viewer",
         ageRange: ageRange
       };
       
@@ -1094,7 +1093,7 @@ export default function OnboardingFlow({
               </Tooltip>
             </div>
             <p className="text-gray-300 mb-6">
-              Select all that apply - this helps us customize your experience on Gamefolio
+              Select one that best describes you - this helps us customize your experience on Gamefolio
             </p>
             
             <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1150,18 +1149,13 @@ export default function OnboardingFlow({
                 },
               ].map((type) => {
                 const IconComponent = type.icon;
-                const isSelected = userTypes.includes(type.id as any);
+                const isSelected = userType === type.id;
                 
                 return (
                   <div
                     key={type.id}
                     onClick={() => {
-                      const typeId = type.id as any;
-                      if (userTypes.includes(typeId)) {
-                        setUserTypes(userTypes.filter(t => t !== typeId));
-                      } else {
-                        setUserTypes([...userTypes, typeId]);
-                      }
+                      setUserType(type.id as any);
                     }}
                     className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all hover:scale-105 ${
                       isSelected
@@ -1200,7 +1194,7 @@ export default function OnboardingFlow({
               </Button>
               <Button
                 onClick={goToNextStep}
-                disabled={userTypes.length === 0}
+                disabled={!userType}
                 className="flex-1"
               >
                 Next
