@@ -1167,7 +1167,7 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          {/* Username and Display Name - On one line on Mobile */}
+          {/* Username and Display Name - Stacked on Mobile */}
           <div className="flex flex-col items-center gap-1 mb-3 text-center" style={{ marginTop: '-20px' }}>
             <div className="flex items-center gap-2 flex-wrap justify-center">
               <h1 className="text-xl font-bold">{profile.displayName}</h1>
@@ -1184,12 +1184,12 @@ const ProfilePage = () => {
                   </Badge>
                 );
               })()}
-              <span className="text-lg text-white/70 font-normal">@{profile.username}</span>
               <ModeratorBadge 
                 isModerator={profile.role === "moderator" || profile.role === "admin"} 
                 size="lg" 
               />
             </div>
+            <span className="text-base text-white/70 font-normal">@{profile.username}</span>
           </div>
 
           {/* Stats under username on mobile - Two rows */}
@@ -1503,12 +1503,12 @@ const ProfilePage = () => {
                       </Badge>
                     );
                   })()}
-                  <span className="text-xl text-white/70 font-normal">@{profile.username}</span>
                   <ModeratorBadge 
                     isModerator={profile.role === "moderator" || profile.role === "admin"} 
                     size="xl" 
                   />
                 </div>
+                <span className="text-lg text-white/70 font-normal mt-1">@{profile.username}</span>
 
                 {/* Stats positioned directly below username - Two rows */}
                 <div className="flex flex-col gap-2 mt-2">
