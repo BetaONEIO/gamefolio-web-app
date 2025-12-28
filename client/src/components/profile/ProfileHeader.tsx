@@ -193,7 +193,7 @@ const ProfileHeader = ({
                 <h1 className="text-2xl font-bold text-foreground">
                   {profile.displayName}
                 </h1>
-                {profile.userType && userTypeConfig[profile.userType] && (() => {
+                {profile.userType && profile.showUserType !== false && userTypeConfig[profile.userType] && (() => {
                   const config = userTypeConfig[profile.userType];
                   const IconComponent = config.icon;
                   return (

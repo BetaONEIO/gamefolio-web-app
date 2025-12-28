@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useQuery } from '@tanstack/react-query';
 import { Redirect } from 'wouter';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Video, Gamepad2, Trophy, Upload, Code, Eye, Coffee, Scroll } from 'lucide-react';
 import { HexColorPicker } from "react-colorful";
 
 import {
@@ -37,11 +37,23 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FaSteam, FaXbox, FaPlaystation, FaYoutube, FaDiscord } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
 import { SiEpicgames, SiNintendo } from 'react-icons/si';
 import { ProfilePictureSelector } from '@/components/profile/ProfilePictureSelector';
+
+const userTypeOptions = [
+  { id: "streamer", label: "Streamer", description: "I stream games live", icon: Video, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
+  { id: "gamer", label: "Gamer", description: "I love playing games", icon: Gamepad2, color: "bg-green-500/20 text-green-400 border-green-500/30" },
+  { id: "professional_gamer", label: "Pro Gamer", description: "I compete in esports", icon: Trophy, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
+  { id: "content_creator", label: "Creator", description: "I create gaming content", icon: Upload, color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+  { id: "indie_developer", label: "Indie Dev", description: "I develop games", icon: Code, color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
+  { id: "viewer", label: "Viewer", description: "I watch gaming content", icon: Eye, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
+  { id: "filthy_casual", label: "Casual", description: "I play when I can", icon: Coffee, color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
+  { id: "doom_scroller", label: "Doom Scroller", description: "I watch clips all day", icon: Scroll, color: "bg-red-500/20 text-red-400 border-red-500/30" },
+];
 
 const ProfileSettingsPage: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -148,6 +160,9 @@ const ProfileSettingsPage: React.FC = () => {
     primaryColor: z.string().min(1),
     avatarBorderColor: z.string().min(1),
     bannerUrl: z.string().optional().nullable(),
+    // User type settings
+    userType: z.string().optional().nullable(),
+    showUserType: z.boolean().optional(),
     // Platform connections
     steamUsername: z.string().optional().nullable(),
     xboxUsername: z.string().optional().nullable(),
@@ -169,6 +184,9 @@ const ProfileSettingsPage: React.FC = () => {
       primaryColor: user?.primaryColor || '#02172C',
       avatarBorderColor: user?.avatarBorderColor || '#4ADE80',
       bannerUrl: user?.bannerUrl || '',
+      // User type settings
+      userType: user?.userType || '',
+      showUserType: user?.showUserType !== false,
       // Platform connections
       steamUsername: user?.steamUsername || '',
       xboxUsername: user?.xboxUsername || '',
@@ -201,7 +219,9 @@ const ProfileSettingsPage: React.FC = () => {
       normalizeValue(formValues.playstationUsername) !== normalizeValue(user?.playstationUsername) ||
       normalizeValue(formValues.discordUsername) !== normalizeValue(user?.discordUsername) ||
       normalizeValue(formValues.epicUsername) !== normalizeValue(user?.epicUsername) ||
-      normalizeValue(formValues.nintendoUsername) !== normalizeValue(user?.nintendoUsername)
+      normalizeValue(formValues.nintendoUsername) !== normalizeValue(user?.nintendoUsername) ||
+      normalizeValue(formValues.userType) !== normalizeValue(user?.userType) ||
+      formValues.showUserType !== (user?.showUserType !== false)
     );
   };
 
@@ -433,6 +453,72 @@ const ProfileSettingsPage: React.FC = () => {
                       </FormItem>
                     )}
                   />
+                  
+                  {/* User Type Section */}
+                  <div className="space-y-4 pt-4 border-t">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <FormLabel>User Type Badge</FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Display a badge on your profile showing what type of user you are
+                        </p>
+                      </div>
+                      <FormField
+                        control={profileForm.control}
+                        name="showUserType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <FormField
+                      control={profileForm.control}
+                      name="userType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Select Your Type</FormLabel>
+                          <FormControl>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                              {userTypeOptions.map((type) => {
+                                const IconComponent = type.icon;
+                                const isSelected = field.value === type.id;
+                                return (
+                                  <button
+                                    key={type.id}
+                                    type="button"
+                                    onClick={() => field.onChange(type.id)}
+                                    className={`p-3 rounded-lg border-2 cursor-pointer transition-all text-left ${
+                                      isSelected
+                                        ? `${type.color} border-current`
+                                        : "border-muted hover:border-muted-foreground/50"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <IconComponent className={`h-4 w-4 ${isSelected ? '' : 'text-muted-foreground'}`} />
+                                      <span className={`text-sm font-medium ${isSelected ? '' : 'text-muted-foreground'}`}>
+                                        {type.label}
+                                      </span>
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Choose one that best describes you. This appears as a badge next to your name.
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   
                   {/* Email field (disabled, not connected to form) */}
                   <div className="space-y-2">
