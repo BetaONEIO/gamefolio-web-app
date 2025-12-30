@@ -463,7 +463,14 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       {/* Top overlay with user info - improved mobile design */}
                       <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-50 pointer-events-auto">
                         <div className="flex items-center">
-                          <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3 border-2 border-white/20">
+                          <div 
+                            className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3"
+                            style={{ 
+                              boxShadow: clip.user?.avatarBorderColor 
+                                ? `0 0 0 3px ${clip.user.avatarBorderColor}` 
+                                : '0 0 0 2px rgba(255,255,255,0.2)'
+                            }}
+                          >
                             {clip.user?.avatarUrl ? (
                               <img 
                                 src={clip.user.avatarUrl} 
@@ -636,7 +643,13 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   </div>
                 )}
                 <div className="flex items-center">
-                  <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3">
+                  <div 
+                    className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3 ring-2"
+                    style={{ 
+                      borderColor: clip.user?.avatarBorderColor || 'transparent',
+                      boxShadow: clip.user?.avatarBorderColor ? `0 0 0 2px ${clip.user.avatarBorderColor}` : undefined
+                    }}
+                  >
                     {clip.user?.avatarUrl ? (
                       <img 
                         src={clip.user.avatarUrl} 
