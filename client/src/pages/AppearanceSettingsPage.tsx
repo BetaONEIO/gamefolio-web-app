@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,11 +8,14 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest, getQueryFn, queryClient } from '@/lib/queryClient';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Redirect } from 'wouter';
-import { Loader2, Upload, Camera, Trash2, Check, Sparkles, X } from 'lucide-react';
+import { Loader2, Upload, Camera, Trash2, Check, Sparkles, X, ZoomIn } from 'lucide-react';
 import { HexColorPicker } from "react-colorful";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Slider } from '@/components/ui/slider';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import Cropper, { Area } from 'react-easy-crop';
 import type { AssetReward } from '@shared/schema';
 
 import {
@@ -35,6 +38,170 @@ import {
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { BannerUploadPreview } from '@/components/BannerUploadPreview';
+
+// Helper function to create cropped image from canvas
+const createCroppedImage = async (
+  imageSrc: string,
+  pixelCrop: Area
+): Promise<Blob> => {
+  const image = new Image();
+  image.src = imageSrc;
+  
+  await new Promise((resolve) => {
+    image.onload = resolve;
+  });
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  if (!ctx) {
+    throw new Error('Could not get canvas context');
+  }
+
+  // Set canvas size to crop size
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  // Draw cropped image
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error('Canvas to Blob conversion failed'));
+      }
+    }, 'image/jpeg', 0.95);
+  });
+};
+
+// Avatar Crop Modal Component
+const AvatarCropModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  imageSrc: string;
+  onCropComplete: (croppedBlob: Blob, previewUrl: string) => void;
+}> = ({ isOpen, onClose, imageSrc, onCropComplete }) => {
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const onCropChange = useCallback((location: { x: number; y: number }) => {
+    setCrop(location);
+  }, []);
+
+  const onZoomChange = useCallback((zoomValue: number) => {
+    setZoom(zoomValue);
+  }, []);
+
+  const onCropAreaComplete = useCallback((_: Area, croppedAreaPixelsParam: Area) => {
+    setCroppedAreaPixels(croppedAreaPixelsParam);
+  }, []);
+
+  const handleSaveCrop = async () => {
+    if (!croppedAreaPixels) return;
+    
+    setIsProcessing(true);
+    try {
+      const croppedBlob = await createCroppedImage(imageSrc, croppedAreaPixels);
+      const previewUrl = URL.createObjectURL(croppedBlob);
+      onCropComplete(croppedBlob, previewUrl);
+      onClose();
+    } catch (error) {
+      console.error('Error cropping image:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Reset zoom when modal opens with new image
+  useEffect(() => {
+    if (isOpen) {
+      setZoom(1);
+      setCrop({ x: 0, y: 0 });
+    }
+  }, [isOpen, imageSrc]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ZoomIn className="h-5 w-5" />
+            Crop Profile Picture
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          {/* Crop Area */}
+          <div className="relative h-72 w-full bg-black rounded-lg overflow-hidden">
+            <Cropper
+              image={imageSrc}
+              crop={crop}
+              zoom={zoom}
+              aspect={1}
+              cropShape="round"
+              showGrid={false}
+              onCropChange={onCropChange}
+              onZoomChange={onZoomChange}
+              onCropComplete={onCropAreaComplete}
+            />
+          </div>
+          
+          {/* Zoom Slider */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <ZoomIn className="h-4 w-4" />
+                Zoom
+              </label>
+              <span className="text-sm text-muted-foreground">{Math.round(zoom * 100)}%</span>
+            </div>
+            <Slider
+              value={[zoom]}
+              min={1}
+              max={3}
+              step={0.1}
+              onValueChange={(values) => setZoom(values[0])}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Drag to reposition, use slider to zoom in/out
+            </p>
+          </div>
+        </div>
+        
+        <DialogFooter className="flex gap-2">
+          <Button variant="outline" onClick={onClose} disabled={isProcessing}>
+            Cancel
+          </Button>
+          <Button onClick={handleSaveCrop} disabled={isProcessing || !croppedAreaPixels}>
+            {isProcessing ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              'Apply Crop'
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 // Define ProfileBanner type
 type ProfileBanner = {
@@ -553,6 +720,10 @@ const AppearanceSettingsPage: React.FC = () => {
   const [selectedBannerUrl, setSelectedBannerUrl] = useState<string>('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
+  
+  // Crop modal state
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const [rawImageSrc, setRawImageSrc] = useState<string>('');
 
   // Fetch user's unlocked profile banners (only banners they have access to)
   const { data: profileBanners = [], isLoading: bannersLoading } = useQuery<ProfileBanner[]>({
@@ -694,12 +865,12 @@ const AppearanceSettingsPage: React.FC = () => {
     }
   }, [user, appearanceForm, defaultGamefolioTheme]);
 
-  // Handle avatar file selection
+  // Handle avatar file selection - opens crop modal
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('🎯 NEW CODE LOADED - handleAvatarChange triggered');
+    console.log('🎯 handleAvatarChange triggered');
     const file = event.target.files?.[0];
     if (file) {
-      console.log('📸 File selected:', file.name, 'avatarFile state will update');
+      console.log('📸 File selected:', file.name);
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast({
@@ -720,17 +891,28 @@ const AppearanceSettingsPage: React.FC = () => {
         return;
       }
 
-      setAvatarFile(file);
-      console.log('✅ avatarFile state updated, button should now be enabled');
-
-      // Create preview URL
+      // Create data URL and open crop modal
       const reader = new FileReader();
       reader.onload = (e) => {
-        setAvatarPreview(e.target?.result as string);
-        console.log('🖼️ Preview created');
+        const imageSrc = e.target?.result as string;
+        setRawImageSrc(imageSrc);
+        setIsCropModalOpen(true);
+        console.log('🖼️ Opening crop modal');
       };
       reader.readAsDataURL(file);
     }
+    
+    // Reset the input so the same file can be selected again
+    event.target.value = '';
+  };
+  
+  // Handle crop complete - receives cropped blob and preview URL
+  const handleCropComplete = (croppedBlob: Blob, previewUrl: string) => {
+    // Convert blob to File for upload
+    const croppedFile = new File([croppedBlob], 'avatar-cropped.jpg', { type: 'image/jpeg' });
+    setAvatarFile(croppedFile);
+    setAvatarPreview(previewUrl);
+    console.log('✅ Cropped avatar ready for upload');
   };
 
   // Handle form submission
@@ -831,6 +1013,14 @@ const AppearanceSettingsPage: React.FC = () => {
     <div 
       className="min-h-screen py-8"
     >
+      {/* Avatar Crop Modal */}
+      <AvatarCropModal
+        isOpen={isCropModalOpen}
+        onClose={() => setIsCropModalOpen(false)}
+        imageSrc={rawImageSrc}
+        onCropComplete={handleCropComplete}
+      />
+      
       <div className="container max-w-4xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Profile & Appearance</h1>
