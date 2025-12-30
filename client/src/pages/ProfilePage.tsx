@@ -1003,7 +1003,7 @@ const ProfilePage = () => {
       className="min-h-screen pb-12 relative profile-theme-scope" 
       ref={profileThemeScopeRef}
       style={{ 
-        background: `linear-gradient(160deg, ${backgroundColor} 0%, ${accentDark} 50%, ${darkBgColor} 100%)`,
+        background: `linear-gradient(160deg, ${darkBgColor} 0%, ${accentDark} 50%, ${backgroundColor} 100%)`,
         position: 'relative',
         zIndex: 1
       }}
