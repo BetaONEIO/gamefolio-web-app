@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HexColorPicker } from "react-colorful";
 import { useToast } from "@/hooks/use-toast";
@@ -493,6 +493,71 @@ export default function SettingsPage() {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Profile Banner Selection Section */}
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    <Label className="text-base font-medium">Profile Banner</Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Select a banner from your unlocked rewards to customize your profile.
+                  </p>
+
+                  {/* Current Banner Preview */}
+                  {profileData.bannerUrl && (
+                    <div className="w-full h-32 rounded-md overflow-hidden border border-input">
+                      <img 
+                        src={profileData.bannerUrl} 
+                        alt="Current Banner" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+
+                  {/* Loading State */}
+                  {isLoadingBanners && (
+                    <div className="p-4 flex items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+
+                  {/* No Banners Unlocked Message */}
+                  {!isLoadingBanners && (!bannerImages || bannerImages.length === 0) && (
+                    <div className="p-4 bg-muted/50 rounded-lg border text-center">
+                      <Sparkles className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">
+                        No banners unlocked yet. Check back soon for ways to unlock exclusive banners!
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Unlocked Banners Grid */}
+                  {!isLoadingBanners && bannerImages && bannerImages.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {bannerImages.map((banner: any) => (
+                        <div
+                          key={banner.id}
+                          data-testid={`banner-select-${banner.id}`}
+                          className={`
+                            cursor-pointer rounded-md overflow-hidden border-2 h-24 relative transition-all
+                            ${profileData.bannerUrl === banner.imageUrl ? 'border-primary ring-2 ring-primary/50' : 'border-transparent hover:border-primary/50'}
+                          `}
+                          onClick={() => setProfileData(prev => ({ ...prev, bannerUrl: banner.imageUrl }))}
+                        >
+                          <img 
+                            src={banner.imageUrl} 
+                            alt={banner.name}
+                            className="w-full h-full object-cover" 
+                          />
+                          <div className="p-1 bg-black/75 text-white text-xs font-medium absolute bottom-0 left-0 right-0 truncate">
+                            {banner.name}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
