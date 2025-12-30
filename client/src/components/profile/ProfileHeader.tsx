@@ -188,23 +188,30 @@ const ProfileHeader = ({
 
             {/* Profile Info */}
             <div className="space-y-2">
-              {/* Username with user type badge */}
-              <div className="flex items-center gap-2">
+              {/* Username with user type badge(s) */}
+              <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl font-bold text-foreground">
                   {profile.displayName}
                 </h1>
-                {profile.userType && profile.showUserType !== false && userTypeConfig[profile.userType] && (() => {
-                  const config = userTypeConfig[profile.userType];
-                  const IconComponent = config.icon;
-                  return (
-                    <Badge 
-                      variant="outline" 
-                      className={`${config.color} border text-xs font-medium px-2 py-0.5`}
-                    >
-                      <IconComponent className="w-3 h-3 mr-1" />
-                      {config.label}
-                    </Badge>
-                  );
+                {profile.userType && profile.showUserType !== false && (() => {
+                  const userTypes = profile.userType.split(',').map(t => t.trim()).filter(Boolean);
+                  const displayTypes = userTypes.slice(0, 2);
+                  
+                  return displayTypes.map((type, index) => {
+                    const config = userTypeConfig[type];
+                    if (!config) return null;
+                    const IconComponent = config.icon;
+                    return (
+                      <Badge 
+                        key={`${type}-${index}`}
+                        variant="outline" 
+                        className={`${config.color} border text-xs font-medium px-2 py-0.5`}
+                      >
+                        <IconComponent className="w-3 h-3 mr-1" />
+                        {config.label}
+                      </Badge>
+                    );
+                  });
                 })()}
               </div>
 

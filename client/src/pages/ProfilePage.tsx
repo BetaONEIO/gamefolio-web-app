@@ -1183,18 +1183,25 @@ const ProfilePage = () => {
           <div className="flex flex-col items-center gap-1 mb-3 text-center" style={{ marginTop: '-20px' }}>
             <div className="flex items-center gap-2 flex-wrap justify-center">
               <h1 className="text-xl font-bold">{profile.displayName}</h1>
-              {profile.userType && profile.showUserType !== false && userTypeConfig[profile.userType] && (() => {
-                const config = userTypeConfig[profile.userType!];
-                const IconComponent = config.icon;
-                return (
-                  <Badge 
-                    variant="outline" 
-                    className={`${config.color} border text-xs font-medium px-2 py-0.5`}
-                  >
-                    <IconComponent className="w-3 h-3 mr-1" />
-                    {config.label}
-                  </Badge>
-                );
+              {profile.userType && profile.showUserType !== false && (() => {
+                const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
+                const displayTypes = userTypes.slice(0, 2);
+                
+                return displayTypes.map((type, index) => {
+                  const config = userTypeConfig[type];
+                  if (!config) return null;
+                  const IconComponent = config.icon;
+                  return (
+                    <Badge 
+                      key={`${type}-${index}`}
+                      variant="outline" 
+                      className={`${config.color} border text-xs font-medium px-2 py-0.5`}
+                    >
+                      <IconComponent className="w-3 h-3 mr-1" />
+                      {config.label}
+                    </Badge>
+                  );
+                });
               })()}
               <ModeratorBadge 
                 isModerator={profile.role === "moderator" || profile.role === "admin"} 
@@ -1500,20 +1507,27 @@ const ProfilePage = () => {
             {/* Username and Display Name with action buttons */}
             <div className="flex flex-row justify-between items-start gap-4 mb-6">
               <div className="flex flex-col flex-1">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-wrap">
                   <h1 className="text-3xl font-bold">{profile.displayName}</h1>
-                  {profile.userType && profile.showUserType !== false && userTypeConfig[profile.userType] && (() => {
-                    const config = userTypeConfig[profile.userType!];
-                    const IconComponent = config.icon;
-                    return (
-                      <Badge 
-                        variant="outline" 
-                        className={`${config.color} border text-xs font-medium px-2 py-0.5`}
-                      >
-                        <IconComponent className="w-3 h-3 mr-1" />
-                        {config.label}
-                      </Badge>
-                    );
+                  {profile.userType && profile.showUserType !== false && (() => {
+                    const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
+                    const displayTypes = userTypes.slice(0, 2);
+                    
+                    return displayTypes.map((type, index) => {
+                      const config = userTypeConfig[type];
+                      if (!config) return null;
+                      const IconComponent = config.icon;
+                      return (
+                        <Badge 
+                          key={`${type}-${index}`}
+                          variant="outline" 
+                          className={`${config.color} border text-xs font-medium px-2 py-0.5`}
+                        >
+                          <IconComponent className="w-3 h-3 mr-1" />
+                          {config.label}
+                        </Badge>
+                      );
+                    });
                   })()}
                   <ModeratorBadge 
                     isModerator={profile.role === "moderator" || profile.role === "admin"} 
