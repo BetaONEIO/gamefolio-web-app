@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useTheme } from "@/hooks/use-theme";
@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HexColorPicker } from "react-colorful";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +18,57 @@ import { BannerUploadPreview } from "@/components/BannerUploadPreview";
 import { BannerPositionPreview } from "@/components/BannerPositionPreview";
 import { BlockedUsersSection } from "@/components/settings/blocked-users-section";
 import { Check } from "lucide-react";
+import Cropper from "react-easy-crop";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Slider } from "@/components/ui/slider";
+
+// Utility function to create a cropped image from canvas
+const createImage = (url: string): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener('load', () => resolve(image));
+    image.addEventListener('error', (error) => reject(error));
+    image.setAttribute('crossOrigin', 'anonymous');
+    image.src = url;
+  });
+
+const getCroppedImg = async (
+  imageSrc: string,
+  pixelCrop: { x: number; y: number; width: number; height: number }
+): Promise<Blob> => {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) {
+    throw new Error('No 2d context');
+  }
+
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error('Canvas is empty'));
+      }
+    }, 'image/jpeg', 0.9);
+  });
+};
 
 const PRESET_THEMES = [
   {
@@ -93,6 +144,13 @@ export default function SettingsPage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  
+  // Crop modal state
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string>('');
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   
   // Track if banner was manually uploaded to prevent useEffect override
   const [uploadedBannerUrl, setUploadedBannerUrl] = useState<string>('');
@@ -191,7 +249,45 @@ export default function SettingsPage() {
     bioChanged: normalizeValue(profileData.bio) !== normalizeValue(user?.bio)
   });
 
-  // Handle avatar file selection
+  // Handle crop complete callback
+  const onCropComplete = useCallback(
+    (_: any, croppedPixels: { x: number; y: number; width: number; height: number }) => {
+      setCroppedAreaPixels(croppedPixels);
+    },
+    []
+  );
+
+  // Apply the crop and create the final file
+  const applyCrop = async () => {
+    if (!imageToCrop || !croppedAreaPixels) return;
+
+    try {
+      const croppedBlob = await getCroppedImg(imageToCrop, croppedAreaPixels);
+      const croppedFile = new File([croppedBlob], 'avatar.jpg', { type: 'image/jpeg' });
+      
+      setAvatarFile(croppedFile);
+      setAvatarPreview(URL.createObjectURL(croppedBlob));
+      setShowCropModal(false);
+      setImageToCrop('');
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      
+      toast({
+        title: "Avatar cropped",
+        description: "Click 'Save Changes' to upload your new profile picture",
+        variant: "gamefolioSuccess",
+      });
+    } catch (error) {
+      console.error('Error cropping image:', error);
+      toast({
+        title: "Crop failed",
+        description: "Failed to crop the image. Please try again.",
+        variant: "gamefolioError",
+      });
+    }
+  };
+
+  // Handle avatar file selection - opens crop modal
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -216,21 +312,18 @@ export default function SettingsPage() {
       }
 
       console.log('🖼️ Avatar file selected:', file.name, 'Size:', file.size);
-      setAvatarFile(file);
       
-      // Create preview URL
+      // Create preview URL and open crop modal
       const reader = new FileReader();
       reader.onload = (e) => {
-        setAvatarPreview(e.target?.result as string);
-        console.log('✅ Avatar preview created');
+        const imageUrl = e.target?.result as string;
+        setImageToCrop(imageUrl);
+        setShowCropModal(true);
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
+        console.log('🎯 Opening crop modal');
       };
       reader.readAsDataURL(file);
-      
-      toast({
-        title: "Avatar selected",
-        description: "Click 'Save Changes' to upload your new profile picture",
-        variant: "gamefolioSuccess",
-      });
     }
   };
 
@@ -834,6 +927,80 @@ export default function SettingsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Avatar Crop Modal */}
+      <Dialog open={showCropModal} onOpenChange={setShowCropModal}>
+        <DialogContent className="sm:max-w-lg bg-slate-900 border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Crop className="h-5 w-5" />
+              Crop Profile Picture
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Drag to reposition and use the slider to zoom in or out
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Crop Area */}
+            <div className="relative h-80 w-full bg-slate-800 rounded-lg overflow-hidden">
+              {imageToCrop && (
+                <Cropper
+                  image={imageToCrop}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={1}
+                  cropShape="round"
+                  showGrid={false}
+                  onCropChange={setCrop}
+                  onCropComplete={onCropComplete}
+                  onZoomChange={setZoom}
+                />
+              )}
+            </div>
+
+            {/* Zoom Slider */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-white flex items-center gap-2">
+                  <ZoomIn className="h-4 w-4" />
+                  Zoom
+                </Label>
+                <span className="text-sm text-slate-400">{Math.round(zoom * 100)}%</span>
+              </div>
+              <Slider
+                value={[zoom]}
+                min={1}
+                max={3}
+                step={0.1}
+                onValueChange={([value]) => setZoom(value)}
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCropModal(false);
+                setImageToCrop('');
+                setCrop({ x: 0, y: 0 });
+                setZoom(1);
+              }}
+              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={applyCrop}
+              className="bg-primary hover:bg-primary/90"
+            >
+              Apply Crop
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
