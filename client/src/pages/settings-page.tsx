@@ -215,9 +215,10 @@ export default function SettingsPage() {
     }
   };
 
-  // Fetch gaming banner images
+  // Fetch user's unlocked profile banners (only banners they have access to)
   const { data: bannerImages, isLoading: isLoadingBanners } = useQuery({
-    queryKey: ['/api/banner-images'],
+    queryKey: ['/api/user/unlocked-banners'],
+    enabled: !!user,
   });
 
 
