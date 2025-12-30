@@ -347,6 +347,205 @@ const ProfilePictureBorderSection: React.FC<{
   );
 };
 
+// Large Profile Picture with Border Preview Component
+const ProfilePictureWithBorder: React.FC<{
+  userId?: number;
+  avatarUrl: string;
+  displayName: string;
+  selectedBorderId?: number | null;
+  size?: 'md' | 'lg' | 'xl';
+}> = ({ userId, avatarUrl, displayName, selectedBorderId, size = 'xl' }) => {
+  // Fetch the selected border image if available
+  const { data: borderData } = useQuery<AssetReward>({
+    queryKey: [`/api/user/${userId}/avatar-border`],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!userId && !!selectedBorderId,
+  });
+
+  const sizeClasses = {
+    md: 'h-24 w-24',
+    lg: 'h-32 w-32',
+    xl: 'h-48 w-48',
+  };
+
+  const borderSizeClasses = {
+    md: 'h-28 w-28',
+    lg: 'h-36 w-36',
+    xl: 'h-56 w-56',
+  };
+
+  return (
+    <div className={`relative ${borderSizeClasses[size]} flex items-center justify-center`}>
+      {/* Border overlay if selected */}
+      {borderData?.imageUrl && (
+        <img
+          src={borderData.imageUrl}
+          alt="Avatar border"
+          className="absolute inset-0 w-full h-full object-contain z-10 pointer-events-none"
+        />
+      )}
+      {/* Avatar */}
+      <Avatar className={`${sizeClasses[size]} border-4 border-border`}>
+        <AvatarImage 
+          src={avatarUrl} 
+          alt={displayName} 
+        />
+        <AvatarFallback className="text-4xl font-bold">
+          {displayName?.charAt(0) || '?'}
+        </AvatarFallback>
+      </Avatar>
+    </div>
+  );
+};
+
+// Inline Profile Picture Border Selection Component (shows next to avatar)
+const ProfilePictureBorderInlineSection: React.FC<{
+  userId?: number;
+  currentBorderId?: number | null;
+  avatarPreview: string;
+  displayName: string;
+}> = ({ userId, currentBorderId, avatarPreview, displayName }) => {
+  const { toast } = useToast();
+  const [previewBorderId, setPreviewBorderId] = useState<number | null>(currentBorderId || null);
+
+  // Fetch user's unlocked avatar borders
+  const { data: unlockedBorders = [], isLoading } = useQuery<AssetReward[]>({
+    queryKey: ['/api/user/avatar-borders'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!userId,
+  });
+
+  // Mutation to update selected avatar border
+  const updateBorderMutation = useMutation({
+    mutationFn: async (avatarBorderId: number | null) => {
+      const response = await apiRequest('PUT', '/api/user/avatar-border', { avatarBorderId });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}/avatar-border`] });
+      }
+      toast({
+        title: "Border updated",
+        description: "Your profile picture border has been applied.",
+        variant: "gamefolioSuccess",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update border.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const getRarityColor = (rarity: string) => {
+    switch (rarity) {
+      case 'legendary': return 'from-yellow-400 to-yellow-600';
+      case 'epic': return 'from-purple-400 to-purple-600';
+      case 'rare': return 'from-blue-400 to-blue-600';
+      default: return 'from-gray-400 to-gray-600';
+    }
+  };
+
+  const handleBorderSelect = (borderId: number | null) => {
+    setPreviewBorderId(borderId);
+    updateBorderMutation.mutate(borderId);
+  };
+
+  // Get current preview border
+  const previewBorder = unlockedBorders.find(b => b.id === previewBorderId);
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h4 className="text-base font-medium flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          Profile Picture Border
+        </h4>
+        <p className="text-xs text-muted-foreground">
+          Select a border to show around your profile picture
+        </p>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center p-4">
+          <Loader2 className="h-5 w-5 animate-spin" />
+        </div>
+      ) : unlockedBorders.length === 0 ? (
+        <div className="p-4 bg-muted/50 rounded-lg border text-center">
+          <Sparkles className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            No borders unlocked yet. Complete achievements to unlock exclusive borders!
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {/* Remove Border Option */}
+          {currentBorderId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleBorderSelect(null)}
+              disabled={updateBorderMutation.isPending}
+              className="w-full"
+              data-testid="button-remove-border-inline"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Remove Border
+            </Button>
+          )}
+
+          {/* Available Borders Grid */}
+          <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+            {unlockedBorders.map((border) => {
+              const isSelected = currentBorderId === border.id;
+              const isPreview = previewBorderId === border.id;
+              return (
+                <button
+                  key={border.id}
+                  type="button"
+                  onClick={() => handleBorderSelect(border.id)}
+                  disabled={updateBorderMutation.isPending}
+                  className={`
+                    relative p-1.5 rounded-lg transition-all transform hover:scale-105
+                    ${isSelected 
+                      ? 'ring-2 ring-primary bg-primary/20' 
+                      : 'border border-border hover:border-primary/50'}
+                  `}
+                  data-testid={`button-inline-border-${border.id}`}
+                >
+                  {/* Border Preview */}
+                  <div className="relative aspect-square rounded-full overflow-hidden">
+                    <img
+                      src={border.imageUrl}
+                      alt={border.name}
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Rarity Glow */}
+                    <div 
+                      className={`absolute inset-0 rounded-full bg-gradient-to-br ${getRarityColor(border.rarity || 'common')} opacity-20`}
+                    />
+                  </div>
+
+                  {/* Selected Indicator */}
+                  {isSelected && (
+                    <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5">
+                      <Check className="h-2.5 w-2.5" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const AppearanceSettingsPage: React.FC = () => {
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
@@ -676,26 +875,25 @@ const AppearanceSettingsPage: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="flex items-start space-x-6">
-                  {/* Current/Preview Avatar */}
-                  <div className="flex flex-col items-center space-y-2">
-                    <Avatar className="h-24 w-24 border-4 border-border">
-                      <AvatarImage 
-                        src={avatarPreview || user?.avatarUrl || ''} 
-                        alt={user?.displayName} 
+                <div className="flex flex-col lg:flex-row items-start gap-8">
+                  {/* Left side: Large Avatar Preview with Border */}
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="relative">
+                      {/* Avatar Border Preview (shows selected border) */}
+                      <ProfilePictureWithBorder
+                        userId={user?.id}
+                        avatarUrl={avatarPreview || user?.avatarUrl || ''}
+                        displayName={user?.displayName || ''}
+                        selectedBorderId={user?.selectedAvatarBorderId}
+                        size="xl"
                       />
-                      <AvatarFallback className="text-2xl">
-                        {user?.displayName?.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-xs text-muted-foreground">
-                      {avatarFile ? 'New' : 'Current'}
+                    </div>
+                    <span className="text-sm text-muted-foreground font-medium">
+                      {avatarFile ? 'New Picture' : 'Current Picture'}
                     </span>
-                  </div>
-
-                  {/* Upload Controls */}
-                  <div className="flex-1 space-y-3">
-                    <div className="flex flex-wrap gap-2">
+                    
+                    {/* Upload Controls */}
+                    <div className="flex flex-wrap gap-2 justify-center">
                       <Button 
                         type="button" 
                         variant="outline" 
@@ -703,7 +901,7 @@ const AppearanceSettingsPage: React.FC = () => {
                         onClick={() => document.getElementById('avatar-upload')?.click()}
                       >
                         <Upload className="h-4 w-4 mr-2" />
-                        {avatarFile ? 'Change Picture' : 'Upload Picture'}
+                        {avatarFile ? 'Change' : 'Upload'}
                       </Button>
 
                       {avatarFile && (
@@ -728,12 +926,20 @@ const AppearanceSettingsPage: React.FC = () => {
                       className="hidden"
                     />
 
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <div>• Recommended: 400x400 pixels or larger</div>
-                      <div>• Square images work best</div>
-                      <div>• Maximum file size: 5MB</div>
-                      <div>• Supported formats: JPG, PNG, GIF</div>
+                    <div className="text-xs text-muted-foreground space-y-1 text-center">
+                      <div>Square images work best (400x400+)</div>
+                      <div>Max 5MB • JPG, PNG, GIF</div>
                     </div>
+                  </div>
+
+                  {/* Right side: Border Selection */}
+                  <div className="flex-1 w-full lg:w-auto">
+                    <ProfilePictureBorderInlineSection 
+                      userId={user?.id} 
+                      currentBorderId={user?.selectedAvatarBorderId}
+                      avatarPreview={avatarPreview || user?.avatarUrl || ''}
+                      displayName={user?.displayName || ''}
+                    />
                   </div>
                 </div>
               </div>
@@ -791,9 +997,6 @@ const AppearanceSettingsPage: React.FC = () => {
         </CardHeader>
 
         <CardContent>
-          {/* Profile Picture Border Section */}
-          <ProfilePictureBorderSection userId={user?.id} currentBorderId={user?.selectedAvatarBorderId} />
-          
           <Form {...appearanceForm}>
             <form 
               id="appearance-form" 
