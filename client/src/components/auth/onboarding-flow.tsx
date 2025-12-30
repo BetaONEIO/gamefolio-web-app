@@ -197,7 +197,7 @@ export default function OnboardingFlow({
   const [games, setGames] = useState<Game[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [userType, setUserType] = useState<"streamer" | "gamer" | "professional_gamer" | "content_creator" | "indie_developer" | "filthy_casual" | "viewer" | "doom_scroller" | null>(null);
+  const [userTypes, setUserTypes] = useState<string[]>([]);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -585,7 +585,7 @@ export default function OnboardingFlow({
         username: formUsername,
         displayName: formUsername,
         bio: "Just joined Gamefolio!",
-        userType: userType || "viewer",
+        userType: userTypes.length > 0 ? userTypes.join(",") : "viewer",
         ageRange: ageRange
       };
       
@@ -1079,6 +1079,14 @@ export default function OnboardingFlow({
         );
 
       case OnboardingStep.UserType:
+        const toggleUserType = (typeId: string) => {
+          if (userTypes.includes(typeId)) {
+            setUserTypes(userTypes.filter(t => t !== typeId));
+          } else if (userTypes.length < 2) {
+            setUserTypes([...userTypes, typeId]);
+          }
+        };
+        
         return (
           <>
             <div className="flex items-center gap-2 mb-4">
@@ -1093,7 +1101,7 @@ export default function OnboardingFlow({
               </Tooltip>
             </div>
             <p className="text-gray-300 mb-6">
-              Select one that best describes you - this helps us customize your experience on Gamefolio
+              Select up to 2 that best describe you - this helps us customize your experience on Gamefolio
             </p>
             
             <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1149,15 +1157,16 @@ export default function OnboardingFlow({
                 },
               ].map((type) => {
                 const IconComponent = type.icon;
-                const isSelected = userType === type.id;
+                const isSelected = userTypes.includes(type.id);
+                const isDisabled = !isSelected && userTypes.length >= 2;
                 
                 return (
                   <div
                     key={type.id}
-                    onClick={() => {
-                      setUserType(type.id as any);
-                    }}
-                    className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all hover:scale-105 ${
+                    onClick={() => !isDisabled && toggleUserType(type.id)}
+                    className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      isDisabled ? "opacity-50 cursor-not-allowed" : "hover:scale-105"
+                    } ${
                       isSelected
                         ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
                         : "border-gray-700 hover:border-primary/50 hover:bg-primary/5"
@@ -1188,13 +1197,17 @@ export default function OnboardingFlow({
               })}
             </div>
             
+            <p className="text-sm text-gray-400 text-center mb-4">
+              {userTypes.length}/2 selected
+            </p>
+            
             <div className="flex gap-3">
               <Button variant="outline" onClick={goToPrevStep}>
                 Back
               </Button>
               <Button
                 onClick={goToNextStep}
-                disabled={!userType}
+                disabled={userTypes.length === 0}
                 className="flex-1"
               >
                 Next
