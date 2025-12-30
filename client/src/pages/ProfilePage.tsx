@@ -992,8 +992,8 @@ const ProfilePage = () => {
 
   const bgRgb = hexToRgb(backgroundColor);
   const accentRgb = hexToRgb(accentColor);
-  const darkBgColor = darkenColor(backgroundColor, 50);
-  const accentDark = accentRgb ? `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.15)` : 'transparent';
+  const darkBgColor = darkenColor(backgroundColor, 70);
+  const accentDark = accentRgb ? `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.35)` : 'transparent';
 
   // Debug: Log the actual colors being used
   console.log('Profile colors:', { accentColor, backgroundColor, bgRgb, accentRgb });

@@ -618,7 +618,7 @@ export default function SettingsPage() {
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {PRESET_THEMES.map((theme) => {
                         const accentRgb = hexToRgb(theme.accentColor);
-                        const accentGlow = accentRgb ? `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.15)` : 'transparent';
+                        const accentGlow = accentRgb ? `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.35)` : 'transparent';
                         return (
                           <div
                             key={theme.name}
@@ -628,7 +628,7 @@ export default function SettingsPage() {
                             <div
                               className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm"
                               style={{ 
-                                background: `linear-gradient(160deg, ${theme.backgroundColor} 0%, ${accentGlow} 50%, ${darkenColor(theme.backgroundColor, 50)} 100%)`
+                                background: `linear-gradient(160deg, ${theme.backgroundColor} 0%, ${accentGlow} 50%, ${darkenColor(theme.backgroundColor, 70)} 100%)`
                               }}
                             >
                               <div
