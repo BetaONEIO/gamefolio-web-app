@@ -52,6 +52,25 @@ const PRESET_THEMES = [
   }
 ];
 
+const hexToRgb = (hex: string) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+};
+
+const darkenColor = (hex: string, percent: number) => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  const factor = 1 - percent / 100;
+  const r = Math.round(rgb.r * factor);
+  const g = Math.round(rgb.g * factor);
+  const b = Math.round(rgb.b * factor);
+  return `rgb(${r}, ${g}, ${b})`;
+};
+
 export default function SettingsPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -605,7 +624,9 @@ export default function SettingsPage() {
                         >
                           <div
                             className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm"
-                            style={{ backgroundColor: theme.backgroundColor }}
+                            style={{ 
+                              background: `linear-gradient(180deg, ${theme.backgroundColor} 0%, ${darkenColor(theme.backgroundColor, 40)} 100%)`
+                            }}
                           >
                             <div
                               className="w-8 h-8 rounded-full border-2 border-white"

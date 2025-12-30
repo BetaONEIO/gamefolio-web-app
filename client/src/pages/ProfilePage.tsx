@@ -979,8 +979,20 @@ const ProfilePage = () => {
     } : null;
   };
 
+  // Darken a hex color by a percentage
+  const darkenColor = (hex: string, percent: number) => {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return hex;
+    const factor = 1 - percent / 100;
+    const r = Math.round(rgb.r * factor);
+    const g = Math.round(rgb.g * factor);
+    const b = Math.round(rgb.b * factor);
+    return `rgb(${r}, ${g}, ${b})`;
+  };
+
   const bgRgb = hexToRgb(backgroundColor);
   const accentRgb = hexToRgb(accentColor);
+  const darkBgColor = darkenColor(backgroundColor, 40);
 
   // Debug: Log the actual colors being used
   console.log('Profile colors:', { accentColor, backgroundColor, bgRgb, accentRgb });
@@ -990,7 +1002,7 @@ const ProfilePage = () => {
       className="min-h-screen pb-12 relative profile-theme-scope" 
       ref={profileThemeScopeRef}
       style={{ 
-        background: backgroundColor,
+        background: `linear-gradient(180deg, ${backgroundColor} 0%, ${darkBgColor} 100%)`,
         position: 'relative',
         zIndex: 1
       }}
