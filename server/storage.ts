@@ -162,6 +162,11 @@ export interface IStorage {
   // Profile customization operations
   getAllProfileBanners(): Promise<ProfileBanner[]>;
   getProfileBannersByCategory(category: string): Promise<ProfileBanner[]>;
+  
+  // User unlocked banners operations
+  getUserUnlockedBanners(userId: number): Promise<ProfileBanner[]>;
+  unlockBannerForUser(userId: number, bannerId: number): Promise<void>;
+  hasUserUnlockedBanner(userId: number, bannerId: number): Promise<boolean>;
 
   // Uploaded banner operations
   createUploadedBanner(userId: number, bannerUrl: string): Promise<UploadedBanner>;

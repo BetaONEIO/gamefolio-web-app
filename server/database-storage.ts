@@ -83,7 +83,8 @@ import {
   screenshotCommentMentions,
   assetRewards,
   assetRewardClaims,
-  userDailyLootbox
+  userDailyLootbox,
+  userUnlockedBanners
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, isNotNull, getTableColumns } from "drizzle-orm";
@@ -1390,6 +1391,49 @@ export class DatabaseStorage implements IStorage {
       .where(eq(profileBanners.category, category))
       .orderBy(profileBanners.id);
     return banners;
+  }
+
+  async getUserUnlockedBanners(userId: number): Promise<ProfileBanner[]> {
+    const results = await db
+      .select({
+        id: profileBanners.id,
+        name: profileBanners.name,
+        imageUrl: profileBanners.imageUrl,
+        category: profileBanners.category,
+        createdAt: profileBanners.createdAt,
+      })
+      .from(userUnlockedBanners)
+      .innerJoin(profileBanners, eq(userUnlockedBanners.bannerId, profileBanners.id))
+      .where(eq(userUnlockedBanners.userId, userId))
+      .orderBy(profileBanners.category, profileBanners.id);
+    return results;
+  }
+
+  async unlockBannerForUser(userId: number, bannerId: number): Promise<void> {
+    const existing = await db
+      .select()
+      .from(userUnlockedBanners)
+      .where(and(
+        eq(userUnlockedBanners.userId, userId),
+        eq(userUnlockedBanners.bannerId, bannerId)
+      ))
+      .limit(1);
+    
+    if (existing.length === 0) {
+      await db.insert(userUnlockedBanners).values({ userId, bannerId });
+    }
+  }
+
+  async hasUserUnlockedBanner(userId: number, bannerId: number): Promise<boolean> {
+    const result = await db
+      .select()
+      .from(userUnlockedBanners)
+      .where(and(
+        eq(userUnlockedBanners.userId, userId),
+        eq(userUnlockedBanners.bannerId, bannerId)
+      ))
+      .limit(1);
+    return result.length > 0;
   }
 
   // Uploaded banner operations

@@ -210,6 +210,22 @@ export const profileBanners = pgTable("profile_banners", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Track which banners users have unlocked
+export const userUnlockedBanners = pgTable("user_unlocked_banners", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  bannerId: integer("banner_id").notNull().references(() => profileBanners.id, { onDelete: "cascade" }),
+  unlockedAt: timestamp("unlocked_at").defaultNow().notNull(),
+});
+
+export const insertUserUnlockedBannerSchema = createInsertSchema(userUnlockedBanners).omit({
+  id: true,
+  unlockedAt: true,
+});
+
+export type UserUnlockedBanner = typeof userUnlockedBanners.$inferSelect;
+export type InsertUserUnlockedBanner = z.infer<typeof insertUserUnlockedBannerSchema>;
+
 // Notifications table
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
