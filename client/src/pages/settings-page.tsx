@@ -545,23 +545,25 @@ export default function SettingsPage() {
                     {/* Current/Preview Avatar with Border */}
                     <div className="flex flex-col items-center space-y-3">
                       <div 
-                        className="relative rounded-full p-1"
+                        className="relative rounded-full p-[4px]"
                         style={{ 
                           background: user?.avatarBorderColor 
-                            ? `linear-gradient(135deg, ${user.avatarBorderColor}, ${user.avatarBorderColor}88)`
-                            : 'linear-gradient(135deg, hsl(var(--border)), hsl(var(--border)))'
+                            ? user.avatarBorderColor
+                            : 'hsl(var(--border))'
                         }}
                       >
-                        <Avatar className="h-32 w-32 border-4 border-background">
-                          <AvatarImage 
-                            src={avatarPreview || user?.avatarUrl || ''} 
-                            alt={user?.displayName}
-                            key={user?.avatarUrl || 'default'}
-                          />
-                          <AvatarFallback className="text-3xl font-bold">
-                            {user?.displayName?.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
+                        <div className="rounded-full bg-background p-1">
+                          <Avatar className="h-32 w-32">
+                            <AvatarImage 
+                              src={avatarPreview || user?.avatarUrl || ''} 
+                              alt={user?.displayName}
+                              key={user?.avatarUrl || 'default'}
+                            />
+                            <AvatarFallback className="text-3xl font-bold">
+                              {user?.displayName?.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </div>
                       </div>
                       <div className="text-center">
                         <span className="text-sm font-medium">

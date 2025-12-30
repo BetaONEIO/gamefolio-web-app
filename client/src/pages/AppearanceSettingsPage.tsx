@@ -554,27 +554,27 @@ const ProfilePictureWithBorder: React.FC<{
       )}
       {/* Avatar with color border */}
       <div 
-        className="relative rounded-full p-1"
+        className="relative rounded-full p-[4px]"
         style={{ 
-          background: avatarBorderColor 
-            ? `linear-gradient(135deg, ${avatarBorderColor}, ${avatarBorderColor}88)`
-            : 'transparent'
+          background: avatarBorderColor || 'hsl(var(--border))'
         }}
       >
-        <Avatar className={`${sizeClasses[size]} border-4 border-background`}>
-          <AvatarImage 
-            src={avatarUrl} 
-            alt={displayName} 
-          />
-          <AvatarFallback className="text-4xl font-bold">
-            {displayName?.charAt(0) || '?'}
-          </AvatarFallback>
-        </Avatar>
+        <div className="rounded-full bg-background p-1">
+          <Avatar className={sizeClasses[size]}>
+            <AvatarImage 
+              src={avatarUrl} 
+              alt={displayName} 
+            />
+            <AvatarFallback className="text-4xl font-bold">
+              {displayName?.charAt(0) || '?'}
+            </AvatarFallback>
+          </Avatar>
+        </div>
       </div>
       {/* Show border color indicator */}
       {avatarBorderColor && (
-        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-xs text-muted-foreground bg-background/80 px-2 py-0.5 rounded-full">
-          <span style={{ color: avatarBorderColor }}>{avatarBorderColor}</span>
+        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-xs text-muted-foreground bg-background/80 px-2 py-0.5 rounded-full whitespace-nowrap">
+          Border: <span style={{ color: avatarBorderColor }}>{avatarBorderColor}</span>
         </div>
       )}
     </div>
