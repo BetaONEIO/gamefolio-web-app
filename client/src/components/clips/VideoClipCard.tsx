@@ -117,15 +117,11 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
   
   // Fire button now handled by FireButton component with proper backend integration
 
-  // Handle click on the clip card
+  // Handle click on the clip card - open dialog instead of navigating
   const handleCardClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    // Navigate to shareable URL format that matches share links
-    if (clip.videoType === 'reel') {
-      navigate(`/@${clip.user.username}/reel/${clip.shareCode}`);
-    } else {
-      navigate(`/@${clip.user.username}/clip/${clip.shareCode}`);
-    }
+    // Open clip dialog with the clips list for navigation
+    openClipDialog(clip.id, clipsList || [clip]);
   };
 
   return (
