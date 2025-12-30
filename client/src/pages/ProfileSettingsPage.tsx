@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useQuery } from '@tanstack/react-query';
 import { Redirect } from 'wouter';
-import { Loader2, Video, Gamepad2, Trophy, Upload, Code, Eye, Coffee, Scroll } from 'lucide-react';
+import { Loader2, Video, Gamepad2, Trophy, Upload, Code, Eye, Coffee, Scroll, Sparkles } from 'lucide-react';
 import { HexColorPicker } from "react-colorful";
 
 import {
@@ -55,6 +55,14 @@ const userTypeOptions = [
   { id: "doom_scroller", label: "Doom Scroller", description: "I watch clips all day", icon: Scroll, color: "bg-red-500/20 text-red-400 border-red-500/30" },
 ];
 
+type ProfileBanner = {
+  id: number;
+  name: string;
+  category: string;
+  imageUrl: string;
+  createdAt: string;
+};
+
 const ProfileSettingsPage: React.FC = () => {
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
@@ -62,6 +70,13 @@ const ProfileSettingsPage: React.FC = () => {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
+
+  // Fetch user's unlocked profile banners
+  const { data: unlockedBanners = [], isLoading: bannersLoading } = useQuery<ProfileBanner[]>({
+    queryKey: ['/api/user/unlocked-banners'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!user,
+  });
   
   // Handle file upload for avatar
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -822,35 +837,76 @@ const ProfileSettingsPage: React.FC = () => {
                     />
                   </div>
                   
-                  {/* Banner URL */}
+                  {/* Profile Banner Selection */}
                   <FormField
                     control={profileForm.control}
                     name="bannerUrl"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Banner Image</FormLabel>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Sparkles className="h-5 w-5 text-primary" />
+                          <FormLabel className="text-lg font-medium">Profile Banner</FormLabel>
+                        </div>
+                        <FormDescription className="mb-3">
+                          Select a banner from your unlocked rewards to customize your profile.
+                        </FormDescription>
                         <FormControl>
-                          <div className="space-y-3">
-                            <Input 
-                              placeholder="https://example.com/banner.jpg" 
-                              {...field}
-                              value={field.value || ''}
-                            />
-                            
+                          <div className="space-y-4">
+                            {/* Current Banner Preview */}
                             {field.value && (
                               <div className="w-full h-32 rounded-md overflow-hidden border border-input">
                                 <img 
                                   src={field.value} 
-                                  alt="Banner Preview" 
+                                  alt="Current Banner" 
                                   className="w-full h-full object-cover"
                                 />
                               </div>
                             )}
+
+                            {/* Loading State */}
+                            {bannersLoading && (
+                              <div className="p-4 flex items-center justify-center">
+                                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                              </div>
+                            )}
+
+                            {/* No Banners Unlocked Message */}
+                            {!bannersLoading && unlockedBanners.length === 0 && (
+                              <div className="p-4 bg-muted/50 rounded-lg border text-center">
+                                <Sparkles className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                                <p className="text-sm text-muted-foreground">
+                                  No banners unlocked yet. Check back soon for ways to unlock exclusive banners!
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Unlocked Banners Grid */}
+                            {!bannersLoading && unlockedBanners.length > 0 && (
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {unlockedBanners.map((banner) => (
+                                  <div
+                                    key={banner.id}
+                                    data-testid={`banner-select-${banner.id}`}
+                                    className={`
+                                      cursor-pointer rounded-md overflow-hidden border-2 h-24 relative transition-all
+                                      ${field.value === banner.imageUrl ? 'border-primary ring-2 ring-primary/50' : 'border-transparent hover:border-primary/50'}
+                                    `}
+                                    onClick={() => field.onChange(banner.imageUrl)}
+                                  >
+                                    <img 
+                                      src={banner.imageUrl} 
+                                      alt={banner.name}
+                                      className="w-full h-full object-cover" 
+                                    />
+                                    <div className="p-1 bg-black/75 text-white text-xs font-medium absolute bottom-0 left-0 right-0 truncate">
+                                      {banner.name}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </FormControl>
-                        <FormDescription>
-                          Add a banner image to your profile.
-                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
