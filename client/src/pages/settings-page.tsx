@@ -617,8 +617,7 @@ export default function SettingsPage() {
                   <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {PRESET_THEMES.map((theme) => {
-                        const accentRgb = hexToRgb(theme.accentColor);
-                        const accentGlow = accentRgb ? `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.35)` : 'transparent';
+                        const defaultThemeColor = '#0B2232';
                         return (
                           <div
                             key={theme.name}
@@ -628,7 +627,7 @@ export default function SettingsPage() {
                             <div
                               className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm"
                               style={{ 
-                                background: `linear-gradient(160deg, ${darkenColor(theme.backgroundColor, 70)} 0%, ${accentGlow} 50%, ${theme.backgroundColor} 100%)`
+                                background: `linear-gradient(180deg, ${theme.backgroundColor} 0%, ${theme.backgroundColor} 40%, ${defaultThemeColor} 100%)`
                               }}
                             >
                               <div
