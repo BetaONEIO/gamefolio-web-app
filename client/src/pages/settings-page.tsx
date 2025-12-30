@@ -627,7 +627,7 @@ export default function SettingsPage() {
                             <div
                               className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm"
                               style={{ 
-                                background: `linear-gradient(180deg, ${theme.backgroundColor} 0%, ${theme.backgroundColor} 40%, ${defaultThemeColor} 100%)`
+                                background: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
                               }}
                             >
                               <div
