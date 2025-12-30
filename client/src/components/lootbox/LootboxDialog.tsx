@@ -367,7 +367,14 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                     "w-40 h-40 rounded-xl border-2 overflow-hidden flex items-center justify-center bg-[#1a1a2e]",
                     rarityStyle.border
                   )}>
-                    {reward.imageUrl ? (
+                    {reward.assetType === 'xp_reward' ? (
+                      <div className="w-28 h-28 rounded-full bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-yellow-500/30">
+                        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-300 to-amber-400 flex flex-col items-center justify-center border-4 border-yellow-200/50">
+                          <Zap className="w-8 h-8 text-yellow-900 mb-1" />
+                          <span className="text-2xl font-bold text-yellow-900">{reward.name.match(/\d+/)?.[0] || 'XP'}</span>
+                        </div>
+                      </div>
+                    ) : reward.imageUrl ? (
                       <img
                         src={reward.imageUrl}
                         alt={reward.name}
