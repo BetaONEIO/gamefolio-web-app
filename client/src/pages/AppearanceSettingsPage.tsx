@@ -355,10 +355,11 @@ const AppearanceSettingsPage: React.FC = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
 
-  // Fetch profile banners
-  const { data: profileBanners = [] } = useQuery<ProfileBanner[]>({
-    queryKey: ['/api/profile-banners'],
+  // Fetch user's unlocked profile banners (only banners they have access to)
+  const { data: profileBanners = [], isLoading: bannersLoading } = useQuery<ProfileBanner[]>({
+    queryKey: ['/api/user/unlocked-banners'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!user,
   });
 
   // Define form schemas with Zod
@@ -1050,11 +1051,22 @@ const AppearanceSettingsPage: React.FC = () => {
                             </div>
                           )}
 
-                          {/* Show message if no banners available */}
-                          {profileBanners.length === 0 && (
+                          {/* Show loading state */}
+                          {bannersLoading && (
+                            <div className="p-4 flex items-center justify-center">
+                              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                            </div>
+                          )}
+
+                          {/* Show message if no banners unlocked */}
+                          {!bannersLoading && profileBanners.length === 0 && (
                             <div className="p-4 bg-muted/50 rounded-lg border text-center">
+                              <Sparkles className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                               <p className="text-sm text-muted-foreground">
-                                No preset banners available. Upload a custom banner below.
+                                No banners unlocked yet. Unlock banners through lootboxes or special rewards to customize your profile!
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-2">
+                                You can still upload a custom banner below.
                               </p>
                             </div>
                           )}

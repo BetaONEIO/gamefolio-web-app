@@ -5352,7 +5352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Profile Banner Routes
   // ==========================================
 
-  // Get all profile banners
+  // Get all profile banners (for admin use)
   app.get("/api/profile-banners", async (req, res) => {
     try {
       const banners = await storage.getAllProfileBanners();
@@ -5360,6 +5360,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Error fetching profile banners:", err);
       return res.status(500).json({ message: "Error fetching profile banners" });
+    }
+  });
+
+  // Get unlocked banners for the current user
+  app.get("/api/user/unlocked-banners", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const userId = (req.user as User).id;
+      const banners = await storage.getUserUnlockedBanners(userId);
+      res.json(banners);
+    } catch (err) {
+      console.error("Error fetching unlocked banners:", err);
+      return res.status(500).json({ message: "Error fetching unlocked banners" });
+    }
+  });
+
+  // Unlock a banner for the current user (admin or lootbox system use)
+  app.post("/api/user/unlock-banner/:bannerId", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const userId = (req.user as User).id;
+      const bannerId = parseInt(req.params.bannerId);
+      
+      if (isNaN(bannerId)) {
+        return res.status(400).json({ message: "Invalid banner ID" });
+      }
+      
+      await storage.unlockBannerForUser(userId, bannerId);
+      res.json({ success: true, message: "Banner unlocked" });
+    } catch (err) {
+      console.error("Error unlocking banner:", err);
+      return res.status(500).json({ message: "Error unlocking banner" });
     }
   });
 
