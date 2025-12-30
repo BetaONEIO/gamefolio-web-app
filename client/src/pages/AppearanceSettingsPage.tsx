@@ -1063,7 +1063,7 @@ const AppearanceSettingsPage: React.FC = () => {
                             <div className="p-4 bg-muted/50 rounded-lg border text-center">
                               <Sparkles className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                               <p className="text-sm text-muted-foreground">
-                                No banners unlocked yet. Unlock banners through lootboxes or special rewards to customize your profile!
+                                No banners unlocked yet. Check back soon for ways to unlock exclusive banners!
                               </p>
                               <p className="text-xs text-muted-foreground mt-2">
                                 You can still upload a custom banner below.
