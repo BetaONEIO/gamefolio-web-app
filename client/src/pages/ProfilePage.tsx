@@ -992,7 +992,8 @@ const ProfilePage = () => {
 
   const bgRgb = hexToRgb(backgroundColor);
   const accentRgb = hexToRgb(accentColor);
-  const darkBgColor = darkenColor(backgroundColor, 40);
+  const darkBgColor = darkenColor(backgroundColor, 50);
+  const accentDark = accentRgb ? `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.15)` : 'transparent';
 
   // Debug: Log the actual colors being used
   console.log('Profile colors:', { accentColor, backgroundColor, bgRgb, accentRgb });
@@ -1002,7 +1003,7 @@ const ProfilePage = () => {
       className="min-h-screen pb-12 relative profile-theme-scope" 
       ref={profileThemeScopeRef}
       style={{ 
-        background: `linear-gradient(180deg, ${backgroundColor} 0%, ${darkBgColor} 100%)`,
+        background: `linear-gradient(160deg, ${backgroundColor} 0%, ${accentDark} 50%, ${darkBgColor} 100%)`,
         position: 'relative',
         zIndex: 1
       }}

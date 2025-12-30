@@ -616,26 +616,30 @@ export default function SettingsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {PRESET_THEMES.map((theme) => (
-                        <div
-                          key={theme.name}
-                          className="cursor-pointer rounded-lg border-2 border-transparent hover:border-primary/50 transition-colors"
-                          onClick={() => applyPresetTheme(theme)}
-                        >
+                      {PRESET_THEMES.map((theme) => {
+                        const accentRgb = hexToRgb(theme.accentColor);
+                        const accentGlow = accentRgb ? `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.15)` : 'transparent';
+                        return (
                           <div
-                            className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm"
-                            style={{ 
-                              background: `linear-gradient(180deg, ${theme.backgroundColor} 0%, ${darkenColor(theme.backgroundColor, 40)} 100%)`
-                            }}
+                            key={theme.name}
+                            className="cursor-pointer rounded-lg border-2 border-transparent hover:border-primary/50 transition-colors"
+                            onClick={() => applyPresetTheme(theme)}
                           >
                             <div
-                              className="w-8 h-8 rounded-full border-2 border-white"
-                              style={{ backgroundColor: theme.accentColor }}
-                            />
+                              className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm"
+                              style={{ 
+                                background: `linear-gradient(160deg, ${theme.backgroundColor} 0%, ${accentGlow} 50%, ${darkenColor(theme.backgroundColor, 50)} 100%)`
+                              }}
+                            >
+                              <div
+                                className="w-8 h-8 rounded-full border-2 border-white"
+                                style={{ backgroundColor: theme.accentColor }}
+                              />
+                            </div>
+                            <p className="text-center mt-2 text-sm font-medium">{theme.name}</p>
                           </div>
-                          <p className="text-center mt-2 text-sm font-medium">{theme.name}</p>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>
