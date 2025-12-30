@@ -113,18 +113,11 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-[#0f0f1a] border border-purple-900/30 rounded-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-6">
+        <div className="flex items-center justify-start px-6 pt-6">
           <div className="flex items-center gap-2">
             <Gift className="w-6 h-6 text-purple-500" />
             <span className="text-lg font-semibold text-white">Daily Lootbox</span>
           </div>
-          <button
-            onClick={handleClose}
-            className="text-gray-400 hover:text-white transition-colors"
-            data-testid="button-close-lootbox-x"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
         <div className="flex flex-col items-center px-6 pb-6">
