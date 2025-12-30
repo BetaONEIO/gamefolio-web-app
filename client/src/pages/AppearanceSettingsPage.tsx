@@ -980,101 +980,84 @@ const AppearanceSettingsPage: React.FC = () => {
 
                         {/* Banner Categories */}
                         <div className="space-y-4">
-                          {/* Default Banners */}
-                          <div>
-                            <h4 className="text-sm font-medium mb-2">Default Banners</h4>
-                            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                              {profileBanners
-                                .filter(banner => banner.category === 'default')
-                                .map((banner: ProfileBanner) => (
-                                <div 
-                                  key={banner.id}
-                                  className={`
-                                    cursor-pointer rounded-md overflow-hidden border-2 h-40 relative
-                                    ${field.value === banner.imageUrl ? 'border-primary' : 'border-transparent'}
-                                    hover:border-primary/70 transition-all
-                                  `}
-                                  onClick={() => {
-                                    field.onChange(banner.imageUrl);
-                                    setSelectedBannerUrl(banner.imageUrl);
-                                  }}
-                                >
-                                  <img 
-                                    src={banner.imageUrl} 
-                                    alt={banner.name}
-                                    className="w-full h-full object-cover" 
-                                  />
-                                  <div className="p-2 bg-black/75 text-white text-sm font-medium absolute bottom-0 left-0 right-0">
-                                    {banner.name}
+                          {/* Gradient Banners */}
+                          {profileBanners.filter(banner => banner.category === 'gradient').length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">Gradient Banners</h4>
+                              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                {profileBanners
+                                  .filter(banner => banner.category === 'gradient')
+                                  .map((banner: ProfileBanner) => (
+                                  <div 
+                                    key={banner.id}
+                                    data-testid={`banner-gradient-${banner.id}`}
+                                    className={`
+                                      cursor-pointer rounded-md overflow-hidden border-2 h-40 relative
+                                      ${field.value === banner.imageUrl ? 'border-primary' : 'border-transparent'}
+                                      hover:border-primary/70 transition-all
+                                    `}
+                                    onClick={() => {
+                                      field.onChange(banner.imageUrl);
+                                      setSelectedBannerUrl(banner.imageUrl);
+                                    }}
+                                  >
+                                    <img 
+                                      src={banner.imageUrl} 
+                                      alt={banner.name}
+                                      className="w-full h-full object-cover" 
+                                    />
+                                    <div className="p-2 bg-black/75 text-white text-sm font-medium absolute bottom-0 left-0 right-0">
+                                      {banner.name}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
                             </div>
-                          </div>
+                          )}
 
-                          {/* Gaming Banners */}
-                          <div>
-                            <h4 className="text-sm font-medium mb-2">Gaming Banners</h4>
-                            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                              {profileBanners
-                                .filter(banner => banner.category === 'gaming')
-                                .map((banner: ProfileBanner) => (
-                                <div 
-                                  key={banner.id}
-                                  className={`
-                                    cursor-pointer rounded-md overflow-hidden border-2 h-40 relative
-                                    ${field.value === banner.imageUrl ? 'border-primary' : 'border-transparent'}
-                                    hover:border-primary/70 transition-all
-                                  `}
-                                  onClick={() => {
-                                    field.onChange(banner.imageUrl);
-                                    setSelectedBannerUrl(banner.imageUrl);
-                                  }}
-                                >
-                                  <img 
-                                    src={banner.imageUrl} 
-                                    alt={banner.name}
-                                    className="w-full h-full object-cover" 
-                                  />
-                                  <div className="p-2 bg-black/75 text-white text-sm font-medium absolute bottom-0 left-0 right-0">
-                                    {banner.name}
+                          {/* Solid Banners */}
+                          {profileBanners.filter(banner => banner.category === 'solid').length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">Solid Banners</h4>
+                              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                {profileBanners
+                                  .filter(banner => banner.category === 'solid')
+                                  .map((banner: ProfileBanner) => (
+                                  <div 
+                                    key={banner.id}
+                                    data-testid={`banner-solid-${banner.id}`}
+                                    className={`
+                                      cursor-pointer rounded-md overflow-hidden border-2 h-40 relative
+                                      ${field.value === banner.imageUrl ? 'border-primary' : 'border-transparent'}
+                                      hover:border-primary/70 transition-all
+                                    `}
+                                    onClick={() => {
+                                      field.onChange(banner.imageUrl);
+                                      setSelectedBannerUrl(banner.imageUrl);
+                                    }}
+                                  >
+                                    <img 
+                                      src={banner.imageUrl} 
+                                      alt={banner.name}
+                                      className="w-full h-full object-cover" 
+                                    />
+                                    <div className="p-2 bg-black/75 text-white text-sm font-medium absolute bottom-0 left-0 right-0">
+                                      {banner.name}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
                             </div>
-                          </div>
+                          )}
 
-                          {/* Abstract Banners */}
-                          <div>
-                            <h4 className="text-sm font-medium mb-2">Abstract Banners</h4>
-                            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                              {profileBanners
-                                .filter(banner => banner.category === 'abstract')
-                                .map((banner: ProfileBanner) => (
-                                <div 
-                                  key={banner.id}
-                                  className={`
-                                    cursor-pointer rounded-md overflow-hidden border-2 h-40 relative
-                                    ${field.value === banner.imageUrl ? 'border-primary' : 'border-transparent'}
-                                    hover:border-primary/70 transition-all
-                                  `}
-                                  onClick={() => {
-                                    field.onChange(banner.imageUrl);
-                                    setSelectedBannerUrl(banner.imageUrl);
-                                  }}
-                                >
-                                  <img 
-                                    src={banner.imageUrl} 
-                                    alt={banner.name}
-                                    className="w-full h-full object-cover" 
-                                  />
-                                  <div className="p-2 bg-black/75 text-white text-sm font-medium absolute bottom-0 left-0 right-0">
-                                    {banner.name}
-                                  </div>
-                                </div>
-                              ))}
+                          {/* Show message if no banners available */}
+                          {profileBanners.length === 0 && (
+                            <div className="p-4 bg-muted/50 rounded-lg border text-center">
+                              <p className="text-sm text-muted-foreground">
+                                No preset banners available. Upload a custom banner below.
+                              </p>
                             </div>
-                          </div>
+                          )}
                         </div>
 
                         {/* Custom Banner Upload */}
