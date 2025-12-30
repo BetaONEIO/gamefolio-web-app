@@ -257,7 +257,7 @@ const ProfilePictureBorderSection: React.FC<{
           Profile Picture Border
         </h3>
         <p className="text-sm text-muted-foreground">
-          Select a border from your unlocked lootbox rewards.
+          Select a border from your unlocked rewards.
         </p>
       </div>
 
@@ -269,7 +269,7 @@ const ProfilePictureBorderSection: React.FC<{
         <div className="p-4 bg-muted/50 rounded-lg border text-center">
           <Sparkles className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            No profile picture borders unlocked yet. Open lootboxes to unlock special borders!
+            No profile picture borders unlocked yet. Check back soon for ways to unlock exclusive borders!
           </p>
         </div>
       ) : (
