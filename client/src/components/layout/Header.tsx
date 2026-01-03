@@ -21,12 +21,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { LootboxDialog, LootboxTrigger } from "@/components/lootbox/LootboxDialog";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [lootboxOpen, setLootboxOpen] = useState(false);
   const { user, logoutMutation } = useAuth();
   const { toggle } = useMobileMenu();
   const isMobile = useMobile();
@@ -323,7 +325,9 @@ const Header = () => {
           
           {user ? (
             <>
+              <LootboxTrigger onClick={() => setLootboxOpen(true)} />
               <NotificationBell />
+              <LootboxDialog open={lootboxOpen} onOpenChange={setLootboxOpen} />
               <Link href="/upload">
                 <Button 
                   className="ml-2 sm:ml-4 flex items-center px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300 bg-primary hover:bg-primary/90 border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_hsl(var(--primary)/0.13)]"

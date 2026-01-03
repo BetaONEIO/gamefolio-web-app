@@ -95,19 +95,19 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
         />
 
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
 
         {/* Play button overlay */}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <div className="bg-white/20 backdrop-blur-sm rounded-full p-4">
-            <svg className="w-8 h-8 text-white fill-white" viewBox="0 0 24 24">
+          <div className="bg-primary backdrop-blur-sm rounded-full p-3">
+            <svg className="w-6 h-6 text-white fill-white" viewBox="0 0 24 24">
               <path d="M8 5v14l11-7z"/>
             </svg>
           </div>
         </div>
 
-        {/* Duration badge */}
-        <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+        {/* Duration badge - top left */}
+        <div className="absolute top-3 left-3 bg-black/70 text-white text-xs px-2 py-1 rounded-md font-semibold">
           {(() => {
             const actualDuration = reel.trimEnd && reel.trimEnd > 0 
               ? reel.trimEnd - (reel.trimStart || 0)
@@ -116,49 +116,30 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
           })()}
         </div>
 
-        {/* Content overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          {/* User info */}
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/50">
-              <img
-                src={reel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                alt={reel.user.displayName}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <span className="text-white text-sm font-medium">
-              {reel.user.displayName || reel.user.username}
-            </span>
-          </div>
+        {/* View count - top right */}
+        <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded-md font-semibold flex items-center gap-1">
+          <Eye className="h-3 w-3" />
+          {formatNumber(reel.views || 0)}
+        </div>
 
+        {/* Content overlay - left aligned bottom */}
+        <div className="absolute bottom-0 left-0 right-0 p-3">
           {/* Title */}
-          <h3 className="text-white font-semibold text-sm mb-2 line-clamp-2 leading-tight">
+          <h3 className="text-white font-bold text-sm mb-0.5 drop-shadow-lg line-clamp-2">
             {reel.title}
           </h3>
 
-          {/* Stats and game */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 text-white/80 text-xs">
-              <span className="flex items-center gap-1">
-                <Eye className="h-3 w-3" />
-                {formatNumber(reel.views || 0)}
-              </span>
-              <span className="flex items-center gap-1">
-                ♥ {formatNumber(parseInt(reel._count?.likes?.toString() || '0'))}
-              </span>
-              <span className="flex items-center gap-1">
-                💬 {formatNumber(parseInt(reel._count?.comments?.toString() || '0'))}
-              </span>
-            </div>
+          {/* Username */}
+          <p className="text-white text-xs mb-1.5 drop-shadow-lg">
+            @{reel.user.username}
+          </p>
 
-            {/* Game badge */}
-            {reel.game && (
-              <div className="bg-primary/80 text-white text-xs px-2 py-1 rounded-full">
-                {reel.game.name}
-              </div>
-            )}
-          </div>
+          {/* Game badge underneath username */}
+          {reel.game && (
+            <div className="inline-block bg-green-600 text-white text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis">
+              {reel.game.name}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -402,44 +383,44 @@ const TrendingPage: React.FC = () => {
                       }}
                     />
                     
-                    {/* Subtle gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+                    {/* Gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
                     
-                    {/* Username - top left */}
-                    <div className="absolute top-2 left-2 flex items-center gap-1.5">
-                      <div className="w-6 h-6 rounded-full overflow-hidden border border-white/50">
-                        <img
-                          src={reel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                          alt={reel.user.displayName}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <span className="text-white text-xs font-medium drop-shadow-lg">
-                        {reel.user.displayName || reel.user.username}
-                      </span>
+                    {/* Duration badge - top left */}
+                    <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold">
+                      {(() => {
+                        const actualDuration = reel.trimEnd && reel.trimEnd > 0 
+                          ? reel.trimEnd - (reel.trimStart || 0)
+                          : reel.duration || 0;
+                        return formatDuration(actualDuration);
+                      })()}
                     </div>
                     
-                    {/* View count and game - bottom left */}
-                    <div className="absolute bottom-2 left-2 flex items-center gap-2 text-white text-xs font-medium drop-shadow-lg">
-                      <div className="flex items-center gap-1">
-                        <Eye className="h-4 w-4" />
-                        <span>{formatNumber(reel.views || 0)}</span>
-                      </div>
+                    {/* View count - top right */}
+                    <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold flex items-center gap-1">
+                      <Eye className="h-3 w-3" />
+                      {formatNumber(reel.views || 0)}
+                    </div>
+                    
+                    {/* Content overlay - left aligned bottom */}
+                    <div className="absolute bottom-0 left-0 right-0 p-2">
+                      {/* Title */}
+                      <h3 className="text-white font-bold text-xs mb-0.5 drop-shadow-lg line-clamp-2">
+                        {reel.title}
+                      </h3>
+
+                      {/* Username */}
+                      <p className="text-white text-[10px] mb-1 drop-shadow-lg">
+                        @{reel.user.username}
+                      </p>
+
+                      {/* Game badge underneath username */}
                       {reel.game && (
-                        <div className="bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full">
+                        <div className="inline-block bg-green-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis">
                           {reel.game.name}
                         </div>
                       )}
                     </div>
-                    
-                    {/* Title overlay - some reels show title */}
-                    {index % 3 === 0 && (
-                      <div className="absolute bottom-8 left-2 right-2">
-                        <p className="text-white text-sm font-medium line-clamp-2 drop-shadow-lg">
-                          {reel.title}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </div>
               );

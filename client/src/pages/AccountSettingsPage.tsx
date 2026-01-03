@@ -126,14 +126,10 @@ const AccountSettingsPage: React.FC = () => {
     createdAt: string;
   };
 
-  // Fetch profile banners
+  // Fetch user's unlocked profile banners (only banners they have access to)
   const { data: profileBanners = [] } = useQuery<ProfileBanner[]>({
-    queryKey: ['/api/profile-banners'],
-    queryFn: async () => {
-      const response = await fetch('/api/profile-banners');
-      if (!response.ok) return [];
-      return response.json();
-    }
+    queryKey: ['/api/user/unlocked-banners'],
+    enabled: !!user,
   });
   
 

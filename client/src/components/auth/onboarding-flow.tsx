@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Progress } from "@/components/ui/progress";
-import { Check, Gamepad2, Upload, Share2, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Calendar, Loader2, Plus, User, Camera, HelpCircle, Info } from "lucide-react";
+import { Check, Gamepad2, Upload, Share2, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Calendar, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet } from "lucide-react";
 import { Game } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -109,7 +109,8 @@ enum OnboardingStep {
   Avatar = 3,
   UserType = 4,
   Age = 5,
-  Complete = 6,
+  Wallet = 6,
+  Complete = 7,
 }
 
 interface OnboardingStepIndicatorProps {
@@ -125,6 +126,7 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser }: OnboardingStepIn
     { id: OnboardingStep.Avatar, label: "Avatar" },
     { id: OnboardingStep.UserType, label: "User Type" },
     { id: OnboardingStep.Age, label: "Age" },
+    { id: OnboardingStep.Wallet, label: "Wallet" },
     { id: OnboardingStep.Complete, label: "Complete" },
   ];
 
@@ -195,11 +197,13 @@ export default function OnboardingFlow({
   const [games, setGames] = useState<Game[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [userTypes, setUserTypes] = useState<("streamer" | "gamer" | "professional_gamer" | "content_creator" | "indie_developer" | "filthy_casual" | "viewer" | "doom_scroller")[]>([]);
+  const [userTypes, setUserTypes] = useState<string[]>([]);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [ageRange, setAgeRange] = useState<"13-17" | "18-24" | "25-34" | "35-44" | "45-54" | "55+" | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [isCreatingWallet, setIsCreatingWallet] = useState(false);
 
   // Auto-skip username step for non-Google users
   useEffect(() => {
@@ -207,6 +211,74 @@ export default function OnboardingFlow({
       setCurrentStep(OnboardingStep.Games);
     }
   }, [currentStep, isGoogleUser]);
+
+  // Load existing wallet when reaching wallet step
+  useEffect(() => {
+    const loadExistingWallet = async () => {
+      if (currentStep === OnboardingStep.Wallet && !walletAddress) {
+        try {
+          const response = await fetch('/api/wallet/info', {
+            credentials: 'include',
+          });
+          
+          if (response.ok) {
+            const walletData = await response.json();
+            setWalletAddress(walletData.address);
+          }
+        } catch (error) {
+          console.log('No existing wallet found');
+        }
+      }
+    };
+    
+    loadExistingWallet();
+  }, [currentStep, walletAddress]);
+
+  // Get or create wallet via Crossmint API
+  const handleCreateWallet = async () => {
+    setIsCreatingWallet(true);
+    
+    try {
+      const response = await fetch('/api/wallet/create', {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to connect wallet');
+      }
+
+      const walletData = await response.json();
+
+      if (walletData.address) {
+        setWalletAddress(walletData.address);
+        
+        // Use the isExisting flag from the API response
+        const isExisting = walletData.isExisting || false;
+        
+        toast({
+          title: isExisting ? "Wallet connected!" : "Wallet created!",
+          description: isExisting 
+            ? "Connected to your existing Crossmint wallet" 
+            : "Your new Crossmint wallet has been created successfully",
+          variant: "gamefolioSuccess",
+        });
+      } else {
+        throw new Error('No wallet address received');
+      }
+    } catch (error: any) {
+      console.error('Failed to create wallet:', error);
+      toast({
+        title: "Failed to connect wallet",
+        description: error.message || "Please try again later",
+        variant: "gamefolioError",
+      });
+    } finally {
+      setIsCreatingWallet(false);
+    }
+  };
+
 
   // Load games using Twitch API
   const loadGames = async () => {
@@ -501,6 +573,7 @@ export default function OnboardingFlow({
     }
   };
 
+
   // Complete onboarding
   const completeOnboarding = async () => {
     setIsLoading(true);
@@ -512,7 +585,6 @@ export default function OnboardingFlow({
         username: formUsername,
         displayName: formUsername,
         bio: "Just joined Gamefolio!",
-        // Store user types as comma-separated string for now
         userType: userTypes.length > 0 ? userTypes.join(",") : "viewer",
         ageRange: ageRange
       };
@@ -1007,6 +1079,14 @@ export default function OnboardingFlow({
         );
 
       case OnboardingStep.UserType:
+        const toggleUserType = (typeId: string) => {
+          if (userTypes.includes(typeId)) {
+            setUserTypes(userTypes.filter(t => t !== typeId));
+          } else if (userTypes.length < 2) {
+            setUserTypes([...userTypes, typeId]);
+          }
+        };
+        
         return (
           <>
             <div className="flex items-center gap-2 mb-4">
@@ -1021,7 +1101,7 @@ export default function OnboardingFlow({
               </Tooltip>
             </div>
             <p className="text-gray-300 mb-6">
-              Select all that apply - this helps us customize your experience on Gamefolio
+              Select up to 2 that best describe you - this helps us customize your experience on Gamefolio
             </p>
             
             <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1077,20 +1157,16 @@ export default function OnboardingFlow({
                 },
               ].map((type) => {
                 const IconComponent = type.icon;
-                const isSelected = userTypes.includes(type.id as any);
+                const isSelected = userTypes.includes(type.id);
+                const isDisabled = !isSelected && userTypes.length >= 2;
                 
                 return (
                   <div
                     key={type.id}
-                    onClick={() => {
-                      const typeId = type.id as any;
-                      if (userTypes.includes(typeId)) {
-                        setUserTypes(userTypes.filter(t => t !== typeId));
-                      } else {
-                        setUserTypes([...userTypes, typeId]);
-                      }
-                    }}
-                    className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all hover:scale-105 ${
+                    onClick={() => !isDisabled && toggleUserType(type.id)}
+                    className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      isDisabled ? "opacity-50 cursor-not-allowed" : "hover:scale-105"
+                    } ${
                       isSelected
                         ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
                         : "border-gray-700 hover:border-primary/50 hover:bg-primary/5"
@@ -1120,6 +1196,10 @@ export default function OnboardingFlow({
                 );
               })}
             </div>
+            
+            <p className="text-sm text-gray-400 text-center mb-4">
+              {userTypes.length}/2 selected
+            </p>
             
             <div className="flex gap-3">
               <Button variant="outline" onClick={goToPrevStep}>
@@ -1228,6 +1308,106 @@ export default function OnboardingFlow({
                 Next
               </Button>
             </div>
+          </>
+        );
+
+      case OnboardingStep.Wallet:
+        return (
+          <>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-2xl font-bold text-white">Crypto Wallet Setup</h2>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-5 w-5 text-gray-400 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Connect a wallet to fund with crypto and purchase exclusive NFTs</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <p className="text-gray-300 mb-6">
+              Connect a crypto wallet to unlock future NFT features and rewards. You can create one now via Crossmint or skip this step.
+            </p>
+            {walletAddress ? (
+              <div className="mb-6">
+                <Card className="bg-primary/10 border-primary/50">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="p-3 rounded-full bg-primary text-white">
+                        <Check className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-white mb-1">Wallet Connected!</h3>
+                        <p className="text-sm text-gray-300">You're ready for crypto and NFTs</p>
+                      </div>
+                    </div>
+                    <div className="bg-gray-900/50 rounded-lg p-3">
+                      <p className="text-xs text-gray-400 mb-1">Wallet Address</p>
+                      <p className="text-sm text-white font-mono break-all">{walletAddress}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <div className="mb-6 space-y-3">
+                <Button
+                  onClick={handleCreateWallet}
+                  disabled={isCreatingWallet}
+                  className="w-full h-auto py-4 px-6 bg-primary hover:bg-primary/90 text-white"
+                  data-testid="button-create-wallet"
+                >
+                  <div className="flex items-start gap-3 text-left w-full">
+                    <Plus className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="font-semibold mb-1">
+                        {isCreatingWallet ? (
+                          <span className="flex items-center">
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Creating wallet...
+                          </span>
+                        ) : (
+                          "Create Crossmint Wallet"
+                        )}
+                      </div>
+                      <div className="text-sm text-white/80 font-normal">
+                        Get a secure blockchain wallet for NFTs and rewards
+                      </div>
+                    </div>
+                  </div>
+                </Button>
+
+                <Button
+                  onClick={goToNextStep}
+                  variant="ghost"
+                  className="w-full h-auto py-4 px-6 text-gray-400 hover:text-white"
+                  data-testid="button-skip-wallet"
+                >
+                  <div className="flex items-start gap-3 text-left w-full">
+                    <ArrowRight className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="font-semibold mb-1">Skip for now</div>
+                      <div className="text-sm font-normal">
+                        You can set this up later from your profile
+                      </div>
+                    </div>
+                  </div>
+                </Button>
+              </div>
+            )}
+            {walletAddress && (
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={goToPrevStep}>
+                  Back
+                </Button>
+                <Button
+                  onClick={goToNextStep}
+                  className="flex-1"
+                  data-testid="button-next-from-wallet"
+                >
+                  Next <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            )}
           </>
         );
 

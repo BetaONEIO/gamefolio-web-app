@@ -4,13 +4,25 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { UserWithStats } from "@shared/schema";
-import { Mail, UserPlus, UserCheck, Share2, CheckCircle2, MessageSquare, Trophy, Heart, Flame } from "lucide-react";
+import { Mail, UserPlus, UserCheck, Share2, CheckCircle2, MessageSquare, Trophy, Heart, Flame, Video, Gamepad2, Upload, Code, Eye, Coffee, Scroll } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import PlatformConnections from "./PlatformConnections";
 import { GamefolioShareDialog } from "./GamefolioShareDialog";
+
+const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
+  streamer: { label: "Streamer", icon: Video, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
+  gamer: { label: "Gamer", icon: Gamepad2, color: "bg-green-500/20 text-green-400 border-green-500/30" },
+  professional_gamer: { label: "Pro Gamer", icon: Trophy, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
+  content_creator: { label: "Creator", icon: Upload, color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+  indie_developer: { label: "Indie Dev", icon: Code, color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
+  viewer: { label: "Viewer", icon: Eye, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
+  filthy_casual: { label: "Casual", icon: Coffee, color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
+  doom_scroller: { label: "Doom Scroller", icon: Scroll, color: "bg-red-500/20 text-red-400 border-red-500/30" },
+};
 
 interface ProfileHeaderProps {
   profile: UserWithStats;
@@ -176,11 +188,31 @@ const ProfileHeader = ({
 
             {/* Profile Info */}
             <div className="space-y-2">
-              {/* Username with verification badge */}
-              <div className="flex items-center gap-2">
+              {/* Username with user type badge(s) */}
+              <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl font-bold text-foreground">
                   {profile.displayName}
                 </h1>
+                {profile.userType && profile.showUserType !== false && (() => {
+                  const userTypes = profile.userType.split(',').map(t => t.trim()).filter(Boolean);
+                  const displayTypes = userTypes.slice(0, 2);
+                  
+                  return displayTypes.map((type, index) => {
+                    const config = userTypeConfig[type];
+                    if (!config) return null;
+                    const IconComponent = config.icon;
+                    return (
+                      <Badge 
+                        key={`${type}-${index}`}
+                        variant="outline" 
+                        className={`${config.color} border text-xs font-medium px-2 py-0.5`}
+                      >
+                        <IconComponent className="w-3 h-3 mr-1" />
+                        {config.label}
+                      </Badge>
+                    );
+                  });
+                })()}
               </div>
 
               {/* Handle */}

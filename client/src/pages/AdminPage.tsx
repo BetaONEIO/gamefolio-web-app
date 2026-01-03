@@ -3,7 +3,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
 import AdminContentFilter from "./AdminContentFilter";
-import { UserWithBadges, BannerSettings, Badge as BadgeType } from "@shared/schema";
+import { UserWithBadges, BannerSettings, Badge as BadgeType, assetTypes, AssetType } from "@shared/schema";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -49,6 +49,30 @@ interface HeroTextData {
   buttonText?: string;
   buttonUrl?: string;
   targetAudience?: string;
+}
+
+interface AssetReward {
+  id: number;
+  name: string;
+  imageUrl: string;
+  assetType: string;
+  rarity: string;
+  unlockChance: number;
+  timesRewarded: number;
+  isActive: boolean;
+  createdBy: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface AssetRewardWithClaims extends AssetReward {
+  claims: Array<{
+    id: number;
+    rewardId: number;
+    userId: number;
+    claimedAt: string;
+    user: { id: number; username: string; displayName: string; avatarUrl?: string | null };
+  }>;
 }
 
 // Banner Management Component
@@ -323,6 +347,190 @@ function BannerManagement() {
     </div>
   );
 }
+
+// Lootbox Management Component
+interface LootboxOpen {
+  id: number;
+  userId: number;
+  lastOpenedAt: string;
+  rewardId: number | null;
+  openCount: number;
+  user: { id: number; username: string; displayName: string; avatarUrl: string | null };
+  reward: { id: number; name: string; rarity: string; imageUrl: string } | null;
+}
+
+function LootboxManagement() {
+  const { toast } = useToast();
+  const [resetLoading, setResetLoading] = useState<number | null>(null);
+
+  const { data: lootboxOpens, isLoading, refetch } = useQuery<LootboxOpen[]>({
+    queryKey: ['/api/admin/lootbox/opens'],
+  });
+
+  const handleResetLootbox = async (userId: number, username: string) => {
+    if (!confirm(`Are you sure you want to reset ${username}'s lootbox? They will be able to open another lootbox today.`)) {
+      return;
+    }
+    
+    setResetLoading(userId);
+    try {
+      await apiRequest('POST', `/api/admin/lootbox/reset/${userId}`);
+      toast({
+        title: "Lootbox reset",
+        description: `${username} can now open another lootbox today.`,
+        variant: "gamefolioSuccess",
+      });
+      refetch();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reset lootbox",
+        variant: "gamefolioError",
+      });
+    } finally {
+      setResetLoading(null);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getRarityBadgeColor = (rarity: string) => {
+    switch (rarity) {
+      case 'common': return 'bg-gray-500';
+      case 'rare': return 'bg-blue-500';
+      case 'epic': return 'bg-purple-500';
+      case 'legendary': return 'bg-amber-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Gift className="w-5 h-5" />
+          Lootbox Management
+        </CardTitle>
+        <CardDescription>
+          View who has opened lootboxes and manage their daily lootbox status
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <RefreshCw className="w-6 h-6 animate-spin mr-2" />
+            Loading lootbox data...
+          </div>
+        ) : !lootboxOpens || lootboxOpens.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No lootbox opens recorded yet.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Total opens: {lootboxOpens.length}
+              </p>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
+            
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Opened At</TableHead>
+                  <TableHead>Reward</TableHead>
+                  <TableHead>Rarity</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {lootboxOpens.map((open) => (
+                  <TableRow key={open.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {open.user.avatarUrl ? (
+                          <img
+                            src={open.user.avatarUrl}
+                            alt={open.user.username}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                            <User className="w-4 h-4" />
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-medium">{open.user.displayName}</div>
+                          <div className="text-sm text-muted-foreground">@{open.user.username}</div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>{formatDate(open.lastOpenedAt)}</TableCell>
+                    <TableCell>
+                      {open.reward ? (
+                        <div className="flex items-center gap-2">
+                          {open.reward.imageUrl && (
+                            <img
+                              src={open.reward.imageUrl}
+                              alt={open.reward.name}
+                              className="w-8 h-8 rounded object-cover"
+                            />
+                          )}
+                          <span>{open.reward.name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">No reward</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {open.reward && (
+                        <Badge className={`${getRarityBadgeColor(open.reward.rarity)} text-white capitalize`}>
+                          {open.reward.rarity}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleResetLootbox(open.userId, open.user.username)}
+                        disabled={resetLoading === open.userId}
+                        data-testid={`button-reset-lootbox-${open.userId}`}
+                      >
+                        {resetLoading === open.userId ? (
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Reset
+                          </>
+                        )}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
@@ -405,6 +613,7 @@ import {
   Eye,
   Trophy,
   Flame,
+  Gift,
 } from "lucide-react";
 
 const AdminPage = () => {
@@ -456,6 +665,111 @@ const AdminPage = () => {
   const [pointsAdjustment, setPointsAdjustment] = useState<number | null>(null);
   const [pointsAdjustmentReason, setPointsAdjustmentReason] = useState("");
 
+  // Asset rewards state
+  const [newRewardName, setNewRewardName] = useState("");
+  const [newRewardImageUrl, setNewRewardImageUrl] = useState("");
+  const [newRewardImageFile, setNewRewardImageFile] = useState<File | null>(null);
+  const [newRewardRarity, setNewRewardRarity] = useState<"common" | "rare" | "epic" | "legendary">("common");
+  const [newRewardAssetType, setNewRewardAssetType] = useState<AssetType>("other");
+  const [createRewardLoading, setCreateRewardLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  
+  // Asset type display names
+  const assetTypeDisplayNames: Record<string, string> = {
+    avatar_border: "Avatar Border",
+    profile_banner: "Profile Banner",
+    profile_background: "Profile Background",
+    badge: "Badge",
+    emoji: "Emoji",
+    sound_effect: "Sound Effect",
+    other: "Other",
+  };
+  
+  // Rarity to unlock chance mapping
+  const rarityChanceMap: Record<string, number> = {
+    common: 60,
+    rare: 25,
+    epic: 12,
+    legendary: 3,
+  };
+  
+  // Handle reward image upload
+  const handleRewardImageUpload = async (file: File) => {
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const response = await fetch('/api/admin/asset-rewards/upload-image', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+      
+      const data = await response.json();
+      setNewRewardImageUrl(data.imageUrl);
+      setNewRewardImageFile(file);
+      toast({
+        title: "Image uploaded",
+        description: "Reward image uploaded successfully.",
+        variant: "gamefolioSuccess",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload image",
+        variant: "gamefolioError",
+      });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+  const [selectedReward, setSelectedReward] = useState<AssetRewardWithClaims | null>(null);
+  const [rewardDialogOpen, setRewardDialogOpen] = useState(false);
+  const [editingReward, setEditingReward] = useState<AssetReward | null>(null);
+  const [editRewardDialogOpen, setEditRewardDialogOpen] = useState(false);
+  const [editUploadingImage, setEditUploadingImage] = useState(false);
+  
+  // Handle edit reward image upload
+  const handleEditRewardImageUpload = async (file: File) => {
+    if (!editingReward) return;
+    setEditUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const response = await fetch('/api/admin/asset-rewards/upload-image', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+      
+      const data = await response.json();
+      setEditingReward({ ...editingReward, imageUrl: data.imageUrl });
+      toast({
+        title: "Image uploaded",
+        description: "Reward image updated successfully.",
+        variant: "gamefolioSuccess",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload image",
+        variant: "gamefolioError",
+      });
+    } finally {
+      setEditUploadingImage(false);
+    }
+  };
+
   // Access check is now handled by AdminProtectedRoute
 
   // Fetch admin stats
@@ -491,6 +805,11 @@ const AdminPage = () => {
   // Badge management queries
   const { data: badgesData, isLoading: badgesLoading, refetch: refetchBadges } = useQuery<BadgeType[]>({
     queryKey: ["/api/admin/badges"],
+  });
+
+  // Asset rewards queries
+  const { data: assetRewardsData, isLoading: rewardsLoading, refetch: refetchRewards } = useQuery<AssetReward[]>({
+    queryKey: ["/api/admin/asset-rewards"],
   });
 
   // Update form fields when data loads
@@ -883,18 +1202,20 @@ const AdminPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-11">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="content">Content</TabsTrigger>
-          <TabsTrigger value="content-filter">Content Filter</TabsTrigger>
-          <TabsTrigger value="banner">Banner</TabsTrigger>
-          <TabsTrigger value="badges">Badges</TabsTrigger>
-          <TabsTrigger value="levels">Levels</TabsTrigger>
-          <TabsTrigger value="streaks">Streaks</TabsTrigger>
-          <TabsTrigger value="points">Points</TabsTrigger>
-          <TabsTrigger value="hero-text">Hero Text</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
+        <TabsList className="flex flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="dashboard" className="text-xs px-3 py-1.5">Dashboard</TabsTrigger>
+          <TabsTrigger value="users" className="text-xs px-3 py-1.5">Users</TabsTrigger>
+          <TabsTrigger value="content" className="text-xs px-3 py-1.5">Content</TabsTrigger>
+          <TabsTrigger value="content-filter" className="text-xs px-3 py-1.5">Filter</TabsTrigger>
+          <TabsTrigger value="banner" className="text-xs px-3 py-1.5">Banner</TabsTrigger>
+          <TabsTrigger value="badges" className="text-xs px-3 py-1.5">Badges</TabsTrigger>
+          <TabsTrigger value="levels" className="text-xs px-3 py-1.5">Levels</TabsTrigger>
+          <TabsTrigger value="streaks" className="text-xs px-3 py-1.5">Streaks</TabsTrigger>
+          <TabsTrigger value="points" className="text-xs px-3 py-1.5">Points</TabsTrigger>
+          <TabsTrigger value="hero-text" className="text-xs px-3 py-1.5">Hero</TabsTrigger>
+          <TabsTrigger value="asset-rewards" className="text-xs px-3 py-1.5">Rewards</TabsTrigger>
+          <TabsTrigger value="lootbox" className="text-xs px-3 py-1.5">Lootbox</TabsTrigger>
+          <TabsTrigger value="settings" className="text-xs px-3 py-1.5">Settings</TabsTrigger>
         </TabsList>
 
         {/* Dashboard Tab */}
@@ -2790,6 +3111,519 @@ const AdminPage = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Asset Rewards Tab */}
+        <TabsContent value="asset-rewards" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Asset Rewards Management</CardTitle>
+              <CardDescription>
+                Manage loot box rewards for the mobile app
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Create new reward form */}
+                <div className="border rounded-lg p-4 bg-muted/30">
+                  <h3 className="font-medium mb-4">Create New Reward</h3>
+                  <div className="grid gap-4 md:grid-cols-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reward-name">Reward Name</Label>
+                      <Input
+                        id="reward-name"
+                        placeholder="e.g., Golden Sword"
+                        value={newRewardName}
+                        onChange={(e) => setNewRewardName(e.target.value)}
+                        data-testid="input-reward-name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reward-image">Reward Image</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="reward-image"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              handleRewardImageUpload(file);
+                            }
+                          }}
+                          disabled={uploadingImage}
+                          data-testid="input-reward-image"
+                          className="cursor-pointer"
+                        />
+                        {uploadingImage && <span className="text-sm text-muted-foreground">Uploading...</span>}
+                      </div>
+                      {newRewardImageUrl && (
+                        <div className="mt-2">
+                          <img 
+                            src={newRewardImageUrl} 
+                            alt="Preview" 
+                            className="w-16 h-16 object-cover rounded border"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reward-rarity">Rarity (sets drop chance)</Label>
+                      <Select
+                        value={newRewardRarity}
+                        onValueChange={(value: "common" | "rare" | "epic" | "legendary") => setNewRewardRarity(value)}
+                      >
+                        <SelectTrigger data-testid="select-reward-rarity">
+                          <SelectValue placeholder="Select rarity" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="common">
+                            <span className="flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full bg-gray-400"></span>
+                              Common (60%)
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="rare">
+                            <span className="flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                              Rare (25%)
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="epic">
+                            <span className="flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full bg-purple-500"></span>
+                              Epic (12%)
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="legendary">
+                            <span className="flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
+                              Legendary (3%)
+                            </span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reward-asset-type">Asset Type (where it's used)</Label>
+                      <Select
+                        value={newRewardAssetType}
+                        onValueChange={(value: AssetType) => setNewRewardAssetType(value)}
+                      >
+                        <SelectTrigger data-testid="select-reward-asset-type">
+                          <SelectValue placeholder="Select asset type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {assetTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {assetTypeDisplayNames[type]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-end">
+                      <Button
+                        onClick={async () => {
+                          if (!newRewardName.trim() || !newRewardImageUrl) {
+                            toast({
+                              title: "Missing fields",
+                              description: "Please provide a name and upload an image",
+                              variant: "gamefolioError",
+                            });
+                            return;
+                          }
+                          setCreateRewardLoading(true);
+                          try {
+                            await apiRequest('POST', '/api/admin/asset-rewards', {
+                              name: newRewardName.trim(),
+                              imageUrl: newRewardImageUrl,
+                              rarity: newRewardRarity,
+                              assetType: newRewardAssetType,
+                              unlockChance: rarityChanceMap[newRewardRarity],
+                            });
+                            toast({
+                              title: "Reward created",
+                              description: "New reward has been added successfully.",
+                              variant: "gamefolioSuccess",
+                            });
+                            setNewRewardName("");
+                            setNewRewardImageUrl("");
+                            setNewRewardImageFile(null);
+                            setNewRewardRarity("common");
+                            setNewRewardAssetType("other");
+                            // Reset file input
+                            const fileInput = document.getElementById('reward-image') as HTMLInputElement;
+                            if (fileInput) fileInput.value = '';
+                            refetchRewards();
+                          } catch (error: any) {
+                            toast({
+                              title: "Error",
+                              description: error.message || "Failed to create reward",
+                              variant: "gamefolioError",
+                            });
+                          } finally {
+                            setCreateRewardLoading(false);
+                          }
+                        }}
+                        disabled={createRewardLoading || uploadingImage || !newRewardName.trim() || !newRewardImageUrl}
+                        data-testid="button-create-reward"
+                      >
+                        {createRewardLoading ? "Creating..." : <><Plus className="h-4 w-4 mr-2" /> Add Reward</>}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Rewards list */}
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Image</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Asset Type</TableHead>
+                        <TableHead>Rarity</TableHead>
+                        <TableHead>Unlock Chance</TableHead>
+                        <TableHead>Times Rewarded</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {rewardsLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center">
+                            Loading rewards...
+                          </TableCell>
+                        </TableRow>
+                      ) : !assetRewardsData || assetRewardsData.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center text-muted-foreground">
+                            No rewards created yet. Create your first reward above.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        assetRewardsData.map((reward: AssetReward) => (
+                          <TableRow key={reward.id} data-testid={`row-reward-${reward.id}`}>
+                            <TableCell>
+                              <img
+                                src={reward.imageUrl}
+                                alt={reward.name}
+                                className="w-12 h-12 object-cover rounded"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = "https://via.placeholder.com/48?text=?";
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell className="font-medium">{reward.name}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {assetTypeDisplayNames[reward.assetType] || reward.assetType || 'Other'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                className={
+                                  reward.rarity === 'legendary' ? 'bg-yellow-500 text-black' :
+                                  reward.rarity === 'epic' ? 'bg-purple-500' :
+                                  reward.rarity === 'rare' ? 'bg-blue-500' :
+                                  'bg-gray-400'
+                                }
+                              >
+                                {reward.rarity ? reward.rarity.charAt(0).toUpperCase() + reward.rarity.slice(1) : 'Common'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{reward.unlockChance}%</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="cursor-pointer" onClick={async () => {
+                                try {
+                                  const response = await apiRequest('GET', `/api/admin/asset-rewards/${reward.id}`);
+                                  const data = await response.json();
+                                  setSelectedReward(data);
+                                  setRewardDialogOpen(true);
+                                } catch (error) {
+                                  console.error("Failed to fetch reward details:", error);
+                                }
+                              }}>
+                                {reward.timesRewarded} users
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={reward.isActive ? "default" : "secondary"}>
+                                {reward.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingReward(reward);
+                                  setEditRewardDialogOpen(true);
+                                }}
+                                data-testid={`button-edit-reward-${reward.id}`}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={async () => {
+                                  await apiRequest('PATCH', `/api/admin/asset-rewards/${reward.id}`, {
+                                    isActive: !reward.isActive,
+                                  });
+                                  refetchRewards();
+                                }}
+                                data-testid={`button-toggle-reward-${reward.id}`}
+                              >
+                                {reward.isActive ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={async () => {
+                                  if (confirm(`Are you sure you want to delete "${reward.name}"?`)) {
+                                    await apiRequest('DELETE', `/api/admin/asset-rewards/${reward.id}`);
+                                    toast({
+                                      title: "Reward deleted",
+                                      description: "The reward has been deleted.",
+                                    });
+                                    refetchRewards();
+                                  }
+                                }}
+                                data-testid={`button-delete-reward-${reward.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Reward Details Dialog */}
+          <Dialog open={rewardDialogOpen} onOpenChange={setRewardDialogOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Reward Details: {selectedReward?.name}</DialogTitle>
+                <DialogDescription>
+                  View who has received this reward
+                </DialogDescription>
+              </DialogHeader>
+              {selectedReward && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={selectedReward.imageUrl}
+                      alt={selectedReward.name}
+                      className="w-20 h-20 object-cover rounded"
+                    />
+                    <div>
+                      <p><strong>Rarity:</strong> <Badge className={
+                        selectedReward.rarity === 'legendary' ? 'bg-yellow-500 text-black' :
+                        selectedReward.rarity === 'epic' ? 'bg-purple-500' :
+                        selectedReward.rarity === 'rare' ? 'bg-blue-500' :
+                        'bg-gray-400'
+                      }>{selectedReward.rarity ? selectedReward.rarity.charAt(0).toUpperCase() + selectedReward.rarity.slice(1) : 'Common'}</Badge></p>
+                      <p><strong>Unlock Chance:</strong> {selectedReward.unlockChance}%</p>
+                      <p><strong>Times Rewarded:</strong> {selectedReward.timesRewarded}</p>
+                      <p><strong>Status:</strong> {selectedReward.isActive ? "Active" : "Inactive"}</p>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-medium mb-2">Users who received this reward:</h4>
+                    {selectedReward.claims && selectedReward.claims.length > 0 ? (
+                      <ScrollArea className="h-[300px]">
+                        <div className="space-y-2">
+                          {selectedReward.claims.map((claim) => (
+                            <div key={claim.id} className="flex items-center gap-3 p-2 border rounded">
+                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                                {claim.user.avatarUrl ? (
+                                  <img src={claim.user.avatarUrl} alt={claim.user.username} className="w-full h-full object-cover" />
+                                ) : (
+                                  <User className="h-4 w-4" />
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-medium">{claim.user.displayName}</p>
+                                <p className="text-sm text-muted-foreground">@{claim.user.username}</p>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {new Date(claim.claimedAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    ) : (
+                      <p className="text-muted-foreground">No users have received this reward yet.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit Reward Dialog */}
+          <Dialog open={editRewardDialogOpen} onOpenChange={setEditRewardDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Reward</DialogTitle>
+                <DialogDescription>
+                  Update reward details
+                </DialogDescription>
+              </DialogHeader>
+              {editingReward && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-reward-name">Name</Label>
+                    <Input
+                      id="edit-reward-name"
+                      value={editingReward.name}
+                      onChange={(e) => setEditingReward({ ...editingReward, name: e.target.value })}
+                      data-testid="input-edit-reward-name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-reward-image">Reward Image</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="edit-reward-image"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleEditRewardImageUpload(file);
+                          }
+                        }}
+                        disabled={editUploadingImage}
+                        data-testid="input-edit-reward-image"
+                        className="cursor-pointer"
+                      />
+                      {editUploadingImage && <span className="text-sm text-muted-foreground">Uploading...</span>}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Upload a new image to replace the current one</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-reward-rarity">Rarity (sets drop chance)</Label>
+                    <Select
+                      value={editingReward.rarity || "common"}
+                      onValueChange={(value: string) => setEditingReward({ 
+                        ...editingReward, 
+                        rarity: value,
+                        unlockChance: rarityChanceMap[value] 
+                      })}
+                    >
+                      <SelectTrigger data-testid="select-edit-reward-rarity">
+                        <SelectValue placeholder="Select rarity" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="common">
+                          <span className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-gray-400"></span>
+                            Common (60%)
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="rare">
+                          <span className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                            Rare (25%)
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="epic">
+                          <span className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-purple-500"></span>
+                            Epic (12%)
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="legendary">
+                          <span className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
+                            Legendary (3%)
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-reward-asset-type">Asset Type (where it's used)</Label>
+                    <Select
+                      value={editingReward.assetType || "other"}
+                      onValueChange={(value: string) => setEditingReward({ 
+                        ...editingReward, 
+                        assetType: value 
+                      })}
+                    >
+                      <SelectTrigger data-testid="select-edit-reward-asset-type">
+                        <SelectValue placeholder="Select asset type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {assetTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {assetTypeDisplayNames[type]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {editingReward.imageUrl && (
+                    <div className="flex justify-center">
+                      <img
+                        src={editingReward.imageUrl}
+                        alt="Preview"
+                        className="w-24 h-24 object-cover rounded border"
+                      />
+                    </div>
+                  )}
+                  <Button
+                    className="w-full"
+                    onClick={async () => {
+                      try {
+                        const rarity = editingReward.rarity || "common";
+                        await apiRequest('PATCH', `/api/admin/asset-rewards/${editingReward.id}`, {
+                          name: editingReward.name,
+                          imageUrl: editingReward.imageUrl,
+                          rarity: rarity,
+                          assetType: editingReward.assetType || "other",
+                          unlockChance: rarityChanceMap[rarity],
+                        });
+                        toast({
+                          title: "Reward updated",
+                          description: "The reward has been updated successfully.",
+                          variant: "gamefolioSuccess",
+                        });
+                        setEditRewardDialogOpen(false);
+                        setEditingReward(null);
+                        refetchRewards();
+                      } catch (error: any) {
+                        toast({
+                          title: "Error",
+                          description: error.message || "Failed to update reward",
+                          variant: "gamefolioError",
+                        });
+                      }
+                    }}
+                    data-testid="button-save-reward"
+                  >
+                    Save Changes
+                  </Button>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
+        {/* Lootbox Tab */}
+        <TabsContent value="lootbox" className="space-y-4">
+          <LootboxManagement />
         </TabsContent>
 
         {/* Settings Tab */}

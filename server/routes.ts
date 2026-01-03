@@ -13,10 +13,11 @@ import { storage } from "./storage";
 import { LeaderboardService } from "./leaderboard-service";
 import { StreakService } from "./streak-service";
 import { createInsertSchema } from "drizzle-zod";
-import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema } from "@shared/schema";
+import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema } from "@shared/schema";
 import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { nanoid } from "nanoid";
+import jwt from "jsonwebtoken";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { users } from "@shared/schema";
@@ -62,10 +63,12 @@ import { MentionService } from "./mention-service";
 import { initializeRealtimeNotificationService } from './realtime-notification-service';
 import { adminMiddleware } from "./middleware/admin";
 import { optionalHybridAuth } from "./middleware/optional-hybrid-auth";
+import { hybridAuth } from "./middleware/hybrid-auth";
 import QRCode from "qrcode";
 import { supabaseStorage } from "./supabase-storage";
 import { contentFilterService } from "./services/content-filter";
 import { addPlayButtonOverlay } from "./og-thumbnail";
+import { getTokenBalance, getTokenInfo } from "./blockchain";
 
 // Import upload middlewares from upload router
 import multer from "multer";
@@ -3059,6 +3062,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Clip Routes
   // ==========================================
 
+  // Get recent clip uploads for activity banner
+  app.get("/api/recent-uploads", async (req, res) => {
+    try {
+      const limit = 15;
+      const clips = await storage.getAllClips(limit, 0);
+      
+      const recentUploads = clips
+        .filter(clip => clip.user && clip.title)
+        .map(clip => ({
+          clipId: clip.id,
+          username: clip.user.username,
+          clipTitle: clip.title,
+          uploadedAt: clip.createdAt,
+        }));
+      
+      res.json(recentUploads);
+    } catch (err) {
+      console.error("Error fetching recent uploads:", err);
+      return res.status(500).json({ message: "Error fetching recent uploads" });
+    }
+  });
+
   // Get all clips (latest first)
   app.get("/api/clips", async (req, res) => {
     try {
@@ -5358,7 +5383,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Profile Banner Routes
   // ==========================================
 
-  // Get all profile banners
+  // Get all profile banners (for admin use)
   app.get("/api/profile-banners", async (req, res) => {
     try {
       const banners = await storage.getAllProfileBanners();
@@ -5366,6 +5391,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Error fetching profile banners:", err);
       return res.status(500).json({ message: "Error fetching profile banners" });
+    }
+  });
+
+  // Get unlocked banners for the current user
+  app.get("/api/user/unlocked-banners", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const userId = (req.user as User).id;
+      const banners = await storage.getUserUnlockedBanners(userId);
+      res.json(banners);
+    } catch (err) {
+      console.error("Error fetching unlocked banners:", err);
+      return res.status(500).json({ message: "Error fetching unlocked banners" });
+    }
+  });
+
+  // Unlock a banner for the current user (admin or lootbox system use)
+  app.post("/api/user/unlock-banner/:bannerId", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const userId = (req.user as User).id;
+      const bannerId = parseInt(req.params.bannerId);
+      
+      if (isNaN(bannerId)) {
+        return res.status(400).json({ message: "Invalid banner ID" });
+      }
+      
+      await storage.unlockBannerForUser(userId, bannerId);
+      res.json({ success: true, message: "Banner unlocked" });
+    } catch (err) {
+      console.error("Error unlocking banner:", err);
+      return res.status(500).json({ message: "Error unlocking banner" });
     }
   });
 
@@ -5537,6 +5600,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Error deleting banner:", err);
       return res.status(500).json({ message: "Error deleting banner" });
+    }
+  });
+
+  // ==========================================
+  // Avatar Border Routes (Lootbox Rewards)
+  // ==========================================
+
+  // Get user's unlocked avatar borders
+  app.get("/api/user/avatar-borders", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const unlockedBorders = await storage.getUserUnlockedAvatarBorders(req.user.id);
+      res.json(unlockedBorders);
+    } catch (err) {
+      console.error("Error fetching unlocked avatar borders:", err);
+      return res.status(500).json({ message: "Error fetching unlocked avatar borders" });
+    }
+  });
+
+  // Set selected avatar border
+  app.put("/api/user/avatar-border", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const { avatarBorderId } = req.body;
+      
+      // Allow null to remove the border
+      if (avatarBorderId !== null) {
+        // Verify user has unlocked this border
+        const hasUnlocked = await storage.userHasUnlockedReward(req.user.id, avatarBorderId);
+        if (!hasUnlocked) {
+          return res.status(403).json({ message: "You haven't unlocked this avatar border" });
+        }
+        
+        // Verify it's actually an avatar border type
+        const reward = await storage.getAssetReward(avatarBorderId);
+        if (!reward || reward.assetType !== "avatar_border") {
+          return res.status(400).json({ message: "Invalid avatar border" });
+        }
+      }
+
+      await storage.updateUserAvatarBorder(req.user.id, avatarBorderId);
+      res.json({ message: "Avatar border updated successfully" });
+    } catch (err) {
+      console.error("Error updating avatar border:", err);
+      return res.status(500).json({ message: "Error updating avatar border" });
+    }
+  });
+
+  // Get user's selected avatar border (for profile display)
+  app.get("/api/user/:userId/avatar-border", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (!user.selectedAvatarBorderId) {
+        return res.json({ avatarBorder: null });
+      }
+
+      const avatarBorder = await storage.getAssetReward(user.selectedAvatarBorderId);
+      res.json({ avatarBorder });
+    } catch (err) {
+      console.error("Error fetching user avatar border:", err);
+      return res.status(500).json({ message: "Error fetching user avatar border" });
     }
   });
 
@@ -5952,7 +6088,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==========================================
 
   // Get conversations for current user
-  app.get("/api/messages/conversations", authMiddleware, async (req, res) => {
+  app.get("/api/messages/conversations", hybridAuth, async (req, res) => {
     try {
       // Check if user has messaging enabled
       if (!req.user.messagingEnabled) {
@@ -5968,7 +6104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get messages between current user and another user
-  app.get("/api/messages/:otherUserId", authMiddleware, async (req, res) => {
+  app.get("/api/messages/:otherUserId", hybridAuth, async (req, res) => {
     try {
       const otherUserId = parseInt(req.params.otherUserId);
       if (isNaN(otherUserId)) {
@@ -6021,7 +6157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Send a message
-  app.post("/api/messages", emailVerificationMiddleware, async (req, res) => {
+  app.post("/api/messages", hybridAuth, async (req, res) => {
     try {
       // Validate content for profanity and inappropriate language
       const contentValidation = await contentFilterService.validateContent(req.body.content, 'message');
@@ -6087,7 +6223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete a message
-  app.delete("/api/messages/:messageId", authMiddleware, async (req, res) => {
+  app.delete("/api/messages/:messageId", hybridAuth, async (req, res) => {
     try {
       const messageId = parseInt(req.params.messageId);
       if (isNaN(messageId)) {
@@ -6136,7 +6272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Start a new conversation with username lookup
-  app.post("/api/messages/start", emailVerificationMiddleware, async (req, res) => {
+  app.post("/api/messages/start", hybridAuth, async (req, res) => {
     try {
       const { username } = req.body;
       let { content } = req.body;
@@ -6974,6 +7110,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==========================================
+  // Admin Lootbox Management Routes
+  // ==========================================
+
+  // Get all lootbox opens (admin only)
+  app.get("/api/admin/lootbox/opens", adminMiddleware, async (req, res) => {
+    try {
+      const opens = await storage.getAllLootboxOpens();
+      res.json(opens);
+    } catch (error) {
+      console.error("Error fetching lootbox opens:", error);
+      res.status(500).json({ error: "Failed to fetch lootbox opens" });
+    }
+  });
+
+  // Reset user's lootbox (admin only) - allows user to open again today
+  app.post("/api/admin/lootbox/reset/:userId", adminMiddleware, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const success = await storage.resetUserLootbox(userId);
+      
+      if (success) {
+        res.json({ message: "User lootbox reset successfully. They can now open another lootbox." });
+      } else {
+        res.status(404).json({ message: "User lootbox record not found" });
+      }
+    } catch (error) {
+      console.error("Error resetting user lootbox:", error);
+      res.status(500).json({ error: "Failed to reset user lootbox" });
+    }
+  });
+
+  // ==========================================
   // Upload Success Routes
   // ==========================================
 
@@ -7063,6 +7236,686 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Note: Server-side redirects removed - frontend handles shareCode URLs directly now
 
+  // ==========================================
+  // Crossmint Wallet Routes
+  // ==========================================
+
+  // Get or create wallet via Crossmint API (handles both new and existing wallets)
+  app.post("/api/wallet/create", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = await storage.getUser(userId);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // If user already has a wallet saved in our DB, return it
+      if (user.walletAddress) {
+        return res.json({ 
+          address: user.walletAddress,
+          chain: user.walletChain || 'skale-nebula-testnet',
+          message: "Wallet already exists",
+          isExisting: true
+        });
+      }
+
+      // Get Crossmint API key from environment (server-side only, no VITE_ prefix)
+      const apiKey = process.env.CROSSMINT_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ message: "Crossmint API key not configured" });
+      }
+
+      const userEmail = user.email || `${user.username}@gamefolio.app`;
+      // Crossmint requires the linkedUser to be prefixed with the type (e.g., 'email:')
+      const linkedUser = `email:${userEmail}`;
+
+      // Call Crossmint API to get or create wallet on SKALE Nebula Hub Testnet
+      // This is idempotent - it will retrieve existing wallet or create new one
+      const crossmintResponse = await fetch('https://www.crossmint.com/api/v1-alpha2/wallets', {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'evm-smart-wallet',
+          linkedUser: linkedUser,
+          chain: 'skale-nebula-testnet',
+          config: {
+            adminSigner: {
+              type: 'evm-fireblocks-custodial'
+            }
+          }
+        }),
+      });
+
+      if (!crossmintResponse.ok) {
+        const errorText = await crossmintResponse.text();
+        console.error("Crossmint API error:", errorText);
+        
+        // Check if error is because wallet already exists
+        if (errorText.includes('already exists') || errorText.includes('duplicate')) {
+          // Try to fetch the existing wallet
+          const getUserWalletResponse = await fetch(`https://www.crossmint.com/api/v1-alpha2/wallets?linkedUser=${encodeURIComponent(linkedUser)}`, {
+            method: 'GET',
+            headers: {
+              'X-API-KEY': apiKey,
+            },
+          });
+
+          if (getUserWalletResponse.ok) {
+            const walletsData = await getUserWalletResponse.json();
+            if (walletsData && walletsData.length > 0) {
+              const existingWallet = walletsData[0];
+              
+              // Save to database
+              await storage.updateUser(userId, {
+                walletAddress: existingWallet.address,
+                walletChain: existingWallet.chain || 'skale-nebula-testnet',
+                walletCreatedAt: new Date(),
+              });
+
+              return res.json({
+                address: existingWallet.address,
+                chain: existingWallet.chain || 'skale-nebula-testnet',
+                message: "Connected to existing Crossmint wallet",
+                isExisting: true
+              });
+            }
+          }
+        }
+        
+        return res.status(500).json({ message: `Crossmint API error: ${errorText}` });
+      }
+
+      const walletData = await crossmintResponse.json();
+
+      // Save wallet to database
+      await storage.updateUser(userId, {
+        walletAddress: walletData.address,
+        walletChain: walletData.chain || 'skale-nebula-testnet',
+        walletCreatedAt: new Date(),
+      });
+
+      res.json({
+        address: walletData.address,
+        chain: walletData.chain || 'skale-nebula-testnet',
+        message: "Wallet created successfully",
+        isExisting: false
+      });
+    } catch (error) {
+      console.error("Error creating wallet:", error);
+      res.status(500).json({ error: "Failed to create wallet" });
+    }
+  });
+
+  // Get wallet info for authenticated user
+  app.get("/api/wallet/info", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = await storage.getUser(userId);
+
+      if (!user?.walletAddress) {
+        return res.status(404).json({ message: "No wallet found" });
+      }
+
+      res.json({
+        address: user.walletAddress,
+        chain: user.walletChain || 'skale-nebula-testnet',
+        createdAt: user.walletCreatedAt,
+      });
+    } catch (error) {
+      console.error("Error fetching wallet info:", error);
+      res.status(500).json({ error: "Failed to fetch wallet info" });
+    }
+  });
+
+  // ==========================================
+  // Blockchain Token Routes
+  // ==========================================
+
+  // Get GF token information from smart contract
+  app.get("/api/token/info", async (req, res) => {
+    try {
+      const tokenInfo = await getTokenInfo();
+      res.json(tokenInfo);
+    } catch (error) {
+      console.error("Error fetching token info:", error);
+      res.status(500).json({ error: "Failed to fetch token information" });
+    }
+  });
+
+  // Get user's on-chain GF token balance
+  app.get("/api/token/balance", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = await storage.getUser(userId);
+
+      if (!user?.walletAddress) {
+        return res.status(404).json({ 
+          message: "No wallet found",
+          balance: "0"
+        });
+      }
+
+      const balance = await getTokenBalance(user.walletAddress);
+      
+      res.json({
+        balance,
+        walletAddress: user.walletAddress,
+        contractAddress: "0x2Db1fFAbbc41b8667B408a5F5e0E42bB6c6BA7f7",
+      });
+    } catch (error) {
+      console.error("Error fetching token balance:", error);
+      res.status(500).json({ error: "Failed to fetch token balance" });
+    }
+  });
+
+  // ==========================================
+  // NFT Purchase Routes
+  // ==========================================
+
+  // NFT catalog (server-side source of truth for pricing)
+  const NFT_CATALOG = [
+    { id: 1, name: "Cyber Pilot #001", price: 250, priceUSD: 12.50, forSale: true },
+    { id: 2, name: "Divine Guardian #002", price: 800, priceUSD: 40.00, forSale: true },
+    { id: 3, name: "Street Samurai #003", price: 550, priceUSD: 27.50, forSale: true },
+    { id: 4, name: "Urban Rogue #004", price: 350, priceUSD: 17.50, forSale: true },
+    { id: 5, name: "Matrix Assassin #005", price: 700, priceUSD: 35.00, forSale: true },
+    { id: 6, name: "Golden Warrior #006", price: 600, priceUSD: 30.00, forSale: true },
+    { id: 7, name: "Cyber Ronin #007", price: 650, priceUSD: 32.50, forSale: true },
+    { id: 8, name: "Desert Wanderer #008", price: 400, priceUSD: 20.00, forSale: true },
+    { id: 9, name: "Space Mercenary #009", price: 500, priceUSD: 25.00, forSale: true },
+    { id: 10, name: "Crystal Knight #010", price: 750, priceUSD: 37.50, forSale: true },
+    { id: 11, name: "Retro Explorer #011", price: 300, priceUSD: 15.00, forSale: true },
+    { id: 12, name: "Eastern Mystic #012", price: 450, priceUSD: 22.50, forSale: true },
+    { id: 13, name: "Digital Miner #013", price: 350, priceUSD: 17.50, forSale: true },
+    { id: 14, name: "Tech Operative #014", price: 420, priceUSD: 21.00, forSale: true },
+    { id: 15, name: "Royal Outlaw #015", price: 900, priceUSD: 45.00, forSale: true },
+  ];
+
+  // Purchase NFT with GF tokens
+  app.post("/api/nft/purchase", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { nftId } = req.body;
+
+      if (!nftId || typeof nftId !== 'number') {
+        return res.status(400).json({ message: "Invalid NFT ID" });
+      }
+
+      // Look up NFT price from server-side catalog (prevents price manipulation)
+      const nft = NFT_CATALOG.find(n => n.id === nftId);
+      if (!nft) {
+        return res.status(404).json({ message: "NFT not found" });
+      }
+
+      if (!nft.forSale) {
+        return res.status(400).json({ message: "NFT is not for sale" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check if user has a wallet
+      if (!user.walletAddress) {
+        return res.status(400).json({ message: "Wallet required to purchase NFTs" });
+      }
+
+      // Check if user has enough GF tokens (use server-side price)
+      const currentBalance = user.gfTokenBalance || 0;
+      if (currentBalance < nft.price) {
+        return res.status(400).json({ 
+          message: "Insufficient GF token balance",
+          currentBalance,
+          required: nft.price
+        });
+      }
+
+      // Deduct GF tokens
+      const newBalance = currentBalance - nft.price;
+      await storage.updateUser(userId, {
+        gfTokenBalance: newBalance
+      });
+
+      // TODO: In a real implementation, we would:
+      // 1. Save the NFT purchase record to database
+      // 2. Transfer the NFT to user's wallet via Crossmint API
+      // 3. Update NFT ownership in database
+
+      res.json({
+        success: true,
+        message: "NFT purchased successfully",
+        nftId,
+        nftName: nft.name,
+        pricePaid: nft.price,
+        newBalance,
+        transactionId: `txn_${Date.now()}_${nftId}` // Mock transaction ID
+      });
+    } catch (error) {
+      console.error("Error purchasing NFT:", error);
+      res.status(500).json({ error: "Failed to purchase NFT" });
+    }
+  });
+
+  // Add NFT to watchlist
+  app.post("/api/nft/watchlist", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const validatedData = insertNftWatchlistSchema.parse({
+        ...req.body,
+        userId
+      });
+
+      const watchlistItem = await storage.addToNftWatchlist(validatedData);
+      res.json(watchlistItem);
+    } catch (error: any) {
+      // Handle duplicate entry error
+      if (error.code === '23505') {
+        return res.status(400).json({ message: "NFT already in watchlist" });
+      }
+      console.error("Error adding to NFT watchlist:", error);
+      res.status(500).json({ error: "Failed to add NFT to watchlist" });
+    }
+  });
+
+  // Remove NFT from watchlist
+  app.delete("/api/nft/watchlist/:nftId", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const nftId = parseInt(req.params.nftId);
+
+      if (isNaN(nftId)) {
+        return res.status(400).json({ message: "Invalid NFT ID" });
+      }
+
+      await storage.removeFromNftWatchlist(userId, nftId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing from NFT watchlist:", error);
+      res.status(500).json({ error: "Failed to remove NFT from watchlist" });
+    }
+  });
+
+  // Get user's NFT watchlist
+  app.get("/api/nft/watchlist", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const watchlist = await storage.getNftWatchlist(userId);
+      res.json(watchlist);
+    } catch (error) {
+      console.error("Error fetching NFT watchlist:", error);
+      res.status(500).json({ error: "Failed to fetch watchlist" });
+    }
+  });
+
+  // Check if NFT is in user's watchlist
+  app.get("/api/nft/watchlist/check/:nftId", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const nftId = parseInt(req.params.nftId);
+
+      if (isNaN(nftId)) {
+        return res.status(400).json({ message: "Invalid NFT ID" });
+      }
+
+      const isWatched = await storage.isNftInWatchlist(userId, nftId);
+      res.json({ isWatched });
+    } catch (error) {
+      console.error("Error checking NFT watchlist status:", error);
+      res.status(500).json({ error: "Failed to check watchlist status" });
+    }
+  });
+
+  // Server-side token package catalog (source of truth)
+  const TOKEN_PACKAGES = {
+    starter: { id: 'starter', amount: 10, price: 0.50, bonus: 0 },
+    popular: { id: 'popular', amount: 25, price: 1.00, bonus: 5 },
+    premium: { id: 'premium', amount: 50, price: 2.00, bonus: 10 },
+    ultimate: { id: 'ultimate', amount: 100, price: 3.50, bonus: 25 },
+  } as const;
+
+  // Create Crossmint order for GF token purchase
+  app.post("/api/token/create-order", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { packageId } = req.body;
+
+      // Validate package ID exists in server catalog
+      if (!packageId || typeof packageId !== 'string') {
+        return res.status(400).json({ message: "Invalid package ID" });
+      }
+
+      const packageData = TOKEN_PACKAGES[packageId as keyof typeof TOKEN_PACKAGES];
+      if (!packageData) {
+        console.error(`❌ Invalid package ID attempted: ${packageId} by user ${userId}`);
+        return res.status(400).json({ message: "Invalid package selected" });
+      }
+
+      // Use ONLY server-side values (ignore client-provided amount/price)
+      const totalTokens = packageData.amount + packageData.bonus;
+      const priceUSD = packageData.price;
+
+      // Get user
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Require user to have a wallet before purchasing tokens
+      if (!user.walletAddress) {
+        return res.status(400).json({ 
+          message: "Wallet required",
+          code: "WALLET_REQUIRED",
+          description: "Please create a Crossmint wallet before purchasing GF tokens"
+        });
+      }
+
+      // Get Crossmint API key
+      const apiKey = process.env.CROSSMINT_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ message: "Crossmint API key not configured" });
+      }
+
+      const userEmail = user.email || `${user.username}@gamefolio.app`;
+
+      // Create Crossmint payment order (fiat-to-crypto gateway)
+      // Note: USDC will be delivered to user's wallet, then GF tokens credited to their account
+      // Using Base Sepolia testnet for staging (Ethereum L2 compatible)
+      const crossmintResponse = await fetch('https://staging.crossmint.com/api/2022-06-09/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+        },
+        body: JSON.stringify({
+          lineItems: [
+            {
+              tokenLocator: 'base:0x036CbD53842c5426634e7929541eC2318f3dCF7e', // USDC on Base Sepolia testnet (staging)
+              executionParameters: {
+                mode: 'exact-in',
+                amount: priceUSD.toFixed(2), // Amount in USD
+              },
+            },
+          ],
+          payment: {
+            method: 'checkoutcom-flow',
+            receiptEmail: userEmail,
+          },
+          recipient: {
+            walletAddress: user.walletAddress, // Required: user's Ethereum-compatible wallet
+          },
+          metadata: {
+            userId: userId.toString(),
+            packageId,
+            gfTokenAmount: totalTokens.toString(),
+            serverValidated: 'true', // Flag to verify order came from our server
+          }
+        }),
+      });
+
+      if (!crossmintResponse.ok) {
+        const errorText = await crossmintResponse.text();
+        console.error('Crossmint order creation error:', errorText);
+        return res.status(500).json({ 
+          message: 'Failed to create payment order',
+          error: errorText 
+        });
+      }
+
+      const orderData = await crossmintResponse.json();
+
+      // Store pending order info
+      console.log(`📦 Crossmint Order Created: ${orderData.orderId} for user ${userId}`);
+
+      res.json({
+        orderId: orderData.orderId,
+        clientSecret: orderData.clientSecret,
+        packageId,
+        amount: totalTokens,
+        priceUSD,
+      });
+    } catch (error) {
+      console.error('Error creating Crossmint order:', error);
+      res.status(500).json({ error: 'Failed to create order' });
+    }
+  });
+
+  // Check Crossmint order status and deliver GF tokens
+  app.post("/api/token/complete-order", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { orderId } = req.body;
+
+      if (!orderId) {
+        return res.status(400).json({ message: "Order ID required" });
+      }
+
+      // Get Crossmint API key
+      const apiKey = process.env.CROSSMINT_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ message: "Crossmint API key not configured" });
+      }
+
+      // Check order status from Crossmint
+      const statusResponse = await fetch(
+        `https://staging.crossmint.com/api/2022-06-09/orders/${orderId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+          },
+        }
+      );
+
+      if (!statusResponse.ok) {
+        return res.status(500).json({ message: "Failed to check order status" });
+      }
+
+      const orderData = await statusResponse.json();
+      
+      // Check if order is completed
+      if (orderData.phase !== 'completed' && orderData.phase !== 'delivery') {
+        return res.json({
+          status: orderData.phase,
+          message: "Order not yet completed"
+        });
+      }
+
+      // Verify order was created by our server (security check)
+      if (orderData.metadata?.serverValidated !== 'true') {
+        console.error(`❌ Order ${orderId} failed server validation check`);
+        return res.status(400).json({ message: "Invalid order source" });
+      }
+
+      // Re-validate package from server catalog (don't trust metadata blindly)
+      const packageId = orderData.metadata?.packageId;
+      const packageData = TOKEN_PACKAGES[packageId as keyof typeof TOKEN_PACKAGES];
+      
+      if (!packageData) {
+        console.error(`❌ Order ${orderId} has invalid packageId: ${packageId}`);
+        return res.status(400).json({ message: "Invalid package in order" });
+      }
+
+      // Use server-calculated token amount (defense in depth)
+      const gfTokenAmount = packageData.amount + packageData.bonus;
+      
+      // Double-check metadata matches expected amount
+      const metadataAmount = parseInt(orderData.metadata?.gfTokenAmount || '0');
+      if (metadataAmount !== gfTokenAmount) {
+        console.error(`❌ Order ${orderId} amount mismatch: expected ${gfTokenAmount}, got ${metadataAmount}`);
+        return res.status(400).json({ message: "Order amount validation failed" });
+      }
+
+      // Get user and update balance
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const currentBalance = user.gfTokenBalance || 0;
+      const newBalance = currentBalance + gfTokenAmount;
+
+      await storage.updateUser(userId, {
+        gfTokenBalance: newBalance
+      });
+
+      console.log(`✅ GF Tokens Delivered: User ${userId} received ${gfTokenAmount} GF (Order: ${orderId})`);
+
+      res.json({
+        success: true,
+        amount: gfTokenAmount,
+        newBalance,
+        orderId
+      });
+    } catch (error) {
+      console.error("Error completing order:", error);
+      res.status(500).json({ error: "Failed to complete order" });
+    }
+  });
+
+  // Test Crossmint API connection
+  app.get("/api/token/test-connection", authMiddleware, async (req, res) => {
+    try {
+      const apiKey = process.env.CROSSMINT_API_KEY;
+      
+      if (!apiKey) {
+        return res.status(500).json({ 
+          success: false, 
+          message: "Crossmint API key not configured" 
+        });
+      }
+
+      // Try to fetch wallets as a simple API test
+      const testResponse = await fetch(
+        'https://staging.crossmint.com/api/2022-06-09/orders?limit=1',
+        {
+          method: 'GET',
+          headers: {
+            'x-api-key': apiKey,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (testResponse.ok) {
+        console.log('✅ Crossmint API connection successful');
+        return res.json({
+          success: true,
+          message: "Crossmint API key is valid and working!",
+          environment: "staging",
+          statusCode: testResponse.status
+        });
+      } else {
+        const errorText = await testResponse.text();
+        console.error('❌ Crossmint API test failed:', errorText);
+        return res.status(testResponse.status).json({
+          success: false,
+          message: "API key invalid or unauthorized",
+          error: errorText,
+          statusCode: testResponse.status
+        });
+      }
+    } catch (error) {
+      console.error('Error testing Crossmint connection:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to test Crossmint connection",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // ==================== DAILY LOOTBOX ROUTES ====================
+
+  // Get lootbox status - check if user can open today's lootbox
+  app.get("/api/lootbox/status", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const status = await storage.getDailyLootboxStatus(userId);
+      res.json(status);
+    } catch (error) {
+      console.error("Error getting lootbox status:", error);
+      res.status(500).json({ message: "Failed to get lootbox status" });
+    }
+  });
+
+  // Open daily lootbox
+  app.post("/api/lootbox/open", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      
+      // Check if user can open
+      const status = await storage.getDailyLootboxStatus(userId);
+      if (!status.canOpen) {
+        return res.status(400).json({ 
+          message: "You've already opened today's lootbox!", 
+          nextOpenAt: status.nextOpenAt 
+        });
+      }
+
+      const result = await storage.openDailyLootbox(userId);
+      
+      if (!result) {
+        return res.status(404).json({ message: "No rewards available in lootbox" });
+      }
+
+      // Determine the appropriate message based on reward type
+      let message: string;
+      if (result.consumed) {
+        // Consumable reward (XP, GF tokens) was granted
+        const value = result.reward.rewardValue || 0;
+        if (result.reward.assetType === 'xp_reward') {
+          message = `You earned ${value} XP!`;
+        } else if (result.reward.assetType === 'gf_tokens') {
+          message = `You earned ${value} GF Tokens!`;
+        } else {
+          message = "Reward claimed!";
+        }
+      } else if (result.isDuplicate) {
+        message = "You already have this reward!";
+      } else {
+        message = "Congratulations! New reward unlocked!";
+      }
+      
+      res.json({ 
+        reward: result.reward,
+        isDuplicate: result.isDuplicate,
+        consumed: result.consumed,
+        message
+      });
+    } catch (error) {
+      console.error("Error opening lootbox:", error);
+      res.status(500).json({ message: "Failed to open lootbox" });
+    }
+  });
+
+  // Get user's claimed rewards
+  app.get("/api/lootbox/rewards", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const rewards = await storage.getUserClaimedRewards(userId);
+      res.json(rewards);
+    } catch (error) {
+      console.error("Error getting user rewards:", error);
+      res.status(500).json({ message: "Failed to get rewards" });
+    }
+  });
+
+  // Get available rewards for lootbox (public)
+  app.get("/api/lootbox/available-rewards", async (req, res) => {
+    try {
+      const rewards = await storage.getActiveRewardsForLootbox();
+      res.json(rewards);
+    } catch (error) {
+      console.error("Error getting available rewards:", error);
+      res.status(500).json({ message: "Failed to get available rewards" });
+    }
+  });
 
   return httpServer;
 }

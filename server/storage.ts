@@ -1,7 +1,7 @@
 import {
   users, games, clips, likes, comments, userGameFavorites, follows, messages, profileBanners,
   monthlyLeaderboard, weeklyLeaderboard, topContributors, userPointsHistory, userXPHistory, notifications, userBadges, contentFilterSettings, bannedWords,
-  heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions,
+  heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions, nftWatchlist, assetRewards, assetRewardClaims,
   type User, type InsertUser,
   type Game, type InsertGame,
   type Clip, type InsertClip,
@@ -27,6 +27,10 @@ import {
   type ClipMention, type InsertClipMention,
   type CommentMention, type InsertCommentMention,
   type ScreenshotCommentMention, type InsertScreenshotCommentMention,
+  type NftWatchlist, type InsertNftWatchlist,
+  type AssetReward, type InsertAssetReward,
+  type AssetRewardClaim, type InsertAssetRewardClaim,
+  type AssetRewardWithClaims,
   type ClipWithUser,
   type CommentWithUser,
   type UserWithStats,
@@ -158,6 +162,11 @@ export interface IStorage {
   // Profile customization operations
   getAllProfileBanners(): Promise<ProfileBanner[]>;
   getProfileBannersByCategory(category: string): Promise<ProfileBanner[]>;
+  
+  // User unlocked banners operations
+  getUserUnlockedBanners(userId: number): Promise<ProfileBanner[]>;
+  unlockBannerForUser(userId: number, bannerId: number): Promise<void>;
+  hasUserUnlockedBanner(userId: number, bannerId: number): Promise<boolean>;
 
   // Uploaded banner operations
   createUploadedBanner(userId: number, bannerUrl: string): Promise<UploadedBanner>;
@@ -294,6 +303,12 @@ export interface IStorage {
   getHeroTextSettings(textType: string): Promise<HeroTextSettings | null>;
   updateHeroTextSettings(textType: string, settings: { title: string; subtitle: string; updatedBy: number }): Promise<HeroTextSettings>;
 
+  // NFT Watchlist operations
+  addToNftWatchlist(watchlistData: InsertNftWatchlist): Promise<NftWatchlist>;
+  removeFromNftWatchlist(userId: number, nftId: number): Promise<boolean>;
+  getNftWatchlist(userId: number): Promise<NftWatchlist[]>;
+  isNftInWatchlist(userId: number, nftId: number): Promise<boolean>;
+
   // Leaderboard operations
   getEngagementLeaderboard(limit?: number): Promise<Array<{
     user: User;
@@ -306,6 +321,37 @@ export interface IStorage {
 
   // Recommendation operations
   getRecommendedClips(userId: number, limit?: number): Promise<ClipWithUser[]>;
+
+  // Asset reward operations
+  createAssetReward(reward: InsertAssetReward): Promise<AssetReward>;
+  getAllAssetRewards(): Promise<AssetReward[]>;
+  getAssetReward(id: number): Promise<AssetReward | null>;
+  getAssetRewardWithClaims(id: number): Promise<AssetRewardWithClaims | null>;
+  updateAssetReward(id: number, updates: Partial<AssetReward>): Promise<AssetReward | null>;
+  deleteAssetReward(id: number): Promise<boolean>;
+  createAssetRewardClaim(claim: InsertAssetRewardClaim): Promise<AssetRewardClaim>;
+  getAssetRewardClaims(rewardId: number): Promise<(AssetRewardClaim & { user: User })[]>;
+  getUserUnlockedAvatarBorders(userId: number): Promise<AssetReward[]>;
+  userHasUnlockedReward(userId: number, rewardId: number): Promise<boolean>;
+  updateUserAvatarBorder(userId: number, avatarBorderId: number | null): Promise<void>;
+
+  // Daily lootbox operations
+  getDailyLootboxStatus(userId: number): Promise<{ canOpen: boolean; lastOpenedAt: Date | null; nextOpenAt: Date | null }>;
+  openDailyLootbox(userId: number): Promise<{ reward: AssetReward; isDuplicate: boolean; consumed: boolean } | null>;
+  getUserClaimedRewards(userId: number): Promise<AssetReward[]>;
+  getActiveRewardsForLootbox(): Promise<AssetReward[]>;
+  
+  // Admin lootbox operations
+  getAllLootboxOpens(): Promise<Array<{
+    id: number;
+    userId: number;
+    lastOpenedAt: Date;
+    rewardId: number | null;
+    openCount: number;
+    user: { id: number; username: string; displayName: string; avatarUrl: string | null };
+    reward: { id: number; name: string; rarity: string; imageUrl: string } | null;
+  }>>;
+  resetUserLootbox(userId: number): Promise<boolean>;
 
   // Unified content moderation operations  
   getRecentContent(limit?: number, offset?: number, contentType?: string): Promise<Array<{

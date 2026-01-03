@@ -26,23 +26,28 @@ if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
 
-// CORS configuration for production (including mobile apps)
+// CORS configuration for production and mobile apps
 app.use((req, res, next) => {
   const origin = req.headers.origin;
+  const allowedOrigins = [
+    '.replit.app',
+    '.repl.co',  
+    'localhost',
+    '.gamefolio.com',
+    'gamefolio.com',
+    '.exp.direct',      // Expo development
+    'exp.direct',       // Expo development
+    '.expo.dev',        // Expo development
+    'expo.dev',         // Expo development
+  ];
   
-  // Allow requests from Replit domains, localhost, and mobile apps (no origin header)
-  const allowedOrigins = ['.replit.app', 'localhost', '.repl.co'];
-  const isAllowedOrigin = origin && allowedOrigins.some(allowed => origin.includes(allowed));
+  const isAllowed = origin && allowedOrigins.some(allowed => origin.includes(allowed));
   
-  // Always set CORS headers for maximum compatibility
-  if (origin && isAllowedOrigin) {
-    // Web browsers from allowed origins
+  if (isAllowed) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else if (origin) {
-    // Other web browsers - still allow but don't use credentials
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else {
-    // Mobile apps and other clients that don't send origin header
     res.setHeader('Access-Control-Allow-Origin', '*');
   }
   

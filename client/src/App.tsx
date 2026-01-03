@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ClipDialogProvider } from "@/hooks/use-clip-dialog";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { AuthModalProvider, useAuthModal } from "@/hooks/use-auth-modal";
+import { CrossmintProvider } from "@/hooks/use-crossmint";
 import { useVersionCheck } from "@/hooks/use-version-check";
 import AuthModal from "@/components/auth/auth-modal";
 import { ProtectedRoute } from "@/components/auth/protected-route";
@@ -21,6 +22,7 @@ import Header from "./components/layout/Header";
 import Sidebar from "./components/layout/Sidebar";
 import MobileNav from "./components/layout/MobileNav";
 import MobileMenu from "./components/layout/MobileMenu";
+import { ActivityScrollBanner } from "./components/layout/ActivityScrollBanner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, X } from "lucide-react";
 import { Link } from "wouter";
@@ -65,6 +67,10 @@ const PrivacyPage = React.lazy(() => import("./pages/privacy-page"));
 const ContactPage = React.lazy(() => import("./pages/contact-page"));
 const HelpPage = React.lazy(() => import("./pages/help-page"));
 const LeaderboardEmbedPage = React.lazy(() => import("./pages/LeaderboardEmbedPage"));
+const StorePage = React.lazy(() => import("./pages/StorePage"));
+const WalletPage = React.lazy(() => import("./pages/WalletPage"));
+const StoragePage = React.lazy(() => import("./pages/StoragePage"));
+const WatchlistPage = React.lazy(() => import("./pages/WatchlistPage"));
 const UserBattlesPage = React.lazy(() => import("./pages/UserBattlesPage"));
 
 // Loading component for lazy-loaded routes
@@ -159,6 +165,9 @@ function MainLayout({ children }: { children: React.ReactNode }) {
       <div className="fixed bottom-0 left-0 w-full h-full bg-gradient-to-tr from-transparent via-transparent to-primary/5 pointer-events-none"></div>
 
       <Header />
+
+      {/* Activity Scroll Banner - Only show on home page */}
+      {location === "/" && <ActivityScrollBanner />}
 
       {/* Dynamic Banner */}
       {!isLoadingBanner && bannerSettings && bannerSettings.isEnabled && !isBannerDismissed && (
@@ -284,6 +293,13 @@ function Router() {
           <Route path="/privacy" component={PrivacyPage} />
           <Route path="/contact" component={ContactPage} />
           <Route path="/help" component={HelpPage} />
+          {/* Hidden until ready to go live
+          <Route path="/store" component={StorePage} />
+          <Route path="/wallet" component={WalletPage} />
+          */}
+          <Route path="/storage" component={StoragePage} />
+          <Route path="/watchlist" component={WatchlistPage} />
+          <Route path="/battles" component={UserBattlesPage} />
           <Route path="/user-battles" component={UserBattlesPage} />
           <Route path="/leaderboard/embed" component={LeaderboardEmbedPage} />
 
@@ -310,14 +326,16 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <AuthProvider>
-            <AuthModalProvider>
-              <ClipDialogProvider>
-                <MainLayout>
-                  <Router />
-                </MainLayout>
-              </ClipDialogProvider>
-              <Toaster />
-            </AuthModalProvider>
+            <CrossmintProvider>
+              <AuthModalProvider>
+                <ClipDialogProvider>
+                  <MainLayout>
+                    <Router />
+                  </MainLayout>
+                </ClipDialogProvider>
+                <Toaster />
+              </AuthModalProvider>
+            </CrossmintProvider>
           </AuthProvider>
         </TooltipProvider>
       </QueryClientProvider>

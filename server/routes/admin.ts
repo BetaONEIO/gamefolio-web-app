@@ -5,9 +5,42 @@ import { randomBytes } from "crypto";
 import { VideoProcessor } from '../video-processor';
 import path from 'path';
 import fs from 'fs';
+import multer from 'multer';
 import { ContentFilterService } from '../services/content-filter';
-import { insertBannerSettingsSchema } from '@shared/schema';
+import { insertBannerSettingsSchema, insertAssetRewardSchema } from '@shared/schema';
 import { z } from 'zod';
+import { supabaseStorage } from '../supabase-storage';
+
+// Temporary directory for processing
+const tempDir = path.join(process.cwd(), "temp");
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
+}
+
+// Configure multer for reward image uploads
+const rewardImageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, tempDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueId = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'reward-' + uniqueId + path.extname(file.originalname));
+  }
+});
+
+const rewardImageUpload = multer({
+  storage: rewardImageStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB for reward images
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed for rewards'));
+    }
+  }
+});
 
 // Create admin router
 const adminRouter = Router();
@@ -1230,6 +1263,147 @@ adminRouter.post("/regenerate-reel-thumbnails", async (req: Request, res: Respon
       message: "Error regenerating reel thumbnails",
       error: err instanceof Error ? err.message : String(err)
     });
+  }
+});
+
+// ============ Asset Rewards Routes ============
+
+// POST /api/admin/asset-rewards/upload-image - Upload reward image
+adminRouter.post("/asset-rewards/upload-image", rewardImageUpload.single('image'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No image file provided" });
+    }
+
+    const userId = req.user!.id;
+    
+    // Upload to Supabase storage
+    const result = await supabaseStorage.uploadFile(req.file, 'image', userId);
+    
+    // Clean up temp file
+    const fs = await import('fs');
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    res.json({ 
+      imageUrl: result.url,
+      path: result.path 
+    });
+  } catch (err) {
+    console.error("Error uploading reward image:", err);
+    res.status(500).json({ message: "Error uploading image" });
+  }
+});
+
+// GET /api/admin/asset-rewards - Get all asset rewards
+adminRouter.get("/asset-rewards", async (req: Request, res: Response) => {
+  try {
+    const rewards = await storage.getAllAssetRewards();
+    res.json(rewards);
+  } catch (err) {
+    console.error("Error fetching asset rewards:", err);
+    res.status(500).json({ message: "Error fetching asset rewards" });
+  }
+});
+
+// GET /api/admin/asset-rewards/:id - Get single asset reward with claims
+adminRouter.get("/asset-rewards/:id", async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid reward ID" });
+    }
+
+    const reward = await storage.getAssetRewardWithClaims(id);
+    if (!reward) {
+      return res.status(404).json({ message: "Asset reward not found" });
+    }
+
+    res.json(reward);
+  } catch (err) {
+    console.error("Error fetching asset reward:", err);
+    res.status(500).json({ message: "Error fetching asset reward" });
+  }
+});
+
+// POST /api/admin/asset-rewards - Create new asset reward
+adminRouter.post("/asset-rewards", async (req: Request, res: Response) => {
+  try {
+    const validatedData = insertAssetRewardSchema.parse({
+      ...req.body,
+      createdBy: req.user!.id,
+    });
+
+    const reward = await storage.createAssetReward(validatedData);
+    res.status(201).json(reward);
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ 
+        message: "Invalid input", 
+        errors: err.errors 
+      });
+    }
+    console.error("Error creating asset reward:", err);
+    res.status(500).json({ message: "Error creating asset reward" });
+  }
+});
+
+// PATCH /api/admin/asset-rewards/:id - Update asset reward
+adminRouter.patch("/asset-rewards/:id", async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid reward ID" });
+    }
+
+    const existing = await storage.getAssetReward(id);
+    if (!existing) {
+      return res.status(404).json({ message: "Asset reward not found" });
+    }
+
+    const updated = await storage.updateAssetReward(id, req.body);
+    res.json(updated);
+  } catch (err) {
+    console.error("Error updating asset reward:", err);
+    res.status(500).json({ message: "Error updating asset reward" });
+  }
+});
+
+// DELETE /api/admin/asset-rewards/:id - Delete asset reward
+adminRouter.delete("/asset-rewards/:id", async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid reward ID" });
+    }
+
+    const existing = await storage.getAssetReward(id);
+    if (!existing) {
+      return res.status(404).json({ message: "Asset reward not found" });
+    }
+
+    await storage.deleteAssetReward(id);
+    res.json({ success: true, message: "Asset reward deleted" });
+  } catch (err) {
+    console.error("Error deleting asset reward:", err);
+    res.status(500).json({ message: "Error deleting asset reward" });
+  }
+});
+
+// GET /api/admin/asset-rewards/:id/claims - Get claims for a specific reward
+adminRouter.get("/asset-rewards/:id/claims", async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid reward ID" });
+    }
+
+    const claims = await storage.getAssetRewardClaims(id);
+    res.json(claims);
+  } catch (err) {
+    console.error("Error fetching asset reward claims:", err);
+    res.status(500).json({ message: "Error fetching asset reward claims" });
   }
 });
 

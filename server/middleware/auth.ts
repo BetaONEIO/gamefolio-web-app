@@ -8,3 +8,6 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction) => 
   
   next();
 };
+
+// Alias for compatibility with legacy imports
+export const authMiddleware = requireAuth;

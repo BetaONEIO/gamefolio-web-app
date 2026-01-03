@@ -237,6 +237,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                   <div className="mb-2 md:mb-3">
                     <Link href={`/profile/${reel.user.username}`} onClick={onClose}>
                       <div className="flex items-center gap-2 md:gap-3 mb-2 text-white cursor-pointer hover:opacity-80 transition-opacity">
+
+                      <div className="flex items-center gap-2 md:gap-3 mb-2 text-white cursor-pointer hover:opacity-80 transition-opacity">
                         <div className="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-white/50">
                           <img
                             src={reel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
