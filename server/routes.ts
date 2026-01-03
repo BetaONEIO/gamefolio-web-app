@@ -1565,6 +1565,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get random users for battles endpoint
+  app.get("/api/users/random", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 8;
+      const allUsers = await storage.getFeaturedUsers(100); // Get a larger pool
+      
+      if (!allUsers || allUsers.length === 0) {
+        return res.json([]);
+      }
+
+      // Shuffle and pick random users
+      const shuffled = allUsers.sort(() => 0.5 - Math.random());
+      const randomUsers = shuffled.slice(0, limit);
+
+      // Map to public user data
+      const publicUsers = randomUsers.map(user => ({
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
+        level: user.level || 1,
+        totalXP: user.totalXP || 0,
+      }));
+
+      res.json(publicUsers);
+    } catch (err) {
+      console.error("Error getting random users:", err);
+      res.status(500).json({ message: "Error getting random users" });
+    }
+  });
+
   // Get public banner settings endpoint
   app.get("/api/banner-settings", async (req, res) => {
     try {
