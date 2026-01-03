@@ -347,6 +347,190 @@ function BannerManagement() {
     </div>
   );
 }
+
+// Lootbox Management Component
+interface LootboxOpen {
+  id: number;
+  userId: number;
+  lastOpenedAt: string;
+  rewardId: number | null;
+  openCount: number;
+  user: { id: number; username: string; displayName: string; avatarUrl: string | null };
+  reward: { id: number; name: string; rarity: string; imageUrl: string } | null;
+}
+
+function LootboxManagement() {
+  const { toast } = useToast();
+  const [resetLoading, setResetLoading] = useState<number | null>(null);
+
+  const { data: lootboxOpens, isLoading, refetch } = useQuery<LootboxOpen[]>({
+    queryKey: ['/api/admin/lootbox/opens'],
+  });
+
+  const handleResetLootbox = async (userId: number, username: string) => {
+    if (!confirm(`Are you sure you want to reset ${username}'s lootbox? They will be able to open another lootbox today.`)) {
+      return;
+    }
+    
+    setResetLoading(userId);
+    try {
+      await apiRequest('POST', `/api/admin/lootbox/reset/${userId}`);
+      toast({
+        title: "Lootbox reset",
+        description: `${username} can now open another lootbox today.`,
+        variant: "gamefolioSuccess",
+      });
+      refetch();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reset lootbox",
+        variant: "gamefolioError",
+      });
+    } finally {
+      setResetLoading(null);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getRarityBadgeColor = (rarity: string) => {
+    switch (rarity) {
+      case 'common': return 'bg-gray-500';
+      case 'rare': return 'bg-blue-500';
+      case 'epic': return 'bg-purple-500';
+      case 'legendary': return 'bg-amber-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Gift className="w-5 h-5" />
+          Lootbox Management
+        </CardTitle>
+        <CardDescription>
+          View who has opened lootboxes and manage their daily lootbox status
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <RefreshCw className="w-6 h-6 animate-spin mr-2" />
+            Loading lootbox data...
+          </div>
+        ) : !lootboxOpens || lootboxOpens.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No lootbox opens recorded yet.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Total opens: {lootboxOpens.length}
+              </p>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
+            
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Opened At</TableHead>
+                  <TableHead>Reward</TableHead>
+                  <TableHead>Rarity</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {lootboxOpens.map((open) => (
+                  <TableRow key={open.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {open.user.avatarUrl ? (
+                          <img
+                            src={open.user.avatarUrl}
+                            alt={open.user.username}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                            <User className="w-4 h-4" />
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-medium">{open.user.displayName}</div>
+                          <div className="text-sm text-muted-foreground">@{open.user.username}</div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>{formatDate(open.lastOpenedAt)}</TableCell>
+                    <TableCell>
+                      {open.reward ? (
+                        <div className="flex items-center gap-2">
+                          {open.reward.imageUrl && (
+                            <img
+                              src={open.reward.imageUrl}
+                              alt={open.reward.name}
+                              className="w-8 h-8 rounded object-cover"
+                            />
+                          )}
+                          <span>{open.reward.name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">No reward</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {open.reward && (
+                        <Badge className={`${getRarityBadgeColor(open.reward.rarity)} text-white capitalize`}>
+                          {open.reward.rarity}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleResetLootbox(open.userId, open.user.username)}
+                        disabled={resetLoading === open.userId}
+                        data-testid={`button-reset-lootbox-${open.userId}`}
+                      >
+                        {resetLoading === open.userId ? (
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Reset
+                          </>
+                        )}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
@@ -429,6 +613,7 @@ import {
   Eye,
   Trophy,
   Flame,
+  Gift,
 } from "lucide-react";
 
 const AdminPage = () => {
@@ -1017,19 +1202,20 @@ const AdminPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-12">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="content">Content</TabsTrigger>
-          <TabsTrigger value="content-filter">Content Filter</TabsTrigger>
-          <TabsTrigger value="banner">Banner</TabsTrigger>
-          <TabsTrigger value="badges">Badges</TabsTrigger>
-          <TabsTrigger value="levels">Levels</TabsTrigger>
-          <TabsTrigger value="streaks">Streaks</TabsTrigger>
-          <TabsTrigger value="points">Points</TabsTrigger>
-          <TabsTrigger value="hero-text">Hero Text</TabsTrigger>
-          <TabsTrigger value="asset-rewards">Rewards</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
+        <TabsList className="flex flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="dashboard" className="text-xs px-3 py-1.5">Dashboard</TabsTrigger>
+          <TabsTrigger value="users" className="text-xs px-3 py-1.5">Users</TabsTrigger>
+          <TabsTrigger value="content" className="text-xs px-3 py-1.5">Content</TabsTrigger>
+          <TabsTrigger value="content-filter" className="text-xs px-3 py-1.5">Filter</TabsTrigger>
+          <TabsTrigger value="banner" className="text-xs px-3 py-1.5">Banner</TabsTrigger>
+          <TabsTrigger value="badges" className="text-xs px-3 py-1.5">Badges</TabsTrigger>
+          <TabsTrigger value="levels" className="text-xs px-3 py-1.5">Levels</TabsTrigger>
+          <TabsTrigger value="streaks" className="text-xs px-3 py-1.5">Streaks</TabsTrigger>
+          <TabsTrigger value="points" className="text-xs px-3 py-1.5">Points</TabsTrigger>
+          <TabsTrigger value="hero-text" className="text-xs px-3 py-1.5">Hero</TabsTrigger>
+          <TabsTrigger value="asset-rewards" className="text-xs px-3 py-1.5">Rewards</TabsTrigger>
+          <TabsTrigger value="lootbox" className="text-xs px-3 py-1.5">Lootbox</TabsTrigger>
+          <TabsTrigger value="settings" className="text-xs px-3 py-1.5">Settings</TabsTrigger>
         </TabsList>
 
         {/* Dashboard Tab */}
@@ -3433,6 +3619,11 @@ const AdminPage = () => {
               )}
             </DialogContent>
           </Dialog>
+        </TabsContent>
+
+        {/* Lootbox Tab */}
+        <TabsContent value="lootbox" className="space-y-4">
+          <LootboxManagement />
         </TabsContent>
 
         {/* Settings Tab */}

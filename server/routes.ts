@@ -1565,6 +1565,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get random users for battles endpoint
+  app.get("/api/users/random", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 8;
+      const allUsers = await storage.getFeaturedUsers(100); // Get a larger pool
+      
+      if (!allUsers || allUsers.length === 0) {
+        return res.json([]);
+      }
+
+      // Shuffle and pick random users
+      const shuffled = allUsers.sort(() => 0.5 - Math.random());
+      const randomUsers = shuffled.slice(0, limit);
+
+      // Map to public user data
+      const publicUsers = randomUsers.map(user => ({
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
+        level: user.level || 1,
+        totalXP: user.totalXP || 0,
+      }));
+
+      res.json(publicUsers);
+    } catch (err) {
+      console.error("Error getting random users:", err);
+      res.status(500).json({ message: "Error getting random users" });
+    }
+  });
+
   // Get public banner settings endpoint
   app.get("/api/banner-settings", async (req, res) => {
     try {
@@ -5352,7 +5383,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Profile Banner Routes
   // ==========================================
 
-  // Get all profile banners
+  // Get all profile banners (for admin use)
   app.get("/api/profile-banners", async (req, res) => {
     try {
       const banners = await storage.getAllProfileBanners();
@@ -5360,6 +5391,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Error fetching profile banners:", err);
       return res.status(500).json({ message: "Error fetching profile banners" });
+    }
+  });
+
+  // Get unlocked banners for the current user
+  app.get("/api/user/unlocked-banners", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const userId = (req.user as User).id;
+      const banners = await storage.getUserUnlockedBanners(userId);
+      res.json(banners);
+    } catch (err) {
+      console.error("Error fetching unlocked banners:", err);
+      return res.status(500).json({ message: "Error fetching unlocked banners" });
+    }
+  });
+
+  // Unlock a banner for the current user (admin or lootbox system use)
+  app.post("/api/user/unlock-banner/:bannerId", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const userId = (req.user as User).id;
+      const bannerId = parseInt(req.params.bannerId);
+      
+      if (isNaN(bannerId)) {
+        return res.status(400).json({ message: "Invalid banner ID" });
+      }
+      
+      await storage.unlockBannerForUser(userId, bannerId);
+      res.json({ success: true, message: "Banner unlocked" });
+    } catch (err) {
+      console.error("Error unlocking banner:", err);
+      return res.status(500).json({ message: "Error unlocking banner" });
     }
   });
 
@@ -7041,6 +7110,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==========================================
+  // Admin Lootbox Management Routes
+  // ==========================================
+
+  // Get all lootbox opens (admin only)
+  app.get("/api/admin/lootbox/opens", adminMiddleware, async (req, res) => {
+    try {
+      const opens = await storage.getAllLootboxOpens();
+      res.json(opens);
+    } catch (error) {
+      console.error("Error fetching lootbox opens:", error);
+      res.status(500).json({ error: "Failed to fetch lootbox opens" });
+    }
+  });
+
+  // Reset user's lootbox (admin only) - allows user to open again today
+  app.post("/api/admin/lootbox/reset/:userId", adminMiddleware, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const success = await storage.resetUserLootbox(userId);
+      
+      if (success) {
+        res.json({ message: "User lootbox reset successfully. They can now open another lootbox." });
+      } else {
+        res.status(404).json({ message: "User lootbox record not found" });
+      }
+    } catch (error) {
+      console.error("Error resetting user lootbox:", error);
+      res.status(500).json({ error: "Failed to reset user lootbox" });
+    }
+  });
+
+  // ==========================================
   // Upload Success Routes
   // ==========================================
 
@@ -7721,6 +7827,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Failed to test Crossmint connection",
         error: error instanceof Error ? error.message : String(error)
       });
+    }
+  });
+
+  // ==================== DAILY LOOTBOX ROUTES ====================
+
+  // Get lootbox status - check if user can open today's lootbox
+  app.get("/api/lootbox/status", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const status = await storage.getDailyLootboxStatus(userId);
+      res.json(status);
+    } catch (error) {
+      console.error("Error getting lootbox status:", error);
+      res.status(500).json({ message: "Failed to get lootbox status" });
+    }
+  });
+
+  // Open daily lootbox
+  app.post("/api/lootbox/open", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      
+      // Check if user can open
+      const status = await storage.getDailyLootboxStatus(userId);
+      if (!status.canOpen) {
+        return res.status(400).json({ 
+          message: "You've already opened today's lootbox!", 
+          nextOpenAt: status.nextOpenAt 
+        });
+      }
+
+      const result = await storage.openDailyLootbox(userId);
+      
+      if (!result) {
+        return res.status(404).json({ message: "No rewards available in lootbox" });
+      }
+
+      // Determine the appropriate message based on reward type
+      let message: string;
+      if (result.consumed) {
+        // Consumable reward (XP, GF tokens) was granted
+        const value = result.reward.rewardValue || 0;
+        if (result.reward.assetType === 'xp_reward') {
+          message = `You earned ${value} XP!`;
+        } else if (result.reward.assetType === 'gf_tokens') {
+          message = `You earned ${value} GF Tokens!`;
+        } else {
+          message = "Reward claimed!";
+        }
+      } else if (result.isDuplicate) {
+        message = "You already have this reward!";
+      } else {
+        message = "Congratulations! New reward unlocked!";
+      }
+      
+      res.json({ 
+        reward: result.reward,
+        isDuplicate: result.isDuplicate,
+        consumed: result.consumed,
+        message
+      });
+    } catch (error) {
+      console.error("Error opening lootbox:", error);
+      res.status(500).json({ message: "Failed to open lootbox" });
+    }
+  });
+
+  // Get user's claimed rewards
+  app.get("/api/lootbox/rewards", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const rewards = await storage.getUserClaimedRewards(userId);
+      res.json(rewards);
+    } catch (error) {
+      console.error("Error getting user rewards:", error);
+      res.status(500).json({ message: "Failed to get rewards" });
+    }
+  });
+
+  // Get available rewards for lootbox (public)
+  app.get("/api/lootbox/available-rewards", async (req, res) => {
+    try {
+      const rewards = await storage.getActiveRewardsForLootbox();
+      res.json(rewards);
+    } catch (error) {
+      console.error("Error getting available rewards:", error);
+      res.status(500).json({ message: "Failed to get available rewards" });
     }
   });
 

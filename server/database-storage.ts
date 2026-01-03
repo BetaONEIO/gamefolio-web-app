@@ -36,6 +36,7 @@ import {
   AssetReward, InsertAssetReward,
   AssetRewardClaim, InsertAssetRewardClaim,
   AssetRewardWithClaims,
+  UserDailyLootbox, InsertUserDailyLootbox,
   ClipWithUser,
   CommentWithUser,
   ScreenshotCommentWithUser,
@@ -81,7 +82,9 @@ import {
   commentMentions,
   screenshotCommentMentions,
   assetRewards,
-  assetRewardClaims
+  assetRewardClaims,
+  userDailyLootbox,
+  userUnlockedBanners
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, isNotNull, getTableColumns } from "drizzle-orm";
@@ -1388,6 +1391,49 @@ export class DatabaseStorage implements IStorage {
       .where(eq(profileBanners.category, category))
       .orderBy(profileBanners.id);
     return banners;
+  }
+
+  async getUserUnlockedBanners(userId: number): Promise<ProfileBanner[]> {
+    const results = await db
+      .select({
+        id: profileBanners.id,
+        name: profileBanners.name,
+        imageUrl: profileBanners.imageUrl,
+        category: profileBanners.category,
+        createdAt: profileBanners.createdAt,
+      })
+      .from(userUnlockedBanners)
+      .innerJoin(profileBanners, eq(userUnlockedBanners.bannerId, profileBanners.id))
+      .where(eq(userUnlockedBanners.userId, userId))
+      .orderBy(profileBanners.category, profileBanners.id);
+    return results;
+  }
+
+  async unlockBannerForUser(userId: number, bannerId: number): Promise<void> {
+    const existing = await db
+      .select()
+      .from(userUnlockedBanners)
+      .where(and(
+        eq(userUnlockedBanners.userId, userId),
+        eq(userUnlockedBanners.bannerId, bannerId)
+      ))
+      .limit(1);
+    
+    if (existing.length === 0) {
+      await db.insert(userUnlockedBanners).values({ userId, bannerId });
+    }
+  }
+
+  async hasUserUnlockedBanner(userId: number, bannerId: number): Promise<boolean> {
+    const result = await db
+      .select()
+      .from(userUnlockedBanners)
+      .where(and(
+        eq(userUnlockedBanners.userId, userId),
+        eq(userUnlockedBanners.bannerId, bannerId)
+      ))
+      .limit(1);
+    return result.length > 0;
   }
 
   // Uploaded banner operations
@@ -4191,5 +4237,219 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date() 
       })
       .where(eq(users.id, userId));
+  }
+
+  // Daily lootbox operations
+  async getDailyLootboxStatus(userId: number): Promise<{ canOpen: boolean; lastOpenedAt: Date | null; nextOpenAt: Date | null }> {
+    const [record] = await db
+      .select()
+      .from(userDailyLootbox)
+      .where(eq(userDailyLootbox.userId, userId))
+      .orderBy(desc(userDailyLootbox.lastOpenedAt))
+      .limit(1);
+
+    if (!record) {
+      return { canOpen: true, lastOpenedAt: null, nextOpenAt: null };
+    }
+
+    const now = new Date();
+    const lastOpened = new Date(record.lastOpenedAt);
+    
+    // Reset at midnight UTC
+    const todayMidnight = new Date(now);
+    todayMidnight.setUTCHours(0, 0, 0, 0);
+    
+    const lastOpenedDate = new Date(lastOpened);
+    lastOpenedDate.setUTCHours(0, 0, 0, 0);
+    
+    const canOpen = lastOpenedDate < todayMidnight;
+    
+    // Calculate next open time (next midnight UTC)
+    const nextOpenAt = new Date(todayMidnight);
+    nextOpenAt.setUTCDate(nextOpenAt.getUTCDate() + 1);
+
+    return { 
+      canOpen, 
+      lastOpenedAt: record.lastOpenedAt, 
+      nextOpenAt: canOpen ? null : nextOpenAt 
+    };
+  }
+
+  async openDailyLootbox(userId: number): Promise<{ reward: AssetReward; isDuplicate: boolean; consumed: boolean } | null> {
+    // Check if user can open
+    const status = await this.getDailyLootboxStatus(userId);
+    if (!status.canOpen) {
+      return null;
+    }
+
+    // Get all active rewards
+    const rewards = await this.getActiveRewardsForLootbox();
+    if (rewards.length === 0) {
+      return null;
+    }
+
+    // Calculate total weight based on unlock chance
+    const totalWeight = rewards.reduce((sum, r) => sum + r.unlockChance, 0);
+    
+    // Random weighted selection
+    let random = Math.random() * totalWeight;
+    let selectedReward: AssetReward | null = null;
+    
+    for (const reward of rewards) {
+      random -= reward.unlockChance;
+      if (random <= 0) {
+        selectedReward = reward;
+        break;
+      }
+    }
+    
+    // Fallback to first reward if none selected
+    if (!selectedReward) {
+      selectedReward = rewards[0];
+    }
+
+    // Check if this is a consumable reward (XP, GF tokens)
+    const isConsumable = selectedReward.assetType === 'xp_reward' || selectedReward.assetType === 'gf_tokens';
+    let alreadyHas = false;
+    let consumed = false;
+
+    if (isConsumable) {
+      // Consumable rewards are always granted (never duplicates)
+      const rewardValue = selectedReward.rewardValue || 0;
+      
+      if (selectedReward.assetType === 'xp_reward' && rewardValue > 0) {
+        // Grant XP to user
+        await db.update(users)
+          .set({ totalXP: sql`COALESCE(${users.totalXP}, 0) + ${rewardValue}` })
+          .where(eq(users.id, userId));
+        consumed = true;
+      } else if (selectedReward.assetType === 'gf_tokens' && rewardValue > 0) {
+        // Grant GF tokens to user
+        await db.update(users)
+          .set({ gfTokenBalance: sql`COALESCE(${users.gfTokenBalance}, 0) + ${rewardValue}` })
+          .where(eq(users.id, userId));
+        consumed = true;
+      }
+      
+      // Still create a claim record to track history
+      await this.createAssetRewardClaim({
+        rewardId: selectedReward.id,
+        userId: userId,
+      });
+    } else {
+      // For collectible rewards, check if user already has it
+      alreadyHas = await this.userHasUnlockedReward(userId, selectedReward.id);
+      
+      if (!alreadyHas) {
+        // Create the reward claim only if user doesn't have it
+        await this.createAssetRewardClaim({
+          rewardId: selectedReward.id,
+          userId: userId,
+        });
+      }
+    }
+
+    // Record the lootbox open
+    await db.insert(userDailyLootbox).values({
+      userId,
+      lastOpenedAt: new Date(),
+      rewardId: selectedReward.id,
+      openCount: 1,
+    });
+
+    return { reward: selectedReward, isDuplicate: alreadyHas, consumed };
+  }
+
+  async getUserClaimedRewards(userId: number): Promise<AssetReward[]> {
+    const claims = await db
+      .select({
+        reward: assetRewards,
+      })
+      .from(assetRewardClaims)
+      .innerJoin(assetRewards, eq(assetRewardClaims.rewardId, assetRewards.id))
+      .where(eq(assetRewardClaims.userId, userId))
+      .orderBy(desc(assetRewardClaims.claimedAt));
+
+    return claims.map(c => c.reward);
+  }
+
+  async getActiveRewardsForLootbox(): Promise<AssetReward[]> {
+    return db
+      .select()
+      .from(assetRewards)
+      .where(eq(assetRewards.isActive, true))
+      .orderBy(assetRewards.rarity);
+  }
+
+  // Admin lootbox operations
+  async getAllLootboxOpens(): Promise<Array<{
+    id: number;
+    userId: number;
+    lastOpenedAt: Date;
+    rewardId: number | null;
+    openCount: number;
+    user: { id: number; username: string; displayName: string; avatarUrl: string | null };
+    reward: { id: number; name: string; rarity: string; imageUrl: string } | null;
+  }>> {
+    const records = await db
+      .select({
+        id: userDailyLootbox.id,
+        userId: userDailyLootbox.userId,
+        lastOpenedAt: userDailyLootbox.lastOpenedAt,
+        rewardId: userDailyLootbox.rewardId,
+        openCount: userDailyLootbox.openCount,
+        user: {
+          id: users.id,
+          username: users.username,
+          displayName: users.displayName,
+          avatarUrl: users.avatarUrl,
+        },
+        reward: {
+          id: assetRewards.id,
+          name: assetRewards.name,
+          rarity: assetRewards.rarity,
+          imageUrl: assetRewards.imageUrl,
+        },
+      })
+      .from(userDailyLootbox)
+      .innerJoin(users, eq(userDailyLootbox.userId, users.id))
+      .leftJoin(assetRewards, eq(userDailyLootbox.rewardId, assetRewards.id))
+      .orderBy(desc(userDailyLootbox.lastOpenedAt));
+
+    return records.map(r => ({
+      id: r.id,
+      userId: r.userId,
+      lastOpenedAt: r.lastOpenedAt,
+      rewardId: r.rewardId,
+      openCount: r.openCount,
+      user: r.user,
+      reward: r.reward?.id ? r.reward : null,
+    }));
+  }
+
+  async resetUserLootbox(userId: number): Promise<boolean> {
+    // First check if the user has a lootbox record
+    const [existing] = await db
+      .select({ id: userDailyLootbox.id })
+      .from(userDailyLootbox)
+      .where(eq(userDailyLootbox.userId, userId))
+      .limit(1);
+    
+    if (!existing) {
+      return false;
+    }
+    
+    // Set lastOpenedAt to yesterday to allow another open today
+    // This preserves the openCount and history while resetting the daily lockout
+    const yesterday = new Date();
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    yesterday.setUTCHours(0, 0, 0, 0);
+    
+    await db
+      .update(userDailyLootbox)
+      .set({ lastOpenedAt: yesterday })
+      .where(eq(userDailyLootbox.userId, userId));
+    
+    return true;
   }
 }

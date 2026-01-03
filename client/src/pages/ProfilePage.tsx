@@ -18,6 +18,7 @@ import {
   Users, 
   Youtube, 
   Gamepad,
+  Gamepad2,
   UserCog,
   Share,
   X,
@@ -34,8 +35,14 @@ import {
   Home,
   Search,
   Loader2,
-  Trophy
+  Trophy,
+  Video,
+  Upload,
+  Code,
+  Coffee,
+  Scroll
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { 
   SiSteam,
   SiPlaystation,
@@ -73,6 +80,17 @@ import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { formatDistance } from "date-fns";
 import { cn } from "@/lib/utils";
 import NotFound from "./not-found";
+
+const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
+  streamer: { label: "Streamer", icon: Video, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
+  gamer: { label: "Gamer", icon: Gamepad2, color: "bg-green-500/20 text-green-400 border-green-500/30" },
+  professional_gamer: { label: "Professional Gamer", icon: Trophy, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
+  content_creator: { label: "Content Creator", icon: Upload, color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+  indie_developer: { label: "Indie Developer", icon: Code, color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
+  viewer: { label: "Viewer", icon: Eye, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
+  filthy_casual: { label: "Filthy Casual", icon: Coffee, color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
+  doom_scroller: { label: "Doom Scroller", icon: Scroll, color: "bg-red-500/20 text-red-400 border-red-500/30" },
+};
 
 const ProfilePage = () => {
   const params = useParams();
@@ -961,8 +979,20 @@ const ProfilePage = () => {
     } : null;
   };
 
+  // Darken a hex color by a percentage
+  const darkenColor = (hex: string, percent: number) => {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return hex;
+    const factor = 1 - percent / 100;
+    const r = Math.round(rgb.r * factor);
+    const g = Math.round(rgb.g * factor);
+    const b = Math.round(rgb.b * factor);
+    return `rgb(${r}, ${g}, ${b})`;
+  };
+
   const bgRgb = hexToRgb(backgroundColor);
   const accentRgb = hexToRgb(accentColor);
+  const defaultThemeColor = '#0B2232';
 
   // Debug: Log the actual colors being used
   console.log('Profile colors:', { accentColor, backgroundColor, bgRgb, accentRgb });
@@ -972,7 +1002,7 @@ const ProfilePage = () => {
       className="min-h-screen pb-12 relative profile-theme-scope" 
       ref={profileThemeScopeRef}
       style={{ 
-        background: backgroundColor,
+        background: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
         position: 'relative',
         zIndex: 1
       }}
@@ -1149,16 +1179,36 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          {/* Username and Display Name - On one line on Mobile */}
+          {/* Username and Display Name - Stacked on Mobile */}
           <div className="flex flex-col items-center gap-1 mb-3 text-center" style={{ marginTop: '-20px' }}>
             <div className="flex items-center gap-2 flex-wrap justify-center">
               <h1 className="text-xl font-bold">{profile.displayName}</h1>
-              <span className="text-lg text-white/70 font-normal">@{profile.username}</span>
+              {profile.userType && profile.showUserType !== false && (() => {
+                const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
+                const displayTypes = userTypes.slice(0, 2);
+                
+                return displayTypes.map((type, index) => {
+                  const config = userTypeConfig[type];
+                  if (!config) return null;
+                  const IconComponent = config.icon;
+                  return (
+                    <Badge 
+                      key={`${type}-${index}`}
+                      variant="outline" 
+                      className={`${config.color} border text-xs font-medium px-2 py-0.5`}
+                    >
+                      <IconComponent className="w-3 h-3 mr-1" />
+                      {config.label}
+                    </Badge>
+                  );
+                });
+              })()}
               <ModeratorBadge 
                 isModerator={profile.role === "moderator" || profile.role === "admin"} 
                 size="lg" 
               />
             </div>
+            <span className="text-base text-white/70 font-normal">@{profile.username}</span>
           </div>
 
           {/* Stats under username on mobile - Two rows */}
@@ -1457,14 +1507,34 @@ const ProfilePage = () => {
             {/* Username and Display Name with action buttons */}
             <div className="flex flex-row justify-between items-start gap-4 mb-6">
               <div className="flex flex-col flex-1">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-wrap">
                   <h1 className="text-3xl font-bold">{profile.displayName}</h1>
-                  <span className="text-xl text-white/70 font-normal">@{profile.username}</span>
+                  {profile.userType && profile.showUserType !== false && (() => {
+                    const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
+                    const displayTypes = userTypes.slice(0, 2);
+                    
+                    return displayTypes.map((type, index) => {
+                      const config = userTypeConfig[type];
+                      if (!config) return null;
+                      const IconComponent = config.icon;
+                      return (
+                        <Badge 
+                          key={`${type}-${index}`}
+                          variant="outline" 
+                          className={`${config.color} border text-xs font-medium px-2 py-0.5`}
+                        >
+                          <IconComponent className="w-3 h-3 mr-1" />
+                          {config.label}
+                        </Badge>
+                      );
+                    });
+                  })()}
                   <ModeratorBadge 
                     isModerator={profile.role === "moderator" || profile.role === "admin"} 
                     size="xl" 
                   />
                 </div>
+                <span className="text-lg text-white/70 font-normal mt-1">@{profile.username}</span>
 
                 {/* Stats positioned directly below username - Two rows */}
                 <div className="flex flex-col gap-2 mt-2">

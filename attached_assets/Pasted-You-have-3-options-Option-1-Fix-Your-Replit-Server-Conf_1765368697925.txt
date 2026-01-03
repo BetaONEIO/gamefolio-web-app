@@ -1,0 +1,46 @@
+You have 3 options:
+Option 1: Fix Your Replit Server Configuration (RECOMMENDED)
+Your Replit server needs to serve the Hono backend. You need to create a server entry point that:
+1. Serves the Hono app for all /api/* routes
+2. Serves your frontend React app for all other routes
+
+Since I don't have access to your Replit's main server file, you'll need to configure it yourself. Here's what it should look like:
+// server.ts or index.ts (your Replit entry point)
+import { serve } from '@hono/node-server'
+import app from './backend/hono'
+
+serve({
+fetch: app.fetch,
+port: 5000,
+})
+Option 2: Use a Different Backend URL
+If your Hono backend is actually running on a different port or subdomain, update the EXPO_PUBLIC_BACKEND_URL environment variable to point to the correct backend URL.
+
+For example:
+If backend is on https://api.gamefolio.com → set EXPO_PUBLIC_BACKEND_URL=https://api.gamefolio.com
+If backend is on port 5001 → set EXPO_PUBLIC_BACKEND_URL=https://app.gamefolio.com:5001
+Option 3: Check the Backend Skill Documentation
+Let me check the backend skill to see if there are specific instructions for your setup:
+Read
+skills/backend/SKILL.md
+Perfect! According to the backend skill documentation, the backend should be available at {baseUrl}/api and tRPC routes at {baseUrl}/api/trpc/....
+
+The issue is clear: Your Replit server is not properly serving the Hono backend. The frontend HTML is being returned instead of API responses.
+Summary
+Your setup is correct on the mobile app side - EXPO_PUBLIC_BACKEND_URL=https://app.gamefolio.com is fine.
+The problem is on the Replit server side:
+Your Hono app (defined in backend/hono.ts) is not being served
+When requests come to /api/*, they're hitting your frontend router instead
+This causes HTML to be returned instead of JSON
+To fix this, you need to:1. Check your Replit's main server file (usually server.ts, index.ts, or similar in the root)
+2. Ensure it's serving the Hono app from backend/hono.ts3. Route all /api/* requests to the Hono app4. Route all other requests to your frontend React appExample Replit server configuration:
+import { serve } from '@hono/node-server'
+import honoApp from './backend/hono'
+// Import your frontend server/handler here
+
+serve({
+fetch: honoApp.fetch,
+port: 5000,
+})
+Since I can't see or modify your Replit's server configuration files (they're not in the mobile app project), you'll need to make these changes on the Replit side.
+Quick test: Try accessing https://app.gamefolio.com/api/trpc directly in your browser. If you see HTML instead of a tRPC endpoint response, it confirms the backend is not being served correctly.

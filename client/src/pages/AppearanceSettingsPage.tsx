@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,11 +8,14 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest, getQueryFn, queryClient } from '@/lib/queryClient';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Redirect } from 'wouter';
-import { Loader2, Upload, Camera, Trash2, Check, Sparkles, X } from 'lucide-react';
+import { Loader2, Upload, Camera, Trash2, Check, Sparkles, X, ZoomIn } from 'lucide-react';
 import { HexColorPicker } from "react-colorful";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Slider } from '@/components/ui/slider';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import Cropper, { Area } from 'react-easy-crop';
 import type { AssetReward } from '@shared/schema';
 
 import {
@@ -35,6 +38,170 @@ import {
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { BannerUploadPreview } from '@/components/BannerUploadPreview';
+
+// Helper function to create cropped image from canvas
+const createCroppedImage = async (
+  imageSrc: string,
+  pixelCrop: Area
+): Promise<Blob> => {
+  const image = new Image();
+  image.src = imageSrc;
+  
+  await new Promise((resolve) => {
+    image.onload = resolve;
+  });
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  if (!ctx) {
+    throw new Error('Could not get canvas context');
+  }
+
+  // Set canvas size to crop size
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  // Draw cropped image
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error('Canvas to Blob conversion failed'));
+      }
+    }, 'image/jpeg', 0.95);
+  });
+};
+
+// Avatar Crop Modal Component
+const AvatarCropModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  imageSrc: string;
+  onCropComplete: (croppedBlob: Blob, previewUrl: string) => void;
+}> = ({ isOpen, onClose, imageSrc, onCropComplete }) => {
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const onCropChange = useCallback((location: { x: number; y: number }) => {
+    setCrop(location);
+  }, []);
+
+  const onZoomChange = useCallback((zoomValue: number) => {
+    setZoom(zoomValue);
+  }, []);
+
+  const onCropAreaComplete = useCallback((_: Area, croppedAreaPixelsParam: Area) => {
+    setCroppedAreaPixels(croppedAreaPixelsParam);
+  }, []);
+
+  const handleSaveCrop = async () => {
+    if (!croppedAreaPixels) return;
+    
+    setIsProcessing(true);
+    try {
+      const croppedBlob = await createCroppedImage(imageSrc, croppedAreaPixels);
+      const previewUrl = URL.createObjectURL(croppedBlob);
+      onCropComplete(croppedBlob, previewUrl);
+      onClose();
+    } catch (error) {
+      console.error('Error cropping image:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Reset zoom when modal opens with new image
+  useEffect(() => {
+    if (isOpen) {
+      setZoom(1);
+      setCrop({ x: 0, y: 0 });
+    }
+  }, [isOpen, imageSrc]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ZoomIn className="h-5 w-5" />
+            Crop Profile Picture
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          {/* Crop Area */}
+          <div className="relative h-72 w-full bg-black rounded-lg overflow-hidden">
+            <Cropper
+              image={imageSrc}
+              crop={crop}
+              zoom={zoom}
+              aspect={1}
+              cropShape="round"
+              showGrid={false}
+              onCropChange={onCropChange}
+              onZoomChange={onZoomChange}
+              onCropComplete={onCropAreaComplete}
+            />
+          </div>
+          
+          {/* Zoom Slider */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <ZoomIn className="h-4 w-4" />
+                Zoom
+              </label>
+              <span className="text-sm text-muted-foreground">{Math.round(zoom * 100)}%</span>
+            </div>
+            <Slider
+              value={[zoom]}
+              min={1}
+              max={3}
+              step={0.1}
+              onValueChange={(values) => setZoom(values[0])}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Drag to reposition, use slider to zoom in/out
+            </p>
+          </div>
+        </div>
+        
+        <DialogFooter className="flex gap-2">
+          <Button variant="outline" onClick={onClose} disabled={isProcessing}>
+            Cancel
+          </Button>
+          <Button onClick={handleSaveCrop} disabled={isProcessing || !croppedAreaPixels}>
+            {isProcessing ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              'Apply Crop'
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 // Define ProfileBanner type
 type ProfileBanner = {
@@ -257,7 +424,7 @@ const ProfilePictureBorderSection: React.FC<{
           Profile Picture Border
         </h3>
         <p className="text-sm text-muted-foreground">
-          Select a border from your unlocked lootbox rewards.
+          Select a border from your unlocked rewards.
         </p>
       </div>
 
@@ -269,7 +436,7 @@ const ProfilePictureBorderSection: React.FC<{
         <div className="p-4 bg-muted/50 rounded-lg border text-center">
           <Sparkles className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            No profile picture borders unlocked yet. Open lootboxes to unlock special borders!
+            No profile picture borders unlocked yet. Check back soon for ways to unlock exclusive borders!
           </p>
         </div>
       ) : (
@@ -347,6 +514,221 @@ const ProfilePictureBorderSection: React.FC<{
   );
 };
 
+// Large Profile Picture with Border Preview Component
+const ProfilePictureWithBorder: React.FC<{
+  userId?: number;
+  avatarUrl: string;
+  displayName: string;
+  selectedBorderId?: number | null;
+  avatarBorderColor?: string | null;
+  size?: 'md' | 'lg' | 'xl';
+}> = ({ userId, avatarUrl, displayName, selectedBorderId, avatarBorderColor, size = 'xl' }) => {
+  // Fetch the selected border image if available
+  const { data: borderData } = useQuery<AssetReward>({
+    queryKey: [`/api/user/${userId}/avatar-border`],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!userId && !!selectedBorderId,
+  });
+
+  const sizeClasses = {
+    md: 'h-24 w-24',
+    lg: 'h-32 w-32',
+    xl: 'h-48 w-48',
+  };
+
+  const borderSizeClasses = {
+    md: 'h-28 w-28',
+    lg: 'h-36 w-36',
+    xl: 'h-56 w-56',
+  };
+
+  return (
+    <div className={`relative ${borderSizeClasses[size]} flex items-center justify-center`}>
+      {/* Border overlay if selected (image-based border from loot box) */}
+      {borderData?.imageUrl && (
+        <img
+          src={borderData.imageUrl}
+          alt="Avatar border"
+          className="absolute inset-0 w-full h-full object-contain z-10 pointer-events-none"
+        />
+      )}
+      {/* Avatar with color border */}
+      <div 
+        className="relative rounded-full p-[4px]"
+        style={{ 
+          background: avatarBorderColor || 'hsl(var(--border))'
+        }}
+      >
+        <div className="rounded-full bg-background p-1">
+          <Avatar className={sizeClasses[size]}>
+            <AvatarImage 
+              src={avatarUrl} 
+              alt={displayName} 
+            />
+            <AvatarFallback className="text-4xl font-bold">
+              {displayName?.charAt(0) || '?'}
+            </AvatarFallback>
+          </Avatar>
+        </div>
+      </div>
+      {/* Show border color indicator */}
+      {avatarBorderColor && (
+        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-xs text-muted-foreground bg-background/80 px-2 py-0.5 rounded-full whitespace-nowrap">
+          Border: <span style={{ color: avatarBorderColor }}>{avatarBorderColor}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Inline Profile Picture Border Selection Component (shows next to avatar)
+const ProfilePictureBorderInlineSection: React.FC<{
+  userId?: number;
+  currentBorderId?: number | null;
+  avatarPreview: string;
+  displayName: string;
+}> = ({ userId, currentBorderId, avatarPreview, displayName }) => {
+  const { toast } = useToast();
+  const [previewBorderId, setPreviewBorderId] = useState<number | null>(currentBorderId || null);
+
+  // Fetch user's unlocked avatar borders
+  const { data: unlockedBorders = [], isLoading } = useQuery<AssetReward[]>({
+    queryKey: ['/api/user/avatar-borders'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!userId,
+  });
+
+  // Mutation to update selected avatar border
+  const updateBorderMutation = useMutation({
+    mutationFn: async (avatarBorderId: number | null) => {
+      const response = await apiRequest('PUT', '/api/user/avatar-border', { avatarBorderId });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}/avatar-border`] });
+      }
+      toast({
+        title: "Border updated",
+        description: "Your profile picture border has been applied.",
+        variant: "gamefolioSuccess",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update border.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const getRarityColor = (rarity: string) => {
+    switch (rarity) {
+      case 'legendary': return 'from-yellow-400 to-yellow-600';
+      case 'epic': return 'from-purple-400 to-purple-600';
+      case 'rare': return 'from-blue-400 to-blue-600';
+      default: return 'from-gray-400 to-gray-600';
+    }
+  };
+
+  const handleBorderSelect = (borderId: number | null) => {
+    setPreviewBorderId(borderId);
+    updateBorderMutation.mutate(borderId);
+  };
+
+  // Get current preview border
+  const previewBorder = unlockedBorders.find(b => b.id === previewBorderId);
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h4 className="text-base font-medium flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          Profile Picture Border
+        </h4>
+        <p className="text-xs text-muted-foreground">
+          Select a border to show around your profile picture
+        </p>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center p-4">
+          <Loader2 className="h-5 w-5 animate-spin" />
+        </div>
+      ) : unlockedBorders.length === 0 ? (
+        <div className="p-4 bg-muted/50 rounded-lg border text-center">
+          <Sparkles className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            No borders unlocked yet. Complete achievements to unlock exclusive borders!
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {/* Remove Border Option */}
+          {currentBorderId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleBorderSelect(null)}
+              disabled={updateBorderMutation.isPending}
+              className="w-full"
+              data-testid="button-remove-border-inline"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Remove Border
+            </Button>
+          )}
+
+          {/* Available Borders Grid */}
+          <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+            {unlockedBorders.map((border) => {
+              const isSelected = currentBorderId === border.id;
+              const isPreview = previewBorderId === border.id;
+              return (
+                <button
+                  key={border.id}
+                  type="button"
+                  onClick={() => handleBorderSelect(border.id)}
+                  disabled={updateBorderMutation.isPending}
+                  className={`
+                    relative p-1.5 rounded-lg transition-all transform hover:scale-105
+                    ${isSelected 
+                      ? 'ring-2 ring-primary bg-primary/20' 
+                      : 'border border-border hover:border-primary/50'}
+                  `}
+                  data-testid={`button-inline-border-${border.id}`}
+                >
+                  {/* Border Preview */}
+                  <div className="relative aspect-square rounded-full overflow-hidden">
+                    <img
+                      src={border.imageUrl}
+                      alt={border.name}
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Rarity Glow */}
+                    <div 
+                      className={`absolute inset-0 rounded-full bg-gradient-to-br ${getRarityColor(border.rarity || 'common')} opacity-20`}
+                    />
+                  </div>
+
+                  {/* Selected Indicator */}
+                  {isSelected && (
+                    <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5">
+                      <Check className="h-2.5 w-2.5" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const AppearanceSettingsPage: React.FC = () => {
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
@@ -354,11 +736,16 @@ const AppearanceSettingsPage: React.FC = () => {
   const [selectedBannerUrl, setSelectedBannerUrl] = useState<string>('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
+  
+  // Crop modal state
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const [rawImageSrc, setRawImageSrc] = useState<string>('');
 
-  // Fetch profile banners
-  const { data: profileBanners = [] } = useQuery<ProfileBanner[]>({
-    queryKey: ['/api/profile-banners'],
+  // Fetch user's unlocked profile banners (only banners they have access to)
+  const { data: profileBanners = [], isLoading: bannersLoading } = useQuery<ProfileBanner[]>({
+    queryKey: ['/api/user/unlocked-banners'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!user,
   });
 
   // Define form schemas with Zod
@@ -494,12 +881,12 @@ const AppearanceSettingsPage: React.FC = () => {
     }
   }, [user, appearanceForm, defaultGamefolioTheme]);
 
-  // Handle avatar file selection
+  // Handle avatar file selection - opens crop modal
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('🎯 NEW CODE LOADED - handleAvatarChange triggered');
+    console.log('🎯 handleAvatarChange triggered');
     const file = event.target.files?.[0];
     if (file) {
-      console.log('📸 File selected:', file.name, 'avatarFile state will update');
+      console.log('📸 File selected:', file.name);
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast({
@@ -520,17 +907,28 @@ const AppearanceSettingsPage: React.FC = () => {
         return;
       }
 
-      setAvatarFile(file);
-      console.log('✅ avatarFile state updated, button should now be enabled');
-
-      // Create preview URL
+      // Create data URL and open crop modal
       const reader = new FileReader();
       reader.onload = (e) => {
-        setAvatarPreview(e.target?.result as string);
-        console.log('🖼️ Preview created');
+        const imageSrc = e.target?.result as string;
+        setRawImageSrc(imageSrc);
+        setIsCropModalOpen(true);
+        console.log('🖼️ Opening crop modal');
       };
       reader.readAsDataURL(file);
     }
+    
+    // Reset the input so the same file can be selected again
+    event.target.value = '';
+  };
+  
+  // Handle crop complete - receives cropped blob and preview URL
+  const handleCropComplete = (croppedBlob: Blob, previewUrl: string) => {
+    // Convert blob to File for upload
+    const croppedFile = new File([croppedBlob], 'avatar-cropped.jpg', { type: 'image/jpeg' });
+    setAvatarFile(croppedFile);
+    setAvatarPreview(previewUrl);
+    console.log('✅ Cropped avatar ready for upload');
   };
 
   // Handle form submission
@@ -631,6 +1029,14 @@ const AppearanceSettingsPage: React.FC = () => {
     <div 
       className="min-h-screen py-8"
     >
+      {/* Avatar Crop Modal */}
+      <AvatarCropModal
+        isOpen={isCropModalOpen}
+        onClose={() => setIsCropModalOpen(false)}
+        imageSrc={rawImageSrc}
+        onCropComplete={handleCropComplete}
+      />
+      
       <div className="container max-w-4xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Profile & Appearance</h1>
@@ -675,26 +1081,26 @@ const AppearanceSettingsPage: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="flex items-start space-x-6">
-                  {/* Current/Preview Avatar */}
-                  <div className="flex flex-col items-center space-y-2">
-                    <Avatar className="h-24 w-24 border-4 border-border">
-                      <AvatarImage 
-                        src={avatarPreview || user?.avatarUrl || ''} 
-                        alt={user?.displayName} 
+                <div className="flex flex-col lg:flex-row items-start gap-8">
+                  {/* Left side: Large Avatar Preview with Border */}
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="relative">
+                      {/* Avatar Border Preview (shows selected border) */}
+                      <ProfilePictureWithBorder
+                        userId={user?.id}
+                        avatarUrl={avatarPreview || user?.avatarUrl || ''}
+                        displayName={user?.displayName || ''}
+                        selectedBorderId={user?.selectedAvatarBorderId}
+                        avatarBorderColor={avatarBorderColor || user?.avatarBorderColor}
+                        size="xl"
                       />
-                      <AvatarFallback className="text-2xl">
-                        {user?.displayName?.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-xs text-muted-foreground">
-                      {avatarFile ? 'New' : 'Current'}
+                    </div>
+                    <span className="text-sm text-muted-foreground font-medium">
+                      {avatarFile ? 'New Picture' : 'Current Picture'}
                     </span>
-                  </div>
-
-                  {/* Upload Controls */}
-                  <div className="flex-1 space-y-3">
-                    <div className="flex flex-wrap gap-2">
+                    
+                    {/* Upload Controls */}
+                    <div className="flex flex-wrap gap-2 justify-center">
                       <Button 
                         type="button" 
                         variant="outline" 
@@ -702,7 +1108,7 @@ const AppearanceSettingsPage: React.FC = () => {
                         onClick={() => document.getElementById('avatar-upload')?.click()}
                       >
                         <Upload className="h-4 w-4 mr-2" />
-                        {avatarFile ? 'Change Picture' : 'Upload Picture'}
+                        {avatarFile ? 'Change' : 'Upload'}
                       </Button>
 
                       {avatarFile && (
@@ -727,12 +1133,20 @@ const AppearanceSettingsPage: React.FC = () => {
                       className="hidden"
                     />
 
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <div>• Recommended: 400x400 pixels or larger</div>
-                      <div>• Square images work best</div>
-                      <div>• Maximum file size: 5MB</div>
-                      <div>• Supported formats: JPG, PNG, GIF</div>
+                    <div className="text-xs text-muted-foreground space-y-1 text-center">
+                      <div>Square images work best (400x400+)</div>
+                      <div>Max 5MB • JPG, PNG, GIF</div>
                     </div>
+                  </div>
+
+                  {/* Right side: Border Selection */}
+                  <div className="flex-1 w-full lg:w-auto">
+                    <ProfilePictureBorderInlineSection 
+                      userId={user?.id} 
+                      currentBorderId={user?.selectedAvatarBorderId}
+                      avatarPreview={avatarPreview || user?.avatarUrl || ''}
+                      displayName={user?.displayName || ''}
+                    />
                   </div>
                 </div>
               </div>
@@ -790,9 +1204,6 @@ const AppearanceSettingsPage: React.FC = () => {
         </CardHeader>
 
         <CardContent>
-          {/* Profile Picture Border Section */}
-          <ProfilePictureBorderSection userId={user?.id} currentBorderId={user?.selectedAvatarBorderId} />
-          
           <Form {...appearanceForm}>
             <form 
               id="appearance-form" 
@@ -980,101 +1391,95 @@ const AppearanceSettingsPage: React.FC = () => {
 
                         {/* Banner Categories */}
                         <div className="space-y-4">
-                          {/* Default Banners */}
-                          <div>
-                            <h4 className="text-sm font-medium mb-2">Default Banners</h4>
-                            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                              {profileBanners
-                                .filter(banner => banner.category === 'default')
-                                .map((banner: ProfileBanner) => (
-                                <div 
-                                  key={banner.id}
-                                  className={`
-                                    cursor-pointer rounded-md overflow-hidden border-2 h-40 relative
-                                    ${field.value === banner.imageUrl ? 'border-primary' : 'border-transparent'}
-                                    hover:border-primary/70 transition-all
-                                  `}
-                                  onClick={() => {
-                                    field.onChange(banner.imageUrl);
-                                    setSelectedBannerUrl(banner.imageUrl);
-                                  }}
-                                >
-                                  <img 
-                                    src={banner.imageUrl} 
-                                    alt={banner.name}
-                                    className="w-full h-full object-cover" 
-                                  />
-                                  <div className="p-2 bg-black/75 text-white text-sm font-medium absolute bottom-0 left-0 right-0">
-                                    {banner.name}
+                          {/* Gradient Banners */}
+                          {profileBanners.filter(banner => banner.category === 'gradient').length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">Gradient Banners</h4>
+                              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                {profileBanners
+                                  .filter(banner => banner.category === 'gradient')
+                                  .map((banner: ProfileBanner) => (
+                                  <div 
+                                    key={banner.id}
+                                    data-testid={`banner-gradient-${banner.id}`}
+                                    className={`
+                                      cursor-pointer rounded-md overflow-hidden border-2 h-40 relative
+                                      ${field.value === banner.imageUrl ? 'border-primary' : 'border-transparent'}
+                                      hover:border-primary/70 transition-all
+                                    `}
+                                    onClick={() => {
+                                      field.onChange(banner.imageUrl);
+                                      setSelectedBannerUrl(banner.imageUrl);
+                                    }}
+                                  >
+                                    <img 
+                                      src={banner.imageUrl} 
+                                      alt={banner.name}
+                                      className="w-full h-full object-cover" 
+                                    />
+                                    <div className="p-2 bg-black/75 text-white text-sm font-medium absolute bottom-0 left-0 right-0">
+                                      {banner.name}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
                             </div>
-                          </div>
+                          )}
 
-                          {/* Gaming Banners */}
-                          <div>
-                            <h4 className="text-sm font-medium mb-2">Gaming Banners</h4>
-                            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                              {profileBanners
-                                .filter(banner => banner.category === 'gaming')
-                                .map((banner: ProfileBanner) => (
-                                <div 
-                                  key={banner.id}
-                                  className={`
-                                    cursor-pointer rounded-md overflow-hidden border-2 h-40 relative
-                                    ${field.value === banner.imageUrl ? 'border-primary' : 'border-transparent'}
-                                    hover:border-primary/70 transition-all
-                                  `}
-                                  onClick={() => {
-                                    field.onChange(banner.imageUrl);
-                                    setSelectedBannerUrl(banner.imageUrl);
-                                  }}
-                                >
-                                  <img 
-                                    src={banner.imageUrl} 
-                                    alt={banner.name}
-                                    className="w-full h-full object-cover" 
-                                  />
-                                  <div className="p-2 bg-black/75 text-white text-sm font-medium absolute bottom-0 left-0 right-0">
-                                    {banner.name}
+                          {/* Solid Banners */}
+                          {profileBanners.filter(banner => banner.category === 'solid').length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">Solid Banners</h4>
+                              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                {profileBanners
+                                  .filter(banner => banner.category === 'solid')
+                                  .map((banner: ProfileBanner) => (
+                                  <div 
+                                    key={banner.id}
+                                    data-testid={`banner-solid-${banner.id}`}
+                                    className={`
+                                      cursor-pointer rounded-md overflow-hidden border-2 h-40 relative
+                                      ${field.value === banner.imageUrl ? 'border-primary' : 'border-transparent'}
+                                      hover:border-primary/70 transition-all
+                                    `}
+                                    onClick={() => {
+                                      field.onChange(banner.imageUrl);
+                                      setSelectedBannerUrl(banner.imageUrl);
+                                    }}
+                                  >
+                                    <img 
+                                      src={banner.imageUrl} 
+                                      alt={banner.name}
+                                      className="w-full h-full object-cover" 
+                                    />
+                                    <div className="p-2 bg-black/75 text-white text-sm font-medium absolute bottom-0 left-0 right-0">
+                                      {banner.name}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
                             </div>
-                          </div>
+                          )}
 
-                          {/* Abstract Banners */}
-                          <div>
-                            <h4 className="text-sm font-medium mb-2">Abstract Banners</h4>
-                            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                              {profileBanners
-                                .filter(banner => banner.category === 'abstract')
-                                .map((banner: ProfileBanner) => (
-                                <div 
-                                  key={banner.id}
-                                  className={`
-                                    cursor-pointer rounded-md overflow-hidden border-2 h-40 relative
-                                    ${field.value === banner.imageUrl ? 'border-primary' : 'border-transparent'}
-                                    hover:border-primary/70 transition-all
-                                  `}
-                                  onClick={() => {
-                                    field.onChange(banner.imageUrl);
-                                    setSelectedBannerUrl(banner.imageUrl);
-                                  }}
-                                >
-                                  <img 
-                                    src={banner.imageUrl} 
-                                    alt={banner.name}
-                                    className="w-full h-full object-cover" 
-                                  />
-                                  <div className="p-2 bg-black/75 text-white text-sm font-medium absolute bottom-0 left-0 right-0">
-                                    {banner.name}
-                                  </div>
-                                </div>
-                              ))}
+                          {/* Show loading state */}
+                          {bannersLoading && (
+                            <div className="p-4 flex items-center justify-center">
+                              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                             </div>
-                          </div>
+                          )}
+
+                          {/* Show message if no banners unlocked */}
+                          {!bannersLoading && profileBanners.length === 0 && (
+                            <div className="p-4 bg-muted/50 rounded-lg border text-center">
+                              <Sparkles className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                              <p className="text-sm text-muted-foreground">
+                                No banners unlocked yet. Check back soon for ways to unlock exclusive banners!
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-2">
+                                You can still upload a custom banner below.
+                              </p>
+                            </div>
+                          )}
                         </div>
 
                         {/* Custom Banner Upload */}

@@ -54,7 +54,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md p-0 gap-0 bg-black/95 border-white/10" aria-describedby="auth-description">
+      <DialogContent className="sm:max-w-md p-0 gap-0 bg-black/95 border-white/10 max-h-[95vh] overflow-y-auto" aria-describedby="auth-description">
         <DialogHeader className="sr-only">
           <DialogTitle>Authentication</DialogTitle>
           <DialogDescription id="auth-description">Login or register to access Gamefolio</DialogDescription>
@@ -69,7 +69,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                 alt="Gamefolio"
                 className="h-24 w-auto drop-shadow-lg"
               />
-              <div className="mt-3 px-3 py-1 bg-orange-500 text-white text-sm font-bold rounded-full shadow-lg">Alpha 1.4.0 • Nov 06, 2025</div>
+              <div className="mt-3 px-3 py-1 bg-orange-500 text-white text-sm font-bold rounded-full shadow-lg">Alpha 1.5.0 • Dec 24, 2025</div>
             </div>
           </div>
 

@@ -4,7 +4,7 @@ import { users, emailVerificationTokens } from '@shared/schema';
 import { storage } from '../storage';
 import { eq, sql } from 'drizzle-orm';
 import { promisify } from 'util';
-import { scrypt, randomBytes } from 'crypto';
+import { scrypt, randomBytes, timingSafeEqual } from 'crypto';
 import {
   createVerificationCode,
   verifyEmailCode,
@@ -14,11 +14,100 @@ import {
   deletePasswordResetToken
 } from '../services/token-service';
 import { EmailService } from '../services/email-service'; // Assuming EmailService is set up for Brevo
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../services/jwt-service';
 
 // Scrypt promisification for password hashing
 const scryptAsync = promisify(scrypt);
 
 const router = Router();
+
+/**
+ * JWT Token-based login endpoint for mobile apps
+ * POST /api/auth/token/login
+ */
+router.post('/auth/token/login', async (req: Request, res: Response) => {
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Username and password are required' });
+    }
+
+    // Find user by username or email (case-insensitive)
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(sql`LOWER(${users.username}) = LOWER(${username}) OR LOWER(${users.email}) = LOWER(${username})`);
+
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid username or password' });
+    }
+
+    // Verify password
+    const [hashedPassword, salt] = user.password.split('.');
+    const hashedPasswordBuf = Buffer.from(hashedPassword, 'hex');
+    const suppliedPasswordBuf = (await scryptAsync(password, salt, 64)) as Buffer;
+
+    const passwordMatch = timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
+
+    if (!passwordMatch) {
+      return res.status(401).json({ message: 'Invalid username or password' });
+    }
+
+    // Generate tokens
+    const accessToken = generateAccessToken(user.id);
+    const refreshToken = generateRefreshToken(user.id);
+
+    // Return user data without password
+    const { password: _, ...userWithoutPassword } = user;
+
+    return res.status(200).json({
+      accessToken,
+      refreshToken,
+      expiresIn: 604800, // 7 days in seconds
+      user: userWithoutPassword
+    });
+
+  } catch (error) {
+    console.error('Token login error:', error);
+    return res.status(500).json({ message: 'Authentication failed' });
+  }
+});
+
+/**
+ * Refresh access token endpoint for mobile apps
+ * POST /api/auth/token/refresh
+ */
+router.post('/auth/token/refresh', async (req: Request, res: Response) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({ message: 'Refresh token is required' });
+    }
+
+    // Verify refresh token
+    const userId = verifyRefreshToken(refreshToken);
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Invalid or expired refresh token' });
+    }
+
+    // Generate new tokens
+    const newAccessToken = generateAccessToken(userId);
+    const newRefreshToken = generateRefreshToken(userId);
+
+    return res.status(200).json({
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+      expiresIn: 604800 // 7 days in seconds
+    });
+
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    return res.status(401).json({ message: 'Failed to refresh token' });
+  }
+});
 
 /**
  * Request email verification

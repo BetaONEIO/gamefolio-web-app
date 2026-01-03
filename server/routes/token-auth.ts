@@ -206,7 +206,7 @@ router.post('/auth/token/google', async (req: Request, res: Response) => {
       try {
         await storage.updateUserLoginTime(user.id, 0);
         const streakInfo = await StreakService.updateLoginStreak(user.id);
-        
+
         const tokens = JWTService.generateTokenPair(user);
         const { password: _, ...userWithoutPassword } = user;
 
@@ -386,6 +386,17 @@ router.post('/auth/token/discord', async (req: Request, res: Response) => {
     console.error('Discord token auth error:', error);
     return res.status(500).json({ message: 'Discord authentication failed' });
   }
+});
+
+/**
+ * Health check endpoint for mobile apps
+ */
+router.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    service: 'Gamefolio API'
+  });
 });
 
 export default router;

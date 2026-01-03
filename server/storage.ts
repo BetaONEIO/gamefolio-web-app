@@ -162,6 +162,11 @@ export interface IStorage {
   // Profile customization operations
   getAllProfileBanners(): Promise<ProfileBanner[]>;
   getProfileBannersByCategory(category: string): Promise<ProfileBanner[]>;
+  
+  // User unlocked banners operations
+  getUserUnlockedBanners(userId: number): Promise<ProfileBanner[]>;
+  unlockBannerForUser(userId: number, bannerId: number): Promise<void>;
+  hasUserUnlockedBanner(userId: number, bannerId: number): Promise<boolean>;
 
   // Uploaded banner operations
   createUploadedBanner(userId: number, bannerUrl: string): Promise<UploadedBanner>;
@@ -329,6 +334,24 @@ export interface IStorage {
   getUserUnlockedAvatarBorders(userId: number): Promise<AssetReward[]>;
   userHasUnlockedReward(userId: number, rewardId: number): Promise<boolean>;
   updateUserAvatarBorder(userId: number, avatarBorderId: number | null): Promise<void>;
+
+  // Daily lootbox operations
+  getDailyLootboxStatus(userId: number): Promise<{ canOpen: boolean; lastOpenedAt: Date | null; nextOpenAt: Date | null }>;
+  openDailyLootbox(userId: number): Promise<{ reward: AssetReward; isDuplicate: boolean; consumed: boolean } | null>;
+  getUserClaimedRewards(userId: number): Promise<AssetReward[]>;
+  getActiveRewardsForLootbox(): Promise<AssetReward[]>;
+  
+  // Admin lootbox operations
+  getAllLootboxOpens(): Promise<Array<{
+    id: number;
+    userId: number;
+    lastOpenedAt: Date;
+    rewardId: number | null;
+    openCount: number;
+    user: { id: number; username: string; displayName: string; avatarUrl: string | null };
+    reward: { id: number; name: string; rarity: string; imageUrl: string } | null;
+  }>>;
+  resetUserLootbox(userId: number): Promise<boolean>;
 
   // Unified content moderation operations  
   getRecentContent(limit?: number, offset?: number, contentType?: string): Promise<Array<{

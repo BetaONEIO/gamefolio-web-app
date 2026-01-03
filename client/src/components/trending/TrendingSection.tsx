@@ -3,13 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Calendar, CalendarDays, TrendingUp, Eye } from 'lucide-react';
+import { Clock, Calendar, CalendarDays, TrendingUp, Eye, Heart, MessageCircle, Play } from 'lucide-react';
 import VideoClipCard from "@/components/clips/VideoClipCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { TrendingCategories } from './TrendingCategories';
 import { useClipDialog } from '@/hooks/use-clip-dialog';
 import { formatDuration } from '@/lib/constants';
-import { TrendingCategories } from './TrendingCategories';
+import { LazyImage } from "@/components/ui/lazy-image";
 
 interface TrendingSectionProps {
   className?: string;
@@ -21,7 +22,7 @@ const ReelCard: React.FC<{ reel: any; reelsList?: any[] }> = ({ reel, reelsList 
 
   const handleReelClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    openClipDialog(reel.id, reelsList); // Open reel in dialog
+    openClipDialog(reel.id, reelsList);
   };
 
   const formatNumber = (num: number) => {
@@ -33,86 +34,67 @@ const ReelCard: React.FC<{ reel: any; reelsList?: any[] }> = ({ reel, reelsList 
   return (
     <div 
       onClick={handleReelClick}
-      className="group relative bg-black rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
+      className="group relative overflow-hidden rounded-xl cursor-pointer aspect-[9/16] border border-border/50 hover:border-primary/50 transition-all duration-300"
     >
-      {/* Thumbnail/Video */}
-      <div className="relative w-full h-full">
-        <img
-          src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
-          alt={reel.title}
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.src = "/placeholder-game.png";
-          }}
-        />
+      {/* Thumbnail */}
+      <LazyImage
+        src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
+        alt={reel.title}
+        className="w-full h-full object-cover"
+        placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%23f3f4f6'/%3e%3c/svg%3e"
+        showLoadingSpinner={true}
+      />
 
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+      {/* Gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
 
-        {/* Play button overlay */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <div className="bg-white/20 backdrop-blur-sm rounded-full p-4">
-            <svg className="w-8 h-8 text-white fill-white" viewBox="0 0 24 24">
-              <path d="M8 5v14l11-7z"/>
-            </svg>
+      {/* Play button overlay */}
+      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/60">
+        <div className="bg-primary/90 rounded-full p-3 md:p-4 backdrop-blur-sm transform scale-90 group-hover:scale-100 transition-transform duration-500">
+          <Play size={32} className="text-white fill-white" />
+        </div>
+      </div>
+
+      {/* Duration badge */}
+      {reel.duration && reel.duration > 0 && (
+        <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm text-white px-1.5 py-0.5 text-xs rounded font-medium">
+          {`${Math.floor(reel.duration / 60)}:${(reel.duration % 60).toString().padStart(2, '0')}`}
+        </div>
+      )}
+
+      {/* View count badge */}
+      <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-white px-1.5 py-0.5 text-xs rounded font-medium flex items-center gap-1">
+        <Eye className="h-3 w-3" />
+        {formatNumber(reel.views || 0)}
+      </div>
+
+      {/* Bottom content overlay */}
+      <div className="absolute bottom-0 left-0 right-0 p-3">
+        {/* Title */}
+        <h3 className="text-white font-semibold text-sm mb-2 line-clamp-2 leading-tight">
+          {reel.title}
+        </h3>
+
+        {/* User info */}
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-6 h-6 rounded-full overflow-hidden border border-white/50">
+            <img
+              src={reel.user?.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+              alt={reel.user?.displayName || 'User'}
+              className="w-full h-full object-cover"
+            />
           </div>
+          <span className="text-white/90 text-xs font-medium">
+            @{reel.user?.username || 'unknown'}
+          </span>
         </div>
 
-        {/* Duration badge */}
-        <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
-          {(() => {
-            const actualDuration = reel.trimEnd && reel.trimEnd > 0 
-              ? reel.trimEnd - (reel.trimStart || 0)
-              : reel.duration || 0;
-            return formatDuration(actualDuration);
-          })()}
-        </div>
-
-        {/* Content overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          {/* User info */}
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/50">
-              <img
-                src={reel.user?.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                alt={reel.user?.displayName || 'User'}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <span className="text-white text-sm font-medium">
-              {reel.user?.displayName || reel.user?.username || 'Unknown User'}
-            </span>
+        {/* Game badge */}
+        {reel.game && (
+          <div className="inline-block bg-green-600 text-white text-xs px-2 py-0.5 rounded font-bold">
+            {reel.game.name}
           </div>
-
-          {/* Title */}
-          <h3 className="text-white font-semibold text-sm mb-2 line-clamp-2 leading-tight">
-            {reel.title}
-          </h3>
-
-          {/* Stats and game */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 text-white/80 text-xs">
-              <span className="flex items-center gap-1">
-                <Eye className="h-3 w-3" />
-                {formatNumber(reel.views || 0)}
-              </span>
-              <span className="flex items-center gap-1">
-                ♥ {formatNumber(parseInt(reel._count?.likes?.toString() || '0'))}
-              </span>
-              <span className="flex items-center gap-1">
-                💬 {formatNumber(parseInt(reel._count?.comments?.toString() || '0'))}
-              </span>
-            </div>
-
-            {/* Game badge */}
-            {reel.game && (
-              <div className="bg-primary/80 text-white text-xs px-2 py-1 rounded-full">
-                {reel.game.name}
-              </div>
-            )}
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -274,19 +256,13 @@ export function TrendingSection({ className }: TrendingSectionProps) {
 
         <TabsContent value="reels" className="mt-6">
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array(6).fill(0).map((_, i) => (
-                <div key={i} className="space-y-4">
-                  <Skeleton className="aspect-[9/16] rounded-lg" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
-                </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="aspect-[9/16] bg-muted rounded-xl animate-pulse" />
               ))}
             </div>
           ) : currentData && currentData.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-4">
               {currentData.map((reel: any) => (
                 <ReelCard
                   key={reel.id}

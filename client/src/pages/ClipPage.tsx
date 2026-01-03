@@ -414,121 +414,135 @@ const ClipPage = () => {
   return (
     <div
       ref={containerRef}
-      className="min-h-screen py-4 space-y-4"
+      className="min-h-screen"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       data-testid="clip-page-container"
     >
-      <Button
-        variant="ghost"
-        size="sm"
-        className="mb-4"
-        onClick={() => navigate("/")}
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back
-      </Button>
+      {/* Split Layout: Video Left, Info/Comments Right */}
+      <div className="flex flex-col lg:flex-row min-h-screen">
+        {/* Left Side - Video Player */}
+        <div className="lg:w-[60%] xl:w-[65%] bg-black flex items-center justify-center relative">
+          <VideoPlayer
+            videoUrl={(clip as any).videoUrl}
+            thumbnailUrl={(clip as any).thumbnailUrl === null ? undefined : (clip as any).thumbnailUrl}
+            autoPlay={true}
+            clipId={(clip as any).id}
+          />
+        </div>
 
-      <VideoPlayer
-        videoUrl={(clip as any).videoUrl}
-        thumbnailUrl={(clip as any).thumbnailUrl === null ? undefined : (clip as any).thumbnailUrl}
-        autoPlay={true}
-        clipId={(clip as any).id}
-      />
-
-      <div className="flex flex-col space-y-4">
-        <div className="bg-card rounded-lg p-4">
-          <h1 className="text-xl md:text-2xl font-bold mb-4">{(clip as any).title}</h1>
-
-          <div className="flex flex-wrap justify-between items-center mb-4">
-            <Link href={`/profile/${(clip as any).user?.username || 'unknown'}`} className="flex items-center group">
-              <img
-                src={(clip as any).user?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent((clip as any).user?.displayName || 'Unknown User')}`}
-                alt={(clip as any).user?.displayName || 'Unknown User'}
-                className="w-10 h-10 rounded-full mr-3"
-              />
-              <div>
-                <h3 className="font-semibold group-hover:text-primary transition-colors">
-                  {(clip as any).user?.displayName || 'Unknown User'}
-                </h3>
-                <p className="text-muted-foreground text-sm">
+        {/* Right Side - Info & Comments Panel */}
+        <div className="lg:w-[40%] xl:w-[35%] bg-card flex flex-col h-screen lg:h-auto lg:max-h-screen overflow-hidden">
+          {/* User Info Header */}
+          <div className="p-4 border-b border-border">
+            <div className="flex items-center justify-between mb-4">
+              <Link href={`/profile/${(clip as any).user?.username || 'unknown'}`} className="flex items-center gap-3 group">
+                <img
+                  src={(clip as any).user?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent((clip as any).user?.displayName || 'Unknown User')}`}
+                  alt={(clip as any).user?.displayName || 'Unknown User'}
+                  className="w-10 h-10 rounded-full"
+                  style={{
+                    border: (clip as any).user?.avatarBorderColor ? `2px solid ${(clip as any).user.avatarBorderColor}` : undefined
+                  }}
+                />
+                <span className="text-sm font-medium group-hover:text-primary transition-colors">
                   @{(clip as any).user?.username || 'unknown'}
-                </p>
-              </div>
-            </Link>
+                </span>
+              </Link>
+              
+              {/* Follow Button - only show if not own clip */}
+              {currentUserId && currentUserId !== (clip as any).userId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-primary border-primary hover:bg-primary hover:text-white"
+                  data-testid="button-follow"
+                >
+                  Following
+                </Button>
+              )}
+            </div>
 
-            <div className="flex items-center text-muted-foreground mt-2 sm:mt-0">
-              <Eye className="h-4 w-4 mr-1" />
-              <span className="mr-3">{(clip as any).views} views</span>
-              <Clock className="h-4 w-4 mr-1" />
+            {/* Title */}
+            <h1 className="text-lg font-bold mb-2">{(clip as any).title}</h1>
+            
+            {/* Description */}
+            {(clip as any).description && (
+              <p className="text-sm text-muted-foreground mb-3 whitespace-pre-line line-clamp-3">
+                {(clip as any).description}
+              </p>
+            )}
+
+            {/* Game Badge */}
+            {(clip as any).game && (
+              <Link 
+                href={`/games/${(clip as any).game.id}/clips`} 
+                className="inline-block bg-primary text-white px-3 py-1 rounded-md text-sm font-medium hover:bg-primary/90 transition-colors mb-3"
+              >
+                {(clip as any).game.name}
+              </Link>
+            )}
+
+            {/* Stats Row */}
+            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+              <span className="flex items-center gap-1">
+                <Eye className="h-4 w-4" />
+                {(clip as any).views} views
+              </span>
               <span>
                 {formatDistance(new Date((clip as any).createdAt), new Date(), { addSuffix: true })}
               </span>
             </div>
-          </div>
 
-          {(clip as any).description && (
-            <p className="text-card-foreground mb-4 whitespace-pre-line">
-              {(clip as any).description}
-            </p>
-          )}
+            {/* Engagement Stats & Actions */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                {/* Like Button */}
+                <button
+                  onClick={handleLike}
+                  className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+                  data-testid="button-like"
+                >
+                  <Heart
+                    className={cn(
+                      "h-5 w-5",
+                      hasLiked ? "fill-red-500 text-red-500" : "text-muted-foreground"
+                    )}
+                  />
+                  <span className={cn("text-sm", hasLiked ? "text-red-500" : "text-muted-foreground")}>
+                    {likeCount}
+                  </span>
+                </button>
 
-          {(clip as any).game && (
-            <Link href={`/games/${(clip as any).game.id}/clips`} className="inline-block bg-green-600 text-white px-3 py-1 rounded-full text-sm font-bold hover:bg-green-500 transition-colors">
-              {(clip as any).game.name}
-            </Link>
-          )}
-        </div>
+                {/* Views as thumbs up style */}
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                  </svg>
+                  <span className="text-sm">{(clip as any).views || 0}</span>
+                </div>
+              </div>
 
-        <div className="bg-card rounded-lg p-4">
-          <div className="flex items-center space-x-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex-1"
-              onClick={handleLike}
-            >
-              <Heart
-                className={cn(
-                  "mr-2 h-4 w-4",
-                  hasLiked ? "fill-destructive text-destructive" : ""
-                )}
-              />
-              {likeCount} {likeCount === 1 ? "Like" : "Likes"}
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex-1"
-              onClick={() => setShowComments(!showComments)}
-            >
-              <MessageSquare className="mr-2 h-4 w-4" />
-              {(clip as any)._count?.comments || 0} {(clip as any)._count?.comments === 1 ? "Comment" : "Comments"}
-            </Button>
-
-            {/* Social Media Share Menu */}
-            <div className="flex-1 flex justify-center">
-              <ShareMenu clipId={(clip as any).id} clipTitle={(clip as any).title} />
+              {/* Share & Report Actions */}
+              <div className="flex items-center gap-2">
+                <ShareMenu clipId={(clip as any).id} clipTitle={(clip as any).title} />
+                <Button variant="ghost" size="sm" className="text-muted-foreground">
+                  Report
+                </Button>
+              </div>
             </div>
-
-            <Button variant="ghost" size="sm" className="flex-1">
-              <Bookmark className="mr-2 h-4 w-4" />
-              Save
-            </Button>
           </div>
-        </div>
 
-        {showComments && (
-          <div data-comments-section>
+          {/* Comments Section - Scrollable */}
+          <div className="flex-1 overflow-y-auto" data-comments-section>
             <CommentSection
               clipId={(clip as any).id}
               currentUserId={currentUserId}
               highlightCommentId={highlightCommentId}
             />
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

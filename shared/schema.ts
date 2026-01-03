@@ -32,7 +32,8 @@ export const users = pgTable("users", {
   instagramUsername: text("instagram_username"), // Instagram
   facebookUsername: text("facebook_username"), // Facebook
   // Onboarding data for analytics and personalization
-  userType: text("user_type"), // Comma-separated list of user types
+  userType: text("user_type"), // User type selection
+  showUserType: boolean("show_user_type").default(true), // Whether to show user type badge on profile
   ageRange: text("age_range"), // Age range: 13-17, 18-24, 25-34, 35-44, 45-54, 55+
   // Authentication provider fields
   authProvider: text("auth_provider").default("local"), // "local", "google", "discord", "steam"
@@ -208,6 +209,22 @@ export const profileBanners = pgTable("profile_banners", {
   category: text("category").notNull(), // "abstract", "gaming", "esports", etc.
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// Track which banners users have unlocked
+export const userUnlockedBanners = pgTable("user_unlocked_banners", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  bannerId: integer("banner_id").notNull().references(() => profileBanners.id, { onDelete: "cascade" }),
+  unlockedAt: timestamp("unlocked_at").defaultNow().notNull(),
+});
+
+export const insertUserUnlockedBannerSchema = createInsertSchema(userUnlockedBanners).omit({
+  id: true,
+  unlockedAt: true,
+});
+
+export type UserUnlockedBanner = typeof userUnlockedBanners.$inferSelect;
+export type InsertUserUnlockedBanner = z.infer<typeof insertUserUnlockedBannerSchema>;
 
 // Notifications table
 export const notifications = pgTable("notifications", {
@@ -786,7 +803,7 @@ export const rarityTiers = ["common", "rare", "epic", "legendary"] as const;
 export type RarityTier = typeof rarityTiers[number];
 
 // Asset types for categorizing where rewards are used
-export const assetTypes = ["avatar_border", "profile_banner", "profile_background", "badge", "emoji", "sound_effect", "other"] as const;
+export const assetTypes = ["avatar_border", "profile_banner", "profile_background", "badge", "emoji", "sound_effect", "xp_reward", "gf_tokens", "other"] as const;
 export type AssetType = typeof assetTypes[number];
 
 // Asset rewards table for loot box rewards
@@ -794,9 +811,10 @@ export const assetRewards = pgTable("asset_rewards", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   imageUrl: text("image_url").notNull(),
-  assetType: text("asset_type").notNull().default("other"), // avatar_border, profile_banner, profile_background, badge, emoji, sound_effect, other
+  assetType: text("asset_type").notNull().default("other"), // avatar_border, profile_banner, profile_background, badge, emoji, sound_effect, xp_reward, gf_tokens, other
   rarity: text("rarity").notNull().default("common"), // common, rare, epic, legendary
   unlockChance: real("unlock_chance").notNull().default(10), // Percentage chance (0-100)
+  rewardValue: integer("reward_value"), // For consumable rewards like XP or GF tokens - the amount to grant
   timesRewarded: integer("times_rewarded").default(0).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   createdBy: integer("created_by").references(() => users.id),
@@ -846,6 +864,20 @@ export const insertAssetRewardSchema = createInsertSchema(assetRewards).omit({
 export const insertAssetRewardClaimSchema = createInsertSchema(assetRewardClaims).omit({
   id: true,
   claimedAt: true,
+});
+
+// Daily lootbox tracking table
+export const userDailyLootbox = pgTable("user_daily_lootbox", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  lastOpenedAt: timestamp("last_opened_at").defaultNow().notNull(),
+  rewardId: integer("reward_id").references(() => assetRewards.id),
+  openCount: integer("open_count").default(1).notNull(),
+});
+
+// Schema for inserting daily lootbox record
+export const insertUserDailyLootboxSchema = createInsertSchema(userDailyLootbox).omit({
+  id: true,
 });
 
 
@@ -1012,6 +1044,8 @@ export type AssetReward = typeof assetRewards.$inferSelect;
 export type InsertAssetReward = z.infer<typeof insertAssetRewardSchema>;
 export type AssetRewardClaim = typeof assetRewardClaims.$inferSelect;
 export type InsertAssetRewardClaim = z.infer<typeof insertAssetRewardClaimSchema>;
+export type UserDailyLootbox = typeof userDailyLootbox.$inferSelect;
+export type InsertUserDailyLootbox = z.infer<typeof insertUserDailyLootboxSchema>;
 
 // Extended type for asset reward with claim info
 export type AssetRewardWithClaims = AssetReward & {
