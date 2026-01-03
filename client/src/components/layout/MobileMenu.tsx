@@ -166,7 +166,6 @@ const MobileMenu = () => {
                   <span className="font-medium">Leaderboard</span>
                 </Link>
               </li>
-              {/* Hidden until ready to go live
               <li>
                 <Link 
                   href="/store"
@@ -187,7 +186,6 @@ const MobileMenu = () => {
                   <span className="font-medium">Wallet</span>
                 </Link>
               </li>
-              */}
               {user && user.messagingEnabled !== false && (
                 <li>
                   <Link 
