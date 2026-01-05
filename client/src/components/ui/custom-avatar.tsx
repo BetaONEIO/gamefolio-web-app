@@ -10,7 +10,8 @@ const InlineSvgBorder: React.FC<{
   svgUrl: string;
   color: string;
   className?: string;
-}> = ({ svgUrl, color, className }) => {
+  style?: React.CSSProperties;
+}> = ({ svgUrl, color, className, style }) => {
   const [svgContent, setSvgContent] = useState<string>('');
   
   useEffect(() => {
@@ -46,6 +47,7 @@ const InlineSvgBorder: React.FC<{
   return (
     <div 
       className={className}
+      style={style}
       dangerouslySetInnerHTML={{ __html: svgContent }}
     />
   );
@@ -122,11 +124,12 @@ export const CustomAvatar = ({
           </AvatarFallback>
         </Avatar>
         
-        {/* SVG Border with inline color replacement */}
+        {/* SVG Border with inline color replacement - scaled up to fit around avatar */}
         <InlineSvgBorder
           svgUrl={avatarBorder.imageUrl}
           color={borderColor}
           className="absolute inset-0 w-full h-full pointer-events-none z-20 [&>svg]:w-full [&>svg]:h-full"
+          style={{ transform: 'scale(1.4)' }}
         />
       </div>
     );
