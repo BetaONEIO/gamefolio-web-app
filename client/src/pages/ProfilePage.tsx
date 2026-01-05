@@ -2506,11 +2506,11 @@ const ProfilePage = () => {
         setSelectedScreenshot(null);
         // Dialog closes without navigation - stays on same page
       }}>
-        <DialogContent className="max-w-[95%] w-[95%] p-0 bg-background text-foreground max-h-[95vh] h-[95vh] overflow-hidden">
+        <DialogContent className="max-w-[95%] w-[95%] p-0 bg-background text-foreground max-h-[95vh] h-[95vh] overflow-y-auto lg:overflow-hidden">
           {selectedScreenshot && (
-            <div className="flex flex-col lg:flex-row h-full">
+            <div className="flex flex-col lg:flex-row h-auto lg:h-full min-h-full">
               {/* Left side - Image display */}
-              <div className="bg-black flex items-center justify-center w-full lg:w-[75%] h-[60vh] lg:h-full">
+              <div className="bg-black flex items-center justify-center w-full lg:w-[75%] h-[50vh] lg:h-full flex-shrink-0">
                 <img
                   src={selectedScreenshot.imageUrl}
                   alt={selectedScreenshot.title}
@@ -2519,7 +2519,7 @@ const ProfilePage = () => {
               </div>
 
               {/* Right side - Info and comments */}
-              <div className="h-full flex flex-col w-full lg:w-[25%]">
+              <div className="flex flex-col w-full lg:w-[25%] lg:h-full">
                 {/* Header with username */}
                 <div className="border-b border-border p-4 flex items-center justify-between">
                   <div className="flex items-center">
@@ -2549,8 +2549,8 @@ const ProfilePage = () => {
                   </div>
                 </div>
 
-                {/* Comments and content section - scrollable */}
-                <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+                {/* Comments and content section - scrollable on desktop only */}
+                <div className="flex-1 lg:overflow-y-auto px-4 py-3 space-y-3">
                   {/* Title and description */}
                   <div>
                     <h1 className="text-lg font-semibold">{selectedScreenshot.title}</h1>
