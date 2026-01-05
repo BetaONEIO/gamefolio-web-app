@@ -2,6 +2,57 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, AssetReward } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
+import { useState, useEffect } from "react";
+import DOMPurify from "dompurify";
+
+// Component to fetch SVG and render it inline with color replacement
+const InlineSvgBorder: React.FC<{
+  svgUrl: string;
+  color: string;
+  className?: string;
+}> = ({ svgUrl, color, className }) => {
+  const [svgContent, setSvgContent] = useState<string>('');
+  
+  useEffect(() => {
+    if (!svgUrl) return;
+    
+    fetch(svgUrl)
+      .then(res => res.text())
+      .then(svg => {
+        // Sanitize the SVG
+        const sanitized = DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } });
+        
+        // Replace black colors with the user's selected color
+        let colorized = sanitized
+          .replace(/fill\s*=\s*["'](?:#000000|#000|black|rgb\(0,\s*0,\s*0\))["']/gi, `fill="${color}"`)
+          .replace(/stroke\s*=\s*["'](?:#000000|#000|black|rgb\(0,\s*0,\s*0\))["']/gi, `stroke="${color}"`)
+          .replace(/fill\s*:\s*(?:#000000|#000|black|rgb\(0,\s*0,\s*0\))/gi, `fill: ${color}`)
+          .replace(/stroke\s*:\s*(?:#000000|#000|black|rgb\(0,\s*0,\s*0\))/gi, `stroke: ${color}`);
+        
+        // Also replace currentColor with the selected color
+        colorized = colorized
+          .replace(/fill\s*=\s*["']currentColor["']/gi, `fill="${color}"`)
+          .replace(/stroke\s*=\s*["']currentColor["']/gi, `stroke="${color}"`)
+          .replace(/fill\s*:\s*currentColor/gi, `fill: ${color}`)
+          .replace(/stroke\s*:\s*currentColor/gi, `stroke: ${color}`);
+        
+        setSvgContent(colorized);
+      })
+      .catch(err => console.error('Failed to load SVG:', err));
+  }, [svgUrl, color]);
+  
+  if (!svgContent) return null;
+  
+  return (
+    <div 
+      className={className}
+      dangerouslySetInnerHTML={{ __html: svgContent }}
+      style={{
+        filter: `drop-shadow(0 0 4px ${color}80) drop-shadow(0 0 8px ${color}40)`,
+      }}
+    />
+  );
+};
 
 interface CustomAvatarProps {
   user: User;
@@ -60,15 +111,9 @@ export const CustomAvatar = ({
   if (hasAvatarBorderOverlay) {
     return (
       <div className={`relative inline-flex items-center justify-center ${containerSizes[size]} ${className}`}>
+        {/* Avatar without circular glow - SVG border handles all decoration */}
         <Avatar 
           className={`${sizeClasses[size]} transition-all duration-300 rounded-full z-10 relative`}
-          style={{
-            boxShadow: `
-              0 0 20px ${borderColor}40,
-              0 0 40px ${borderColor}20,
-              inset 0 0 15px ${borderColor}10
-            `
-          }}
         >
           <AvatarImage 
             src={user?.avatarUrl || ""} 
@@ -80,14 +125,11 @@ export const CustomAvatar = ({
           </AvatarFallback>
         </Avatar>
         
-        <img
-          src={avatarBorder.imageUrl}
-          alt="Avatar border"
-          className="absolute inset-0 w-full h-full object-contain pointer-events-none z-20"
-          style={{
-            filter: `drop-shadow(0 0 8px ${borderColor}60) drop-shadow(0 0 16px ${borderColor}30)`,
-            imageRendering: 'auto',
-          }}
+        {/* SVG Border with inline color replacement */}
+        <InlineSvgBorder
+          svgUrl={avatarBorder.imageUrl}
+          color={borderColor}
+          className="absolute inset-0 w-full h-full pointer-events-none z-20 [&>svg]:w-full [&>svg]:h-full"
         />
       </div>
     );
