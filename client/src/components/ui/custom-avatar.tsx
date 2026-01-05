@@ -5,7 +5,7 @@ import { getQueryFn } from "@/lib/queryClient";
 
 interface CustomAvatarProps {
   user: User;
-  size?: "sm" | "md" | "lg" | "xl" | "2xl";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "profile";
   className?: string;
   showBorder?: boolean;
   borderIntensity?: "subtle" | "normal" | "strong";
@@ -17,15 +17,17 @@ const sizeClasses = {
   md: "h-12 w-12", 
   lg: "h-16 w-16",
   xl: "h-20 w-20",
-  "2xl": "h-32 w-32"
+  "2xl": "h-32 w-32",
+  "profile": "h-40 w-40 sm:h-48 sm:w-48 md:h-56 md:w-56"
 };
 
-const borderOverlaySizes = {
-  sm: "h-12 w-12",
+const containerSizes = {
+  sm: "h-11 w-11",
   md: "h-16 w-16",
-  lg: "h-24 w-24",
+  lg: "h-22 w-22",
   xl: "h-28 w-28",
-  "2xl": "h-44 w-44"
+  "2xl": "h-44 w-44",
+  "profile": "h-52 w-52 sm:h-60 sm:w-60 md:h-72 md:w-72"
 };
 
 const borderStyles = {
@@ -45,12 +47,11 @@ export const CustomAvatar = ({
   const borderColor = user?.avatarBorderColor || 'hsl(var(--primary))';
   const safeDisplayName = user?.displayName || user?.username || "?";
   
-  // Fetch selected avatar border if user has one selected
   const { data: borderData } = useQuery<{ avatarBorder: AssetReward | null }>({
     queryKey: [`/api/user/${user?.id}/avatar-border`],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: showAvatarBorderOverlay && !!user?.selectedAvatarBorderId,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
   const avatarBorder = borderData?.avatarBorder;
@@ -58,36 +59,41 @@ export const CustomAvatar = ({
 
   if (hasAvatarBorderOverlay) {
     return (
-      <div className={`relative inline-flex items-center justify-center ${className}`}>
-        {/* Avatar in the center */}
+      <div className={`relative inline-flex items-center justify-center ${containerSizes[size]} ${className}`}>
         <Avatar 
-          className={`${sizeClasses[size]} transition-all duration-300 rounded-full z-10`}
-          style={showBorder ? {
-            boxShadow: borderStyles[borderIntensity](borderColor)
-          } : {}}
+          className={`${sizeClasses[size]} transition-all duration-300 rounded-full z-10 relative`}
+          style={{
+            boxShadow: `
+              0 0 20px ${borderColor}40,
+              0 0 40px ${borderColor}20,
+              inset 0 0 15px ${borderColor}10
+            `
+          }}
         >
-          <AvatarImage src={user?.avatarUrl || ""} alt={safeDisplayName} className="rounded-full object-cover" />
+          <AvatarImage 
+            src={user?.avatarUrl || ""} 
+            alt={safeDisplayName} 
+            className="rounded-full object-cover w-full h-full"
+          />
           <AvatarFallback className="bg-primary/20 text-foreground font-semibold rounded-full">
             {safeDisplayName.substring(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
         
-        {/* Border overlay image */}
         <img
           src={avatarBorder.imageUrl}
           alt="Avatar border"
-          className={`absolute ${borderOverlaySizes[size]} object-contain pointer-events-none z-20`}
+          className="absolute inset-0 w-full h-full object-contain pointer-events-none z-20"
           style={{
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
+            filter: `drop-shadow(0 0 8px ${borderColor}60) drop-shadow(0 0 16px ${borderColor}30)`,
+            imageRendering: 'auto',
           }}
         />
       </div>
     );
   }
 
-  const displayName = user.displayName || user.username || "?";
+  const displayName = user?.displayName || user?.username || "?";
   
   return (
     <Avatar 
@@ -96,7 +102,7 @@ export const CustomAvatar = ({
         boxShadow: borderStyles[borderIntensity](borderColor)
       } : {}}
     >
-      <AvatarImage src={user.avatarUrl || ""} alt={displayName} className="rounded-full object-cover" />
+      <AvatarImage src={user?.avatarUrl || ""} alt={displayName} className="rounded-full object-cover" />
       <AvatarFallback className="bg-primary/20 text-foreground font-semibold rounded-full">
         {displayName.substring(0, 2).toUpperCase()}
       </AvatarFallback>
