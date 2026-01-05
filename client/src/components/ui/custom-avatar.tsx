@@ -130,6 +130,7 @@ const InlineSvgBorder: React.FC<{
 // Component to create an SVG clip path from border shape
 const SvgClipPath: React.FC<{ svgUrl: string; clipId: string }> = ({ svgUrl, clipId }) => {
   const [clipContent, setClipContent] = useState<string>('');
+  const [viewBox, setViewBox] = useState<string>('0 0 128 128');
   
   useEffect(() => {
     if (!svgUrl) return;
@@ -142,10 +143,8 @@ const SvgClipPath: React.FC<{ svgUrl: string; clipId: string }> = ({ svgUrl, cli
         const svgEl = doc.querySelector('svg');
         
         if (svgEl) {
-          const viewBox = svgEl.getAttribute('viewBox') || '0 0 128 128';
-          const [, , vbWidth, vbHeight] = viewBox.split(' ').map(Number);
-          const scaleX = 1 / vbWidth;
-          const scaleY = 1 / vbHeight;
+          const vb = svgEl.getAttribute('viewBox') || '0 0 128 128';
+          setViewBox(vb);
           
           const circle = svgEl.querySelector('circle');
           const path = svgEl.querySelector('path');
@@ -153,21 +152,20 @@ const SvgClipPath: React.FC<{ svgUrl: string; clipId: string }> = ({ svgUrl, cli
           
           let shapeContent = '';
           if (circle) {
-            const cx = parseFloat(circle.getAttribute('cx') || '64') * scaleX;
-            const cy = parseFloat(circle.getAttribute('cy') || '64') * scaleY;
-            const r = parseFloat(circle.getAttribute('r') || '50') * scaleX;
-            shapeContent = `<circle cx="${cx}" cy="${cy}" r="${r}"/>`;
+            const cx = circle.getAttribute('cx') || '64';
+            const cy = circle.getAttribute('cy') || '64';
+            const r = circle.getAttribute('r') || '50';
+            shapeContent = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="black"/>`;
           } else if (path) {
             const d = path.getAttribute('d') || '';
-            const scaledD = d.replace(/[\d.]+/g, (match) => (parseFloat(match) * scaleX).toFixed(4));
-            shapeContent = `<path d="${scaledD}"/>`;
+            shapeContent = `<path d="${d}" fill="black"/>`;
           } else if (rect) {
-            const x = parseFloat(rect.getAttribute('x') || '0') * scaleX;
-            const y = parseFloat(rect.getAttribute('y') || '0') * scaleY;
-            const w = parseFloat(rect.getAttribute('width') || '100') * scaleX;
-            const h = parseFloat(rect.getAttribute('height') || '100') * scaleY;
-            const rx = parseFloat(rect.getAttribute('rx') || '0') * scaleX;
-            shapeContent = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}"/>`;
+            const x = rect.getAttribute('x') || '0';
+            const y = rect.getAttribute('y') || '0';
+            const w = rect.getAttribute('width') || '100';
+            const h = rect.getAttribute('height') || '100';
+            const rx = rect.getAttribute('rx') || '0';
+            shapeContent = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="black"/>`;
           }
           
           if (shapeContent) {
@@ -183,7 +181,7 @@ const SvgClipPath: React.FC<{ svgUrl: string; clipId: string }> = ({ svgUrl, cli
   return (
     <svg width="0" height="0" style={{ position: 'absolute' }}>
       <defs>
-        <clipPath id={clipId} clipPathUnits="objectBoundingBox">
+        <clipPath id={clipId} clipPathUnits="userSpaceOnUse" viewBox={viewBox}>
           <g dangerouslySetInnerHTML={{ __html: clipContent }} />
         </clipPath>
       </defs>
@@ -249,29 +247,24 @@ export const CustomAvatar = ({
   if (hasAvatarBorderOverlay) {
     return (
       <div className={`relative inline-flex items-center justify-center ${containerSizes[size]} ${className}`}>
-        {/* SVG Clip Path definition - clips avatar to match border shape */}
-        <SvgClipPath svgUrl={avatarBorder.imageUrl} clipId={clipId} />
-        
         {/* Glow effect behind the avatar - matches border color */}
         <div 
-          className={`absolute ${sizeClasses[size]} z-0`}
+          className={`absolute ${sizeClasses[size]} rounded-full z-0`}
           style={{
-            boxShadow: `0 0 25px ${borderColor}80, 0 0 50px ${borderColor}50, 0 0 75px ${borderColor}30`,
-            clipPath: `url(#${clipId})`
+            boxShadow: `0 0 25px ${borderColor}80, 0 0 50px ${borderColor}50, 0 0 75px ${borderColor}30`
           }}
         />
         
-        {/* Avatar - the actual profile picture, clipped to border shape */}
+        {/* Avatar - the actual profile picture */}
         <Avatar 
-          className={`${sizeClasses[size]} transition-all duration-300 z-10 relative`}
-          style={{ clipPath: `url(#${clipId})` }}
+          className={`${sizeClasses[size]} transition-all duration-300 rounded-full z-10 relative`}
         >
           <AvatarImage 
             src={user?.avatarUrl || ""} 
             alt={safeDisplayName} 
-            className="object-cover w-full h-full"
+            className="rounded-full object-cover w-full h-full"
           />
-          <AvatarFallback className="bg-primary/20 text-foreground font-semibold">
+          <AvatarFallback className="bg-primary/20 text-foreground font-semibold rounded-full">
             {safeDisplayName.substring(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
