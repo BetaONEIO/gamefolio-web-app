@@ -12,6 +12,7 @@ import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import PlatformConnections from "./PlatformConnections";
 import { GamefolioShareDialog } from "./GamefolioShareDialog";
+import { CustomAvatar } from "@/components/ui/custom-avatar";
 
 const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
   streamer: { label: "Streamer", icon: Video, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
@@ -96,22 +97,13 @@ const ProfileHeader = ({
         {/* Profile Image - Positioned halfway on banner */}
         <div className="absolute left-8 bottom-0 transform translate-y-1/2">
           <div className="flex flex-col items-center">
-            <div 
-              className="relative w-32 h-32 rounded-lg shadow-lg overflow-hidden ring-4"
-              style={{ 
-                '--tw-ring-color': profile.avatarBorderColor || '#4ADE80'
-              } as React.CSSProperties}
-            >
-              <img 
-                src={profile.avatarUrl || `/attached_assets/gamefolio social logo 3d circle web.png`} 
-                alt={profile.displayName} 
-                className="block w-full h-full object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = "/attached_assets/gamefolio social logo 3d circle web.png";
-                }}
-              />
-            </div>
+            <CustomAvatar 
+              user={profile}
+              size="2xl"
+              className="shadow-lg"
+              borderIntensity="strong"
+              showAvatarBorderOverlay={true}
+            />
             
             {/* Profile Stats underneath profile picture */}
             <div className="flex space-x-4 text-xs mt-3 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 border">

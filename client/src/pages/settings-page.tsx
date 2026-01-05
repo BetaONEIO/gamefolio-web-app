@@ -327,10 +327,46 @@ export default function SettingsPage() {
     }
   };
 
-  // Fetch user's unlocked profile banners (only banners they have access to)
-  const { data: bannerImages, isLoading: isLoadingBanners } = useQuery({
-    queryKey: ['/api/user/unlocked-banners'],
+  // Fetch user's unlocked avatar borders (only borders they have access to)
+  const { data: avatarBorders, isLoading: isLoadingBorders } = useQuery({
+    queryKey: ['/api/user/avatar-borders'],
     enabled: !!user,
+  });
+  
+  // Track selected avatar border ID
+  const [selectedBorderId, setSelectedBorderId] = useState<number | null>(user?.selectedAvatarBorderId || null);
+  
+  // Update selected border when user data loads
+  useEffect(() => {
+    if (user?.selectedAvatarBorderId !== undefined) {
+      setSelectedBorderId(user.selectedAvatarBorderId);
+    }
+  }, [user?.selectedAvatarBorderId]);
+  
+  // Mutation to save avatar border selection
+  const saveAvatarBorderMutation = useMutation({
+    mutationFn: async (avatarBorderId: number | null) => {
+      const response = await apiRequest("PUT", `/api/user/avatar-border`, { avatarBorderId });
+      // Handle both JSON and non-JSON responses
+      const text = await response.text();
+      return text ? JSON.parse(text) : { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/avatar-border`] });
+      toast({
+        title: "Border updated!",
+        description: "Your profile picture border has been saved.",
+        variant: "gamefolioSuccess",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Update failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
 
@@ -635,55 +671,97 @@ export default function SettingsPage() {
                     Select a border from your unlocked rewards to customize your profile picture.
                   </p>
 
-                  {/* Current Banner Preview */}
-                  {profileData.bannerUrl && (
-                    <div className="w-full h-32 rounded-md overflow-hidden border border-input">
-                      <img 
-                        src={profileData.bannerUrl} 
-                        alt="Current Banner" 
-                        className="w-full h-full object-cover"
-                      />
+                  {/* Current Border Preview */}
+                  <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg border">
+                    <div className="relative inline-flex items-center justify-center">
+                      <Avatar className="h-20 w-20">
+                        <AvatarImage src={avatarPreview || profileData.avatarUrl || ""} alt="Preview" />
+                        <AvatarFallback className="bg-primary/20 text-foreground font-semibold">
+                          {user?.username?.substring(0, 2).toUpperCase() || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      {selectedBorderId && avatarBorders && (() => {
+                        const border = (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId);
+                        return border ? (
+                          <img
+                            src={border.imageUrl}
+                            alt="Border preview"
+                            className="absolute h-28 w-28 object-contain pointer-events-none"
+                            style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
+                          />
+                        ) : null;
+                      })()}
                     </div>
-                  )}
+                    <div>
+                      <p className="text-sm font-medium">Preview</p>
+                      <p className="text-xs text-muted-foreground">
+                        {selectedBorderId && avatarBorders 
+                          ? (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId)?.name || "Selected"
+                          : "No border selected"}
+                      </p>
+                    </div>
+                  </div>
 
                   {/* Loading State */}
-                  {isLoadingBanners && (
+                  {isLoadingBorders && (
                     <div className="p-4 flex items-center justify-center">
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
                   )}
 
-                  {/* No Banners Unlocked Message */}
-                  {!isLoadingBanners && (!bannerImages || bannerImages.length === 0) && (
+                  {/* No Borders Unlocked Message */}
+                  {!isLoadingBorders && (!avatarBorders || (avatarBorders as any[]).length === 0) && (
                     <div className="p-4 bg-muted/50 rounded-lg border text-center">
                       <Sparkles className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                       <p className="text-sm text-muted-foreground">
-                        No banners unlocked yet. Check back soon for ways to unlock exclusive banners!
+                        No borders unlocked yet. Check back soon for ways to unlock exclusive borders!
                       </p>
                     </div>
                   )}
 
-                  {/* Unlocked Banners Grid */}
-                  {!isLoadingBanners && bannerImages && bannerImages.length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {bannerImages.map((banner: any) => (
+                  {/* Unlocked Borders Grid */}
+                  {!isLoadingBorders && avatarBorders && (avatarBorders as any[]).length > 0 && (
+                    <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                      {/* None option */}
+                      <div
+                        data-testid="border-select-none"
+                        className={`
+                          cursor-pointer rounded-md border-2 p-3 relative transition-all flex flex-col items-center justify-center
+                          ${selectedBorderId === null ? 'border-primary ring-2 ring-primary/50 bg-primary/10' : 'border-muted hover:border-primary/50'}
+                        `}
+                        onClick={() => {
+                          setSelectedBorderId(null);
+                          saveAvatarBorderMutation.mutate(null);
+                        }}
+                      >
+                        <X className="h-8 w-8 text-muted-foreground mb-1" />
+                        <span className="text-xs text-muted-foreground">None</span>
+                      </div>
+                      
+                      {(avatarBorders as any[]).map((border: any) => (
                         <div
-                          key={banner.id}
-                          data-testid={`banner-select-${banner.id}`}
+                          key={border.id}
+                          data-testid={`border-select-${border.id}`}
                           className={`
-                            cursor-pointer rounded-md overflow-hidden border-2 h-24 relative transition-all
-                            ${profileData.bannerUrl === banner.imageUrl ? 'border-primary ring-2 ring-primary/50' : 'border-transparent hover:border-primary/50'}
+                            cursor-pointer rounded-md border-2 p-2 relative transition-all flex flex-col items-center
+                            ${selectedBorderId === border.id ? 'border-primary ring-2 ring-primary/50 bg-primary/10' : 'border-muted hover:border-primary/50'}
                           `}
-                          onClick={() => setProfileData(prev => ({ ...prev, bannerUrl: banner.imageUrl }))}
+                          onClick={() => {
+                            setSelectedBorderId(border.id);
+                            saveAvatarBorderMutation.mutate(border.id);
+                          }}
                         >
-                          <img 
-                            src={banner.imageUrl} 
-                            alt={banner.name}
-                            className="w-full h-full object-cover" 
-                          />
-                          <div className="p-1 bg-black/75 text-white text-xs font-medium absolute bottom-0 left-0 right-0 truncate">
-                            {banner.name}
+                          <div className="relative w-16 h-16 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-full bg-muted" />
+                            <img 
+                              src={border.imageUrl} 
+                              alt={border.name}
+                              className="absolute w-16 h-16 object-contain" 
+                            />
                           </div>
+                          <span className="text-xs text-center mt-1 truncate w-full">
+                            {border.name}
+                          </span>
                         </div>
                       ))}
                     </div>
