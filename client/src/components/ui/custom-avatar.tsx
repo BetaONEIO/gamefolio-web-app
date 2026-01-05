@@ -119,9 +119,12 @@ export const CustomAvatar = ({
   if (hasAvatarBorderOverlay) {
     return (
       <div className={`relative inline-flex items-center justify-center ${containerSizes[size]} ${className}`}>
-        {/* Avatar without circular glow - SVG border handles all decoration */}
+        {/* Avatar with glow matching the border color */}
         <Avatar 
           className={`${sizeClasses[size]} transition-all duration-300 rounded-full z-10 relative`}
+          style={{
+            boxShadow: `0 0 20px ${borderColor}50, 0 0 40px ${borderColor}30`
+          }}
         >
           <AvatarImage 
             src={user?.avatarUrl || ""} 
