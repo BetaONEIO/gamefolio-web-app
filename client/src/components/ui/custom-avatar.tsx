@@ -247,17 +247,20 @@ export const CustomAvatar = ({
   if (hasAvatarBorderOverlay) {
     return (
       <div className={`relative inline-flex items-center justify-center ${containerSizes[size]} ${className}`}>
-        {/* Glow effect behind the avatar - matches border color */}
+        {/* Glow effect behind the avatar - scaled larger to be visible outside the border */}
         <div 
-          className={`absolute ${sizeClasses[size]} rounded-full z-0`}
+          className={`absolute ${sizeClasses[size]} rounded-full`}
           style={{
-            boxShadow: `0 0 25px ${borderColor}80, 0 0 50px ${borderColor}50, 0 0 75px ${borderColor}30`
+            boxShadow: `0 0 30px 10px ${borderColor}60, 0 0 60px 20px ${borderColor}40, 0 0 90px 30px ${borderColor}20`,
+            transform: 'scale(1.5)',
+            zIndex: 0
           }}
         />
         
         {/* Avatar - the actual profile picture */}
         <Avatar 
-          className={`${sizeClasses[size]} transition-all duration-300 rounded-full z-10 relative`}
+          className={`${sizeClasses[size]} transition-all duration-300 rounded-full relative`}
+          style={{ zIndex: 10 }}
         >
           <AvatarImage 
             src={user?.avatarUrl || ""} 
@@ -273,8 +276,8 @@ export const CustomAvatar = ({
         <InlineSvgBorder
           svgUrl={avatarBorder.imageUrl}
           color={borderColor}
-          className="absolute inset-0 w-full h-full pointer-events-none z-20 [&>svg]:w-full [&>svg]:h-full"
-          style={{ transform: 'scale(1.38)' }}
+          className="absolute inset-0 w-full h-full pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+          style={{ transform: 'scale(1.38)', zIndex: 20 }}
         />
       </div>
     );
