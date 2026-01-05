@@ -523,12 +523,15 @@ const ProfilePictureWithBorder: React.FC<{
   avatarBorderColor?: string | null;
   size?: 'md' | 'lg' | 'xl';
 }> = ({ userId, avatarUrl, displayName, selectedBorderId, avatarBorderColor, size = 'xl' }) => {
-  // Fetch the selected border image if available
-  const { data: borderData } = useQuery<AssetReward>({
-    queryKey: [`/api/user/${userId}/avatar-border`],
+  // Fetch unlocked borders to display pending selections
+  const { data: unlockedBorders = [] } = useQuery<AssetReward[]>({
+    queryKey: ['/api/user/avatar-borders'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!userId && !!selectedBorderId,
   });
+
+  // Find the border data from unlocked borders
+  const borderData = selectedBorderId ? unlockedBorders.find(b => b.id === selectedBorderId) : null;
 
   const sizeClasses = {
     md: 'h-24 w-24',
@@ -585,43 +588,16 @@ const ProfilePictureWithBorder: React.FC<{
 const ProfilePictureBorderInlineSection: React.FC<{
   userId?: number;
   currentBorderId?: number | null;
+  pendingBorderId?: number | null;
   avatarPreview: string;
   displayName: string;
-}> = ({ userId, currentBorderId, avatarPreview, displayName }) => {
-  const { toast } = useToast();
-  const [previewBorderId, setPreviewBorderId] = useState<number | null>(currentBorderId || null);
-
+  onBorderChange?: (borderId: number | null) => void;
+}> = ({ userId, currentBorderId, pendingBorderId, avatarPreview, displayName, onBorderChange }) => {
   // Fetch user's unlocked avatar borders
   const { data: unlockedBorders = [], isLoading } = useQuery<AssetReward[]>({
     queryKey: ['/api/user/avatar-borders'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!userId,
-  });
-
-  // Mutation to update selected avatar border
-  const updateBorderMutation = useMutation({
-    mutationFn: async (avatarBorderId: number | null) => {
-      const response = await apiRequest('PUT', '/api/user/avatar-border', { avatarBorderId });
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      if (userId) {
-        queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}/avatar-border`] });
-      }
-      toast({
-        title: "Border updated",
-        description: "Your profile picture border has been applied.",
-        variant: "gamefolioSuccess",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update border.",
-        variant: "destructive",
-      });
-    },
   });
 
   const getRarityColor = (rarity: string) => {
@@ -634,12 +610,16 @@ const ProfilePictureBorderInlineSection: React.FC<{
   };
 
   const handleBorderSelect = (borderId: number | null) => {
-    setPreviewBorderId(borderId);
-    updateBorderMutation.mutate(borderId);
+    if (onBorderChange) {
+      onBorderChange(borderId);
+    }
   };
 
+  // Use pending selection if available, otherwise show current saved border
+  const displayBorderId = pendingBorderId !== undefined ? pendingBorderId : currentBorderId;
+
   // Get current preview border
-  const previewBorder = unlockedBorders.find(b => b.id === previewBorderId);
+  const previewBorder = unlockedBorders.find(b => b.id === displayBorderId);
 
   return (
     <div className="space-y-4">
@@ -667,12 +647,11 @@ const ProfilePictureBorderInlineSection: React.FC<{
       ) : (
         <div className="space-y-3">
           {/* Remove Border Option */}
-          {currentBorderId && (
+          {displayBorderId && (
             <Button
               variant="outline"
               size="sm"
               onClick={() => handleBorderSelect(null)}
-              disabled={updateBorderMutation.isPending}
               className="w-full"
               data-testid="button-remove-border-inline"
             >
@@ -684,14 +663,12 @@ const ProfilePictureBorderInlineSection: React.FC<{
           {/* Available Borders Grid */}
           <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
             {unlockedBorders.map((border) => {
-              const isSelected = currentBorderId === border.id;
-              const isPreview = previewBorderId === border.id;
+              const isSelected = displayBorderId === border.id;
               return (
                 <button
                   key={border.id}
                   type="button"
                   onClick={() => handleBorderSelect(border.id)}
-                  disabled={updateBorderMutation.isPending}
                   className={`
                     relative p-1.5 rounded-lg transition-all transform hover:scale-105
                     ${isSelected 
@@ -736,6 +713,9 @@ const AppearanceSettingsPage: React.FC = () => {
   const [selectedBannerUrl, setSelectedBannerUrl] = useState<string>('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
+  
+  // Pending border selection (only saved on "Save Changes")
+  const [pendingBorderId, setPendingBorderId] = useState<number | null | undefined>(undefined);
   
   // Crop modal state
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
@@ -980,10 +960,23 @@ const AppearanceSettingsPage: React.FC = () => {
         userData: updateData
       });
 
+      // Save pending border selection if there is one
+      if (pendingBorderId !== undefined) {
+        try {
+          await apiRequest('PUT', '/api/user/avatar-border', { avatarBorderId: pendingBorderId });
+          queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+          queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/avatar-border`] });
+          console.log('💾 Border saved:', pendingBorderId);
+        } catch (borderError) {
+          console.error('Failed to save border:', borderError);
+        }
+      }
+
       // Handle success state immediately since mutation is async
-      // Reset avatar upload state
+      // Reset avatar upload state and pending border
       setAvatarFile(null);
       setAvatarPreview('');
+      setPendingBorderId(undefined);
 
       console.log('💾 Profile saved successfully - preview colors will be preserved');
     } catch (error) {
@@ -1085,12 +1078,12 @@ const AppearanceSettingsPage: React.FC = () => {
                   {/* Left side: Large Avatar Preview with Border */}
                   <div className="flex flex-col items-center space-y-4">
                     <div className="relative">
-                      {/* Avatar Border Preview (shows selected border) */}
+                      {/* Avatar Border Preview (shows selected or pending border) */}
                       <ProfilePictureWithBorder
                         userId={user?.id}
                         avatarUrl={avatarPreview || user?.avatarUrl || ''}
                         displayName={user?.displayName || ''}
-                        selectedBorderId={user?.selectedAvatarBorderId}
+                        selectedBorderId={pendingBorderId !== undefined ? pendingBorderId : user?.selectedAvatarBorderId}
                         avatarBorderColor={avatarBorderColor || user?.avatarBorderColor}
                         size="xl"
                       />
@@ -1144,8 +1137,10 @@ const AppearanceSettingsPage: React.FC = () => {
                     <ProfilePictureBorderInlineSection 
                       userId={user?.id} 
                       currentBorderId={user?.selectedAvatarBorderId}
+                      pendingBorderId={pendingBorderId}
                       avatarPreview={avatarPreview || user?.avatarUrl || ''}
                       displayName={user?.displayName || ''}
+                      onBorderChange={(borderId) => setPendingBorderId(borderId)}
                     />
                   </div>
                 </div>
