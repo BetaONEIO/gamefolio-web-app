@@ -2,10 +2,83 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, AssetReward } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import DOMPurify from "dompurify";
 
-// Component to fetch SVG and render it inline with color replacement
+// Helper to extract clip path from SVG and generate border content
+const useSvgBorderData = (svgUrl: string, color: string) => {
+  const [data, setData] = useState<{ borderSvg: string; clipPath: string } | null>(null);
+  const clipId = useMemo(() => `clip-${Math.random().toString(36).substr(2, 9)}`, []);
+  
+  useEffect(() => {
+    if (!svgUrl) return;
+    
+    fetch(svgUrl)
+      .then(res => res.text())
+      .then(svg => {
+        const sanitized = DOMPurify.sanitize(svg, { 
+          USE_PROFILES: { svg: true, svgFilters: true },
+          ADD_TAGS: ['animate', 'animateTransform', 'animateMotion', 'set', 'clipPath', 'defs'],
+          ADD_ATTR: ['attributeName', 'attributeType', 'begin', 'dur', 'end', 'from', 'to', 'by', 'values', 'keyTimes', 'keySplines', 'calcMode', 'repeatCount', 'repeatDur', 'fill', 'additive', 'accumulate', 'type', 'restart', 'clip-path', 'clipPathUnits']
+        });
+        
+        // Parse SVG to extract the main shape for clipping
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(sanitized, 'image/svg+xml');
+        const svgEl = doc.querySelector('svg');
+        
+        let clipPathContent = '';
+        if (svgEl) {
+          // Find the first circle, path, or rect as the clip shape
+          const circle = svgEl.querySelector('circle');
+          const path = svgEl.querySelector('path');
+          const rect = svgEl.querySelector('rect');
+          
+          if (circle) {
+            const cx = circle.getAttribute('cx') || '64';
+            const cy = circle.getAttribute('cy') || '64';
+            const r = circle.getAttribute('r') || '50';
+            clipPathContent = `<circle cx="${cx}" cy="${cy}" r="${r}"/>`;
+          } else if (path) {
+            const d = path.getAttribute('d') || '';
+            clipPathContent = `<path d="${d}"/>`;
+          } else if (rect) {
+            const x = rect.getAttribute('x') || '0';
+            const y = rect.getAttribute('y') || '0';
+            const w = rect.getAttribute('width') || '100';
+            const h = rect.getAttribute('height') || '100';
+            const rx = rect.getAttribute('rx') || '0';
+            clipPathContent = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}"/>`;
+          }
+        }
+        
+        // Colorize the border SVG
+        let colorized = sanitized
+          .replace(/fill\s*=\s*["'](?:#000000|#000|black|rgb\(0,\s*0,\s*0\))["']/gi, `fill="${color}"`)
+          .replace(/stroke\s*=\s*["'](?:#000000|#000|black|rgb\(0,\s*0,\s*0\))["']/gi, `stroke="${color}"`)
+          .replace(/fill\s*:\s*(?:#000000|#000|black|rgb\(0,\s*0,\s*0\))/gi, `fill: ${color}`)
+          .replace(/stroke\s*:\s*(?:#000000|#000|black|rgb\(0,\s*0,\s*0\))/gi, `stroke: ${color}`)
+          .replace(/fill\s*=\s*["']currentColor["']/gi, `fill="${color}"`)
+          .replace(/stroke\s*=\s*["']currentColor["']/gi, `stroke="${color}"`)
+          .replace(/fill\s*:\s*currentColor/gi, `fill: ${color}`)
+          .replace(/stroke\s*:\s*currentColor/gi, `stroke: ${color}`)
+          .replace(/stroke-width\s*=\s*["']\d+["']/gi, `stroke-width="2"`)
+          .replace(/stroke-width\s*:\s*\d+/gi, `stroke-width: 2`);
+        
+        // Create the clip path SVG definition
+        const clipSvg = clipPathContent 
+          ? `<svg width="0" height="0" style="position:absolute"><defs><clipPath id="${clipId}" clipPathUnits="objectBoundingBox" transform="scale(0.0078125)">${clipPathContent}</clipPath></defs></svg>`
+          : '';
+        
+        setData({ borderSvg: colorized, clipPath: clipPathContent ? clipId : '' });
+      })
+      .catch(err => console.error('Failed to load SVG:', err));
+  }, [svgUrl, color, clipId]);
+  
+  return { ...data, clipId };
+};
+
+// Component to render SVG border
 const InlineSvgBorder: React.FC<{
   svgUrl: string;
   color: string;
@@ -20,29 +93,21 @@ const InlineSvgBorder: React.FC<{
     fetch(svgUrl)
       .then(res => res.text())
       .then(svg => {
-        // Sanitize the SVG with animation elements allowed
         const sanitized = DOMPurify.sanitize(svg, { 
           USE_PROFILES: { svg: true, svgFilters: true },
           ADD_TAGS: ['animate', 'animateTransform', 'animateMotion', 'set'],
           ADD_ATTR: ['attributeName', 'attributeType', 'begin', 'dur', 'end', 'from', 'to', 'by', 'values', 'keyTimes', 'keySplines', 'calcMode', 'repeatCount', 'repeatDur', 'fill', 'additive', 'accumulate', 'type', 'restart']
         });
         
-        // Replace black colors with the user's selected color
         let colorized = sanitized
           .replace(/fill\s*=\s*["'](?:#000000|#000|black|rgb\(0,\s*0,\s*0\))["']/gi, `fill="${color}"`)
           .replace(/stroke\s*=\s*["'](?:#000000|#000|black|rgb\(0,\s*0,\s*0\))["']/gi, `stroke="${color}"`)
           .replace(/fill\s*:\s*(?:#000000|#000|black|rgb\(0,\s*0,\s*0\))/gi, `fill: ${color}`)
-          .replace(/stroke\s*:\s*(?:#000000|#000|black|rgb\(0,\s*0,\s*0\))/gi, `stroke: ${color}`);
-        
-        // Also replace currentColor with the selected color
-        colorized = colorized
+          .replace(/stroke\s*:\s*(?:#000000|#000|black|rgb\(0,\s*0,\s*0\))/gi, `stroke: ${color}`)
           .replace(/fill\s*=\s*["']currentColor["']/gi, `fill="${color}"`)
           .replace(/stroke\s*=\s*["']currentColor["']/gi, `stroke="${color}"`)
           .replace(/fill\s*:\s*currentColor/gi, `fill: ${color}`)
-          .replace(/stroke\s*:\s*currentColor/gi, `stroke: ${color}`);
-        
-        // Reduce stroke-width to make borders thinner
-        colorized = colorized
+          .replace(/stroke\s*:\s*currentColor/gi, `stroke: ${color}`)
           .replace(/stroke-width\s*=\s*["']\d+["']/gi, `stroke-width="2"`)
           .replace(/stroke-width\s*:\s*\d+/gi, `stroke-width: 2`);
         
@@ -59,6 +124,70 @@ const InlineSvgBorder: React.FC<{
       style={style}
       dangerouslySetInnerHTML={{ __html: svgContent }}
     />
+  );
+};
+
+// Component to create an SVG clip path from border shape
+const SvgClipPath: React.FC<{ svgUrl: string; clipId: string }> = ({ svgUrl, clipId }) => {
+  const [clipContent, setClipContent] = useState<string>('');
+  
+  useEffect(() => {
+    if (!svgUrl) return;
+    
+    fetch(svgUrl)
+      .then(res => res.text())
+      .then(svg => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(svg, 'image/svg+xml');
+        const svgEl = doc.querySelector('svg');
+        
+        if (svgEl) {
+          const viewBox = svgEl.getAttribute('viewBox') || '0 0 128 128';
+          const [, , vbWidth, vbHeight] = viewBox.split(' ').map(Number);
+          const scaleX = 1 / vbWidth;
+          const scaleY = 1 / vbHeight;
+          
+          const circle = svgEl.querySelector('circle');
+          const path = svgEl.querySelector('path');
+          const rect = svgEl.querySelector('rect');
+          
+          let shapeContent = '';
+          if (circle) {
+            const cx = parseFloat(circle.getAttribute('cx') || '64') * scaleX;
+            const cy = parseFloat(circle.getAttribute('cy') || '64') * scaleY;
+            const r = parseFloat(circle.getAttribute('r') || '50') * scaleX;
+            shapeContent = `<circle cx="${cx}" cy="${cy}" r="${r}"/>`;
+          } else if (path) {
+            const d = path.getAttribute('d') || '';
+            const scaledD = d.replace(/[\d.]+/g, (match) => (parseFloat(match) * scaleX).toFixed(4));
+            shapeContent = `<path d="${scaledD}"/>`;
+          } else if (rect) {
+            const x = parseFloat(rect.getAttribute('x') || '0') * scaleX;
+            const y = parseFloat(rect.getAttribute('y') || '0') * scaleY;
+            const w = parseFloat(rect.getAttribute('width') || '100') * scaleX;
+            const h = parseFloat(rect.getAttribute('height') || '100') * scaleY;
+            const rx = parseFloat(rect.getAttribute('rx') || '0') * scaleX;
+            shapeContent = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}"/>`;
+          }
+          
+          if (shapeContent) {
+            setClipContent(shapeContent);
+          }
+        }
+      })
+      .catch(err => console.error('Failed to parse SVG for clip path:', err));
+  }, [svgUrl]);
+  
+  if (!clipContent) return null;
+  
+  return (
+    <svg width="0" height="0" style={{ position: 'absolute' }}>
+      <defs>
+        <clipPath id={clipId} clipPathUnits="objectBoundingBox">
+          <g dangerouslySetInnerHTML={{ __html: clipContent }} />
+        </clipPath>
+      </defs>
+    </svg>
   );
 };
 
@@ -105,6 +234,7 @@ export const CustomAvatar = ({
 }: CustomAvatarProps) => {
   const borderColor = user?.avatarBorderColor || '#ffffff';
   const safeDisplayName = user?.displayName || user?.username || "?";
+  const clipId = useMemo(() => `avatar-clip-${user?.id || 'default'}-${Math.random().toString(36).substr(2, 6)}`, [user?.id]);
   
   const { data: borderData } = useQuery<{ avatarBorder: AssetReward | null }>({
     queryKey: [`/api/user/${user?.id}/avatar-border`],
@@ -119,24 +249,29 @@ export const CustomAvatar = ({
   if (hasAvatarBorderOverlay) {
     return (
       <div className={`relative inline-flex items-center justify-center ${containerSizes[size]} ${className}`}>
+        {/* SVG Clip Path definition - clips avatar to match border shape */}
+        <SvgClipPath svgUrl={avatarBorder.imageUrl} clipId={clipId} />
+        
         {/* Glow effect behind the avatar - matches border color */}
         <div 
-          className={`absolute ${sizeClasses[size]} rounded-full z-0`}
+          className={`absolute ${sizeClasses[size]} z-0`}
           style={{
-            boxShadow: `0 0 25px ${borderColor}80, 0 0 50px ${borderColor}50, 0 0 75px ${borderColor}30`
+            boxShadow: `0 0 25px ${borderColor}80, 0 0 50px ${borderColor}50, 0 0 75px ${borderColor}30`,
+            clipPath: `url(#${clipId})`
           }}
         />
         
-        {/* Avatar - the actual profile picture */}
+        {/* Avatar - the actual profile picture, clipped to border shape */}
         <Avatar 
-          className={`${sizeClasses[size]} transition-all duration-300 rounded-full z-10 relative`}
+          className={`${sizeClasses[size]} transition-all duration-300 z-10 relative`}
+          style={{ clipPath: `url(#${clipId})` }}
         >
           <AvatarImage 
             src={user?.avatarUrl || ""} 
             alt={safeDisplayName} 
-            className="rounded-full object-cover w-full h-full"
+            className="object-cover w-full h-full"
           />
-          <AvatarFallback className="bg-primary/20 text-foreground font-semibold rounded-full">
+          <AvatarFallback className="bg-primary/20 text-foreground font-semibold">
             {safeDisplayName.substring(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
