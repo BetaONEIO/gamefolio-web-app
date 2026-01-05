@@ -41,6 +41,11 @@ const InlineSvgBorder: React.FC<{
           .replace(/fill\s*:\s*currentColor/gi, `fill: ${color}`)
           .replace(/stroke\s*:\s*currentColor/gi, `stroke: ${color}`);
         
+        // Reduce stroke-width to make borders thinner
+        colorized = colorized
+          .replace(/stroke-width\s*=\s*["']\d+["']/gi, `stroke-width="2"`)
+          .replace(/stroke-width\s*:\s*\d+/gi, `stroke-width: 2`);
+        
         setSvgContent(colorized);
       })
       .catch(err => console.error('Failed to load SVG:', err));
