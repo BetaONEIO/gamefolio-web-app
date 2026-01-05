@@ -199,10 +199,10 @@ export function ScreenshotCard({
         <h3 className="font-semibold text-sm line-clamp-2 leading-tight">{screenshot.title}</h3>
         
         {/* User info and stats row */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           {/* User with avatar */}
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full overflow-hidden bg-secondary flex items-center justify-center flex-shrink-0">
+          <div className="flex items-center gap-2 min-w-0 flex-shrink">
+            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-secondary flex items-center justify-center flex-shrink-0">
               {profile.avatarUrl ? (
                 <img 
                   src={profile.avatarUrl} 
@@ -213,17 +213,17 @@ export function ScreenshotCard({
                 <span className="text-xs font-medium">{profile.username?.charAt(0).toUpperCase()}</span>
               )}
             </div>
-            <span className="text-sm text-muted-foreground">{profile.displayName || profile.username}</span>
+            <span className="text-xs sm:text-sm text-muted-foreground truncate">{profile.displayName || profile.username}</span>
           </div>
           
           {/* Stats */}
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground flex-shrink-0">
             <button 
               onClick={handleLikeClick}
-              className={`flex items-center gap-1 transition-colors ${hasUserLiked ? 'text-green-500' : 'hover:text-green-500'}`}
+              className={`flex items-center gap-0.5 sm:gap-1 transition-colors ${hasUserLiked ? 'text-green-500' : 'hover:text-green-500'}`}
             >
               <Heart 
-                className={`h-4 w-4 transition-all duration-300 ${
+                className={`h-3.5 w-3.5 sm:h-4 sm:w-4 transition-all duration-300 ${
                   hasUserLiked 
                     ? `fill-green-500 stroke-green-500 ${isAnimating ? 'animate-bounce scale-125' : ''}` 
                     : 'fill-transparent'
@@ -245,10 +245,17 @@ export function ScreenshotCard({
               showCount={true}
             />
             
-            <div className="flex items-center gap-1">
-              <MessageSquare className="h-4 w-4" />
+            <button 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onSelect?.(screenshot);
+              }}
+              className="flex items-center gap-0.5 sm:gap-1 hover:text-primary transition-colors"
+            >
+              <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span>{(screenshot as any)._count?.comments || 0}</span>
-            </div>
+            </button>
           </div>
         </div>
         
