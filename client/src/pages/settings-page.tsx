@@ -625,14 +625,14 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Profile Banner Selection Section */}
+                {/* Profile Picture Border Selection Section */}
                 <div className="space-y-4 pt-4 border-t">
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5 text-primary" />
-                    <Label className="text-base font-medium">Profile Banner</Label>
+                    <Label className="text-base font-medium">Profile Picture Border</Label>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Select a banner from your unlocked rewards to customize your profile.
+                    Select a border from your unlocked rewards to customize your profile picture.
                   </p>
 
                   {/* Current Banner Preview */}

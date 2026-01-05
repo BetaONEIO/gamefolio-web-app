@@ -1366,13 +1366,13 @@ const AppearanceSettingsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Profile Banner */}
+              {/* Profile Picture Border */}
               <FormField
                 control={appearanceForm.control}
                 name="bannerUrl"
                 render={({ field }) => (
                   <FormItem className="space-y-3">
-                    <FormLabel>Profile Banner</FormLabel>
+                    <FormLabel>Profile Picture Border</FormLabel>
                     <FormControl>
                       <div className="space-y-3">
                         <div className="w-full h-48 overflow-hidden rounded-lg border border-border">

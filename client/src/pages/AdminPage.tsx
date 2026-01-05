@@ -677,7 +677,7 @@ const AdminPage = () => {
   // Asset type display names
   const assetTypeDisplayNames: Record<string, string> = {
     avatar_border: "Avatar Border",
-    profile_banner: "Profile Banner",
+    profile_banner: "Profile Picture Border",
     profile_background: "Profile Background",
     badge: "Badge",
     emoji: "Emoji",

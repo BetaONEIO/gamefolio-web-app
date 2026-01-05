@@ -837,7 +837,7 @@ const ProfileSettingsPage: React.FC = () => {
                     />
                   </div>
                   
-                  {/* Profile Banner Selection */}
+                  {/* Profile Picture Border Selection */}
                   <FormField
                     control={profileForm.control}
                     name="bannerUrl"
@@ -845,10 +845,10 @@ const ProfileSettingsPage: React.FC = () => {
                       <FormItem>
                         <div className="flex items-center gap-2 mb-2">
                           <Sparkles className="h-5 w-5 text-primary" />
-                          <FormLabel className="text-lg font-medium">Profile Banner</FormLabel>
+                          <FormLabel className="text-lg font-medium">Profile Picture Border</FormLabel>
                         </div>
                         <FormDescription className="mb-3">
-                          Select a banner from your unlocked rewards to customize your profile.
+                          Select a border from your unlocked rewards to customize your profile picture.
                         </FormDescription>
                         <FormControl>
                           <div className="space-y-4">
