@@ -2,24 +2,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, AssetReward } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import DOMPurify from "dompurify";
 
-// Component that renders avatar clipped to SVG border shape
-const ClippedAvatarWithBorder: React.FC<{
+// Component to render SVG border overlay
+const InlineSvgBorder: React.FC<{
   svgUrl: string;
-  avatarUrl: string;
   color: string;
   className?: string;
-  fallbackText: string;
-}> = ({ svgUrl, avatarUrl, color, className, fallbackText }) => {
-  const [svgData, setSvgData] = useState<{
-    viewBox: string;
-    clipShape: string;
-    borderContent: string;
-  } | null>(null);
-  
-  const clipId = useMemo(() => `clip-${Math.random().toString(36).substr(2, 9)}`, []);
+  style?: React.CSSProperties;
+}> = ({ svgUrl, color, className, style }) => {
+  const [svgContent, setSvgContent] = useState<string>('');
   
   useEffect(() => {
     if (!svgUrl) return;
@@ -33,39 +26,7 @@ const ClippedAvatarWithBorder: React.FC<{
           ADD_ATTR: ['attributeName', 'attributeType', 'begin', 'dur', 'end', 'from', 'to', 'by', 'values', 'keyTimes', 'keySplines', 'calcMode', 'repeatCount', 'repeatDur', 'fill', 'additive', 'accumulate', 'type', 'restart']
         });
         
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(sanitized, 'image/svg+xml');
-        const svgEl = doc.querySelector('svg');
-        
-        if (!svgEl) return;
-        
-        const viewBox = svgEl.getAttribute('viewBox') || '0 0 128 128';
-        
-        // Extract the first shape element for clipping
-        const circle = svgEl.querySelector('circle');
-        const path = svgEl.querySelector('path');
-        const rect = svgEl.querySelector('rect');
-        
-        let clipShape = '';
-        if (circle) {
-          const cx = circle.getAttribute('cx') || '64';
-          const cy = circle.getAttribute('cy') || '64';
-          const r = circle.getAttribute('r') || '50';
-          clipShape = `<circle cx="${cx}" cy="${cy}" r="${r}"/>`;
-        } else if (path) {
-          const d = path.getAttribute('d') || '';
-          clipShape = `<path d="${d}"/>`;
-        } else if (rect) {
-          const x = rect.getAttribute('x') || '0';
-          const y = rect.getAttribute('y') || '0';
-          const w = rect.getAttribute('width') || '100';
-          const h = rect.getAttribute('height') || '100';
-          const rx = rect.getAttribute('rx') || '0';
-          clipShape = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}"/>`;
-        }
-        
-        // Colorize and prepare border content (everything inside the SVG)
-        let borderContent = sanitized
+        let colorized = sanitized
           .replace(/fill\s*=\s*["'](?:#000000|#000|black|rgb\(0,\s*0,\s*0\))["']/gi, `fill="${color}"`)
           .replace(/stroke\s*=\s*["'](?:#000000|#000|black|rgb\(0,\s*0,\s*0\))["']/gi, `stroke="${color}"`)
           .replace(/fill\s*:\s*(?:#000000|#000|black|rgb\(0,\s*0,\s*0\))/gi, `fill: ${color}`)
@@ -77,62 +38,19 @@ const ClippedAvatarWithBorder: React.FC<{
           .replace(/stroke-width\s*=\s*["']\d+["']/gi, `stroke-width="2"`)
           .replace(/stroke-width\s*:\s*\d+/gi, `stroke-width: 2`);
         
-        // Extract inner content of SVG (remove outer svg tags)
-        const innerMatch = borderContent.match(/<svg[^>]*>([\s\S]*)<\/svg>/i);
-        const innerContent = innerMatch ? innerMatch[1] : '';
-        
-        setSvgData({ viewBox, clipShape, borderContent: innerContent });
+        setSvgContent(colorized);
       })
-      .catch(err => console.error('Failed to load SVG border:', err));
+      .catch(err => console.error('Failed to load SVG:', err));
   }, [svgUrl, color]);
   
-  if (!svgData) {
-    // Loading state - show circular avatar
-    return (
-      <div className={`relative ${className}`}>
-        <Avatar className="w-full h-full rounded-full">
-          <AvatarImage src={avatarUrl} className="rounded-full object-cover" />
-          <AvatarFallback className="bg-primary/20 text-foreground font-semibold rounded-full">
-            {fallbackText}
-          </AvatarFallback>
-        </Avatar>
-      </div>
-    );
-  }
-  
-  // Parse viewBox to get dimensions
-  const viewBoxParts = svgData.viewBox.split(' ').map(Number);
-  const vbWidth = viewBoxParts[2] || 128;
-  const vbHeight = viewBoxParts[3] || 128;
+  if (!svgContent) return null;
   
   return (
-    <svg 
-      viewBox={svgData.viewBox} 
+    <div 
       className={className}
-      style={{ overflow: 'visible' }}
-    >
-      {/* Define clip path from the border shape */}
-      <defs>
-        <clipPath id={clipId}>
-          <g dangerouslySetInnerHTML={{ __html: svgData.clipShape }} />
-        </clipPath>
-      </defs>
-      
-      {/* Avatar image clipped to the border shape */}
-      <image
-        xlinkHref={avatarUrl}
-        href={avatarUrl}
-        x="0"
-        y="0"
-        width={vbWidth}
-        height={vbHeight}
-        preserveAspectRatio="xMidYMid slice"
-        clipPath={`url(#${clipId})`}
-      />
-      
-      {/* Border strokes on top */}
-      <g dangerouslySetInnerHTML={{ __html: svgData.borderContent }} />
-    </svg>
+      style={style}
+      dangerouslySetInnerHTML={{ __html: svgContent }}
+    />
   );
 };
 
@@ -202,13 +120,27 @@ export const CustomAvatar = ({
           }}
         />
         
-        {/* Avatar clipped to border shape with border strokes on top */}
-        <ClippedAvatarWithBorder
+        {/* Avatar - the actual profile picture */}
+        <Avatar 
+          className={`${sizeClasses[size]} transition-all duration-300 rounded-full relative`}
+          style={{ zIndex: 10 }}
+        >
+          <AvatarImage 
+            src={user?.avatarUrl || ""} 
+            alt={safeDisplayName} 
+            className="rounded-full object-cover w-full h-full"
+          />
+          <AvatarFallback className="bg-primary/20 text-foreground font-semibold rounded-full">
+            {safeDisplayName.substring(0, 2).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        
+        {/* SVG Border overlay - scaled to fit around avatar */}
+        <InlineSvgBorder
           svgUrl={avatarBorder.imageUrl}
-          avatarUrl={user?.avatarUrl || ""}
           color={borderColor}
-          className={`${sizeClasses[size]} relative`}
-          fallbackText={safeDisplayName.substring(0, 2).toUpperCase()}
+          className="absolute inset-0 w-full h-full pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+          style={{ transform: 'scale(1.38)', zIndex: 20 }}
         />
       </div>
     );
