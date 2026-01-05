@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { User, Game } from "@shared/schema";
 
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { CustomAvatar } from "@/components/ui/custom-avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -341,14 +342,12 @@ const Header = () => {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="ml-2 sm:ml-4 p-1 h-auto hover:bg-transparent">
-                      <Avatar 
-                        className="w-10 h-10 sm:w-12 sm:h-12 md:w-8 md:h-8 lg:w-10 lg:h-10 xl:w-12 xl:h-12 border-2 transition-all duration-300 border-primary shadow-[0_0_0_2px_hsl(var(--primary)/0.4),0_0_15px_hsl(var(--primary)/0.2)]"
-                      >
-                        <AvatarImage src={user.avatarUrl || undefined} alt={user.displayName} />
-                        <AvatarFallback className="text-xs sm:text-sm">
-                          {getInitials(user.displayName)}
-                        </AvatarFallback>
-                      </Avatar>
+                      <CustomAvatar 
+                        user={user}
+                        size="md"
+                        borderIntensity="normal"
+                        showAvatarBorderOverlay={true}
+                      />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 mt-2">

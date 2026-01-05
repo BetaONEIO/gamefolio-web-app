@@ -7,6 +7,7 @@ import { X, Search, Home, Compass, Flame, User, Settings, LogOut, MessageSquare,
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CustomAvatar } from "@/components/ui/custom-avatar";
 import gamefolioLogo from '@assets/gamefolio social logo 3d circle web.png';
 
 const MobileMenu = () => {
@@ -110,12 +111,12 @@ const MobileMenu = () => {
           {/* User Profile */}
           {user && (
             <div className="p-4 border-b border-border flex items-center">
-              <Avatar className="w-10 h-10 border-2 border-accent">
-                <AvatarImage src={user.avatarUrl || undefined} alt={user.displayName} />
-                <AvatarFallback className="text-sm">
-                  {user.displayName.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
+              <CustomAvatar 
+                user={user}
+                size="md"
+                borderIntensity="normal"
+                showAvatarBorderOverlay={true}
+              />
               <div className="ml-3">
                 <p className="font-medium">{user.displayName}</p>
                 <p className="text-xs text-muted-foreground">@{user.username}</p>
