@@ -21,6 +21,57 @@ import { Check } from "lucide-react";
 import Cropper from "react-easy-crop";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
+import DOMPurify from "dompurify";
+
+// Component to fetch SVG and render it inline with color replacement
+const InlineSvgBorder: React.FC<{
+  svgUrl: string;
+  color: string;
+  className?: string;
+}> = ({ svgUrl, color, className }) => {
+  const [svgContent, setSvgContent] = useState<string>('');
+  
+  useEffect(() => {
+    if (!svgUrl) return;
+    
+    fetch(svgUrl)
+      .then(res => res.text())
+      .then(svg => {
+        // Sanitize the SVG
+        const sanitized = DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } });
+        
+        // Replace black colors with the user's selected color
+        // This handles various formats: #000, #000000, black, rgb(0,0,0)
+        let colorized = sanitized
+          .replace(/fill\s*=\s*["'](?:#000000|#000|black|rgb\(0,\s*0,\s*0\))["']/gi, `fill="${color}"`)
+          .replace(/stroke\s*=\s*["'](?:#000000|#000|black|rgb\(0,\s*0,\s*0\))["']/gi, `stroke="${color}"`)
+          .replace(/fill\s*:\s*(?:#000000|#000|black|rgb\(0,\s*0,\s*0\))/gi, `fill: ${color}`)
+          .replace(/stroke\s*:\s*(?:#000000|#000|black|rgb\(0,\s*0,\s*0\))/gi, `stroke: ${color}`);
+        
+        // Also replace currentColor with the selected color
+        colorized = colorized
+          .replace(/fill\s*=\s*["']currentColor["']/gi, `fill="${color}"`)
+          .replace(/stroke\s*=\s*["']currentColor["']/gi, `stroke="${color}"`)
+          .replace(/fill\s*:\s*currentColor/gi, `fill: ${color}`)
+          .replace(/stroke\s*:\s*currentColor/gi, `stroke: ${color}`);
+        
+        setSvgContent(colorized);
+      })
+      .catch(err => console.error('Failed to load SVG:', err));
+  }, [svgUrl, color]);
+  
+  if (!svgContent) return null;
+  
+  return (
+    <div 
+      className={className}
+      dangerouslySetInnerHTML={{ __html: svgContent }}
+      style={{
+        filter: `drop-shadow(0 0 4px ${color}80) drop-shadow(0 0 8px ${color}40)`,
+      }}
+    />
+  );
+};
 
 // Utility function to create a cropped image from canvas
 const createImage = (url: string): Promise<HTMLImageElement> =>
@@ -629,46 +680,16 @@ export default function SettingsPage() {
                             </div>
                           )}
                         </div>
-                        {/* SVG Border Overlay - colored using CSS filter */}
+                        {/* SVG Border Overlay - rendered inline with color replacement */}
                         {selectedBorderId && avatarBorders && (() => {
                           const border = (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId);
                           if (!border) return null;
                           
-                          // Convert hex color to CSS filter for SVG colorization
-                          // This creates a colored glow effect around the SVG
-                          const hexToHsl = (hex: string) => {
-                            const r = parseInt(hex.slice(1, 3), 16) / 255;
-                            const g = parseInt(hex.slice(3, 5), 16) / 255;
-                            const b = parseInt(hex.slice(5, 7), 16) / 255;
-                            const max = Math.max(r, g, b), min = Math.min(r, g, b);
-                            let h = 0, s = 0, l = (max + min) / 2;
-                            if (max !== min) {
-                              const d = max - min;
-                              s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-                              switch (max) {
-                                case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-                                case g: h = ((b - r) / d + 2) / 6; break;
-                                case b: h = ((r - g) / d + 4) / 6; break;
-                              }
-                            }
-                            return { h: h * 360, s: s * 100, l: l * 100 };
-                          };
-                          
-                          const hsl = hexToHsl(avatarBorderColor);
-                          // CSS filter to colorize - works best for white/light SVGs
-                          const colorFilter = `
-                            drop-shadow(0 0 6px ${avatarBorderColor})
-                            drop-shadow(0 0 12px ${avatarBorderColor}80)
-                            drop-shadow(0 0 20px ${avatarBorderColor}40)
-                            brightness(1.1) saturate(1.2) hue-rotate(${hsl.h - 120}deg)
-                          `;
-                          
                           return (
-                            <img
-                              src={border.imageUrl}
-                              alt="Border"
-                              className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-                              style={{ filter: colorFilter }}
+                            <InlineSvgBorder
+                              svgUrl={border.imageUrl}
+                              color={avatarBorderColor}
+                              className="absolute inset-0 w-full h-full pointer-events-none [&>svg]:w-full [&>svg]:h-full"
                             />
                           );
                         })()}
