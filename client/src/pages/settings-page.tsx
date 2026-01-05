@@ -764,9 +764,6 @@ export default function SettingsPage() {
                     <div className="relative h-28 w-28 flex items-center justify-center">
                       <div 
                         className="h-20 w-20 rounded-full overflow-hidden"
-                        style={{
-                          boxShadow: '0 0 0 3px hsl(var(--primary)), 0 0 20px hsl(var(--primary) / 0.4)'
-                        }}
                       >
                         <img 
                           src={avatarPreview || profileData.avatarUrl || ""} 
@@ -779,16 +776,14 @@ export default function SettingsPage() {
                           </div>
                         )}
                       </div>
+                      {/* SVG Border Overlay with color replacement */}
                       {selectedBorderId && avatarBorders && (() => {
                         const border = (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId);
                         return border ? (
-                          <img
-                            src={border.imageUrl}
-                            alt="Border preview"
-                            className="absolute inset-0 w-full h-full object-contain pointer-events-none z-10"
-                            style={{
-                              filter: 'drop-shadow(0 0 8px hsl(var(--primary) / 0.6)) drop-shadow(0 0 16px hsl(var(--primary) / 0.3))'
-                            }}
+                          <InlineSvgBorder
+                            svgUrl={border.imageUrl}
+                            color={avatarBorderColor}
+                            className="absolute inset-0 w-full h-full pointer-events-none z-10 [&>svg]:w-full [&>svg]:h-full"
                           />
                         ) : null;
                       })()}
