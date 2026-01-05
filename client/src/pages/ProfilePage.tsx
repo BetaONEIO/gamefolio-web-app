@@ -7,6 +7,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CustomAvatar } from "@/components/ui/custom-avatar";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
@@ -1147,26 +1148,18 @@ const ProfilePage = () => {
                 <div className="w-full h-full rounded-full bg-background"></div>
               </div>
               <div 
-                className="relative z-10 border-4 border-primary shadow-2xl cursor-pointer hover:opacity-90 transition-opacity w-32 h-32 rounded-lg overflow-hidden"
+                className="relative z-10 cursor-pointer hover:opacity-90 transition-opacity"
                 style={{ 
                   boxShadow: `0 0 30px hsl(var(--primary) / 0.5), 0 0 60px hsl(var(--primary) / 0.2)`
                 }}
                 onClick={() => profile.avatarUrl && openLightbox(profile.avatarUrl, profile.displayName, profile.username)}
               >
-                <Avatar 
-                  className="w-full h-full rounded-lg [&>span]:rounded-lg"
-                >
-                  <AvatarImage 
-                    src={profile.avatarUrl || undefined} 
-                    alt={profile.displayName}
-                    className="rounded-lg object-cover"
-                  />
-                  <AvatarFallback
-                    className="text-3xl text-primary-foreground font-bold bg-primary rounded-lg"
-                  >
-                    {profile.displayName.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
+                <CustomAvatar 
+                  user={profile}
+                  size="2xl"
+                  borderIntensity="strong"
+                  showAvatarBorderOverlay={true}
+                />
               </div>
               {/* Level Badge with Progress */}
               <div className="absolute -bottom-4 -right-4 z-20">
@@ -1472,26 +1465,19 @@ const ProfilePage = () => {
               <div className="w-full h-full rounded-full bg-background"></div>
             </div>
             <div 
-              className="relative z-10 border-4 border-primary shadow-2xl cursor-pointer hover:opacity-90 transition-opacity w-56 h-56 rounded-lg overflow-hidden"
+              className="relative z-10 cursor-pointer hover:opacity-90 transition-opacity"
               style={{ 
                 boxShadow: `0 0 30px hsl(var(--primary) / 0.5), 0 0 60px hsl(var(--primary) / 0.2)`
               }}
               onClick={() => profile.avatarUrl && openLightbox(profile.avatarUrl, profile.displayName, profile.username)}
             >
-              <Avatar 
-                className="w-full h-full rounded-lg [&>span]:rounded-lg"
-              >
-                <AvatarImage 
-                  src={profile.avatarUrl || undefined} 
-                  alt={profile.displayName}
-                  className="rounded-lg object-cover"
-                />
-                <AvatarFallback
-                  className="text-3xl text-primary-foreground font-bold bg-primary rounded-lg"
-                >
-                  {profile.displayName.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
+              <CustomAvatar 
+                user={profile}
+                size="2xl"
+                className="w-56 h-56"
+                borderIntensity="strong"
+                showAvatarBorderOverlay={true}
+              />
             </div>
             {/* Level Badge with Progress */}
             <div className="absolute -bottom-5 -right-5 z-20">
