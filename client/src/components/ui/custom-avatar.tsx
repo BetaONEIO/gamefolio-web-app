@@ -247,19 +247,18 @@ export const CustomAvatar = ({
   if (hasAvatarBorderOverlay) {
     return (
       <div className={`relative inline-flex items-center justify-center ${containerSizes[size]} ${className}`}>
-        {/* Glow effect behind the avatar - scaled larger to be visible outside the border */}
+        {/* Glow effect behind the profile picture - subtle glow matching border color */}
         <div 
           className={`absolute ${sizeClasses[size]} rounded-full`}
           style={{
-            boxShadow: `0 0 30px 10px ${borderColor}60, 0 0 60px 20px ${borderColor}40, 0 0 90px 30px ${borderColor}20`,
-            transform: 'scale(1.5)',
+            boxShadow: `0 0 20px ${borderColor}50, 0 0 40px ${borderColor}30`,
             zIndex: 0
           }}
         />
         
-        {/* Avatar - the actual profile picture */}
+        {/* Avatar - the actual profile picture (no border, just the image) */}
         <Avatar 
-          className={`${sizeClasses[size]} transition-all duration-300 rounded-full relative`}
+          className={`${sizeClasses[size]} transition-all duration-300 rounded-full relative border-0`}
           style={{ zIndex: 10 }}
         >
           <AvatarImage 
