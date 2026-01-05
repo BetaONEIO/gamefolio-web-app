@@ -674,21 +674,34 @@ export default function SettingsPage() {
 
                   {/* Current Border Preview */}
                   <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg border">
-                    <div className="relative inline-flex items-center justify-center">
-                      <Avatar className="h-20 w-20">
-                        <AvatarImage src={avatarPreview || profileData.avatarUrl || ""} alt="Preview" />
-                        <AvatarFallback className="bg-primary/20 text-foreground font-semibold">
-                          {user?.username?.substring(0, 2).toUpperCase() || "U"}
-                        </AvatarFallback>
-                      </Avatar>
+                    <div className="relative h-28 w-28 flex items-center justify-center">
+                      <div 
+                        className="h-20 w-20 rounded-full overflow-hidden"
+                        style={{
+                          boxShadow: '0 0 0 3px hsl(var(--primary)), 0 0 20px hsl(var(--primary) / 0.4)'
+                        }}
+                      >
+                        <img 
+                          src={avatarPreview || profileData.avatarUrl || ""} 
+                          alt="Preview" 
+                          className="w-full h-full object-cover rounded-full"
+                        />
+                        {!(avatarPreview || profileData.avatarUrl) && (
+                          <div className="w-full h-full flex items-center justify-center bg-primary/20 text-foreground font-semibold text-xl rounded-full">
+                            {user?.username?.substring(0, 2).toUpperCase() || "U"}
+                          </div>
+                        )}
+                      </div>
                       {selectedBorderId && avatarBorders && (() => {
                         const border = (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId);
                         return border ? (
                           <img
                             src={border.imageUrl}
                             alt="Border preview"
-                            className="absolute h-28 w-28 object-contain pointer-events-none"
-                            style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
+                            className="absolute inset-0 w-full h-full object-contain pointer-events-none z-10"
+                            style={{
+                              filter: 'drop-shadow(0 0 8px hsl(var(--primary) / 0.6)) drop-shadow(0 0 16px hsl(var(--primary) / 0.3))'
+                            }}
                           />
                         ) : null;
                       })()}
