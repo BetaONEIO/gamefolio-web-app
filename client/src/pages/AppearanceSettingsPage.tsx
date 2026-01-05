@@ -523,62 +523,62 @@ const ProfilePictureWithBorder: React.FC<{
   avatarBorderColor?: string | null;
   size?: 'md' | 'lg' | 'xl';
 }> = ({ userId, avatarUrl, displayName, selectedBorderId, avatarBorderColor, size = 'xl' }) => {
-  // Fetch unlocked borders to display pending selections
   const { data: unlockedBorders = [] } = useQuery<AssetReward[]>({
     queryKey: ['/api/user/avatar-borders'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!userId && !!selectedBorderId,
   });
 
-  // Find the border data from unlocked borders
   const borderData = selectedBorderId ? unlockedBorders.find(b => b.id === selectedBorderId) : null;
+  const borderColor = avatarBorderColor || 'hsl(var(--primary))';
 
-  const sizeClasses = {
-    md: 'h-24 w-24',
-    lg: 'h-32 w-32',
-    xl: 'h-48 w-48',
-  };
-
-  const borderSizeClasses = {
-    md: 'h-28 w-28',
-    lg: 'h-36 w-36',
+  const containerSizes = {
+    md: 'h-32 w-32',
+    lg: 'h-40 w-40',
     xl: 'h-56 w-56',
   };
 
+  const avatarSizes = {
+    md: 'h-24 w-24',
+    lg: 'h-32 w-32',
+    xl: 'h-44 w-44',
+  };
+
   return (
-    <div className={`relative ${borderSizeClasses[size]} flex items-center justify-center`}>
-      {/* Border overlay if selected (image-based border from loot box) */}
+    <div className={`relative ${containerSizes[size]} flex items-center justify-center`}>
+      {/* Circular Avatar */}
+      <div 
+        className={`relative ${avatarSizes[size]} rounded-full overflow-hidden`}
+        style={{
+          boxShadow: `
+            0 0 0 3px ${borderColor},
+            0 0 20px ${borderColor}40,
+            0 0 40px ${borderColor}20
+          `
+        }}
+      >
+        <img
+          src={avatarUrl || ''}
+          alt={displayName}
+          className="w-full h-full object-cover rounded-full"
+        />
+        {!avatarUrl && (
+          <div className="absolute inset-0 flex items-center justify-center bg-primary/20 text-4xl font-bold rounded-full">
+            {displayName?.charAt(0) || '?'}
+          </div>
+        )}
+      </div>
+      
+      {/* Border overlay if selected */}
       {borderData?.imageUrl && (
         <img
           src={borderData.imageUrl}
           alt="Avatar border"
           className="absolute inset-0 w-full h-full object-contain z-10 pointer-events-none"
+          style={{
+            filter: `drop-shadow(0 0 8px ${borderColor}60) drop-shadow(0 0 16px ${borderColor}30)`,
+          }}
         />
-      )}
-      {/* Avatar with color border */}
-      <div 
-        className="relative rounded-full p-[4px]"
-        style={{ 
-          background: avatarBorderColor || 'hsl(var(--border))'
-        }}
-      >
-        <div className="rounded-full bg-background p-1">
-          <Avatar className={sizeClasses[size]}>
-            <AvatarImage 
-              src={avatarUrl} 
-              alt={displayName} 
-            />
-            <AvatarFallback className="text-4xl font-bold">
-              {displayName?.charAt(0) || '?'}
-            </AvatarFallback>
-          </Avatar>
-        </div>
-      </div>
-      {/* Show border color indicator */}
-      {avatarBorderColor && (
-        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-xs text-muted-foreground bg-background/80 px-2 py-0.5 rounded-full whitespace-nowrap">
-          Border: <span style={{ color: avatarBorderColor }}>{avatarBorderColor}</span>
-        </div>
       )}
     </div>
   );
