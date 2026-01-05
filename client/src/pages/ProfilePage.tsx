@@ -1137,16 +1137,19 @@ const ProfilePage = () => {
           {/* Profile Picture - Centered on Mobile */}
           <div className="flex justify-center mb-6" style={{ transform: 'translateY(-28px)' }}>
             <div className="relative">
-              <div 
-                className="absolute inset-0 rounded-full animate-pulse"
-                style={{
-                  background: `linear-gradient(45deg, hsl(var(--primary)), hsl(var(--card)))`,
-                  padding: '4px',
-                  filter: `drop-shadow(0 0 20px hsl(var(--primary) / 0.4))`,
-                }}
-              >
-                <div className="w-full h-full rounded-full bg-background"></div>
-              </div>
+              {/* Only show circular glow when user has no SVG border selected */}
+              {!profile.selectedAvatarBorderId && (
+                <div 
+                  className="absolute inset-0 rounded-full animate-pulse"
+                  style={{
+                    background: `linear-gradient(45deg, hsl(var(--primary)), hsl(var(--card)))`,
+                    padding: '4px',
+                    filter: `drop-shadow(0 0 20px hsl(var(--primary) / 0.4))`,
+                  }}
+                >
+                  <div className="w-full h-full rounded-full bg-background"></div>
+                </div>
+              )}
               <div 
                 className="relative z-10 cursor-pointer hover:opacity-90 transition-opacity"
                 onClick={() => profile.avatarUrl && openLightbox(profile.avatarUrl, profile.displayName, profile.username)}
@@ -1451,16 +1454,19 @@ const ProfilePage = () => {
         <div className="hidden md:flex items-start gap-4 md:gap-8 pb-6" style={{ marginTop: '-56px', paddingTop: '24px' }}>
           {/* Profile Picture positioned to overlap banner */}
           <div className="relative flex-shrink-0" style={{ transform: 'translateY(-28px)' }}>
-            <div 
-              className="absolute inset-0 rounded-full animate-pulse"
-              style={{
-                background: `linear-gradient(45deg, hsl(var(--primary)), hsl(var(--card)))`,
-                padding: '4px',
-                filter: `drop-shadow(0 0 20px hsl(var(--primary) / 0.4))`,
-              }}
-            >
-              <div className="w-full h-full rounded-full bg-background"></div>
-            </div>
+            {/* Only show circular glow when user has no SVG border selected */}
+            {!profile.selectedAvatarBorderId && (
+              <div 
+                className="absolute inset-0 rounded-full animate-pulse"
+                style={{
+                  background: `linear-gradient(45deg, hsl(var(--primary)), hsl(var(--card)))`,
+                  padding: '4px',
+                  filter: `drop-shadow(0 0 20px hsl(var(--primary) / 0.4))`,
+                }}
+              >
+                <div className="w-full h-full rounded-full bg-background"></div>
+              </div>
+            )}
             <div 
               className="relative z-10 cursor-pointer hover:opacity-90 transition-opacity"
               onClick={() => profile.avatarUrl && openLightbox(profile.avatarUrl, profile.displayName, profile.username)}

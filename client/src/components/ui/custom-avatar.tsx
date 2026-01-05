@@ -47,9 +47,6 @@ const InlineSvgBorder: React.FC<{
     <div 
       className={className}
       dangerouslySetInnerHTML={{ __html: svgContent }}
-      style={{
-        filter: `drop-shadow(0 0 4px ${color}80) drop-shadow(0 0 8px ${color}40)`,
-      }}
     />
   );
 };
