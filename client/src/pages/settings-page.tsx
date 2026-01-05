@@ -582,35 +582,34 @@ export default function SettingsPage() {
                     {/* Current/Preview Avatar with Border */}
                     <div className="flex flex-col items-center space-y-3">
                       <div 
-                        className="relative rounded-full p-[4px]"
-                        style={{ 
-                          background: user?.avatarBorderColor 
-                            ? user.avatarBorderColor
-                            : 'hsl(var(--border))'
-                        }}
+                        className="relative h-36 w-36 flex items-center justify-center"
                       >
-                        <div className="rounded-full bg-background p-1">
-                          <Avatar className="h-32 w-32">
-                            <AvatarImage 
-                              src={avatarPreview || user?.avatarUrl || ''} 
-                              alt={user?.displayName}
-                              key={user?.avatarUrl || 'default'}
-                            />
-                            <AvatarFallback className="text-3xl font-bold">
-                              {user?.displayName?.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
+                        <div 
+                          className="h-32 w-32 rounded-full overflow-hidden"
+                          style={{
+                            boxShadow: `
+                              0 0 0 3px ${user?.avatarBorderColor || 'hsl(var(--primary))'},
+                              0 0 20px ${user?.avatarBorderColor || 'hsl(var(--primary))'}40,
+                              0 0 40px ${user?.avatarBorderColor || 'hsl(var(--primary))'}20
+                            `
+                          }}
+                        >
+                          <img 
+                            src={avatarPreview || user?.avatarUrl || ''} 
+                            alt={user?.displayName || 'Profile'}
+                            className="w-full h-full object-cover rounded-full"
+                          />
+                          {!(avatarPreview || user?.avatarUrl) && (
+                            <div className="w-full h-full flex items-center justify-center bg-primary/20 text-3xl font-bold rounded-full">
+                              {user?.displayName?.charAt(0) || '?'}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="text-center">
                         <span className="text-sm font-medium">
                           {avatarFile ? 'New Preview' : 'Current'}
                         </span>
-                        {user?.avatarBorderColor && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Border: <span style={{ color: user.avatarBorderColor }}>{user.avatarBorderColor}</span>
-                          </p>
-                        )}
                       </div>
                     </div>
                     
