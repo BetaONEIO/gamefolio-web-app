@@ -103,7 +103,7 @@ export const CustomAvatar = ({
   borderIntensity = "normal",
   showAvatarBorderOverlay = true
 }: CustomAvatarProps) => {
-  const borderColor = user?.avatarBorderColor || 'hsl(var(--primary))';
+  const borderColor = user?.avatarBorderColor || '#ffffff';
   const safeDisplayName = user?.displayName || user?.username || "?";
   
   const { data: borderData } = useQuery<{ avatarBorder: AssetReward | null }>({
