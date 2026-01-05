@@ -42,13 +42,14 @@ export const CustomAvatar = ({
   borderIntensity = "normal",
   showAvatarBorderOverlay = true
 }: CustomAvatarProps) => {
-  const borderColor = user.avatarBorderColor || 'hsl(var(--primary))';
+  const borderColor = user?.avatarBorderColor || 'hsl(var(--primary))';
+  const safeDisplayName = user?.displayName || user?.username || "?";
   
   // Fetch selected avatar border if user has one selected
   const { data: borderData } = useQuery<{ avatarBorder: AssetReward | null }>({
-    queryKey: [`/api/user/${user.id}/avatar-border`],
+    queryKey: [`/api/user/${user?.id}/avatar-border`],
     queryFn: getQueryFn({ on401: 'returnNull' }),
-    enabled: showAvatarBorderOverlay && !!user.selectedAvatarBorderId,
+    enabled: showAvatarBorderOverlay && !!user?.selectedAvatarBorderId,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
@@ -65,9 +66,9 @@ export const CustomAvatar = ({
             boxShadow: borderStyles[borderIntensity](borderColor)
           } : {}}
         >
-          <AvatarImage src={user.avatarUrl || ""} alt={user.username} />
+          <AvatarImage src={user?.avatarUrl || ""} alt={safeDisplayName} className="rounded-full object-cover" />
           <AvatarFallback className="bg-primary/20 text-foreground font-semibold rounded-full">
-            {user.username.substring(0, 2).toUpperCase()}
+            {safeDisplayName.substring(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
         
@@ -86,16 +87,18 @@ export const CustomAvatar = ({
     );
   }
 
+  const displayName = user.displayName || user.username || "?";
+  
   return (
     <Avatar 
-      className={`${sizeClasses[size]} transition-all duration-300 rounded-lg ${className}`}
+      className={`${sizeClasses[size]} transition-all duration-300 rounded-full ${className}`}
       style={showBorder ? {
         boxShadow: borderStyles[borderIntensity](borderColor)
       } : {}}
     >
-      <AvatarImage src={user.avatarUrl || ""} alt={user.username} />
-      <AvatarFallback className="bg-primary/20 text-foreground font-semibold rounded-lg">
-        {user.username.substring(0, 2).toUpperCase()}
+      <AvatarImage src={user.avatarUrl || ""} alt={displayName} className="rounded-full object-cover" />
+      <AvatarFallback className="bg-primary/20 text-foreground font-semibold rounded-full">
+        {displayName.substring(0, 2).toUpperCase()}
       </AvatarFallback>
     </Avatar>
   );
