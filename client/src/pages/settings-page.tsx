@@ -354,6 +354,7 @@ export default function SettingsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/avatar-border`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
       toast({
         title: "Border updated!",
         description: "Your profile picture border has been saved.",
