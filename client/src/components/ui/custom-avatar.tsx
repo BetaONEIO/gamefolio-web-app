@@ -20,8 +20,12 @@ const InlineSvgBorder: React.FC<{
     fetch(svgUrl)
       .then(res => res.text())
       .then(svg => {
-        // Sanitize the SVG
-        const sanitized = DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } });
+        // Sanitize the SVG with animation elements allowed
+        const sanitized = DOMPurify.sanitize(svg, { 
+          USE_PROFILES: { svg: true, svgFilters: true },
+          ADD_TAGS: ['animate', 'animateTransform', 'animateMotion', 'set'],
+          ADD_ATTR: ['attributeName', 'attributeType', 'begin', 'dur', 'end', 'from', 'to', 'by', 'values', 'keyTimes', 'keySplines', 'calcMode', 'repeatCount', 'repeatDur', 'fill', 'additive', 'accumulate', 'type', 'restart']
+        });
         
         // Replace black colors with the user's selected color
         let colorized = sanitized
