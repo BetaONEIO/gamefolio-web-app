@@ -38,7 +38,9 @@ import {
   type Badge, type InsertBadge,
   type BadgeWithStats,
   type Screenshot, type InsertScreenshot,
-  type InsertScreenshot as InsertScreenshotData
+  type InsertScreenshot as InsertScreenshotData,
+  type ScreenshotComment, type InsertScreenshotComment,
+  type ScreenshotCommentWithUser
 } from "@shared/schema";
 
 export interface IStorage {
@@ -114,6 +116,11 @@ export interface IStorage {
   createClipMention(mention: InsertClipMention): Promise<ClipMention>;
   createCommentMention(mention: InsertCommentMention): Promise<CommentMention>;
   createScreenshotCommentMention(mention: InsertScreenshotCommentMention): Promise<ScreenshotCommentMention>;
+
+  // Screenshot comment operations
+  createScreenshotComment(commentData: InsertScreenshotComment): Promise<ScreenshotComment>;
+  getScreenshotComments(screenshotId: number): Promise<ScreenshotCommentWithUser[]>;
+  deleteScreenshotComment(id: number): Promise<boolean>;
 
   // User game favorites operations
   addUserGameFavorite(favorite: InsertUserGameFavorite): Promise<UserGameFavorite>;
