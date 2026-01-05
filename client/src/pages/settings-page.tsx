@@ -617,13 +617,6 @@ export default function SettingsPage() {
                       >
                         <div 
                           className="h-28 w-28 rounded-full overflow-hidden"
-                          style={{
-                            boxShadow: selectedBorderId ? `
-                              0 0 0 3px ${avatarBorderColor},
-                              0 0 20px ${avatarBorderColor}40,
-                              0 0 40px ${avatarBorderColor}20
-                            ` : 'none'
-                          }}
                         >
                           <img 
                             src={avatarPreview || user?.avatarUrl || ''} 
@@ -636,19 +629,48 @@ export default function SettingsPage() {
                             </div>
                           )}
                         </div>
-                        {/* SVG Border Overlay */}
+                        {/* SVG Border Overlay - colored using CSS filter */}
                         {selectedBorderId && avatarBorders && (() => {
                           const border = (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId);
-                          return border ? (
+                          if (!border) return null;
+                          
+                          // Convert hex color to CSS filter for SVG colorization
+                          // This creates a colored glow effect around the SVG
+                          const hexToHsl = (hex: string) => {
+                            const r = parseInt(hex.slice(1, 3), 16) / 255;
+                            const g = parseInt(hex.slice(3, 5), 16) / 255;
+                            const b = parseInt(hex.slice(5, 7), 16) / 255;
+                            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+                            let h = 0, s = 0, l = (max + min) / 2;
+                            if (max !== min) {
+                              const d = max - min;
+                              s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                              switch (max) {
+                                case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                                case g: h = ((b - r) / d + 2) / 6; break;
+                                case b: h = ((r - g) / d + 4) / 6; break;
+                              }
+                            }
+                            return { h: h * 360, s: s * 100, l: l * 100 };
+                          };
+                          
+                          const hsl = hexToHsl(avatarBorderColor);
+                          // CSS filter to colorize - works best for white/light SVGs
+                          const colorFilter = `
+                            drop-shadow(0 0 6px ${avatarBorderColor})
+                            drop-shadow(0 0 12px ${avatarBorderColor}80)
+                            drop-shadow(0 0 20px ${avatarBorderColor}40)
+                            brightness(1.1) saturate(1.2) hue-rotate(${hsl.h - 120}deg)
+                          `;
+                          
+                          return (
                             <img
                               src={border.imageUrl}
                               alt="Border"
                               className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-                              style={{
-                                filter: `drop-shadow(0 0 8px ${avatarBorderColor}60) drop-shadow(0 0 16px ${avatarBorderColor}30)`,
-                              }}
+                              style={{ filter: colorFilter }}
                             />
-                          ) : null;
+                          );
                         })()}
                       </div>
                       <div className="text-center">
