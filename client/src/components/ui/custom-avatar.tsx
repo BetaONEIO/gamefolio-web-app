@@ -100,6 +100,11 @@ const ClippedAvatarWithBorder: React.FC<{
     );
   }
   
+  // Parse viewBox to get dimensions
+  const viewBoxParts = svgData.viewBox.split(' ').map(Number);
+  const vbWidth = viewBoxParts[2] || 128;
+  const vbHeight = viewBoxParts[3] || 128;
+  
   return (
     <svg 
       viewBox={svgData.viewBox} 
@@ -115,11 +120,12 @@ const ClippedAvatarWithBorder: React.FC<{
       
       {/* Avatar image clipped to the border shape */}
       <image
+        xlinkHref={avatarUrl}
         href={avatarUrl}
         x="0"
         y="0"
-        width="100%"
-        height="100%"
+        width={vbWidth}
+        height={vbHeight}
         preserveAspectRatio="xMidYMid slice"
         clipPath={`url(#${clipId})`}
       />
