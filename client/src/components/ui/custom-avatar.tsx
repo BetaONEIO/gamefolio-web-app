@@ -136,12 +136,12 @@ export const CustomAvatar = ({
           </AvatarFallback>
         </Avatar>
         
-        {/* SVG Border with inline color replacement - scaled to fit around avatar */}
+        {/* SVG Border with inline color replacement - scaled to fit snugly around avatar */}
         <InlineSvgBorder
           svgUrl={avatarBorder.imageUrl}
           color={borderColor}
           className="absolute inset-0 w-full h-full pointer-events-none z-20 [&>svg]:w-full [&>svg]:h-full"
-          style={{ transform: 'scale(1.38)' }}
+          style={{ transform: 'scale(1.75)' }}
         />
       </div>
     );
