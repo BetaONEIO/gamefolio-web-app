@@ -336,12 +336,19 @@ export default function SettingsPage() {
   // Track selected avatar border ID
   const [selectedBorderId, setSelectedBorderId] = useState<number | null>(user?.selectedAvatarBorderId || null);
   
+  // Track avatar border color for SVG customization
+  const [avatarBorderColor, setAvatarBorderColor] = useState<string>(user?.avatarBorderColor || '#4ADE80');
+  const [showBorderColorPicker, setShowBorderColorPicker] = useState(false);
+  
   // Update selected border when user data loads
   useEffect(() => {
     if (user?.selectedAvatarBorderId !== undefined) {
       setSelectedBorderId(user.selectedAvatarBorderId);
     }
-  }, [user?.selectedAvatarBorderId]);
+    if (user?.avatarBorderColor) {
+      setAvatarBorderColor(user.avatarBorderColor);
+    }
+  }, [user?.selectedAvatarBorderId, user?.avatarBorderColor]);
   
   // Mutation to save avatar border selection
   const saveAvatarBorderMutation = useMutation({
@@ -358,6 +365,30 @@ export default function SettingsPage() {
       toast({
         title: "Border updated!",
         description: "Your profile picture border has been saved.",
+        variant: "gamefolioSuccess",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Update failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Mutation to save avatar border color
+  const saveBorderColorMutation = useMutation({
+    mutationFn: async (color: string) => {
+      const response = await apiRequest("PATCH", `/api/users/${user?.id}`, { avatarBorderColor: color });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
+      toast({
+        title: "Border color updated!",
+        description: "Your border color has been saved.",
         variant: "gamefolioSuccess",
       });
     },
@@ -585,13 +616,13 @@ export default function SettingsPage() {
                         className="relative h-36 w-36 flex items-center justify-center"
                       >
                         <div 
-                          className="h-32 w-32 rounded-full overflow-hidden"
+                          className="h-28 w-28 rounded-full overflow-hidden"
                           style={{
-                            boxShadow: `
-                              0 0 0 3px ${user?.avatarBorderColor || 'hsl(var(--primary))'},
-                              0 0 20px ${user?.avatarBorderColor || 'hsl(var(--primary))'}40,
-                              0 0 40px ${user?.avatarBorderColor || 'hsl(var(--primary))'}20
-                            `
+                            boxShadow: selectedBorderId ? `
+                              0 0 0 3px ${avatarBorderColor},
+                              0 0 20px ${avatarBorderColor}40,
+                              0 0 40px ${avatarBorderColor}20
+                            ` : 'none'
                           }}
                         >
                           <img 
@@ -605,6 +636,20 @@ export default function SettingsPage() {
                             </div>
                           )}
                         </div>
+                        {/* SVG Border Overlay */}
+                        {selectedBorderId && avatarBorders && (() => {
+                          const border = (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId);
+                          return border ? (
+                            <img
+                              src={border.imageUrl}
+                              alt="Border"
+                              className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                              style={{
+                                filter: `drop-shadow(0 0 8px ${avatarBorderColor}60) drop-shadow(0 0 16px ${avatarBorderColor}30)`,
+                              }}
+                            />
+                          ) : null;
+                        })()}
                       </div>
                       <div className="text-center">
                         <span className="text-sm font-medium">
@@ -760,8 +805,14 @@ export default function SettingsPage() {
                             ${selectedBorderId === border.id ? 'border-primary ring-2 ring-primary/50 bg-primary/10' : 'border-muted hover:border-primary/50'}
                           `}
                           onClick={() => {
-                            setSelectedBorderId(border.id);
-                            saveAvatarBorderMutation.mutate(border.id);
+                            // Toggle behavior: clicking selected border deselects it
+                            if (selectedBorderId === border.id) {
+                              setSelectedBorderId(null);
+                              saveAvatarBorderMutation.mutate(null);
+                            } else {
+                              setSelectedBorderId(border.id);
+                              saveAvatarBorderMutation.mutate(border.id);
+                            }
                           }}
                         >
                           <div className="relative w-16 h-16 flex items-center justify-center">
@@ -777,6 +828,66 @@ export default function SettingsPage() {
                           </span>
                         </div>
                       ))}
+                    </div>
+                  )}
+                  
+                  {/* Border Color Picker - shown when a border is selected */}
+                  {selectedBorderId && (
+                    <div className="mt-4 pt-4 border-t space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Palette className="h-4 w-4 text-muted-foreground" />
+                          <Label className="text-sm font-medium">Border Color</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-8 h-8 rounded-full border-2 border-white cursor-pointer transition-all hover:scale-110"
+                            style={{ 
+                              backgroundColor: avatarBorderColor,
+                              boxShadow: `0 0 10px ${avatarBorderColor}60`
+                            }}
+                            onClick={() => setShowBorderColorPicker(!showBorderColorPicker)}
+                            data-testid="border-color-swatch"
+                          />
+                          <span className="text-xs font-mono text-muted-foreground">{avatarBorderColor}</span>
+                        </div>
+                      </div>
+                      
+                      {showBorderColorPicker && (
+                        <div className="space-y-3 p-3 bg-muted/30 rounded-lg border">
+                          <HexColorPicker 
+                            color={avatarBorderColor} 
+                            onChange={setAvatarBorderColor}
+                            style={{ width: '100%' }}
+                          />
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 text-sm font-mono bg-background border rounded px-3 py-2">
+                              {avatarBorderColor}
+                            </div>
+                            <Button 
+                              size="sm"
+                              onClick={() => {
+                                // Validate hex color before saving
+                                if (/^#[0-9A-Fa-f]{6}$/.test(avatarBorderColor)) {
+                                  saveBorderColorMutation.mutate(avatarBorderColor);
+                                  setShowBorderColorPicker(false);
+                                }
+                              }}
+                              disabled={saveBorderColorMutation.isPending || !/^#[0-9A-Fa-f]{6}$/.test(avatarBorderColor)}
+                              data-testid="border-color-save"
+                            >
+                              {saveBorderColorMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                'Apply'
+                              )}
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            This color will be applied to your SVG border's glow effect.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
