@@ -73,35 +73,7 @@ import { getTokenBalance, getTokenInfo } from "./blockchain";
 // Import upload middlewares from upload router
 import multer from "multer";
 
-// Rate limiting for likes and reactions to prevent spam
-// Global rate limiting: user can only perform ONE action every 5 seconds across ALL content
-const actionRateLimits = new Map<string, number>();
-const RATE_LIMIT_COOLDOWN = 5000; // 5 seconds between actions
-
-function checkRateLimit(userId: number, contentType: string, contentId: number, actionType: string): boolean {
-  // Use global key per user for stricter rate limiting
-  const key = `${userId}:like-action`;
-  const now = Date.now();
-  const lastAction = actionRateLimits.get(key);
-  
-  if (lastAction && (now - lastAction) < RATE_LIMIT_COOLDOWN) {
-    return false;
-  }
-  
-  actionRateLimits.set(key, now);
-  
-  // Clean up old entries periodically (keep map size manageable)
-  if (actionRateLimits.size > 10000) {
-    const cutoff = now - RATE_LIMIT_COOLDOWN * 2;
-    for (const [k, v] of actionRateLimits.entries()) {
-      if (v < cutoff) {
-        actionRateLimits.delete(k);
-      }
-    }
-  }
-  
-  return true;
-}
+// Rate limiting disabled - users can like/react freely
 
 // Password hashing utilities
 const scryptAsync = promisify(scrypt);
@@ -4360,13 +4332,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userId = req.user!.id;
       
-      // Rate limit check to prevent spam
-      if (!checkRateLimit(userId, 'clip', clipId, 'like')) {
-        return res.status(429).json({ 
-          message: "Slow down! You can only like/unlike once every 5 seconds" 
-        });
-      }
-      
       // Check if the clip exists
       const clip = await storage.getClip(clipId);
       if (!clip) {
@@ -4476,13 +4441,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const clipId = parseInt(req.params.id);
       const userId = req.user!.id;
-
-      // Rate limit check to prevent spam
-      if (!checkRateLimit(userId, 'clip', clipId, 'reaction')) {
-        return res.status(429).json({ 
-          message: "Slow down! You can only add/remove reactions once every 5 seconds" 
-        });
-      }
 
       // Check if the clip exists
       const clip = await storage.getClip(clipId);
@@ -6860,13 +6818,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const screenshotId = parseInt(req.params.id);
       const userId = req.user!.id;
 
-      // Rate limit check to prevent spam
-      if (!checkRateLimit(userId, 'screenshot', screenshotId, 'like')) {
-        return res.status(429).json({ 
-          message: "Slow down! You can only like/unlike once every 5 seconds" 
-        });
-      }
-
       // Check if the screenshot exists
       const screenshot = await storage.getScreenshot(screenshotId);
       if (!screenshot) {
@@ -6966,13 +6917,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const screenshotId = parseInt(req.params.id);
       const userId = req.user!.id;
       const { emoji } = req.body;
-
-      // Rate limit check to prevent spam
-      if (!checkRateLimit(userId, 'screenshot', screenshotId, 'reaction')) {
-        return res.status(429).json({ 
-          message: "Slow down! You can only add/remove reactions once every 5 seconds" 
-        });
-      }
 
       // Check if the screenshot exists
       const screenshot = await storage.getScreenshot(screenshotId);
