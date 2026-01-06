@@ -1816,7 +1816,7 @@ const ProfilePage = () => {
           className="w-full"
         >
           <TabsList 
-            className="w-full justify-start rounded-none h-12 md:h-14 p-0 relative overflow-x-auto overflow-y-hidden flex"
+            className="w-full justify-start rounded-none h-12 md:h-14 p-0 relative overflow-hidden flex"
             style={{ 
               backgroundColor: `hsl(var(--background) / 0.4)`
             }}
