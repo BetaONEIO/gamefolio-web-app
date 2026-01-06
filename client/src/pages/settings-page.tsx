@@ -823,58 +823,80 @@ export default function SettingsPage() {
                     </div>
                   )}
 
-                  {/* Unlocked Borders Grid */}
+                  {/* Unlocked Borders Grid with Category Tabs */}
                   {!isLoadingBorders && avatarBorders && (avatarBorders as any[]).length > 0 && (
-                    <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                      {/* None option */}
-                      <div
-                        data-testid="border-select-none"
-                        className={`
-                          cursor-pointer rounded-md border-2 p-3 relative transition-all flex flex-col items-center justify-center
-                          ${selectedBorderId === null ? 'border-primary ring-2 ring-primary/50 bg-primary/10' : 'border-muted hover:border-primary/50'}
-                        `}
-                        onClick={() => {
-                          setSelectedBorderId(null);
-                          saveAvatarBorderMutation.mutate(null);
-                        }}
-                      >
-                        <X className="h-8 w-8 text-muted-foreground mb-1" />
-                        <span className="text-xs text-muted-foreground">None</span>
-                      </div>
+                    <Tabs defaultValue="static" className="w-full">
+                      <TabsList className="w-full grid grid-cols-3 mb-4">
+                        <TabsTrigger value="static" className="text-xs md:text-sm">Static</TabsTrigger>
+                        <TabsTrigger value="animated" className="text-xs md:text-sm">Animated</TabsTrigger>
+                        <TabsTrigger value="pro" className="text-xs md:text-sm">PRO</TabsTrigger>
+                      </TabsList>
                       
-                      {(avatarBorders as any[]).map((border: any) => (
-                        <div
-                          key={border.id}
-                          data-testid={`border-select-${border.id}`}
-                          className={`
-                            cursor-pointer rounded-md border-2 p-2 relative transition-all flex flex-col items-center
-                            ${selectedBorderId === border.id ? 'border-primary ring-2 ring-primary/50 bg-primary/10' : 'border-muted hover:border-primary/50'}
-                          `}
-                          onClick={() => {
-                            // Toggle behavior: clicking selected border deselects it
-                            if (selectedBorderId === border.id) {
-                              setSelectedBorderId(null);
-                              saveAvatarBorderMutation.mutate(null);
-                            } else {
-                              setSelectedBorderId(border.id);
-                              saveAvatarBorderMutation.mutate(border.id);
-                            }
-                          }}
-                        >
-                          <div className="relative w-16 h-16 flex items-center justify-center">
-                            <div className="w-10 h-10 rounded-full bg-muted" />
-                            <img 
-                              src={border.imageUrl} 
-                              alt={border.name}
-                              className="absolute w-16 h-16 object-contain" 
-                            />
+                      {['static', 'animated', 'pro'].map((category) => (
+                        <TabsContent key={category} value={category} className="mt-0">
+                          <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                            {/* None option - only show in first tab */}
+                            {category === 'static' && (
+                              <div
+                                data-testid="border-select-none"
+                                className={`
+                                  cursor-pointer rounded-md border-2 p-3 relative transition-all flex flex-col items-center justify-center
+                                  ${selectedBorderId === null ? 'border-primary ring-2 ring-primary/50 bg-primary/10' : 'border-muted hover:border-primary/50'}
+                                `}
+                                onClick={() => {
+                                  setSelectedBorderId(null);
+                                  saveAvatarBorderMutation.mutate(null);
+                                }}
+                              >
+                                <X className="h-8 w-8 text-muted-foreground mb-1" />
+                                <span className="text-xs text-muted-foreground">None</span>
+                              </div>
+                            )}
+                            
+                            {(avatarBorders as any[])
+                              .filter((border: any) => (border.category || 'static') === category)
+                              .map((border: any) => (
+                                <div
+                                  key={border.id}
+                                  data-testid={`border-select-${border.id}`}
+                                  className={`
+                                    cursor-pointer rounded-md border-2 p-2 relative transition-all flex flex-col items-center
+                                    ${selectedBorderId === border.id ? 'border-primary ring-2 ring-primary/50 bg-primary/10' : 'border-muted hover:border-primary/50'}
+                                  `}
+                                  onClick={() => {
+                                    if (selectedBorderId === border.id) {
+                                      setSelectedBorderId(null);
+                                      saveAvatarBorderMutation.mutate(null);
+                                    } else {
+                                      setSelectedBorderId(border.id);
+                                      saveAvatarBorderMutation.mutate(border.id);
+                                    }
+                                  }}
+                                >
+                                  <div className="relative w-16 h-16 flex items-center justify-center">
+                                    <div className="w-10 h-10 rounded-full bg-muted" />
+                                    <img 
+                                      src={border.imageUrl} 
+                                      alt={border.name}
+                                      className="absolute w-16 h-16 object-contain" 
+                                    />
+                                  </div>
+                                  <span className="text-xs text-center mt-1 truncate w-full">
+                                    {border.name}
+                                  </span>
+                                </div>
+                              ))}
+                            
+                            {/* Empty state for category */}
+                            {(avatarBorders as any[]).filter((border: any) => (border.category || 'static') === category).length === 0 && category !== 'static' && (
+                              <div className="col-span-full p-4 text-center text-sm text-muted-foreground">
+                                No {category} borders unlocked yet
+                              </div>
+                            )}
                           </div>
-                          <span className="text-xs text-center mt-1 truncate w-full">
-                            {border.name}
-                          </span>
-                        </div>
+                        </TabsContent>
                       ))}
-                    </div>
+                    </Tabs>
                   )}
                   
                   {/* Border Color Picker - shown when a border is selected */}

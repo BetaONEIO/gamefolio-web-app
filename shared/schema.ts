@@ -838,12 +838,17 @@ export type RarityTier = typeof rarityTiers[number];
 export const assetTypes = ["avatar_border", "profile_banner", "profile_background", "badge", "emoji", "sound_effect", "xp_reward", "gf_tokens", "other"] as const;
 export type AssetType = typeof assetTypes[number];
 
+// Border categories for avatar borders
+export const borderCategories = ["static", "animated", "pro"] as const;
+export type BorderCategory = typeof borderCategories[number];
+
 // Asset rewards table for loot box rewards
 export const assetRewards = pgTable("asset_rewards", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   imageUrl: text("image_url").notNull(),
   assetType: text("asset_type").notNull().default("other"), // avatar_border, profile_banner, profile_background, badge, emoji, sound_effect, xp_reward, gf_tokens, other
+  category: text("category").default("static"), // static, animated, pro - for avatar borders
   rarity: text("rarity").notNull().default("common"), // common, rare, epic, legendary
   unlockChance: real("unlock_chance").notNull().default(10), // Percentage chance (0-100)
   rewardValue: integer("reward_value"), // For consumable rewards like XP or GF tokens - the amount to grant

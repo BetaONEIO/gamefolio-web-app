@@ -405,20 +405,26 @@ const ProfilePage = () => {
   const [activeTab, setActiveTab] = useState(getInitialTab);
 
   // Sync tab state with URL for browser back/forward navigation
+  const isInitialMount = useRef(true);
   useEffect(() => {
+    // Skip on initial mount to avoid pushing duplicate history entry
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    
     const urlParams = new URLSearchParams(window.location.search);
     const currentTab = urlParams.get('tab');
     
-    // Only update URL if tab changed and it's not the default
-    if (activeTab !== 'clips' && currentTab !== activeTab) {
-      urlParams.set('tab', activeTab);
-      const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
-      window.history.replaceState(null, '', newUrl);
-    } else if (activeTab === 'clips' && currentTab) {
-      // Remove tab param if going back to default
-      urlParams.delete('tab');
+    // Only update URL if tab actually changed
+    if (currentTab !== activeTab && (activeTab !== 'clips' || currentTab)) {
+      if (activeTab !== 'clips') {
+        urlParams.set('tab', activeTab);
+      } else {
+        urlParams.delete('tab');
+      }
       const newUrl = urlParams.toString() ? `${window.location.pathname}?${urlParams.toString()}` : window.location.pathname;
-      window.history.replaceState(null, '', newUrl);
+      window.history.pushState({ tab: activeTab }, '', newUrl);
     }
   }, [activeTab]);
 
