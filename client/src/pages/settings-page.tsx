@@ -829,7 +829,11 @@ export default function SettingsPage() {
                       <TabsList className="w-full grid grid-cols-2 mb-4">
                         <TabsTrigger value="static" className="text-xs md:text-sm">Static</TabsTrigger>
                         <TabsTrigger value="animated" className="text-xs md:text-sm relative">
-                          <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] font-bold text-green-500 bg-green-500/10 px-1.5 py-0.5 rounded-full border border-green-500/30">PRO</span>
+                          <img 
+                            src="/assets/pro-badge.png" 
+                            alt="PRO" 
+                            className="absolute -top-4 left-1/2 -translate-x-1/2 h-5 w-auto"
+                          />
                           Animated
                         </TabsTrigger>
                       </TabsList>
