@@ -1765,7 +1765,7 @@ const ProfilePage = () => {
                         size="sm"
                         className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
                       >
-                        <Share2 className="mr-1 h-4 w-4" /> Share
+                        <Share2 className="h-4 w-4" />
                       </Button>
                     }
                   />
@@ -1794,7 +1794,7 @@ const ProfilePage = () => {
                         size="sm"
                         className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
                       >
-                        <Share2 className="mr-1 h-4 w-4" /> Share
+                        <Share2 className="h-4 w-4" />
                       </Button>
                     }
                   />
