@@ -666,10 +666,10 @@ export default function SettingsPage() {
                     {/* Current/Preview Avatar with Border */}
                     <div className="flex flex-col items-center space-y-3">
                       <div 
-                        className="relative h-32 w-32 flex items-center justify-center overflow-visible"
+                        className="relative h-40 w-40 flex items-center justify-center"
                       >
                         <div 
-                          className="h-28 w-28 rounded-full overflow-hidden"
+                          className="h-24 w-24 rounded-full overflow-hidden z-10"
                         >
                           <img 
                             src={avatarPreview || user?.avatarUrl || ''} 
@@ -691,14 +691,8 @@ export default function SettingsPage() {
                             <InlineSvgBorder
                               svgUrl={border.imageUrl}
                               color={avatarBorderColor}
-                              className="absolute pointer-events-none [&>svg]:w-full [&>svg]:h-full"
-                              style={{ 
-                                width: '160%', 
-                                height: '160%', 
-                                top: '-30%', 
-                                left: '-30%',
-                                zIndex: 20 
-                              }}
+                              className="absolute inset-0 pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+                              style={{ zIndex: 5 }}
                             />
                           );
                         })()}
@@ -769,10 +763,10 @@ export default function SettingsPage() {
                   </p>
 
                   {/* Current Border Preview */}
-                  <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg border overflow-visible">
-                    <div className="relative h-24 w-24 flex items-center justify-center overflow-visible">
+                  <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg border">
+                    <div className="relative h-28 w-28 flex items-center justify-center">
                       <div 
-                        className="h-20 w-20 rounded-full overflow-hidden"
+                        className="h-16 w-16 rounded-full overflow-hidden z-10"
                       >
                         <img 
                           src={avatarPreview || profileData.avatarUrl || ""} 
@@ -792,14 +786,8 @@ export default function SettingsPage() {
                           <InlineSvgBorder
                             svgUrl={border.imageUrl}
                             color={avatarBorderColor}
-                            className="absolute pointer-events-none [&>svg]:w-full [&>svg]:h-full"
-                            style={{ 
-                              width: '160%', 
-                              height: '160%', 
-                              top: '-30%', 
-                              left: '-30%',
-                              zIndex: 20 
-                            }}
+                            className="absolute inset-0 pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+                            style={{ zIndex: 5 }}
                           />
                         ) : null;
                       })()}
