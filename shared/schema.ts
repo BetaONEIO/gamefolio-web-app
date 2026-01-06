@@ -324,6 +324,22 @@ export const screenshotReactions = pgTable("screenshot_reactions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Comment likes table for clip comments
+export const commentLikes = pgTable("comment_likes", {
+  id: serial("id").primaryKey(),
+  commentId: integer("comment_id").notNull().references(() => comments.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Screenshot comment likes table
+export const screenshotCommentLikes = pgTable("screenshot_comment_likes", {
+  id: serial("id").primaryKey(),
+  screenshotCommentId: integer("screenshot_comment_id").notNull().references(() => screenshotComments.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Comment reports table for moderation
 export const commentReports = pgTable("comment_reports", {
   id: serial("id").primaryKey(),
@@ -732,6 +748,18 @@ export const insertScreenshotReactionSchema = createInsertSchema(screenshotReact
   createdAt: true,
 });
 
+// Schema for inserting comment likes
+export const insertCommentLikeSchema = createInsertSchema(commentLikes).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Schema for inserting screenshot comment likes
+export const insertScreenshotCommentLikeSchema = createInsertSchema(screenshotCommentLikes).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Schema for inserting comment reports
 export const insertCommentReportSchema = createInsertSchema(commentReports).omit({
   id: true,
@@ -903,6 +931,12 @@ export type InsertScreenshotComment = z.infer<typeof insertScreenshotCommentSche
 
 export type ScreenshotReaction = typeof screenshotReactions.$inferSelect;
 export type InsertScreenshotReaction = z.infer<typeof insertScreenshotReactionSchema>;
+
+export type CommentLike = typeof commentLikes.$inferSelect;
+export type InsertCommentLike = z.infer<typeof insertCommentLikeSchema>;
+
+export type ScreenshotCommentLike = typeof screenshotCommentLikes.$inferSelect;
+export type InsertScreenshotCommentLike = z.infer<typeof insertScreenshotCommentLikeSchema>;
 
 export type CommentReport = typeof commentReports.$inferSelect;
 export type InsertCommentReport = z.infer<typeof insertCommentReportSchema>;
