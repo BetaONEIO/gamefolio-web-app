@@ -1802,7 +1802,7 @@ const ProfilePage = () => {
         </div>
 
         {/* Spacer for tabs section */}
-        <div className="h-[20px]"></div>
+        <div className="h-[12px]"></div>
 
         {/* Enhanced Tabs section with theme colors */}
         <Tabs 
@@ -1903,7 +1903,7 @@ const ProfilePage = () => {
           </TabsList>
 
           {/* Clips Tab */}
-          <TabsContent value="clips" className="pt-6">
+          <TabsContent value="clips" className="pt-4">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
@@ -1960,13 +1960,13 @@ const ProfilePage = () => {
                 </div>
               </div>
             ) : isLoadingClips ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                   <Skeleton key={i} className="aspect-video w-full rounded-lg" />
                 ))}
               </div>
             ) : clips && clips.filter(clip => clip.videoType !== 'reel').length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {clips.filter(clip => clip.videoType !== 'reel').map((clip) => {
                   const isHighlighted = highlightedContent?.type === 'clip' && highlightedContent.id === clip.id.toString();
                   return (
@@ -2011,7 +2011,7 @@ const ProfilePage = () => {
           </TabsContent>
 
           {/* Reels Tab */}
-          <TabsContent value="reels" className="pt-6">
+          <TabsContent value="reels" className="pt-4">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
@@ -2068,13 +2068,13 @@ const ProfilePage = () => {
                 </div>
               </div>
             ) : isLoadingClips ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                   <Skeleton key={i} className="aspect-[9/16] w-full rounded-lg" />
                 ))}
               </div>
             ) : clips && clips.filter(clip => clip.videoType === 'reel').length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {clips.filter(clip => clip.videoType === 'reel').map((reel) => {
                   const isHighlighted = highlightedContent?.type === 'reel' && highlightedContent.id === reel.id.toString();
                   return (
@@ -2120,7 +2120,7 @@ const ProfilePage = () => {
           </TabsContent>
 
           {/* Screenshots Tab */}
-          <TabsContent value="screenshots" className="pt-6">
+          <TabsContent value="screenshots" className="pt-4">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
