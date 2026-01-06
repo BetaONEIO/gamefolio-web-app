@@ -246,10 +246,10 @@ export const CustomAvatar = ({
 
   if (hasAvatarBorderOverlay) {
     return (
-      <div className={`relative inline-flex items-center justify-center ${containerSizes[size]} ${className}`}>
+      <div className={`relative inline-flex items-center justify-center ${sizeClasses[size]} ${className}`} style={{ overflow: 'visible' }}>
         {/* Glow effect behind the profile picture - subtle glow matching border color */}
         <div 
-          className={`absolute ${sizeClasses[size]} rounded-full`}
+          className="absolute inset-0 rounded-full"
           style={{
             boxShadow: `0 0 20px ${borderColor}50, 0 0 40px ${borderColor}30`,
             zIndex: 0
@@ -271,12 +271,18 @@ export const CustomAvatar = ({
           </AvatarFallback>
         </Avatar>
         
-        {/* SVG Border with inline color replacement - scaled to wrap tightly around avatar */}
+        {/* SVG Border with inline color replacement - slightly larger than avatar to wrap around it */}
         <InlineSvgBorder
           svgUrl={avatarBorder.imageUrl}
           color={borderColor}
-          className="absolute inset-0 w-full h-full pointer-events-none [&>svg]:w-full [&>svg]:h-full"
-          style={{ transform: 'scale(1.15)', zIndex: 20 }}
+          className="absolute pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+          style={{ 
+            width: '115%', 
+            height: '115%', 
+            top: '-7.5%', 
+            left: '-7.5%',
+            zIndex: 20 
+          }}
         />
       </div>
     );
