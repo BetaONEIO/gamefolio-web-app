@@ -693,10 +693,10 @@ export default function SettingsPage() {
                               color={avatarBorderColor}
                               className="absolute pointer-events-none [&>svg]:w-full [&>svg]:h-full"
                               style={{ 
-                                width: '160%', 
-                                height: '160%', 
-                                top: '-30%', 
-                                left: '-30%',
+                                width: '130%', 
+                                height: '130%', 
+                                top: '-15%', 
+                                left: '-15%',
                                 zIndex: 20 
                               }}
                             />
@@ -794,10 +794,10 @@ export default function SettingsPage() {
                             color={avatarBorderColor}
                             className="absolute pointer-events-none [&>svg]:w-full [&>svg]:h-full"
                             style={{ 
-                              width: '160%', 
-                              height: '160%', 
-                              top: '-30%', 
-                              left: '-30%',
+                              width: '130%', 
+                              height: '130%', 
+                              top: '-15%', 
+                              left: '-15%',
                               zIndex: 20 
                             }}
                           />
