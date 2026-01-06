@@ -243,6 +243,42 @@ export const CustomAvatar = ({
 
   const avatarBorder = borderData?.avatarBorder;
   const hasAvatarBorderOverlay = showAvatarBorderOverlay && avatarBorder?.imageUrl;
+  const hasStandardBorder = showAvatarBorderOverlay && user?.selectedAvatarBorderId === 'standard';
+
+  // Render standard circular border
+  if (hasStandardBorder) {
+    return (
+      <div className={`relative inline-flex items-center justify-center ${sizeClasses[size]} ${className}`} style={{ overflow: 'visible' }}>
+        {/* Glow effect behind the profile picture */}
+        <div 
+          className="absolute inset-0 rounded-full"
+          style={{
+            boxShadow: `0 0 20px ${borderColor}50, 0 0 40px ${borderColor}30`,
+            zIndex: 0
+          }}
+        />
+        
+        {/* Avatar with standard circular border */}
+        <Avatar 
+          className={`${sizeClasses[size]} transition-all duration-300 rounded-full relative`}
+          style={{ 
+            zIndex: 10,
+            border: `4px solid ${borderColor}`,
+            boxShadow: `0 0 15px ${borderColor}50`
+          }}
+        >
+          <AvatarImage 
+            src={user?.avatarUrl || ""} 
+            alt={safeDisplayName} 
+            className="rounded-full object-cover w-full h-full"
+          />
+          <AvatarFallback className="bg-primary/20 text-foreground font-semibold rounded-full">
+            {safeDisplayName.substring(0, 2).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+      </div>
+    );
+  }
 
   if (hasAvatarBorderOverlay) {
     return (
