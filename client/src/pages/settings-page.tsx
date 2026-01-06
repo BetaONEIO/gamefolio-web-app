@@ -670,10 +670,10 @@ export default function SettingsPage() {
                     {/* Current/Preview Avatar with Border */}
                     <div className="flex flex-col items-center space-y-3">
                       <div 
-                        className="relative h-40 w-40 flex items-center justify-center"
+                        className="relative h-48 w-48 flex items-center justify-center"
                       >
                         <div 
-                          className="h-24 w-24 rounded-full overflow-hidden z-10"
+                          className="h-32 w-32 rounded-full overflow-hidden z-10"
                         >
                           <img 
                             src={avatarPreview || user?.avatarUrl || ''} 
