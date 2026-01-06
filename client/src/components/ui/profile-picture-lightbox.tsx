@@ -25,15 +25,11 @@ export function ProfilePictureLightbox({
       <DialogContent className="max-w-[calc(100vw-3rem)] md:max-w-2xl p-0 bg-black/95 border-none">
         {/* Profile image */}
         <div className="relative flex flex-col items-center justify-center p-4 md:p-8">
-          <div className="relative max-w-full max-h-[70vh] md:max-h-[80vh]">
+          <div className="relative">
             <img
               src={avatarUrl}
               alt={`${displayName}'s profile picture`}
-              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-              style={{ 
-                maxWidth: '280px',
-                maxHeight: '70vh'
-              }}
+              className="w-64 h-64 md:w-80 md:h-80 object-cover rounded-full shadow-2xl"
             />
           </div>
           
