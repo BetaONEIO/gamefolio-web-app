@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HexColorPicker } from "react-colorful";
 import { useToast } from "@/hooks/use-toast";
@@ -834,70 +834,84 @@ export default function SettingsPage() {
                         </TabsTrigger>
                       </TabsList>
                       
-                      {['static', 'animated'].map((category) => (
-                        <TabsContent key={category} value={category} className="mt-0">
-                          <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                            {/* None option - only show in first tab */}
-                            {category === 'static' && (
-                              <div
-                                data-testid="border-select-none"
-                                className={`
-                                  cursor-pointer rounded-md border-2 p-3 relative transition-all flex flex-col items-center justify-center
-                                  ${selectedBorderId === null ? 'border-primary ring-2 ring-primary/50 bg-primary/10' : 'border-muted hover:border-primary/50'}
-                                `}
-                                onClick={() => {
-                                  setSelectedBorderId(null);
-                                  saveAvatarBorderMutation.mutate(null);
-                                }}
-                              >
-                                <X className="h-8 w-8 text-muted-foreground mb-1" />
-                                <span className="text-xs text-muted-foreground">None</span>
+                      {['static', 'animated'].map((category) => {
+                        const isProRequired = category === 'animated';
+                        const isLocked = isProRequired && !user?.isPro;
+                        
+                        return (
+                          <TabsContent key={category} value={category} className="mt-0">
+                            {/* Pro lock overlay for animated borders */}
+                            {isLocked && (
+                              <div className="mb-3 p-3 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center gap-2">
+                                <Lock className="h-4 w-4 text-green-500" />
+                                <span className="text-sm text-green-500">Upgrade to Gamefolio Pro to unlock animated borders</span>
                               </div>
                             )}
                             
-                            {(avatarBorders as any[])
-                              .filter((border: any) => (border.category || 'static') === category)
-                              .map((border: any) => (
+                            <div className={`grid grid-cols-3 md:grid-cols-4 gap-3 ${isLocked ? 'blur-sm pointer-events-none select-none' : ''}`}>
+                              {/* None option - only show in first tab */}
+                              {category === 'static' && (
                                 <div
-                                  key={border.id}
-                                  data-testid={`border-select-${border.id}`}
+                                  data-testid="border-select-none"
                                   className={`
-                                    cursor-pointer rounded-md border-2 p-2 relative transition-all flex flex-col items-center
-                                    ${selectedBorderId === border.id ? 'border-primary ring-2 ring-primary/50 bg-primary/10' : 'border-muted hover:border-primary/50'}
+                                    cursor-pointer rounded-md border-2 p-3 relative transition-all flex flex-col items-center justify-center
+                                    ${selectedBorderId === null ? 'border-primary ring-2 ring-primary/50 bg-primary/10' : 'border-muted hover:border-primary/50'}
                                   `}
                                   onClick={() => {
-                                    if (selectedBorderId === border.id) {
-                                      setSelectedBorderId(null);
-                                      saveAvatarBorderMutation.mutate(null);
-                                    } else {
-                                      setSelectedBorderId(border.id);
-                                      saveAvatarBorderMutation.mutate(border.id);
-                                    }
+                                    setSelectedBorderId(null);
+                                    saveAvatarBorderMutation.mutate(null);
                                   }}
                                 >
-                                  <div className="relative w-16 h-16 flex items-center justify-center">
-                                    <div className="w-10 h-10 rounded-full bg-muted" />
-                                    <InlineSvgBorder
-                                      svgUrl={border.imageUrl}
-                                      color="#ffffff"
-                                      className="absolute inset-0 pointer-events-none [&>svg]:w-full [&>svg]:h-full"
-                                    />
-                                  </div>
-                                  <span className="text-xs text-center mt-1 truncate w-full">
-                                    {border.name}
-                                  </span>
+                                  <X className="h-8 w-8 text-muted-foreground mb-1" />
+                                  <span className="text-xs text-muted-foreground">None</span>
                                 </div>
-                              ))}
-                            
-                            {/* Empty state for category */}
-                            {(avatarBorders as any[]).filter((border: any) => (border.category || 'static') === category).length === 0 && category !== 'static' && (
-                              <div className="col-span-full p-4 text-center text-sm text-muted-foreground">
-                                No {category} borders unlocked yet
-                              </div>
-                            )}
-                          </div>
-                        </TabsContent>
-                      ))}
+                              )}
+                              
+                              {(avatarBorders as any[])
+                                .filter((border: any) => (border.category || 'static') === category)
+                                .map((border: any) => (
+                                  <div
+                                    key={border.id}
+                                    data-testid={`border-select-${border.id}`}
+                                    className={`
+                                      cursor-pointer rounded-md border-2 p-2 relative transition-all flex flex-col items-center
+                                      ${selectedBorderId === border.id ? 'border-primary ring-2 ring-primary/50 bg-primary/10' : 'border-muted hover:border-primary/50'}
+                                    `}
+                                    onClick={() => {
+                                      if (isLocked) return;
+                                      if (selectedBorderId === border.id) {
+                                        setSelectedBorderId(null);
+                                        saveAvatarBorderMutation.mutate(null);
+                                      } else {
+                                        setSelectedBorderId(border.id);
+                                        saveAvatarBorderMutation.mutate(border.id);
+                                      }
+                                    }}
+                                  >
+                                    <div className="relative w-16 h-16 flex items-center justify-center">
+                                      <div className="w-10 h-10 rounded-full bg-muted" />
+                                      <InlineSvgBorder
+                                        svgUrl={border.imageUrl}
+                                        color="#ffffff"
+                                        className="absolute inset-0 pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+                                      />
+                                    </div>
+                                    <span className="text-xs text-center mt-1 truncate w-full">
+                                      {border.name}
+                                    </span>
+                                  </div>
+                                ))}
+                              
+                              {/* Empty state for category */}
+                              {(avatarBorders as any[]).filter((border: any) => (border.category || 'static') === category).length === 0 && category !== 'static' && (
+                                <div className="col-span-full p-4 text-center text-sm text-muted-foreground">
+                                  No {category} borders unlocked yet
+                                </div>
+                              )}
+                            </div>
+                          </TabsContent>
+                        );
+                      })}
                     </Tabs>
                   )}
                   

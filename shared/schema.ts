@@ -60,6 +60,8 @@ export const users = pgTable("users", {
   walletCreatedAt: timestamp("wallet_created_at"),
   // GF Token Balance
   gfTokenBalance: real("gf_token_balance").default(1000).notNull(), // Starting balance of 1000 GF tokens
+  // Gamefolio Pro subscription
+  isPro: boolean("is_pro").default(false).notNull(), // Gamefolio Pro subscriber status
   // Selected Avatar Border (from lootbox rewards)
   selectedAvatarBorderId: integer("selected_avatar_border_id"), // References asset_rewards table
   createdAt: timestamp("created_at").defaultNow().notNull(),
