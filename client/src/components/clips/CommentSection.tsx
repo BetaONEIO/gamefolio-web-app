@@ -12,6 +12,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { Trash2 } from "lucide-react";
+import { VerificationBadge } from "@/components/ui/verification-badge";
+import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
 import {
@@ -158,10 +160,12 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                 <div className="flex flex-wrap items-baseline">
                   <Link href={`/profile/${comment.user.username}`}>
                     <span 
-                      className="font-semibold mr-2 text-sm hover:text-primary cursor-pointer"
+                      className="font-semibold mr-1 text-sm hover:text-primary cursor-pointer flex items-center"
                       onClick={onUsernameClick}
                     >
                       {comment.user.username}
+                      <VerificationBadge isVerified={(comment.user as any).emailVerified} size="sm" />
+                      <ModeratorBadge isModerator={(comment.user as any).role === "moderator"} size="sm" />
                     </span>
                   </Link>
                   <p className="inline text-sm break-words">{comment.content}</p>

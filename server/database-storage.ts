@@ -1813,7 +1813,9 @@ export class DatabaseStorage implements IStorage {
           id: users.id,
           username: users.username,
           displayName: users.displayName,
-          avatarUrl: users.avatarUrl
+          avatarUrl: users.avatarUrl,
+          emailVerified: users.emailVerified,
+          role: users.role
         }
       })
       .from(screenshotComments)
