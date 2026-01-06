@@ -122,6 +122,18 @@ export interface IStorage {
   getScreenshotComments(screenshotId: number): Promise<ScreenshotCommentWithUser[]>;
   deleteScreenshotComment(id: number): Promise<boolean>;
 
+  // Comment like operations
+  likeComment(commentId: number, userId: number): Promise<boolean>;
+  unlikeComment(commentId: number, userId: number): Promise<boolean>;
+  hasUserLikedComment(commentId: number, userId: number): Promise<boolean>;
+  getCommentLikeCount(commentId: number): Promise<number>;
+  
+  // Screenshot comment like operations
+  likeScreenshotComment(screenshotCommentId: number, userId: number): Promise<boolean>;
+  unlikeScreenshotComment(screenshotCommentId: number, userId: number): Promise<boolean>;
+  hasUserLikedScreenshotComment(screenshotCommentId: number, userId: number): Promise<boolean>;
+  getScreenshotCommentLikeCount(screenshotCommentId: number): Promise<number>;
+
   // User game favorites operations
   addUserGameFavorite(favorite: InsertUserGameFavorite): Promise<UserGameFavorite>;
   removeUserGameFavorite(userId: number, gameId: number): Promise<boolean>;

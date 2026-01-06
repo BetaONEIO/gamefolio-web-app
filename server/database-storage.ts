@@ -84,7 +84,9 @@ import {
   assetRewards,
   assetRewardClaims,
   userDailyLootbox,
-  userUnlockedBanners
+  userUnlockedBanners,
+  commentLikes,
+  screenshotCommentLikes
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, isNotNull, getTableColumns } from "drizzle-orm";
@@ -1833,6 +1835,102 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error deleting screenshot comment:", error);
       return false;
+    }
+  }
+
+  // Comment like operations (for clip comments)
+  async likeComment(commentId: number, userId: number): Promise<boolean> {
+    try {
+      await db.insert(commentLikes).values({ commentId, userId });
+      return true;
+    } catch (error) {
+      console.error("Error liking comment:", error);
+      return false;
+    }
+  }
+
+  async unlikeComment(commentId: number, userId: number): Promise<boolean> {
+    try {
+      await db.delete(commentLikes).where(
+        and(eq(commentLikes.commentId, commentId), eq(commentLikes.userId, userId))
+      );
+      return true;
+    } catch (error) {
+      console.error("Error unliking comment:", error);
+      return false;
+    }
+  }
+
+  async hasUserLikedComment(commentId: number, userId: number): Promise<boolean> {
+    try {
+      const result = await db.select()
+        .from(commentLikes)
+        .where(and(eq(commentLikes.commentId, commentId), eq(commentLikes.userId, userId)))
+        .limit(1);
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error checking comment like:", error);
+      return false;
+    }
+  }
+
+  async getCommentLikeCount(commentId: number): Promise<number> {
+    try {
+      const result = await db.select({ count: sql<number>`count(*)` })
+        .from(commentLikes)
+        .where(eq(commentLikes.commentId, commentId));
+      return Number(result[0]?.count || 0);
+    } catch (error) {
+      console.error("Error getting comment like count:", error);
+      return 0;
+    }
+  }
+
+  // Screenshot comment like operations
+  async likeScreenshotComment(screenshotCommentId: number, userId: number): Promise<boolean> {
+    try {
+      await db.insert(screenshotCommentLikes).values({ screenshotCommentId, userId });
+      return true;
+    } catch (error) {
+      console.error("Error liking screenshot comment:", error);
+      return false;
+    }
+  }
+
+  async unlikeScreenshotComment(screenshotCommentId: number, userId: number): Promise<boolean> {
+    try {
+      await db.delete(screenshotCommentLikes).where(
+        and(eq(screenshotCommentLikes.screenshotCommentId, screenshotCommentId), eq(screenshotCommentLikes.userId, userId))
+      );
+      return true;
+    } catch (error) {
+      console.error("Error unliking screenshot comment:", error);
+      return false;
+    }
+  }
+
+  async hasUserLikedScreenshotComment(screenshotCommentId: number, userId: number): Promise<boolean> {
+    try {
+      const result = await db.select()
+        .from(screenshotCommentLikes)
+        .where(and(eq(screenshotCommentLikes.screenshotCommentId, screenshotCommentId), eq(screenshotCommentLikes.userId, userId)))
+        .limit(1);
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error checking screenshot comment like:", error);
+      return false;
+    }
+  }
+
+  async getScreenshotCommentLikeCount(screenshotCommentId: number): Promise<number> {
+    try {
+      const result = await db.select({ count: sql<number>`count(*)` })
+        .from(screenshotCommentLikes)
+        .where(eq(screenshotCommentLikes.screenshotCommentId, screenshotCommentId));
+      return Number(result[0]?.count || 0);
+    } catch (error) {
+      console.error("Error getting screenshot comment like count:", error);
+      return 0;
     }
   }
 
