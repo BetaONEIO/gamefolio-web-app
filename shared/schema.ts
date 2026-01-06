@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json, unique, real } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, unique, real, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -330,7 +330,9 @@ export const commentLikes = pgTable("comment_likes", {
   commentId: integer("comment_id").notNull().references(() => comments.id, { onDelete: "cascade" }),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  uniqueUserComment: uniqueIndex("comment_likes_user_comment_unique").on(table.userId, table.commentId),
+}));
 
 // Screenshot comment likes table
 export const screenshotCommentLikes = pgTable("screenshot_comment_likes", {
@@ -338,7 +340,9 @@ export const screenshotCommentLikes = pgTable("screenshot_comment_likes", {
   screenshotCommentId: integer("screenshot_comment_id").notNull().references(() => screenshotComments.id, { onDelete: "cascade" }),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  uniqueUserScreenshotComment: uniqueIndex("screenshot_comment_likes_user_comment_unique").on(table.userId, table.screenshotCommentId),
+}));
 
 // Comment reports table for moderation
 export const commentReports = pgTable("comment_reports", {

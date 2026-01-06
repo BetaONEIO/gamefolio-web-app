@@ -4230,7 +4230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get comment like status
-  app.get("/api/comments/:id/like", optionalHybridAuthMiddleware, async (req, res) => {
+  app.get("/api/comments/:id/like", optionalHybridAuth, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const userId = req.user?.id;
@@ -4284,7 +4284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get screenshot comment like status
-  app.get("/api/screenshot-comments/:id/like", optionalHybridAuthMiddleware, async (req, res) => {
+  app.get("/api/screenshot-comments/:id/like", optionalHybridAuth, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const userId = req.user?.id;

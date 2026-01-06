@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CommentWithUser } from "@shared/schema";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,9 @@ import { useScreenshotComments, useCreateScreenshotComment, useDeleteScreenshotC
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
-import { Send } from "lucide-react";
+import { Heart, Send } from "lucide-react";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
+import { apiRequest } from "@/lib/queryClient";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +27,60 @@ import {
 
 interface ScreenshotCommentSectionProps {
   screenshotId: number;
+}
+
+interface ScreenshotCommentLikeButtonProps {
+  commentId: number;
+  isLoggedIn: boolean;
+}
+
+function ScreenshotCommentLikeButton({ commentId, isLoggedIn }: ScreenshotCommentLikeButtonProps) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  const { data: likeStatus } = useQuery<{ hasLiked: boolean; likeCount: number }>({
+    queryKey: [`/api/screenshot-comments/${commentId}/like`],
+  });
+  
+  const likeMutation = useMutation({
+    mutationFn: async () => {
+      if (likeStatus?.hasLiked) {
+        await apiRequest("DELETE", `/api/screenshot-comments/${commentId}/like`);
+      } else {
+        await apiRequest("POST", `/api/screenshot-comments/${commentId}/like`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/screenshot-comments/${commentId}/like`] });
+    }
+  });
+
+  const handleClick = () => {
+    if (!isLoggedIn) {
+      toast({
+        title: "Login required",
+        description: "Please log in to like comments",
+        variant: "default"
+      });
+      return;
+    }
+    likeMutation.mutate();
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+      data-testid={`button-like-screenshot-comment-${commentId}`}
+    >
+      <Heart 
+        className={`h-3.5 w-3.5 ${likeStatus?.hasLiked ? 'fill-red-500 text-red-500' : ''}`} 
+      />
+      {(likeStatus?.likeCount ?? 0) > 0 && (
+        <span>{likeStatus?.likeCount}</span>
+      )}
+    </button>
+  );
 }
 
 export function ScreenshotCommentSection({ screenshotId }: ScreenshotCommentSectionProps) {
@@ -151,6 +207,10 @@ export function ScreenshotCommentSection({ screenshotId }: ScreenshotCommentSect
                   <span>
                     {formatDistance(new Date(comment.createdAt), new Date(), { addSuffix: true })}
                   </span>
+                  <ScreenshotCommentLikeButton 
+                    commentId={comment.id} 
+                    isLoggedIn={!!user} 
+                  />
                   {comment.userId === user?.id && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>

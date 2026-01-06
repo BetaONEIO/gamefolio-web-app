@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CommentWithUser, User } from "@shared/schema";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,11 @@ import { useCreateComment, useDeleteComment } from "@/hooks/use-clips";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
-import { Trash2 } from "lucide-react";
+import { Heart, Trash2 } from "lucide-react";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
+import { apiRequest } from "@/lib/queryClient";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +33,56 @@ interface CommentSectionProps {
   currentUserId?: number | null;
   onUsernameClick?: () => void; // Function to close parent dialog
   highlightCommentId?: number | null; // Comment ID to highlight
+}
+
+interface CommentLikeButtonProps {
+  commentId: number;
+  isLoggedIn: boolean;
+  onNotLoggedIn: () => void;
+}
+
+function CommentLikeButton({ commentId, isLoggedIn, onNotLoggedIn }: CommentLikeButtonProps) {
+  const queryClient = useQueryClient();
+  
+  const { data: likeStatus } = useQuery<{ hasLiked: boolean; likeCount: number }>({
+    queryKey: [`/api/comments/${commentId}/like`],
+  });
+  
+  const likeMutation = useMutation({
+    mutationFn: async () => {
+      if (likeStatus?.hasLiked) {
+        await apiRequest("DELETE", `/api/comments/${commentId}/like`);
+      } else {
+        await apiRequest("POST", `/api/comments/${commentId}/like`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/comments/${commentId}/like`] });
+    }
+  });
+
+  const handleClick = () => {
+    if (!isLoggedIn) {
+      onNotLoggedIn();
+      return;
+    }
+    likeMutation.mutate();
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+      data-testid={`button-like-comment-${commentId}`}
+    >
+      <Heart 
+        className={`h-3.5 w-3.5 ${likeStatus?.hasLiked ? 'fill-red-500 text-red-500' : ''}`} 
+      />
+      {(likeStatus?.likeCount ?? 0) > 0 && (
+        <span>{likeStatus?.likeCount}</span>
+      )}
+    </button>
+  );
 }
 
 const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightCommentId }: CommentSectionProps) => {
@@ -172,6 +223,11 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                   <span>
                     {formatDistance(new Date(comment.createdAt), new Date(), { addSuffix: true })}
                   </span>
+                  <CommentLikeButton 
+                    commentId={comment.id} 
+                    isLoggedIn={!!user} 
+                    onNotLoggedIn={() => openDialog('like')} 
+                  />
                   {comment.userId === user?.id && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
