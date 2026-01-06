@@ -277,10 +277,10 @@ export const CustomAvatar = ({
           color={borderColor}
           className="absolute pointer-events-none [&>svg]:w-full [&>svg]:h-full"
           style={{ 
-            width: '145%', 
-            height: '145%', 
-            top: '-22.5%', 
-            left: '-22.5%',
+            width: '160%', 
+            height: '160%', 
+            top: '-30%', 
+            left: '-30%',
             zIndex: 20 
           }}
         />
