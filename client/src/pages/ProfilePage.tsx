@@ -1452,7 +1452,7 @@ const ProfilePage = () => {
         </div>
 
         {/* Desktop Layout - Horizontal */}
-        <div className="hidden md:flex items-start gap-4 md:gap-6 pb-4" style={{ marginTop: '-48px', paddingTop: '20px' }}>
+        <div className="hidden md:flex items-start gap-4 md:gap-6 pb-4 relative" style={{ marginTop: '-48px', paddingTop: '20px' }}>
           {/* Profile Picture positioned to overlap banner */}
           <div className="relative flex-shrink-0" style={{ transform: 'translateY(-28px)' }}>
             {/* Circular glow - only show when NO SVG border is selected (CustomAvatar handles its own glow) */}
@@ -1686,9 +1686,9 @@ const ProfilePage = () => {
                 )}
               </div>
 
-              {/* Action buttons positioned top right, in line with display name */}
+              {/* Action buttons positioned top right, aligned with Favorites tab edge */}
               {!isOwnProfile && currentUser && (
-                <div className="flex gap-2 flex-shrink-0">
+                <div className="flex gap-2 flex-shrink-0 absolute top-[20px] right-0">
                   <Button 
                     onClick={handleFollowClick}
                     variant={followRequestStatus === 'following' ? "default" : (followRequestStatus === 'requested' ? "outline" : "outline")}
@@ -1772,9 +1772,9 @@ const ProfilePage = () => {
                 </div>
               )}
 
-              {/* Share button for own profile */}
+              {/* Share button for own profile - aligned with Favorites tab edge */}
               {isOwnProfile && (
-                <div className="flex gap-2 flex-shrink-0">
+                <div className="flex gap-2 flex-shrink-0 absolute top-[20px] right-0">
                   <GamefolioShareDialog 
                     username={profile.username}
                     userProfile={{
