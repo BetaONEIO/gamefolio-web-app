@@ -4191,6 +4191,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Like a clip comment
+  app.post("/api/comments/:id/like", authMiddleware, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.id);
+      const userId = req.user!.id;
+
+      // Check if already liked
+      const hasLiked = await storage.hasUserLikedComment(commentId, userId);
+      if (hasLiked) {
+        return res.status(400).json({ message: "Already liked this comment" });
+      }
+
+      await storage.likeComment(commentId, userId);
+      const likeCount = await storage.getCommentLikeCount(commentId);
+      
+      res.status(200).json({ liked: true, likeCount });
+    } catch (err) {
+      console.error("Error liking comment:", err);
+      return res.status(500).json({ message: "Error liking comment" });
+    }
+  });
+
+  // Unlike a clip comment
+  app.delete("/api/comments/:id/like", authMiddleware, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.id);
+      const userId = req.user!.id;
+
+      await storage.unlikeComment(commentId, userId);
+      const likeCount = await storage.getCommentLikeCount(commentId);
+      
+      res.status(200).json({ liked: false, likeCount });
+    } catch (err) {
+      console.error("Error unliking comment:", err);
+      return res.status(500).json({ message: "Error unliking comment" });
+    }
+  });
+
+  // Get comment like status
+  app.get("/api/comments/:id/like", optionalHybridAuthMiddleware, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.id);
+      const userId = req.user?.id;
+
+      const likeCount = await storage.getCommentLikeCount(commentId);
+      const hasLiked = userId ? await storage.hasUserLikedComment(commentId, userId) : false;
+      
+      res.status(200).json({ hasLiked, likeCount });
+    } catch (err) {
+      console.error("Error getting comment like status:", err);
+      return res.status(500).json({ message: "Error getting comment like status" });
+    }
+  });
+
+  // Like a screenshot comment
+  app.post("/api/screenshot-comments/:id/like", authMiddleware, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.id);
+      const userId = req.user!.id;
+
+      // Check if already liked
+      const hasLiked = await storage.hasUserLikedScreenshotComment(commentId, userId);
+      if (hasLiked) {
+        return res.status(400).json({ message: "Already liked this comment" });
+      }
+
+      await storage.likeScreenshotComment(commentId, userId);
+      const likeCount = await storage.getScreenshotCommentLikeCount(commentId);
+      
+      res.status(200).json({ liked: true, likeCount });
+    } catch (err) {
+      console.error("Error liking screenshot comment:", err);
+      return res.status(500).json({ message: "Error liking screenshot comment" });
+    }
+  });
+
+  // Unlike a screenshot comment
+  app.delete("/api/screenshot-comments/:id/like", authMiddleware, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.id);
+      const userId = req.user!.id;
+
+      await storage.unlikeScreenshotComment(commentId, userId);
+      const likeCount = await storage.getScreenshotCommentLikeCount(commentId);
+      
+      res.status(200).json({ liked: false, likeCount });
+    } catch (err) {
+      console.error("Error unliking screenshot comment:", err);
+      return res.status(500).json({ message: "Error unliking screenshot comment" });
+    }
+  });
+
+  // Get screenshot comment like status
+  app.get("/api/screenshot-comments/:id/like", optionalHybridAuthMiddleware, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.id);
+      const userId = req.user?.id;
+
+      const likeCount = await storage.getScreenshotCommentLikeCount(commentId);
+      const hasLiked = userId ? await storage.hasUserLikedScreenshotComment(commentId, userId) : false;
+      
+      res.status(200).json({ hasLiked, likeCount });
+    } catch (err) {
+      console.error("Error getting screenshot comment like status:", err);
+      return res.status(500).json({ message: "Error getting screenshot comment like status" });
+    }
+  });
+
   // Screenshot sharing route
   app.get("/api/screenshots/:id/share", async (req, res) => {
     try {
