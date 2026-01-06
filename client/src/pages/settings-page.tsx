@@ -687,7 +687,7 @@ export default function SettingsPage() {
                           )}
                         </div>
                         {/* SVG Border Overlay - rendered inline with color replacement */}
-                        {selectedBorderId && selectedBorderId !== 'standard' && avatarBorders && (() => {
+                        {selectedBorderId && avatarBorders && (() => {
                           const border = (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId);
                           if (!border) return null;
                           
@@ -700,22 +700,6 @@ export default function SettingsPage() {
                             />
                           );
                         })()}
-                        {/* Standard border overlay */}
-                        {selectedBorderId === 'standard' && (
-                          <div 
-                            className="absolute rounded-full pointer-events-none"
-                            style={{
-                              width: '136px',
-                              height: '136px',
-                              top: '50%',
-                              left: '50%',
-                              transform: 'translate(-50%, -50%)',
-                              border: `4px solid ${avatarBorderColor}`,
-                              boxShadow: `0 0 15px ${avatarBorderColor}50`,
-                              zIndex: 5
-                            }}
-                          />
-                        )}
                       </div>
                       <div className="text-center">
                         <span className="text-sm font-medium">
@@ -800,7 +784,7 @@ export default function SettingsPage() {
                         )}
                       </div>
                       {/* SVG Border Overlay with color replacement */}
-                      {selectedBorderId && selectedBorderId !== 'standard' && avatarBorders && (() => {
+                      {selectedBorderId && avatarBorders && (() => {
                         const border = (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId);
                         return border ? (
                           <InlineSvgBorder
@@ -811,24 +795,11 @@ export default function SettingsPage() {
                           />
                         ) : null;
                       })()}
-                      {/* Standard border overlay */}
-                      {selectedBorderId === 'standard' && (
-                        <div 
-                          className="absolute inset-0 rounded-full pointer-events-none"
-                          style={{
-                            border: `3px solid ${avatarBorderColor}`,
-                            boxShadow: `0 0 12px ${avatarBorderColor}40`,
-                            zIndex: 5
-                          }}
-                        />
-                      )}
                     </div>
                     <div>
                       <p className="text-sm font-medium">Preview</p>
                       <p className="text-xs text-muted-foreground">
-                        {selectedBorderId === 'standard' 
-                          ? "Standard"
-                          : selectedBorderId && avatarBorders 
+                        {selectedBorderId && avatarBorders 
                           ? (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId)?.name || "Selected"
                           : "No border selected"}
                       </p>
@@ -900,37 +871,6 @@ export default function SettingsPage() {
                                 </div>
                               )}
                               
-                              {/* Standard circular border option - only show in static tab */}
-                              {category === 'static' && (
-                                <div
-                                  data-testid="border-select-standard"
-                                  className={`
-                                    cursor-pointer rounded-md border-2 p-2 relative transition-all flex flex-col items-center
-                                    ${selectedBorderId === 'standard' ? 'border-primary ring-2 ring-primary/50 bg-primary/10' : 'border-muted hover:border-primary/50'}
-                                  `}
-                                  onClick={() => {
-                                    if (selectedBorderId === 'standard') {
-                                      setSelectedBorderId(null);
-                                      saveAvatarBorderMutation.mutate(null);
-                                    } else {
-                                      setSelectedBorderId('standard');
-                                      saveAvatarBorderMutation.mutate('standard');
-                                    }
-                                  }}
-                                >
-                                  <div className="relative w-16 h-16 flex items-center justify-center">
-                                    <div 
-                                      className="w-12 h-12 rounded-full bg-muted"
-                                      style={{
-                                        border: `3px solid ${avatarBorderColor}`,
-                                        boxShadow: `0 0 8px ${avatarBorderColor}40`
-                                      }}
-                                    />
-                                  </div>
-                                  <span className="text-xs text-center mt-1 truncate w-full">Standard</span>
-                                </div>
-                              )}
-                              
                               {(avatarBorders as any[])
                                 .filter((border: any) => (border.category || 'static') === category)
                                 .map((border: any) => (
@@ -980,7 +920,7 @@ export default function SettingsPage() {
                   )}
                   
                   {/* Border Color Picker - shown when a border is selected */}
-                  {(selectedBorderId || selectedBorderId === 'standard') && (
+                  {selectedBorderId && (
                     <div className="mt-4 pt-4 border-t space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
