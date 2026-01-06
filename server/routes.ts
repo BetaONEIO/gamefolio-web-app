@@ -3184,7 +3184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Trending clips by likes
   app.get("/api/trending/clips/likes", async (req, res) => {
     try {
-      const { period = 'today', limit = 20, gameId } = req.query;
+      const { period = 'recent', limit = 20, gameId } = req.query;
       const clips = await storage.getTrendingClipsByLikes(
         period as string,
         parseInt(limit as string) || 20,
@@ -3200,7 +3200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Trending clips by comments
   app.get("/api/trending/clips/comments", async (req, res) => {
     try {
-      const { period = 'today', limit = 20, gameId } = req.query;
+      const { period = 'recent', limit = 20, gameId } = req.query;
       const clips = await storage.getTrendingClipsByComments(
         period as string,
         parseInt(limit as string) || 20,
@@ -3216,7 +3216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Trending reels by likes
   app.get("/api/trending/reels/likes", async (req, res) => {
     try {
-      const { period = 'today', limit = 20, gameId } = req.query;
+      const { period = 'recent', limit = 20, gameId } = req.query;
       const reels = await storage.getTrendingReelsByLikes(
         period as string,
         parseInt(limit as string) || 20,
@@ -3232,7 +3232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Trending reels by comments
   app.get("/api/trending/reels/comments", async (req, res) => {
     try {
-      const { period = 'today', limit = 20, gameId } = req.query;
+      const { period = 'recent', limit = 20, gameId } = req.query;
       const reels = await storage.getTrendingReelsByComments(
         period as string,
         parseInt(limit as string) || 20,
@@ -3248,7 +3248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Trending screenshots (for now by views, will extend to likes/comments when schema supports it)
   app.get("/api/trending/screenshots", async (req, res) => {
     try {
-      const { period = 'today', limit = 20, gameId } = req.query;
+      const { period = 'recent', limit = 20, gameId } = req.query;
       const screenshots = await storage.getTrendingScreenshots(
         period as string,
         parseInt(limit as string) || 20,
@@ -3264,7 +3264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // General screenshots endpoint (supports filtering by game and time period)
   app.get("/api/screenshots", async (req, res) => {
     try {
-      const { period = 'today', limit = 20, gameId } = req.query;
+      const { period = 'recent', limit = 20, gameId } = req.query;
       const screenshots = await storage.getTrendingScreenshots(
         period as string,
         parseInt(limit as string) || 20,

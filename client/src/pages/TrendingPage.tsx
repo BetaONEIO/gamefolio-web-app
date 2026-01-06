@@ -31,7 +31,7 @@ import { ScreenshotCommentSection } from '@/components/screenshots/ScreenshotCom
 
 type ContentType = 'clips' | 'reels' | 'screenshots';
 type FilterType = 'likes' | 'comments';
-type TimePeriod = 'today' | 'week' | 'ever';
+type TimePeriod = 'recent' | '1w' | '1m' | 'ever';
 
 interface ScreenshotWithUser {
   id: number;
@@ -152,7 +152,7 @@ const TrendingPage: React.FC = () => {
   const { openClipDialog } = useClipDialog();
   const [activeTab, setActiveTab] = useState<ContentType>('clips');
   const [filter, setFilter] = useState<FilterType>('likes');
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>('today');
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('recent');
   const [showMobileViewer, setShowMobileViewer] = useState(false);
   const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotWithUser | null>(null);
   const [ageRestrictionAccepted, setAgeRestrictionAccepted] = useState(false);
@@ -301,8 +301,9 @@ const TrendingPage: React.FC = () => {
 
   const getPeriodIcon = (period: TimePeriod) => {
     switch (period) {
-      case 'today': return <Clock className="h-4 w-4" />;
-      case 'week': return <Calendar className="h-4 w-4" />;
+      case 'recent': return <Clock className="h-4 w-4" />;
+      case '1w': return <Calendar className="h-4 w-4" />;
+      case '1m': return <Calendar className="h-4 w-4" />;
       case 'ever': return <CalendarDays className="h-4 w-4" />;
       default: return <Clock className="h-4 w-4" />;
     }
@@ -310,10 +311,11 @@ const TrendingPage: React.FC = () => {
 
   const getPeriodLabel = (period: TimePeriod) => {
     switch (period) {
-      case 'today': return 'Today';
-      case 'week': return 'This Week';
+      case 'recent': return 'Most Recent';
+      case '1w': return '1W';
+      case '1m': return '1M';
       case 'ever': return 'Ever';
-      default: return 'Today';
+      default: return 'Most Recent';
     }
   };
 
@@ -558,7 +560,7 @@ const TrendingPage: React.FC = () => {
 
           {/* Time Period Filter */}
           <div className="flex items-center gap-2">
-            {(['today', 'week', 'ever'] as const).map((period) => (
+            {(['recent', '1w', '1m', 'ever'] as const).map((period) => (
               <Button
                 key={period}
                 variant={timePeriod === period ? "default" : "outline"}
@@ -577,7 +579,7 @@ const TrendingPage: React.FC = () => {
         <div className="px-4 mb-4 flex md:hidden items-center justify-between">
           <h2 className="text-lg font-semibold">Trending</h2>
           <div className="flex items-center gap-1">
-            {(['today', 'week', 'ever'] as const).map((period) => (
+            {(['recent', '1w', '1m', 'ever'] as const).map((period) => (
               <Button
                 key={period}
                 variant={timePeriod === period ? "default" : "ghost"}

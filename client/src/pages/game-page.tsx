@@ -1,26 +1,29 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Upload, ArrowLeft, Play, TrendingUp, Camera, Users, Clock, Calendar, CalendarDays } from "lucide-react";
+import { Upload, ArrowLeft, Play, TrendingUp, Camera, Users, Clock, Calendar, CalendarDays, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { ClipWithUser, Game } from "@shared/schema";
+import { ClipWithUser, Game, User } from "@shared/schema";
 import { formatDuration } from "@/lib/constants";
 import VideoClipCard from "@/components/clips/VideoClipCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useMobile } from "@/hooks/use-mobile";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const GamePage = () => {
   const [, navigate] = useLocation();
   const [match, params] = useRoute("/games/:gameSlug");
   const gameSlug = params?.gameSlug;
   const isMobile = useMobile();
-  const [timePeriod, setTimePeriod] = useState<'day' | 'week' | 'month'>('day');
+  const [timePeriod, setTimePeriod] = useState<'recent' | '1w' | '1m' | 'ever'>('recent');
   const [contentType, setContentType] = useState<'clips' | 'reels' | 'screenshots'>('clips');
+  const [selectedUserId, setSelectedUserId] = useState<string>('all');
   const { user } = useAuth();
 
   // Get game data by slug (will create from Twitch if doesn't exist)
@@ -88,26 +91,29 @@ const GamePage = () => {
   };
 
   // Helper functions for time period
-  const getPeriodIcon = (period: 'day' | 'week' | 'month') => {
+  const getPeriodIcon = (period: 'recent' | '1w' | '1m' | 'ever') => {
     switch (period) {
-      case 'day': return <Clock className="h-3 w-3" />;
-      case 'week': return <Calendar className="h-3 w-3" />;
-      case 'month': return <CalendarDays className="h-3 w-3" />;
+      case 'recent': return <Clock className="h-3 w-3" />;
+      case '1w': return <Calendar className="h-3 w-3" />;
+      case '1m': return <Calendar className="h-3 w-3" />;
+      case 'ever': return <CalendarDays className="h-3 w-3" />;
     }
   };
 
-  const getPeriodLabel = (period: 'day' | 'week' | 'month') => {
+  const getPeriodLabel = (period: 'recent' | '1w' | '1m' | 'ever') => {
     if (isMobile) {
       switch (period) {
-        case 'day': return '1D';
-        case 'week': return '1W';
-        case 'month': return '1M';
+        case 'recent': return 'New';
+        case '1w': return '1W';
+        case '1m': return '1M';
+        case 'ever': return 'All';
       }
     }
     switch (period) {
-      case 'day': return 'Today';
-      case 'week': return 'This Week';
-      case 'month': return 'This Month';
+      case 'recent': return 'Most Recent';
+      case '1w': return '1W';
+      case '1m': return '1M';
+      case 'ever': return 'Ever';
     }
   };
 
@@ -117,7 +123,32 @@ const GamePage = () => {
   const isLoadingCurrent = contentType === 'clips' ? isLoadingClips : 
                           contentType === 'reels' ? isLoadingReels : isLoadingScreenshots;
   const fallbackData = contentType === 'screenshots' ? [] : clips;
-  const displayData = currentData?.length ? currentData : fallbackData;
+  const rawDisplayData = currentData?.length ? currentData : fallbackData;
+  
+  // Extract unique users from current content for the filter dropdown
+  const uniqueUsers = useMemo(() => {
+    if (!rawDisplayData) return [];
+    const usersMap = new Map<number, { id: number; username: string; displayName?: string; avatarUrl?: string }>();
+    rawDisplayData.forEach((item: any) => {
+      if (item.user && item.user.id) {
+        usersMap.set(item.user.id, {
+          id: item.user.id,
+          username: item.user.username,
+          displayName: item.user.displayName,
+          avatarUrl: item.user.avatarUrl
+        });
+      }
+    });
+    return Array.from(usersMap.values()).sort((a, b) => a.username.localeCompare(b.username));
+  }, [rawDisplayData]);
+  
+  // Filter display data by selected user
+  const displayData = useMemo(() => {
+    if (!rawDisplayData) return [];
+    if (selectedUserId === 'all') return rawDisplayData;
+    const userId = parseInt(selectedUserId);
+    return rawDisplayData.filter((item: any) => item.user?.id === userId);
+  }, [rawDisplayData, selectedUserId]);
 
   if (!match || !gameSlug) {
     return <div>Game not found</div>;
@@ -192,9 +223,9 @@ const GamePage = () => {
       {/* Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         {/* Time Period Filter */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium">Time Period:</span>
-          {(['day', 'week', 'month'] as const).map((period) => (
+          {(['recent', '1w', '1m', 'ever'] as const).map((period) => (
             <Button
               key={period}
               variant={timePeriod === period ? "default" : "outline"}
@@ -207,6 +238,50 @@ const GamePage = () => {
             </Button>
           ))}
         </div>
+
+        {/* User Filter Dropdown */}
+        {uniqueUsers.length > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">
+              <Users className="h-4 w-4 inline mr-1" />
+              Creator:
+            </span>
+            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+              <SelectTrigger className="w-[180px]" data-testid="select-user-filter">
+                <SelectValue placeholder="All Creators" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" data-testid="select-user-all">
+                  All Creators
+                </SelectItem>
+                {uniqueUsers.map((u) => (
+                  <SelectItem key={u.id} value={u.id.toString()} data-testid={`select-user-${u.id}`}>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage src={u.avatarUrl || ''} alt={u.username} />
+                        <AvatarFallback className="text-xs">
+                          {u.username?.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>{u.displayName || u.username}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedUserId !== 'all' && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setSelectedUserId('all')}
+                className="h-8 w-8 p-0"
+                data-testid="button-clear-user-filter"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Content Type Tabs */}
         <Tabs value={contentType} onValueChange={(value) => setContentType(value as 'clips' | 'reels' | 'screenshots')}>
@@ -248,7 +323,7 @@ const GamePage = () => {
         ) : displayData && displayData.length > 0 ? (
           <>
             {/* Stats */}
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center gap-4 mb-6 flex-wrap">
               <Badge variant="secondary" className="flex items-center gap-1">
                 <TrendingUp className="h-3 w-3" />
                 {displayData.length} {contentType} found
@@ -256,6 +331,12 @@ const GamePage = () => {
               <Badge variant="outline">
                 {getPeriodLabel(timePeriod)}
               </Badge>
+              {selectedUserId !== 'all' && (
+                <Badge variant="default" className="flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  Filtered by creator
+                </Badge>
+              )}
             </div>
 
             {/* Grid */}

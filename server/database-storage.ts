@@ -661,30 +661,44 @@ export class DatabaseStorage implements IStorage {
     return clipsWithDetails;
   }
 
-  async getFeedClips(period: string = 'day', limit: number = 10): Promise<ClipWithUser[]> {
+  async getFeedClips(period: string = 'recent', limit: number = 10): Promise<ClipWithUser[]> {
     let dateFilter;
     const now = new Date();
 
     switch (period) {
       case 'day':
+      case 'today':
         dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000); // 1 day ago
         break;
       case 'week':
+      case '1w':
         dateFilter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days ago
         break;
       case 'month':
+      case '1m':
         dateFilter = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
         break;
-      default:
+      case 'ever':
+      case 'all':
         dateFilter = new Date(0); // Beginning of time
+        break;
+      case 'recent':
+      default:
+        dateFilter = null; // No date filter, just order by recency
     }
 
-    const clipIds = await db
-      .select()
-      .from(clips)
-      .where(gt(clips.createdAt, dateFilter))
-      .orderBy(desc(clips.views), desc(clips.createdAt), desc(clips.id))
-      .limit(limit);
+    const clipIds = dateFilter 
+      ? await db
+          .select()
+          .from(clips)
+          .where(gt(clips.createdAt, dateFilter))
+          .orderBy(desc(clips.createdAt), desc(clips.id))
+          .limit(limit)
+      : await db
+          .select()
+          .from(clips)
+          .orderBy(desc(clips.createdAt), desc(clips.id))
+          .limit(limit);
 
     const clipsWithDetails: ClipWithUser[] = [];
     for (const clip of clipIds) {
@@ -697,22 +711,30 @@ export class DatabaseStorage implements IStorage {
     return clipsWithDetails;
   }
 
-  async getTrendingClips(period: string = 'day', limit: number = 10, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]> {
-    let dateFilter;
+  async getTrendingClips(period: string = 'recent', limit: number = 10, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]> {
+    let dateFilter: Date | null;
     const now = new Date();
 
     switch (period) {
       case 'day':
+      case 'today':
         dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         break;
       case 'week':
+      case '1w':
         dateFilter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
       case 'month':
+      case '1m':
         dateFilter = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         break;
-      default:
+      case 'ever':
+      case 'all':
         dateFilter = new Date(0);
+        break;
+      case 'recent':
+      default:
+        dateFilter = null; // No date filter for most recent
     }
 
     // Get clips based on engagement (likes + comments) with privacy filtering
@@ -729,7 +751,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(comments, eq(clips.id, comments.clipId))
       .where(
         and(
-          gt(clips.createdAt, dateFilter),
+          dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'clip'),
           gameId ? eq(clips.gameId, gameId) : undefined,
           // Only show clips from public accounts OR private accounts that current user follows OR user's own content
@@ -757,22 +779,30 @@ export class DatabaseStorage implements IStorage {
     return clipsWithDetails;
   }
 
-  async getTrendingReels(period: string = 'day', limit: number = 10, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]> {
-    let dateFilter;
+  async getTrendingReels(period: string = 'recent', limit: number = 10, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]> {
+    let dateFilter: Date | null;
     const now = new Date();
 
     switch (period) {
       case 'day':
+      case 'today':
         dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         break;
       case 'week':
+      case '1w':
         dateFilter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
       case 'month':
+      case '1m':
         dateFilter = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         break;
-      default:
+      case 'ever':
+      case 'all':
         dateFilter = new Date(0);
+        break;
+      case 'recent':
+      default:
+        dateFilter = null;
     }
 
     // Get reels based on engagement (likes + comments) with proper joins
@@ -810,7 +840,7 @@ export class DatabaseStorage implements IStorage {
       ))
       .where(
         and(
-          gt(clips.createdAt, dateFilter),
+          dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'reel'),
           gameId ? eq(clips.gameId, gameId) : undefined,
           // Only show reels from public accounts OR private accounts that current user follows OR user's own content
@@ -2453,22 +2483,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Extended trending methods for comprehensive trending page
-  async getTrendingClipsByLikes(period: string = 'day', limit: number = 10, gameId?: number): Promise<ClipWithUser[]> {
-    let dateFilter;
+  async getTrendingClipsByLikes(period: string = 'recent', limit: number = 10, gameId?: number): Promise<ClipWithUser[]> {
+    let dateFilter: Date | null;
     const now = new Date();
 
     switch (period) {
+      case 'day':
       case 'today':
         dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         break;
       case 'week':
+      case '1w':
         dateFilter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
+      case 'month':
+      case '1m':
+        dateFilter = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
       case 'ever':
+      case 'all':
         dateFilter = new Date(0);
         break;
+      case 'recent':
       default:
-        dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        dateFilter = null;
     }
 
     // Get clips ordered by likes count
@@ -2481,7 +2519,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(likes, eq(clips.id, likes.clipId))
       .where(
         and(
-          gt(clips.createdAt, dateFilter),
+          dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'clip'),
           gameId ? eq(clips.gameId, gameId) : undefined
         )
@@ -2503,22 +2541,30 @@ export class DatabaseStorage implements IStorage {
     return clipsWithDetails;
   }
 
-  async getTrendingClipsByComments(period: string = 'day', limit: number = 10, gameId?: number): Promise<ClipWithUser[]> {
-    let dateFilter;
+  async getTrendingClipsByComments(period: string = 'recent', limit: number = 10, gameId?: number): Promise<ClipWithUser[]> {
+    let dateFilter: Date | null;
     const now = new Date();
 
     switch (period) {
+      case 'day':
       case 'today':
         dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         break;
       case 'week':
+      case '1w':
         dateFilter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
+      case 'month':
+      case '1m':
+        dateFilter = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
       case 'ever':
+      case 'all':
         dateFilter = new Date(0);
         break;
+      case 'recent':
       default:
-        dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        dateFilter = null;
     }
 
     // Get clips ordered by comments count
@@ -2531,7 +2577,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(comments, eq(clips.id, comments.clipId))
       .where(
         and(
-          gt(clips.createdAt, dateFilter),
+          dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'clip'),
           gameId ? eq(clips.gameId, gameId) : undefined
         )
@@ -2553,22 +2599,30 @@ export class DatabaseStorage implements IStorage {
     return clipsWithDetails;
   }
 
-  async getTrendingReelsByLikes(period: string = 'day', limit: number = 10, gameId?: number): Promise<ClipWithUser[]> {
-    let dateFilter;
+  async getTrendingReelsByLikes(period: string = 'recent', limit: number = 10, gameId?: number): Promise<ClipWithUser[]> {
+    let dateFilter: Date | null;
     const now = new Date();
 
     switch (period) {
+      case 'day':
       case 'today':
         dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         break;
       case 'week':
+      case '1w':
         dateFilter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
+      case 'month':
+      case '1m':
+        dateFilter = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
       case 'ever':
+      case 'all':
         dateFilter = new Date(0);
         break;
+      case 'recent':
       default:
-        dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        dateFilter = null;
     }
 
     // Get reels ordered by likes count
@@ -2581,7 +2635,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(likes, eq(clips.id, likes.clipId))
       .where(
         and(
-          gt(clips.createdAt, dateFilter),
+          dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'reel'),
           gameId ? eq(clips.gameId, gameId) : undefined
         )
@@ -2603,22 +2657,30 @@ export class DatabaseStorage implements IStorage {
     return clipsWithDetails;
   }
 
-  async getTrendingReelsByComments(period: string = 'day', limit: number = 10, gameId?: number): Promise<ClipWithUser[]> {
-    let dateFilter;
+  async getTrendingReelsByComments(period: string = 'recent', limit: number = 10, gameId?: number): Promise<ClipWithUser[]> {
+    let dateFilter: Date | null;
     const now = new Date();
 
     switch (period) {
+      case 'day':
       case 'today':
         dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         break;
       case 'week':
+      case '1w':
         dateFilter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
+      case 'month':
+      case '1m':
+        dateFilter = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
       case 'ever':
+      case 'all':
         dateFilter = new Date(0);
         break;
+      case 'recent':
       default:
-        dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        dateFilter = null;
     }
 
     // Get reels ordered by comments count
@@ -2631,7 +2693,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(comments, eq(clips.id, comments.clipId))
       .where(
         and(
-          gt(clips.createdAt, dateFilter),
+          dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'reel'),
           gameId ? eq(clips.gameId, gameId) : undefined
         )
@@ -2673,22 +2735,30 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getTrendingScreenshots(period: string = 'day', limit: number = 10, gameId?: number): Promise<(Screenshot & { user: User; game?: Game })[]> {
-    let dateFilter;
+  async getTrendingScreenshots(period: string = 'recent', limit: number = 10, gameId?: number): Promise<(Screenshot & { user: User; game?: Game })[]> {
+    let dateFilter: Date | null;
     const now = new Date();
 
     switch (period) {
+      case 'day':
       case 'today':
         dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         break;
       case 'week':
+      case '1w':
         dateFilter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
+      case 'month':
+      case '1m':
+        dateFilter = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
       case 'ever':
+      case 'all':
         dateFilter = new Date(0);
         break;
+      case 'recent':
       default:
-        dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        dateFilter = null;
     }
 
     const screenshotsQuery = db
@@ -2705,7 +2775,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(games, eq(screenshots.gameId, games.id))
       .where(
         and(
-          gt(screenshots.createdAt, dateFilter),
+          dateFilter ? gt(screenshots.createdAt, dateFilter) : undefined,
           gameId ? eq(screenshots.gameId, gameId) : undefined
         )
       )

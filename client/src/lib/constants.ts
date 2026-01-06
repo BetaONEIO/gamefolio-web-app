@@ -7,9 +7,10 @@ export const formatDuration = (seconds: number): string => {
 
 // Define the available time periods for feed filtering
 export const feedPeriods = [
-  { value: 'day', label: 'Today' },
-  { value: 'week', label: 'This week' },
-  { value: 'month', label: 'This month' },
+  { value: 'recent', label: 'Most Recent' },
+  { value: '1w', label: '1W' },
+  { value: '1m', label: '1M' },
+  { value: 'ever', label: 'Ever' },
 ];
 
 // Define the placeholder thumbnail when no image is available

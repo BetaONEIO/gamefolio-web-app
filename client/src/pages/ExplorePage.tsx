@@ -29,7 +29,7 @@ const ExplorePage = () => {
   const [location, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
-  const [timeRange, setTimeRange] = useState("year");
+  const [timeRange, setTimeRange] = useState("recent");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [queryParams, setQueryParams] = useState<{ q?: string; hashtag?: string; game?: string; category?: string }>({});
   const [displayedGamesCount, setDisplayedGamesCount] = useState(20);
@@ -267,24 +267,31 @@ const ExplorePage = () => {
                 <div className="flex flex-wrap gap-1 items-center">
                   <div className="flex items-center bg-card rounded border border-border overflow-hidden h-7">
                     <button 
-                      onClick={() => setTimeRange("month")}
-                      className={`px-2 py-0.5 text-xs transition-colors ${timeRange === 'month' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                      onClick={() => setTimeRange("recent")}
+                      className={`px-2 py-0.5 text-xs transition-colors ${timeRange === 'recent' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
                     >
-                      Month
+                      Recent
                     </button>
                     <div className="w-px h-4 bg-border"></div>
                     <button 
-                      onClick={() => setTimeRange("year")}
-                      className={`px-2 py-0.5 text-xs transition-colors ${timeRange === 'year' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                      onClick={() => setTimeRange("1w")}
+                      className={`px-2 py-0.5 text-xs transition-colors ${timeRange === '1w' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
                     >
-                      Year
+                      1W
                     </button>
                     <div className="w-px h-4 bg-border"></div>
                     <button 
-                      onClick={() => setTimeRange("all")}
-                      className={`px-2 py-0.5 text-xs transition-colors ${timeRange === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                      onClick={() => setTimeRange("1m")}
+                      className={`px-2 py-0.5 text-xs transition-colors ${timeRange === '1m' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
                     >
-                      All
+                      1M
+                    </button>
+                    <div className="w-px h-4 bg-border"></div>
+                    <button 
+                      onClick={() => setTimeRange("ever")}
+                      className={`px-2 py-0.5 text-xs transition-colors ${timeRange === 'ever' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                    >
+                      Ever
                     </button>
                   </div>
                   <Button 
@@ -363,24 +370,31 @@ const ExplorePage = () => {
             <div className="flex flex-wrap gap-2 items-center">
               <div className="flex items-center bg-card rounded-md border border-border overflow-hidden">
                 <button 
-                  onClick={() => setTimeRange("month")}
-                  className={`px-3 py-1.5 text-sm transition-colors ${timeRange === 'month' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                  onClick={() => setTimeRange("recent")}
+                  className={`px-3 py-1.5 text-sm transition-colors ${timeRange === 'recent' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
                 >
-                  Month
+                  Recent
                 </button>
                 <div className="w-px h-5 bg-border"></div>
                 <button 
-                  onClick={() => setTimeRange("year")}
-                  className={`px-3 py-1.5 text-sm transition-colors ${timeRange === 'year' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                  onClick={() => setTimeRange("1w")}
+                  className={`px-3 py-1.5 text-sm transition-colors ${timeRange === '1w' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
                 >
-                  Year
+                  1W
                 </button>
                 <div className="w-px h-5 bg-border"></div>
                 <button 
-                  onClick={() => setTimeRange("all")}
-                  className={`px-3 py-1.5 text-sm transition-colors ${timeRange === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                  onClick={() => setTimeRange("1m")}
+                  className={`px-3 py-1.5 text-sm transition-colors ${timeRange === '1m' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
                 >
-                  All Time
+                  1M
+                </button>
+                <div className="w-px h-5 bg-border"></div>
+                <button 
+                  onClick={() => setTimeRange("ever")}
+                  className={`px-3 py-1.5 text-sm transition-colors ${timeRange === 'ever' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                >
+                  Ever
                 </button>
               </div>
               <Button 
