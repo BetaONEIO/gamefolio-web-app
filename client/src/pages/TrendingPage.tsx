@@ -157,9 +157,47 @@ const TrendingPage: React.FC = () => {
   const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotWithUser | null>(null);
   const [ageRestrictionAccepted, setAgeRestrictionAccepted] = useState(false);
   const [showAgeRestrictionDialog, setShowAgeRestrictionDialog] = useState(false);
+  const [isFollowingAuthor, setIsFollowingAuthor] = useState(false);
   const isAcceptingRef = useRef(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch follow status when screenshot is selected
+  const { data: followStatus } = useQuery({
+    queryKey: ['/api/follow/status', selectedScreenshot?.user?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/follow/status/${selectedScreenshot?.user?.id}`);
+      if (!response.ok) return { following: false };
+      return response.json();
+    },
+    enabled: !!selectedScreenshot && !!user && selectedScreenshot.user.id !== user.id,
+  });
+
+  // Sync follow status from server
+  useEffect(() => {
+    if (followStatus) {
+      setIsFollowingAuthor(followStatus.following);
+    }
+  }, [followStatus]);
+
+  // Follow/unfollow mutation
+  const followMutation = useMutation({
+    mutationFn: async (targetUserId: number) => {
+      const response = await apiRequest('POST', `/api/follow/${targetUserId}`);
+      return response;
+    },
+    onSuccess: (data) => {
+      setIsFollowingAuthor(data.following);
+      queryClient.invalidateQueries({ queryKey: ['/api/follow/status', selectedScreenshot?.user?.id] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Action failed",
+        description: error.message || "Failed to update follow status",
+        variant: "gamefolioError",
+      });
+    },
+  });
 
   // Check for age restriction when screenshot is selected
   useEffect(() => {
@@ -182,11 +220,12 @@ const TrendingPage: React.FC = () => {
     }
   }, [ageRestrictionAccepted, showAgeRestrictionDialog]);
 
-  // Reset age restriction state when screenshot dialog is closed
+  // Reset age restriction and follow state when screenshot dialog is closed
   useEffect(() => {
     if (!selectedScreenshot) {
       setAgeRestrictionAccepted(false);
       setShowAgeRestrictionDialog(false);
+      setIsFollowingAuthor(false);
       isAcceptingRef.current = false; // Reset accepting flag
     }
   }, [selectedScreenshot]);
@@ -570,7 +609,7 @@ const TrendingPage: React.FC = () => {
 
       {/* Screenshot Modal Dialog */}
       <Dialog open={!!selectedScreenshot} onOpenChange={() => setSelectedScreenshot(null)}>
-        <DialogContent className="max-w-[95%] w-[95%] p-0 bg-background text-foreground max-h-[95vh] h-[95vh] overflow-hidden">
+        <DialogContent className="max-w-[95%] w-[95%] p-0 bg-background text-foreground max-h-[95vh] h-auto lg:h-[95vh] overflow-y-auto lg:overflow-hidden">
 
           {selectedScreenshot && (
             <div className="flex flex-col lg:flex-row h-full">
@@ -632,15 +671,17 @@ const TrendingPage: React.FC = () => {
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                  ) : (
+                  ) : user ? (
                     <Button
-                      variant="default"
+                      variant={isFollowingAuthor ? "outline" : "default"}
                       size="sm"
+                      onClick={() => followMutation.mutate(selectedScreenshot.user.id)}
+                      disabled={followMutation.isPending}
                       data-testid="button-follow"
                     >
-                      Follow
+                      {isFollowingAuthor ? "Following" : "Follow"}
                     </Button>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* Screenshot Details - scrollable */}
