@@ -4295,8 +4295,12 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
+  // Free avatar borders available to all users (IDs of borders everyone can use)
+  private readonly FREE_AVATAR_BORDER_IDS = [17]; // HUD Corner Brackets
+
   // Get user's unlocked avatar borders
   async getUserUnlockedAvatarBorders(userId: number): Promise<AssetReward[]> {
+    // Get user's claimed borders from lootbox
     const claims = await db
       .select({
         reward: assetRewards,
@@ -4311,11 +4315,39 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    return claims.map(c => c.reward);
+    const claimedBorders = claims.map(c => c.reward);
+    const claimedIds = new Set(claimedBorders.map(b => b.id));
+
+    // Get free borders that user hasn't already claimed
+    const freeBorders = await db
+      .select()
+      .from(assetRewards)
+      .where(
+        and(
+          inArray(assetRewards.id, this.FREE_AVATAR_BORDER_IDS),
+          eq(assetRewards.assetType, "avatar_border"),
+          eq(assetRewards.isActive, true)
+        )
+      );
+
+    // Combine claimed and free borders (avoiding duplicates)
+    const allBorders = [...claimedBorders];
+    for (const freeBorder of freeBorders) {
+      if (!claimedIds.has(freeBorder.id)) {
+        allBorders.push(freeBorder);
+      }
+    }
+
+    return allBorders;
   }
 
   // Check if user has unlocked a specific reward
   async userHasUnlockedReward(userId: number, rewardId: number): Promise<boolean> {
+    // Check if it's a free border (available to everyone)
+    if (this.FREE_AVATAR_BORDER_IDS.includes(rewardId)) {
+      return true;
+    }
+
     const [claim] = await db
       .select()
       .from(assetRewardClaims)
