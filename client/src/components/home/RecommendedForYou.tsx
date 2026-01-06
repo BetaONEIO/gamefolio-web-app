@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Star, Video, Camera } from "lucide-react";
+import { Star, Video, Camera, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
@@ -35,60 +35,20 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
     }
   }, [recommendedClips, contentType]);
 
-  // Grab scroll behavior for recommended clips
-  useEffect(() => {
+  // Scroll function for arrow navigation
+  const scroll = (direction: 'left' | 'right') => {
+    if (!containerRef.current) return;
+    
     const container = containerRef.current;
-    if (!container) return;
-
-    let isDown = false;
-    let startX: number;
-    let scrollLeft: number;
-
-    const handleMouseDown = (e: MouseEvent) => {
-      // Only enable drag if clicking on the container itself, not on video items
-      if ((e.target as HTMLElement).closest('[data-testid*="clip-recommended-"]')) {
-        return;
-      }
-      isDown = true;
-      startX = e.pageX - container.offsetLeft;
-      scrollLeft = container.scrollLeft;
-      container.style.cursor = 'grabbing';
-      container.style.userSelect = 'none';
-    };
-
-    const handleMouseLeave = () => {
-      isDown = false;
-      container.style.cursor = 'grab';
-      container.style.userSelect = 'auto';
-    };
-
-    const handleMouseUp = () => {
-      isDown = false;
-      container.style.cursor = 'grab';
-      container.style.userSelect = 'auto';
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDown) return;
-      e.preventDefault();
-      const x = e.pageX - container.offsetLeft;
-      const walk = (x - startX) * 2; // Scroll speed
-      container.scrollLeft = scrollLeft - walk;
-    };
-
-    container.style.cursor = 'grab';
-    container.addEventListener('mousedown', handleMouseDown);
-    container.addEventListener('mouseleave', handleMouseLeave);
-    container.addEventListener('mouseup', handleMouseUp);
-    container.addEventListener('mousemove', handleMouseMove);
-
-    return () => {
-      container.removeEventListener('mousedown', handleMouseDown);
-      container.removeEventListener('mouseleave', handleMouseLeave);
-      container.removeEventListener('mouseup', handleMouseUp);
-      container.removeEventListener('mousemove', handleMouseMove);
-    };
-  }, []);
+    const itemWidth = contentType === 'reels' ? 180 : 420; // Width based on content type
+    const scrollAmount = itemWidth * 2; // Scroll by 2 items
+    
+    if (direction === 'left') {
+      container.scrollLeft -= scrollAmount;
+    } else {
+      container.scrollLeft += scrollAmount;
+    }
+  };
 
   // Don't render if loading or no clips
   if (isLoading) {
@@ -127,8 +87,8 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
           </div>
         </div>
         
-        <div className="overflow-x-auto pb-2 -mx-2 sm:-mx-4 md:-mx-6 px-2 sm:px-4 md:px-6" style={{ scrollbarWidth: 'thin' }}>
-          <div className="flex gap-3 md:gap-4" style={{ minWidth: "100%", width: "max-content" }}>
+        <div className="relative">
+          <div className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide pb-4 px-2 sm:px-8">
             {Array(6).fill(0).map((_, i) => (
               <div 
                 key={i}
@@ -186,8 +146,30 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
       </div>
 
       {filteredContent.length > 0 ? (
-        <div className="overflow-x-auto pb-2 -mx-2 sm:-mx-4 md:-mx-6 px-2 sm:px-4 md:px-6" ref={containerRef} style={{ scrollbarWidth: 'thin' }}>
-          <div className="flex gap-3 md:gap-4" style={{ minWidth: "100%", width: "max-content" }}>
+        <div className="relative">
+          {/* Navigation Arrows */}
+          <button
+            onClick={() => scroll('left')}
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors hidden sm:block"
+            data-testid="button-recommended-scroll-left"
+          >
+            <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+          </button>
+          
+          <button
+            onClick={() => scroll('right')}
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors hidden sm:block"
+            data-testid="button-recommended-scroll-right"
+          >
+            <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
+          </button>
+
+          {/* Carousel Container */}
+          <div 
+            ref={containerRef}
+            className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide pb-4 px-2 sm:px-8"
+            style={{ scrollBehavior: 'smooth' }}
+          >
             {filteredContent.map((clip) => (
               <div 
                 key={`recommended-clip-${clip.id}`}
