@@ -10,7 +10,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { Send } from "lucide-react";
-import { VerificationBadge } from "@/components/ui/verification-badge";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import {
   AlertDialog,
@@ -143,7 +142,6 @@ export function ScreenshotCommentSection({ screenshotId }: ScreenshotCommentSect
                   <Link href={`/@${comment.user.username}`}>
                     <span className="font-semibold mr-1 text-sm hover:text-primary cursor-pointer flex items-center">
                       {comment.user.username}
-                      <VerificationBadge isVerified={(comment.user as any).emailVerified} size="sm" />
                       <ModeratorBadge isModerator={(comment.user as any).role === "moderator"} size="sm" />
                     </span>
                   </Link>

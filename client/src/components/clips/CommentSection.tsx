@@ -12,7 +12,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { Trash2 } from "lucide-react";
-import { VerificationBadge } from "@/components/ui/verification-badge";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
@@ -164,7 +163,6 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                       onClick={onUsernameClick}
                     >
                       {comment.user.username}
-                      <VerificationBadge isVerified={(comment.user as any).emailVerified} size="sm" />
                       <ModeratorBadge isModerator={(comment.user as any).role === "moderator"} size="sm" />
                     </span>
                   </Link>
