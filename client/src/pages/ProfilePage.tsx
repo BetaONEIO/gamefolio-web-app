@@ -1453,8 +1453,8 @@ const ProfilePage = () => {
 
         {/* Desktop Layout - Horizontal */}
         <div className="hidden md:flex items-start gap-4 md:gap-6 pb-4" style={{ marginTop: '-48px', paddingTop: '20px' }}>
-          {/* Profile Picture positioned to overlap banner */}
-          <div className="relative flex-shrink-0" style={{ transform: 'translateY(-28px)' }}>
+          {/* Profile Picture positioned to overlap banner - fixed width for consistent layout */}
+          <div className="relative flex-shrink-0 w-56 h-56" style={{ transform: 'translateY(-28px)' }}>
             {/* Circular glow - only show when NO SVG border is selected (CustomAvatar handles its own glow) */}
             {!profile.selectedAvatarBorderId && (
               <div 

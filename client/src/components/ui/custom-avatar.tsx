@@ -284,25 +284,6 @@ export const CustomAvatar = ({
 
   const displayName = user?.displayName || user?.username || "?";
   
-  // For profile size, wrap in same container to maintain consistent sizing with SVG border version
-  if (size === "profile") {
-    return (
-      <div className={`relative inline-flex items-center justify-center ${containerSizes[size]} ${className}`}>
-        <Avatar 
-          className={`${sizeClasses[size]} transition-all duration-300 rounded-full`}
-          style={showBorder ? {
-            boxShadow: borderStyles[borderIntensity](borderColor)
-          } : {}}
-        >
-          <AvatarImage src={user?.avatarUrl || ""} alt={displayName} className="rounded-full object-cover" />
-          <AvatarFallback className="bg-primary/20 text-foreground font-semibold rounded-full">
-            {displayName.substring(0, 2).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-      </div>
-    );
-  }
-  
   return (
     <Avatar 
       className={`${sizeClasses[size]} transition-all duration-300 rounded-full ${className}`}
