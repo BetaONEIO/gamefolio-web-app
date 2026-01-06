@@ -63,6 +63,7 @@ import {
 } from "@/components/ui/dialog";
 import CommentSection from "@/components/clips/CommentSection";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
+import { ScreenshotCommentSection } from "@/components/screenshots/ScreenshotCommentSection";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import { ModeratorIcon } from "@/components/ui/moderator-icon";
@@ -2633,13 +2634,8 @@ const ProfilePage = () => {
                   </div>
 
                   {/* Comments section */}
-                  <CommentSection 
-                    contentId={selectedScreenshot.id}
-                    contentType="screenshot"
-                    currentUserId={profile?.id} 
-                    autoExpanded={true}
-                    initialCount={(selectedScreenshot as any)._count?.comments || 0}
-                    onUsernameClick={() => setSelectedScreenshot(null)}
+                  <ScreenshotCommentSection 
+                    screenshotId={selectedScreenshot.id}
                   />
                 </div>
               </div>
