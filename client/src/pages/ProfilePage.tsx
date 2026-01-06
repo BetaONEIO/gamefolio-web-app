@@ -393,8 +393,50 @@ const ProfilePage = () => {
     },
   });
 
-  // Set default tab
-  const [activeTab, setActiveTab] = useState("clips");
+  // Set default tab from URL params or default to "clips"
+  const getInitialTab = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam && ['clips', 'reels', 'screenshots', 'favorites'].includes(tabParam)) {
+      return tabParam;
+    }
+    return "clips";
+  };
+  const [activeTab, setActiveTab] = useState(getInitialTab);
+
+  // Sync tab state with URL for browser back/forward navigation
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentTab = urlParams.get('tab');
+    
+    // Only update URL if tab changed and it's not the default
+    if (activeTab !== 'clips' && currentTab !== activeTab) {
+      urlParams.set('tab', activeTab);
+      const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
+      window.history.replaceState(null, '', newUrl);
+    } else if (activeTab === 'clips' && currentTab) {
+      // Remove tab param if going back to default
+      urlParams.delete('tab');
+      const newUrl = urlParams.toString() ? `${window.location.pathname}?${urlParams.toString()}` : window.location.pathname;
+      window.history.replaceState(null, '', newUrl);
+    }
+  }, [activeTab]);
+
+  // Handle browser back/forward to restore tab state
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      if (tabParam && ['clips', 'reels', 'screenshots', 'favorites'].includes(tabParam)) {
+        setActiveTab(tabParam);
+      } else {
+        setActiveTab('clips');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Game selection dialog state
   const [showGameSelection, setShowGameSelection] = useState(false);
