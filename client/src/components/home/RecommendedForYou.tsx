@@ -17,6 +17,8 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
   const actualUserId = userId || user?.id;
   const containerRef = useRef<HTMLDivElement>(null);
   const [contentType, setContentType] = useState<'clips' | 'reels'>('clips');
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
 
   // Fetch recommended clips based on user's favorite games
   const { data: recommendedClips, isLoading } = useQuery<ClipWithUser[]>({
@@ -34,6 +36,26 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
       return recommendedClips.filter(clip => clip.videoType !== 'reel');
     }
   }, [recommendedClips, contentType]);
+
+  // Check scroll position and update arrow states
+  const updateScrollState = () => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+    const isAtStart = container.scrollLeft <= 0;
+    const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 10;
+    setCanScrollLeft(!isAtStart);
+    setCanScrollRight(!isAtEnd);
+  };
+
+  // Update scroll state on mount and when content changes
+  useEffect(() => {
+    updateScrollState();
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('scroll', updateScrollState);
+      return () => container.removeEventListener('scroll', updateScrollState);
+    }
+  }, [filteredContent]);
 
   // Scroll function for arrow navigation
   const scroll = (direction: 'left' | 'right') => {
@@ -149,16 +171,26 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
         <div className="relative">
           {/* Navigation Arrows */}
           <button
-            onClick={() => scroll('left')}
-            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors hidden sm:block"
+            onClick={() => canScrollLeft && scroll('left')}
+            className={`absolute left-2 top-1/2 -translate-y-1/2 z-10 text-white p-2 rounded-full transition-all hidden sm:block ${
+              canScrollLeft 
+                ? 'bg-black/50 hover:bg-black/70 cursor-pointer' 
+                : 'bg-black/20 cursor-not-allowed opacity-40'
+            }`}
+            disabled={!canScrollLeft}
             data-testid="button-recommended-scroll-left"
           >
             <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
           
           <button
-            onClick={() => scroll('right')}
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors hidden sm:block"
+            onClick={() => canScrollRight && scroll('right')}
+            className={`absolute right-2 top-1/2 -translate-y-1/2 z-10 text-white p-2 rounded-full transition-all hidden sm:block ${
+              canScrollRight 
+                ? 'bg-black/50 hover:bg-black/70 cursor-pointer' 
+                : 'bg-black/20 cursor-not-allowed opacity-40'
+            }`}
+            disabled={!canScrollRight}
             data-testid="button-recommended-scroll-right"
           >
             <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
