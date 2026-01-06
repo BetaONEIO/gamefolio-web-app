@@ -4298,6 +4298,20 @@ export class DatabaseStorage implements IStorage {
   // Free avatar borders available to all users (IDs of borders everyone can use)
   private readonly FREE_AVATAR_BORDER_IDS = [17]; // HUD Corner Brackets
 
+  // Get ALL avatar borders (for Pro users who have access to everything)
+  async getAllAvatarBorders(): Promise<AssetReward[]> {
+    return await db
+      .select()
+      .from(assetRewards)
+      .where(
+        and(
+          eq(assetRewards.assetType, "avatar_border"),
+          eq(assetRewards.isActive, true)
+        )
+      )
+      .orderBy(assetRewards.rarity, assetRewards.id);
+  }
+
   // Get user's unlocked avatar borders
   async getUserUnlockedAvatarBorders(userId: number): Promise<AssetReward[]> {
     // Get user's claimed borders from lootbox

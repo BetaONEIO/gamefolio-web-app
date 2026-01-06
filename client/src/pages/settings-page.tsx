@@ -768,9 +768,9 @@ export default function SettingsPage() {
 
                   {/* Current Border Preview */}
                   <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg border">
-                    <div className="relative h-28 w-28 flex items-center justify-center">
+                    <div className="relative h-48 w-48 flex items-center justify-center">
                       <div 
-                        className="h-16 w-16 rounded-full overflow-hidden z-10"
+                        className="h-32 w-32 rounded-full overflow-hidden z-10"
                       >
                         <img 
                           src={avatarPreview || profileData.avatarUrl || ""} 

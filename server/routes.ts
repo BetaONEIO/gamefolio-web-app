@@ -5682,6 +5682,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
+      // Pro users get access to ALL avatar borders
+      const user = await storage.getUserById(req.user.id);
+      if (user?.isPro) {
+        const allBorders = await storage.getAllAvatarBorders();
+        return res.json(allBorders);
+      }
+      
+      // Non-Pro users only get their unlocked borders
       const unlockedBorders = await storage.getUserUnlockedAvatarBorders(req.user.id);
       res.json(unlockedBorders);
     } catch (err) {
@@ -5701,16 +5709,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Allow null to remove the border
       if (avatarBorderId !== null) {
-        // Verify user has unlocked this border
-        const hasUnlocked = await storage.userHasUnlockedReward(req.user.id, avatarBorderId);
-        if (!hasUnlocked) {
-          return res.status(403).json({ message: "You haven't unlocked this avatar border" });
-        }
-        
         // Verify it's actually an avatar border type
         const reward = await storage.getAssetReward(avatarBorderId);
         if (!reward || reward.assetType !== "avatar_border") {
           return res.status(400).json({ message: "Invalid avatar border" });
+        }
+        
+        // Pro users can select ANY border
+        const user = await storage.getUserById(req.user.id);
+        if (!user?.isPro) {
+          // Non-Pro users must have unlocked the border
+          const hasUnlocked = await storage.userHasUnlockedReward(req.user.id, avatarBorderId);
+          if (!hasUnlocked) {
+            return res.status(403).json({ message: "You haven't unlocked this avatar border" });
+          }
         }
       }
 
