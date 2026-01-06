@@ -1131,7 +1131,7 @@ const ProfilePage = () => {
       </div>
 
       {/* Profile Info - positioned below banner with overlapping profile picture */}
-      <div className="container mx-auto px-4 relative z-20">
+      <div className="max-w-[80%] mx-auto px-4 relative z-20">
 
         {/* Mobile Layout - Stacked Vertically */}
         <div className="block md:hidden pb-6" style={{ marginTop: '-56px', paddingTop: '24px' }}>
