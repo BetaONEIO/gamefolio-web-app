@@ -28,7 +28,8 @@ const InlineSvgBorder: React.FC<{
   svgUrl: string;
   color: string;
   className?: string;
-}> = ({ svgUrl, color, className }) => {
+  style?: React.CSSProperties;
+}> = ({ svgUrl, color, className, style }) => {
   const [svgContent, setSvgContent] = useState<string>('');
   
   useEffect(() => {
@@ -68,6 +69,7 @@ const InlineSvgBorder: React.FC<{
       dangerouslySetInnerHTML={{ __html: svgContent }}
       style={{
         filter: `drop-shadow(0 0 4px ${color}80) drop-shadow(0 0 8px ${color}40)`,
+        ...style,
       }}
     />
   );
