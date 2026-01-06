@@ -38,8 +38,12 @@ const InlineSvgBorder: React.FC<{
     fetch(svgUrl)
       .then(res => res.text())
       .then(svg => {
-        // Sanitize the SVG
-        const sanitized = DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } });
+        // Sanitize the SVG - preserve style tags, CSS animations, and SMIL animations
+        const sanitized = DOMPurify.sanitize(svg, { 
+          USE_PROFILES: { svg: true, svgFilters: true },
+          ADD_TAGS: ['style', 'animate', 'animateTransform', 'animateMotion', 'set'],
+          ADD_ATTR: ['xmlns', 'viewBox', 'preserveAspectRatio', 'attributeName', 'attributeType', 'begin', 'dur', 'end', 'from', 'to', 'by', 'values', 'keyTimes', 'keySplines', 'calcMode', 'repeatCount', 'repeatDur', 'additive', 'accumulate', 'type', 'restart']
+        });
         
         // Replace black colors with the user's selected color
         // This handles various formats: #000, #000000, black, rgb(0,0,0)
