@@ -28,12 +28,6 @@ ogType.property = 'og:type';
 ogType.content = 'website';
 document.head.appendChild(ogType);
 
-// Add favicon link
-const favicon = document.createElement('link');
-favicon.rel = 'icon';
-favicon.type = 'image/svg+xml';
-favicon.href = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%239146FF"><rect width="24" height="24" rx="4" fill="%232D2D39"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="16" font-weight="bold" fill="%239146FF">G</text></svg>';
-document.head.appendChild(favicon);
 
 // Initialize EmailJS
 initEmailJS();
