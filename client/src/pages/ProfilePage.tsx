@@ -1582,11 +1582,12 @@ const ProfilePage = () => {
                   <p className="mt-3 text-base text-foreground/90 max-w-2xl">{profile.bio}</p>
                 )}
 
-                {/* Thin dividing line above gaming social links */}
-                <div className="w-full h-px bg-border/60 mt-4 mb-3"></div>
-
-                {/* Platform Connections under description */}
-                <div className="flex flex-wrap gap-2 mt-3">
+                {/* Platform Connections under description - only show if any platform is connected */}
+                {(profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
+                  <>
+                    {/* Thin dividing line above gaming social links */}
+                    <div className="w-full h-px bg-border/60 mt-4 mb-3"></div>
+                    <div className="flex flex-wrap gap-2 mt-3">
                   {profile.steamUsername && (
                     <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#1B2838', color: '#FFFFFF' }}>
                       <SiSteam className="w-3 h-3" />
@@ -1680,7 +1681,9 @@ const ProfilePage = () => {
                       <span>{profile.facebookUsername}</span>
                     </a>
                   )}
-                </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Action buttons positioned top right, in line with display name */}
