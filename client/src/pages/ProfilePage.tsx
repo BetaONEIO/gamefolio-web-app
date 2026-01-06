@@ -1804,7 +1804,8 @@ const ProfilePage = () => {
         {/* Spacer for tabs section */}
         <div className="h-[12px]"></div>
 
-        {/* Enhanced Tabs section with theme colors */}
+        {/* Enhanced Tabs section with theme colors - reduced width */}
+        <div className="max-w-[80%] mx-auto">
         <Tabs 
           defaultValue="clips" 
           value={activeTab} 
@@ -2489,6 +2490,7 @@ const ProfilePage = () => {
             </div>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
 
       {/* Game Selection Dialog */}
