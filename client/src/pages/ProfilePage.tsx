@@ -1131,7 +1131,7 @@ const ProfilePage = () => {
       </div>
 
       {/* Profile Info - positioned below banner with overlapping profile picture */}
-      <div className="max-w-[80%] mx-auto px-4 relative z-20">
+      <div className="max-w-[90%] mx-auto px-4 relative z-20">
 
         {/* Mobile Layout - Stacked Vertically */}
         <div className="block md:hidden pb-6" style={{ marginTop: '-56px', paddingTop: '24px' }}>
@@ -1805,7 +1805,7 @@ const ProfilePage = () => {
         <div className="h-[12px]"></div>
 
         {/* Enhanced Tabs section with theme colors - reduced width */}
-        <div className="max-w-[80%] mx-auto">
+        <div className="max-w-[90%] mx-auto">
         <Tabs 
           defaultValue="clips" 
           value={activeTab} 
