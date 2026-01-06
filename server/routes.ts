@@ -1319,6 +1319,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           longestStreak: userWithoutPassword.longestStreak || 0,
           level: userWithoutPassword.level || 1,
           totalXP: userWithoutPassword.totalXP || 0,
+          isPro: userWithoutPassword.isPro || false,
         });
       }
     } catch (error) {
@@ -1350,6 +1351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       longestStreak: userWithoutPassword.longestStreak || 0,
       level: userWithoutPassword.level || 1,
       totalXP: userWithoutPassword.totalXP || 0,
+      isPro: userWithoutPassword.isPro || false,
     });
   });
 
