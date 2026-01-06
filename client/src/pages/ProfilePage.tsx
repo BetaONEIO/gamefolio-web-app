@@ -1011,7 +1011,7 @@ const ProfilePage = () => {
     >
       {/* Enhanced Banner with global theme colors */}
       <div 
-        className={`h-52 sm:h-64 md:h-96 bg-cover bg-center overflow-hidden profile-banner relative -mx-4 md:-mx-8 border-b-4 border-primary ${profile?.bannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
+        className={`h-44 sm:h-52 md:h-72 lg:h-80 bg-cover bg-center overflow-hidden profile-banner relative -mx-4 md:-mx-8 border-b-4 border-primary ${profile?.bannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
         style={{
           ...bannerStyle,
         }}
@@ -1131,7 +1131,7 @@ const ProfilePage = () => {
       </div>
 
       {/* Profile Info - positioned below banner with overlapping profile picture */}
-      <div className="container mx-auto px-4 relative z-20">
+      <div className="mx-auto px-4 lg:px-6 relative z-20 max-w-[1200px]">
 
         {/* Mobile Layout - Stacked Vertically */}
         <div className="block md:hidden pb-6" style={{ marginTop: '-56px', paddingTop: '24px' }}>
@@ -1802,7 +1802,7 @@ const ProfilePage = () => {
         </div>
 
         {/* Spacer for tabs section */}
-        <div className="h-[20px]"></div>
+        <div className="h-[12px]"></div>
 
         {/* Enhanced Tabs section with theme colors */}
         <Tabs 
@@ -1812,7 +1812,7 @@ const ProfilePage = () => {
           className="w-full"
         >
           <TabsList 
-            className="w-full justify-start rounded-none h-12 md:h-14 p-0 relative overflow-x-auto overflow-y-hidden flex"
+            className="w-full justify-start rounded-none h-10 md:h-12 p-0 relative overflow-x-auto overflow-y-hidden flex"
             style={{ 
               backgroundColor: `hsl(var(--background) / 0.4)`
             }}
@@ -1820,7 +1820,7 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={clipsTabRef}
               value="clips" 
-              className={`relative rounded-none h-12 md:h-14 transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6 border ${activeTab === 'clips' ? 'font-bold' : 'font-medium'}`}
+              className={`relative rounded-none h-10 md:h-12 transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-4 border ${activeTab === 'clips' ? 'font-bold' : 'font-medium'}`}
               style={{ 
                 color: activeTab === 'clips' ? '#FFFFFF' : '#9CA3AF',
                 backgroundColor: activeTab === 'clips' ? 'hsl(var(--primary) / 0.1)' : 'transparent',
@@ -1841,7 +1841,7 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={reelsTabRef}
               value="reels" 
-              className={`relative rounded-none h-12 md:h-14 transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6 border ${activeTab === 'reels' ? 'font-bold' : 'font-medium'}`}
+              className={`relative rounded-none h-10 md:h-12 transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-4 border ${activeTab === 'reels' ? 'font-bold' : 'font-medium'}`}
               style={{ 
                 color: activeTab === 'reels' ? '#FFFFFF' : '#9CA3AF',
                 backgroundColor: activeTab === 'reels' ? 'hsl(var(--primary) / 0.1)' : 'transparent',
@@ -1862,7 +1862,7 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={screenshotsTabRef}
               value="screenshots" 
-              className={`relative rounded-none h-12 md:h-14 transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6 text-xs md:text-base border ${activeTab === 'screenshots' ? 'font-bold' : 'font-medium'}`}
+              className={`relative rounded-none h-10 md:h-12 transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-4 text-xs md:text-sm border ${activeTab === 'screenshots' ? 'font-bold' : 'font-medium'}`}
               style={{ 
                 color: activeTab === 'screenshots' ? '#FFFFFF' : '#9CA3AF',
                 backgroundColor: activeTab === 'screenshots' ? 'hsl(var(--primary) / 0.1)' : 'transparent',
@@ -1883,7 +1883,7 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={favoritesTabRef}
               value="favorites" 
-              className={`relative rounded-none h-12 md:h-14 transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6 border ${activeTab === 'favorites' ? 'font-bold' : 'font-medium'}`}
+              className={`relative rounded-none h-10 md:h-12 transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-4 border ${activeTab === 'favorites' ? 'font-bold' : 'font-medium'}`}
               style={{ 
                 color: activeTab === 'favorites' ? '#FFFFFF' : '#9CA3AF',
                 backgroundColor: activeTab === 'favorites' ? 'hsl(var(--primary) / 0.1)' : 'transparent',
@@ -1903,7 +1903,7 @@ const ProfilePage = () => {
           </TabsList>
 
           {/* Clips Tab */}
-          <TabsContent value="clips" className="pt-6">
+          <TabsContent value="clips" className="pt-4">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
@@ -1960,13 +1960,13 @@ const ProfilePage = () => {
                 </div>
               </div>
             ) : isLoadingClips ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                   <Skeleton key={i} className="aspect-video w-full rounded-lg" />
                 ))}
               </div>
             ) : clips && clips.filter(clip => clip.videoType !== 'reel').length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {clips.filter(clip => clip.videoType !== 'reel').map((clip) => {
                   const isHighlighted = highlightedContent?.type === 'clip' && highlightedContent.id === clip.id.toString();
                   return (
@@ -2011,7 +2011,7 @@ const ProfilePage = () => {
           </TabsContent>
 
           {/* Reels Tab */}
-          <TabsContent value="reels" className="pt-6">
+          <TabsContent value="reels" className="pt-4">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
@@ -2068,13 +2068,13 @@ const ProfilePage = () => {
                 </div>
               </div>
             ) : isLoadingClips ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                   <Skeleton key={i} className="aspect-[9/16] w-full rounded-lg" />
                 ))}
               </div>
             ) : clips && clips.filter(clip => clip.videoType === 'reel').length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {clips.filter(clip => clip.videoType === 'reel').map((reel) => {
                   const isHighlighted = highlightedContent?.type === 'reel' && highlightedContent.id === reel.id.toString();
                   return (
@@ -2120,7 +2120,7 @@ const ProfilePage = () => {
           </TabsContent>
 
           {/* Screenshots Tab */}
-          <TabsContent value="screenshots" className="pt-6">
+          <TabsContent value="screenshots" className="pt-4">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
@@ -2226,7 +2226,7 @@ const ProfilePage = () => {
           </TabsContent>
 
           {/* Favorite Games Tab */}
-          <TabsContent value="favorites" className="pt-6">
+          <TabsContent value="favorites" className="pt-4">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
