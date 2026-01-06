@@ -1156,7 +1156,9 @@ const ProfilePage = () => {
               displayName: profile.displayName,
               bio: profile.bio,
               avatarUrl: profile.avatarUrl,
-              bannerUrl: profile.bannerUrl
+              bannerUrl: profile.bannerUrl,
+              selectedAvatarBorderId: profile.selectedAvatarBorderId,
+              avatarBorderColor: profile.avatarBorderColor
             }}
             userStats={{
               clips: profile._count?.clips || 0,
@@ -1388,7 +1390,9 @@ const ProfilePage = () => {
                       displayName: profile.displayName,
                       bio: profile.bio,
                       avatarUrl: profile.avatarUrl,
-                      bannerUrl: profile.bannerUrl
+                      bannerUrl: profile.bannerUrl,
+                      selectedAvatarBorderId: profile.selectedAvatarBorderId,
+                      avatarBorderColor: profile.avatarBorderColor
                     }}
                     userStats={{
                       clips: profile._count?.clips || 0,
@@ -1800,7 +1804,9 @@ const ProfilePage = () => {
                       displayName: profile.displayName,
                       bio: profile.bio,
                       avatarUrl: profile.avatarUrl,
-                      bannerUrl: profile.bannerUrl
+                      bannerUrl: profile.bannerUrl,
+                      selectedAvatarBorderId: profile.selectedAvatarBorderId,
+                      avatarBorderColor: profile.avatarBorderColor
                     }}
                     userStats={{
                       clips: profile._count?.clips || 0,
@@ -1829,7 +1835,9 @@ const ProfilePage = () => {
                       displayName: profile.displayName,
                       bio: profile.bio,
                       avatarUrl: profile.avatarUrl,
-                      bannerUrl: profile.bannerUrl
+                      bannerUrl: profile.bannerUrl,
+                      selectedAvatarBorderId: profile.selectedAvatarBorderId,
+                      avatarBorderColor: profile.avatarBorderColor
                     }}
                     userStats={{
                       clips: profile._count?.clips || 0,
@@ -2770,7 +2778,9 @@ const ProfilePage = () => {
                 displayName: profile.displayName,
                 bio: profile.bio,
                 avatarUrl: profile.avatarUrl,
-                bannerUrl: profile.bannerUrl
+                bannerUrl: profile.bannerUrl,
+                selectedAvatarBorderId: profile.selectedAvatarBorderId,
+                avatarBorderColor: profile.avatarBorderColor
               }}
               userStats={{
                 clips: profile._count?.clips || 0,

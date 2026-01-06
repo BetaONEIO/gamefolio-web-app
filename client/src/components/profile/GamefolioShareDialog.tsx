@@ -12,6 +12,7 @@ import { Share2, Copy, ExternalLink } from 'lucide-react';
 import { FaFacebook, FaReddit, FaLinkedin, FaWhatsapp, FaTelegram, FaDiscord, FaEnvelope } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
 import { toast } from '@/hooks/use-toast';
+import { CustomAvatar } from '@/components/ui/custom-avatar';
 
 interface GamefolioShareData {
   profileUrl: string;
@@ -40,6 +41,8 @@ interface GamefolioShareDialogProps {
     bio?: string | null;
     avatarUrl?: string | null;
     bannerUrl?: string | null;
+    selectedAvatarBorderId?: number | null;
+    avatarBorderColor?: string | null;
   };
   userStats?: {
     clips?: number;
@@ -206,19 +209,19 @@ export function GamefolioShareDialog({
               {/* Profile Section */}
               <div className="relative px-3 sm:px-6 pb-4 sm:pb-6 -mt-8 sm:-mt-12">
                 <div className="flex items-start gap-2 sm:gap-4">
-                  {/* Profile Picture with Purple Border */}
+                  {/* Profile Picture with Selected Frame */}
                   <div className="relative">
-                    {userProfile?.avatarUrl ? (
-                      <img 
-                        src={userProfile.avatarUrl} 
-                        alt={`${username}'s avatar`}
-                        className="w-16 h-16 sm:w-24 sm:h-24 rounded-full border-2 sm:border-4 border-purple-500 shadow-lg bg-slate-800 object-cover"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full border-2 sm:border-4 border-purple-500 shadow-lg bg-slate-800 flex items-center justify-center">
-                        <span className="text-lg sm:text-2xl font-bold text-purple-400">{username[0]?.toUpperCase()}</span>
-                      </div>
-                    )}
+                    <CustomAvatar 
+                      user={{
+                        username,
+                        displayName: userProfile?.displayName || username,
+                        avatarUrl: userProfile?.avatarUrl || null,
+                        selectedAvatarBorderId: userProfile?.selectedAvatarBorderId || null,
+                        avatarBorderColor: userProfile?.avatarBorderColor || null,
+                      }}
+                      size="lg"
+                      showAvatarBorderOverlay={true}
+                    />
                   </div>
                   
                   {/* Profile Info */}
