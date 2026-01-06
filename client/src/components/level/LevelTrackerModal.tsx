@@ -1,0 +1,329 @@
+import { useState, useEffect, useMemo } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
+import { 
+  Video, 
+  Users, 
+  MessageCircle, 
+  Copy, 
+  Check, 
+  Star,
+  Trophy,
+  Flame,
+  Eye,
+  Heart,
+  Share2
+} from "lucide-react";
+
+interface LevelTrackerModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  level: number;
+  totalXP: number;
+  username?: string;
+}
+
+const LEVEL_THRESHOLDS = [
+  { level: 1, xpRequired: 0 },
+  { level: 2, xpRequired: 100 },
+  { level: 3, xpRequired: 500 },
+  { level: 4, xpRequired: 1500 },
+  { level: 5, xpRequired: 3500 },
+  { level: 6, xpRequired: 7000 },
+  { level: 7, xpRequired: 14000 },
+  { level: 8, xpRequired: 28000 },
+  { level: 9, xpRequired: 56000 },
+  { level: 10, xpRequired: 100000 },
+];
+
+const XP_TASKS = [
+  { 
+    id: 'upload-video', 
+    title: 'Upload a Clip', 
+    description: 'Share your best gaming moments',
+    xpReward: 5, 
+    icon: Video,
+    action: '/upload'
+  },
+  { 
+    id: 'get-likes', 
+    title: 'Get Likes', 
+    description: 'Receive likes on your content',
+    xpReward: 1, 
+    icon: Heart,
+    action: null
+  },
+  { 
+    id: 'get-fires', 
+    title: 'Get Fire Reactions', 
+    description: 'Receive fire reactions on clips',
+    xpReward: 3, 
+    icon: Flame,
+    action: null
+  },
+  { 
+    id: 'leave-comments', 
+    title: 'Leave Comments', 
+    description: 'Engage with the community',
+    xpReward: 1, 
+    icon: MessageCircle,
+    action: '/explore'
+  },
+  { 
+    id: 'get-views', 
+    title: 'Get Views', 
+    description: 'Have others watch your clips',
+    xpReward: 1, 
+    icon: Eye,
+    action: null
+  },
+];
+
+function AnimatedStars() {
+  const stars = useMemo(() => 
+    Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      size: Math.random() * 3 + 1,
+      delay: Math.random() * 3,
+      duration: Math.random() * 2 + 2,
+    })), []
+  );
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {stars.map((star) => (
+        <div
+          key={star.id}
+          className="absolute rounded-full bg-white/20 animate-pulse"
+          style={{
+            left: `${star.left}%`,
+            top: `${star.top}%`,
+            width: `${star.size}px`,
+            height: `${star.size}px`,
+            animationDelay: `${star.delay}s`,
+            animationDuration: `${star.duration}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function LevelBadge({ level, progress, size = 120 }: { level: number; progress: number; size?: number }) {
+  const strokeWidth = 8;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
+
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="transform -rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="rgba(255,255,255,0.1)"
+          strokeWidth={strokeWidth}
+          fill="none"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="url(#levelGradient)"
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          className="transition-all duration-1000 ease-out"
+        />
+        <defs>
+          <linearGradient id="levelGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#4ADE80" />
+            <stop offset="50%" stopColor="#22D3EE" />
+            <stop offset="100%" stopColor="#4ADE80" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <Trophy className="w-6 h-6 text-primary mb-1" />
+        <span className="text-3xl font-bold text-foreground">{level}</span>
+        <span className="text-xs text-muted-foreground uppercase tracking-wider">Level</span>
+      </div>
+    </div>
+  );
+}
+
+export function LevelTrackerModal({ 
+  open, 
+  onOpenChange, 
+  level, 
+  totalXP, 
+  username 
+}: LevelTrackerModalProps) {
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+
+  const currentLevelData = LEVEL_THRESHOLDS.find(t => t.level === level) || LEVEL_THRESHOLDS[0];
+  const nextLevelData = LEVEL_THRESHOLDS.find(t => t.level === level + 1);
+  
+  const xpForCurrentLevel = currentLevelData.xpRequired;
+  const xpForNextLevel = nextLevelData?.xpRequired || currentLevelData.xpRequired * 2;
+  const xpProgress = totalXP - xpForCurrentLevel;
+  const xpNeeded = xpForNextLevel - xpForCurrentLevel;
+  const progressPercent = Math.min((xpProgress / xpNeeded) * 100, 100);
+
+  const referralLink = username 
+    ? `${window.location.origin}/register?ref=${username}`
+    : '';
+
+  const handleCopyReferral = async () => {
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      setCopied(true);
+      toast({ title: "Copied!", description: "Referral link copied to clipboard" });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ title: "Error", description: "Failed to copy link", variant: "destructive" });
+    }
+  };
+
+  const handleTaskAction = (action: string | null) => {
+    if (action) {
+      onOpenChange(false);
+      setLocation(action);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md bg-gradient-to-b from-[#0F1520] via-[#134E4A]/20 to-[#0F1520] border-border/50 overflow-hidden">
+        <AnimatedStars />
+        
+        <DialogHeader className="relative z-10">
+          <DialogTitle className="text-center text-xl font-bold text-foreground">
+            Level Progress
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="relative z-10 flex flex-col items-center py-4">
+          <LevelBadge level={level} progress={progressPercent} />
+          
+          <div className="mt-4 text-center">
+            <p className="text-sm text-muted-foreground">
+              <span className="text-primary font-semibold">{Math.round(xpProgress)}</span>
+              {" / "}
+              <span>{xpNeeded} XP</span>
+              {" to Level "}
+              <span className="font-semibold">{level + 1}</span>
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Total XP: <span className="text-foreground font-medium">{Math.round(totalXP)}</span>
+            </p>
+          </div>
+        </div>
+
+        <Tabs defaultValue="earn" className="relative z-10 w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-background/50">
+            <TabsTrigger value="earn" className="data-[state=active]:bg-primary/20">
+              <Star className="w-4 h-4 mr-2" />
+              Earn XP
+            </TabsTrigger>
+            <TabsTrigger value="refer" className="data-[state=active]:bg-primary/20">
+              <Users className="w-4 h-4 mr-2" />
+              Refer Friends
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="earn" className="mt-4 space-y-3 max-h-[250px] overflow-y-auto">
+            {XP_TASKS.map((task) => {
+              const Icon = task.icon;
+              return (
+                <div
+                  key={task.id}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-background/30 border border-border/30 hover:bg-background/50 transition-colors"
+                >
+                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground text-sm">{task.title}</p>
+                    <p className="text-xs text-muted-foreground truncate">{task.description}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-primary font-bold text-sm">+{task.xpReward}</span>
+                    {task.action && (
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => handleTaskAction(task.action)}
+                        data-testid={`button-task-${task.id}`}
+                      >
+                        Go
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </TabsContent>
+
+          <TabsContent value="refer" className="mt-4 space-y-4">
+            <div className="text-center space-y-2">
+              <div className="w-16 h-16 mx-auto rounded-full bg-primary/20 flex items-center justify-center">
+                <Share2 className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="font-semibold text-foreground">Invite Friends</h3>
+              <p className="text-sm text-muted-foreground">
+                Share your referral link and earn bonus XP when friends join!
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Your Referral Link</label>
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value={referralLink}
+                  className="bg-background/50 text-xs"
+                  data-testid="input-referral-link"
+                />
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={handleCopyReferral}
+                  className="flex-shrink-0"
+                  data-testid="button-copy-referral"
+                >
+                  {copied ? (
+                    <Check className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div className="bg-primary/10 rounded-lg p-3 text-center">
+              <p className="text-sm font-medium text-primary">+250 XP Bonus</p>
+              <p className="text-xs text-muted-foreground">
+                For each friend who signs up
+              </p>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export default LevelTrackerModal;

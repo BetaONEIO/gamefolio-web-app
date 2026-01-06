@@ -1,0 +1,84 @@
+## Components
+
+### 1. LevelDetailsModal.tsx
+typescript
+// Modal that displays level progress, XP tasks, and referral system
+// Features:
+// - Animated badge with SVG progress ring
+// - Two tabs: "Earn XP" and "Refer Friends"
+// - Tasks list with XP rewards
+// - Referral link sharing
+// - Animated star background
+
+// Key Props:
+interface LevelDetailsModalProps {
+  visible: boolean;
+  onClose: () => void;
+  level: number;
+  currentXP: number;
+  userId?: string;
+  onTaskStart?: (taskId: string) => void;
+}
+
+// XP Tasks configured:
+const XP_TASKS = [
+  { id: 'upload-video', xpReward: 100 },
+  { id: 'invite-friends', xpReward: 250 },
+  { id: 'community-discussion', xpReward: 75 }
+];
+### 2. LevelBadge.tsx
+typescript
+// Octagonal badge that displays user level
+// Uses SVG with gradient backgrounds
+// Props: level, currentXP, size, thickness
+### 3. Backend XP System
+typescript
+// backend/trpc/routes/user/add-xp/route.ts
+
+// XP Calculation Formula:
+function calculateLevel(totalXP: number): number {
+  let level = 1;
+  let xpNeeded = 0;
+  
+  while (xpNeeded <= totalXP) {
+    xpNeeded += 1000  level;  // Level 1 needs 1000, Level 2 needs 2000, etc.
+    if (xpNeeded <= totalXP) {
+      level++;
+    }
+  }
+  
+  return level;
+}
+
+// Database fields needed:
+// - users.total_xp (integer)
+// - users.level (integer)
+```
+
+## Design System
+- Colors: Dark theme (#0F1520 background, #4ADE80 accent green)
+- Gradients: Background uses teal-to-dark gradient (#0F1520 → #134E4A → #0F1520)
+- Animations: React Native Animated API for star particles
+- Layout: Bottom sheet modal (90% height, rounded top corners)
+
+## Integration Pattern
+```typescript
+// Usage in profile or header:
+const [showLevelModal, setShowLevelModal] = useState(false);
+
+<TouchableOpacity onPress={() => setShowLevelModal(true)}>
+  <LevelBadge level={user.level} currentXP={user.total_xp} />
+</TouchableOpacity>
+
+<LevelDetailsModal
+  visible={showLevelModal}
+  onClose={() => setShowLevelModal(false)}
+  level={user.level}
+  currentXP={user.total_xp}
+  userId={user.id}
+  onTaskStart={(taskId) => {
+    // Handle task navigation
+    if (taskId === 'upload-video') router.push('/create');
+  }}
+/>
+```
