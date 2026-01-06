@@ -666,10 +666,10 @@ export default function SettingsPage() {
                     {/* Current/Preview Avatar with Border */}
                     <div className="flex flex-col items-center space-y-3">
                       <div 
-                        className="relative h-36 w-36 flex items-center justify-center"
+                        className="relative h-36 w-36 flex items-center justify-center overflow-visible"
                       >
                         <div 
-                          className="h-28 w-28 rounded-full overflow-hidden"
+                          className="h-24 w-24 rounded-full overflow-hidden"
                         >
                           <img 
                             src={avatarPreview || user?.avatarUrl || ''} 
@@ -693,10 +693,10 @@ export default function SettingsPage() {
                               color={avatarBorderColor}
                               className="absolute pointer-events-none [&>svg]:w-full [&>svg]:h-full"
                               style={{ 
-                                width: '130%', 
-                                height: '130%', 
-                                top: '-15%', 
-                                left: '-15%',
+                                width: '160%', 
+                                height: '160%', 
+                                top: '-30%', 
+                                left: '-30%',
                                 zIndex: 20 
                               }}
                             />
@@ -769,10 +769,10 @@ export default function SettingsPage() {
                   </p>
 
                   {/* Current Border Preview */}
-                  <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg border">
-                    <div className="relative h-28 w-28 flex items-center justify-center">
+                  <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg border overflow-visible">
+                    <div className="relative h-28 w-28 flex items-center justify-center overflow-visible">
                       <div 
-                        className="h-20 w-20 rounded-full overflow-hidden"
+                        className="h-16 w-16 rounded-full overflow-hidden"
                       >
                         <img 
                           src={avatarPreview || profileData.avatarUrl || ""} 
@@ -794,10 +794,10 @@ export default function SettingsPage() {
                             color={avatarBorderColor}
                             className="absolute pointer-events-none [&>svg]:w-full [&>svg]:h-full"
                             style={{ 
-                              width: '130%', 
-                              height: '130%', 
-                              top: '-15%', 
-                              left: '-15%',
+                              width: '160%', 
+                              height: '160%', 
+                              top: '-30%', 
+                              left: '-30%',
                               zIndex: 20 
                             }}
                           />
