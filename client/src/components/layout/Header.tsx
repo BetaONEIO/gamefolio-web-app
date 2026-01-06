@@ -275,11 +275,8 @@ const Header = () => {
                           {getInitials(user.displayName)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1">
                             <span className="font-medium text-foreground">{user.displayName}</span>
-                            {user.emailVerified && (
-                              <CheckCircle2 className="h-3 w-3 text-primary" />
-                            )}
                             <ModeratorBadge 
                               isModerator={user.role === "moderator" || user.role === "admin"} 
                               size="sm" 
@@ -550,11 +547,8 @@ const Header = () => {
                               {getInitials(user.displayName)}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1">
                                 <span className="font-medium text-foreground">{user.displayName}</span>
-                                {user.emailVerified && (
-                                  <CheckCircle2 className="h-3 w-3 text-primary" />
-                                )}
                                 <ModeratorBadge 
                                   isModerator={user.role === "moderator" || user.role === "admin"} 
                                   size="sm" 
