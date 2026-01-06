@@ -28,6 +28,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { ScreenshotCard } from '@/components/screenshots/ScreenshotCard';
 import { ScreenshotCommentSection } from '@/components/screenshots/ScreenshotCommentSection';
+import { ScreenshotShareDialog } from '@/components/screenshot/ScreenshotShareDialog';
 
 type ContentType = 'clips' | 'reels' | 'screenshots';
 type FilterType = 'likes' | 'comments';
@@ -158,6 +159,7 @@ const TrendingPage: React.FC = () => {
   const [ageRestrictionAccepted, setAgeRestrictionAccepted] = useState(false);
   const [showAgeRestrictionDialog, setShowAgeRestrictionDialog] = useState(false);
   const [isFollowingAuthor, setIsFollowingAuthor] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   const isAcceptingRef = useRef(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -611,12 +613,20 @@ const TrendingPage: React.FC = () => {
 
       {/* Screenshot Modal Dialog */}
       <Dialog open={!!selectedScreenshot} onOpenChange={() => setSelectedScreenshot(null)}>
-        <DialogContent className="max-w-[95%] w-[95%] p-0 bg-background text-foreground max-h-[95vh] h-auto lg:h-[95vh] overflow-y-auto lg:overflow-hidden">
+        <DialogContent className="max-w-[95%] w-[95%] p-0 bg-background text-foreground max-h-[95vh] h-auto lg:h-[95vh] overflow-y-auto lg:overflow-hidden [&>button]:hidden">
+          {/* Custom close button - positioned away from follow button */}
+          <button
+            onClick={() => setSelectedScreenshot(null)}
+            className="absolute top-2 left-2 z-50 rounded-full bg-black/70 hover:bg-black/90 p-2 text-white transition-colors"
+            data-testid="button-close-screenshot-modal"
+          >
+            <X className="h-5 w-5" />
+          </button>
 
           {selectedScreenshot && (
             <div className="flex flex-col lg:flex-row h-full">
               {/* Left side - Image display */}
-              <div className="bg-black flex items-center justify-center w-full lg:w-[75%] h-[60vh] lg:h-full">
+              <div className="bg-black flex items-center justify-center w-full lg:w-[75%] h-[60vh] lg:h-full relative">
                 {(!selectedScreenshot.ageRestricted || ageRestrictionAccepted) ? (
                   <img
                     src={selectedScreenshot.imageUrl}
@@ -735,7 +745,11 @@ const TrendingPage: React.FC = () => {
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <button className="focus:outline-none">
+                          <button 
+                            className="focus:outline-none hover:text-primary transition-colors"
+                            onClick={() => setShowShareDialog(true)}
+                            data-testid="button-share-screenshot"
+                          >
                             <Share2 className="h-6 w-6" />
                           </button>
                           <ReportButton
@@ -775,6 +789,15 @@ const TrendingPage: React.FC = () => {
             }
           }}
           contentType="screenshot"
+        />
+      )}
+
+      {/* Screenshot Share Dialog */}
+      {selectedScreenshot && (
+        <ScreenshotShareDialog
+          screenshotId={selectedScreenshot.id.toString()}
+          open={showShareDialog}
+          onOpenChange={setShowShareDialog}
         />
       )}
     </div>
