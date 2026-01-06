@@ -269,7 +269,7 @@ export function NotificationBell() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent 
-          className="w-80 max-h-96 overflow-y-auto p-0" 
+          className="w-80 max-h-96 overflow-hidden p-0" 
           align="end"
           sideOffset={2}
         >
