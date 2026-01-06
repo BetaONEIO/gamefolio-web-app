@@ -826,13 +826,13 @@ export default function SettingsPage() {
                   {/* Unlocked Borders Grid with Category Tabs */}
                   {!isLoadingBorders && avatarBorders && (avatarBorders as any[]).length > 0 && (
                     <Tabs defaultValue="static" className="w-full">
-                      <div className="flex items-center gap-2 mb-4">
-                        <TabsList className="grid grid-cols-2 flex-1">
-                          <TabsTrigger value="static" className="text-xs md:text-sm">Static</TabsTrigger>
-                          <TabsTrigger value="animated" className="text-xs md:text-sm">Animated</TabsTrigger>
-                        </TabsList>
-                        <span className="text-xs md:text-sm font-semibold text-green-500 px-2">PRO</span>
-                      </div>
+                      <TabsList className="w-full grid grid-cols-2 mb-4">
+                        <TabsTrigger value="static" className="text-xs md:text-sm">Static</TabsTrigger>
+                        <TabsTrigger value="animated" className="text-xs md:text-sm relative">
+                          <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] font-bold text-green-500 bg-green-500/10 px-1.5 py-0.5 rounded-full border border-green-500/30">PRO</span>
+                          Animated
+                        </TabsTrigger>
+                      </TabsList>
                       
                       {['static', 'animated'].map((category) => (
                         <TabsContent key={category} value={category} className="mt-0">
