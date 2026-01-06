@@ -1686,9 +1686,9 @@ const ProfilePage = () => {
                 )}
               </div>
 
-              {/* Action buttons positioned top right, aligned with Favorites tab edge */}
+              {/* Action buttons aligned with username row */}
               {!isOwnProfile && currentUser && (
-                <div className="flex gap-2 flex-shrink-0 absolute top-[20px] right-0">
+                <div className="flex gap-2 flex-shrink-0 self-start mt-0">
                   <Button 
                     onClick={handleFollowClick}
                     variant={followRequestStatus === 'following' ? "default" : (followRequestStatus === 'requested' ? "outline" : "outline")}
@@ -1772,9 +1772,9 @@ const ProfilePage = () => {
                 </div>
               )}
 
-              {/* Share button for own profile - aligned with Favorites tab edge */}
+              {/* Share button for own profile - aligned with username row */}
               {isOwnProfile && (
-                <div className="flex gap-2 flex-shrink-0 absolute top-[20px] right-0">
+                <div className="flex gap-2 flex-shrink-0 self-start mt-0">
                   <GamefolioShareDialog 
                     username={profile.username}
                     userProfile={{
