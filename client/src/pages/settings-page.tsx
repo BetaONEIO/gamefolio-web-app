@@ -689,7 +689,14 @@ export default function SettingsPage() {
                             <InlineSvgBorder
                               svgUrl={border.imageUrl}
                               color={avatarBorderColor}
-                              className="absolute inset-0 w-full h-full pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+                              className="absolute pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+                              style={{ 
+                                width: '160%', 
+                                height: '160%', 
+                                top: '-30%', 
+                                left: '-30%',
+                                zIndex: 20 
+                              }}
                             />
                           );
                         })()}
@@ -783,7 +790,14 @@ export default function SettingsPage() {
                           <InlineSvgBorder
                             svgUrl={border.imageUrl}
                             color={avatarBorderColor}
-                            className="absolute inset-0 w-full h-full pointer-events-none z-10 [&>svg]:w-full [&>svg]:h-full"
+                            className="absolute pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+                            style={{ 
+                              width: '160%', 
+                              height: '160%', 
+                              top: '-30%', 
+                              left: '-30%',
+                              zIndex: 20 
+                            }}
                           />
                         ) : null;
                       })()}
