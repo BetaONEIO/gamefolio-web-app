@@ -271,9 +271,14 @@ const Header = () => {
                         onClick={() => handleUserSelect(user.username)}
                         className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left"
                       >
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                          {getInitials(user.displayName)}
-                        </div>
+                        <Avatar className="w-8 h-8 flex-shrink-0">
+                          {user.avatarUrl ? (
+                            <AvatarImage src={user.avatarUrl} alt={user.displayName} className="object-cover" />
+                          ) : null}
+                          <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
+                            {getInitials(user.displayName)}
+                          </AvatarFallback>
+                        </Avatar>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1">
                             <span className="font-medium text-foreground">{user.displayName}</span>
@@ -543,9 +548,14 @@ const Header = () => {
                             onClick={() => handleUserSelect(user.username)}
                             className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left touch-manipulation active:bg-secondary/50"
                           >
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                              {getInitials(user.displayName)}
-                            </div>
+                            <Avatar className="w-8 h-8 flex-shrink-0">
+                              {user.avatarUrl ? (
+                                <AvatarImage src={user.avatarUrl} alt={user.displayName} className="object-cover" />
+                              ) : null}
+                              <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
+                                {getInitials(user.displayName)}
+                              </AvatarFallback>
+                            </Avatar>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1">
                                 <span className="font-medium text-foreground">{user.displayName}</span>

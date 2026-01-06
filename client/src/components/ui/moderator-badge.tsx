@@ -24,6 +24,8 @@ export function ModeratorBadge({ isModerator, size = "md" }: ModeratorBadgeProps
             src={moderatorIcon} 
             alt="Moderator" 
             className={`${sizeClasses[size]} ml-1`}
+            loading="eager"
+            decoding="async"
             style={{
               userSelect: 'none',
               WebkitUserDrag: 'none',
