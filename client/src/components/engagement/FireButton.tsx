@@ -60,26 +60,32 @@ export function FireButton({
 
       return response.json();
     },
+    onMutate: async () => {
+      const previousFired = fired;
+      const previousCount = count;
+      setFired(!fired);
+      setCount(prev => !fired ? prev + 1 : Math.max(0, prev - 1));
+      return { previousFired, previousCount };
+    },
     onSuccess: (data) => {
-      const newFired = data.reacted !== undefined ? data.reacted : !fired;
-      setFired(newFired);
-      setCount(prev => newFired ? prev + 1 : prev - 1);
-
-      // Invalidate relevant queries to refresh data
+      if (data.reacted !== undefined) {
+        setFired(data.reacted);
+      }
+      if (data.count !== undefined) {
+        setCount(data.count);
+      }
       queryClient.invalidateQueries({ 
         queryKey: [`/api/${contentType}s/${contentId}/reactions`] 
       });
       queryClient.invalidateQueries({ 
         queryKey: [`/api/${contentType}s/${contentId}`] 
       });
-      queryClient.invalidateQueries({ 
-        queryKey: [`/api/${contentType}s`] 
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ['trending'] 
-      });
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _, context) => {
+      if (context) {
+        setFired(context.previousFired);
+        setCount(context.previousCount);
+      }
       toast({
         title: "Error",
         description: error.message,

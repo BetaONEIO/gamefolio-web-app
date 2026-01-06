@@ -58,7 +58,6 @@ export function LikeButton({
         ? `/api/clips/${contentId}/likes`
         : `/api/screenshots/${contentId}/likes`;
 
-      // Always use POST for both like and unlike (toggle behavior)
       const response = await fetch(endpoint, {
         method: 'POST',
         credentials: 'include',
@@ -72,23 +71,18 @@ export function LikeButton({
       const result = await response.json();
       return result;
     },
+    onMutate: async () => {
+      const previousLiked = liked;
+      const previousCount = count;
+      setLiked(!liked);
+      setCount(prev => !liked ? prev + 1 : Math.max(0, prev - 1));
+      return { previousLiked, previousCount };
+    },
     onSuccess: (result) => {
-      // Update local state based on response
-      if ('liked' in result) {
+      if ('liked' in result && 'count' in result && typeof result.count === 'number') {
         setLiked(result.liked);
-        // Use actual count from server if provided, otherwise calculate
-        if ('count' in result && typeof result.count === 'number') {
-          setCount(result.count);
-        } else {
-          setCount(prevCount => result.liked ? prevCount + 1 : Math.max(0, prevCount - 1));
-        }
-      } else {
-        // Fallback for endpoints that don't return liked status
-        setLiked(!liked);
-        setCount(prevCount => !liked ? prevCount + 1 : Math.max(0, prevCount - 1));
+        setCount(result.count);
       }
-
-      // Invalidate queries to refetch data
       queryClient.invalidateQueries({ 
         queryKey: [`/api/${contentType}s/${contentId}/likes`] 
       });
@@ -96,7 +90,11 @@ export function LikeButton({
         queryKey: [`/api/${contentType}s/${contentId}/likes/status`] 
       });
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _, context) => {
+      if (context) {
+        setLiked(context.previousLiked);
+        setCount(context.previousCount);
+      }
       toast({
         title: "Error",
         description: error.message || "Failed to toggle like",
