@@ -1011,7 +1011,7 @@ const ProfilePage = () => {
     >
       {/* Enhanced Banner with global theme colors */}
       <div 
-        className={`h-52 sm:h-64 md:h-96 bg-cover bg-center overflow-hidden profile-banner relative -mx-4 md:-mx-8 border-b-4 border-primary ${profile?.bannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
+        className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-4 md:-mx-8 border-b-4 border-primary ${profile?.bannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
         style={{
           ...bannerStyle,
         }}
@@ -1452,7 +1452,7 @@ const ProfilePage = () => {
         </div>
 
         {/* Desktop Layout - Horizontal */}
-        <div className="hidden md:flex items-start gap-4 md:gap-8 pb-6" style={{ marginTop: '-56px', paddingTop: '24px' }}>
+        <div className="hidden md:flex items-start gap-4 md:gap-6 pb-4" style={{ marginTop: '-48px', paddingTop: '20px' }}>
           {/* Profile Picture positioned to overlap banner */}
           <div className="relative flex-shrink-0" style={{ transform: 'translateY(-28px)' }}>
             {/* Circular glow - only show when NO SVG border is selected (CustomAvatar handles its own glow) */}
@@ -1489,12 +1489,12 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          <div className="flex-1 pt-16">
+          <div className="flex-1 pt-12">
             {/* Username and Display Name with action buttons */}
-            <div className="flex flex-row justify-between items-start gap-4 mb-6">
+            <div className="flex flex-row justify-between items-start gap-3 mb-4">
               <div className="flex flex-col flex-1">
                 <div className="flex items-center gap-4 flex-wrap">
-                  <h1 className="text-3xl font-bold">{profile.displayName}</h1>
+                  <h1 className="text-2xl font-bold">{profile.displayName}</h1>
                   {profile.userType && profile.showUserType !== false && (() => {
                     const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
                     const displayTypes = userTypes.slice(0, 2);
@@ -1520,7 +1520,7 @@ const ProfilePage = () => {
                     size="xl" 
                   />
                 </div>
-                <span className="text-lg text-white/70 font-normal mt-1">@{profile.username}</span>
+                <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
 
                 {/* Stats positioned directly below username - Two rows */}
                 <div className="flex flex-col gap-2 mt-2">
@@ -1960,13 +1960,13 @@ const ProfilePage = () => {
                 </div>
               </div>
             ) : isLoadingClips ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                   <Skeleton key={i} className="aspect-video w-full rounded-lg" />
                 ))}
               </div>
             ) : clips && clips.filter(clip => clip.videoType !== 'reel').length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                 {clips.filter(clip => clip.videoType !== 'reel').map((clip) => {
                   const isHighlighted = highlightedContent?.type === 'clip' && highlightedContent.id === clip.id.toString();
                   return (
@@ -2068,13 +2068,13 @@ const ProfilePage = () => {
                 </div>
               </div>
             ) : isLoadingClips ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                   <Skeleton key={i} className="aspect-[9/16] w-full rounded-lg" />
                 ))}
               </div>
             ) : clips && clips.filter(clip => clip.videoType === 'reel').length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                 {clips.filter(clip => clip.videoType === 'reel').map((reel) => {
                   const isHighlighted = highlightedContent?.type === 'reel' && highlightedContent.id === reel.id.toString();
                   return (

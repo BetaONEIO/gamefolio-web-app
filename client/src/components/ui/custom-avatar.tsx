@@ -204,7 +204,7 @@ const sizeClasses = {
   lg: "h-16 w-16",
   xl: "h-20 w-20",
   "2xl": "h-32 w-32",
-  "profile": "h-40 w-40 sm:h-48 sm:w-48 md:h-56 md:w-56"
+  "profile": "h-32 w-32 sm:h-36 sm:w-36 md:h-40 md:w-40"
 };
 
 const containerSizes = {
@@ -213,7 +213,7 @@ const containerSizes = {
   lg: "h-22 w-22",
   xl: "h-28 w-28",
   "2xl": "h-44 w-44",
-  "profile": "h-52 w-52 sm:h-60 sm:w-60 md:h-72 md:w-72"
+  "profile": "h-40 w-40 sm:h-44 sm:w-44 md:h-52 md:w-52"
 };
 
 const borderStyles = {
