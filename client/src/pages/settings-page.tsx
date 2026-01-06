@@ -877,10 +877,10 @@ export default function SettingsPage() {
                                 >
                                   <div className="relative w-16 h-16 flex items-center justify-center">
                                     <div className="w-10 h-10 rounded-full bg-muted" />
-                                    <img 
-                                      src={border.imageUrl} 
-                                      alt={border.name}
-                                      className="absolute w-16 h-16 object-contain" 
+                                    <InlineSvgBorder
+                                      svgUrl={border.imageUrl}
+                                      color="#ffffff"
+                                      className="absolute inset-0 pointer-events-none [&>svg]:w-full [&>svg]:h-full"
                                     />
                                   </div>
                                   <span className="text-xs text-center mt-1 truncate w-full">
