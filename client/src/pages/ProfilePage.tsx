@@ -1543,7 +1543,7 @@ const ProfilePage = () => {
 
           <div className="flex-1 pt-12 overflow-hidden">
             {/* Username and Display Name with action buttons */}
-            <div className="flex flex-row justify-between items-start gap-3 mb-4 pr-2">
+            <div className="flex flex-row justify-between items-start gap-3 mb-4">
               <div className="flex flex-col flex-1">
                 <div className="flex items-center gap-4 flex-wrap">
                   <h1 className="text-2xl font-bold">{profile.displayName}</h1>
