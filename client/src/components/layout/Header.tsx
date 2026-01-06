@@ -23,6 +23,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { LootboxDialog, LootboxTrigger } from "@/components/lootbox/LootboxDialog";
+import { ModeratorBadge } from "@/components/ui/moderator-badge";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -279,6 +280,10 @@ const Header = () => {
                             {user.emailVerified && (
                               <CheckCircle2 className="h-3 w-3 text-primary" />
                             )}
+                            <ModeratorBadge 
+                              isModerator={user.role === "moderator" || user.role === "admin"} 
+                              size="sm" 
+                            />
                           </div>
                           <div className="text-sm text-muted-foreground">@{user.username}</div>
                         </div>
@@ -550,6 +555,10 @@ const Header = () => {
                                 {user.emailVerified && (
                                   <CheckCircle2 className="h-3 w-3 text-primary" />
                                 )}
+                                <ModeratorBadge 
+                                  isModerator={user.role === "moderator" || user.role === "admin"} 
+                                  size="sm" 
+                                />
                               </div>
                               <div className="text-sm text-muted-foreground">@{user.username}</div>
                             </div>
