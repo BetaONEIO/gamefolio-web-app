@@ -428,7 +428,7 @@ const Sidebar = () => {
           </div>
 
           {favoriteGames && favoriteGames.length > 0 ? (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(70px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(80px,1fr))] gap-4">
               {favoriteGames.map((game) => (
                 <div
                   key={`mobile-${game.id}`}
@@ -438,14 +438,14 @@ const Sidebar = () => {
                     setLocation(`/games/${gameSlug}`);
                   }}
                 >
-                  <div className="w-12 h-16 mb-2 relative">
+                  <div className="w-full aspect-[3/4] mb-2 relative">
                     {game.imageUrl ? (
                       <img
                         src={game.imageUrl.includes('{width}')
-                          ? game.imageUrl.replace('{width}', '48').replace('{height}', '64')
-                          : game.imageUrl.replace('285x380', '48x64')}
+                          ? game.imageUrl.replace('{width}', '120').replace('{height}', '160')
+                          : game.imageUrl.replace('285x380', '120x160')}
                         alt={game.name}
-                        className="w-full h-full rounded object-cover"
+                        className="w-full h-full rounded-lg object-cover"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.style.display = 'none';
@@ -455,12 +455,12 @@ const Sidebar = () => {
                       />
                     ) : null}
                     <div
-                      className="w-full h-full rounded flex items-center justify-center"
+                      className="w-full h-full rounded-lg bg-muted flex items-center justify-center"
                       style={{ display: game.imageUrl ? 'none' : 'flex' }}
                     >
                       <span
                         className={cn(
-                          "w-4 h-4 rounded-full",
+                          "w-6 h-6 rounded-full",
                           game.id % 5 === 0 ? "bg-red-500" :
                           game.id % 5 === 1 ? "bg-blue-500" :
                           game.id % 5 === 2 ? "bg-primary" :
@@ -482,7 +482,7 @@ const Sidebar = () => {
                       <X className="h-3 w-3" />
                     </button>
                   </div>
-                  <span className="text-xs text-center text-muted-foreground line-clamp-2 max-w-16">
+                  <span className="text-xs text-center text-muted-foreground line-clamp-2 w-full px-1">
                     {game.name}
                   </span>
                 </div>
