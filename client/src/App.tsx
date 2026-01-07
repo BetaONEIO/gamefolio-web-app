@@ -9,6 +9,7 @@ import { ClipDialogProvider } from "@/hooks/use-clip-dialog";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { AuthModalProvider, useAuthModal } from "@/hooks/use-auth-modal";
 import { CrossmintProvider } from "@/hooks/use-crossmint";
+import { RevenueCatProvider } from "@/hooks/use-revenuecat";
 import { useVersionCheck } from "@/hooks/use-version-check";
 import AuthModal from "@/components/auth/auth-modal";
 import { ProtectedRoute } from "@/components/auth/protected-route";
@@ -326,16 +327,18 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <AuthProvider>
-            <CrossmintProvider>
-              <AuthModalProvider>
-                <ClipDialogProvider>
-                  <MainLayout>
-                    <Router />
-                  </MainLayout>
-                </ClipDialogProvider>
-                <Toaster />
-              </AuthModalProvider>
-            </CrossmintProvider>
+            <RevenueCatProvider>
+              <CrossmintProvider>
+                <AuthModalProvider>
+                  <ClipDialogProvider>
+                    <MainLayout>
+                      <Router />
+                    </MainLayout>
+                  </ClipDialogProvider>
+                  <Toaster />
+                </AuthModalProvider>
+              </CrossmintProvider>
+            </RevenueCatProvider>
           </AuthProvider>
         </TooltipProvider>
       </QueryClientProvider>

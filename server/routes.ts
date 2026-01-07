@@ -7983,5 +7983,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== SUBSCRIPTION ROUTES ====================
+
+  // Sync subscription status from RevenueCat
+  app.post("/api/subscription/sync", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const { isPro } = req.body;
+
+      if (typeof isPro !== "boolean") {
+        return res.status(400).json({ message: "Invalid isPro value" });
+      }
+
+      // Update user's Pro status in database
+      await db.update(users).set({ 
+        isPro,
+        updatedAt: new Date()
+      }).where(eq(users.id, userId));
+
+      console.log(`✅ Updated Pro status for user ${userId}: ${isPro}`);
+
+      res.json({ success: true, isPro });
+    } catch (error) {
+      console.error("Error syncing subscription:", error);
+      res.status(500).json({ message: "Failed to sync subscription status" });
+    }
+  });
+
+  // Get current subscription status
+  app.get("/api/subscription/status", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const user = await storage.getUserById(userId);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ 
+        isPro: user.isPro || false,
+        userId: user.id
+      });
+    } catch (error) {
+      console.error("Error getting subscription status:", error);
+      res.status(500).json({ message: "Failed to get subscription status" });
+    }
+  });
+
   return httpServer;
 }
