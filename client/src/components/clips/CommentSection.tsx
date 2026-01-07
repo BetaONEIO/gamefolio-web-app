@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { Heart, Trash2 } from "lucide-react";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
+import { VerificationBadge } from "@/components/ui/verification-badge";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { apiRequest } from "@/lib/queryClient";
@@ -214,6 +215,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                       onClick={onUsernameClick}
                     >
                       {comment.user.username}
+                      <VerificationBadge isVerified={(comment.user as any).emailVerified} size="sm" />
                       <ModeratorBadge isModerator={(comment.user as any).role === "moderator"} size="sm" />
                     </span>
                   </Link>
