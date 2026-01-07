@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, User as UserIcon, Settings, LogOut, CheckCircle2, Palette, UserCog, Menu, ShieldCheck, Flame, Trophy } from "lucide-react";
+import { Search, Plus, User as UserIcon, Settings, LogOut, CheckCircle2, Palette, UserCog, Menu, ShieldCheck, Flame, Trophy, Crown } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
@@ -25,6 +25,8 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { LootboxDialog, LootboxTrigger } from "@/components/lootbox/LootboxDialog";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { LevelTrackerModal } from "@/components/level/LevelTrackerModal";
+import { useRevenueCat } from "@/hooks/use-revenuecat";
+import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,7 +35,9 @@ const Header = () => {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [lootboxOpen, setLootboxOpen] = useState(false);
   const [levelTrackerOpen, setLevelTrackerOpen] = useState(false);
+  const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
   const { user, logoutMutation } = useAuth();
+  const { isPro } = useRevenueCat();
   const { toggle } = useMobileMenu();
   const isMobile = useMobile();
   const [, setLocation] = useLocation();
@@ -345,6 +349,10 @@ const Header = () => {
                 totalXP={user?.totalXP || 0}
                 username={user?.username}
               />
+              <ProUpgradeDialog 
+                open={proUpgradeOpen} 
+                onOpenChange={setProUpgradeOpen}
+              />
               <Link href="/upload">
                 <Button 
                   className="ml-2 sm:ml-4 flex items-center px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300 bg-primary hover:bg-primary/90 border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_hsl(var(--primary)/0.13)]"
@@ -397,6 +405,17 @@ const Header = () => {
                       <Trophy className="mr-2 h-4 w-4" />
                       <span>Level Tracker</span>
                     </DropdownMenuItem>
+                    
+                    {!isPro && !user?.isPro && (
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setProUpgradeOpen(true)}
+                        data-testid="button-go-pro"
+                      >
+                        <Crown className="mr-2 h-4 w-4 text-yellow-500" />
+                        <span>Go Pro</span>
+                      </DropdownMenuItem>
+                    )}
 
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
