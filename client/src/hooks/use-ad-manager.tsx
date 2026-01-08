@@ -111,6 +111,8 @@ export function useClipAdDecision() {
   const [adCompleted, setAdCompleted] = useState(false);
 
   const decideAd = useCallback(() => {
+    setAdCompleted(false);
+    
     if (isPro || isLoading) {
       setShowAd(false);
       setAdCompleted(true);

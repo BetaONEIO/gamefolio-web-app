@@ -101,7 +101,7 @@ export function VideoAdPlayer({
 }: VideoAdPlayerProps) {
   const adContainerRef = useRef<HTMLDivElement>(null);
   const contentVideoRef = useRef<HTMLVideoElement>(null);
-  const [adsManager, setAdsManager] = useState<AdsManager | null>(null);
+  const adsManagerRef = useRef<AdsManager | null>(null);
   const [adPlaying, setAdPlaying] = useState(false);
   const [canSkip, setCanSkip] = useState(false);
   const [skipCountdown, setSkipCountdown] = useState(skipAfterSeconds);
@@ -155,7 +155,7 @@ export function VideoAdPlayer({
           adsRenderingSettings.restoreCustomPlaybackStateOnAdBreakComplete = true;
 
           const manager: AdsManager = e.getAdsManager(contentVideoRef.current, adsRenderingSettings);
-          setAdsManager(manager);
+          adsManagerRef.current = manager;
 
           manager.addEventListener(window.google.ima.AdEvent.Type.STARTED, () => {
             setAdPlaying(true);
@@ -220,11 +220,12 @@ export function VideoAdPlayer({
     initializeAds();
 
     return () => {
-      if (adsManager) {
-        adsManager.destroy();
+      if (adsManagerRef.current) {
+        adsManagerRef.current.destroy();
+        adsManagerRef.current = null;
       }
     };
-  }, []);
+  }, [initializeAds]);
 
   useEffect(() => {
     if (!adPlaying || skipCountdown <= 0) return;
@@ -243,16 +244,16 @@ export function VideoAdPlayer({
   }, [adPlaying, skipCountdown]);
 
   const handleSkip = () => {
-    if (canSkip && adsManager) {
-      adsManager.skip();
+    if (canSkip && adsManagerRef.current) {
+      adsManagerRef.current.skip();
     }
   };
 
   const toggleMute = () => {
-    if (adsManager) {
+    if (adsManagerRef.current) {
       const newMuted = !isMuted;
       setIsMuted(newMuted);
-      adsManager.setVolume(newMuted ? 0 : 1);
+      adsManagerRef.current.setVolume(newMuted ? 0 : 1);
     }
   };
 
