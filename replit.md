@@ -41,6 +41,7 @@ Gamefolio is a comprehensive gaming portfolio and social platform for gamers to 
 - **NFT Marketplace**: Store for purchasing NFT avatars with GF tokens, with balance checks and wallet requirements.
 - **Crossmint Wallet Integration**: Simplified onboarding for creating/connecting SKALE Nebula Hub Testnet wallets, with zero gas fees and `getOrCreateWallet()` pattern.
 - **RevenueCat Integration**: Pro subscription management via `@revenuecat/purchases-js` SDK, syncing subscription status to the database.
+- **Video Ads System**: Google IMA SDK integration for monetization with 25% chance on clips, every 5 reels for non-Pro users. Pro subscribers are exempt from all ads.
 
 ### System Design Choices
 - **Cloud-first Architecture**: Emphasizes scalability and leverages Supabase for core services.

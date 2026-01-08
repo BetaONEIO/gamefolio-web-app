@@ -16,6 +16,8 @@ import { AgeRestrictionDialog } from "@/components/content/AgeRestrictionDialog"
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { VideoAdPlayer } from "@/components/ads/VideoAdPlayer";
+import { useReelAdTracker } from "@/hooks/use-ad-manager";
 
 interface FullscreenReelsViewerProps {
   reels: ClipWithUser[];
@@ -33,6 +35,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   const containerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  const { showAd, isPro, onReelChange, onAdFinished, reset: resetAdTracker } = useReelAdTracker();
 
   const currentReel = reels[currentIndex];
 
@@ -92,7 +96,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
     }
   }, []);
 
-  // Track current reel based on scroll position
+  // Track current reel based on scroll position and trigger ads every 5 reels
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -102,12 +106,15 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       const newIndex = Math.round(scrollTop / window.innerHeight);
       if (newIndex !== currentIndex && newIndex >= 0 && newIndex < reels.length) {
         setCurrentIndex(newIndex);
+        if (!isPro) {
+          onReelChange(newIndex);
+        }
       }
     };
 
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [currentIndex, reels.length]);
+  }, [currentIndex, reels.length, isPro, onReelChange]);
 
   // Keyboard navigation
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -168,6 +175,19 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
 
   return (
     <div className="fixed inset-0 bg-black z-50">
+      {/* Ad overlay - shows every 5 reels for non-Pro users */}
+      {showAd && (
+        <div className="fixed inset-0 bg-black z-[60] flex items-center justify-center">
+          <VideoAdPlayer 
+            onAdComplete={onAdFinished}
+            onAdError={onAdFinished}
+            onAdSkipped={onAdFinished}
+            skipAfterSeconds={5}
+            className="w-full h-full max-w-2xl"
+          />
+        </div>
+      )}
+      
       {/* Close button */}
       <Button
         variant="ghost"
