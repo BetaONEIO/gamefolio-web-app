@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   Video, 
   Users, 
@@ -16,7 +17,8 @@ import {
   Flame,
   Eye,
   Heart,
-  Share2
+  Share2,
+  Sparkles
 } from "lucide-react";
 
 interface LevelTrackerModalProps {
@@ -25,6 +27,8 @@ interface LevelTrackerModalProps {
   level: number;
   totalXP: number;
   username?: string;
+  xpDelta?: number | null;
+  previousXP?: number | null;
 }
 
 const LEVEL_THRESHOLDS = [
@@ -166,18 +170,59 @@ export function LevelTrackerModal({
   onOpenChange, 
   level, 
   totalXP, 
-  username 
+  username,
+  xpDelta,
+  previousXP
 }: LevelTrackerModalProps) {
   const [copied, setCopied] = useState(false);
+  const [animatedXP, setAnimatedXP] = useState(totalXP);
+  const [showXpGain, setShowXpGain] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
+  useEffect(() => {
+    if (open && xpDelta && previousXP !== null && previousXP !== undefined) {
+      setAnimatedXP(previousXP);
+      setShowXpGain(true);
+      
+      const animationDuration = 1500;
+      const startTime = Date.now();
+      const startXP = previousXP;
+      const endXP = totalXP;
+      
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / animationDuration, 1);
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        const currentXP = startXP + (endXP - startXP) * easeOut;
+        
+        setAnimatedXP(currentXP);
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          setTimeout(() => setShowXpGain(false), 2000);
+        }
+      };
+      
+      const timeout = setTimeout(() => {
+        requestAnimationFrame(animate);
+      }, 500);
+      
+      return () => clearTimeout(timeout);
+    } else {
+      setAnimatedXP(totalXP);
+      setShowXpGain(false);
+    }
+  }, [open, xpDelta, previousXP, totalXP]);
+
+  const displayXP = xpDelta ? animatedXP : totalXP;
   const currentLevelData = LEVEL_THRESHOLDS.find(t => t.level === level) || LEVEL_THRESHOLDS[0];
   const nextLevelData = LEVEL_THRESHOLDS.find(t => t.level === level + 1);
   
   const xpForCurrentLevel = currentLevelData.xpRequired;
   const xpForNextLevel = nextLevelData?.xpRequired || currentLevelData.xpRequired * 2;
-  const xpProgress = totalXP - xpForCurrentLevel;
+  const xpProgress = displayXP - xpForCurrentLevel;
   const xpNeeded = xpForNextLevel - xpForCurrentLevel;
   const progressPercent = Math.min((xpProgress / xpNeeded) * 100, 100);
 
@@ -215,18 +260,40 @@ export function LevelTrackerModal({
         </DialogHeader>
 
         <div className="relative z-10 flex flex-col items-center py-4">
+          <AnimatePresence>
+            {showXpGain && xpDelta && (
+              <motion.div
+                initial={{ opacity: 0, y: -20, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="absolute -top-2 left-1/2 -translate-x-1/2 z-20"
+              >
+                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary/20 to-emerald-500/20 border border-primary/30 rounded-full">
+                  <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+                  <span className="text-primary font-bold text-lg">+{xpDelta} XP</span>
+                  <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
           <LevelBadge level={level} progress={progressPercent} />
           
           <div className="mt-4 text-center">
             <p className="text-sm text-muted-foreground">
-              <span className="text-primary font-semibold">{Math.round(xpProgress)}</span>
+              <motion.span 
+                className="text-primary font-semibold"
+                key={Math.round(xpProgress)}
+              >
+                {Math.round(xpProgress)}
+              </motion.span>
               {" / "}
               <span>{xpNeeded} XP</span>
               {" to Level "}
               <span className="font-semibold">{level + 1}</span>
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Total XP: <span className="text-foreground font-medium">{Math.round(totalXP)}</span>
+              Total XP: <span className="text-foreground font-medium">{Math.round(displayXP)}</span>
             </p>
           </div>
         </div>
