@@ -180,6 +180,10 @@ export function LevelTrackerModal({
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
+  const targetXP = (xpDelta && previousXP !== null && previousXP !== undefined) 
+    ? previousXP + xpDelta 
+    : totalXP;
+
   useEffect(() => {
     if (open && xpDelta && previousXP !== null && previousXP !== undefined) {
       setAnimatedXP(previousXP);
@@ -188,7 +192,7 @@ export function LevelTrackerModal({
       const animationDuration = 1500;
       const startTime = Date.now();
       const startXP = previousXP;
-      const endXP = totalXP;
+      const endXP = previousXP + xpDelta;
       
       const animate = () => {
         const elapsed = Date.now() - startTime;

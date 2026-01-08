@@ -26,6 +26,7 @@ import { LootboxDialog, LootboxTrigger } from "@/components/lootbox/LootboxDialo
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { LevelTrackerModal } from "@/components/level/LevelTrackerModal";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
+import { useLevelTracker } from "@/hooks/use-level-tracker";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 
 const Header = () => {
@@ -38,6 +39,13 @@ const Header = () => {
   const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
   const { user, logoutMutation } = useAuth();
   const { isPro } = useRevenueCat();
+  const { state: levelTrackerState, hideLevelTracker } = useLevelTracker();
+  
+  const isLevelTrackerOpen = levelTrackerOpen || levelTrackerState.isOpen;
+  const handleLevelTrackerClose = (open: boolean) => {
+    setLevelTrackerOpen(open);
+    if (!open) hideLevelTracker();
+  };
   const { toggle } = useMobileMenu();
   const isMobile = useMobile();
   const [, setLocation] = useLocation();
@@ -343,11 +351,13 @@ const Header = () => {
               <NotificationBell />
               <LootboxDialog open={lootboxOpen} onOpenChange={setLootboxOpen} />
               <LevelTrackerModal 
-                open={levelTrackerOpen} 
-                onOpenChange={setLevelTrackerOpen}
+                open={isLevelTrackerOpen} 
+                onOpenChange={handleLevelTrackerClose}
                 level={user?.level || 1}
                 totalXP={user?.totalXP || 0}
                 username={user?.username}
+                xpDelta={levelTrackerState.xpDelta}
+                previousXP={levelTrackerState.previousXP}
               />
               <ProUpgradeDialog 
                 open={proUpgradeOpen} 

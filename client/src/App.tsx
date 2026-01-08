@@ -10,6 +10,7 @@ import { ThemeProvider } from "@/hooks/use-theme";
 import { AuthModalProvider, useAuthModal } from "@/hooks/use-auth-modal";
 import { CrossmintProvider } from "@/hooks/use-crossmint";
 import { RevenueCatProvider } from "@/hooks/use-revenuecat";
+import { LevelTrackerProvider } from "@/hooks/use-level-tracker";
 import { useVersionCheck } from "@/hooks/use-version-check";
 import AuthModal from "@/components/auth/auth-modal";
 import { ProtectedRoute } from "@/components/auth/protected-route";
@@ -328,16 +329,18 @@ function App() {
         <TooltipProvider>
           <AuthProvider>
             <RevenueCatProvider>
-              <CrossmintProvider>
-                <AuthModalProvider>
-                  <ClipDialogProvider>
-                    <MainLayout>
-                      <Router />
-                    </MainLayout>
-                  </ClipDialogProvider>
-                  <Toaster />
-                </AuthModalProvider>
-              </CrossmintProvider>
+              <LevelTrackerProvider>
+                <CrossmintProvider>
+                  <AuthModalProvider>
+                    <ClipDialogProvider>
+                      <MainLayout>
+                        <Router />
+                      </MainLayout>
+                    </ClipDialogProvider>
+                    <Toaster />
+                  </AuthModalProvider>
+                </CrossmintProvider>
+              </LevelTrackerProvider>
             </RevenueCatProvider>
           </AuthProvider>
         </TooltipProvider>

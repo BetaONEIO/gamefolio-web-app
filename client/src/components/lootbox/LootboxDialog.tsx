@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Gift, Sparkles, Timer, Star, Crown, Gem, Package, Zap, Coins, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AssetReward } from "@shared/schema";
+import { useLevelTracker } from "@/hooks/use-level-tracker";
+import { useAuth } from "@/hooks/use-auth";
 
 interface LootboxStatus {
   canOpen: boolean;
@@ -44,6 +46,9 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
   const [phase, setPhase] = useState<"idle" | "opening" | "reveal">("idle");
   const [reward, setReward] = useState<AssetReward | null>(null);
   const [isDuplicate, setIsDuplicate] = useState(false);
+  const [previousXP, setPreviousXP] = useState<number | null>(null);
+  const { showLevelTracker } = useLevelTracker();
+  const { user } = useAuth();
 
   const { data: status, isLoading: statusLoading } = useQuery<LootboxStatus>({
     queryKey: ["/api/lootbox/status"],
@@ -74,15 +79,29 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
 
   const handleOpen = () => {
     if (!status?.canOpen || openMutation.isPending) return;
+    if (user?.totalXP !== undefined) {
+      setPreviousXP(user.totalXP);
+    }
     setPhase("opening");
     openMutation.mutate();
   };
 
   const handleClose = () => {
+    const wasXpReward = reward?.assetType === 'xp_reward';
+    const xpAmount = wasXpReward ? parseInt(reward?.name?.match(/\d+/)?.[0] || '0', 10) : 0;
+    
     setPhase("idle");
     setReward(null);
     setIsDuplicate(false);
     onOpenChange(false);
+    
+    if (wasXpReward && xpAmount > 0 && previousXP !== null) {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      setTimeout(() => {
+        showLevelTracker(xpAmount, previousXP);
+      }, 300);
+    }
+    setPreviousXP(null);
   };
 
   useEffect(() => {
