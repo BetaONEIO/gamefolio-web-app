@@ -47,6 +47,8 @@ import { FullscreenReelsViewer } from "./FullscreenReelsViewer";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { ReportDialog } from "@/components/content/ReportDialog";
 import { AgeRestrictionDialog } from "@/components/content/AgeRestrictionDialog";
+import { VideoAdPlayer } from "@/components/ads/VideoAdPlayer";
+import { useClipAdDecision } from "@/hooks/use-ad-manager";
 
 interface ClipDialogProps {
   clipId: number | null;
@@ -61,7 +63,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   const { toast } = useToast();
   const { user } = useAuth();
   const { isOpen: joinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
-  const [showComments, setShowComments] = useState(false); // Start with comments hidden for Instagram-like behavior
+  const [showComments, setShowComments] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
@@ -71,6 +73,8 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   const [ageRestrictionAccepted, setAgeRestrictionAccepted] = useState(false);
   const [showAgeRestrictionDialog, setShowAgeRestrictionDialog] = useState(false);
   const isAcceptingRef = useRef(false);
+  
+  const { showAd, adCompleted, isPro, decideAd, onAdFinished, reset: resetAd } = useClipAdDecision();
 
   // Access closeClipDialog from useClipDialog
   const { closeClipDialog } = useClipDialog();
@@ -101,12 +105,20 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   // Reset state when dialog is closed
   useEffect(() => {
     if (!isOpen) {
-      setShowComments(false); // Reset comments visibility when dialog closes
-      setAgeRestrictionAccepted(false); // Reset age restriction acceptance
+      setShowComments(false);
+      setAgeRestrictionAccepted(false);
       setShowAgeRestrictionDialog(false);
-      isAcceptingRef.current = false; // Reset accepting flag
+      isAcceptingRef.current = false;
+      resetAd();
     }
-  }, [isOpen]);
+  }, [isOpen, resetAd]);
+  
+  // Decide whether to show an ad when a new clip loads
+  useEffect(() => {
+    if (isOpen && clipId !== null && clipId !== previousClipId && !isPro) {
+      decideAd();
+    }
+  }, [isOpen, clipId, previousClipId, isPro, decideAd]);
 
   // Check for age restriction when clip loads
   useEffect(() => {
@@ -426,6 +438,16 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               </div>
             </div>
           </div>
+        ) : showAd && !adCompleted ? (
+          <div className="flex items-center justify-center w-full h-full bg-black">
+            <VideoAdPlayer 
+              onAdComplete={onAdFinished}
+              onAdError={onAdFinished}
+              onAdSkipped={onAdFinished}
+              skipAfterSeconds={5}
+              className="w-full h-full max-w-4xl"
+            />
+          </div>
         ) : (
           <div className={cn(
             "flex flex-col lg:flex-row h-full transition-opacity duration-300",
@@ -434,17 +456,15 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             {/* Video player area */}
             <div className={cn(
               "bg-black flex items-center justify-center transition-transform duration-200 relative",
-              // Mobile Instagram-like behavior for reels only
               clip.videoType === 'reel' && isMobile
-                ? "w-full h-full" // Full screen on mobile for reels
+                ? "w-full h-full"
                 : isMobile
-                  ? "w-full flex-[0_0_clamp(280px,50vh,60vh)]" // Flexible height with reasonable bounds for mobile
+                  ? "w-full flex-[0_0_clamp(280px,50vh,60vh)]"
                   : clip.videoType === 'reel'
-                    ? "w-full lg:w-[400px] h-full flex-shrink-0 mx-auto" // Fixed width container for reels on desktop
-                    : "w-full lg:w-[65%] h-[60vh] lg:h-full", // Desktop layout for regular clips
+                    ? "w-full lg:w-[400px] h-full flex-shrink-0 mx-auto"
+                    : "w-full lg:w-[65%] h-[60vh] lg:h-full",
               isTransitioning ? "scale-95" : "scale-100"
             )}>
-              {/* Show content only if not age-restricted or if accepted */}
               {(!clip.ageRestricted || ageRestrictionAccepted) ? (
               clip.videoType === 'reel' && isMobile ? (
                 // Special mobile fullscreen layout for reels only
