@@ -6,13 +6,14 @@ interface GamefolioExploreIconProps {
 
 export function GamefolioExploreIcon({ className }: GamefolioExploreIconProps) {
   return (
-    <img 
-      src="https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-icons/sidebar_explore_radar_norm_115.svg"
-      alt=""
-      className="shrink-0"
+    <span 
+      className={cn("inline-flex items-center justify-center shrink-0", className)}
       style={{
-        width: "28px",
-        height: "28px",
+        width: "1em",
+        height: "1em",
+        mask: "url('https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-icons/sidebar_explore_radar_norm_115.svg') no-repeat center / contain",
+        WebkitMask: "url('https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-icons/sidebar_explore_radar_norm_115.svg') no-repeat center / contain",
+        backgroundColor: "currentColor",
       }}
       aria-hidden="true"
     />
