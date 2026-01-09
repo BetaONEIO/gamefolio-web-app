@@ -6,12 +6,12 @@ interface GamefolioMessagesIconProps {
 
 export function GamefolioMessagesIcon({ className }: GamefolioMessagesIconProps) {
   return (
-    <span 
-      className={cn("inline-flex items-center justify-center shrink-0 w-6 h-6", className)}
+    <img 
+      src="https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-icons/sidebar_messages_single_ellipsis_spaced%20(1).svg"
+      alt=""
+      className={cn("w-6 h-6 shrink-0", className)}
       style={{
-        mask: "url('https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-icons/sidebar_messages_single_ellipsis_spaced%20(1).svg') no-repeat center / 180% 180%",
-        WebkitMask: "url('https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-icons/sidebar_messages_single_ellipsis_spaced%20(1).svg') no-repeat center / 180% 180%",
-        backgroundColor: "currentColor",
+        filter: "brightness(0) saturate(100%) invert(70%) sepia(10%) saturate(200%) hue-rotate(180deg)",
       }}
       aria-hidden="true"
     />
