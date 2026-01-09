@@ -5,7 +5,6 @@ import {
   Compass,
   Flame,
   MessageSquare,
-  User,
   ShieldAlert,
   Trophy,
   Palette,
@@ -18,6 +17,7 @@ import {
   ShoppingBag,
   Wallet
 } from "lucide-react";
+import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Game } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
@@ -239,7 +239,7 @@ const Sidebar = () => {
     // Only show Messages link if user has messaging enabled - default to true for demo user
     ...(user && user.messagingEnabled !== false ? [{ icon: MessageSquare, label: "Messages", href: "/messages" }] : []),
 
-    { icon: User, label: "My Gamefolio", href: user ? `/profile/${user.username}` : "/auth" },
+    { icon: GamefolioProfileIcon, label: "My Gamefolio", href: user ? `/profile/${user.username}` : "/auth" },
     { icon: HelpCircle, label: "Help & Support", href: "/help" },
 
     // Only show admin panel link for users with admin role

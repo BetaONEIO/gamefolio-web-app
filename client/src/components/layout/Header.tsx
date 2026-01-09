@@ -1,13 +1,14 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, User as UserIcon, Settings, LogOut, CheckCircle2, Palette, UserCog, Menu, ShieldCheck, Flame, Trophy, Crown } from "lucide-react";
+import { Search, Plus, Settings, LogOut, CheckCircle2, Palette, UserCog, Menu, ShieldCheck, Flame, Trophy, Crown } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useMobile } from "@/hooks/use-mobile";
 import { useQuery } from "@tanstack/react-query";
 import { User, Game } from "@shared/schema";
+import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
 
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
@@ -404,7 +405,7 @@ const Header = () => {
                       className="cursor-pointer"
                       onClick={() => setLocation(`/profile/${user.username}`)}
                     >
-                      <UserIcon className="mr-2 h-4 w-4" />
+                      <GamefolioProfileIcon className="mr-2 h-4 w-4" />
                       <span>View Profile</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
