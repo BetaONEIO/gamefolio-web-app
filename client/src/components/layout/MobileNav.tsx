@@ -33,7 +33,7 @@ const MobileNav = () => {
           >
             <item.icon className={cn(
               "mb-1",
-              item.isUpload ? "text-2xl" : "text-lg"
+              item.isUpload ? "w-7 h-7" : "w-6 h-6"
             )} />
             <span>{item.label}</span>
           </Link>
