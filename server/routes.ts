@@ -7983,6 +7983,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== WELCOME PACK ROUTES ====================
+
+  // Get welcome pack status
+  app.get("/api/welcome-pack/status", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({
+        claimed: user.welcomePackClaimed || false,
+        canClaim: !user.welcomePackClaimed
+      });
+    } catch (error) {
+      console.error("Error getting welcome pack status:", error);
+      res.status(500).json({ message: "Failed to get welcome pack status" });
+    }
+  });
+
+  // Claim welcome pack - grants NFT voucher, random store item, and random animated border
+  app.post("/api/welcome-pack/claim", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (user.welcomePackClaimed) {
+        return res.status(400).json({ message: "Welcome pack already claimed" });
+      }
+      
+      const rewards: Array<{
+        type: "nft_voucher" | "store_item" | "animated_border";
+        reward: any;
+        name: string;
+        description: string;
+        imageUrl?: string;
+      }> = [];
+      
+      // 1. NFT Lootbox Voucher - This is a placeholder/virtual reward
+      rewards.push({
+        type: "nft_voucher",
+        reward: null,
+        name: "NFT Lootbox Voucher",
+        description: "Redeem this voucher in the store for an exclusive NFT!"
+      });
+      
+      // 2. Random store item (get a random asset reward)
+      const allRewards = await storage.getAllAssetRewards();
+      const storeItems = allRewards.filter(r => 
+        r.isActive && 
+        r.assetType !== "avatar_border" && 
+        r.assetType !== "xp_reward" && 
+        r.assetType !== "gf_tokens"
+      );
+      
+      if (storeItems.length > 0) {
+        const randomStoreItem = storeItems[Math.floor(Math.random() * storeItems.length)];
+        // Claim this reward for the user
+        await storage.createAssetRewardClaim({
+          rewardId: randomStoreItem.id,
+          userId: userId
+        });
+        rewards.push({
+          type: "store_item",
+          reward: randomStoreItem,
+          name: randomStoreItem.name,
+          description: `A ${randomStoreItem.rarity} ${randomStoreItem.assetType.replace("_", " ")}`,
+          imageUrl: randomStoreItem.imageUrl
+        });
+      } else {
+        // Fallback if no store items available
+        rewards.push({
+          type: "store_item",
+          reward: null,
+          name: "Mystery Item",
+          description: "Check back later for your mystery item!"
+        });
+      }
+      
+      // 3. Random animated avatar border
+      const animatedBorders = allRewards.filter(r => 
+        r.isActive && 
+        r.assetType === "avatar_border" && 
+        r.category === "animated"
+      );
+      
+      if (animatedBorders.length > 0) {
+        const randomBorder = animatedBorders[Math.floor(Math.random() * animatedBorders.length)];
+        // Claim this border for the user
+        await storage.createAssetRewardClaim({
+          rewardId: randomBorder.id,
+          userId: userId
+        });
+        rewards.push({
+          type: "animated_border",
+          reward: randomBorder,
+          name: randomBorder.name,
+          description: "An animated border to make your avatar stand out!",
+          imageUrl: randomBorder.imageUrl
+        });
+      } else {
+        // Try to get any border if no animated ones exist
+        const anyBorders = allRewards.filter(r => 
+          r.isActive && 
+          r.assetType === "avatar_border"
+        );
+        if (anyBorders.length > 0) {
+          const randomBorder = anyBorders[Math.floor(Math.random() * anyBorders.length)];
+          await storage.createAssetRewardClaim({
+            rewardId: randomBorder.id,
+            userId: userId
+          });
+          rewards.push({
+            type: "animated_border",
+            reward: randomBorder,
+            name: randomBorder.name,
+            description: "A profile border to make your avatar stand out!",
+            imageUrl: randomBorder.imageUrl
+          });
+        } else {
+          rewards.push({
+            type: "animated_border",
+            reward: null,
+            name: "Profile Border",
+            description: "Check back later for your profile border!"
+          });
+        }
+      }
+      
+      // Mark welcome pack as claimed
+      await db.update(users).set({ 
+        welcomePackClaimed: true,
+        updatedAt: new Date()
+      }).where(eq(users.id, userId));
+      
+      res.json({
+        rewards,
+        success: true,
+        message: "Welcome pack claimed successfully!"
+      });
+    } catch (error) {
+      console.error("Error claiming welcome pack:", error);
+      res.status(500).json({ message: "Failed to claim welcome pack" });
+    }
+  });
+
   // ==================== SUBSCRIPTION ROUTES ====================
 
   // Sync subscription status from RevenueCat

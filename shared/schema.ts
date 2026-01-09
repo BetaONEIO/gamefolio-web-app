@@ -64,6 +64,8 @@ export const users = pgTable("users", {
   isPro: boolean("is_pro").default(false).notNull(), // Gamefolio Pro subscriber status
   // Selected Avatar Border (from lootbox rewards)
   selectedAvatarBorderId: integer("selected_avatar_border_id"), // References asset_rewards table
+  // Welcome Pack
+  welcomePackClaimed: boolean("welcome_pack_claimed").default(false).notNull(), // Whether the user has claimed their welcome pack
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import TwitchGameSearch, { TwitchGame } from "@/components/games/TwitchGameSearch";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useWelcomePack } from "@/hooks/use-welcome-pack";
 
 // Component to display trending games in a grid
 interface TrendingGamesGridProps {
@@ -186,6 +187,7 @@ export default function OnboardingFlow({
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { openWelcomePack, canClaimWelcomePack } = useWelcomePack();
 
   // Form state
   const [formUsername, setFormUsername] = useState(username.startsWith('temp_') ? '' : username);
@@ -643,9 +645,15 @@ export default function OnboardingFlow({
       // Complete onboarding and navigate to homepage
       onComplete();
       
-      // Wait a moment to ensure state updates are processed
+      // Wait a moment to ensure state updates are processed, then show welcome pack
       setTimeout(() => {
         setLocation("/");
+        // Show welcome pack dialog if user hasn't claimed it yet
+        if (canClaimWelcomePack) {
+          setTimeout(() => {
+            openWelcomePack();
+          }, 500);
+        }
       }, 300);
       
     } catch (error) {

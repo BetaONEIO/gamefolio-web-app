@@ -11,8 +11,11 @@ import { AuthModalProvider, useAuthModal } from "@/hooks/use-auth-modal";
 import { CrossmintProvider } from "@/hooks/use-crossmint";
 import { RevenueCatProvider } from "@/hooks/use-revenuecat";
 import { LevelTrackerProvider } from "@/hooks/use-level-tracker";
+import { WelcomePackProvider, useWelcomePack } from "@/hooks/use-welcome-pack";
 import { useVersionCheck } from "@/hooks/use-version-check";
 import AuthModal from "@/components/auth/auth-modal";
+import { WelcomePackDialog } from "@/components/welcome-pack/WelcomePackDialog";
+import { WalletPointer } from "@/components/welcome-pack/WalletPointer";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AdminProtectedRoute } from "@/components/auth/admin-protected-route";
 import { OnboardingGuard } from "@/components/auth/onboarding-guard";
@@ -295,10 +298,9 @@ function Router() {
           <Route path="/privacy" component={PrivacyPage} />
           <Route path="/contact" component={ContactPage} />
           <Route path="/help" component={HelpPage} />
-          {/* Hidden until ready to go live
-          <Route path="/store" component={StorePage} />
+          {/* Hidden until ready to go live */}
+          {/* <Route path="/store" component={StorePage} /> */}
           <Route path="/wallet" component={WalletPage} />
-          */}
           <Route path="/storage" component={StoragePage} />
           <Route path="/watchlist" component={WatchlistPage} />
           <Route path="/battles" component={UserBattlesPage} />
@@ -322,6 +324,24 @@ function Router() {
   );
 }
 
+function WelcomePackComponents() {
+  const { showWelcomePack, showWalletPointer, closeWelcomePack, onClaimComplete, dismissWalletPointer } = useWelcomePack();
+  
+  return (
+    <>
+      <WelcomePackDialog 
+        open={showWelcomePack} 
+        onOpenChange={closeWelcomePack}
+        onClaimComplete={onClaimComplete}
+      />
+      <WalletPointer 
+        show={showWalletPointer} 
+        onDismiss={dismissWalletPointer}
+      />
+    </>
+  );
+}
+
 function App() {
   return (
     <ThemeProvider>
@@ -330,16 +350,19 @@ function App() {
           <AuthProvider>
             <RevenueCatProvider>
               <LevelTrackerProvider>
-                <CrossmintProvider>
-                  <AuthModalProvider>
-                    <ClipDialogProvider>
-                      <MainLayout>
-                        <Router />
-                      </MainLayout>
-                    </ClipDialogProvider>
-                    <Toaster />
-                  </AuthModalProvider>
-                </CrossmintProvider>
+                <WelcomePackProvider>
+                  <CrossmintProvider>
+                    <AuthModalProvider>
+                      <ClipDialogProvider>
+                        <MainLayout>
+                          <Router />
+                        </MainLayout>
+                        <WelcomePackComponents />
+                      </ClipDialogProvider>
+                      <Toaster />
+                    </AuthModalProvider>
+                  </CrossmintProvider>
+                </WelcomePackProvider>
               </LevelTrackerProvider>
             </RevenueCatProvider>
           </AuthProvider>
