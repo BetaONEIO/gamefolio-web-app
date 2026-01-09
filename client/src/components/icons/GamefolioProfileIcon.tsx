@@ -19,7 +19,7 @@ export function GamefolioProfileIcon({ className }: GamefolioProfileIconProps) {
       className={cn("w-6 h-6", className)}
       aria-hidden="true"
     >
-      <g transform="translate(12 12) scale(1.15) translate(-12 -12)">
+      <g transform="translate(12 12) scale(1.2) translate(-12 -12)">
         <circle cx="12" cy="8.2" r="2.3"/>
         <path d="M6.8 17.2c1.4-2.6 3.4-3.9 5.2-3.9s3.8 1.3 5.2 3.9"/>
         <path d="M7.6 20h8.8"/>

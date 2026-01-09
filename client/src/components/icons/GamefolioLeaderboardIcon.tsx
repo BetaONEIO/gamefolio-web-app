@@ -19,7 +19,7 @@ export function GamefolioLeaderboardIcon({ className }: GamefolioLeaderboardIcon
       className={cn("w-6 h-6", className)}
       aria-hidden="true"
     >
-      <g transform="translate(12 12) scale(1.15) translate(-12 -12)">
+      <g transform="translate(12 12) scale(1.2) translate(-12 -12)">
         <path d="M10 6h4v8h-4z"/>
         <path d="M5.5 9h4v5h-4z"/>
         <path d="M14.5 10.5h4v3.5h-4z"/>

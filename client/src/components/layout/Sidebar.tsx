@@ -5,8 +5,7 @@ import {
   Plus,
   Search,
   X,
-  HelpCircle,
-  Wallet
+  HelpCircle
 } from "lucide-react";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
@@ -14,6 +13,7 @@ import { GamefolioTrendingIcon } from "@/components/icons/GamefolioTrendingIcon"
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
 import { GamefolioMessagesIcon } from "@/components/icons/GamefolioMessagesIcon";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
+import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Game } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
@@ -230,7 +230,7 @@ const Sidebar = () => {
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
     // Hidden until ready to go live
     // { icon: ShoppingBag, label: "Store", href: "/store" },
-    { icon: Wallet, label: "Wallet", href: "/wallet" },
+    { icon: GamefolioWalletIcon, label: "Wallet", href: "/wallet" },
 
     // Only show Messages link if user has messaging enabled - default to true for demo user
     ...(user && user.messagingEnabled !== false ? [{ icon: GamefolioMessagesIcon, label: "Messages", href: "/messages" }] : []),

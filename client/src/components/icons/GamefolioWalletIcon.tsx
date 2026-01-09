@@ -1,10 +1,10 @@
 import { cn } from "@/lib/utils";
 
-interface GamefolioExploreIconProps {
+interface GamefolioWalletIconProps {
   className?: string;
 }
 
-export function GamefolioExploreIcon({ className }: GamefolioExploreIconProps) {
+export function GamefolioWalletIcon({ className }: GamefolioWalletIconProps) {
   return (
     <svg 
       xmlns="http://www.w3.org/2000/svg"
@@ -20,10 +20,9 @@ export function GamefolioExploreIcon({ className }: GamefolioExploreIconProps) {
       aria-hidden="true"
     >
       <g transform="translate(12 12) scale(1.2) translate(-12 -12)">
-        <path d="M6.2 12a5.8 5.8 0 1 1 5.8 5.8"/>
-        <path d="M8.8 12a3.2 3.2 0 1 1 3.2 3.2"/>
-        <path d="M12 12l4.7-2.7"/>
-        <circle cx="15.8" cy="9.7" r="0.9" fill="currentColor" stroke="none"/>
+        <path d="M5 8.5h14c1.1 0 2 .9 2 2v5c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2v-5c0-1.1.9-2 2-2z"/>
+        <path d="M5 8.5V7c0-1.1.9-2 2-2h8"/>
+        <circle cx="16.5" cy="13" r="0.9" fill="currentColor" stroke="none"/>
       </g>
     </svg>
   );
