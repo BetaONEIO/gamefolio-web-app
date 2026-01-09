@@ -1,7 +1,8 @@
 import { useLocation, Link } from "wouter";
-import { Home, Compass, PlusCircle, Flame, User } from "lucide-react";
+import { Home, PlusCircle, Flame, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
 
 const MobileNav = () => {
   const [location] = useLocation();
@@ -10,7 +11,7 @@ const MobileNav = () => {
 
   const navItems = [
     { icon: Home, label: "Home", href: "/" },
-    { icon: Compass, label: "Explore", href: "/explore" },
+    { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: PlusCircle, label: "", href: "/upload", isUpload: true },
     { icon: Flame, label: "Trending", href: "/trending" },
     { icon: User, label: "Profile", href: `/profile/${username}` },
