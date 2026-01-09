@@ -6,16 +6,25 @@ interface GamefolioExploreIconProps {
 
 export function GamefolioExploreIcon({ className }: GamefolioExploreIconProps) {
   return (
-    <span 
-      className={cn("inline-flex items-center justify-center shrink-0", className)}
-      style={{
-        width: "1em",
-        height: "1em",
-        mask: "url('https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-icons/sidebar_explore_radar_norm_115.svg') no-repeat center / contain",
-        WebkitMask: "url('https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-icons/sidebar_explore_radar_norm_115.svg') no-repeat center / contain",
-        backgroundColor: "currentColor",
-      }}
+    <svg 
+      xmlns="http://www.w3.org/2000/svg"
+      width="24" 
+      height="24" 
+      viewBox="0 0 24 24"
+      fill="none" 
+      stroke="currentColor"
+      strokeWidth="1.2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+      className={cn("w-6 h-6", className)}
       aria-hidden="true"
-    />
+    >
+      <g transform="translate(12 12) scale(1.15) translate(-12 -12)">
+        <path d="M6.2 12a5.8 5.8 0 1 1 5.8 5.8"/>
+        <path d="M8.8 12a3.2 3.2 0 1 1 3.2 3.2"/>
+        <path d="M12 12l4.7-2.7"/>
+        <circle cx="15.8" cy="9.7" r="0.9" fill="currentColor" stroke="none"/>
+      </g>
+    </svg>
   );
 }
