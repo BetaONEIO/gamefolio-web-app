@@ -18,6 +18,7 @@ import {
   Wallet
 } from "lucide-react";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
+import { GamefolioMessagesIcon } from "@/components/icons/GamefolioMessagesIcon";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Game } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
@@ -237,7 +238,7 @@ const Sidebar = () => {
     { icon: Wallet, label: "Wallet", href: "/wallet" },
 
     // Only show Messages link if user has messaging enabled - default to true for demo user
-    ...(user && user.messagingEnabled !== false ? [{ icon: MessageSquare, label: "Messages", href: "/messages" }] : []),
+    ...(user && user.messagingEnabled !== false ? [{ icon: GamefolioMessagesIcon, label: "Messages", href: "/messages" }] : []),
 
     { icon: GamefolioProfileIcon, label: "My Gamefolio", href: user ? `/profile/${user.username}` : "/auth" },
     { icon: HelpCircle, label: "Help & Support", href: "/help" },
