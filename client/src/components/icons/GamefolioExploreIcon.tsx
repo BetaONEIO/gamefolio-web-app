@@ -9,9 +9,10 @@ export function GamefolioExploreIcon({ className }: GamefolioExploreIconProps) {
     <img 
       src="https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-icons/sidebar_explore_radar_norm_115.svg"
       alt=""
-      className={cn("w-7 h-7 shrink-0", className)}
+      className="shrink-0"
       style={{
-        filter: "brightness(0) saturate(100%) invert(70%) sepia(10%) saturate(200%) hue-rotate(180deg)",
+        width: "28px",
+        height: "28px",
       }}
       aria-hidden="true"
     />
