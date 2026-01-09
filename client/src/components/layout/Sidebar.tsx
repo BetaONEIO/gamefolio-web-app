@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
 import { GamefolioMessagesIcon } from "@/components/icons/GamefolioMessagesIcon";
+import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Game } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
@@ -232,7 +233,7 @@ const Sidebar = () => {
     { icon: Home, label: "Home", href: "/" },
     { icon: Compass, label: "Explore", href: "/explore" },
     { icon: Flame, label: "Trending", href: "/trending" },
-    { icon: Trophy, label: "Leaderboard", href: "/leaderboard" },
+    { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
     // Hidden until ready to go live
     // { icon: ShoppingBag, label: "Store", href: "/store" },
     { icon: Wallet, label: "Wallet", href: "/wallet" },
