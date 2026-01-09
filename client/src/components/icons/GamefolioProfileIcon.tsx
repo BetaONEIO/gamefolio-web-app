@@ -9,7 +9,7 @@ export function GamefolioProfileIcon({ className }: GamefolioProfileIconProps) {
     <img 
       src="https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-icons/Gamefolio-sidebar-user-icon.svg"
       alt=""
-      className={cn("w-6 h-6 shrink-0", className)}
+      className={cn("w-7 h-7 shrink-0", className)}
       style={{
         filter: "brightness(0) saturate(100%) invert(70%) sepia(10%) saturate(200%) hue-rotate(180deg)",
       }}
