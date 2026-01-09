@@ -20,6 +20,7 @@ import {
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
 import { GamefolioMessagesIcon } from "@/components/icons/GamefolioMessagesIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
+import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Game } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
@@ -231,7 +232,7 @@ const Sidebar = () => {
 
   const menuItems = [
     { icon: Home, label: "Home", href: "/" },
-    { icon: Compass, label: "Explore", href: "/explore" },
+    { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: Flame, label: "Trending", href: "/trending" },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
     // Hidden until ready to go live
