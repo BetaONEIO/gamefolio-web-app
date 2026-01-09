@@ -1,26 +1,19 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import {
-  Home,
-  Compass,
-  Flame,
-  MessageSquare,
   ShieldAlert,
-  Trophy,
-  Palette,
   Plus,
   Search,
   X,
-  Check,
-  Trash2,
   HelpCircle,
-  ShoppingBag,
   Wallet
 } from "lucide-react";
-import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
-import { GamefolioMessagesIcon } from "@/components/icons/GamefolioMessagesIcon";
-import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
+import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
+import { GamefolioTrendingIcon } from "@/components/icons/GamefolioTrendingIcon";
+import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
+import { GamefolioMessagesIcon } from "@/components/icons/GamefolioMessagesIcon";
+import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Game } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
@@ -231,9 +224,9 @@ const Sidebar = () => {
   };
 
   const menuItems = [
-    { icon: Home, label: "Home", href: "/" },
+    { icon: GamefolioHomeIcon, label: "Home", href: "/" },
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
-    { icon: Flame, label: "Trending", href: "/trending" },
+    { icon: GamefolioTrendingIcon, label: "Trending", href: "/trending" },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
     // Hidden until ready to go live
     // { icon: ShoppingBag, label: "Store", href: "/store" },

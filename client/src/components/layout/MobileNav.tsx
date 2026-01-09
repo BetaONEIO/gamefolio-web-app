@@ -1,8 +1,10 @@
 import { useLocation, Link } from "wouter";
-import { Home, PlusCircle, Flame, User } from "lucide-react";
+import { PlusCircle, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
+import { GamefolioTrendingIcon } from "@/components/icons/GamefolioTrendingIcon";
 
 const MobileNav = () => {
   const [location] = useLocation();
@@ -10,10 +12,10 @@ const MobileNav = () => {
   const username = user?.username || "user";
 
   const navItems = [
-    { icon: Home, label: "Home", href: "/" },
+    { icon: GamefolioHomeIcon, label: "Home", href: "/" },
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: PlusCircle, label: "", href: "/upload", isUpload: true },
-    { icon: Flame, label: "Trending", href: "/trending" },
+    { icon: GamefolioTrendingIcon, label: "Trending", href: "/trending" },
     { icon: User, label: "Profile", href: `/profile/${username}` },
   ];
 
