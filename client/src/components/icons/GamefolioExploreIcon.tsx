@@ -13,7 +13,7 @@ export function GamefolioExploreIcon({ className }: GamefolioExploreIconProps) {
       viewBox="0 0 24 24"
       fill="none" 
       stroke="currentColor"
-      strokeWidth="1.2" 
+      strokeWidth="2" 
       strokeLinecap="round" 
       strokeLinejoin="round"
       className={cn("w-6 h-6", className)}
