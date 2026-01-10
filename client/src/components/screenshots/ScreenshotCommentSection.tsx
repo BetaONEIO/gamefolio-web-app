@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CommentWithUser } from "@shared/schema";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { MentionInput } from "@/components/ui/mention-input";
+import { StyledMentionInput } from "@/components/ui/mention-input";
 import { MentionText } from "@/components/ui/mention-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistance } from "date-fns";
@@ -266,7 +266,7 @@ export function ScreenshotCommentSection({ screenshotId }: ScreenshotCommentSect
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 space-y-2">
-              <MentionInput
+              <StyledMentionInput
                 value={newComment}
                 onChange={setNewComment}
                 placeholder="Add a comment... Use @username to mention other users!"
