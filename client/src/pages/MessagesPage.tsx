@@ -394,10 +394,13 @@ const MessagesPage: React.FC = () => {
 
   // Handle user search with debouncing
   useEffect(() => {
-    if (userSearchQuery.length > 2) {
+    // Strip @ symbol if user types it (usernames don't include @)
+    const cleanQuery = userSearchQuery.startsWith('@') ? userSearchQuery.slice(1) : userSearchQuery;
+    
+    if (cleanQuery.length > 1) {
       setIsSearching(true);
       const timeoutId = setTimeout(() => {
-        searchUsersMutation.mutate(userSearchQuery);
+        searchUsersMutation.mutate(cleanQuery);
       }, 300);
 
       return () => clearTimeout(timeoutId);
@@ -534,7 +537,7 @@ const MessagesPage: React.FC = () => {
 
         {/* Search Results */}
         <div className="flex-1 overflow-hidden">
-          {userSearchQuery.length > 2 ? (
+          {(userSearchQuery.startsWith('@') ? userSearchQuery.length > 2 : userSearchQuery.length > 1) ? (
             <ScrollArea className="h-full">
               <div className="p-4">
                 {userSearchResults.length > 0 ? (
