@@ -158,19 +158,19 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
         {showSuggestions && (
           <div
             ref={suggestionsRef}
-            className="absolute z-50 w-64 max-h-48 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg"
+            className="absolute z-50 w-64 max-h-48 overflow-y-auto bg-[#1a1a2e] border border-[#16213e] rounded-lg shadow-xl"
             style={{
-              top: suggestionPosition.top,
-              left: suggestionPosition.left,
-              position: 'fixed'
+              top: '100%',
+              left: 0,
+              marginTop: '4px'
             }}
           >
             {currentQuery.length < 2 ? (
-              <div className="p-2 text-sm text-gray-500 dark:text-gray-400">
+              <div className="p-3 text-sm text-gray-400">
                 Type at least 2 characters to search users...
               </div>
             ) : isLoading ? (
-              <div className="p-2 text-sm text-gray-500 dark:text-gray-400">
+              <div className="p-3 text-sm text-gray-400">
                 Loading users...
               </div>
             ) : users.length > 0 ? (
@@ -178,7 +178,7 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
                 {users.slice(0, 8).map((user: User) => (
                   <button
                     key={user.id}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700 focus:outline-none"
+                    className="w-full px-3 py-2 text-left hover:bg-[#16213e] focus:bg-[#16213e] focus:outline-none transition-colors"
                     onClick={() => selectSuggestion(user)}
                     data-testid={`mention-suggestion-${user.username}`}
                   >
@@ -191,16 +191,16 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
                           data-testid={`avatar-${user.username}`}
                         />
                       ) : (
-                        <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs font-medium">
+                        <div className="w-6 h-6 rounded-full bg-[#00d26a]/20 text-[#00d26a] flex items-center justify-center text-xs font-medium">
                           {user.username.charAt(0).toUpperCase()}
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                        <div className="text-sm font-medium text-white truncate">
                           @{user.username}
                         </div>
                         {user.displayName && user.displayName !== user.username && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          <div className="text-xs text-gray-400 truncate">
                             {user.displayName}
                           </div>
                         )}
@@ -210,7 +210,7 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
                 ))}
               </div>
             ) : (
-              <div className="p-2 text-sm text-gray-500 dark:text-gray-400">
+              <div className="p-3 text-sm text-gray-400">
                 No users found for "@{currentQuery}"
               </div>
             )}
