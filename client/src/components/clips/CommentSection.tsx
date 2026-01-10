@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { MentionInput } from "@/components/ui/mention-input";
+import { MentionText } from "@/components/ui/mention-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistance } from "date-fns";
 import { useCreateComment, useDeleteComment } from "@/hooks/use-clips";
@@ -219,7 +220,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                       <ModeratorBadge isModerator={(comment.user as any).role === "moderator"} size="sm" />
                     </span>
                   </Link>
-                  <p className="inline text-sm break-words">{comment.content}</p>
+                  <MentionText text={comment.content} className="inline text-sm break-words" />
                 </div>
                 <div className="flex items-center mt-1.5 space-x-3 text-xs text-muted-foreground">
                   <span>

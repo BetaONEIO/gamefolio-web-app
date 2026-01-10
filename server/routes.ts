@@ -6886,6 +6886,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const comment = await storage.createScreenshotComment(commentData);
 
+      // Process mentions in the comment
+      const mentions = await mentionService.parseMentions(req.body.content);
+      if (mentions.length > 0) {
+        await mentionService.createScreenshotCommentMentions(
+          comment.id,
+          mentions.map(m => m.userId),
+          req.user!.id,
+          screenshotId
+        );
+      }
+
       // Award points to the user for commenting
       await LeaderboardService.awardPoints(
         req.user!.id,
