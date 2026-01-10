@@ -29,6 +29,7 @@ import { LevelTrackerModal } from "@/components/level/LevelTrackerModal";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { useLevelTracker } from "@/hooks/use-level-tracker";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
+import ManageProDialog from "@/components/ManageProDialog";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,6 +39,7 @@ const Header = () => {
   const [lootboxOpen, setLootboxOpen] = useState(false);
   const [levelTrackerOpen, setLevelTrackerOpen] = useState(false);
   const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
+  const [manageProOpen, setManageProOpen] = useState(false);
   const { user, logoutMutation } = useAuth();
   const { isPro } = useRevenueCat();
   const { state: levelTrackerState, hideLevelTracker } = useLevelTracker();
@@ -364,6 +366,10 @@ const Header = () => {
                 open={proUpgradeOpen} 
                 onOpenChange={setProUpgradeOpen}
               />
+              <ManageProDialog 
+                open={manageProOpen} 
+                onOpenChange={setManageProOpen}
+              />
               <Link href="/upload">
                 <Button 
                   className="ml-2 sm:ml-4 flex items-center px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300 bg-primary hover:bg-primary/90 border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_hsl(var(--primary)/0.13)]"
@@ -417,7 +423,16 @@ const Header = () => {
                       <span>Level Tracker</span>
                     </DropdownMenuItem>
                     
-                    {!isPro && !user?.isPro && (
+                    {isPro || user?.isPro ? (
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setManageProOpen(true)}
+                        data-testid="button-manage-pro"
+                      >
+                        <Crown className="mr-2 h-4 w-4 text-yellow-500" />
+                        <span>Manage Pro</span>
+                      </DropdownMenuItem>
+                    ) : (
                       <DropdownMenuItem
                         className="cursor-pointer"
                         onClick={() => setProUpgradeOpen(true)}

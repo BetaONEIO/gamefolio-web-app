@@ -8248,5 +8248,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Cancel subscription (sets isPro to false)
+  app.post("/api/subscription/cancel", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const user = await storage.getUserById(userId);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (!user.isPro) {
+        return res.status(400).json({ message: "No active Pro subscription to cancel" });
+      }
+
+      // Update user's Pro status in database
+      await db.update(users).set({ 
+        isPro: false,
+        proSubscriptionEndDate: new Date(),
+        updatedAt: new Date()
+      }).where(eq(users.id, userId));
+
+      console.log(`❌ Pro subscription cancelled for user ${userId}`);
+
+      res.json({ 
+        success: true,
+        message: "Your Pro subscription has been cancelled"
+      });
+    } catch (error) {
+      console.error("Error cancelling subscription:", error);
+      res.status(500).json({ message: "Failed to cancel subscription" });
+    }
+  });
+
   return httpServer;
 }
