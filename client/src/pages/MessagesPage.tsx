@@ -21,7 +21,10 @@ import {
   ShieldOff,
   ArrowLeft,
   X,
-  UserCheck
+  UserCheck,
+  Check,
+  CheckCheck,
+  CornerDownRight
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -694,8 +697,17 @@ const MessagesPage: React.FC = () => {
                               </span>
                             )}
                           </div>
-                          <p className={`text-sm truncate ${conversation.unreadCount > 0 ? 'text-white font-bold' : 'text-muted-foreground'}`}>
-                            {conversation.lastMessage?.content || "No messages yet"}
+                          <p className={`text-sm truncate flex items-center gap-1 ${conversation.unreadCount > 0 ? 'text-white font-bold' : 'text-muted-foreground'}`}>
+                            {conversation.lastMessage?.senderId === user?.id && (
+                              <CornerDownRight className="h-3 w-3 flex-shrink-0 text-green-500" />
+                            )}
+                            <span className="truncate">{conversation.lastMessage?.content || "No messages yet"}</span>
+                            {conversation.lastMessage?.senderId === user?.id && conversation.lastMessage?.isRead && (
+                              <CheckCheck className="h-3 w-3 flex-shrink-0 text-blue-400" />
+                            )}
+                            {conversation.lastMessage?.senderId === user?.id && !conversation.lastMessage?.isRead && (
+                              <Check className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
+                            )}
                           </p>
                         </div>
                         {conversation.unreadCount > 0 && (
