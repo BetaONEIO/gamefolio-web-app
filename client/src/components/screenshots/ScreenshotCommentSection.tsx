@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CommentWithUser } from "@shared/schema";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { MentionInput } from "@/components/ui/mention-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistance } from "date-fns";
 import { useScreenshotComments, useCreateScreenshotComment, useDeleteScreenshotComment } from "@/hooks/use-clips";
@@ -265,9 +265,9 @@ export function ScreenshotCommentSection({ screenshotId }: ScreenshotCommentSect
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 space-y-2">
-              <Textarea
+              <MentionInput
                 value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
+                onChange={setNewComment}
                 placeholder="Add a comment... Use @username to mention other users!"
                 className="min-h-[60px] resize-none text-sm"
                 data-testid="input-comment"
