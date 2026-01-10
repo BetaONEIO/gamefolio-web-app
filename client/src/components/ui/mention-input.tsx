@@ -366,10 +366,11 @@ function renderStyledText(text: string): React.ReactNode[] {
         </span>
       );
     } else if (match[3]) {
-      // /[Game] - purple
+      // /[Game] - purple, show only the game name
+      const gameName = match[3].slice(2, -1); // Remove /[ and ]
       parts.push(
         <span key={key++} className="text-purple-400 font-medium">
-          {match[3]}
+          {gameName}
         </span>
       );
     }
