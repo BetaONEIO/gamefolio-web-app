@@ -681,7 +681,7 @@ const MessagesPage: React.FC = () => {
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <p className="font-medium truncate">{displayName}</p>
+                            <p className={`font-medium truncate ${conversation.unreadCount > 0 ? 'text-green-500' : ''}`}>{displayName}</p>
                             {conversation.lastMessage && conversation.lastMessage.createdAt && (
                               <span className="text-xs text-muted-foreground">
                                 {(() => {
@@ -694,7 +694,7 @@ const MessagesPage: React.FC = () => {
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground truncate">
+                          <p className={`text-sm truncate ${conversation.unreadCount > 0 ? 'text-white font-bold' : 'text-muted-foreground'}`}>
                             {conversation.lastMessage?.content || "No messages yet"}
                           </p>
                         </div>
