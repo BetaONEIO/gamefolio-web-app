@@ -78,7 +78,7 @@ const faqData: FAQItem[] = [
   {
     id: 'upload-limits',
     question: 'What are the file size limits for uploads?',
-    answer: 'Free users can upload videos up to 100MB and images up to 10MB. Pro subscribers enjoy increased limits with videos up to 500MB and priority upload processing. All uploads are optimized for fast streaming and viewing across devices.',
+    answer: 'You can upload videos up to 500MB and screenshots up to 100MB. Supported video formats include MP4, WebM, and MOV. For images, we support JPEG, PNG, and JPG formats. All uploads are optimized for fast streaming and viewing across devices.',
     category: 'Content',
     keywords: ['file size', 'limits', 'maximum', 'upload size', 'mb', 'video size']
   },
@@ -113,7 +113,7 @@ const faqData: FAQItem[] = [
   {
     id: 'pro-subscription',
     question: 'What benefits do Pro subscribers get?',
-    answer: 'Gamefolio Pro unlocks premium features including higher upload limits, priority content processing, exclusive profile customization options, a verified Pro badge, early access to new features, and reduced wait times for support requests. Subscribe through Settings > Account Settings.',
+    answer: 'Gamefolio Pro unlocks premium features including an exclusive Pro badge on your profile, early access to new features and tools, and priority support. Pro subscribers help support the platform while enjoying enhanced visibility in the community. Subscribe through your account settings.',
     category: 'Subscription',
     keywords: ['pro', 'premium', 'subscription', 'benefits', 'upgrade', 'paid', 'features']
   },
