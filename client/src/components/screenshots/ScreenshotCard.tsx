@@ -198,10 +198,12 @@ export function ScreenshotCard({
         {/* Title */}
         <h3 className="font-semibold text-sm line-clamp-1 leading-tight">{screenshot.title}</h3>
         
-        {/* Game name */}
+        {/* Game name with green background like clips/reels */}
         {(screenshot as any).game && (
-          <div className="text-xs text-primary font-medium truncate">
-            {(screenshot as any).game.name}
+          <div className="pt-1">
+            <span className="inline-block bg-green-600 text-white text-xs px-2 py-0.5 rounded font-medium">
+              {(screenshot as any).game.name}
+            </span>
           </div>
         )}
         
