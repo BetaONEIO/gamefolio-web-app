@@ -163,6 +163,45 @@ router.post('/video-direct', fullAccessMiddleware, upload.single('file'), async 
 
     const { uploadType, filename, filetype } = req.body;
 
+    // Check upload limits before processing
+    const limits = await storage.getUploadLimits(req.user!.id);
+    const isReel = uploadType === 'reel';
+    const contentType = isReel ? 'reel' : 'clip';
+    
+    // Check daily quota (if not unlimited)
+    if (!limits.isPro) {
+      if (isReel && !limits.canUploadReel) {
+        // Clean up temp file
+        if (req.file?.path) fs.unlink(req.file.path, () => {});
+        return res.status(403).json({ 
+          error: 'Daily reel upload limit reached',
+          message: `Free users can upload ${limits.maxReelsPerDay} reels per day. Upgrade to Pro for unlimited uploads.`,
+          limits
+        });
+      }
+      if (!isReel && !limits.canUploadClip) {
+        // Clean up temp file
+        if (req.file?.path) fs.unlink(req.file.path, () => {});
+        return res.status(403).json({ 
+          error: 'Daily clip upload limit reached',
+          message: `Free users can upload ${limits.maxClipsPerDay} clips per day. Upgrade to Pro for unlimited uploads.`,
+          limits
+        });
+      }
+    }
+    
+    // Check file size limit
+    const fileSizeMB = req.file.size / (1024 * 1024);
+    if (fileSizeMB > limits.maxVideoSizeMB) {
+      // Clean up temp file
+      if (req.file?.path) fs.unlink(req.file.path, () => {});
+      return res.status(403).json({ 
+        error: 'File size exceeds limit',
+        message: `Maximum video size is ${limits.maxVideoSizeMB}MB. ${limits.isPro ? '' : 'Upgrade to Pro for larger uploads (up to 500MB).'}`,
+        limits
+      });
+    }
+
     // Read the uploaded file
     const fileBuffer = fs.readFileSync(req.file.path);
 
@@ -191,6 +230,10 @@ router.post('/video-direct', fullAccessMiddleware, upload.single('file'), async 
     }
 
     console.log('✅ Video uploaded successfully:', result.url);
+
+    // Increment daily upload count
+    await storage.incrementDailyUploadCount(req.user!.id, contentType);
+    console.log(`📊 Incremented ${contentType} upload count for user ${req.user!.id}`);
 
     // Clean up temp file immediately after successful Supabase upload
     fs.unlink(req.file.path, (err) => {
@@ -255,6 +298,32 @@ router.post('/screenshot', fullAccessMiddleware, screenshotUpload.single('screen
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No screenshot file provided' });
+    }
+
+    // Check upload limits before processing
+    const limits = await storage.getUploadLimits(req.user!.id);
+    
+    // Check daily quota (if not unlimited)
+    if (!limits.isPro && !limits.canUploadScreenshot) {
+      // Clean up temp file
+      if (req.file?.path) fs.unlink(req.file.path, () => {});
+      return res.status(403).json({ 
+        error: 'Daily screenshot upload limit reached',
+        message: `Free users can upload ${limits.maxScreenshotsPerDay} screenshots per day. Upgrade to Pro for unlimited uploads.`,
+        limits
+      });
+    }
+    
+    // Check file size limit
+    const fileSizeMB = req.file.size / (1024 * 1024);
+    if (fileSizeMB > limits.maxImageSizeMB) {
+      // Clean up temp file
+      if (req.file?.path) fs.unlink(req.file.path, () => {});
+      return res.status(403).json({ 
+        error: 'File size exceeds limit',
+        message: `Maximum image size is ${limits.maxImageSizeMB}MB. ${limits.isPro ? '' : 'Upgrade to Pro for larger uploads (up to 100MB).'}`,
+        limits
+      });
     }
 
     const { title, description, gameId, tags, ageRestricted } = req.body;
@@ -416,6 +485,10 @@ router.post('/screenshot', fullAccessMiddleware, screenshotUpload.single('screen
 
     const screenshot = await storage.createScreenshot(screenshotDataWithShareCode);
 
+    // Increment daily upload count
+    await storage.incrementDailyUploadCount(req.user!.id, 'screenshot');
+    console.log(`📊 Incremented screenshot upload count for user ${req.user!.id}`);
+
     // Award upload points to the user (screenshots are worth 2 XP)
     await LeaderboardService.awardPoints(
       req.user!.id,
@@ -497,6 +570,28 @@ router.post('/process-video', fullAccessMiddleware, async (req, res) => {
     // Validate video type
     if (!['clip', 'reel'].includes(videoType)) {
       return res.status(400).json({ error: 'Invalid video type. Must be "clip" or "reel"' });
+    }
+
+    // Check upload limits before processing
+    const limits = await storage.getUploadLimits(req.user!.id);
+    const isReel = videoType === 'reel';
+    
+    // Check daily quota (if not unlimited)
+    if (!limits.isPro) {
+      if (isReel && !limits.canUploadReel) {
+        return res.status(403).json({ 
+          error: 'Daily reel upload limit reached',
+          message: `Free users can upload ${limits.maxReelsPerDay} reels per day. Upgrade to Pro for unlimited uploads.`,
+          limits
+        });
+      }
+      if (!isReel && !limits.canUploadClip) {
+        return res.status(403).json({ 
+          error: 'Daily clip upload limit reached',
+          message: `Free users can upload ${limits.maxClipsPerDay} clips per day. Upgrade to Pro for unlimited uploads.`,
+          limits
+        });
+      }
     }
 
     // Handle game ID - ensure game exists in database
@@ -759,6 +854,11 @@ router.post('/process-video', fullAccessMiddleware, async (req, res) => {
     // Create the clip
     const clip = await storage.createClip(validatedClipData);
 
+    // Increment daily upload count
+    const uploadContentType = isReel ? 'reel' : 'clip';
+    await storage.incrementDailyUploadCount(req.user!.id, uploadContentType);
+    console.log(`📊 Incremented ${uploadContentType} upload count for user ${req.user!.id}`);
+
     // Award upload points to the user
     await LeaderboardService.awardPoints(
       req.user!.id,
@@ -900,6 +1000,18 @@ router.get('/config', fullAccessMiddleware, (req, res) => {
     },
     tusEndpoint: '/api/upload/tus'
   });
+});
+
+// Get user-specific upload limits and remaining quota
+router.get('/limits', fullAccessMiddleware, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const limits = await storage.getUploadLimits(userId);
+    res.json(limits);
+  } catch (error) {
+    console.error('Error fetching upload limits:', error);
+    res.status(500).json({ error: 'Failed to fetch upload limits' });
+  }
 });
 
 // Avatar upload endpoint

@@ -8147,6 +8147,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid isPro value" });
       }
 
+      // Get current user state to check if this is a new Pro subscription
+      const currentUser = await storage.getUserById(userId);
+      const wasNotPro = !currentUser?.isPro;
+
       // Update user's Pro status in database
       await db.update(users).set({ 
         isPro,
@@ -8155,10 +8159,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`✅ Updated Pro status for user ${userId}: ${isPro}`);
 
-      res.json({ success: true, isPro });
+      let lootboxReward = null;
+
+      // If user is becoming Pro for the first time, grant initial lootbox
+      if (isPro && wasNotPro) {
+        console.log(`🎁 User ${userId} just became Pro! Granting initial Pro lootbox...`);
+        const initialGrant = await storage.grantProLootbox(userId, 'initial');
+        if (initialGrant) {
+          lootboxReward = {
+            type: 'initial',
+            reward: initialGrant.reward,
+            isDuplicate: initialGrant.isDuplicate
+          };
+          console.log(`🎁 Initial Pro lootbox granted: ${initialGrant.reward.name} (${initialGrant.reward.rarity})`);
+        }
+      }
+
+      // Also check for monthly lootbox grant
+      if (isPro) {
+        const monthlyGrant = await storage.grantProLootbox(userId, 'monthly');
+        if (monthlyGrant && !lootboxReward) {
+          lootboxReward = {
+            type: 'monthly',
+            reward: monthlyGrant.reward,
+            isDuplicate: monthlyGrant.isDuplicate
+          };
+          console.log(`🎁 Monthly Pro lootbox granted: ${monthlyGrant.reward.name} (${monthlyGrant.reward.rarity})`);
+        }
+      }
+
+      res.json({ success: true, isPro, lootboxReward });
     } catch (error) {
       console.error("Error syncing subscription:", error);
       res.status(500).json({ message: "Failed to sync subscription status" });
+    }
+  });
+
+  // Check and grant monthly Pro lootbox (can be called on app load for Pro users)
+  app.post("/api/subscription/claim-monthly-lootbox", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const user = await storage.getUserById(userId);
+
+      if (!user?.isPro) {
+        return res.status(403).json({ message: "Pro subscription required" });
+      }
+
+      const monthlyGrant = await storage.grantProLootbox(userId, 'monthly');
+      
+      if (monthlyGrant) {
+        console.log(`🎁 Monthly Pro lootbox granted to user ${userId}: ${monthlyGrant.reward.name}`);
+        res.json({ 
+          success: true, 
+          reward: monthlyGrant.reward,
+          isDuplicate: monthlyGrant.isDuplicate,
+          message: `You received a ${monthlyGrant.reward.rarity} reward: ${monthlyGrant.reward.name}!`
+        });
+      } else {
+        res.json({ 
+          success: false, 
+          alreadyClaimed: true,
+          message: "You've already claimed your monthly Pro lootbox. Check back next month!" 
+        });
+      }
+    } catch (error) {
+      console.error("Error claiming monthly lootbox:", error);
+      res.status(500).json({ message: "Failed to claim monthly lootbox" });
     }
   });
 

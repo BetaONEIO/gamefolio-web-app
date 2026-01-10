@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -171,6 +171,25 @@ const UploadPage = () => {
   } | null>(null);
 
   const userId = user?.id;
+
+  // Fetch upload limits
+  const { data: uploadLimits, isLoading: limitsLoading } = useQuery<{
+    isPro: boolean;
+    maxClipsPerDay: number;
+    maxReelsPerDay: number;
+    maxScreenshotsPerDay: number;
+    maxVideoSizeMB: number;
+    maxImageSizeMB: number;
+    clipsUploadedToday: number;
+    reelsUploadedToday: number;
+    screenshotsUploadedToday: number;
+    canUploadClip: boolean;
+    canUploadReel: boolean;
+    canUploadScreenshot: boolean;
+  }>({
+    queryKey: ['/api/upload/limits'],
+    enabled: !!userId,
+  });
 
   // Reset form function
   const resetFormAndNavigate = () => {
@@ -423,6 +442,7 @@ const UploadPage = () => {
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/screenshots`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/screenshots`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/upload/limits'] });
       
       // Reset form first
       resetScreenshotForm();
@@ -581,6 +601,7 @@ const UploadPage = () => {
       queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/clips`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/upload/limits'] });
       
       setIsUploading(false);
       setUploadProgress(0);
@@ -689,6 +710,27 @@ const UploadPage = () => {
       return;
     }
 
+    // Check upload limits (client-side validation)
+    if (uploadLimits && !uploadLimits.isPro) {
+      const isReel = contentType === 'reels';
+      if (isReel && !uploadLimits.canUploadReel) {
+        toast({
+          title: "Daily limit reached",
+          description: `You've reached your daily limit of ${uploadLimits.maxReelsPerDay} reels. Upgrade to Pro for unlimited uploads.`,
+          variant: "gamefolioError",
+        });
+        return;
+      }
+      if (!isReel && !uploadLimits.canUploadClip) {
+        toast({
+          title: "Daily limit reached",
+          description: `You've reached your daily limit of ${uploadLimits.maxClipsPerDay} clips. Upgrade to Pro for unlimited uploads.`,
+          variant: "gamefolioError",
+        });
+        return;
+      }
+    }
+
     // Validate required fields
     if (!file) {
       toast({
@@ -752,6 +794,41 @@ const UploadPage = () => {
       </div>
       
       <EmailVerificationBanner />
+
+      {/* Upload Limits Display */}
+      {!limitsLoading && uploadLimits && !uploadLimits.isPro && (
+        <Alert className="mb-4">
+          <Info className="h-4 w-4" />
+          <AlertTitle>Daily Upload Limits</AlertTitle>
+          <AlertDescription>
+            <div className="flex flex-wrap gap-4 mt-2 text-sm">
+              <span className={uploadLimits.canUploadClip ? "" : "text-destructive font-medium"}>
+                Clips: {uploadLimits.clipsUploadedToday}/{uploadLimits.maxClipsPerDay}
+              </span>
+              <span className={uploadLimits.canUploadReel ? "" : "text-destructive font-medium"}>
+                Reels: {uploadLimits.reelsUploadedToday}/{uploadLimits.maxReelsPerDay}
+              </span>
+              <span className={uploadLimits.canUploadScreenshot ? "" : "text-destructive font-medium"}>
+                Screenshots: {uploadLimits.screenshotsUploadedToday}/{uploadLimits.maxScreenshotsPerDay}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Max file sizes: Videos {uploadLimits.maxVideoSizeMB}MB, Images {uploadLimits.maxImageSizeMB}MB. 
+              <a href="/pro" className="text-primary ml-1 underline">Upgrade to Pro</a> for unlimited uploads and larger files.
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {uploadLimits?.isPro && (
+        <Alert className="mb-4 border-purple-500/50 bg-purple-500/10">
+          <Check className="h-4 w-4 text-purple-500" />
+          <AlertTitle className="text-purple-500">Pro Member</AlertTitle>
+          <AlertDescription>
+            Unlimited uploads with max file sizes: Videos {uploadLimits.maxVideoSizeMB}MB, Images {uploadLimits.maxImageSizeMB}MB
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Tabs value={contentType} onValueChange={(value) => setContentType(value as 'clips' | 'reels' | 'screenshots')} className="w-full mb-6">
         <TabsList className="grid w-fit grid-cols-3">
@@ -1919,6 +1996,16 @@ const UploadPage = () => {
                   toast({
                     title: "Tags required",
                     description: "Please add at least 2 tags for your screenshots.",
+                    variant: "gamefolioError",
+                  });
+                  return;
+                }
+                
+                // Check upload limits (client-side validation)
+                if (uploadLimits && !uploadLimits.isPro && !uploadLimits.canUploadScreenshot) {
+                  toast({
+                    title: "Daily limit reached",
+                    description: `You've reached your daily limit of ${uploadLimits.maxScreenshotsPerDay} screenshots. Upgrade to Pro for unlimited uploads.`,
                     variant: "gamefolioError",
                   });
                   return;

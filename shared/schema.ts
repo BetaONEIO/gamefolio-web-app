@@ -921,7 +921,42 @@ export const insertUserDailyLootboxSchema = createInsertSchema(userDailyLootbox)
   id: true,
 });
 
+// Daily upload tracking table - tracks uploads per user per day for quota enforcement
+export const userDailyUploads = pgTable("user_daily_uploads", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  uploadDate: text("upload_date").notNull(), // YYYY-MM-DD format in UTC
+  clipsCount: integer("clips_count").default(0).notNull(),
+  reelsCount: integer("reels_count").default(0).notNull(),
+  screenshotsCount: integer("screenshots_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  uniqueUserDate: unique().on(table.userId, table.uploadDate),
+}));
 
+// Schema for inserting daily upload record
+export const insertUserDailyUploadsSchema = createInsertSchema(userDailyUploads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Pro lootbox grants table - tracks initial and monthly lootbox grants for Pro subscribers
+export const proLootboxGrants = pgTable("pro_lootbox_grants", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  grantType: text("grant_type").notNull(), // 'initial' or 'monthly'
+  grantedForMonth: text("granted_for_month"), // YYYY-MM format for monthly grants
+  rewardId: integer("reward_id").references(() => assetRewards.id),
+  grantedAt: timestamp("granted_at").defaultNow().notNull(),
+});
+
+// Schema for inserting pro lootbox grant
+export const insertProLootboxGrantSchema = createInsertSchema(proLootboxGrants).omit({
+  id: true,
+  grantedAt: true,
+});
 
 // Extended types for frontend use
 export type User = typeof users.$inferSelect;
@@ -1098,3 +1133,27 @@ export type InsertUserDailyLootbox = z.infer<typeof insertUserDailyLootboxSchema
 export type AssetRewardWithClaims = AssetReward & {
   claims: (AssetRewardClaim & { user: User })[];
 };
+
+// Types for daily upload tracking
+export type UserDailyUploads = typeof userDailyUploads.$inferSelect;
+export type InsertUserDailyUploads = z.infer<typeof insertUserDailyUploadsSchema>;
+
+// Types for Pro lootbox grants
+export type ProLootboxGrant = typeof proLootboxGrants.$inferSelect;
+export type InsertProLootboxGrant = z.infer<typeof insertProLootboxGrantSchema>;
+
+// Upload limits configuration type
+export interface UploadLimits {
+  isPro: boolean;
+  maxClipsPerDay: number;
+  maxReelsPerDay: number;
+  maxScreenshotsPerDay: number;
+  maxVideoSizeMB: number;
+  maxImageSizeMB: number;
+  clipsUploadedToday: number;
+  reelsUploadedToday: number;
+  screenshotsUploadedToday: number;
+  canUploadClip: boolean;
+  canUploadReel: boolean;
+  canUploadScreenshot: boolean;
+}

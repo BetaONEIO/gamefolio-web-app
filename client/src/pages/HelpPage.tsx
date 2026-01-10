@@ -77,10 +77,10 @@ const faqData: FAQItem[] = [
   },
   {
     id: 'upload-limits',
-    question: 'What are the file size limits for uploads?',
-    answer: 'You can upload videos up to 500MB and screenshots up to 100MB. Supported video formats include MP4, WebM, and MOV. For images, we support JPEG, PNG, and JPG formats. All uploads are optimized for fast streaming and viewing across devices.',
+    question: 'What are the file size and daily upload limits?',
+    answer: 'Free users can upload up to 2 clips, 2 reels, and 3 screenshots per day. Maximum file sizes for free users are 100MB for videos and 10MB for images. Pro subscribers enjoy unlimited daily uploads with larger file sizes: up to 500MB for videos and 100MB for images. Supported video formats include MP4, WebM, and MOV. For images, we support JPEG, PNG, and JPG formats. All uploads are optimized for fast streaming and viewing across devices.',
     category: 'Content',
-    keywords: ['file size', 'limits', 'maximum', 'upload size', 'mb', 'video size']
+    keywords: ['file size', 'limits', 'maximum', 'upload size', 'mb', 'video size', 'daily limit', 'free', 'pro', 'quota']
   },
   {
     id: 'customize-profile',
@@ -113,9 +113,9 @@ const faqData: FAQItem[] = [
   {
     id: 'pro-subscription',
     question: 'What benefits do Pro subscribers get?',
-    answer: 'Gamefolio Pro unlocks premium features including an exclusive Pro badge on your profile, early access to new features and tools, and priority support. Pro subscribers help support the platform while enjoying enhanced visibility in the community. Subscribe through your account settings.',
+    answer: 'Gamefolio Pro unlocks premium features including: unlimited daily uploads (no quota limits), larger file size allowances (500MB videos, 100MB images), an exclusive Pro badge on your profile, access to all avatar borders, a free lootbox reward upon subscribing, a monthly bonus lootbox reward, early access to new features and tools, and priority support. Pro subscribers help support the platform while enjoying enhanced visibility in the community. Subscribe through your account settings.',
     category: 'Subscription',
-    keywords: ['pro', 'premium', 'subscription', 'benefits', 'upgrade', 'paid', 'features']
+    keywords: ['pro', 'premium', 'subscription', 'benefits', 'upgrade', 'paid', 'features', 'unlimited', 'lootbox', 'rewards']
   },
   {
     id: 'report-content',

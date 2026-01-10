@@ -37,6 +37,9 @@ import {
   AssetRewardClaim, InsertAssetRewardClaim,
   AssetRewardWithClaims,
   UserDailyLootbox, InsertUserDailyLootbox,
+  UserDailyUploads, InsertUserDailyUploads,
+  ProLootboxGrant, InsertProLootboxGrant,
+  UploadLimits,
   ClipWithUser,
   CommentWithUser,
   ScreenshotCommentWithUser,
@@ -84,6 +87,8 @@ import {
   assetRewards,
   assetRewardClaims,
   userDailyLootbox,
+  userDailyUploads,
+  proLootboxGrants,
   userUnlockedBanners,
   commentLikes,
   screenshotCommentLikes
@@ -4668,5 +4673,228 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userDailyLootbox.userId, userId));
     
     return true;
+  }
+
+  // ==================== DAILY UPLOAD QUOTA OPERATIONS ====================
+
+  // Upload limit constants
+  private readonly FREE_MAX_CLIPS_PER_DAY = 2;
+  private readonly FREE_MAX_REELS_PER_DAY = 2;
+  private readonly FREE_MAX_SCREENSHOTS_PER_DAY = 3;
+  private readonly FREE_MAX_VIDEO_SIZE_MB = 100;
+  private readonly FREE_MAX_IMAGE_SIZE_MB = 10;
+  private readonly PRO_MAX_VIDEO_SIZE_MB = 500;
+  private readonly PRO_MAX_IMAGE_SIZE_MB = 100;
+
+  private getTodayDateString(): string {
+    const now = new Date();
+    return now.toISOString().split('T')[0]; // YYYY-MM-DD in UTC
+  }
+
+  private getCurrentMonthString(): string {
+    const now = new Date();
+    return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`; // YYYY-MM
+  }
+
+  async getUserDailyUploads(userId: number, date: string): Promise<UserDailyUploads | null> {
+    const [record] = await db
+      .select()
+      .from(userDailyUploads)
+      .where(and(
+        eq(userDailyUploads.userId, userId),
+        eq(userDailyUploads.uploadDate, date)
+      ))
+      .limit(1);
+    return record || null;
+  }
+
+  async incrementDailyUploadCount(userId: number, contentType: 'clip' | 'reel' | 'screenshot'): Promise<UserDailyUploads> {
+    const today = this.getTodayDateString();
+    
+    // Try to get existing record for today
+    const existing = await this.getUserDailyUploads(userId, today);
+    
+    if (existing) {
+      // Update existing record
+      const updates: Partial<UserDailyUploads> = { updatedAt: new Date() };
+      if (contentType === 'clip') {
+        updates.clipsCount = existing.clipsCount + 1;
+      } else if (contentType === 'reel') {
+        updates.reelsCount = existing.reelsCount + 1;
+      } else if (contentType === 'screenshot') {
+        updates.screenshotsCount = existing.screenshotsCount + 1;
+      }
+      
+      const [updated] = await db
+        .update(userDailyUploads)
+        .set(updates)
+        .where(eq(userDailyUploads.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      // Create new record for today
+      const newRecord: any = {
+        userId,
+        uploadDate: today,
+        clipsCount: contentType === 'clip' ? 1 : 0,
+        reelsCount: contentType === 'reel' ? 1 : 0,
+        screenshotsCount: contentType === 'screenshot' ? 1 : 0,
+      };
+      
+      const [created] = await db
+        .insert(userDailyUploads)
+        .values(newRecord)
+        .returning();
+      return created;
+    }
+  }
+
+  async getUploadLimits(userId: number): Promise<UploadLimits> {
+    // Get user to check Pro status
+    const user = await this.getUser(userId);
+    const isPro = user?.isPro || false;
+    
+    // Get today's upload counts
+    const today = this.getTodayDateString();
+    const dailyUploads = await this.getUserDailyUploads(userId, today);
+    
+    const clipsUploadedToday = dailyUploads?.clipsCount || 0;
+    const reelsUploadedToday = dailyUploads?.reelsCount || 0;
+    const screenshotsUploadedToday = dailyUploads?.screenshotsCount || 0;
+    
+    if (isPro) {
+      // Pro users have unlimited uploads
+      return {
+        isPro: true,
+        maxClipsPerDay: -1, // -1 means unlimited
+        maxReelsPerDay: -1,
+        maxScreenshotsPerDay: -1,
+        maxVideoSizeMB: this.PRO_MAX_VIDEO_SIZE_MB,
+        maxImageSizeMB: this.PRO_MAX_IMAGE_SIZE_MB,
+        clipsUploadedToday,
+        reelsUploadedToday,
+        screenshotsUploadedToday,
+        canUploadClip: true,
+        canUploadReel: true,
+        canUploadScreenshot: true,
+      };
+    } else {
+      // Free users have daily limits
+      return {
+        isPro: false,
+        maxClipsPerDay: this.FREE_MAX_CLIPS_PER_DAY,
+        maxReelsPerDay: this.FREE_MAX_REELS_PER_DAY,
+        maxScreenshotsPerDay: this.FREE_MAX_SCREENSHOTS_PER_DAY,
+        maxVideoSizeMB: this.FREE_MAX_VIDEO_SIZE_MB,
+        maxImageSizeMB: this.FREE_MAX_IMAGE_SIZE_MB,
+        clipsUploadedToday,
+        reelsUploadedToday,
+        screenshotsUploadedToday,
+        canUploadClip: clipsUploadedToday < this.FREE_MAX_CLIPS_PER_DAY,
+        canUploadReel: reelsUploadedToday < this.FREE_MAX_REELS_PER_DAY,
+        canUploadScreenshot: screenshotsUploadedToday < this.FREE_MAX_SCREENSHOTS_PER_DAY,
+      };
+    }
+  }
+
+  // ==================== PRO LOOTBOX GRANT OPERATIONS ====================
+
+  async hasProLootboxGrant(userId: number, grantType: 'initial' | 'monthly', month?: string): Promise<boolean> {
+    const conditions = [
+      eq(proLootboxGrants.userId, userId),
+      eq(proLootboxGrants.grantType, grantType)
+    ];
+    
+    if (grantType === 'monthly' && month) {
+      conditions.push(eq(proLootboxGrants.grantedForMonth, month));
+    }
+    
+    const [existing] = await db
+      .select({ id: proLootboxGrants.id })
+      .from(proLootboxGrants)
+      .where(and(...conditions))
+      .limit(1);
+    
+    return !!existing;
+  }
+
+  async createProLootboxGrant(userId: number, grantType: 'initial' | 'monthly', rewardId?: number): Promise<ProLootboxGrant> {
+    const grantedForMonth = grantType === 'monthly' ? this.getCurrentMonthString() : null;
+    
+    const [grant] = await db
+      .insert(proLootboxGrants)
+      .values({
+        userId,
+        grantType,
+        grantedForMonth,
+        rewardId: rewardId || null,
+      })
+      .returning();
+    
+    return grant;
+  }
+
+  async grantProLootbox(userId: number, grantType: 'initial' | 'monthly'): Promise<{ reward: AssetReward; isDuplicate: boolean } | null> {
+    const currentMonth = this.getCurrentMonthString();
+    
+    // Check if already granted
+    const alreadyGranted = await this.hasProLootboxGrant(userId, grantType, grantType === 'monthly' ? currentMonth : undefined);
+    if (alreadyGranted) {
+      return null; // Already received this grant
+    }
+    
+    // Get available rewards for lootbox
+    const availableRewards = await this.getActiveRewardsForLootbox();
+    if (availableRewards.length === 0) {
+      // Create the grant record even if no rewards available
+      await this.createProLootboxGrant(userId, grantType);
+      return null;
+    }
+    
+    // Pick a random reward based on rarity weights
+    const rarityWeights: Record<string, number> = {
+      'common': 50,
+      'uncommon': 30,
+      'rare': 15,
+      'epic': 4,
+      'legendary': 1
+    };
+    
+    const totalWeight = availableRewards.reduce((sum, r) => sum + (rarityWeights[r.rarity] || 10), 0);
+    let random = Math.random() * totalWeight;
+    let selectedReward = availableRewards[0];
+    
+    for (const reward of availableRewards) {
+      random -= (rarityWeights[reward.rarity] || 10);
+      if (random <= 0) {
+        selectedReward = reward;
+        break;
+      }
+    }
+    
+    // Check if user already has this reward
+    const alreadyHas = await this.userHasUnlockedReward(userId, selectedReward.id);
+    
+    if (!alreadyHas) {
+      // Claim the reward for the user
+      await this.createAssetRewardClaim({
+        userId,
+        rewardId: selectedReward.id,
+      });
+      
+      // Update times rewarded count
+      await db
+        .update(assetRewards)
+        .set({ timesRewarded: (selectedReward.timesRewarded || 0) + 1 })
+        .where(eq(assetRewards.id, selectedReward.id));
+    }
+    
+    // Record the grant
+    await this.createProLootboxGrant(userId, grantType, selectedReward.id);
+    
+    return {
+      reward: selectedReward,
+      isDuplicate: alreadyHas
+    };
   }
 }
