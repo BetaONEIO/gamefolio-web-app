@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode, useRef } from "react";
-import { Purchases, CustomerInfo, Offerings, Package } from "@revenuecat/purchases-js";
+import { Purchases, CustomerInfo, Offerings, Package, Offering } from "@revenuecat/purchases-js";
 import { useAuth } from "./use-auth";
 import { useToast } from "./use-toast";
 import { queryClient } from "@/lib/queryClient";
@@ -12,7 +12,9 @@ type RevenueCatContextType = {
   offerings: Offerings | null;
   refreshCustomerInfo: () => Promise<void>;
   purchasePackage: (pkg: Package, containerElement?: HTMLElement) => Promise<boolean>;
+  presentPaywall: (containerElement: HTMLElement) => Promise<boolean>;
   getCurrentOffering: () => Package[] | null;
+  currentOffering: Offering | null;
 };
 
 const RevenueCatContext = createContext<RevenueCatContextType | null>(null);
@@ -178,6 +180,54 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     return offerings.current.availablePackages;
   }, [offerings]);
 
+  const presentPaywall = useCallback(async (containerElement: HTMLElement): Promise<boolean> => {
+    const purchases = purchasesRef.current;
+    if (!purchases) {
+      toast({
+        title: "Not initialized",
+        description: "Please wait while we set up the payment system.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await purchases.presentPaywall({
+        htmlTarget: containerElement,
+        offering: offerings?.current || undefined,
+      });
+      
+      setCustomerInfo(result.customerInfo);
+
+      const hasPro = result.customerInfo.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined;
+      if (hasPro) {
+        await syncProStatusWithBackend(true);
+        toast({
+          title: "Welcome to Gamefolio Pro!",
+          description: "You now have access to all premium features.",
+          variant: "gamefolioSuccess",
+        });
+        return true;
+      }
+
+      return false;
+    } catch (error: any) {
+      if (error?.errorCode === "UserCancelledError" || error?.message?.includes("cancelled")) {
+        return false;
+      }
+      console.error("Paywall error:", error);
+      toast({
+        title: "Payment failed",
+        description: error?.message || "There was an error processing your payment. Please try again.",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [offerings, toast, syncProStatusWithBackend]);
+
   return (
     <RevenueCatContext.Provider
       value={{
@@ -188,7 +238,9 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
         offerings,
         refreshCustomerInfo,
         purchasePackage,
+        presentPaywall,
         getCurrentOffering,
+        currentOffering: offerings?.current || null,
       }}
     >
       {children}
