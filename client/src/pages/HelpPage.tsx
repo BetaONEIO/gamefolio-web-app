@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,18 +9,24 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import { useQuery } from '@tanstack/react-query';
 import { 
-  HelpCircle, 
+  Search,
   MessageSquare, 
-  Upload, 
-  Users, 
-  Settings, 
-  Trophy,
   Mail,
-  CheckCircle
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
+  Upload,
+  User,
+  Shield,
+  CreditCard,
+  Share2,
+  Bell,
+  Gamepad2,
+  Settings,
+  HelpCircle
 } from 'lucide-react';
 
 const supportFormSchema = z.object({
@@ -32,11 +38,193 @@ const supportFormSchema = z.object({
 
 type SupportFormData = z.infer<typeof supportFormSchema>;
 
+interface FAQItem {
+  id: string;
+  question: string;
+  answer: string;
+  category: string;
+  keywords: string[];
+}
+
+const faqData: FAQItem[] = [
+  {
+    id: 'what-is-gamefolio',
+    question: 'What is Gamefolio and how does it work?',
+    answer: 'Gamefolio is a social platform designed for gamers to share their gaming highlights, connect with other players, and build their gaming portfolio. You can upload gaming clips, screenshots, and reels to showcase your best moments. Follow other gamers, engage with their content through likes and comments, and climb the leaderboards to gain recognition in the gaming community.',
+    category: 'Getting Started',
+    keywords: ['about', 'platform', 'gaming', 'social', 'community', 'introduction']
+  },
+  {
+    id: 'create-account',
+    question: 'How do I create a Gamefolio account?',
+    answer: 'Creating a Gamefolio account is simple. Click the "Sign Up" button on the homepage, enter your email address, choose a unique username, and create a secure password. After registration, we recommend verifying your email address to unlock all platform features including content uploads and messaging.',
+    category: 'Getting Started',
+    keywords: ['register', 'signup', 'new account', 'join', 'email', 'password']
+  },
+  {
+    id: 'verify-email',
+    question: 'Why should I verify my email address?',
+    answer: 'Email verification is essential to unlock the full Gamefolio experience. Verified users can upload gaming content (clips, screenshots, reels), send messages to other users, participate in the leaderboards, and receive important account notifications. It also helps protect your account and ensures you can recover it if needed.',
+    category: 'Account',
+    keywords: ['verification', 'email', 'confirm', 'unlock features', 'security']
+  },
+  {
+    id: 'upload-content',
+    question: 'What types of content can I upload to Gamefolio?',
+    answer: 'Gamefolio supports three main content types: Gaming Clips (video highlights in MP4, MOV, or AVI format), Screenshots (still images in PNG, JPG, or JPEG format), and Reels (short-form vertical videos for maximum engagement). Each upload can be tagged with the game it features, making it easier for other users to discover your content.',
+    category: 'Content',
+    keywords: ['upload', 'video', 'clips', 'screenshots', 'images', 'reels', 'formats', 'mp4', 'png', 'jpg']
+  },
+  {
+    id: 'upload-limits',
+    question: 'What are the file size limits for uploads?',
+    answer: 'Free users can upload videos up to 100MB and images up to 10MB. Pro subscribers enjoy increased limits with videos up to 500MB and priority upload processing. All uploads are optimized for fast streaming and viewing across devices.',
+    category: 'Content',
+    keywords: ['file size', 'limits', 'maximum', 'upload size', 'mb', 'video size']
+  },
+  {
+    id: 'customize-profile',
+    question: 'How can I customize my Gamefolio profile?',
+    answer: 'Your profile is your gaming identity! Customize it by adding a profile picture and banner image, writing a bio that describes your gaming style, selecting your favorite games, and choosing custom theme colors. Access profile customization through Settings > Profile Settings or by clicking the edit button on your profile page.',
+    category: 'Profile',
+    keywords: ['customize', 'personalize', 'avatar', 'banner', 'bio', 'theme', 'colors', 'settings']
+  },
+  {
+    id: 'privacy-settings',
+    question: 'How do I control who sees my content?',
+    answer: 'Gamefolio offers flexible privacy options. You can make your profile private (requiring follow approval), control who can message you, and manage comment settings on your posts. Access these options through Settings > Privacy Settings to customize your visibility preferences.',
+    category: 'Privacy',
+    keywords: ['privacy', 'private', 'public', 'visibility', 'followers', 'who can see']
+  },
+  {
+    id: 'follow-users',
+    question: 'How do I follow other gamers?',
+    answer: 'To follow a gamer, visit their profile and click the "Follow" button. Once you follow someone, their content will appear in your home feed. You can manage your following list from your profile page. If the user has a private profile, they will need to approve your follow request first.',
+    category: 'Social',
+    keywords: ['follow', 'following', 'followers', 'connect', 'social', 'feed']
+  },
+  {
+    id: 'leaderboard-ranking',
+    question: 'How does the Gamefolio leaderboard work?',
+    answer: 'The leaderboard ranks users based on engagement and activity. Earn points by uploading quality content, receiving likes and reactions, gaining followers, and consistent platform engagement. Higher rankings increase your visibility and can help you get featured on the platform.',
+    category: 'Features',
+    keywords: ['leaderboard', 'ranking', 'points', 'top users', 'featured', 'competition']
+  },
+  {
+    id: 'pro-subscription',
+    question: 'What benefits do Pro subscribers get?',
+    answer: 'Gamefolio Pro unlocks premium features including higher upload limits, priority content processing, exclusive profile customization options, a verified Pro badge, early access to new features, and reduced wait times for support requests. Subscribe through Settings > Account Settings.',
+    category: 'Subscription',
+    keywords: ['pro', 'premium', 'subscription', 'benefits', 'upgrade', 'paid', 'features']
+  },
+  {
+    id: 'report-content',
+    question: 'How do I report inappropriate content or users?',
+    answer: 'If you encounter content that violates our community guidelines, click the three-dot menu on the post and select "Report." Choose the appropriate reason for reporting and provide any additional details. Our moderation team reviews all reports within 24 hours and takes appropriate action.',
+    category: 'Safety',
+    keywords: ['report', 'inappropriate', 'violation', 'block', 'moderation', 'abuse', 'harassment']
+  },
+  {
+    id: 'delete-account',
+    question: 'How do I delete my Gamefolio account?',
+    answer: 'To delete your account, go to Settings > Account Settings > Delete Account. You will need to confirm your password and acknowledge that this action is permanent. All your content, followers, and data will be removed. We recommend downloading your data before deletion if you want to keep a copy.',
+    category: 'Account',
+    keywords: ['delete', 'remove', 'close account', 'permanent', 'data', 'deactivate']
+  },
+  {
+    id: 'share-content',
+    question: 'How do I share my Gamefolio content on other platforms?',
+    answer: 'Every post on Gamefolio has a share button that provides a direct link to your content. You can copy this link to share on Twitter, Discord, Reddit, or any other platform. Your Gamefolio profile also has a unique shareable URL that you can add to your social media bios.',
+    category: 'Social',
+    keywords: ['share', 'link', 'social media', 'twitter', 'discord', 'embed', 'url']
+  },
+  {
+    id: 'notifications',
+    question: 'How do I manage my notification preferences?',
+    answer: 'Control your notifications through Settings > Notification Settings. Choose which activities trigger notifications including new followers, likes on your content, comments, and messages. You can enable or disable email notifications and push notifications separately.',
+    category: 'Settings',
+    keywords: ['notifications', 'alerts', 'email', 'push', 'preferences', 'settings']
+  },
+  {
+    id: 'supported-games',
+    question: 'Which games are supported on Gamefolio?',
+    answer: 'Gamefolio supports content from virtually any video game! Our extensive database includes thousands of titles from major platforms like PlayStation, Xbox, Nintendo, PC, and mobile. When uploading content, search for your game to tag it properly. If a game is missing from our database, you can request it to be added.',
+    category: 'Features',
+    keywords: ['games', 'supported', 'platforms', 'playstation', 'xbox', 'nintendo', 'pc', 'mobile']
+  },
+  {
+    id: 'password-reset',
+    question: 'How do I reset my password?',
+    answer: 'If you forgot your password, click "Forgot Password" on the login page and enter your email address. You will receive a password reset link valid for 24 hours. Click the link and create a new secure password. For security, always use a unique password that you do not use on other sites.',
+    category: 'Account',
+    keywords: ['password', 'reset', 'forgot', 'recover', 'login', 'access']
+  }
+];
+
+const categoryIcons: Record<string, React.ReactNode> = {
+  'Getting Started': <HelpCircle className="h-5 w-5" />,
+  'Account': <User className="h-5 w-5" />,
+  'Content': <Upload className="h-5 w-5" />,
+  'Profile': <Settings className="h-5 w-5" />,
+  'Privacy': <Shield className="h-5 w-5" />,
+  'Social': <Share2 className="h-5 w-5" />,
+  'Features': <Gamepad2 className="h-5 w-5" />,
+  'Subscription': <CreditCard className="h-5 w-5" />,
+  'Safety': <Shield className="h-5 w-5" />,
+  'Settings': <Bell className="h-5 w-5" />
+};
+
+function FAQArticle({ item, isExpanded, onToggle }: { item: FAQItem; isExpanded: boolean; onToggle: () => void }) {
+  return (
+    <article 
+      className="border rounded-lg overflow-hidden transition-all hover:border-primary/50"
+      itemScope 
+      itemProp="mainEntity"
+      itemType="https://schema.org/Question"
+    >
+      <button
+        onClick={onToggle}
+        className="w-full p-4 text-left flex items-center justify-between gap-4 bg-card hover:bg-accent/50 transition-colors"
+        aria-expanded={isExpanded}
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-muted-foreground">
+            {categoryIcons[item.category] || <HelpCircle className="h-5 w-5" />}
+          </span>
+          <div>
+            <h3 className="font-medium text-sm md:text-base" itemProp="name">{item.question}</h3>
+            <span className="text-xs text-muted-foreground">{item.category}</span>
+          </div>
+        </div>
+        {isExpanded ? (
+          <ChevronUp className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+        ) : (
+          <ChevronDown className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+        )}
+      </button>
+      {isExpanded && (
+        <div 
+          className="p-4 pt-0 bg-card"
+          itemScope 
+          itemType="https://schema.org/Answer"
+          itemProp="acceptedAnswer"
+        >
+          <p className="text-sm text-muted-foreground leading-relaxed" itemProp="text">
+            {item.answer}
+          </p>
+        </div>
+      )}
+    </article>
+  );
+}
+
 export default function HelpPage() {
   const { toast } = useToast();
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  // Get current user for auto-filling username
   const { data: user } = useQuery<{ id: number; username: string; email: string }>({
     queryKey: ['/api/user'],
     retry: false,
@@ -52,7 +240,6 @@ export default function HelpPage() {
     }
   });
 
-  // Update username when user data loads
   if (user?.username && form.getValues().username !== user.username) {
     form.setValue('username', user.username);
   }
@@ -85,6 +272,41 @@ export default function HelpPage() {
     submitSupportForm.mutate(data);
   };
 
+  const toggleItem = (id: string) => {
+    setExpandedItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const categories = useMemo(() => {
+    const cats = new Set(faqData.map(item => item.category));
+    return ['all', ...Array.from(cats).sort()];
+  }, []);
+
+  const filteredFAQs = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+    
+    return faqData.filter(item => {
+      const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
+      
+      if (!query) return matchesCategory;
+      
+      const matchesSearch = 
+        item.question.toLowerCase().includes(query) ||
+        item.answer.toLowerCase().includes(query) ||
+        item.keywords.some(kw => kw.toLowerCase().includes(query)) ||
+        item.category.toLowerCase().includes(query);
+      
+      return matchesCategory && matchesSearch;
+    });
+  }, [searchQuery, selectedCategory]);
+
   if (isSubmitted) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -104,146 +326,100 @@ export default function HelpPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold mb-2">Help & Support</h1>
+      <header className="text-center mb-8">
+        <h1 className="text-4xl font-bold mb-2">Help Center</h1>
         <p className="text-muted-foreground text-lg">
-          Learn how to make the most of your Gamefolio experience
+          Find answers to common questions about Gamefolio
         </p>
-      </div>
+      </header>
 
-      {/* User Guides Section */}
-      <div className="mb-12">
-        <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
+      <section className="mb-8" aria-label="FAQ Search">
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search help articles..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-12 text-base"
+            aria-label="Search FAQ articles"
+          />
+        </div>
+        
+        <div className="flex flex-wrap gap-2">
+          {categories.map(category => (
+            <Button
+              key={category}
+              variant={selectedCategory === category ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedCategory(category)}
+              className="capitalize"
+            >
+              {category === 'all' ? 'All Topics' : category}
+            </Button>
+          ))}
+        </div>
+      </section>
+
+      <section 
+        className="mb-12" 
+        aria-label="Frequently Asked Questions"
+        itemScope 
+        itemType="https://schema.org/FAQPage"
+      >
+        <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
           <HelpCircle className="h-6 w-6" />
-          How to Use Gamefolio
+          Frequently Asked Questions
+          {searchQuery && (
+            <span className="text-sm font-normal text-muted-foreground">
+              ({filteredFAQs.length} result{filteredFAQs.length !== 1 ? 's' : ''})
+            </span>
+          )}
         </h2>
         
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Getting Started */}
+        {filteredFAQs.length === 0 ? (
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Getting Started
-              </CardTitle>
-              <CardDescription>
-                Set up your gaming profile and start sharing
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="text-sm">
-                <strong>1. Complete Your Profile</strong>
-                <p className="text-muted-foreground">Add your display name, bio, and profile picture to make your profile stand out.</p>
-              </div>
-              <div className="text-sm">
-                <strong>2. Add Favorite Games</strong>
-                <p className="text-muted-foreground">Select your favorite games to help others discover your gaming interests.</p>
-              </div>
-              <div className="text-sm">
-                <strong>3. Verify Your Email</strong>
-                <p className="text-muted-foreground">Verify your email to unlock all features like uploading content and messaging.</p>
-              </div>
+            <CardContent className="py-8 text-center">
+              <p className="text-muted-foreground">
+                No articles found matching "{searchQuery}". Try different keywords or{' '}
+                <button 
+                  onClick={() => { setSearchQuery(''); setSelectedCategory('all'); }}
+                  className="text-primary hover:underline"
+                >
+                  clear filters
+                </button>
+                .
+              </p>
             </CardContent>
           </Card>
+        ) : (
+          <div className="space-y-3">
+            {filteredFAQs.map(item => (
+              <FAQArticle
+                key={item.id}
+                item={item}
+                isExpanded={expandedItems.has(item.id)}
+                onToggle={() => toggleItem(item.id)}
+              />
+            ))}
+          </div>
+        )}
+      </section>
 
-          {/* Uploading Content */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="h-5 w-5" />
-                Uploading Content
-              </CardTitle>
-              <CardDescription>
-                Share your best gaming moments
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="text-sm">
-                <strong>Gaming Clips</strong>
-                <p className="text-muted-foreground">Upload video clips of your best plays. Supported formats: MP4, MOV, AVI.</p>
-              </div>
-              <div className="text-sm">
-                <strong>Screenshots</strong>
-                <p className="text-muted-foreground">Share stunning game screenshots. Supported formats: PNG, JPG, JPEG.</p>
-              </div>
-              <div className="text-sm">
-                <strong>Reels</strong>
-                <p className="text-muted-foreground">Create short-form content in vertical format for maximum engagement.</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Customization */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Profile Customization
-              </CardTitle>
-              <CardDescription>
-                Make your profile uniquely yours
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="text-sm">
-                <strong>Theme Colors</strong>
-                <p className="text-muted-foreground">Choose from preset themes or create custom colors that reflect your style.</p>
-              </div>
-              <div className="text-sm">
-                <strong>Banner & Avatar</strong>
-                <p className="text-muted-foreground">Upload custom banner and profile pictures to personalize your space.</p>
-              </div>
-              <div className="text-sm">
-                <strong>Privacy Settings</strong>
-                <p className="text-muted-foreground">Control who can see your content and interact with your profile.</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Social Features */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5" />
-                Social Features
-              </CardTitle>
-              <CardDescription>
-                Connect with the gaming community
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="text-sm">
-                <strong>Reactions & Likes</strong>
-                <p className="text-muted-foreground">Show appreciation for great content with likes and reactions.</p>
-              </div>
-              <div className="text-sm">
-                <strong>Following</strong>
-                <p className="text-muted-foreground">Follow your favorite gamers to see their latest content in your feed.</p>
-              </div>
-              <div className="text-sm">
-                <strong>Leaderboards</strong>
-                <p className="text-muted-foreground">Compete with other users and climb the platform leaderboards.</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Support Form Section */}
-      <div>
+      <section aria-label="Contact Support">
         <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
           <MessageSquare className="h-6 w-6" />
-          Contact Support
+          Still Need Help?
         </h2>
         
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
-              Send us a message
+              Contact Our Support Team
             </CardTitle>
             <CardDescription>
-              Need help? We're here to assist you with any questions or issues.
+              Can't find what you're looking for? Send us a message and we'll get back to you.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -341,7 +517,7 @@ export default function HelpPage() {
             </Form>
           </CardContent>
         </Card>
-      </div>
+      </section>
     </div>
   );
 }
