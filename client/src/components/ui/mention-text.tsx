@@ -38,12 +38,12 @@ export function MentionText({ text, className = "" }: MentionTextProps) {
         </Link>
       );
     } else if (match[2]) {
-      // #hashtag - green and clickable (future: link to hashtag page)
+      // #hashtag - green and clickable, links to dedicated hashtag page
       const hashtag = fullMatch.substring(1);
       parts.push(
         <Link 
           key={`hashtag-${keyIndex}`}
-          href={`/explore?tag=${hashtag}`}
+          href={`/hashtag/${hashtag}`}
           className="text-[#00d26a] hover:text-[#00b359] font-medium cursor-pointer hover:underline"
         >
           {fullMatch}
