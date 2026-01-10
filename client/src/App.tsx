@@ -70,7 +70,7 @@ const ResetPasswordPage = React.lazy(() => import("./pages/ResetPasswordPage"));
 const TermsPage = React.lazy(() => import("./pages/terms-page"));
 const PrivacyPage = React.lazy(() => import("./pages/privacy-page"));
 const ContactPage = React.lazy(() => import("./pages/contact-page"));
-const HelpPage = React.lazy(() => import("./pages/help-page"));
+const HelpPage = React.lazy(() => import("./pages/HelpPage"));
 const LeaderboardEmbedPage = React.lazy(() => import("./pages/LeaderboardEmbedPage"));
 const StorePage = React.lazy(() => import("./pages/StorePage"));
 const WalletPage = React.lazy(() => import("./pages/WalletPage"));
