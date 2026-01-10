@@ -109,7 +109,7 @@ export function FireButton({
       toast({
         title: "Cannot fire own content",
         description: "You cannot fire your own content, casual!",
-        variant: "gamefolioError"
+        variant: "default"
       });
       return;
     }

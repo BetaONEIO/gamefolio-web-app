@@ -75,7 +75,7 @@ export function ScreenshotCard({
       toast({
         title: "Cannot like own content",
         description: "You cannot like your own content, casual!",
-        variant: "destructive"
+        variant: "default"
       });
       return;
     }
