@@ -85,8 +85,8 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
       const userMatch = beforeCursor.match(/@([a-zA-Z0-9_-]*)$/);
       // Check for # (hashtag)
       const hashtagMatch = beforeCursor.match(/#([a-zA-Z0-9_]*)$/);
-      // Check for ~ (game) - allow common game name characters including hyphens, colons, apostrophes
-      const gameMatch = beforeCursor.match(/~([a-zA-Z0-9_ :'\-&!.]+?)$/)
+      // Check for / (game) - allow common game name characters including hyphens, colons, apostrophes
+      const gameMatch = beforeCursor.match(/\/([a-zA-Z0-9_ :'\-&!.]+?)$/)
 
       if (userMatch) {
         setCurrentQuery(userMatch[1]);
@@ -104,7 +104,7 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
         setCurrentQuery(gameMatch[1].trim());
         setMentionStart(cursorPosition - gameMatch[0].length + 1);
         setSuggestionType('game');
-        setTriggerChar('~');
+        setTriggerChar('/');
         setShowSuggestions(true);
       } else {
         setShowSuggestions(false);
@@ -159,14 +159,14 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
         const beforeMention = value.substring(0, mentionStart - 1);
         const afterCursor = value.substring(cursorPosition);
         // Wrap game name in brackets for reliable parsing
-        const newValue = beforeMention + `~[${game.name}] ` + afterCursor;
+        const newValue = beforeMention + `/[${game.name}] ` + afterCursor;
         
         onChange(newValue);
         setShowSuggestions(false);
         setCurrentQuery("");
 
         setTimeout(() => {
-          const newCursorPos = beforeMention.length + game.name.length + 4; // +4 for ~[ and ] and space
+          const newCursorPos = beforeMention.length + game.name.length + 4; // +4 for /[ and ] and space
           textarea.setSelectionRange(newCursorPos, newCursorPos);
           textarea.focus();
         }, 0);
@@ -338,8 +338,8 @@ function renderStyledText(text: string): React.ReactNode[] {
   if (!text) return [];
   
   const parts: React.ReactNode[] = [];
-  // Match @username, #hashtag, or ~[GameName]
-  const regex = /(@[a-zA-Z0-9_-]+)|(#[a-zA-Z0-9_]+)|(~\[[^\]]+\])/g;
+  // Match @username, #hashtag, or /[GameName]
+  const regex = /(@[a-zA-Z0-9_-]+)|(#[a-zA-Z0-9_]+)|(\/\[[^\]]+\])/g;
   let lastIndex = 0;
   let match;
   let key = 0;
@@ -366,7 +366,7 @@ function renderStyledText(text: string): React.ReactNode[] {
         </span>
       );
     } else if (match[3]) {
-      // ~[Game] - purple
+      // /[Game] - purple
       parts.push(
         <span key={key++} className="text-purple-400 font-medium">
           {match[3]}
@@ -453,7 +453,7 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
       
       const userMatch = beforeCursor.match(/@([a-zA-Z0-9_-]*)$/);
       const hashtagMatch = beforeCursor.match(/#([a-zA-Z0-9_]*)$/);
-      const gameMatch = beforeCursor.match(/~([a-zA-Z0-9_ :'\-&!.]+?)$/);
+      const gameMatch = beforeCursor.match(/\/([a-zA-Z0-9_ :'\-&!.]+?)$/);
 
       if (userMatch) {
         setCurrentQuery(userMatch[1]);
@@ -471,7 +471,7 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
         setCurrentQuery(gameMatch[1].trim());
         setMentionStart(cursorPosition - gameMatch[0].length + 1);
         setSuggestionType('game');
-        setTriggerChar('~');
+        setTriggerChar('/');
         setShowSuggestions(true);
       } else {
         setShowSuggestions(false);
@@ -525,7 +525,7 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
         const cursorPosition = textarea.selectionStart;
         const beforeMention = value.substring(0, mentionStart - 1);
         const afterCursor = value.substring(cursorPosition);
-        const newValue = beforeMention + `~[${game.name}] ` + afterCursor;
+        const newValue = beforeMention + `/[${game.name}] ` + afterCursor;
         
         onChange(newValue);
         setShowSuggestions(false);
@@ -568,7 +568,7 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
     }, [actualRef]);
 
     const isLoading = suggestionType === 'user' ? isLoadingUsers : suggestionType === 'game' ? isLoadingGames : false;
-    const hasStyledContent = /@[a-zA-Z0-9_-]+|#[a-zA-Z0-9_]+|~\[[^\]]+\]/.test(value);
+    const hasStyledContent = /@[a-zA-Z0-9_-]+|#[a-zA-Z0-9_]+|\/\[[^\]]+\]/.test(value);
 
     return (
       <div className="relative">

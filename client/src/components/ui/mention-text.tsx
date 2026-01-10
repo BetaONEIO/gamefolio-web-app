@@ -8,9 +8,9 @@ interface MentionTextProps {
 export function MentionText({ text, className = "" }: MentionTextProps) {
   const parts: (string | JSX.Element)[] = [];
   
-  // Combined regex for @mentions, #hashtags, and ~[games]
-  // Games are wrapped in brackets ~[Game Name] for reliable parsing of multi-word titles
-  const combinedRegex = /(@[a-zA-Z0-9_-]+)|(#[a-zA-Z0-9_]+)|(~\[[^\]]+\])/g;
+  // Combined regex for @mentions, #hashtags, and /[games]
+  // Games are wrapped in brackets /[Game Name] for reliable parsing of multi-word titles
+  const combinedRegex = /(@[a-zA-Z0-9_-]+)|(#[a-zA-Z0-9_]+)|(\/\[[^\]]+\])/g;
   
   let lastIndex = 0;
   let match;
@@ -50,8 +50,8 @@ export function MentionText({ text, className = "" }: MentionTextProps) {
         </Link>
       );
     } else if (match[3]) {
-      // ~[game] - bold and clickable, extract name from brackets
-      const gameName = fullMatch.slice(2, -1); // Remove ~[ and ]
+      // /[game] - bold and clickable, extract name from brackets
+      const gameName = fullMatch.slice(2, -1); // Remove /[ and ]
       const gameSlug = gameName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       parts.push(
         <Link 
