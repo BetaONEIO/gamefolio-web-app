@@ -170,10 +170,10 @@ export class DatabaseStorage implements IStorage {
     
     // Use case-insensitive matching for usernames
     const lowerUsernames = usernames.map(u => u.toLowerCase());
-    const users = await db.select().from(users).where(
+    const matchingUsers = await db.select().from(users).where(
       inArray(sql`LOWER(${users.username})`, lowerUsernames)
     );
-    return users;
+    return matchingUsers;
   }
 
   async getUserByEmail(email: string): Promise<User | null> {
