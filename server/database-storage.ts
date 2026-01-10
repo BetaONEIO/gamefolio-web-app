@@ -1627,6 +1627,36 @@ export class DatabaseStorage implements IStorage {
     return Number(result.count);
   }
 
+  async getProSubscribers(): Promise<Array<{
+    id: number;
+    username: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+    isPro: boolean;
+    proSubscriptionType: string | null;
+    proSubscriptionStartDate: Date | null;
+    proSubscriptionEndDate: Date | null;
+    createdAt: Date;
+  }>> {
+    const proUsers = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        displayName: users.displayName,
+        avatarUrl: users.avatarUrl,
+        isPro: users.isPro,
+        proSubscriptionType: users.proSubscriptionType,
+        proSubscriptionStartDate: users.proSubscriptionStartDate,
+        proSubscriptionEndDate: users.proSubscriptionEndDate,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .where(eq(users.isPro, true))
+      .orderBy(desc(users.proSubscriptionStartDate));
+    
+    return proUsers;
+  }
+
   async getClipCount(): Promise<number> {
     const [result] = await db.select({ count: sql`count(*)` }).from(clips);
     return Number(result.count);

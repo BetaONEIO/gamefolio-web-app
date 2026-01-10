@@ -75,6 +75,17 @@ export interface IStorage {
   getAgeRangeDistribution(): Promise<{range: string, count: number}[]>;
   getTopGames(limit?: number): Promise<Game[]>;
   getRecentClips(limit?: number): Promise<ClipWithUser[]>;
+  getProSubscribers(): Promise<Array<{
+    id: number;
+    username: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+    isPro: boolean;
+    proSubscriptionType: string | null;
+    proSubscriptionStartDate: Date | null;
+    proSubscriptionEndDate: Date | null;
+    createdAt: Date;
+  }>>;
 
   // Game operations
   getGame(id: number): Promise<Game | null>;

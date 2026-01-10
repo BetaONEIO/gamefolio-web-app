@@ -348,6 +348,159 @@ function BannerManagement() {
   );
 }
 
+// Pro Subscribers Management Component
+interface ProSubscriber {
+  id: number;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  isPro: boolean;
+  proSubscriptionType: string | null;
+  proSubscriptionStartDate: string | null;
+  proSubscriptionEndDate: string | null;
+  createdAt: string;
+}
+
+function ProSubscribersManagement() {
+  const { data, isLoading, refetch } = useQuery<{ subscribers: ProSubscriber[]; total: number }>({
+    queryKey: ['/api/admin/pro-subscribers'],
+  });
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const calculateDuration = (startDate: string | null) => {
+    if (!startDate) return 'Unknown';
+    const start = new Date(startDate);
+    const now = new Date();
+    const diffMs = now.getTime() - start.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 1) return 'Today';
+    if (diffDays === 1) return '1 day';
+    if (diffDays < 30) return `${diffDays} days`;
+    if (diffDays < 60) return '1 month';
+    const months = Math.floor(diffDays / 30);
+    if (months < 12) return `${months} months`;
+    const years = Math.floor(months / 12);
+    const remainingMonths = months % 12;
+    if (remainingMonths === 0) return `${years} year${years > 1 ? 's' : ''}`;
+    return `${years} year${years > 1 ? 's' : ''}, ${remainingMonths} month${remainingMonths > 1 ? 's' : ''}`;
+  };
+
+  const getSubscriptionBadgeColor = (type: string | null) => {
+    switch (type?.toLowerCase()) {
+      case 'yearly': return 'bg-amber-500';
+      case 'monthly': return 'bg-blue-500';
+      default: return 'bg-green-500';
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Crown className="w-5 h-5 text-amber-500" />
+          Pro Subscribers
+        </CardTitle>
+        <CardDescription>
+          View and manage Pro subscribers and their subscription details
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <RefreshCw className="w-6 h-6 animate-spin mr-2" />
+            Loading Pro subscribers...
+          </div>
+        ) : !data?.subscribers || data.subscribers.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No Pro subscribers yet.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Total Pro subscribers: <span className="font-semibold text-amber-500">{data.total}</span>
+              </p>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
+            
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Subscription Type</TableHead>
+                  <TableHead>Pro Since</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead>Expires</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.subscribers.map((subscriber) => (
+                  <TableRow key={subscriber.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {subscriber.avatarUrl ? (
+                          <img 
+                            src={subscriber.avatarUrl} 
+                            alt={subscriber.username}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                            <User className="w-4 h-4" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-medium">{subscriber.displayName || subscriber.username}</p>
+                          <p className="text-xs text-muted-foreground">@{subscriber.username}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={`${getSubscriptionBadgeColor(subscriber.proSubscriptionType)}`}>
+                        {subscriber.proSubscriptionType || 'Pro'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {formatDate(subscriber.proSubscriptionStartDate)}
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-green-500 font-medium">
+                        {calculateDuration(subscriber.proSubscriptionStartDate)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      {subscriber.proSubscriptionEndDate ? (
+                        <span className={new Date(subscriber.proSubscriptionEndDate) < new Date() ? 'text-red-500' : ''}>
+                          {formatDate(subscriber.proSubscriptionEndDate)}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">Never</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // Lootbox Management Component
 interface LootboxOpen {
   id: number;
@@ -1215,6 +1368,7 @@ const AdminPage = () => {
           <TabsTrigger value="hero-text" className="text-xs px-3 py-1.5">Hero</TabsTrigger>
           <TabsTrigger value="asset-rewards" className="text-xs px-3 py-1.5">Rewards</TabsTrigger>
           <TabsTrigger value="lootbox" className="text-xs px-3 py-1.5">Lootbox</TabsTrigger>
+          <TabsTrigger value="pro-subscribers" className="text-xs px-3 py-1.5">Pro</TabsTrigger>
           <TabsTrigger value="settings" className="text-xs px-3 py-1.5">Settings</TabsTrigger>
         </TabsList>
 
@@ -3624,6 +3778,11 @@ const AdminPage = () => {
         {/* Lootbox Tab */}
         <TabsContent value="lootbox" className="space-y-4">
           <LootboxManagement />
+        </TabsContent>
+
+        {/* Pro Subscribers Tab */}
+        <TabsContent value="pro-subscribers" className="space-y-4">
+          <ProSubscribersManagement />
         </TabsContent>
 
         {/* Settings Tab */}

@@ -1407,4 +1407,18 @@ adminRouter.get("/asset-rewards/:id/claims", async (req: Request, res: Response)
   }
 });
 
+// GET /api/admin/pro-subscribers - Get all Pro subscribers with subscription details
+adminRouter.get("/pro-subscribers", async (req: Request, res: Response) => {
+  try {
+    const proSubscribers = await storage.getProSubscribers();
+    res.json({
+      subscribers: proSubscribers,
+      total: proSubscribers.length
+    });
+  } catch (err) {
+    console.error("Error fetching Pro subscribers:", err);
+    res.status(500).json({ message: "Error fetching Pro subscribers" });
+  }
+});
+
 export default adminRouter;

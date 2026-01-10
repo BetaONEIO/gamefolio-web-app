@@ -62,6 +62,9 @@ export const users = pgTable("users", {
   gfTokenBalance: real("gf_token_balance").default(1000).notNull(), // Starting balance of 1000 GF tokens
   // Gamefolio Pro subscription
   isPro: boolean("is_pro").default(false).notNull(), // Gamefolio Pro subscriber status
+  proSubscriptionType: text("pro_subscription_type"), // "yearly", "monthly", etc.
+  proSubscriptionStartDate: timestamp("pro_subscription_start_date"), // When subscription started
+  proSubscriptionEndDate: timestamp("pro_subscription_end_date"), // When subscription expires
   // Selected Avatar Border (from lootbox rewards)
   selectedAvatarBorderId: integer("selected_avatar_border_id"), // References asset_rewards table
   // Welcome Pack
