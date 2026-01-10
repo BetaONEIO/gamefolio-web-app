@@ -14,7 +14,7 @@ interface User {
 interface Game {
   id: number;
   name: string;
-  coverUrl?: string;
+  imageUrl?: string;
 }
 
 type SuggestionType = 'user' | 'hashtag' | 'game';
@@ -307,8 +307,8 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
                         onClick={() => selectGame(game)}
                       >
                         <div className="flex items-center space-x-2">
-                          {game.coverUrl ? (
-                            <img src={game.coverUrl} alt={game.name} className="w-6 h-6 rounded object-cover" />
+                          {game.imageUrl ? (
+                            <img src={game.imageUrl} alt={game.name} className="w-6 h-6 rounded object-cover" />
                           ) : (
                             <div className="w-6 h-6 rounded bg-purple-500/20 text-purple-400 flex items-center justify-center">
                               <Gamepad2 className="w-3.5 h-3.5" />
@@ -718,8 +718,8 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
                         onClick={() => selectGame(game)}
                       >
                         <div className="flex items-center space-x-2">
-                          {game.coverUrl ? (
-                            <img src={game.coverUrl} alt={game.name} className="w-6 h-6 rounded object-cover" />
+                          {game.imageUrl ? (
+                            <img src={game.imageUrl} alt={game.name} className="w-6 h-6 rounded object-cover" />
                           ) : (
                             <div className="w-6 h-6 rounded bg-purple-500/20 text-purple-400 flex items-center justify-center">
                               <Gamepad2 className="w-3.5 h-3.5" />
