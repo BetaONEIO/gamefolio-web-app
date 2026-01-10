@@ -1,23 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Video, 
-  Users, 
   MessageCircle, 
-  Copy, 
-  Check, 
   Star,
   Trophy,
   Flame,
   Eye,
   Heart,
-  Share2,
   Sparkles
 } from "lucide-react";
 
@@ -174,10 +167,8 @@ export function LevelTrackerModal({
   xpDelta,
   previousXP
 }: LevelTrackerModalProps) {
-  const [copied, setCopied] = useState(false);
   const [animatedXP, setAnimatedXP] = useState(totalXP);
   const [showXpGain, setShowXpGain] = useState(false);
-  const { toast } = useToast();
   const [, setLocation] = useLocation();
 
   const targetXP = (xpDelta && previousXP !== null && previousXP !== undefined) 
@@ -229,21 +220,6 @@ export function LevelTrackerModal({
   const xpProgress = displayXP - xpForCurrentLevel;
   const xpNeeded = xpForNextLevel - xpForCurrentLevel;
   const progressPercent = Math.min((xpProgress / xpNeeded) * 100, 100);
-
-  const referralLink = username 
-    ? `${window.location.origin}/register?ref=${username}`
-    : '';
-
-  const handleCopyReferral = async () => {
-    try {
-      await navigator.clipboard.writeText(referralLink);
-      setCopied(true);
-      toast({ title: "Copied!", description: "Referral link copied to clipboard" });
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast({ title: "Error", description: "Failed to copy link", variant: "destructive" });
-    }
-  };
 
   const handleTaskAction = (action: string | null) => {
     if (action) {
@@ -302,96 +278,43 @@ export function LevelTrackerModal({
           </div>
         </div>
 
-        <Tabs defaultValue="earn" className="relative z-10 w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-background/50">
-            <TabsTrigger value="earn" className="data-[state=active]:bg-primary/20">
-              <Star className="w-4 h-4 mr-2" />
-              Earn XP
-            </TabsTrigger>
-            <TabsTrigger value="refer" className="data-[state=active]:bg-primary/20">
-              <Users className="w-4 h-4 mr-2" />
-              Refer Friends
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="earn" className="mt-4 space-y-3 max-h-[250px] overflow-y-auto">
-            {XP_TASKS.map((task) => {
-              const Icon = task.icon;
-              return (
-                <div
-                  key={task.id}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-background/30 border border-border/30 hover:bg-background/50 transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                    <Icon className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground text-sm">{task.title}</p>
-                    <p className="text-xs text-muted-foreground truncate">{task.description}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-primary font-bold text-sm">+{task.xpReward}</span>
-                    {task.action && (
-                      <Button 
-                        size="sm" 
-                        variant="ghost"
-                        className="h-7 px-2 text-xs"
-                        onClick={() => handleTaskAction(task.action)}
-                        data-testid={`button-task-${task.id}`}
-                      >
-                        Go
-                      </Button>
-                    )}
-                  </div>
+        <div className="relative z-10 w-full space-y-3 max-h-[300px] overflow-y-auto">
+          <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+            <Star className="w-4 h-4 text-primary" />
+            Ways to Earn XP
+          </h3>
+          {XP_TASKS.map((task) => {
+            const Icon = task.icon;
+            return (
+              <div
+                key={task.id}
+                className="flex items-center gap-3 p-3 rounded-lg bg-background/30 border border-border/30 hover:bg-background/50 transition-colors"
+              >
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <Icon className="w-5 h-5 text-primary" />
                 </div>
-              );
-            })}
-          </TabsContent>
-
-          <TabsContent value="refer" className="mt-4 space-y-4">
-            <div className="text-center space-y-2">
-              <div className="w-16 h-16 mx-auto rounded-full bg-primary/20 flex items-center justify-center">
-                <Share2 className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="font-semibold text-foreground">Invite Friends</h3>
-              <p className="text-sm text-muted-foreground">
-                Share your referral link and earn bonus XP when friends join!
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs text-muted-foreground">Your Referral Link</label>
-              <div className="flex gap-2">
-                <Input
-                  readOnly
-                  value={referralLink}
-                  className="bg-background/50 text-xs"
-                  data-testid="input-referral-link"
-                />
-                <Button
-                  size="icon"
-                  variant="outline"
-                  onClick={handleCopyReferral}
-                  className="flex-shrink-0"
-                  data-testid="button-copy-referral"
-                >
-                  {copied ? (
-                    <Check className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <Copy className="w-4 h-4" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-foreground text-sm">{task.title}</p>
+                  <p className="text-xs text-muted-foreground truncate">{task.description}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-primary font-bold text-sm">+{task.xpReward}</span>
+                  {task.action && (
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => handleTaskAction(task.action)}
+                      data-testid={`button-task-${task.id}`}
+                    >
+                      Go
+                    </Button>
                   )}
-                </Button>
+                </div>
               </div>
-            </div>
-
-            <div className="bg-primary/10 rounded-lg p-3 text-center">
-              <p className="text-sm font-medium text-primary">+250 XP Bonus</p>
-              <p className="text-xs text-muted-foreground">
-                For each friend who signs up
-              </p>
-            </div>
-          </TabsContent>
-        </Tabs>
+            );
+          })}
+        </div>
       </DialogContent>
     </Dialog>
   );
