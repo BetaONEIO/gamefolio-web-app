@@ -220,7 +220,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                       <ModeratorBadge isModerator={(comment.user as any).role === "moderator"} size="sm" />
                     </span>
                   </Link>
-                  <MentionText text={comment.content} className="inline text-sm break-words" />
+                  <MentionText text={comment.content} className="inline text-sm break-words" onLinkClick={onUsernameClick} />
                 </div>
                 <div className="flex items-center mt-1.5 space-x-3 text-xs text-muted-foreground">
                   <span>

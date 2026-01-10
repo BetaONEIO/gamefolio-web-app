@@ -29,6 +29,7 @@ import {
 
 interface ScreenshotCommentSectionProps {
   screenshotId: number;
+  onUsernameClick?: () => void;
 }
 
 interface ScreenshotCommentLikeButtonProps {
@@ -85,7 +86,7 @@ function ScreenshotCommentLikeButton({ commentId, isLoggedIn }: ScreenshotCommen
   );
 }
 
-export function ScreenshotCommentSection({ screenshotId }: ScreenshotCommentSectionProps) {
+export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: ScreenshotCommentSectionProps) {
   const [newComment, setNewComment] = useState("");
   
   const { user } = useAuth();
@@ -204,7 +205,7 @@ export function ScreenshotCommentSection({ screenshotId }: ScreenshotCommentSect
                       <ModeratorBadge isModerator={(comment.user as any).role === "moderator"} size="sm" />
                     </span>
                   </Link>
-                  <MentionText text={comment.content} className="inline text-sm break-words" />
+                  <MentionText text={comment.content} className="inline text-sm break-words" onLinkClick={onUsernameClick} />
                 </div>
                 <div className="flex items-center mt-1.5 space-x-3 text-xs text-muted-foreground">
                   <span>
