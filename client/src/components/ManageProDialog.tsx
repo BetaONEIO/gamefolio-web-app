@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -6,12 +7,24 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
-import { Crown, Check, Calendar, CreditCard, ExternalLink } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Crown, Check, Calendar, CreditCard, ExternalLink, AlertTriangle, Loader2 } from "lucide-react";
 
 interface ManageProDialogProps {
   open: boolean;
@@ -20,7 +33,10 @@ interface ManageProDialogProps {
 
 export default function ManageProDialog({ open, onOpenChange }: ManageProDialogProps) {
   const { user } = useAuth();
-  const { customerInfo } = useRevenueCat();
+  const { customerInfo, refreshCustomerInfo } = useRevenueCat();
+  const { toast } = useToast();
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const proEntitlement = customerInfo?.entitlements?.active?.["pro"];
   const subscriptionType = user?.proSubscriptionType || "Pro";
@@ -54,6 +70,42 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
     }
   };
 
+  const handleCancelSubscription = async () => {
+    setCancelling(true);
+    try {
+      const response = await apiRequest("POST", "/api/subscription/cancel");
+      const data = await response.json();
+      
+      if (data.success) {
+        await refreshCustomerInfo();
+        await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        
+        toast({
+          title: "Subscription cancelled",
+          description: data.message || "Your Pro subscription has been cancelled.",
+          variant: "gamefolioSuccess",
+        });
+        setShowCancelConfirm(false);
+        onOpenChange(false);
+      } else if (data.useManagementUrl && managementUrl) {
+        window.open(managementUrl, '_blank');
+        toast({
+          title: "Manage subscription",
+          description: "Please cancel your subscription through the billing portal.",
+        });
+        setShowCancelConfirm(false);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel subscription. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const proFeatures = [
     "Unlimited video and screenshot uploads",
     "500MB video file size limit",
@@ -65,6 +117,7 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
   ];
 
   return (
+    <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -135,11 +188,66 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
                 onClick={handleManageSubscription}
               >
                 <ExternalLink className="mr-2 h-4 w-4" />
-                Manage Subscription
+                Billing Portal
               </Button>
             )}
+            <Button
+              variant="ghost"
+              className="w-full text-red-500 hover:text-red-600 hover:bg-red-500/10"
+              onClick={() => setShowCancelConfirm(true)}
+            >
+              Cancel Subscription
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              Cancel Pro Subscription?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>Are you sure you want to cancel your Gamefolio Pro subscription?</p>
+                <p className="text-sm font-medium">You'll lose access to:</p>
+                <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
+                  <li>Unlimited uploads</li>
+                  <li>Higher file size limits</li>
+                  <li>Exclusive avatar borders</li>
+                  <li>Ad-free experience</li>
+                  <li>Monthly bonus lootboxes</li>
+                </ul>
+                <p className="text-sm">
+                  Your access will continue until the end of your current billing period.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>Keep Pro</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleCancelSubscription();
+              }}
+              disabled={cancelling}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              {cancelling ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                "Yes, Cancel"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
