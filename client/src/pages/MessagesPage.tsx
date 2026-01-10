@@ -600,7 +600,7 @@ const MessagesPage: React.FC = () => {
       {/* Conversations Sidebar */}
       <div className={`
         ${showMobileConversationList || !selectedConversation ? 'flex' : 'hidden'} 
-        md:flex w-full md:w-96 border-r bg-card flex-col
+        md:flex w-full md:w-[420px] border-r bg-card flex-col
       `}>
         {/* Header */}
         <div className="p-4 border-b">
