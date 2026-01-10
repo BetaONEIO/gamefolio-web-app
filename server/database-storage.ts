@@ -1775,16 +1775,19 @@ export class DatabaseStorage implements IStorage {
     const results = await db
       .select({
         screenshot: screenshots,
+        game: games,
         likesCount: sql<number>`COALESCE((SELECT COUNT(*)::int FROM screenshot_likes WHERE screenshot_likes.screenshot_id = screenshots.id), 0)`,
         reactionsCount: sql<number>`COALESCE((SELECT COUNT(*)::int FROM screenshot_reactions WHERE screenshot_reactions.screenshot_id = screenshots.id), 0)`,
         commentsCount: sql<number>`COALESCE((SELECT COUNT(*)::int FROM screenshot_comments WHERE screenshot_comments.screenshot_id = screenshots.id), 0)`
       })
       .from(screenshots)
+      .leftJoin(games, eq(screenshots.gameId, games.id))
       .where(eq(screenshots.userId, userId))
       .orderBy(desc(screenshots.createdAt), desc(screenshots.id));
     
     return results.map(row => ({
       ...row.screenshot,
+      game: row.game?.id ? row.game : null,
       _count: {
         likes: Number(row.likesCount),
         reactions: Number(row.reactionsCount),
