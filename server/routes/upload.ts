@@ -549,7 +549,7 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
 });
 
 // Video/Reel processing endpoint (called after TUS upload completes)
-router.post('/process-video', fullAccessMiddleware, async (req, res) => {
+router.post('/process-video', hybridFullAccess, async (req, res) => {
   try {
     const { uploadResult, title, description, gameId, tags, videoType = 'clip', ageRestricted } = req.body;
 
