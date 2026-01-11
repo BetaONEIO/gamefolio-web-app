@@ -5,7 +5,8 @@ import {
   Plus,
   Search,
   X,
-  HelpCircle
+  HelpCircle,
+  ShoppingBag
 } from "lucide-react";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
@@ -228,8 +229,7 @@ const Sidebar = () => {
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: GamefolioTrendingIcon, label: "Trending", href: "/trending" },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
-    // Hidden until ready to go live
-    // { icon: ShoppingBag, label: "Store", href: "/store" },
+    { icon: ShoppingBag, label: "Store", href: "/store" },
     { icon: GamefolioWalletIcon, label: "Wallet", href: "/wallet" },
 
     // Only show Messages link if user has messaging enabled - default to true for demo user
