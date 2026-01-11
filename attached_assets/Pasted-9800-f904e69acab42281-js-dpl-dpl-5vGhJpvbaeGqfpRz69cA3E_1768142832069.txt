@@ -1,0 +1,471 @@
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 102312ms ago, last ping sent 102350ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  >> mutation #53 vmHelpers.proxyToVM Object
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 102612ms ago, last ping sent 102650ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  << mutation #53 vmHelpers.proxyToVM Object
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 102912ms ago, last ping sent 102950ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 103212ms ago, last ping sent 103250ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 103513ms ago, last ping sent 103551ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+create.tsx:205 [Upload] Starting upload...
+create.tsx:206 [Upload] Type: clips
+create.tsx:207 [Upload] Title: test
+create.tsx:208 [Upload] Description: test
+create.tsx:209 [Upload] Game: IRL
+create.tsx:210 [Upload] Tags: []
+create.tsx:211 [Upload] Age Restricted: false
+create.tsx:212 [Upload] File URI: blob:https://krlugqk-anonymous-8081.exp.direct/77f5a6a1-ecb5-487b-9a08-c819d0f47a66
+create.tsx:214 [Upload] Getting Gamefolio access token...
+create.tsx:227 [Upload] Gamefolio access token obtained successfully
+create.tsx:228 [Upload] Token length: 164
+create.tsx:229 [Upload] Token preview: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+create.tsx:248 [Upload] Uploading clip ...
+gamefolio-api.ts:347 [Gamefolio Upload] Starting clip upload
+gamefolio-api.ts:348 [Gamefolio Upload] File URI: blob:https://krlugqk-anonymous-8081.exp.direct/77f5a6a1-ecb5-487b-9a08-c819d0f47a66
+gamefolio-api.ts:349 [Gamefolio Upload] Data: {title: 'test', description: 'test', gameId: '509672', tags: Array(0), ageRestricted: false}
+gamefolio-api.ts:350 [Gamefolio Upload] Auth token length: 164
+gamefolio-api.ts:351 [Gamefolio Upload] Auth token preview: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiO...
+gamefolio-api.ts:365 [Gamefolio Upload] Step 1: Upload video file
+gamefolio-api.ts:366 [Gamefolio Upload] Endpoint: https://app.gamefolio.com/api/upload/video-direct
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 103813ms ago, last ping sent 103851ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+gamefolio-api.ts:378   POST https://app.gamefolio.com/api/upload/video-direct 401 (Unauthorized)
+uploadClipOrReel @ gamefolio-api.ts:378
+handleUpload @ create.tsx:249
+await in handleUpload
+onClick @ PressResponder.js:314
+executeDispatch @ react-dom-client.development.js:16368
+runWithFiberInDEV @ react-dom-client.development.js:1519
+processDispatchQueue @ react-dom-client.development.js:16418
+(anonymous) @ react-dom-client.development.js:17016
+batchedUpdates$1 @ react-dom-client.development.js:3262
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:16572
+dispatchEvent @ react-dom-client.development.js:20658
+dispatchDiscreteEvent @ react-dom-client.development.js:20626
+gamefolio-api.ts:309  [Gamefolio Upload] Video upload failed with status: 401
+registerError @ LogBox.web.ts:134
+console.error @ LogBox.web.ts:59
+console.error @ error-boundary.js:59
+handleUploadError @ gamefolio-api.ts:309
+uploadClipOrReel @ gamefolio-api.ts:387
+await in uploadClipOrReel
+handleUpload @ create.tsx:249
+await in handleUpload
+onClick @ PressResponder.js:314
+executeDispatch @ react-dom-client.development.js:16368
+runWithFiberInDEV @ react-dom-client.development.js:1519
+processDispatchQueue @ react-dom-client.development.js:16418
+(anonymous) @ react-dom-client.development.js:17016
+batchedUpdates$1 @ react-dom-client.development.js:3262
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:16572
+dispatchEvent @ react-dom-client.development.js:20658
+dispatchDiscreteEvent @ react-dom-client.development.js:20626
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Iframe Error] {type: 'ERROR', error: {…}, iframeId: 'rork-web-preview'}
+gamefolio-api.ts:311  [Gamefolio Upload] Error response: {"message":"Not authenticated"}
+registerError @ LogBox.web.ts:134
+console.error @ LogBox.web.ts:59
+console.error @ error-boundary.js:59
+handleUploadError @ gamefolio-api.ts:311
+await in handleUploadError
+uploadClipOrReel @ gamefolio-api.ts:387
+await in uploadClipOrReel
+handleUpload @ create.tsx:249
+await in handleUpload
+onClick @ PressResponder.js:314
+executeDispatch @ react-dom-client.development.js:16368
+runWithFiberInDEV @ react-dom-client.development.js:1519
+processDispatchQueue @ react-dom-client.development.js:16418
+(anonymous) @ react-dom-client.development.js:17016
+batchedUpdates$1 @ react-dom-client.development.js:3262
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:16572
+dispatchEvent @ react-dom-client.development.js:20658
+dispatchDiscreteEvent @ react-dom-client.development.js:20626
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 {errorQueue: Array(1)}
+gamefolio-api.ts:442  [Gamefolio Upload] Error: Error: Authentication failed: Your session may have expired. Please log out and log back in.
+    at handleUploadError (gamefolio-api.ts:323:11)
+    at async Object.uploadClipOrReel (gamefolio-api.ts:387:9)
+    at async handleUpload (create.tsx:249:18)
+registerError @ LogBox.web.ts:134
+console.error @ LogBox.web.ts:59
+console.error @ error-boundary.js:59
+uploadClipOrReel @ gamefolio-api.ts:442
+await in uploadClipOrReel
+handleUpload @ create.tsx:249
+await in handleUpload
+onClick @ PressResponder.js:314
+executeDispatch @ react-dom-client.development.js:16368
+runWithFiberInDEV @ react-dom-client.development.js:1519
+processDispatchQueue @ react-dom-client.development.js:16418
+(anonymous) @ react-dom-client.development.js:17016
+batchedUpdates$1 @ react-dom-client.development.js:3262
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:16572
+dispatchEvent @ react-dom-client.development.js:20658
+dispatchDiscreteEvent @ react-dom-client.development.js:20626
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Processing error] {id: '1768142784352-d018ir5', timestamp: 1768142784352, type: 'runtime', status: 'pending', source: 'iframe', …}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 {errorQueue: Array(1)}
+create.tsx:281  [Upload] Upload error: Error: Authentication failed: Your session may have expired. Please log out and log back in.
+    at handleUploadError (gamefolio-api.ts:323:11)
+    at async Object.uploadClipOrReel (gamefolio-api.ts:387:9)
+    at async handleUpload (create.tsx:249:18)
+registerError @ LogBox.web.ts:134
+console.error @ LogBox.web.ts:59
+console.error @ error-boundary.js:59
+handleUpload @ create.tsx:281
+await in handleUpload
+onClick @ PressResponder.js:314
+executeDispatch @ react-dom-client.development.js:16368
+runWithFiberInDEV @ react-dom-client.development.js:1519
+processDispatchQueue @ react-dom-client.development.js:16418
+(anonymous) @ react-dom-client.development.js:17016
+batchedUpdates$1 @ react-dom-client.development.js:3262
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:16572
+dispatchEvent @ react-dom-client.development.js:20658
+dispatchDiscreteEvent @ react-dom-client.development.js:20626
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Error Processing] runtime error: {id: '1768142784352-d018ir5', timestamp: 1768142784352, type: 'runtime', status: 'pending', source: 'iframe', …}
+create.tsx:282  [Upload] Error details: {}
+registerError @ LogBox.web.ts:134
+console.error @ LogBox.web.ts:59
+console.error @ error-boundary.js:59
+handleUpload @ create.tsx:282
+await in handleUpload
+onClick @ PressResponder.js:314
+executeDispatch @ react-dom-client.development.js:16368
+runWithFiberInDEV @ react-dom-client.development.js:1519
+processDispatchQueue @ react-dom-client.development.js:16418
+(anonymous) @ react-dom-client.development.js:17016
+batchedUpdates$1 @ react-dom-client.development.js:3262
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:16572
+dispatchEvent @ react-dom-client.development.js:20658
+dispatchDiscreteEvent @ react-dom-client.development.js:20626
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 {errorQueue: Array(1)}
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  >> mutation #54 logs.logRuntimeError Object
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Preview Error] {message: '[Gamefolio Upload] Video upload failed with status: 401', componentStack: undefined, stack: undefined, timestamp: '2026-01-11T14:46:24.351Z'}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Iframe Error] {type: 'ERROR', error: {…}, iframeId: 'rork-web-preview'}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 {errorQueue: Array(2)}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Processing error] {id: '1768142784359-ginc2xa', timestamp: 1768142784359, type: 'runtime', status: 'pending', source: 'iframe', …}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 {errorQueue: Array(2)}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Error Processing] runtime error: {id: '1768142784359-ginc2xa', timestamp: 1768142784359, type: 'runtime', status: 'pending', source: 'iframe', …}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 {errorQueue: Array(2)}
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  >> mutation #55 logs.logRuntimeError Object
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Preview Error] {message: '[Gamefolio Upload] Error response: {"message":"Not authenticated"}', componentStack: undefined, stack: undefined, timestamp: '2026-01-11T14:46:24.352Z'}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Iframe Error] {type: 'ERROR', error: {…}, iframeId: 'rork-web-preview'}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 {errorQueue: Array(3)}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Processing error] {id: '1768142784365-yas9hcd', timestamp: 1768142784365, type: 'runtime', status: 'pending', source: 'iframe', …}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 {errorQueue: Array(3)}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Error Processing] runtime error: {id: '1768142784365-yas9hcd', timestamp: 1768142784365, type: 'runtime', status: 'pending', source: 'iframe', …}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 {errorQueue: Array(3)}
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  >> mutation #56 logs.logRuntimeError Object
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Preview Error] {message: '[Gamefolio Upload] Error: Error: Authentication fa…may have expired. Please log out and log back in.', componentStack: undefined, stack: undefined, timestamp: '2026-01-11T14:46:24.352Z'}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Iframe Error] {type: 'ERROR', error: {…}, iframeId: 'rork-web-preview'}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 {errorQueue: Array(4)}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Processing error] {id: '1768142784368-ggc7yvl', timestamp: 1768142784368, type: 'runtime', status: 'pending', source: 'iframe', …}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 {errorQueue: Array(4)}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Error Processing] runtime error: {id: '1768142784368-ggc7yvl', timestamp: 1768142784368, type: 'runtime', status: 'pending', source: 'iframe', …}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 {errorQueue: Array(4)}
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  >> mutation #57 logs.logRuntimeError Object
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Preview Error] {message: '[Upload] Upload error: Error: Authentication faile…may have expired. Please log out and log back in.', componentStack: undefined, stack: undefined, timestamp: '2026-01-11T14:46:24.352Z'}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Iframe Error] {type: 'ERROR', error: {…}, iframeId: 'rork-web-preview'}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 {errorQueue: Array(5)}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Processing error] {id: '1768142784370-yeuwcxz', timestamp: 1768142784370, type: 'runtime', status: 'pending', source: 'iframe', …}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 {errorQueue: Array(5)}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Error Processing] runtime error: {id: '1768142784370-yeuwcxz', timestamp: 1768142784370, type: 'runtime', status: 'pending', source: 'iframe', …}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 {errorQueue: Array(5)}
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  >> mutation #58 logs.logRuntimeError Object
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Preview Error] {message: '[Upload] Error details: {}', componentStack: undefined, stack: undefined, timestamp: '2026-01-11T14:46:24.352Z'}
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 104113ms ago, last ping sent 104151ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  << mutation #54 logs.logRuntimeError Object
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  << mutation #56 logs.logRuntimeError Object
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  << mutation #58 logs.logRuntimeError Object
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 104412ms ago, last ping sent 104450ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  << mutation #55 logs.logRuntimeError Object
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 104712ms ago, last ping sent 104750ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  << mutation #57 logs.logRuntimeError Object
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 105012ms ago, last ping sent 105050ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  >> mutation #59 vmHelpers.proxyToVM Object
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 105312ms ago, last ping sent 105350ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  << mutation #59 vmHelpers.proxyToVM Object
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 105612ms ago, last ping sent 105650ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 105912ms ago, last ping sent 105950ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 106211ms ago, last ping sent 106249ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 106512ms ago, last ping sent 106550ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 106812ms ago, last ping sent 106850ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 107112ms ago, last ping sent 107150ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 107412ms ago, last ping sent 107450ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 107712ms ago, last ping sent 107750ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  >> mutation #60 vmHelpers.proxyToVM Object
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 108013ms ago, last ping sent 108051ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  << mutation #60 vmHelpers.proxyToVM Object
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 108312ms ago, last ping sent 108350ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+useOnlineStatus.ts:25 [OnlineStatus] App state changed: background -> background
+useOnlineStatus.ts:34 [OnlineStatus] App went to background, setting offline
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 visibility change hidden
+AuthContext.tsx:392 [Auth] getAccessToken called
+AuthContext.tsx:398 [Auth] Current token age: 49.307 seconds
+AuthContext.tsx:399 [Auth] Token expires in: 604800 seconds
+AuthContext.tsx:420 [Auth] Using existing valid token
+trpc.ts:38 [tRPC Client] ✅ Including Authorization header
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 108612ms ago, last ping sent 108650ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 108913ms ago, last ping sent 108951ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 109213ms ago, last ping sent 109251ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 109512ms ago, last ping sent 109550ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 109812ms ago, last ping sent 109850ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 110112ms ago, last ping sent 110150ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 110412ms ago, last ping sent 110450ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 110713ms ago, last ping sent 110751ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 111013ms ago, last ping sent 111051ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 111312ms ago, last ping sent 111350ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 111612ms ago, last ping sent 111650ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20  Heartbeat timed out, closing connection, last message received 111913ms ago, last ping sent 111951ms ago
+(anonymous) @ 9800.f904e69acab42281.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:20
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 useMessagesReader: terminal-sync [501]
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 adding output to terminal 501 [?2004h[32m[1m/home/user/rork-app$[0m[0m ###E2B_COMMAND_DONE###[K[32m[1m/home/user/rork-app$[0m[0m ###E2B_COMMAND_DONE###^C[?2004l[?2004h[?2004l
+[?2004h[32m[1m/home/user/rork-app$[0m[0m ###E2B_COMMAND_DONE###bun install @rork-ai//toolkit-sdk@latest
+[?2004l[0m[2m[[1m3.34ms[0m[2m][0m [2m".env"[0m
+[0m[1mbun add [0m[2mv1.3.5 (1e86cebd)[0m
+  🔍 Resolving [1/1] [23D[0K  🔍 @stardazed/streams-text-encoding [37/36] [48D[0K  📦 Installing [49/1193] [28D[0K  📦 Installing [56/1193] [28D[0K  📦 Installing [65/1193] [28D[0K  📦 Installing [75/1193] [28D[0K  🚚 @revenuecat/purchases-js-hybrid-mappings... [51D[0K  📦 Installing [83/1193] [28D[0K  📦 Installing [91/1193] [28D[0K  🚚 @revenuecat/purchases-js... [35D[0K  🚚 application-config-path... [34D[0K  📦 Installing [105/1193] [29D[0K  📦 Installing [110/1193] [29D[0K  🚚 ecdsa-sig-formatter... [30D[0K  📦 Installing [118/1193] [29D[0K  📦 Installing [121/1193] [29D[0K  📦 Installing [147/1193] [29D[0K  📦 Installing [167/1193] [29D[0K  📦 Installing [187/1193] [29D[0K  🚚 ansi-styles... [22D[0K  🔒 Saving lockfile... [26D[0K
+[0m[32m+[0m [1m@hono/trpc-server[0m[2m@0.4.0[0m
+[0m[32m+[0m [1m@react-native-community/datetimepicker[0m[2m@8.4.4[0m
+[0m[32m+[0m [1m@react-native-community/slider[0m[2m@5.0.1[0m
+[0m[32m+[0m [1m@react-native-masked-view/masked-view[0m[2m@0.3.2[0m
+[0m[32m+[0m [1m@react-navigation/drawer[0m[2m@7.7.5[0m
+[0m[32m+[0m [1m@supabase/supabase-js[0m[2m@2.86.0[0m
+[0m[32m+[0m [1m@trpc/client[0m[2m@11.7.2[0m
+[0m[32m+[0m [1m@trpc/react-query[0m[2m@11.7.2[0m
+[0m[32m+[0m [1m@trpc/server[0m[2m@11.7.2[0m
+[0m[32m+[0m [1m@types/bcryptjs[0m[2m@3.0.0[0m
+[0m[32m+[0m [1m@types/jsonwebtoken[0m[2m@9.0.10[0m
+[0m[32m+[0m [1mbcryptjs[0m[2m@3.0.3[0m
+[0m[32m+[0m [1mexpo[0m[2m@54.0.25[0m
+[0m[32m+[0m [1mexpo-auth-session[0m[2m@7.0.9[0m
+[0m[32m+[0m [1mexpo-blur[0m[2m@15.0.7[0m
+[0m[32m+[0m [1mexpo-clipboard[0m[2m@8.0.7[0m
+[0m[32m+[0m [1mexpo-constants[0m[2m@18.0.10[0m
+[0m[32m+[0m [1mexpo-crypto[0m[2m@15.0.7[0m
+[0m[32m+[0m [1mexpo-font[0m[2m@14.0.9[0m
+[0m[32m+[0m [1mexpo-haptics[0m[2m@15.0.7[0m
+[0m[32m+[0m [1mexpo-image[0m[2m@3.0.10[0m
+[0m[32m+[0m [1mexpo-image-manipulator[0m[2m@14.0.7[0m
+[0m[32m+[0m [1mexpo-image-picker[0m[2m@17.0.8[0m
+[0m[32m+[0m [1mexpo-linear-gradient[0m[2m@15.0.7[0m
+[0m[32m+[0m [1mexpo-linking[0m[2m@8.0.9[0m
+[0m[32m+[0m [1mexpo-location[0m[2m@19.0.7[0m
+[0m[32m+[0m [1mexpo-router[0m[2m@6.0.15[0m
+[0m[32m+[0m [1mexpo-screen-orientation[0m[2m@9.0.8[0m
+[0m[32m+[0m [1mexpo-secure-store[0m[2m@15.0.7[0m
+[0m[32m+[0m [1mexpo-splash-screen[0m[2m@31.0.11[0m
+[0m[32m+[0m [1mexpo-status-bar[0m[2m@3.0.8[0m
+[0m[32m+[0m [1mexpo-symbols[0m[2m@1.0.7[0m
+[0m[32m+[0m [1mexpo-system-ui[0m[2m@6.0.8[0m
+[0m[32m+[0m [1mexpo-video[0m[2m@3.0.14[0m
+[0m[32m+[0m [1mexpo-video-thumbnails[0m[2m@10.0.7[0m
+[0m[32m+[0m [1mexpo-web-browser[0m[2m@15.0.9[0m
+[0m[32m+[0m [1mhono[0m[2m@4.10.7[0m
+[0m[32m+[0m [1mjsonwebtoken[0m[2m@9.0.2[0m
+[0m[32m+[0m [1mreact-native-purchases[0m[2m@9.6.14[0m
+[0m[32m+[0m [1msuperjson[0m[2m@2.2.6[0m
+
+[0m[32minstalled[0m [1m@rork-ai/toolkit-sdk[0m[2m@0.2.54[0m
+
+[32m159[0m packages[0m installed [0m[2m[[1m2.09s[0m[2m][0m[0m
+[?2004h[32m[1m/home/user/rork-app$[0m[0m ###E2B_COMMAND_DONE###^C[?2004l[?2004h[?2004l
+[?2004h[32m[1m/home/user/rork-app$[0m[0m ###E2B_COMMAND_DONE###bun expo start --tunnnel
+[?2004l[90menv: load .env[39m
+[90menv: export EXPO_PUBLIC_BACKEND_URL EXPO_PUBLIC_DISCORD_MOBILE_CLIENT_SECRET EXPO_PUBLIC_REVENUECAT_IOS_API_KEY EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY EXPO_PUBLIC_RORK_DB_ENDPOINT EXPO_PUBLIC_RORK_DB_NAMESPACE EXPO_PUBLIC_RORK_DB_TOKEN EXPO_PUBLIC_RORK_API_BASE_URL EXPO_PUBLIC_TOOLKIT_URL EXPO_PUBLIC_PROJECT_ID EXPO_PUBLIC_TEAM_ID[39m
+[90mStarting project at /home/user/rork-app[39m
+[2mStarting Metro Bundler[22m
+Tunnel connected.
+Tunnel ready.
+[33mThe following packages should be updated for best compatibility with the installed [1mexpo[22m version:[39m
+[33m  [1mexpo[22m[36m@[39m[33m[31m54.0.25[39m[33m - expected version: [32m~54.0.31[39m[33m[39m
+[33m  [1mexpo-auth-session[22m[36m@[39m[33m[31m7.0.9[39m[33m - expected version: [32m~7.0.10[39m[33m[39m
+[33m  [1mexpo-blur[22m[36m@[39m[33m[31m15.0.7[39m[33m - expected version: [32m~15.0.8[39m[33m[39m
+[33m  [1mexpo-clipboard[22m[36m@[39m[33m[31m8.0.7[39m[33m - expected version: [32m~8.0.8[39m[33m[39m
+[33m  [1mexpo-constants[22m[36m@[39m[33m[31m18.0.10[39m[33m - expected version: [32m~18.0.13[39m[33m[39m
+[33m  [1mexpo-crypto[22m[36m@[39m[33m[31m15.0.7[39m[33m - expected versi
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 URL match exp://krlugqk-anonymous-8081.exp.direct
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 WS [request] resetTimer undefined 5
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 useMountPreviewToLatestSnapshotId: adding job
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 WS [request] mountFromSnapshotId {snapshotId: 'oi8t1niyuv3na15w6t1by'} 6
+hmr.ts:286  Disconnected from Metro (1006: "").
+
+To reconnect:
+- Ensure that Metro is running and available on the same network
+- Reload this app (will trigger further help if Metro cannot be connected to)
+      
+setHMRUnavailableReason @ hmr.ts:286
+(anonymous) @ hmr.ts:249
+emit @ eventemitter3.js:79
+HMRClient._ws.onclose @ HMRClient.js:33
+useOnlineStatus.ts:25 [OnlineStatus] App state changed: background -> active
+useOnlineStatus.ts:31 [OnlineStatus] App became active, setting online
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 visibility change visible
+AuthContext.tsx:392 [Auth] getAccessToken called
+AuthContext.tsx:398 [Auth] Current token age: 86.073 seconds
+AuthContext.tsx:399 [Auth] Token expires in: 604800 seconds
+AuthContext.tsx:420 [Auth] Using existing valid token
+AuthContext.tsx:392 [Auth] getAccessToken called
+AuthContext.tsx:398 [Auth] Current token age: 86.074 seconds
+AuthContext.tsx:399 [Auth] Token expires in: 604800 seconds
+AuthContext.tsx:420 [Auth] Using existing valid token
+AuthContext.tsx:392 [Auth] getAccessToken called
+AuthContext.tsx:398 [Auth] Current token age: 86.074 seconds
+AuthContext.tsx:399 [Auth] Token expires in: 604800 seconds
+AuthContext.tsx:420 [Auth] Using existing valid token
+home.tsx:237 [Home] Fetching recommended clips based on favorite games: 0
+home.tsx:240 [Home] No favorite games, fetching trending clips
+api.ts:49 [API] 🔑 Authorization header set
+api.ts:50 [API] 🔑 Full token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NjgxNDI3MzksImV4cCI6MTc2ODc0NzUzOX0.vZik4ntTP0XH-p1Sa4fqE42Txn0DmsPkF83frgZWUpU
+api.ts:51 [API] 🔑 Token length: 164 chars
+api.ts:57 [API] 🔑 Token payload: {userId: 3, type: 'access', iat: 1768142739, exp: 1768747539}
+api.ts:58 [API] 🔑 Token exp: 2026-01-18T14:45:39.000Z
+api.ts:59 [API] 🔑 Token iat: 2026-01-11T14:45:39.000Z
+api.ts:81 [API] 🔵 GET https://app.gamefolio.com/api/clips/trending?period=ever
+api.ts:87 [API] 📡 Starting fetch request...
+api.ts:88 [API] 📍 Full URL: https://app.gamefolio.com/api/clips/trending?period=ever
+api.ts:89 [API] 🔧 Headers: {
+  "Content-Type": "application/json",
+  "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NjgxNDI3MzksImV4cCI6MTc2ODc0NzUzOX0.vZik4ntTP0XH-p1Sa4fqE42Txn0DmsPkF83frgZWUpU"
+}
+home.tsx:289 [Home] Fetching feed clips...
+api.ts:49 [API] 🔑 Authorization header set
+api.ts:50 [API] 🔑 Full token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NjgxNDI3MzksImV4cCI6MTc2ODc0NzUzOX0.vZik4ntTP0XH-p1Sa4fqE42Txn0DmsPkF83frgZWUpU
+api.ts:51 [API] 🔑 Token length: 164 chars
+api.ts:57 [API] 🔑 Token payload: {userId: 3, type: 'access', iat: 1768142739, exp: 1768747539}
+api.ts:58 [API] 🔑 Token exp: 2026-01-18T14:45:39.000Z
+api.ts:59 [API] 🔑 Token iat: 2026-01-11T14:45:39.000Z
+api.ts:81 [API] 🔵 GET https://app.gamefolio.com/api/clips?page=1&limit=20
+api.ts:87 [API] 📡 Starting fetch request...
+api.ts:88 [API] 📍 Full URL: https://app.gamefolio.com/api/clips?page=1&limit=20
+api.ts:89 [API] 🔧 Headers: {
+  "Content-Type": "application/json",
+  "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NjgxNDI3MzksImV4cCI6MTc2ODc0NzUzOX0.vZik4ntTP0XH-p1Sa4fqE42Txn0DmsPkF83frgZWUpU"
+}
+home.tsx:310 [Home] Fetching latest reels...
+ [API] 🔑 Authorization header set
+ [API] 🔑 Full token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NjgxNDI3MzksImV4cCI6MTc2ODc0NzUzOX0.vZik4ntTP0XH-p1Sa4fqE42Txn0DmsPkF83frgZWUpU
+ [API] 🔑 Token length: 164 chars
+ [API] 🔑 Token payload: {userId: 3, type: 'access', iat: 1768142739, exp: 1768747539}
+ [API] 🔑 Token exp: 2026-01-18T14:45:39.000Z
+ [API] 🔑 Token iat: 2026-01-11T14:45:39.000Z
+ [API] 🔵 GET https://app.gamefolio.com/api/reels/latest
+ [API] 📡 Starting fetch request...
+ [API] 📍 Full URL: https://app.gamefolio.com/api/reels/latest
+ [API] 🔧 Headers: {
+  "Content-Type": "application/json",
+  "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NjgxNDI3MzksImV4cCI6MTc2ODc0NzUzOX0.vZik4ntTP0XH-p1Sa4fqE42Txn0DmsPkF83frgZWUpU"
+}
+ [Auth] getAccessToken called
+ [Auth] Current token age: 86.082 seconds
+ [Auth] Token expires in: 604800 seconds
+ [Auth] Using existing valid token
+ [tRPC Client] ✅ Including Authorization header
+ [Auth] getAccessToken called
+ [Auth] Current token age: 86.082 seconds
+ [Auth] Token expires in: 604800 seconds
+ [Auth] Using existing valid token
+ [tRPC Client] ✅ Including Authorization header
+ [Home] Error fetching trending users, using mock data: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+ [Home] Error fetching latest uploads, using mock data: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+ WS [request] terminal.resize {terminalId: '501', cols: 80, rows: 24} 7
+ resize 80 24
+  >> mutation #61 vmHelpers.proxyToVM Object
+ [API] ✅ Fetch completed successfully
+ [API] ✅ Response status: 200
+ [Home] Received latest reels: 6
+ {nonScalePlans: Array(3), scalePlans: Array(4)}
+ [API] ✅ Fetch completed successfully
+ [API] ✅ Response status: 200
+ [Home] Received feed clips: 20
+ CodeMirrorEditor
+rM @ 1456.1e892e7935327b2…qfpRz69cA3EfoM3CR:1
+lS @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+ot @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+ov @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+ic @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+(anonymous) @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+is @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+u9 @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+iQ @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+iI @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+iV @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+(anonymous) @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+ adding output to terminal 501 [33mWarning: Unable to resolve manifest assets. Icons and fonts might not work. Cannot read properties of null (reading '0').[39m
+
+ [Auth] getAccessToken called
+ [Auth] Current token age: 87.523 seconds
+ [Auth] Token expires in: 604800 seconds
+ [Auth] Using existing valid token
+ [tRPC Client] ✅ Including Authorization header
+  << mutation #61 vmHelpers.proxyToVM Object
+  >> query #62 user.profile Object
+ [API] ✅ Fetch completed successfully
+ [API] ✅ Response status: 200
+ [Home] Received trending clips: 10
+  << query #62 user.profile Object
+ {nonScalePlans: Array(3), scalePlans: Array(4)}
+ CodeMirrorEditor
+rM @ 1456.1e892e7935327b2…qfpRz69cA3EfoM3CR:1
+lS @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+ot @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+ov @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+ic @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+(anonymous) @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+is @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+u9 @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+iQ @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+iI @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+iV @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+(anonymous) @ bd8ea13e-78bb07f3cac…qfpRz69cA3EfoM3CR:1
+setTimeout
+o @ 8356-292868aec5fdfea…fpRz69cA3EfoM3CR:25
+a @ 8356-292868aec5fdfea…fpRz69cA3EfoM3CR:25
+batch @ 8356-292868aec5fdfea…fpRz69cA3EfoM3CR:25
+#S @ 5238-0de8325a8eb241b…fpRz69cA3EfoM3CR:18
+setData @ 5238-0de8325a8eb241b…fpRz69cA3EfoM3CR:18
+fetch @ 5238-0de8325a8eb241b…fpRz69cA3EfoM3CR:18
+await in fetch
+#m @ 5238-0de8325a8eb241b…fpRz69cA3EfoM3CR:18
+(anonymous) @ 5238-0de8325a8eb241b…fpRz69cA3EfoM3CR:18
+ [Auth] getAccessToken called
+ [Auth] Current token age: 89.856 seconds
+ [Auth] Token expires in: 604800 seconds
+ [Auth] Using existing valid token
+ [tRPC Client] ✅ Including Authorization header
+  >> mutation #63 vmHelpers.proxyToVM Object
+ adding output to terminal 501 [33mWarning: Unable to resolve manifest assets. Icons and fonts might not work. Cannot read properties of null (reading '0').[39m
+
+  << mutation #63 vmHelpers.proxyToVM Object
