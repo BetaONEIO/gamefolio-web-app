@@ -1,0 +1,41 @@
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  >> mutation #80 vmHelpers.proxyToVM Object
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  << mutation #80 vmHelpers.proxyToVM Object
+create.tsx:206 [Upload] Starting upload...
+create.tsx:207 [Upload] Type: clips
+create.tsx:208 [Upload] Title: test
+create.tsx:209 [Upload] Description: test
+create.tsx:210 [Upload] Game: Minecraft
+create.tsx:211 [Upload] Tags: []
+create.tsx:212 [Upload] Age Restricted: false
+create.tsx:213 [Upload] File URI: blob:https://yc-_hfi-anonymous-8081.exp.direct/7445bd7a-ddfc-4d0d-8cd3-a2c7435831f6
+create.tsx:215 [Upload] Getting access token from AuthContext...
+create.tsx:218  [Upload] User is not authenticated
+registerError @ LogBox.web.ts:134
+console.error @ LogBox.web.ts:59
+console.error @ error-boundary.js:59
+handleUpload @ create.tsx:218
+onClick @ PressResponder.js:314
+executeDispatch @ react-dom-client.development.js:16368
+runWithFiberInDEV @ react-dom-client.development.js:1519
+processDispatchQueue @ react-dom-client.development.js:16418
+(anonymous) @ react-dom-client.development.js:17016
+batchedUpdates$1 @ react-dom-client.development.js:3262
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:16572
+dispatchEvent @ react-dom-client.development.js:20658
+dispatchDiscreteEvent @ react-dom-client.development.js:20626
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Iframe Error] {type: 'ERROR', error: {…}, iframeId: 'rork-web-preview'}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 {errorQueue: Array(1)}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Processing error] {id: '1768164053361-gxbaelx', timestamp: 1768164053361, type: 'runtime', status: 'pending', source: 'iframe', …}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 {errorQueue: Array(1)}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Error Processing] runtime error: {id: '1768164053361-gxbaelx', timestamp: 1768164053361, type: 'runtime', status: 'pending', source: 'iframe', …}
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 {errorQueue: Array(1)}
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  >> mutation #81 logs.logRuntimeError Object
+1456.1e892e7935327b2e.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:1 [Preview Error] {message: '[Upload] User is not authenticated', componentStack: undefined, stack: undefined, timestamp: '2026-01-11T20:40:53.344Z'}
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  << mutation #81 logs.logRuntimeError Object
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  >> mutation #82 vmHelpers.proxyToVM Object
+5238-0de8325a8eb241ba.js?dpl=dpl_5vGhJpvbaeGqfpRz69cA3EfoM3CR:22  << mutation #82 vmHelpers.proxyToVM Object
