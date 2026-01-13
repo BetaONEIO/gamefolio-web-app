@@ -5771,7 +5771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get user's unlocked name tags
+  // Get user's unlocked name tags (includes default tags for all users)
   app.get("/api/user/name-tags", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.sendStatus(401);
@@ -5780,12 +5780,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = await storage.getUserById(req.user.id);
       if (user?.isPro) {
+        // Pro users get all name tags
         const allTags = await storage.getAllNameTags();
         return res.json(allTags);
       }
       
+      // Non-Pro users get default tags + their unlocked tags
+      const allTags = await storage.getAllNameTags();
+      const defaultTags = allTags.filter(t => t.isDefault);
       const unlockedTags = await storage.getUserUnlockedNameTags(req.user.id);
-      res.json(unlockedTags);
+      
+      // Merge default and unlocked tags, avoiding duplicates
+      const unlockedIds = new Set(unlockedTags.map(t => t.id));
+      const mergedTags = [...defaultTags.filter(t => !unlockedIds.has(t.id)), ...unlockedTags];
+      
+      res.json(mergedTags);
     } catch (err) {
       console.error("Error fetching unlocked name tags:", err);
       return res.status(500).json({ message: "Error fetching unlocked name tags" });
@@ -5807,11 +5816,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Invalid name tag" });
         }
         
-        const user = await storage.getUserById(req.user.id);
-        if (!user?.isPro) {
-          const hasUnlocked = await storage.userHasUnlockedNameTag(req.user.id, nameTagId);
-          if (!hasUnlocked) {
-            return res.status(403).json({ message: "You haven't unlocked this name tag" });
+        // Default tags are available to everyone
+        if (!nameTag.isDefault) {
+          const user = await storage.getUserById(req.user.id);
+          if (!user?.isPro) {
+            const hasUnlocked = await storage.userHasUnlockedNameTag(req.user.id, nameTagId);
+            if (!hasUnlocked) {
+              return res.status(403).json({ message: "You haven't unlocked this name tag" });
+            }
           }
         }
       }
