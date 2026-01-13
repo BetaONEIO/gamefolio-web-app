@@ -40,6 +40,8 @@ import {
   UserDailyUploads, InsertUserDailyUploads,
   ProLootboxGrant, InsertProLootboxGrant,
   UploadLimits,
+  NameTag, InsertNameTag,
+  UserUnlockedNameTag, InsertUserUnlockedNameTag,
   ClipWithUser,
   CommentWithUser,
   ScreenshotCommentWithUser,
@@ -83,6 +85,8 @@ import {
   clipMentions,
   nftWatchlist,
   commentMentions,
+  nameTags,
+  userUnlockedNameTags,
   screenshotCommentMentions,
   assetRewards,
   assetRewardClaims,
@@ -4929,5 +4933,117 @@ export class DatabaseStorage implements IStorage {
       reward: selectedReward,
       isDuplicate: alreadyHas
     };
+  }
+
+  // Name tag operations
+  async getAllNameTags(): Promise<NameTag[]> {
+    return await db
+      .select()
+      .from(nameTags)
+      .where(eq(nameTags.isActive, true))
+      .orderBy(nameTags.name);
+  }
+
+  async getNameTag(id: number): Promise<NameTag | null> {
+    const [nameTag] = await db
+      .select()
+      .from(nameTags)
+      .where(eq(nameTags.id, id));
+    return nameTag || null;
+  }
+
+  async createNameTag(nameTag: InsertNameTag): Promise<NameTag> {
+    const [created] = await db.insert(nameTags).values(nameTag).returning();
+    return created;
+  }
+
+  async updateNameTag(id: number, updates: Partial<NameTag>): Promise<NameTag | null> {
+    const [updated] = await db
+      .update(nameTags)
+      .set(updates)
+      .where(eq(nameTags.id, id))
+      .returning();
+    return updated || null;
+  }
+
+  async deleteNameTag(id: number): Promise<boolean> {
+    const result = await db.delete(nameTags).where(eq(nameTags.id, id));
+    return true;
+  }
+
+  async getUserUnlockedNameTags(userId: number): Promise<NameTag[]> {
+    // Get user's unlocked name tags
+    const unlocked = await db
+      .select({ nameTag: nameTags })
+      .from(userUnlockedNameTags)
+      .innerJoin(nameTags, eq(userUnlockedNameTags.nameTagId, nameTags.id))
+      .where(
+        and(
+          eq(userUnlockedNameTags.userId, userId),
+          eq(nameTags.isActive, true)
+        )
+      );
+
+    // Also get default name tags that everyone has access to
+    const defaultTags = await db
+      .select()
+      .from(nameTags)
+      .where(
+        and(
+          eq(nameTags.isDefault, true),
+          eq(nameTags.isActive, true)
+        )
+      );
+
+    // Combine and deduplicate
+    const unlockedTags = unlocked.map((u) => u.nameTag);
+    const allTags = [...unlockedTags, ...defaultTags];
+    const uniqueTags = allTags.filter(
+      (tag, index, self) => index === self.findIndex((t) => t.id === tag.id)
+    );
+
+    return uniqueTags;
+  }
+
+  async unlockNameTagForUser(userId: number, nameTagId: number): Promise<UserUnlockedNameTag> {
+    const [unlock] = await db
+      .insert(userUnlockedNameTags)
+      .values({ userId, nameTagId })
+      .returning();
+    return unlock;
+  }
+
+  async userHasUnlockedNameTag(userId: number, nameTagId: number): Promise<boolean> {
+    // Check if it's a default tag (everyone has it)
+    const [nameTag] = await db
+      .select()
+      .from(nameTags)
+      .where(eq(nameTags.id, nameTagId));
+    
+    if (nameTag?.isDefault) {
+      return true;
+    }
+
+    // Check if user has specifically unlocked it
+    const [unlock] = await db
+      .select()
+      .from(userUnlockedNameTags)
+      .where(
+        and(
+          eq(userUnlockedNameTags.userId, userId),
+          eq(userUnlockedNameTags.nameTagId, nameTagId)
+        )
+      );
+    return !!unlock;
+  }
+
+  async updateUserNameTag(userId: number, nameTagId: number | null): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        selectedNameTagId: nameTagId,
+        updatedAt: new Date() 
+      })
+      .where(eq(users.id, userId));
   }
 }

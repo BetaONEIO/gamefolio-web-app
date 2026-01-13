@@ -67,6 +67,8 @@ export const users = pgTable("users", {
   proSubscriptionEndDate: timestamp("pro_subscription_end_date"), // When subscription expires
   // Selected Avatar Border (from lootbox rewards)
   selectedAvatarBorderId: integer("selected_avatar_border_id"), // References asset_rewards table
+  // Selected Name Tag
+  selectedNameTagId: integer("selected_name_tag_id"), // References name_tags table
   // Welcome Pack
   welcomePackClaimed: boolean("welcome_pack_claimed").default(false).notNull(), // Whether the user has claimed their welcome pack
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -232,6 +234,41 @@ export const insertUserUnlockedBannerSchema = createInsertSchema(userUnlockedBan
 
 export type UserUnlockedBanner = typeof userUnlockedBanners.$inferSelect;
 export type InsertUserUnlockedBanner = z.infer<typeof insertUserUnlockedBannerSchema>;
+
+// Name tags for profile customization
+export const nameTags = pgTable("name_tags", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  imageUrl: text("image_url").notNull(),
+  rarity: text("rarity").notNull().default("common"), // common, rare, epic, legendary
+  unlockCondition: text("unlock_condition"), // Description of how to unlock (e.g., "Reach level 10", "Complete 50 uploads")
+  isDefault: boolean("is_default").default(false).notNull(), // If true, all users have this unlocked
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Track which name tags users have unlocked
+export const userUnlockedNameTags = pgTable("user_unlocked_name_tags", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  nameTagId: integer("name_tag_id").notNull().references(() => nameTags.id, { onDelete: "cascade" }),
+  unlockedAt: timestamp("unlocked_at").defaultNow().notNull(),
+});
+
+export const insertNameTagSchema = createInsertSchema(nameTags).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserUnlockedNameTagSchema = createInsertSchema(userUnlockedNameTags).omit({
+  id: true,
+  unlockedAt: true,
+});
+
+export type NameTag = typeof nameTags.$inferSelect;
+export type InsertNameTag = z.infer<typeof insertNameTagSchema>;
+export type UserUnlockedNameTag = typeof userUnlockedNameTags.$inferSelect;
+export type InsertUserUnlockedNameTag = z.infer<typeof insertUserUnlockedNameTagSchema>;
 
 // Notifications table
 export const notifications = pgTable("notifications", {

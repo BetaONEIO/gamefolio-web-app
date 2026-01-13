@@ -2,7 +2,7 @@ import {
   users, games, clips, likes, comments, userGameFavorites, follows, messages, profileBanners,
   monthlyLeaderboard, weeklyLeaderboard, topContributors, userPointsHistory, userXPHistory, notifications, userBadges, contentFilterSettings, bannedWords,
   heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions, nftWatchlist, assetRewards, assetRewardClaims,
-  userDailyUploads, proLootboxGrants,
+  userDailyUploads, proLootboxGrants, nameTags, userUnlockedNameTags,
   type User, type InsertUser,
   type Game, type InsertGame,
   type Clip, type InsertClip,
@@ -35,6 +35,8 @@ import {
   type UserDailyUploads, type InsertUserDailyUploads,
   type ProLootboxGrant, type InsertProLootboxGrant,
   type UploadLimits,
+  type NameTag, type InsertNameTag,
+  type UserUnlockedNameTag, type InsertUserUnlockedNameTag,
   type ClipWithUser,
   type CommentWithUser,
   type UserWithStats,
@@ -411,6 +413,17 @@ export interface IStorage {
   hasProLootboxGrant(userId: number, grantType: 'initial' | 'monthly', month?: string): Promise<boolean>;
   createProLootboxGrant(userId: number, grantType: 'initial' | 'monthly', rewardId?: number): Promise<ProLootboxGrant>;
   grantProLootbox(userId: number, grantType: 'initial' | 'monthly'): Promise<{ reward: AssetReward; isDuplicate: boolean } | null>;
+
+  // Name tag operations
+  getAllNameTags(): Promise<NameTag[]>;
+  getNameTag(id: number): Promise<NameTag | null>;
+  createNameTag(nameTag: InsertNameTag): Promise<NameTag>;
+  updateNameTag(id: number, updates: Partial<NameTag>): Promise<NameTag | null>;
+  deleteNameTag(id: number): Promise<boolean>;
+  getUserUnlockedNameTags(userId: number): Promise<NameTag[]>;
+  unlockNameTagForUser(userId: number, nameTagId: number): Promise<UserUnlockedNameTag>;
+  userHasUnlockedNameTag(userId: number, nameTagId: number): Promise<boolean>;
+  updateUserNameTag(userId: number, nameTagId: number | null): Promise<void>;
 }
 
 // Use DatabaseStorage with Supabase - no fallback to in-memory storage
