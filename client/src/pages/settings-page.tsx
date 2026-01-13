@@ -1177,11 +1177,7 @@ export default function SettingsPage() {
                                   <img
                                     src={selectedTag.imageUrl}
                                     alt={selectedTag.name}
-                                    className="w-3/4 max-w-xs h-auto object-contain"
-                                    style={{
-                                      borderRadius: '2px',
-                                      boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.3), inset 0 -2px 4px rgba(255,255,255,0.1)'
-                                    }}
+                                    className="w-full max-w-sm h-auto object-contain"
                                   />
                                   <p className="text-sm font-medium mt-3">{selectedTag.name}</p>
                                   <div className="flex items-center gap-2 text-xs mt-1">
