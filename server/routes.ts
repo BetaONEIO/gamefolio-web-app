@@ -5757,6 +5757,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==========================================
+  // Name Tag Routes
+  // ==========================================
+
+  // Get all available name tags
+  app.get("/api/name-tags", async (req, res) => {
+    try {
+      const tags = await storage.getAllNameTags();
+      res.json(tags);
+    } catch (err) {
+      console.error("Error fetching name tags:", err);
+      return res.status(500).json({ message: "Error fetching name tags" });
+    }
+  });
+
+  // Get user's unlocked name tags
+  app.get("/api/user/name-tags", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const user = await storage.getUserById(req.user.id);
+      if (user?.isPro) {
+        const allTags = await storage.getAllNameTags();
+        return res.json(allTags);
+      }
+      
+      const unlockedTags = await storage.getUserUnlockedNameTags(req.user.id);
+      res.json(unlockedTags);
+    } catch (err) {
+      console.error("Error fetching unlocked name tags:", err);
+      return res.status(500).json({ message: "Error fetching unlocked name tags" });
+    }
+  });
+
+  // Update user's selected name tag
+  app.put("/api/user/name-tag", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const { nameTagId } = req.body;
+      
+      if (nameTagId !== null) {
+        const nameTag = await storage.getNameTag(nameTagId);
+        if (!nameTag) {
+          return res.status(400).json({ message: "Invalid name tag" });
+        }
+        
+        const user = await storage.getUserById(req.user.id);
+        if (!user?.isPro) {
+          const hasUnlocked = await storage.userHasUnlockedNameTag(req.user.id, nameTagId);
+          if (!hasUnlocked) {
+            return res.status(403).json({ message: "You haven't unlocked this name tag" });
+          }
+        }
+      }
+
+      await storage.updateUserNameTag(req.user.id, nameTagId);
+      res.json({ message: "Name tag updated successfully" });
+    } catch (err) {
+      console.error("Error updating name tag:", err);
+      return res.status(500).json({ message: "Error updating name tag" });
+    }
+  });
+
+  // Get user's selected name tag (for profile display)
+  app.get("/api/user/:userId/name-tag", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (!user.selectedNameTagId) {
+        return res.json({ nameTag: null });
+      }
+
+      const nameTag = await storage.getNameTag(user.selectedNameTagId);
+      res.json({ nameTag });
+    } catch (err) {
+      console.error("Error fetching user name tag:", err);
+      return res.status(500).json({ message: "Error fetching user name tag" });
+    }
+  });
+
+  // ==========================================
   // Screenshot Upload Routes
   // ==========================================
 
