@@ -8,7 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle } from "lucide-react";
+import { useRevenueCat } from "@/hooks/use-revenuecat";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HexColorPicker } from "react-colorful";
 import { useToast } from "@/hooks/use-toast";
@@ -17,7 +19,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { BannerUploadPreview } from "@/components/BannerUploadPreview";
 import { BannerPositionPreview } from "@/components/BannerPositionPreview";
 import { BlockedUsersSection } from "@/components/settings/blocked-users-section";
-import { Check } from "lucide-react";
 import Cropper from "react-easy-crop";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
@@ -185,6 +186,45 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { setAccentColor } = useTheme();
+  const { customerInfo, refreshCustomerInfo } = useRevenueCat();
+  
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  const handleCancelSubscription = async () => {
+    setCancelling(true);
+    try {
+      const response = await apiRequest("POST", "/api/subscription/cancel");
+      const data = await response.json();
+      
+      if (data.success) {
+        await refreshCustomerInfo();
+        await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        
+        toast({
+          title: "Subscription cancelled",
+          description: data.message || "Your Pro subscription has been cancelled.",
+          variant: "gamefolioSuccess",
+        });
+        setShowCancelConfirm(false);
+      } else if (data.useManagementUrl && customerInfo?.managementURL) {
+        window.open(customerInfo.managementURL, '_blank');
+        toast({
+          title: "Manage subscription",
+          description: "Please cancel your subscription through the billing portal.",
+        });
+        setShowCancelConfirm(false);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel subscription. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   const [profileData, setProfileData] = useState({
     displayName: user?.displayName || "",
@@ -652,6 +692,91 @@ export default function SettingsPage() {
 
           {/* Profile Tab */}
           <TabsContent value="profile">
+            {/* Pro Subscription Management Section */}
+            {user?.isPro && (
+              <Card className="mb-6 relative overflow-hidden">
+                <div 
+                  className="absolute inset-0 rounded-lg pointer-events-none"
+                  style={{
+                    boxShadow: 'inset 0 0 30px rgba(74, 222, 128, 0.3), 0 0 20px rgba(74, 222, 128, 0.2)',
+                    border: '2px solid rgba(74, 222, 128, 0.5)'
+                  }}
+                />
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-green-500/20 rounded-lg">
+                      <Crown className="h-6 w-6 text-yellow-500" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        Gamefolio Pro Subscription
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+                          Active
+                        </span>
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        {user?.proSubscriptionStartDate && (
+                          <>Member since {new Date(user.proSubscriptionStartDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Your Pro Benefits</p>
+                      <ul className="space-y-1.5">
+                        {[
+                          "Unlimited video and screenshot uploads",
+                          "500MB video file size limit",
+                          "100MB image file size limit",
+                          "Access to all avatar borders",
+                          "No video ads",
+                          "Monthly bonus lootboxes",
+                          "Priority support",
+                        ].map((benefit, idx) => (
+                          <li key={idx} className="flex items-center gap-2 text-sm">
+                            <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                            <span>{benefit}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="p-3 bg-muted/30 rounded-lg space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Plan:</span>
+                          <span className="font-medium">{user?.proSubscriptionType || 'Pro'}</span>
+                        </div>
+                        {customerInfo?.managementURL && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => window.open(customerInfo.managementURL, '_blank')}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Manage Billing
+                          </Button>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                        onClick={() => setShowCancelConfirm(true)}
+                      >
+                        <AlertTriangle className="h-4 w-4 mr-2" />
+                        End Membership
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader>
                 <CardTitle>Profile Information</CardTitle>
@@ -1309,6 +1434,41 @@ export default function SettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel Subscription Confirmation Dialog */}
+      <AlertDialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Cancel Pro Subscription?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>Are you sure you want to cancel your Gamefolio Pro subscription?</p>
+              <p className="text-muted-foreground">
+                You will lose access to all Pro benefits at the end of your current billing period.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>Keep Subscription</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelSubscription}
+              disabled={cancelling}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {cancelling ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                'Yes, Cancel Subscription'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
