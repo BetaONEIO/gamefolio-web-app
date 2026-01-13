@@ -1756,8 +1756,11 @@ const AppearanceSettingsPage: React.FC = () => {
               const isFormDirty = appearanceForm.formState.isDirty;
               const hasAvatar = !!avatarFile;
               const isPending = updateProfile.isPending;
-              const shouldDisable = (!isFormDirty && !hasAvatar) || isPending;
-              console.log('🔘 Button render:', { isFormDirty, hasAvatar, isPending, shouldDisable });
+              const hasPendingBorder = pendingBorderId !== undefined;
+              const hasPendingNameTag = pendingNameTagId !== undefined;
+              const hasChanges = isFormDirty || hasAvatar || hasPendingBorder || hasPendingNameTag;
+              const shouldDisable = !hasChanges || isPending;
+              console.log('🔘 Button render:', { isFormDirty, hasAvatar, hasPendingBorder, hasPendingNameTag, isPending, shouldDisable });
               return shouldDisable;
             })()}
             data-testid="button-save-profile-appearance"
