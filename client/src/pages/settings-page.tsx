@@ -23,6 +23,7 @@ import Cropper from "react-easy-crop";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import DOMPurify from "dompurify";
+import type { NameTag } from "@shared/schema";
 
 // Component to fetch SVG and render it inline with color replacement
 const InlineSvgBorder: React.FC<{
@@ -242,6 +243,10 @@ export default function SettingsPage() {
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   
+  // Name tag state - undefined means no pending change, null means remove tag, number means select tag
+  const [pendingNameTagId, setPendingNameTagId] = useState<number | null | undefined>(undefined);
+  const [previewNameTag, setPreviewNameTag] = useState<NameTag | null>(null);
+  
   // Crop modal state
   const [showCropModal, setShowCropModal] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<string>('');
@@ -336,7 +341,8 @@ export default function SettingsPage() {
     profileData.profileBackgroundType !== ((user as any)?.profileBackgroundType || "solid") ||
     profileData.profileBackgroundTheme !== ((user as any)?.profileBackgroundTheme || "default") ||
     profileData.profileBackgroundAnimation !== ((user as any)?.profileBackgroundAnimation || "none") ||
-    avatarFile !== null;
+    avatarFile !== null ||
+    (pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId);
   
   // Debug logging
   console.log('💾 Save button state:', { 
@@ -430,6 +436,12 @@ export default function SettingsPage() {
     enabled: !!user,
   });
   
+  // Fetch user's unlocked name tags
+  const { data: userNameTags = [], isLoading: isLoadingNameTags } = useQuery<NameTag[]>({
+    queryKey: ['/api/user/name-tags'],
+    enabled: !!user,
+  });
+  
   // Track selected avatar border ID
   const [selectedBorderId, setSelectedBorderId] = useState<number | null>(user?.selectedAvatarBorderId || null);
   
@@ -446,6 +458,15 @@ export default function SettingsPage() {
       setAvatarBorderColor(user.avatarBorderColor);
     }
   }, [user?.selectedAvatarBorderId, user?.avatarBorderColor]);
+  
+  // Sync pending name tag with user data after save completes
+  // When the user's selectedNameTagId matches the pending selection, reset the pending state
+  useEffect(() => {
+    if (pendingNameTagId !== undefined && pendingNameTagId === user?.selectedNameTagId) {
+      // User data has updated to match our pending selection, so we can clear pending
+      setPendingNameTagId(undefined);
+    }
+  }, [user?.selectedNameTagId, pendingNameTagId]);
   
   // Mutation to save avatar border selection
   const saveAvatarBorderMutation = useMutation({
@@ -521,9 +542,19 @@ export default function SettingsPage() {
         }
       }
       
-      // Direct cache update to prevent re-renders and style flashing
-      queryClient.setQueryData(["/api/user"], updatedUser);
-      queryClient.setQueryData([`/api/users/${user?.username}`], updatedUser);
+      // Direct cache update using functional updater to merge with existing cache
+      // This preserves fields like selectedNameTagId that aren't returned in the PATCH response
+      const cacheUpdater = (oldData: any) => {
+        if (!oldData) return updatedUser;
+        return {
+          ...oldData,  // Preserve existing fields
+          ...updatedUser,  // Apply PATCH response updates
+          // Always preserve selectedNameTagId from existing cache - it was already updated by the PUT
+          selectedNameTagId: oldData.selectedNameTagId,
+        };
+      };
+      queryClient.setQueryData(["/api/user"], cacheUpdater);
+      queryClient.setQueryData([`/api/users/${user?.username}`], cacheUpdater);
       
       // Force refresh of all user-related queries to ensure UI updates
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
@@ -570,6 +601,12 @@ export default function SettingsPage() {
         setAvatarFile(null);
         setAvatarPreview('');
         setUploadingAvatar(false);
+      }
+
+      // Save name tag selection if changed
+      if (pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId) {
+        await apiRequest("PUT", "/api/user/name-tag", { nameTagId: pendingNameTagId });
+        await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       }
 
       updateProfileMutation.mutate(updatedData);
@@ -1104,6 +1141,153 @@ export default function SettingsPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Name Tag Selection Section */}
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    <Label className="text-base font-medium">Name Tag</Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Select a name tag to display below your username on your profile.
+                  </p>
+
+                  {isLoadingNameTags ? (
+                    <div className="flex items-center justify-center p-4">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    </div>
+                  ) : userNameTags.length === 0 ? (
+                    <div className="p-4 bg-muted/50 rounded-lg border text-center">
+                      <Sparkles className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">
+                        No name tags unlocked yet. Visit the store to get exclusive name tags!
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {/* Remove Name Tag button - show if there's a tag currently selected (pending or saved) */}
+                      {((pendingNameTagId !== undefined ? pendingNameTagId : user?.selectedNameTagId) !== null) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setPendingNameTagId(null)}
+                          className="w-full"
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Remove Name Tag
+                        </Button>
+                      )}
+
+                      {/* Name Tag Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {userNameTags.map((tag: NameTag) => {
+                          // Only use pendingNameTagId if it's been explicitly set (not undefined)
+                          const displayNameTagId = pendingNameTagId !== undefined ? pendingNameTagId : user?.selectedNameTagId;
+                          const isSelected = displayNameTagId === tag.id;
+                          return (
+                            <button
+                              key={tag.id}
+                              type="button"
+                              onClick={() => setPreviewNameTag(tag)}
+                              className={`
+                                relative p-2 rounded-lg transition-all transform hover:scale-105
+                                ${isSelected 
+                                  ? 'ring-2 ring-primary bg-primary/20' 
+                                  : 'border border-border hover:border-primary/50'}
+                              `}
+                            >
+                              <img
+                                src={tag.imageUrl}
+                                alt={tag.name}
+                                className="w-full h-6 object-contain"
+                                style={{
+                                  borderRadius: '2px',
+                                  boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.1)'
+                                }}
+                              />
+                              <p className="text-xs text-center mt-1 truncate">{tag.name}</p>
+
+                              {isSelected && (
+                                <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5">
+                                  <Check className="h-2.5 w-2.5" />
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Name Tag Preview Dialog */}
+                <Dialog open={!!previewNameTag} onOpenChange={(open) => !open && setPreviewNameTag(null)}>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-primary" />
+                        {previewNameTag?.name}
+                      </DialogTitle>
+                      <DialogDescription>
+                        {previewNameTag?.description || `${previewNameTag?.rarity?.charAt(0).toUpperCase()}${previewNameTag?.rarity?.slice(1)} Name Tag`}
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="flex flex-col items-center gap-4 py-4">
+                      {previewNameTag && (
+                        <div className="p-6 bg-muted/30 rounded-lg w-full flex justify-center">
+                          <img
+                            src={previewNameTag.imageUrl}
+                            alt={previewNameTag.name}
+                            className="max-w-full h-auto"
+                            style={{
+                              borderRadius: '2px',
+                              boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.3), inset 0 -2px 4px rgba(255,255,255,0.1)'
+                            }}
+                          />
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className={`capitalize font-medium ${
+                          previewNameTag?.rarity === 'legendary' ? 'text-yellow-400' :
+                          previewNameTag?.rarity === 'epic' ? 'text-purple-400' :
+                          previewNameTag?.rarity === 'rare' ? 'text-blue-400' : 'text-gray-400'
+                        }`}>
+                          {previewNameTag?.rarity}
+                        </span>
+                        <span className="text-muted-foreground">•</span>
+                        <span className="text-muted-foreground">
+                          {previewNameTag?.isDefault ? 'Default Tag' : 'Unlocked'}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <DialogFooter className="gap-2 sm:gap-0">
+                      <Button variant="outline" onClick={() => setPreviewNameTag(null)}>
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          if (previewNameTag) {
+                            setPendingNameTagId(previewNameTag.id);
+                            setPreviewNameTag(null);
+                          }
+                        }}
+                        disabled={(pendingNameTagId !== undefined ? pendingNameTagId : user?.selectedNameTagId) === previewNameTag?.id}
+                      >
+                        {(pendingNameTagId !== undefined ? pendingNameTagId : user?.selectedNameTagId) === previewNameTag?.id ? (
+                          <>
+                            <Check className="h-4 w-4 mr-2" />
+                            Selected
+                          </>
+                        ) : (
+                          'Select This Tag'
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
 
                 <div className="space-y-2">
                   <Label htmlFor="displayName">Display Name</Label>
