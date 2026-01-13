@@ -1171,7 +1171,7 @@ export default function SettingsPage() {
                         
                         return (
                           <div className="flex flex-col items-center space-y-3">
-                            <div className="p-6 bg-muted/30 rounded-lg w-full flex flex-col items-center">
+                            <div className="p-3 bg-muted/30 rounded-lg w-full flex flex-col items-center">
                               {selectedTag ? (
                                 <>
                                   <img
