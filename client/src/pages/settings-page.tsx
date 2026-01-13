@@ -606,6 +606,10 @@ export default function SettingsPage() {
       if (pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId) {
         await apiRequest("PUT", "/api/user/name-tag", { nameTagId: pendingNameTagId });
         await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        // Also invalidate the profile's name tag query so it updates on the profile page
+        if (user?.id) {
+          await queryClient.invalidateQueries({ queryKey: ['/api/user', user.id, 'name-tag'] });
+        }
       }
 
       updateProfileMutation.mutate(updatedData);
