@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import Cropper, { Area } from 'react-easy-crop';
 import type { AssetReward } from '@shared/schema';
 
@@ -724,6 +724,8 @@ const NameTagInlineSection: React.FC<{
   pendingNameTagId?: number | null;
   onNameTagChange?: (nameTagId: number | null) => void;
 }> = ({ userId, currentNameTagId, pendingNameTagId, onNameTagChange }) => {
+  const [previewTag, setPreviewTag] = useState<NameTag | null>(null);
+  
   const { data: unlockedNameTags = [], isLoading } = useQuery<NameTag[]>({
     queryKey: ['/api/user/name-tags'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
@@ -814,7 +816,7 @@ const NameTagInlineSection: React.FC<{
                 <button
                   key={tag.id}
                   type="button"
-                  onClick={() => handleNameTagSelect(tag.id)}
+                  onClick={() => setPreviewTag(tag)}
                   className={`
                     relative p-2 rounded-lg transition-all transform hover:scale-105
                     ${isSelected 
@@ -845,6 +847,71 @@ const NameTagInlineSection: React.FC<{
           </div>
         </div>
       )}
+
+      {/* Name Tag Preview Dialog */}
+      <Dialog open={!!previewTag} onOpenChange={(open) => !open && setPreviewTag(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              {previewTag?.name}
+            </DialogTitle>
+            <DialogDescription>
+              {previewTag?.description || `${previewTag?.rarity?.charAt(0).toUpperCase()}${previewTag?.rarity?.slice(1)} Name Tag`}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex flex-col items-center gap-4 py-4">
+            {previewTag && (
+              <div className="p-6 bg-muted/30 rounded-lg w-full flex justify-center">
+                <img
+                  src={previewTag.imageUrl}
+                  alt={previewTag.name}
+                  className="max-w-full h-auto"
+                  style={{
+                    borderRadius: '2px',
+                    boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.3), inset 0 -2px 4px rgba(255,255,255,0.1)'
+                  }}
+                />
+              </div>
+            )}
+            
+            <div className="flex items-center gap-2 text-sm">
+              <span className={`capitalize font-medium ${getRarityLabel(previewTag?.rarity || 'common')}`}>
+                {previewTag?.rarity}
+              </span>
+              <span className="text-muted-foreground">•</span>
+              <span className="text-muted-foreground">
+                {previewTag?.isDefault ? 'Default Tag' : 'Unlocked'}
+              </span>
+            </div>
+          </div>
+          
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setPreviewTag(null)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                if (previewTag) {
+                  handleNameTagSelect(previewTag.id);
+                  setPreviewTag(null);
+                }
+              }}
+              disabled={displayNameTagId === previewTag?.id}
+            >
+              {displayNameTagId === previewTag?.id ? (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  Selected
+                </>
+              ) : (
+                'Select This Tag'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {lockedTags.length > 0 && (
         <div className="space-y-3 pt-4 border-t">
