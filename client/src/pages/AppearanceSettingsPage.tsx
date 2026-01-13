@@ -730,12 +730,30 @@ const NameTagInlineSection: React.FC<{
     enabled: !!userId,
   });
 
+  const { data: allNameTags = [], isLoading: allLoading } = useQuery<NameTag[]>({
+    queryKey: ['/api/name-tags'],
+    queryFn: async () => {
+      const res = await fetch('/api/name-tags');
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
-      case 'legendary': return 'from-yellow-400 to-yellow-600';
-      case 'epic': return 'from-purple-400 to-purple-600';
-      case 'rare': return 'from-blue-400 to-blue-600';
-      default: return 'from-gray-400 to-gray-600';
+      case 'legendary': return 'border-yellow-500 bg-yellow-500/10';
+      case 'epic': return 'border-purple-500 bg-purple-500/10';
+      case 'rare': return 'border-blue-500 bg-blue-500/10';
+      default: return 'border-gray-500 bg-gray-500/10';
+    }
+  };
+
+  const getRarityLabel = (rarity: string) => {
+    switch (rarity) {
+      case 'legendary': return 'text-yellow-400';
+      case 'epic': return 'text-purple-400';
+      case 'rare': return 'text-blue-400';
+      default: return 'text-gray-400';
     }
   };
 
@@ -747,8 +765,11 @@ const NameTagInlineSection: React.FC<{
 
   const displayNameTagId = pendingNameTagId !== undefined ? pendingNameTagId : currentNameTagId;
 
+  const unlockedIds = new Set(unlockedNameTags.map(t => t.id));
+  const lockedTags = allNameTags.filter(t => !unlockedIds.has(t.id) && !t.isDefault);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
         <h4 className="text-base font-medium flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
@@ -767,11 +788,12 @@ const NameTagInlineSection: React.FC<{
         <div className="p-4 bg-muted/50 rounded-lg border text-center">
           <Sparkles className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            No name tags unlocked yet. Complete achievements to unlock exclusive name tags!
+            No name tags unlocked yet. Visit the store to get exclusive name tags!
           </p>
         </div>
       ) : (
         <div className="space-y-3">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Your Name Tags</p>
           {displayNameTagId && (
             <Button
               variant="outline"
@@ -786,7 +808,7 @@ const NameTagInlineSection: React.FC<{
           )}
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {unlockedNameTags.map((tag) => {
+            {unlockedNameTags.map((tag: NameTag) => {
               const isSelected = displayNameTagId === tag.id;
               return (
                 <button
@@ -810,6 +832,7 @@ const NameTagInlineSection: React.FC<{
                       boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.1)'
                     }}
                   />
+                  <p className="text-xs text-center mt-1 truncate">{tag.name}</p>
 
                   {isSelected && (
                     <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5">
@@ -819,6 +842,38 @@ const NameTagInlineSection: React.FC<{
                 </button>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {lockedTags.length > 0 && (
+        <div className="space-y-3 pt-4 border-t">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Available in Store</p>
+            <a href="/store" className="text-xs text-primary hover:underline">View Store</a>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {lockedTags.map((tag: NameTag) => (
+              <div
+                key={tag.id}
+                className={`relative p-2 rounded-lg border-2 opacity-60 ${getRarityColor(tag.rarity)}`}
+              >
+                <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px] rounded-lg flex items-center justify-center z-10">
+                  <span className="text-xs font-medium bg-background/90 px-2 py-0.5 rounded">Locked</span>
+                </div>
+                <img
+                  src={tag.imageUrl}
+                  alt={tag.name}
+                  className="w-full h-6 object-contain grayscale"
+                  style={{
+                    borderRadius: '2px',
+                    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.1)'
+                  }}
+                />
+                <p className="text-xs text-center mt-1 truncate">{tag.name}</p>
+                <p className={`text-[10px] text-center capitalize ${getRarityLabel(tag.rarity)}`}>{tag.rarity}</p>
+              </div>
+            ))}
           </div>
         </div>
       )}
