@@ -34,6 +34,16 @@ interface ProfileHeaderProps {
   isFollowLoading?: boolean;
 }
 
+interface NameTag {
+  id: number;
+  name: string;
+  imageUrl: string;
+  rarity: string;
+  isDefault: boolean;
+  isActive: boolean;
+  description?: string | null;
+}
+
 const ProfileHeader = ({ 
   profile, 
   isCurrentUser, 
@@ -44,6 +54,15 @@ const ProfileHeader = ({
 }: ProfileHeaderProps) => {
   const { user } = useAuth();
   const { isOpen, actionType, openDialog, closeDialog } = useJoinDialog();
+
+  const { data: nameTagData } = useQuery<{ nameTag: NameTag | null }>({
+    queryKey: ['/api/user', profile.id, 'name-tag'],
+    queryFn: async () => {
+      const res = await fetch(`/api/user/${profile.id}/name-tag`);
+      if (!res.ok) return { nameTag: null };
+      return res.json();
+    },
+  });
 
   const handleFollowClick = () => {
     if (!user) {
@@ -209,6 +228,33 @@ const ProfileHeader = ({
 
               {/* Handle */}
               <p className="text-sm text-muted-foreground">@{profile.username}</p>
+
+              {/* Name Tag */}
+              {nameTagData?.nameTag && (
+                <div className="mt-1">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <img 
+                          src={nameTagData.nameTag.imageUrl} 
+                          alt={nameTagData.nameTag.name}
+                          className="h-6 rounded-sm"
+                          style={{
+                            borderRadius: '2px',
+                            boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.1)'
+                          }}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-sm font-medium">{nameTagData.nameTag.name}</p>
+                        {nameTagData.nameTag.description && (
+                          <p className="text-xs text-muted-foreground">{nameTagData.nameTag.description}</p>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              )}
 
               {/* Bio */}
               <div>

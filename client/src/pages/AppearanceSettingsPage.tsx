@@ -706,6 +706,126 @@ const ProfilePictureBorderInlineSection: React.FC<{
   );
 };
 
+// Name Tag interface
+interface NameTag {
+  id: number;
+  name: string;
+  imageUrl: string;
+  rarity: string;
+  isDefault: boolean;
+  isActive: boolean;
+  description?: string | null;
+}
+
+// Inline Name Tag Selection Component
+const NameTagInlineSection: React.FC<{
+  userId?: number;
+  currentNameTagId?: number | null;
+  pendingNameTagId?: number | null;
+  onNameTagChange?: (nameTagId: number | null) => void;
+}> = ({ userId, currentNameTagId, pendingNameTagId, onNameTagChange }) => {
+  const { data: unlockedNameTags = [], isLoading } = useQuery<NameTag[]>({
+    queryKey: ['/api/user/name-tags'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!userId,
+  });
+
+  const getRarityColor = (rarity: string) => {
+    switch (rarity) {
+      case 'legendary': return 'from-yellow-400 to-yellow-600';
+      case 'epic': return 'from-purple-400 to-purple-600';
+      case 'rare': return 'from-blue-400 to-blue-600';
+      default: return 'from-gray-400 to-gray-600';
+    }
+  };
+
+  const handleNameTagSelect = (nameTagId: number | null) => {
+    if (onNameTagChange) {
+      onNameTagChange(nameTagId);
+    }
+  };
+
+  const displayNameTagId = pendingNameTagId !== undefined ? pendingNameTagId : currentNameTagId;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h4 className="text-base font-medium flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          Name Tag
+        </h4>
+        <p className="text-xs text-muted-foreground">
+          Select a name tag to display below your username on your profile
+        </p>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center p-4">
+          <Loader2 className="h-5 w-5 animate-spin" />
+        </div>
+      ) : unlockedNameTags.length === 0 ? (
+        <div className="p-4 bg-muted/50 rounded-lg border text-center">
+          <Sparkles className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            No name tags unlocked yet. Complete achievements to unlock exclusive name tags!
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {displayNameTagId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleNameTagSelect(null)}
+              className="w-full"
+              data-testid="button-remove-name-tag-inline"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Remove Name Tag
+            </Button>
+          )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {unlockedNameTags.map((tag) => {
+              const isSelected = displayNameTagId === tag.id;
+              return (
+                <button
+                  key={tag.id}
+                  type="button"
+                  onClick={() => handleNameTagSelect(tag.id)}
+                  className={`
+                    relative p-2 rounded-lg transition-all transform hover:scale-105
+                    ${isSelected 
+                      ? 'ring-2 ring-primary bg-primary/20' 
+                      : 'border border-border hover:border-primary/50'}
+                  `}
+                  data-testid={`button-inline-name-tag-${tag.id}`}
+                >
+                  <img
+                    src={tag.imageUrl}
+                    alt={tag.name}
+                    className="w-full h-6 object-contain"
+                    style={{
+                      borderRadius: '2px',
+                      boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.1)'
+                    }}
+                  />
+
+                  {isSelected && (
+                    <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5">
+                      <Check className="h-2.5 w-2.5" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const AppearanceSettingsPage: React.FC = () => {
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
@@ -716,6 +836,9 @@ const AppearanceSettingsPage: React.FC = () => {
   
   // Pending border selection (only saved on "Save Changes")
   const [pendingBorderId, setPendingBorderId] = useState<number | null | undefined>(undefined);
+  
+  // Pending name tag selection (only saved on "Save Changes")
+  const [pendingNameTagId, setPendingNameTagId] = useState<number | null | undefined>(undefined);
   
   // Crop modal state
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
@@ -972,11 +1095,24 @@ const AppearanceSettingsPage: React.FC = () => {
         }
       }
 
+      // Save pending name tag selection if there is one
+      if (pendingNameTagId !== undefined) {
+        try {
+          await apiRequest('PUT', '/api/user/name-tag', { nameTagId: pendingNameTagId });
+          queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/user', user.id, 'name-tag'] });
+          console.log('💾 Name tag saved:', pendingNameTagId);
+        } catch (nameTagError) {
+          console.error('Failed to save name tag:', nameTagError);
+        }
+      }
+
       // Handle success state immediately since mutation is async
-      // Reset avatar upload state and pending border
+      // Reset avatar upload state and pending selections
       setAvatarFile(null);
       setAvatarPreview('');
       setPendingBorderId(undefined);
+      setPendingNameTagId(undefined);
 
       console.log('💾 Profile saved successfully - preview colors will be preserved');
     } catch (error) {
@@ -1163,6 +1299,16 @@ const AppearanceSettingsPage: React.FC = () => {
                   </FormItem>
                 )}
               />
+
+              {/* Name Tag Selection */}
+              <div className="border rounded-lg p-4 bg-card">
+                <NameTagInlineSection 
+                  userId={user?.id}
+                  currentNameTagId={user?.selectedNameTagId}
+                  pendingNameTagId={pendingNameTagId}
+                  onNameTagChange={(nameTagId) => setPendingNameTagId(nameTagId)}
+                />
+              </div>
 
               {/* Bio */}
               <FormField
