@@ -62,6 +62,8 @@ const ProfileHeader = ({
       if (!res.ok) return { nameTag: null };
       return res.json();
     },
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   const handleFollowClick = () => {
