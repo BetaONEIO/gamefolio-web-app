@@ -48,7 +48,6 @@ const ClipPage = React.lazy(() => import("./pages/ClipPage"));
 const UploadPage = React.lazy(() => import("./pages/UploadPage"));
 const ScreenshotUploadPage = React.lazy(() => import("./pages/ScreenshotUploadPage"));
 const AccountSettingsPage = React.lazy(() => import("./pages/AccountSettingsPage"));
-const AppearanceSettingsPage = React.lazy(() => import("./pages/AppearanceSettingsPage"));
 const GameCategoriesPage = React.lazy(() => import("./pages/GameCategoriesPage"));
 const LeaderboardPage = React.lazy(() => import("./pages/LeaderboardPage"));
 const CustomizePage = React.lazy(() => import("./pages/customize-page"));
@@ -274,7 +273,6 @@ function Router() {
           <ProtectedRoute path="/upload-success/:contentType/:contentId" component={PostUploadSuccessPage} />
           <ProtectedRoute path="/account/settings" component={AccountSettingsPage} />
           <ProtectedRoute path="/settings/profile" component={SettingsPage} />
-          <ProtectedRoute path="/settings/appearance" component={AppearanceSettingsPage} />
           <ProtectedRoute path="/customize" component={CustomizePage} />
           <ProtectedRoute path="/browse/games/:category" component={GameCategoriesPage} />
           <ProtectedRoute path="/browse/games/categories" component={GameCategoriesPage} />
