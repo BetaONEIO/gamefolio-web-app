@@ -245,7 +245,6 @@ export default function SettingsPage() {
   
   // Name tag state - undefined means no pending change, null means remove tag, number means select tag
   const [pendingNameTagId, setPendingNameTagId] = useState<number | null | undefined>(undefined);
-  const [previewNameTag, setPreviewNameTag] = useState<NameTag | null>(null);
   
   // Crop modal state
   const [showCropModal, setShowCropModal] = useState(false);
@@ -1164,7 +1163,51 @@ export default function SettingsPage() {
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
+                      {/* Current Name Tag Preview - shown above the grid */}
+                      {(() => {
+                        const displayNameTagId = pendingNameTagId !== undefined ? pendingNameTagId : user?.selectedNameTagId;
+                        const selectedTag = displayNameTagId ? userNameTags.find((t: NameTag) => t.id === displayNameTagId) : null;
+                        
+                        return (
+                          <div className="flex flex-col items-center space-y-3">
+                            <div className="p-4 bg-muted/30 rounded-lg w-full flex flex-col items-center">
+                              {selectedTag ? (
+                                <>
+                                  <img
+                                    src={selectedTag.imageUrl}
+                                    alt={selectedTag.name}
+                                    className="max-w-full h-auto max-h-16"
+                                    style={{
+                                      borderRadius: '2px',
+                                      boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.3), inset 0 -2px 4px rgba(255,255,255,0.1)'
+                                    }}
+                                  />
+                                  <p className="text-sm font-medium mt-2">{selectedTag.name}</p>
+                                  <div className="flex items-center gap-2 text-xs mt-1">
+                                    <span className={`capitalize font-medium ${
+                                      selectedTag.rarity === 'legendary' ? 'text-yellow-400' :
+                                      selectedTag.rarity === 'epic' ? 'text-purple-400' :
+                                      selectedTag.rarity === 'rare' ? 'text-blue-400' : 'text-gray-400'
+                                    }`}>
+                                      {selectedTag.rarity}
+                                    </span>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="text-center py-2">
+                                  <Sparkles className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                                  <p className="text-sm text-muted-foreground">No name tag selected</p>
+                                </div>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {selectedTag ? (pendingNameTagId !== undefined ? 'New Selection' : 'Current') : 'Select a tag below'}
+                            </span>
+                          </div>
+                        );
+                      })()}
+
                       {/* Remove Name Tag button - show if there's a tag currently selected (pending or saved) */}
                       {((pendingNameTagId !== undefined ? pendingNameTagId : user?.selectedNameTagId) !== null) && (
                         <Button
@@ -1181,14 +1224,13 @@ export default function SettingsPage() {
                       {/* Name Tag Grid */}
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {userNameTags.map((tag: NameTag) => {
-                          // Only use pendingNameTagId if it's been explicitly set (not undefined)
                           const displayNameTagId = pendingNameTagId !== undefined ? pendingNameTagId : user?.selectedNameTagId;
                           const isSelected = displayNameTagId === tag.id;
                           return (
                             <button
                               key={tag.id}
                               type="button"
-                              onClick={() => setPreviewNameTag(tag)}
+                              onClick={() => setPendingNameTagId(tag.id)}
                               className={`
                                 relative p-2 rounded-lg transition-all transform hover:scale-105
                                 ${isSelected 
@@ -1219,75 +1261,6 @@ export default function SettingsPage() {
                     </div>
                   )}
                 </div>
-
-                {/* Name Tag Preview Dialog */}
-                <Dialog open={!!previewNameTag} onOpenChange={(open) => !open && setPreviewNameTag(null)}>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-primary" />
-                        {previewNameTag?.name}
-                      </DialogTitle>
-                      <DialogDescription>
-                        {previewNameTag?.description || `${previewNameTag?.rarity?.charAt(0).toUpperCase()}${previewNameTag?.rarity?.slice(1)} Name Tag`}
-                      </DialogDescription>
-                    </DialogHeader>
-                    
-                    <div className="flex flex-col items-center gap-4 py-4">
-                      {previewNameTag && (
-                        <div className="p-6 bg-muted/30 rounded-lg w-full flex justify-center">
-                          <img
-                            src={previewNameTag.imageUrl}
-                            alt={previewNameTag.name}
-                            className="max-w-full h-auto"
-                            style={{
-                              borderRadius: '2px',
-                              boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.3), inset 0 -2px 4px rgba(255,255,255,0.1)'
-                            }}
-                          />
-                        </div>
-                      )}
-                      
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className={`capitalize font-medium ${
-                          previewNameTag?.rarity === 'legendary' ? 'text-yellow-400' :
-                          previewNameTag?.rarity === 'epic' ? 'text-purple-400' :
-                          previewNameTag?.rarity === 'rare' ? 'text-blue-400' : 'text-gray-400'
-                        }`}>
-                          {previewNameTag?.rarity}
-                        </span>
-                        <span className="text-muted-foreground">•</span>
-                        <span className="text-muted-foreground">
-                          {previewNameTag?.isDefault ? 'Default Tag' : 'Unlocked'}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <DialogFooter className="gap-2 sm:gap-0">
-                      <Button variant="outline" onClick={() => setPreviewNameTag(null)}>
-                        Cancel
-                      </Button>
-                      <Button 
-                        onClick={() => {
-                          if (previewNameTag) {
-                            setPendingNameTagId(previewNameTag.id);
-                            setPreviewNameTag(null);
-                          }
-                        }}
-                        disabled={(pendingNameTagId !== undefined ? pendingNameTagId : user?.selectedNameTagId) === previewNameTag?.id}
-                      >
-                        {(pendingNameTagId !== undefined ? pendingNameTagId : user?.selectedNameTagId) === previewNameTag?.id ? (
-                          <>
-                            <Check className="h-4 w-4 mr-2" />
-                            Selected
-                          </>
-                        ) : (
-                          'Select This Tag'
-                        )}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
 
                 <div className="space-y-2">
                   <Label htmlFor="displayName">Display Name</Label>
