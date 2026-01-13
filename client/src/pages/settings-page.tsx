@@ -1171,19 +1171,23 @@ export default function SettingsPage() {
                         
                         return (
                           <div className="flex flex-col items-center space-y-3">
-                            <div className="p-4 bg-muted/30 rounded-lg w-full flex flex-col items-center">
+                            <div className="p-8 bg-muted/30 rounded-lg w-full flex flex-col items-center overflow-visible">
                               {selectedTag ? (
                                 <>
-                                  <img
-                                    src={selectedTag.imageUrl}
-                                    alt={selectedTag.name}
-                                    className="max-w-full h-auto max-h-16"
-                                    style={{
-                                      borderRadius: '2px',
-                                      boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.3), inset 0 -2px 4px rgba(255,255,255,0.1)'
-                                    }}
-                                  />
-                                  <p className="text-sm font-medium mt-2">{selectedTag.name}</p>
+                                  <div className="my-8">
+                                    <img
+                                      src={selectedTag.imageUrl}
+                                      alt={selectedTag.name}
+                                      className="h-auto"
+                                      style={{
+                                        borderRadius: '2px',
+                                        boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.3), inset 0 -2px 4px rgba(255,255,255,0.1)',
+                                        transform: 'scale(2)',
+                                        transformOrigin: 'center'
+                                      }}
+                                    />
+                                  </div>
+                                  <p className="text-sm font-medium mt-4">{selectedTag.name}</p>
                                   <div className="flex items-center gap-2 text-xs mt-1">
                                     <span className={`capitalize font-medium ${
                                       selectedTag.rarity === 'legendary' ? 'text-yellow-400' :
