@@ -1277,13 +1277,15 @@ const ProfilePage = () => {
               >
                 {/* Container with image on top */}
                 <div className="relative">
-                  {/* Dark rounded rectangle background */}
+                  {/* Glass rounded rectangle background */}
                   <div 
-                    className="bg-gray-900 rounded-full shadow-lg"
+                    className="rounded-full shadow-lg backdrop-blur-md"
                     style={{
                       width: '210px',
                       height: '50px',
-                      marginTop: '12px'
+                      marginTop: '12px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)'
                     }}
                   />
                   {/* Image sitting on top */}
@@ -1321,36 +1323,6 @@ const ProfilePage = () => {
               <div className="flex flex-col items-center min-w-[60px]">
                 <span className="font-bold text-lg">{Number(profile._count?.following || 0)}</span>
                 <span className="text-muted-foreground text-xs">Following</span>
-              </div>
-            </div>
-            {/* Second row: Likes, Fires, Streak */}
-            <div className="flex justify-center gap-x-3">
-              <div className="flex flex-col items-center min-w-[60px]" data-testid="stat-likes-received-mobile">
-                <span className="font-bold text-lg flex items-center gap-1">
-                  <Heart className="h-4 w-4 text-red-500" />
-                  {Number(profile._count?.likesReceived || 0)}
-                </span>
-                <span className="text-muted-foreground text-xs">Likes</span>
-              </div>
-              <div className="flex flex-col items-center min-w-[60px]" data-testid="stat-fires-received-mobile">
-                <span className="font-bold text-lg flex items-center gap-1">
-                  <Flame className="h-4 w-4 text-orange-500" />
-                  {Number(profile._count?.firesReceived || 0)}
-                </span>
-                <span className="text-muted-foreground text-xs">Fires</span>
-              </div>
-              <div className="flex flex-col items-center min-w-[60px]" data-testid="stat-streak-mobile">
-                <span className="font-bold text-lg flex items-center gap-1">
-                  <Flame 
-                    className="h-4 w-4 text-orange-500" 
-                    fill="currentColor"
-                    style={{
-                      filter: 'drop-shadow(0 0 4px rgba(249, 115, 22, 0.6)) drop-shadow(0 0 8px rgba(249, 115, 22, 0.4))'
-                    }}
-                  />
-                  {Number(profile.currentStreak || 0)}
-                </span>
-                <span className="text-muted-foreground text-xs">Streak</span>
               </div>
             </div>
           </div>
@@ -1635,13 +1607,15 @@ const ProfilePage = () => {
                   >
                     {/* Container with image on top */}
                     <div className="relative">
-                      {/* Dark rounded rectangle background */}
+                      {/* Glass rounded rectangle background */}
                       <div 
-                        className="bg-gray-900 rounded-full shadow-lg"
+                        className="rounded-full shadow-lg backdrop-blur-md"
                         style={{
                           width: '360px',
                           height: '80px',
-                          marginTop: '20px'
+                          marginTop: '20px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)'
                         }}
                       />
                       {/* Image sitting on top */}
@@ -1678,30 +1652,6 @@ const ProfilePage = () => {
                     <div className="flex items-center gap-1">
                       <span className="font-semibold">{Number(profile._count?.following || 0)}</span>
                       <span className="text-muted-foreground">Following</span>
-                    </div>
-                  </div>
-                  {/* Second row: Likes, Fires, Streak */}
-                  <div className="flex gap-6 items-center">
-                    <div className="flex items-center gap-1" data-testid="stat-likes-received-desktop">
-                      <Heart className="h-4 w-4 text-red-500" />
-                      <span className="font-semibold">{Number(profile._count?.likesReceived || 0)}</span>
-                      <span className="text-muted-foreground">Likes</span>
-                    </div>
-                    <div className="flex items-center gap-1" data-testid="stat-fires-received-desktop">
-                      <Flame className="h-4 w-4 text-orange-500" />
-                      <span className="font-semibold">{Number(profile._count?.firesReceived || 0)}</span>
-                      <span className="text-muted-foreground">Fires</span>
-                    </div>
-                    <div className="flex items-center gap-1" data-testid="stat-streak-desktop">
-                      <Flame 
-                        className="h-4 w-4 text-orange-500" 
-                        fill="currentColor"
-                        style={{
-                          filter: 'drop-shadow(0 0 4px rgba(249, 115, 22, 0.6)) drop-shadow(0 0 8px rgba(249, 115, 22, 0.4))'
-                        }}
-                      />
-                      <span className="font-semibold">{Number(profile.currentStreak || 0)}</span>
-                      <span className="text-muted-foreground">Streak</span>
                     </div>
                   </div>
                 </div>
