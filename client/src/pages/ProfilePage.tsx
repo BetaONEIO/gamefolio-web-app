@@ -315,6 +315,19 @@ const ProfilePage = () => {
     enabled: !!profile?.id && canViewContent,
   });
 
+  // Fetch user's selected name tag
+  const { data: nameTagData } = useQuery<{ nameTag: { id: number; name: string; imageUrl: string; rarity: string; description?: string | null } | null }>({
+    queryKey: ['/api/user', profile?.id, 'name-tag'],
+    queryFn: async () => {
+      const res = await fetch(`/api/user/${profile?.id}/name-tag`);
+      if (!res.ok) return { nameTag: null };
+      return res.json();
+    },
+    enabled: !!profile?.id,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+
   // Fetch screenshot by shareCode (when shareCode is present in URL)
   const { data: screenshotByShareCode, isLoading: isLoadingScreenshotByShareCode } = useQuery<Screenshot>({
     queryKey: [`/api/screenshots/share/${shareCode}`],
@@ -1253,6 +1266,22 @@ const ProfilePage = () => {
               />
             </div>
             <span className="text-base text-white/70 font-normal">@{profile.username}</span>
+            
+            {/* Name Tag */}
+            {nameTagData?.nameTag && (
+              <div className="mt-2">
+                <img 
+                  src={nameTagData.nameTag.imageUrl} 
+                  alt={nameTagData.nameTag.name}
+                  className="h-6 rounded-sm"
+                  title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                  style={{
+                    borderRadius: '2px',
+                    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.1)'
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           {/* Stats under username on mobile - Two rows */}
@@ -1573,6 +1602,22 @@ const ProfilePage = () => {
                   />
                 </div>
                 <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
+                
+                {/* Name Tag */}
+                {nameTagData?.nameTag && (
+                  <div className="mt-2">
+                    <img 
+                      src={nameTagData.nameTag.imageUrl} 
+                      alt={nameTagData.nameTag.name}
+                      className="h-6 rounded-sm"
+                      title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                      style={{
+                        borderRadius: '2px',
+                        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.1)'
+                      }}
+                    />
+                  </div>
+                )}
 
                 {/* Stats positioned directly below username - Two rows */}
                 <div className="flex flex-col gap-2 mt-2">
