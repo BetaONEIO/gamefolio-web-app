@@ -1730,79 +1730,46 @@ const ProfilePage = () => {
               </div>
             )}
 
-            {/* Name Tag and Share Button - positioned absolutely below banner */}
-            <div 
-              className="absolute flex items-center gap-4"
-              style={{
-                top: '220px',
-                right: '5%'
-              }}
-            >
-              {/* Name Tag */}
-              {nameTagData?.nameTag && (
-                <div className="flex flex-col items-center">
-                  <div className="relative">
-                    <div 
-                      className="rounded-full shadow-lg backdrop-blur-md"
-                      style={{
-                        width: '360px',
-                        height: '80px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)'
-                      }}
-                    />
-                    <img 
-                      src={nameTagData.nameTag.imageUrl} 
-                      alt={nameTagData.nameTag.name}
-                      title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                      className="absolute"
-                      style={{
-                        width: '336px',
-                        height: 'auto',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)'
-                      }}
-                    />
-                  </div>
-                  <span className="text-xs text-white/60 mt-2 uppercase tracking-wider">Nametag</span>
+            {/* Name Tag - positioned absolutely below banner, only show if name tag exists */}
+            {nameTagData?.nameTag && (
+              <div 
+                className="absolute flex flex-col items-center"
+                style={{
+                  top: '220px',
+                  right: '5%'
+                }}
+              >
+                <div className="relative">
+                  <div 
+                    className="rounded-full shadow-lg backdrop-blur-md"
+                    style={{
+                      width: '360px',
+                      height: '80px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)'
+                    }}
+                  />
+                  <img 
+                    src={nameTagData.nameTag.imageUrl} 
+                    alt={nameTagData.nameTag.name}
+                    title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                    className="absolute"
+                    style={{
+                      width: '336px',
+                      height: 'auto',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)'
+                    }}
+                  />
                 </div>
-              )}
+                <span className="text-xs text-white/60 mt-2 uppercase tracking-wider">Nametag</span>
+              </div>
+            )}
 
-              {/* Share Button */}
-              <GamefolioShareDialog 
-                username={profile.username}
-                userProfile={{
-                  displayName: profile.displayName,
-                  bio: profile.bio,
-                  avatarUrl: profile.avatarUrl,
-                  bannerUrl: profile.bannerUrl,
-                  selectedAvatarBorderId: profile.selectedAvatarBorderId,
-                  avatarBorderColor: profile.avatarBorderColor
-                }}
-                userStats={{
-                  clips: profile._count?.clips || 0,
-                  followers: profile._count?.followers || 0,
-                  following: profile._count?.following || 0
-                }}
-                trigger={
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20 h-12 w-12 p-0"
-                  >
-                    <Share2 className="h-5 w-5" />
-                  </Button>
-                }
-              />
-            </div>
-          </div>
-
-          {/* Right side - Action buttons */}
-          <div className="flex-1 flex justify-end">
-            {/* Action buttons */}
-              {!isOwnProfile && currentUser && (
-                <div className="flex gap-2 flex-shrink-0 self-start mt-0">
+            {/* Action buttons - Follow, Message, Share - positioned below user info */}
+            {!isOwnProfile && currentUser && (
+              <div className="flex gap-2 mt-4">
                   <Button 
                     onClick={handleFollowClick}
                     variant={followRequestStatus === 'following' ? "default" : (followRequestStatus === 'requested' ? "outline" : "outline")}
@@ -1885,10 +1852,39 @@ const ProfilePage = () => {
                       </Button>
                     }
                   />
-                </div>
-              )}
+              </div>
+            )}
 
-            </div>
+            {/* Share button for own profile */}
+            {isOwnProfile && (
+              <div className="flex gap-2 mt-4">
+                <GamefolioShareDialog 
+                  username={profile.username}
+                  userProfile={{
+                    displayName: profile.displayName,
+                    bio: profile.bio,
+                    avatarUrl: profile.avatarUrl,
+                    bannerUrl: profile.bannerUrl,
+                    selectedAvatarBorderId: profile.selectedAvatarBorderId,
+                    avatarBorderColor: profile.avatarBorderColor
+                  }}
+                  userStats={{
+                    clips: profile._count?.clips || 0,
+                    followers: profile._count?.followers || 0,
+                    following: profile._count?.following || 0
+                  }}
+                  trigger={
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
+                    >
+                      <Share2 className="h-4 w-4 mr-1" /> Share
+                    </Button>
+                  }
+                />
+              </div>
+            )}
           </div>
         </div>
 
