@@ -1269,17 +1269,23 @@ const ProfilePage = () => {
             
             {/* Name Tag */}
             {nameTagData?.nameTag && (
-              <div className="mt-2">
+              <div 
+                className="mt-2 inline-block"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.4)',
+                  borderRadius: '8px',
+                  padding: '0'
+                }}
+              >
                 <img 
                   src={nameTagData.nameTag.imageUrl} 
                   alt={nameTagData.nameTag.name}
-                  className="rounded-sm"
                   title={nameTagData.nameTag.description || nameTagData.nameTag.name}
                   style={{
                     width: '200px',
                     height: 'auto',
-                    borderRadius: '4px',
-                    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.1)'
+                    display: 'block',
+                    borderRadius: '8px'
                   }}
                 />
               </div>
@@ -1607,17 +1613,23 @@ const ProfilePage = () => {
                 
                 {/* Name Tag */}
                 {nameTagData?.nameTag && (
-                  <div className="mt-2">
+                  <div 
+                    className="mt-2 inline-block"
+                    style={{
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      borderRadius: '8px',
+                      padding: '0'
+                    }}
+                  >
                     <img 
                       src={nameTagData.nameTag.imageUrl} 
                       alt={nameTagData.nameTag.name}
-                      className="rounded-sm"
                       title={nameTagData.nameTag.description || nameTagData.nameTag.name}
                       style={{
                         width: '280px',
                         height: 'auto',
-                        borderRadius: '4px',
-                        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.1)'
+                        display: 'block',
+                        borderRadius: '8px'
                       }}
                     />
                   </div>
