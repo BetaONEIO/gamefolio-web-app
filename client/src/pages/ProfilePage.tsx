@@ -1526,167 +1526,115 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        {/* Desktop Layout */}
-        <div className="hidden md:flex flex-col pb-4 relative max-w-[90%] mx-auto" style={{ marginTop: '-100px' }}>
-          {/* Top row: Avatar and Username side by side */}
-          <div className="flex items-end gap-6 mb-4">
-            {/* Profile Picture positioned to overlap banner - half on, half off */}
-            <div className="relative flex-shrink-0">
-            {/* Circular glow - only show when NO SVG border is selected (CustomAvatar handles its own glow) */}
-            {!profile.selectedAvatarBorderId && (
+        {/* Desktop Layout - Vertical stacked on left */}
+        <div className="hidden md:flex flex-row pb-4 relative max-w-[90%] mx-auto" style={{ marginTop: '-100px' }}>
+          {/* Left side - Profile info stacked vertically */}
+          <div className="flex flex-col">
+            {/* Profile Picture positioned to overlap banner */}
+            <div className="relative flex-shrink-0 mb-4">
+              {/* Circular glow - only show when NO SVG border is selected (CustomAvatar handles its own glow) */}
+              {!profile.selectedAvatarBorderId && (
+                <div 
+                  className="absolute inset-0 rounded-full animate-pulse"
+                  style={{
+                    background: `linear-gradient(45deg, hsl(var(--primary)), hsl(var(--card)))`,
+                    padding: '4px',
+                    filter: `drop-shadow(0 0 20px hsl(var(--primary)))`,
+                  }}
+                >
+                  <div className="w-full h-full rounded-full bg-background"></div>
+                </div>
+              )}
               <div 
-                className="absolute inset-0 rounded-full animate-pulse"
-                style={{
-                  background: `linear-gradient(45deg, hsl(var(--primary)), hsl(var(--card)))`,
-                  padding: '4px',
-                  filter: `drop-shadow(0 0 20px hsl(var(--primary)))`,
-                }}
+                className="relative z-10 cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => profile.avatarUrl && openLightbox(profile.avatarUrl, profile.displayName, profile.username)}
               >
-                <div className="w-full h-full rounded-full bg-background"></div>
+                <CustomAvatar 
+                  user={profile}
+                  size="profile"
+                  borderIntensity="strong"
+                  showAvatarBorderOverlay={true}
+                />
+              </div>
+              {/* Level Badge with Progress */}
+              <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 z-30">
+                <LevelBadgeWithProgress 
+                  userId={profile.id}
+                  level={profile.level || 1}
+                  size="large"
+                />
+              </div>
+            </div>
+
+            {/* Display Name and Badges */}
+            <div className="flex items-center gap-2 flex-wrap mt-4">
+              <h1 className="text-2xl font-bold">{profile.displayName}</h1>
+              <ModeratorBadge 
+                isModerator={profile.role === "moderator" || profile.role === "admin"} 
+                size="xl" 
+              />
+              {profile.userType && profile.showUserType !== false && (() => {
+                const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
+                const displayTypes = userTypes.slice(0, 2);
+                
+                return displayTypes.map((type, index) => {
+                  const config = userTypeConfig[type];
+                  if (!config) return null;
+                  const IconComponent = config.icon;
+                  return (
+                    <Badge 
+                      key={`${type}-${index}`}
+                      variant="outline" 
+                      className={`${config.color} border text-xs font-medium px-2 py-0.5`}
+                    >
+                      <IconComponent className="w-3 h-3 mr-1" />
+                      {config.label}
+                    </Badge>
+                  );
+                });
+              })()}
+            </div>
+
+            {/* Username */}
+            <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
+
+            {/* Stats - Clips, Followers, Following */}
+            <div className="flex gap-6 items-center mt-4">
+              <div className="flex flex-col">
+                <span className="font-bold text-lg">{Number(profile._count?.clips || 0)}</span>
+                <span className="text-muted-foreground text-xs uppercase tracking-wider">Clips</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="font-bold text-lg">{Number(profile._count?.followers || 0)}</span>
+                <span className="text-muted-foreground text-xs uppercase tracking-wider">Followers</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="font-bold text-lg">{Number(profile._count?.following || 0)}</span>
+                <span className="text-muted-foreground text-xs uppercase tracking-wider">Following</span>
+              </div>
+            </div>
+
+            {/* Member since date */}
+            {profile.createdAt && (
+              <div className="mt-4">
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">
+                  Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long' 
+                  })}
+                </span>
               </div>
             )}
-            <div 
-              className="relative z-10 cursor-pointer hover:opacity-90 transition-opacity"
-              onClick={() => profile.avatarUrl && openLightbox(profile.avatarUrl, profile.displayName, profile.username)}
-            >
-              <CustomAvatar 
-                user={profile}
-                size="profile"
-                borderIntensity="strong"
-                showAvatarBorderOverlay={true}
-              />
-            </div>
-            {/* Level Badge with Progress */}
-            <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 z-30">
-              <LevelBadgeWithProgress 
-                userId={profile.id}
-                level={profile.level || 1}
-                size="large"
-              />
-            </div>
-          </div>
 
-            {/* Username and Display Name next to avatar */}
-            <div className="flex flex-col justify-center">
-              <div className="flex items-center gap-4 flex-wrap">
-                <h1 className="text-2xl font-bold">{profile.displayName}</h1>
-                <ModeratorBadge 
-                  isModerator={profile.role === "moderator" || profile.role === "admin"} 
-                  size="xl" 
-                />
-                {profile.userType && profile.showUserType !== false && (() => {
-                  const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
-                  const displayTypes = userTypes.slice(0, 2);
-                  
-                  return displayTypes.map((type, index) => {
-                    const config = userTypeConfig[type];
-                    if (!config) return null;
-                    const IconComponent = config.icon;
-                    return (
-                      <Badge 
-                        key={`${type}-${index}`}
-                        variant="outline" 
-                        className={`${config.color} border text-xs font-medium px-2 py-0.5`}
-                      >
-                        <IconComponent className="w-3 h-3 mr-1" />
-                        {config.label}
-                      </Badge>
-                    );
-                  });
-                })()}
-              </div>
-              <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
-            </div>
-          </div>
+            {/* Bio/description */}
+            {profile.bio && (
+              <p className="mt-3 text-base text-foreground/90 max-w-xl">{profile.bio}</p>
+            )}
 
-          {/* Content below avatar row */}
-          <div className="w-full overflow-hidden mt-8">
-            <div className="flex flex-row justify-between items-start gap-3 mb-4">
-              <div className="flex flex-col flex-1">
-                {/* Name Tag - positioned absolutely to not affect layout */}
-                {nameTagData?.nameTag && (
-                  <div 
-                    className="absolute flex flex-col items-center"
-                    style={{
-                      top: '80px',
-                      right: '5%'
-                    }}
-                  >
-                    {/* Container with image on top */}
-                    <div className="relative">
-                      {/* Glass rounded rectangle background */}
-                      <div 
-                        className="rounded-full shadow-lg backdrop-blur-md"
-                        style={{
-                          width: '360px',
-                          height: '80px',
-                          marginTop: '20px',
-                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                          border: '1px solid rgba(255, 255, 255, 0.2)'
-                        }}
-                      />
-                      {/* Image sitting on top */}
-                      <img 
-                        src={nameTagData.nameTag.imageUrl} 
-                        alt={nameTagData.nameTag.name}
-                        title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                        className="absolute"
-                        style={{
-                          width: '336px',
-                          height: 'auto',
-                          top: '50%',
-                          left: '50%',
-                          transform: 'translate(-50%, -50%)'
-                        }}
-                      />
-                    </div>
-                    <span className="text-xs text-white/60 mt-2 uppercase tracking-wider">Nametag</span>
-                  </div>
-                )}
-
-                {/* Stats positioned directly below username - Two rows */}
-                <div className="flex flex-col gap-2 mt-2">
-                  {/* First row: Clips, Followers, Following */}
-                  <div className="flex gap-6 items-center">
-                    <div className="flex items-center gap-1">
-                      <span className="font-semibold">{Number(profile._count?.clips || 0)}</span>
-                      <span className="text-muted-foreground">Clips</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="font-semibold">{Number(profile._count?.followers || 0)}</span>
-                      <span className="text-muted-foreground">Followers</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="font-semibold">{Number(profile._count?.following || 0)}</span>
-                      <span className="text-muted-foreground">Following</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Member since date */}
-                {profile.createdAt && (
-                  <div className="flex items-center gap-1 mt-3">
-                    <span className="text-sm text-muted-foreground">
-                      Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'long' 
-                      })}
-                    </span>
-                  </div>
-                )}
-
-                {/* Bio/description with increased text size (30% larger) */}
-                {profile.bio && (
-                  <p className="mt-3 text-base text-foreground/90 max-w-2xl">{profile.bio}</p>
-                )}
-
-                {/* Platform Connections under description - only show if any platform is connected */}
-                {(profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
-                  <>
-                    {/* Thin dividing line above gaming social links */}
-                    <div className="w-full h-px bg-border/60 mt-4 mb-3"></div>
-                    <div className="flex flex-wrap gap-2 mt-3">
-                  {profile.steamUsername && (
+            {/* Platform Connections */}
+            {(profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
+              <div className="flex flex-wrap gap-2 mt-4">
+                {profile.steamUsername && (
                     <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#1B2838', color: '#FFFFFF' }}>
                       <SiSteam className="w-3 h-3" />
                       <span>{profile.steamUsername}</span>
@@ -1767,24 +1715,66 @@ const ProfilePage = () => {
                     </a>
                   )}
 
-                  {profile.facebookUsername && (
-                    <a 
-                      href={`https://facebook.com/${profile.facebookUsername}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                      style={{ backgroundColor: '#1877F2', color: '#FFFFFF' }}
-                    >
-                      <FaFacebook className="w-3 h-3" />
-                      <span>{profile.facebookUsername}</span>
-                    </a>
-                  )}
-                    </div>
-                  </>
+                {profile.facebookUsername && (
+                  <a 
+                    href={`https://facebook.com/${profile.facebookUsername}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
+                    style={{ backgroundColor: '#1877F2', color: '#FFFFFF' }}
+                  >
+                    <FaFacebook className="w-3 h-3" />
+                    <span>{profile.facebookUsername}</span>
+                  </a>
                 )}
               </div>
+            )}
 
-              {/* Action buttons aligned with username row */}
+            {/* Name Tag - positioned absolutely to not affect layout */}
+            {nameTagData?.nameTag && (
+              <div 
+                className="absolute flex flex-col items-center"
+                style={{
+                  top: '80px',
+                  right: '5%'
+                }}
+              >
+                {/* Container with image on top */}
+                <div className="relative">
+                  {/* Glass rounded rectangle background */}
+                  <div 
+                    className="rounded-full shadow-lg backdrop-blur-md"
+                    style={{
+                      width: '360px',
+                      height: '80px',
+                      marginTop: '20px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)'
+                    }}
+                  />
+                  {/* Image sitting on top */}
+                  <img 
+                    src={nameTagData.nameTag.imageUrl} 
+                    alt={nameTagData.nameTag.name}
+                    title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                    className="absolute"
+                    style={{
+                      width: '336px',
+                      height: 'auto',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)'
+                    }}
+                  />
+                </div>
+                <span className="text-xs text-white/60 mt-2 uppercase tracking-wider">Nametag</span>
+              </div>
+            )}
+          </div>
+
+          {/* Right side - Action buttons */}
+          <div className="flex-1 flex justify-end">
+            {/* Action buttons */}
               {!isOwnProfile && currentUser && (
                 <div className="flex gap-2 flex-shrink-0 self-start mt-0">
                   <Button 
