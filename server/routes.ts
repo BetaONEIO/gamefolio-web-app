@@ -5838,6 +5838,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get user's selected name tag (for profile display)
   app.get("/api/user/:userId/name-tag", async (req, res) => {
+    // Prevent browser caching to ensure fresh data after updates
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
     try {
       const userId = parseInt(req.params.userId);
       const user = await storage.getUser(userId);
