@@ -1730,139 +1730,166 @@ const ProfilePage = () => {
               </div>
             )}
 
+            {/* Name Tag and Share Button - positioned absolutely below banner */}
+            <div 
+              className="absolute flex items-center gap-4"
+              style={{
+                top: '220px',
+                right: '5%'
+              }}
+            >
+              {/* Name Tag */}
+              {nameTagData?.nameTag && (
+                <div className="flex flex-col items-center">
+                  <div className="relative">
+                    <div 
+                      className="rounded-full shadow-lg backdrop-blur-md"
+                      style={{
+                        width: '360px',
+                        height: '80px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)'
+                      }}
+                    />
+                    <img 
+                      src={nameTagData.nameTag.imageUrl} 
+                      alt={nameTagData.nameTag.name}
+                      title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                      className="absolute"
+                      style={{
+                        width: '336px',
+                        height: 'auto',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)'
+                      }}
+                    />
+                  </div>
+                  <span className="text-xs text-white/60 mt-2 uppercase tracking-wider">Nametag</span>
+                </div>
+              )}
+
+              {/* Share Button */}
+              <GamefolioShareDialog 
+                username={profile.username}
+                userProfile={{
+                  displayName: profile.displayName,
+                  bio: profile.bio,
+                  avatarUrl: profile.avatarUrl,
+                  bannerUrl: profile.bannerUrl,
+                  selectedAvatarBorderId: profile.selectedAvatarBorderId,
+                  avatarBorderColor: profile.avatarBorderColor
+                }}
+                userStats={{
+                  clips: profile._count?.clips || 0,
+                  followers: profile._count?.followers || 0,
+                  following: profile._count?.following || 0
+                }}
+                trigger={
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20 h-12 w-12 p-0"
+                  >
+                    <Share2 className="h-5 w-5" />
+                  </Button>
+                }
+              />
+            </div>
           </div>
 
-          {/* Right side - Name Tag and Share Button positioned below banner */}
-          <div 
-            className="absolute flex items-center gap-4"
-            style={{
-              top: '220px',
-              right: '5%'
-            }}
-          >
-            {/* Name Tag */}
-            {nameTagData?.nameTag && (
-              <div className="flex flex-col items-center">
-                {/* Container with image on top */}
-                <div className="relative">
-                  {/* Glass rounded rectangle background */}
-                  <div 
-                    className="rounded-full shadow-lg backdrop-blur-md"
-                    style={{
-                      width: '360px',
-                      height: '80px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)'
+          {/* Right side - Action buttons */}
+          <div className="flex-1 flex justify-end">
+            {/* Action buttons */}
+              {!isOwnProfile && currentUser && (
+                <div className="flex gap-2 flex-shrink-0 self-start mt-0">
+                  <Button 
+                    onClick={handleFollowClick}
+                    variant={followRequestStatus === 'following' ? "default" : (followRequestStatus === 'requested' ? "outline" : "outline")}
+                    size="sm"
+                    disabled={followMutation.isPending}
+                    className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                    style={followRequestStatus === 'following' ? {
+                      backgroundColor: 'hsl(var(--primary))',
+                      borderColor: 'hsl(var(--primary))',
+                      color: 'hsl(var(--primary-foreground))',
+                      boxShadow: `0 4px 15px hsl(var(--primary) / 0.4)`,
+                    } : {
+                      borderColor: 'hsl(var(--primary))',
+                      color: 'hsl(var(--primary))',
+                      backgroundColor: 'transparent',
                     }}
-                  />
-                  {/* Image sitting on top */}
-                  <img 
-                    src={nameTagData.nameTag.imageUrl} 
-                    alt={nameTagData.nameTag.name}
-                    title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                    className="absolute"
-                    style={{
-                      width: '336px',
-                      height: 'auto',
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)'
+                    onMouseEnter={(e) => {
+                      if (followRequestStatus !== 'following') {
+                        e.currentTarget.style.backgroundColor = 'hsl(var(--primary))';
+                        e.currentTarget.style.color = '#000000';
+                      }
                     }}
+                    onMouseLeave={(e) => {
+                      if (followRequestStatus !== 'following') {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = 'hsl(var(--primary))';
+                      }
+                    }}
+                    data-testid="follow-button"
+                    data-following={followRequestStatus === 'following'}
+                  >
+                    {followMutation.isPending ? (
+                      <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-current animate-spin mr-2"></div>
+                    ) : followRequestStatus === 'following' ? (
+                      <UserCheck className="mr-1 h-4 w-4" />
+                    ) : followRequestStatus === 'requested' ? (
+                      <Clock className="mr-1 h-4 w-4" />
+                    ) : (
+                      <UserPlus className="mr-1 h-4 w-4" />
+                    )}
+                    {followRequestStatus === 'following' ? "Following" : 
+                     followRequestStatus === 'requested' ? "Pending" : 
+                     "Follow"}
+                  </Button>
+
+                  <Button 
+                    onClick={() => {
+                      console.log('🎯 MESSAGE BUTTON CLICKED - Setting target user:', username);
+                      setLocation(`/messages?user=${username}`);
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
+                  >
+                    <MessageSquare className="mr-1 h-4 w-4" /> Message
+                  </Button>
+
+                  <GamefolioShareDialog 
+                    username={profile.username}
+                    userProfile={{
+                      displayName: profile.displayName,
+                      bio: profile.bio,
+                      avatarUrl: profile.avatarUrl,
+                      bannerUrl: profile.bannerUrl,
+                      selectedAvatarBorderId: profile.selectedAvatarBorderId,
+                      avatarBorderColor: profile.avatarBorderColor
+                    }}
+                    userStats={{
+                      clips: profile._count?.clips || 0,
+                      followers: profile._count?.followers || 0,
+                      following: profile._count?.following || 0
+                    }}
+                    trigger={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                    }
                   />
                 </div>
-                <span className="text-xs text-white/60 mt-2 uppercase tracking-wider">Nametag</span>
-              </div>
-            )}
+              )}
 
-            {/* Share Button */}
-            <GamefolioShareDialog 
-              username={profile.username}
-              userProfile={{
-                displayName: profile.displayName,
-                bio: profile.bio,
-                avatarUrl: profile.avatarUrl,
-                bannerUrl: profile.bannerUrl,
-                selectedAvatarBorderId: profile.selectedAvatarBorderId,
-                avatarBorderColor: profile.avatarBorderColor
-              }}
-              userStats={{
-                clips: profile._count?.clips || 0,
-                followers: profile._count?.followers || 0,
-                following: profile._count?.following || 0
-              }}
-              trigger={
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20 h-12 w-12 p-0"
-                >
-                  <Share2 className="h-5 w-5" />
-                </Button>
-              }
-            />
-          </div>
-
-          {/* Action buttons for other users' profiles */}
-          {!isOwnProfile && currentUser && (
-            <div className="flex gap-2 mt-4">
-              <Button 
-                onClick={handleFollowClick}
-                variant={followRequestStatus === 'following' ? "default" : (followRequestStatus === 'requested' ? "outline" : "outline")}
-                size="sm"
-                disabled={followMutation.isPending}
-                className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                style={followRequestStatus === 'following' ? {
-                  backgroundColor: 'hsl(var(--primary))',
-                  borderColor: 'hsl(var(--primary))',
-                  color: 'hsl(var(--primary-foreground))',
-                  boxShadow: `0 4px 15px hsl(var(--primary) / 0.4)`,
-                } : {
-                  borderColor: 'hsl(var(--primary))',
-                  color: 'hsl(var(--primary))',
-                  backgroundColor: 'transparent',
-                }}
-                onMouseEnter={(e) => {
-                  if (followRequestStatus !== 'following') {
-                    e.currentTarget.style.backgroundColor = 'hsl(var(--primary))';
-                    e.currentTarget.style.color = '#000000';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (followRequestStatus !== 'following') {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = 'hsl(var(--primary))';
-                  }
-                }}
-                data-testid="follow-button"
-                data-following={followRequestStatus === 'following'}
-              >
-                {followMutation.isPending ? (
-                  <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-current animate-spin mr-2"></div>
-                ) : followRequestStatus === 'following' ? (
-                  <UserCheck className="mr-1 h-4 w-4" />
-                ) : followRequestStatus === 'requested' ? (
-                  <Clock className="mr-1 h-4 w-4" />
-                ) : (
-                  <UserPlus className="mr-1 h-4 w-4" />
-                )}
-                {followRequestStatus === 'following' ? "Following" : 
-                 followRequestStatus === 'requested' ? "Pending" : 
-                 "Follow"}
-              </Button>
-
-              <Button 
-                onClick={() => {
-                  console.log('🎯 MESSAGE BUTTON CLICKED - Setting target user:', username);
-                  setLocation(`/messages?user=${username}`);
-                }}
-                variant="outline"
-                size="sm"
-                className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
-              >
-                <MessageSquare className="mr-1 h-4 w-4" /> Message
-              </Button>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Spacer for tabs section */}
