@@ -151,16 +151,8 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg p-0 overflow-hidden bg-[#0f0f1a] border border-purple-900/30 rounded-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-start px-6 pt-6">
-          <div className="flex items-center gap-2">
-            <Gift className="w-6 h-6 text-purple-500" />
-            <span className="text-lg font-semibold text-white">Daily Lootbox</span>
-          </div>
-        </div>
-
-        <div className="flex flex-col items-center px-6 pb-6">
+      <DialogContent className="sm:max-w-xl p-0 overflow-hidden bg-[#0f0f1a] border border-purple-900/30 rounded-2xl">
+        <div className="flex flex-col items-center px-6 py-6">
           <AnimatePresence mode="wait">
             {phase === "idle" && (
               <motion.div
@@ -171,7 +163,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                 className="flex flex-col items-center w-full"
               >
                 {/* Lootbox Video - paused on first frame */}
-                <div className="relative my-4 w-full max-w-[420px]">
+                <div className="relative my-4 w-full">
                   <video
                     muted
                     playsInline
@@ -206,25 +198,6 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                     >
                       Claim Lootbox
                     </Button>
-
-                    {/* What's Inside section */}
-                    <div className="w-full mt-6 pt-6 border-t border-gray-800">
-                      <h3 className="text-center font-bold text-white mb-4">What's Inside?</h3>
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3 text-gray-300">
-                          <Zap className="w-5 h-5 text-yellow-400" />
-                          <span>100-500 XP</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-gray-300">
-                          <Coins className="w-5 h-5 text-amber-400" />
-                          <span>50-200 Coins</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-gray-300">
-                          <Star className="w-5 h-5 text-purple-400" />
-                          <span>Rare Items</span>
-                        </div>
-                      </div>
-                    </div>
                   </>
                 ) : (
                   <div className="flex flex-col items-center gap-4 py-4">
@@ -249,25 +222,6 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                       <RotateCcw className="w-4 h-4" />
                       {resetMutation.isPending ? "Resetting..." : "Reset for Testing"}
                     </Button>
-                    
-                    {/* What's Inside section */}
-                    <div className="w-full mt-4 pt-4 border-t border-gray-800">
-                      <h3 className="text-center font-bold text-white mb-4">What's Inside?</h3>
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3 text-gray-300">
-                          <Zap className="w-5 h-5 text-yellow-400" />
-                          <span>100-500 XP</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-gray-300">
-                          <Coins className="w-5 h-5 text-amber-400" />
-                          <span>50-200 Coins</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-gray-300">
-                          <Star className="w-5 h-5 text-purple-400" />
-                          <span>Rare Items</span>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 )}
               </motion.div>
@@ -286,7 +240,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                   muted
                   playsInline
                   onEnded={handleVideoEnded}
-                  className="w-full max-w-[420px] rounded-lg"
+                  className="w-full rounded-lg"
                   src="https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-assets/lootbox%20animation%20full.webm"
                 />
               </motion.div>
