@@ -1274,9 +1274,9 @@ const ProfilePage = () => {
                 title={nameTagData.nameTag.description || nameTagData.nameTag.name}
                 className="absolute"
                 style={{
-                  width: '160px',
+                  width: '192px',
                   height: 'auto',
-                  top: '10px',
+                  top: '50px',
                   right: '10px'
                 }}
               />
@@ -1609,9 +1609,9 @@ const ProfilePage = () => {
                     title={nameTagData.nameTag.description || nameTagData.nameTag.name}
                     className="absolute"
                     style={{
-                      width: '280px',
+                      width: '336px',
                       height: 'auto',
-                      top: '0',
+                      top: '40px',
                       right: '140px'
                     }}
                   />
