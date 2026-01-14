@@ -2586,9 +2586,8 @@ const ProfilePage = () => {
           </TabsContent>
         </Tabs>
         </div>
-      </div>
 
-      {/* Game Selection Dialog */}
+        {/* Game Selection Dialog */}
         {isOwnProfile && profile && (
           <GameSelectionDialog
             isOpen={showGameSelection}
