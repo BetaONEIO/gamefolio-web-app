@@ -1200,7 +1200,8 @@ const ProfilePage = () => {
         <div className="block md:hidden pb-6" style={{ marginTop: '-56px', paddingTop: '24px' }}>
           {/* Profile Picture - Centered on Mobile */}
           <div className="flex justify-center mb-6" style={{ transform: 'translateY(-28px)' }}>
-            <div className="relative">
+            {/* Explicit dimensions to ensure circular glow renders correctly - matches profile avatar sizes */}
+            <div className="relative h-40 w-40 sm:h-48 sm:w-48">
               {/* Circular glow - only show when NO SVG border is selected (CustomAvatar handles its own glow) */}
               {!profile.selectedAvatarBorderId && (
                 <div 
@@ -1515,8 +1516,8 @@ const ProfilePage = () => {
         <div className="hidden md:flex flex-row pb-4 relative max-w-[90%] mx-auto" style={{ marginTop: '-100px' }}>
           {/* Left side - Profile info stacked vertically */}
           <div className="flex flex-col">
-            {/* Profile Picture positioned to overlap banner */}
-            <div className="relative flex-shrink-0 mb-4">
+            {/* Profile Picture positioned to overlap banner - explicit dimensions to ensure circular glow renders correctly */}
+            <div className="relative flex-shrink-0 mb-4 h-56 w-56">
               {/* Circular glow - only show when NO SVG border is selected (CustomAvatar handles its own glow) */}
               {!profile.selectedAvatarBorderId && (
                 <div 
