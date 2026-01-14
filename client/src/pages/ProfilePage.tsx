@@ -1526,10 +1526,12 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        {/* Desktop Layout - Vertical with centered avatar */}
-        <div className="hidden md:flex flex-col items-start pb-4 relative max-w-[90%] mx-auto" style={{ marginTop: '-100px' }}>
-          {/* Profile Picture positioned to overlap banner - half on, half off */}
-          <div className="relative flex-shrink-0" style={{ marginBottom: '20px' }}>
+        {/* Desktop Layout */}
+        <div className="hidden md:flex flex-col pb-4 relative max-w-[90%] mx-auto" style={{ marginTop: '-100px' }}>
+          {/* Top row: Avatar and Username side by side */}
+          <div className="flex items-end gap-6 mb-4">
+            {/* Profile Picture positioned to overlap banner - half on, half off */}
+            <div className="relative flex-shrink-0">
             {/* Circular glow - only show when NO SVG border is selected (CustomAvatar handles its own glow) */}
             {!profile.selectedAvatarBorderId && (
               <div 
@@ -1564,38 +1566,43 @@ const ProfilePage = () => {
             </div>
           </div>
 
+            {/* Username and Display Name next to avatar */}
+            <div className="flex flex-col justify-end pb-2">
+              <div className="flex items-center gap-4 flex-wrap">
+                <h1 className="text-2xl font-bold">{profile.displayName}</h1>
+                <ModeratorBadge 
+                  isModerator={profile.role === "moderator" || profile.role === "admin"} 
+                  size="xl" 
+                />
+                {profile.userType && profile.showUserType !== false && (() => {
+                  const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
+                  const displayTypes = userTypes.slice(0, 2);
+                  
+                  return displayTypes.map((type, index) => {
+                    const config = userTypeConfig[type];
+                    if (!config) return null;
+                    const IconComponent = config.icon;
+                    return (
+                      <Badge 
+                        key={`${type}-${index}`}
+                        variant="outline" 
+                        className={`${config.color} border text-xs font-medium px-2 py-0.5`}
+                      >
+                        <IconComponent className="w-3 h-3 mr-1" />
+                        {config.label}
+                      </Badge>
+                    );
+                  });
+                })()}
+              </div>
+              <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
+            </div>
+          </div>
+
+          {/* Content below avatar row */}
           <div className="w-full overflow-hidden">
-            {/* Username and Display Name with action buttons */}
             <div className="flex flex-row justify-between items-start gap-3 mb-4">
               <div className="flex flex-col flex-1">
-                <div className="flex items-center gap-4 flex-wrap">
-                  <h1 className="text-2xl font-bold">{profile.displayName}</h1>
-                  <ModeratorBadge 
-                    isModerator={profile.role === "moderator" || profile.role === "admin"} 
-                    size="xl" 
-                  />
-                  {profile.userType && profile.showUserType !== false && (() => {
-                    const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
-                    const displayTypes = userTypes.slice(0, 2);
-                    
-                    return displayTypes.map((type, index) => {
-                      const config = userTypeConfig[type];
-                      if (!config) return null;
-                      const IconComponent = config.icon;
-                      return (
-                        <Badge 
-                          key={`${type}-${index}`}
-                          variant="outline" 
-                          className={`${config.color} border text-xs font-medium px-2 py-0.5`}
-                        >
-                          <IconComponent className="w-3 h-3 mr-1" />
-                          {config.label}
-                        </Badge>
-                      );
-                    });
-                  })()}
-                </div>
-                <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
                 {/* Name Tag - positioned absolutely to not affect layout */}
                 {nameTagData?.nameTag && (
                   <div 
