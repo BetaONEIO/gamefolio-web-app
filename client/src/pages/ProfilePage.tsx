@@ -1272,9 +1272,11 @@ const ProfilePage = () => {
                   title={nameTagData.nameTag.description || nameTagData.nameTag.name}
                   className="absolute"
                   style={{
-                    width: '200px',
+                    width: '160px',
                     height: 'auto',
-                    marginLeft: '8px'
+                    right: '-170px',
+                    top: '50%',
+                    transform: 'translateY(-50%)'
                   }}
                 />
               )}
@@ -1608,7 +1610,9 @@ const ProfilePage = () => {
                       style={{
                         width: '280px',
                         height: 'auto',
-                        marginLeft: '8px'
+                        right: '-300px',
+                        top: '50%',
+                        transform: 'translateY(-50%)'
                       }}
                     />
                   )}
