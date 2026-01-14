@@ -1271,8 +1271,8 @@ const ProfilePage = () => {
                   alt={nameTagData.nameTag.name}
                   title={nameTagData.nameTag.description || nameTagData.nameTag.name}
                   style={{
-                    height: '24px',
-                    width: 'auto'
+                    width: '200px',
+                    height: 'auto'
                   }}
                 />
               )}
@@ -1603,8 +1603,8 @@ const ProfilePage = () => {
                       alt={nameTagData.nameTag.name}
                       title={nameTagData.nameTag.description || nameTagData.nameTag.name}
                       style={{
-                        height: '32px',
-                        width: 'auto'
+                        width: '280px',
+                        height: 'auto'
                       }}
                     />
                   )}
