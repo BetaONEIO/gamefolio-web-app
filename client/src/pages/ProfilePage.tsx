@@ -1270,13 +1270,9 @@ const ProfilePage = () => {
                   src={nameTagData.nameTag.imageUrl} 
                   alt={nameTagData.nameTag.name}
                   title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                  className="absolute"
                   style={{
-                    width: '160px',
-                    height: 'auto',
-                    right: '-170px',
-                    top: '50%',
-                    transform: 'translateY(-50%)'
+                    height: '24px',
+                    width: 'auto'
                   }}
                 />
               )}
@@ -1606,13 +1602,9 @@ const ProfilePage = () => {
                       src={nameTagData.nameTag.imageUrl} 
                       alt={nameTagData.nameTag.name}
                       title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                      className="absolute"
                       style={{
-                        width: '280px',
-                        height: 'auto',
-                        right: '-300px',
-                        top: '50%',
-                        transform: 'translateY(-50%)'
+                        height: '32px',
+                        width: 'auto'
                       }}
                     />
                   )}
