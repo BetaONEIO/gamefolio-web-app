@@ -151,7 +151,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-xl p-0 overflow-hidden bg-[#0f0f1a] border border-purple-900/30 rounded-2xl">
+      <DialogContent className="sm:max-w-xl p-0 overflow-hidden bg-[#0f0f1a]/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
         <div className="flex flex-col items-center px-6 py-6">
           <AnimatePresence mode="wait">
             {phase === "idle" && (
