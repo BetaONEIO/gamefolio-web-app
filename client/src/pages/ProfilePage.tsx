@@ -1266,16 +1266,18 @@ const ProfilePage = () => {
               />
             </div>
             <span className="text-base text-white/70 font-normal">@{profile.username}</span>
-            {/* Name Tag - below username on mobile */}
+            {/* Name Tag - positioned absolutely on mobile */}
             {nameTagData?.nameTag && (
               <img 
                 src={nameTagData.nameTag.imageUrl} 
                 alt={nameTagData.nameTag.name}
                 title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                className="mt-2"
+                className="absolute"
                 style={{
-                  width: '200px',
-                  height: 'auto'
+                  width: '160px',
+                  height: 'auto',
+                  top: '10px',
+                  right: '10px'
                 }}
               />
             )}
@@ -1597,20 +1599,23 @@ const ProfilePage = () => {
                     isModerator={profile.role === "moderator" || profile.role === "admin"} 
                     size="xl" 
                   />
-                  {/* Name Tag */}
-                  {nameTagData?.nameTag && (
-                    <img 
-                      src={nameTagData.nameTag.imageUrl} 
-                      alt={nameTagData.nameTag.name}
-                      title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                      style={{
-                        width: '280px',
-                        height: 'auto'
-                      }}
-                    />
-                  )}
                 </div>
                 <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
+                {/* Name Tag - positioned absolutely to not affect layout */}
+                {nameTagData?.nameTag && (
+                  <img 
+                    src={nameTagData.nameTag.imageUrl} 
+                    alt={nameTagData.nameTag.name}
+                    title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                    className="absolute"
+                    style={{
+                      width: '280px',
+                      height: 'auto',
+                      top: '0',
+                      right: '140px'
+                    }}
+                  />
+                )}
 
                 {/* Stats positioned directly below username - Two rows */}
                 <div className="flex flex-col gap-2 mt-2">
