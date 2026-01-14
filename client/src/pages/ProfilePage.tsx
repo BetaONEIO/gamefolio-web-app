@@ -1630,7 +1630,7 @@ const ProfilePage = () => {
                     className="absolute flex flex-col items-center"
                     style={{
                       top: '200px',
-                      right: '20px'
+                      right: '5%'
                     }}
                   >
                     {/* Container with image on top */}
