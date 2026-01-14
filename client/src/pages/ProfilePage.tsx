@@ -1567,7 +1567,7 @@ const ProfilePage = () => {
           </div>
 
             {/* Username and Display Name next to avatar */}
-            <div className="flex flex-col justify-end pb-2">
+            <div className="flex flex-col justify-center">
               <div className="flex items-center gap-4 flex-wrap">
                 <h1 className="text-2xl font-bold">{profile.displayName}</h1>
                 <ModeratorBadge 
@@ -1600,7 +1600,7 @@ const ProfilePage = () => {
           </div>
 
           {/* Content below avatar row */}
-          <div className="w-full overflow-hidden">
+          <div className="w-full overflow-hidden mt-8">
             <div className="flex flex-row justify-between items-start gap-3 mb-4">
               <div className="flex flex-col flex-1">
                 {/* Name Tag - positioned absolutely to not affect layout */}
