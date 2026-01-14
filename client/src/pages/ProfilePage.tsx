@@ -1273,9 +1273,11 @@ const ProfilePage = () => {
                 <img 
                   src={nameTagData.nameTag.imageUrl} 
                   alt={nameTagData.nameTag.name}
-                  className="h-8 rounded-sm"
+                  className="rounded-sm"
                   title={nameTagData.nameTag.description || nameTagData.nameTag.name}
                   style={{
+                    width: '200px',
+                    height: 'auto',
                     borderRadius: '4px',
                     boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.1)'
                   }}
@@ -1609,9 +1611,11 @@ const ProfilePage = () => {
                     <img 
                       src={nameTagData.nameTag.imageUrl} 
                       alt={nameTagData.nameTag.name}
-                      className="h-10 rounded-sm"
+                      className="rounded-sm"
                       title={nameTagData.nameTag.description || nameTagData.nameTag.name}
                       style={{
+                        width: '280px',
+                        height: 'auto',
                         borderRadius: '4px',
                         boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.1)'
                       }}
