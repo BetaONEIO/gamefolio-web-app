@@ -160,8 +160,23 @@ export function LevelTrackerModal({
   }, [open, xpDelta, previousXP, totalXP]);
 
   const displayXP = xpDelta ? animatedXP : totalXP;
-  const currentLevelData = LEVEL_THRESHOLDS.find(t => t.level === level) || LEVEL_THRESHOLDS[0];
-  const nextLevelData = LEVEL_THRESHOLDS.find(t => t.level === level + 1);
+  
+  // Calculate the actual level based on current XP (handles level-ups)
+  const calculateLevel = (xp: number) => {
+    let currentLevel = 1;
+    for (const threshold of LEVEL_THRESHOLDS) {
+      if (xp >= threshold.xpRequired) {
+        currentLevel = threshold.level;
+      } else {
+        break;
+      }
+    }
+    return currentLevel;
+  };
+  
+  const actualLevel = calculateLevel(displayXP);
+  const currentLevelData = LEVEL_THRESHOLDS.find(t => t.level === actualLevel) || LEVEL_THRESHOLDS[0];
+  const nextLevelData = LEVEL_THRESHOLDS.find(t => t.level === actualLevel + 1);
   
   const xpForCurrentLevel = currentLevelData.xpRequired;
   const xpForNextLevel = nextLevelData?.xpRequired || currentLevelData.xpRequired * 2;
@@ -198,7 +213,7 @@ export function LevelTrackerModal({
             )}
           </AnimatePresence>
           
-          <LevelBadge level={level} progress={progressPercent} />
+          <LevelBadge level={actualLevel} progress={progressPercent} />
           
           <div className="mt-4 text-center">
             <p className="text-sm text-muted-foreground">
@@ -211,7 +226,7 @@ export function LevelTrackerModal({
               {" / "}
               <span>{xpNeeded} XP</span>
               {" to Level "}
-              <span className="font-semibold">{level + 1}</span>
+              <span className="font-semibold">{actualLevel + 1}</span>
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               Total XP: <span className="text-foreground font-medium">{Math.round(displayXP)}</span>
