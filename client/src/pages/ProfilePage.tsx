@@ -1527,9 +1527,9 @@ const ProfilePage = () => {
         </div>
 
         {/* Desktop Layout - Vertical with centered avatar */}
-        <div className="hidden md:flex flex-col items-start pb-4 relative" style={{ marginTop: '-80px' }}>
+        <div className="hidden md:flex flex-col items-start pb-4 relative max-w-[90%] mx-auto" style={{ marginTop: '-100px' }}>
           {/* Profile Picture positioned to overlap banner - half on, half off */}
-          <div className="relative flex-shrink-0 ml-8" style={{ marginBottom: '20px' }}>
+          <div className="relative flex-shrink-0" style={{ marginBottom: '20px' }}>
             {/* Circular glow - only show when NO SVG border is selected (CustomAvatar handles its own glow) */}
             {!profile.selectedAvatarBorderId && (
               <div 
@@ -1564,7 +1564,7 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          <div className="w-full px-8 overflow-hidden">
+          <div className="w-full overflow-hidden">
             {/* Username and Display Name with action buttons */}
             <div className="flex flex-row justify-between items-start gap-3 mb-4">
               <div className="flex flex-col flex-1">
