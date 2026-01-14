@@ -1264,23 +1264,20 @@ const ProfilePage = () => {
                 isModerator={profile.role === "moderator" || profile.role === "admin"} 
                 size="lg" 
               />
+              {/* Name Tag */}
+              {nameTagData?.nameTag && (
+                <img 
+                  src={nameTagData.nameTag.imageUrl} 
+                  alt={nameTagData.nameTag.name}
+                  title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                  style={{
+                    height: '20px',
+                    width: 'auto'
+                  }}
+                />
+              )}
             </div>
             <span className="text-base text-white/70 font-normal">@{profile.username}</span>
-            
-            {/* Name Tag */}
-            {nameTagData?.nameTag && (
-              <img 
-                src={nameTagData.nameTag.imageUrl} 
-                alt={nameTagData.nameTag.name}
-                title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                className="mt-1"
-                style={{
-                  width: '200px',
-                  height: 'auto',
-                  display: 'block'
-                }}
-              />
-            )}
           </div>
 
           {/* Stats under username on mobile - Two rows */}
@@ -1599,23 +1596,20 @@ const ProfilePage = () => {
                     isModerator={profile.role === "moderator" || profile.role === "admin"} 
                     size="xl" 
                   />
+                  {/* Name Tag */}
+                  {nameTagData?.nameTag && (
+                    <img 
+                      src={nameTagData.nameTag.imageUrl} 
+                      alt={nameTagData.nameTag.name}
+                      title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                      style={{
+                        height: '24px',
+                        width: 'auto'
+                      }}
+                    />
+                  )}
                 </div>
                 <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
-                
-                {/* Name Tag */}
-                {nameTagData?.nameTag && (
-                  <img 
-                    src={nameTagData.nameTag.imageUrl} 
-                    alt={nameTagData.nameTag.name}
-                    title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                    className="mt-1"
-                    style={{
-                      width: '280px',
-                      height: 'auto',
-                      display: 'block'
-                    }}
-                  />
-                )}
 
                 {/* Stats positioned directly below username - Two rows */}
                 <div className="flex flex-col gap-2 mt-2">
