@@ -1271,7 +1271,7 @@ const ProfilePage = () => {
               <div 
                 className="absolute flex flex-col items-center"
                 style={{
-                  top: '30px',
+                  top: '120px',
                   right: '10px'
                 }}
               >
@@ -1629,8 +1629,8 @@ const ProfilePage = () => {
                   <div 
                     className="absolute flex flex-col items-center"
                     style={{
-                      top: '20px',
-                      right: '140px'
+                      top: '200px',
+                      right: '20px'
                     }}
                   >
                     {/* Container with image on top */}
