@@ -170,59 +170,16 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                 exit={{ opacity: 0, scale: 0.8 }}
                 className="flex flex-col items-center w-full"
               >
-                {/* Lootbox Chest */}
-                <motion.div
-                  className="relative my-6"
-                  animate={{ y: [0, -8, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  {/* Glow effect behind chest */}
-                  <div className="absolute inset-0 bg-purple-500/20 blur-3xl rounded-full scale-150" />
-                  
-                  {/* Chest container */}
-                  <div className="relative w-40 h-36">
-                    {/* Chest body - dark blue/green */}
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-36 h-24 bg-gradient-to-b from-[#2a3f4f] to-[#1a2a35] rounded-lg border-2 border-[#1a2a35] shadow-lg">
-                      {/* Chest straps */}
-                      <div className="absolute inset-x-0 top-0 h-full">
-                        <div className="absolute left-2 top-0 w-3 h-full bg-gradient-to-b from-[#7ddb5c] to-[#4fa83d] rounded-sm" />
-                        <div className="absolute right-2 top-0 w-3 h-full bg-gradient-to-b from-[#7ddb5c] to-[#4fa83d] rounded-sm" />
-                      </div>
-                      {/* Chest lock */}
-                      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-10 bg-gradient-to-b from-gray-300 to-gray-400 rounded-sm flex items-center justify-center border border-gray-500">
-                        <div className="w-3 h-4 bg-[#1a2a35] rounded-sm" />
-                      </div>
-                      {/* Chest ring */}
-                      <div className="absolute left-1/2 bottom-2 -translate-x-1/2 w-6 h-6 border-4 border-[#3a8a9a] rounded-full bg-transparent" />
-                    </div>
-                    
-                    {/* Chest lid */}
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 w-36 h-12 bg-gradient-to-b from-[#3a5060] to-[#2a3f4f] rounded-t-xl border-2 border-[#1a2a35]">
-                      {/* Lid straps */}
-                      <div className="absolute left-2 top-0 w-3 h-full bg-gradient-to-b from-[#7ddb5c] to-[#5fc044] rounded-t-lg" />
-                      <div className="absolute right-2 top-0 w-3 h-full bg-gradient-to-b from-[#7ddb5c] to-[#5fc044] rounded-t-lg" />
-                      {/* Lid curve on straps */}
-                      <div className="absolute left-0 -top-1 w-8 h-4 bg-gradient-to-r from-[#7ddb5c] to-[#5fc044] rounded-tl-xl" />
-                      <div className="absolute right-0 -top-1 w-8 h-4 bg-gradient-to-l from-[#7ddb5c] to-[#5fc044] rounded-tr-xl" />
-                    </div>
-                    
-                    {/* Sparkle effects */}
-                    <motion.div
-                      className="absolute -top-2 -right-2"
-                      animate={{ rotate: [0, 360], scale: [1, 1.2, 1] }}
-                      transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                    >
-                      <Sparkles className="w-5 h-5 text-yellow-400" />
-                    </motion.div>
-                    <motion.div
-                      className="absolute -bottom-1 -left-3"
-                      animate={{ rotate: [0, -360], scale: [1, 1.3, 1] }}
-                      transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                    >
-                      <Sparkles className="w-4 h-4 text-purple-400" />
-                    </motion.div>
-                  </div>
-                </motion.div>
+                {/* Lootbox Video - paused on first frame */}
+                <div className="relative my-4 w-full max-w-[280px]">
+                  <video
+                    muted
+                    playsInline
+                    preload="metadata"
+                    className="w-full rounded-lg"
+                    src="https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-assets/lootbox%20animation%20full.webm#t=0.1"
+                  />
+                </div>
 
                 {statusLoading ? (
                   <div className="flex items-center gap-2 text-gray-400 py-4">
