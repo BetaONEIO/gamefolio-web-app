@@ -8096,6 +8096,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reset lootbox for testing (development only)
+  app.post("/api/lootbox/reset", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      await storage.resetUserLootbox(userId);
+      res.json({ success: true, message: "Lootbox reset successfully" });
+    } catch (error) {
+      console.error("Error resetting lootbox:", error);
+      res.status(500).json({ message: "Failed to reset lootbox" });
+    }
+  });
+
   // ==================== WELCOME PACK ROUTES ====================
 
   // Get welcome pack status
