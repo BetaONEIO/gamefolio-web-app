@@ -1238,7 +1238,7 @@ const ProfilePage = () => {
 
           {/* Username and Display Name - Stacked on Mobile */}
           <div className="flex flex-col items-center gap-1 mb-3 text-center" style={{ marginTop: '-20px' }}>
-            <div className="flex items-center gap-2 flex-wrap justify-center">
+            <div className="flex items-center gap-2 flex-wrap justify-center relative">
               <h1 className="text-xl font-bold">{profile.displayName}</h1>
               {profile.userType && profile.showUserType !== false && (() => {
                 const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
@@ -1270,9 +1270,11 @@ const ProfilePage = () => {
                   src={nameTagData.nameTag.imageUrl} 
                   alt={nameTagData.nameTag.name}
                   title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                  className="absolute"
                   style={{
                     width: '200px',
-                    height: 'auto'
+                    height: 'auto',
+                    marginLeft: '8px'
                   }}
                 />
               )}
@@ -1570,7 +1572,7 @@ const ProfilePage = () => {
             {/* Username and Display Name with action buttons */}
             <div className="flex flex-row justify-between items-start gap-3 mb-4">
               <div className="flex flex-col flex-1">
-                <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-4 flex-wrap relative">
                   <h1 className="text-2xl font-bold">{profile.displayName}</h1>
                   {profile.userType && profile.showUserType !== false && (() => {
                     const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
@@ -1602,9 +1604,11 @@ const ProfilePage = () => {
                       src={nameTagData.nameTag.imageUrl} 
                       alt={nameTagData.nameTag.name}
                       title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                      className="absolute"
                       style={{
                         width: '280px',
-                        height: 'auto'
+                        height: 'auto',
+                        marginLeft: '8px'
                       }}
                     />
                   )}
