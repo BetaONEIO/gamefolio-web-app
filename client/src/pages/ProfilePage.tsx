@@ -1269,26 +1269,17 @@ const ProfilePage = () => {
             
             {/* Name Tag */}
             {nameTagData?.nameTag && (
-              <div 
-                className="mt-2 inline-block"
+              <img 
+                src={nameTagData.nameTag.imageUrl} 
+                alt={nameTagData.nameTag.name}
+                title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                className="mt-1"
                 style={{
-                  background: 'rgba(0, 0, 0, 0.4)',
-                  borderRadius: '8px',
-                  padding: '0'
+                  width: '200px',
+                  height: 'auto',
+                  display: 'block'
                 }}
-              >
-                <img 
-                  src={nameTagData.nameTag.imageUrl} 
-                  alt={nameTagData.nameTag.name}
-                  title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                  style={{
-                    width: '200px',
-                    height: 'auto',
-                    display: 'block',
-                    borderRadius: '8px'
-                  }}
-                />
-              </div>
+              />
             )}
           </div>
 
@@ -1613,26 +1604,17 @@ const ProfilePage = () => {
                 
                 {/* Name Tag */}
                 {nameTagData?.nameTag && (
-                  <div 
-                    className="mt-2 inline-block"
+                  <img 
+                    src={nameTagData.nameTag.imageUrl} 
+                    alt={nameTagData.nameTag.name}
+                    title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                    className="mt-1"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      borderRadius: '8px',
-                      padding: '0'
+                      width: '280px',
+                      height: 'auto',
+                      display: 'block'
                     }}
-                  >
-                    <img 
-                      src={nameTagData.nameTag.imageUrl} 
-                      alt={nameTagData.nameTag.name}
-                      title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                      style={{
-                        width: '280px',
-                        height: 'auto',
-                        display: 'block',
-                        borderRadius: '8px'
-                      }}
-                    />
-                  </div>
+                  />
                 )}
 
                 {/* Stats positioned directly below username - Two rows */}
