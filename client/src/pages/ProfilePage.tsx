@@ -1268,18 +1268,24 @@ const ProfilePage = () => {
             <span className="text-base text-white/70 font-normal">@{profile.username}</span>
             {/* Name Tag - positioned absolutely on mobile */}
             {nameTagData?.nameTag && (
-              <img 
-                src={nameTagData.nameTag.imageUrl} 
-                alt={nameTagData.nameTag.name}
-                title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                className="absolute"
+              <div 
+                className="absolute flex flex-col items-center p-2 border border-white/20 rounded-lg bg-black/20 backdrop-blur-sm"
                 style={{
-                  width: '192px',
-                  height: 'auto',
                   top: '50px',
                   right: '10px'
                 }}
-              />
+              >
+                <img 
+                  src={nameTagData.nameTag.imageUrl} 
+                  alt={nameTagData.nameTag.name}
+                  title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                  style={{
+                    width: '192px',
+                    height: 'auto'
+                  }}
+                />
+                <span className="text-xs text-white/60 mt-1 uppercase tracking-wider">Nametag</span>
+              </div>
             )}
           </div>
 
@@ -1603,18 +1609,24 @@ const ProfilePage = () => {
                 <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
                 {/* Name Tag - positioned absolutely to not affect layout */}
                 {nameTagData?.nameTag && (
-                  <img 
-                    src={nameTagData.nameTag.imageUrl} 
-                    alt={nameTagData.nameTag.name}
-                    title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                    className="absolute"
+                  <div 
+                    className="absolute flex flex-col items-center p-3 border border-white/20 rounded-xl bg-black/20 backdrop-blur-sm"
                     style={{
-                      width: '336px',
-                      height: 'auto',
                       top: '40px',
                       right: '140px'
                     }}
-                  />
+                  >
+                    <img 
+                      src={nameTagData.nameTag.imageUrl} 
+                      alt={nameTagData.nameTag.name}
+                      title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                      style={{
+                        width: '336px',
+                        height: 'auto'
+                      }}
+                    />
+                    <span className="text-xs text-white/60 mt-2 uppercase tracking-wider">Nametag</span>
+                  </div>
                 )}
 
                 {/* Stats positioned directly below username - Two rows */}
