@@ -1238,7 +1238,7 @@ const ProfilePage = () => {
 
           {/* Username and Display Name - Stacked on Mobile */}
           <div className="flex flex-col items-center gap-1 mb-3 text-center" style={{ marginTop: '-20px' }}>
-            <div className="flex items-center gap-2 flex-wrap justify-center relative">
+            <div className="flex items-center gap-2 flex-wrap justify-center">
               <h1 className="text-xl font-bold">{profile.displayName}</h1>
               {profile.userType && profile.showUserType !== false && (() => {
                 const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
@@ -1264,20 +1264,21 @@ const ProfilePage = () => {
                 isModerator={profile.role === "moderator" || profile.role === "admin"} 
                 size="lg" 
               />
-              {/* Name Tag */}
-              {nameTagData?.nameTag && (
-                <img 
-                  src={nameTagData.nameTag.imageUrl} 
-                  alt={nameTagData.nameTag.name}
-                  title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                  style={{
-                    width: '200px',
-                    height: 'auto'
-                  }}
-                />
-              )}
             </div>
             <span className="text-base text-white/70 font-normal">@{profile.username}</span>
+            {/* Name Tag - below username on mobile */}
+            {nameTagData?.nameTag && (
+              <img 
+                src={nameTagData.nameTag.imageUrl} 
+                alt={nameTagData.nameTag.name}
+                title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                className="mt-2"
+                style={{
+                  width: '200px',
+                  height: 'auto'
+                }}
+              />
+            )}
           </div>
 
           {/* Stats under username on mobile - Two rows */}
@@ -1570,7 +1571,7 @@ const ProfilePage = () => {
             {/* Username and Display Name with action buttons */}
             <div className="flex flex-row justify-between items-start gap-3 mb-4">
               <div className="flex flex-col flex-1">
-                <div className="flex items-center gap-4 flex-wrap relative">
+                <div className="flex items-center gap-4 flex-wrap">
                   <h1 className="text-2xl font-bold">{profile.displayName}</h1>
                   {profile.userType && profile.showUserType !== false && (() => {
                     const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
