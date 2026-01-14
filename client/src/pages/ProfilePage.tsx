@@ -1269,40 +1269,25 @@ const ProfilePage = () => {
             {/* Name Tag - positioned absolutely on mobile, only show if imageUrl exists */}
             {nameTagData?.nameTag?.imageUrl && (
               <div 
-                className="absolute flex flex-col items-center"
+                className="absolute flex flex-col items-center md:hidden"
                 style={{
                   top: '120px',
                   right: '10px'
                 }}
               >
-                {/* Container with image on top */}
-                <div className="relative">
-                  {/* Glass rounded rectangle background */}
-                  <div 
-                    className="rounded-full shadow-lg backdrop-blur-md"
-                    style={{
-                      width: '210px',
-                      height: '50px',
-                      marginTop: '12px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)'
-                    }}
-                  />
-                  {/* Image sitting on top */}
-                  <img 
-                    src={nameTagData.nameTag.imageUrl} 
-                    alt={nameTagData.nameTag.name}
-                    title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                    className="absolute"
-                    style={{
-                      width: '192px',
-                      height: 'auto',
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)'
-                    }}
-                  />
-                </div>
+                {/* Name tag image only - no glass background */}
+                <img 
+                  src={nameTagData.nameTag.imageUrl} 
+                  alt={nameTagData.nameTag.name}
+                  title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                  style={{
+                    width: '192px',
+                    height: 'auto'
+                  }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
                 <span className="text-xs text-white/60 mt-1 uppercase tracking-wider">Nametag</span>
               </div>
             )}
@@ -1733,40 +1718,25 @@ const ProfilePage = () => {
             {/* Name Tag - positioned absolutely below banner, only show if imageUrl exists */}
             {nameTagData?.nameTag?.imageUrl && (
               <div 
-                className="absolute flex flex-col items-center hidden md:flex"
+                className="absolute flex-col items-center hidden md:flex"
                 style={{
                   top: '220px',
                   right: '5%'
                 }}
               >
-                {/* Container with image on top */}
-                <div className="relative">
-                  {/* Glass rounded rectangle background */}
-                  <div 
-                    className="rounded-full shadow-lg backdrop-blur-md"
-                    style={{
-                      width: '360px',
-                      height: '80px',
-                      marginTop: '20px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)'
-                    }}
-                  />
-                  {/* Image sitting on top */}
-                  <img 
-                    src={nameTagData.nameTag.imageUrl} 
-                    alt={nameTagData.nameTag.name}
-                    title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                    className="absolute"
-                    style={{
-                      width: '336px',
-                      height: 'auto',
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)'
-                    }}
-                  />
-                </div>
+                {/* Name tag image only - no glass background */}
+                <img 
+                  src={nameTagData.nameTag.imageUrl} 
+                  alt={nameTagData.nameTag.name}
+                  title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                  style={{
+                    width: '336px',
+                    height: 'auto'
+                  }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
                 <span className="text-xs text-white/60 mt-2 uppercase tracking-wider">Nametag</span>
               </div>
             )}
