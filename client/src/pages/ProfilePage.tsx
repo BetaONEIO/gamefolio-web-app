@@ -1526,10 +1526,10 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        {/* Desktop Layout - Horizontal */}
-        <div className="hidden md:flex items-start gap-4 md:gap-6 pb-4 relative" style={{ marginTop: '-48px', paddingTop: '20px' }}>
-          {/* Profile Picture positioned to overlap banner */}
-          <div className="relative flex-shrink-0" style={{ transform: 'translateY(-28px)' }}>
+        {/* Desktop Layout - Vertical with centered avatar */}
+        <div className="hidden md:flex flex-col items-start pb-4 relative" style={{ marginTop: '-80px' }}>
+          {/* Profile Picture positioned to overlap banner - half on, half off */}
+          <div className="relative flex-shrink-0 ml-8" style={{ marginBottom: '20px' }}>
             {/* Circular glow - only show when NO SVG border is selected (CustomAvatar handles its own glow) */}
             {!profile.selectedAvatarBorderId && (
               <div 
@@ -1564,7 +1564,7 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          <div className="flex-1 pt-12 overflow-hidden">
+          <div className="w-full px-8 overflow-hidden">
             {/* Username and Display Name with action buttons */}
             <div className="flex flex-row justify-between items-start gap-3 mb-4">
               <div className="flex flex-col flex-1">
@@ -1601,7 +1601,7 @@ const ProfilePage = () => {
                   <div 
                     className="absolute flex flex-col items-center"
                     style={{
-                      top: '200px',
+                      top: '80px',
                       right: '5%'
                     }}
                   >
