@@ -1730,25 +1730,29 @@ const ProfilePage = () => {
               </div>
             )}
 
-            {/* Name Tag - positioned absolutely below banner, only show if name tag exists */}
+            {/* Name Tag - positioned absolutely below banner */}
             {nameTagData?.nameTag && (
               <div 
-                className="absolute flex flex-col items-center"
+                className="absolute flex flex-col items-center hidden md:flex"
                 style={{
                   top: '220px',
                   right: '5%'
                 }}
               >
+                {/* Container with image on top */}
                 <div className="relative">
+                  {/* Glass rounded rectangle background */}
                   <div 
                     className="rounded-full shadow-lg backdrop-blur-md"
                     style={{
                       width: '360px',
                       height: '80px',
+                      marginTop: '20px',
                       backgroundColor: 'rgba(255, 255, 255, 0.1)',
                       border: '1px solid rgba(255, 255, 255, 0.2)'
                     }}
                   />
+                  {/* Image sitting on top */}
                   <img 
                     src={nameTagData.nameTag.imageUrl} 
                     alt={nameTagData.nameTag.name}
@@ -1766,10 +1770,12 @@ const ProfilePage = () => {
                 <span className="text-xs text-white/60 mt-2 uppercase tracking-wider">Nametag</span>
               </div>
             )}
+          </div>
 
-            {/* Action buttons - Follow, Message, Share - positioned below user info */}
+          {/* Action buttons - positioned below banner */}
+          <div className="absolute right-4 md:right-8" style={{ top: '200px' }}>
             {!isOwnProfile && currentUser && (
-              <div className="flex gap-2 mt-4">
+              <div className="flex gap-2">
                   <Button 
                     onClick={handleFollowClick}
                     variant={followRequestStatus === 'following' ? "default" : (followRequestStatus === 'requested' ? "outline" : "outline")}
@@ -1852,39 +1858,40 @@ const ProfilePage = () => {
                       </Button>
                     }
                   />
-              </div>
-            )}
+                </div>
+              )}
 
             {/* Share button for own profile */}
             {isOwnProfile && (
-              <div className="flex gap-2 mt-4">
-                <GamefolioShareDialog 
-                  username={profile.username}
-                  userProfile={{
-                    displayName: profile.displayName,
-                    bio: profile.bio,
-                    avatarUrl: profile.avatarUrl,
-                    bannerUrl: profile.bannerUrl,
-                    selectedAvatarBorderId: profile.selectedAvatarBorderId,
-                    avatarBorderColor: profile.avatarBorderColor
-                  }}
-                  userStats={{
-                    clips: profile._count?.clips || 0,
-                    followers: profile._count?.followers || 0,
-                    following: profile._count?.following || 0
-                  }}
-                  trigger={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
-                    >
-                      <Share2 className="h-4 w-4 mr-1" /> Share
-                    </Button>
-                  }
-                />
-              </div>
-            )}
+              <div className="flex gap-2">
+                  <GamefolioShareDialog 
+                    username={profile.username}
+                    userProfile={{
+                      displayName: profile.displayName,
+                      bio: profile.bio,
+                      avatarUrl: profile.avatarUrl,
+                      bannerUrl: profile.bannerUrl,
+                      selectedAvatarBorderId: profile.selectedAvatarBorderId,
+                      avatarBorderColor: profile.avatarBorderColor
+                    }}
+                    userStats={{
+                      clips: profile._count?.clips || 0,
+                      followers: profile._count?.followers || 0,
+                      following: profile._count?.following || 0
+                    }}
+                    trigger={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                    }
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
