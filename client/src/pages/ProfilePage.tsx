@@ -1269,21 +1269,38 @@ const ProfilePage = () => {
             {/* Name Tag - positioned absolutely on mobile */}
             {nameTagData?.nameTag && (
               <div 
-                className="absolute flex flex-col items-center p-2 border border-white/20 rounded-lg bg-black/20 backdrop-blur-sm"
+                className="absolute flex flex-col items-center"
                 style={{
-                  top: '50px',
+                  top: '30px',
                   right: '10px'
                 }}
               >
-                <img 
-                  src={nameTagData.nameTag.imageUrl} 
-                  alt={nameTagData.nameTag.name}
-                  title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                  style={{
-                    width: '192px',
-                    height: 'auto'
-                  }}
-                />
+                {/* Container with image on top */}
+                <div className="relative">
+                  {/* Dark rounded rectangle background */}
+                  <div 
+                    className="bg-gray-900 rounded-full shadow-lg"
+                    style={{
+                      width: '210px',
+                      height: '50px',
+                      marginTop: '12px'
+                    }}
+                  />
+                  {/* Image sitting on top */}
+                  <img 
+                    src={nameTagData.nameTag.imageUrl} 
+                    alt={nameTagData.nameTag.name}
+                    title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                    className="absolute"
+                    style={{
+                      width: '192px',
+                      height: 'auto',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)'
+                    }}
+                  />
+                </div>
                 <span className="text-xs text-white/60 mt-1 uppercase tracking-wider">Nametag</span>
               </div>
             )}
@@ -1610,21 +1627,38 @@ const ProfilePage = () => {
                 {/* Name Tag - positioned absolutely to not affect layout */}
                 {nameTagData?.nameTag && (
                   <div 
-                    className="absolute flex flex-col items-center p-3 border border-white/20 rounded-xl bg-black/20 backdrop-blur-sm"
+                    className="absolute flex flex-col items-center"
                     style={{
-                      top: '40px',
+                      top: '20px',
                       right: '140px'
                     }}
                   >
-                    <img 
-                      src={nameTagData.nameTag.imageUrl} 
-                      alt={nameTagData.nameTag.name}
-                      title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                      style={{
-                        width: '336px',
-                        height: 'auto'
-                      }}
-                    />
+                    {/* Container with image on top */}
+                    <div className="relative">
+                      {/* Dark rounded rectangle background */}
+                      <div 
+                        className="bg-gray-900 rounded-full shadow-lg"
+                        style={{
+                          width: '360px',
+                          height: '80px',
+                          marginTop: '20px'
+                        }}
+                      />
+                      {/* Image sitting on top */}
+                      <img 
+                        src={nameTagData.nameTag.imageUrl} 
+                        alt={nameTagData.nameTag.name}
+                        title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                        className="absolute"
+                        style={{
+                          width: '336px',
+                          height: 'auto',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)'
+                        }}
+                      />
+                    </div>
                     <span className="text-xs text-white/60 mt-2 uppercase tracking-wider">Nametag</span>
                   </div>
                 )}
