@@ -1240,6 +1240,10 @@ const ProfilePage = () => {
           <div className="flex flex-col items-center gap-1 mb-3 text-center" style={{ marginTop: '-20px' }}>
             <div className="flex items-center gap-2 flex-wrap justify-center">
               <h1 className="text-xl font-bold">{profile.displayName}</h1>
+              <ModeratorBadge 
+                isModerator={profile.role === "moderator" || profile.role === "admin"} 
+                size="lg" 
+              />
               {profile.userType && profile.showUserType !== false && (() => {
                 const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
                 const displayTypes = userTypes.slice(0, 2);
@@ -1260,10 +1264,6 @@ const ProfilePage = () => {
                   );
                 });
               })()}
-              <ModeratorBadge 
-                isModerator={profile.role === "moderator" || profile.role === "admin"} 
-                size="lg" 
-              />
             </div>
             <span className="text-base text-white/70 font-normal">@{profile.username}</span>
             {/* Name Tag - positioned absolutely on mobile */}
@@ -1570,6 +1570,10 @@ const ProfilePage = () => {
               <div className="flex flex-col flex-1">
                 <div className="flex items-center gap-4 flex-wrap">
                   <h1 className="text-2xl font-bold">{profile.displayName}</h1>
+                  <ModeratorBadge 
+                    isModerator={profile.role === "moderator" || profile.role === "admin"} 
+                    size="xl" 
+                  />
                   {profile.userType && profile.showUserType !== false && (() => {
                     const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
                     const displayTypes = userTypes.slice(0, 2);
@@ -1590,10 +1594,6 @@ const ProfilePage = () => {
                       );
                     });
                   })()}
-                  <ModeratorBadge 
-                    isModerator={profile.role === "moderator" || profile.role === "admin"} 
-                    size="xl" 
-                  />
                 </div>
                 <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
                 {/* Name Tag - positioned absolutely to not affect layout */}
