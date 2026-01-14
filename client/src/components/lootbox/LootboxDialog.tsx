@@ -67,7 +67,6 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
     onSuccess: (data: LootboxOpenResult) => {
       setReward(data.reward);
       setIsDuplicate(data.isDuplicate);
-      setTimeout(() => setPhase("reveal"), 1500);
       queryClient.invalidateQueries({ queryKey: ["/api/lootbox/status"] });
       queryClient.invalidateQueries({ queryKey: ["/api/lootbox/rewards"] });
     },
@@ -76,6 +75,10 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
       setPhase("idle");
     },
   });
+
+  const handleVideoEnded = () => {
+    setPhase("reveal");
+  };
 
   const handleOpen = () => {
     if (!status?.canOpen || openMutation.isPending) return;
@@ -290,69 +293,16 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex flex-col items-center gap-6 py-12"
+                className="flex flex-col items-center justify-center w-full"
               >
-                <motion.div
-                  className="relative w-40 h-36"
-                  animate={{
-                    scale: [1, 1.1, 1, 1.15, 1],
-                    rotate: [0, -3, 3, -3, 0],
-                  }}
-                  transition={{ duration: 1.5, ease: "easeInOut" }}
-                >
-                  {/* Intense glow during opening */}
-                  <motion.div
-                    className="absolute inset-0 bg-purple-500/40 blur-3xl rounded-full scale-200"
-                    animate={{ opacity: [0.4, 0.8, 0.4] }}
-                    transition={{ duration: 0.5, repeat: Infinity }}
-                  />
-                  
-                  {/* Chest body */}
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-36 h-24 bg-gradient-to-b from-[#2a3f4f] to-[#1a2a35] rounded-lg border-2 border-purple-500 shadow-lg shadow-purple-500/50">
-                    <div className="absolute inset-x-0 top-0 h-full">
-                      <div className="absolute left-2 top-0 w-3 h-full bg-gradient-to-b from-[#7ddb5c] to-[#4fa83d] rounded-sm" />
-                      <div className="absolute right-2 top-0 w-3 h-full bg-gradient-to-b from-[#7ddb5c] to-[#4fa83d] rounded-sm" />
-                    </div>
-                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-10 bg-gradient-to-b from-yellow-300 to-yellow-500 rounded-sm flex items-center justify-center border border-yellow-600 animate-pulse">
-                      <div className="w-3 h-4 bg-[#1a2a35] rounded-sm" />
-                    </div>
-                    <div className="absolute left-1/2 bottom-2 -translate-x-1/2 w-6 h-6 border-4 border-[#3a8a9a] rounded-full bg-transparent" />
-                  </div>
-                  
-                  {/* Lid bouncing */}
-                  <motion.div
-                    className="absolute top-4 left-1/2 -translate-x-1/2 w-36 h-12 bg-gradient-to-b from-[#3a5060] to-[#2a3f4f] rounded-t-xl border-2 border-purple-500"
-                    animate={{ y: [0, -5, 0] }}
-                    transition={{ duration: 0.2, repeat: Infinity }}
-                  >
-                    <div className="absolute left-2 top-0 w-3 h-full bg-gradient-to-b from-[#7ddb5c] to-[#5fc044] rounded-t-lg" />
-                    <div className="absolute right-2 top-0 w-3 h-full bg-gradient-to-b from-[#7ddb5c] to-[#5fc044] rounded-t-lg" />
-                    <div className="absolute left-0 -top-1 w-8 h-4 bg-gradient-to-r from-[#7ddb5c] to-[#5fc044] rounded-tl-xl" />
-                    <div className="absolute right-0 -top-1 w-8 h-4 bg-gradient-to-l from-[#7ddb5c] to-[#5fc044] rounded-tr-xl" />
-                  </motion.div>
-                  
-                  {/* Flying sparkles */}
-                  {[...Array(6)].map((_, i) => (
-                    <motion.div
-                      key={i}
-                      className="absolute left-1/2 top-1/2"
-                      animate={{
-                        x: [0, (i % 2 === 0 ? 1 : -1) * (30 + i * 10)],
-                        y: [0, -40 - i * 10],
-                        opacity: [1, 0],
-                        scale: [1, 0.5],
-                      }}
-                      transition={{
-                        duration: 1,
-                        repeat: Infinity,
-                        delay: i * 0.2,
-                      }}
-                    >
-                      <Sparkles className="w-4 h-4 text-yellow-400" />
-                    </motion.div>
-                  ))}
-                </motion.div>
-                <p className="text-lg font-semibold text-purple-400 animate-pulse">Opening...</p>
+                <video
+                  autoPlay
+                  muted
+                  playsInline
+                  onEnded={handleVideoEnded}
+                  className="w-full max-w-md rounded-lg"
+                  src="https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-assets/lootbox%20animation%20full.webm"
+                />
               </motion.div>
             )}
 
