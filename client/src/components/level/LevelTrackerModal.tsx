@@ -1,16 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Video, 
-  MessageCircle, 
-  Star,
   Trophy,
-  Flame,
-  Eye,
-  Heart,
   Sparkles
 } from "lucide-react";
 
@@ -35,49 +27,6 @@ const LEVEL_THRESHOLDS = [
   { level: 8, xpRequired: 28000 },
   { level: 9, xpRequired: 56000 },
   { level: 10, xpRequired: 100000 },
-];
-
-const XP_TASKS = [
-  { 
-    id: 'upload-video', 
-    title: 'Upload a Clip', 
-    description: 'Share your best gaming moments',
-    xpReward: 5, 
-    icon: Video,
-    action: '/upload'
-  },
-  { 
-    id: 'get-likes', 
-    title: 'Get Likes', 
-    description: 'Receive likes on your content',
-    xpReward: 1, 
-    icon: Heart,
-    action: null
-  },
-  { 
-    id: 'get-fires', 
-    title: 'Get Fire Reactions', 
-    description: 'Receive fire reactions on clips',
-    xpReward: 3, 
-    icon: Flame,
-    action: null
-  },
-  { 
-    id: 'leave-comments', 
-    title: 'Leave Comments', 
-    description: 'Engage with the community',
-    xpReward: 1, 
-    icon: MessageCircle,
-    action: '/explore'
-  },
-  { 
-    id: 'get-views', 
-    title: 'Get Views', 
-    description: 'Have others watch your clips',
-    xpReward: 1, 
-    icon: Eye,
-    action: null
-  },
 ];
 
 function AnimatedStars() {
@@ -169,7 +118,6 @@ export function LevelTrackerModal({
 }: LevelTrackerModalProps) {
   const [animatedXP, setAnimatedXP] = useState(totalXP);
   const [showXpGain, setShowXpGain] = useState(false);
-  const [, setLocation] = useLocation();
 
   const targetXP = (xpDelta && previousXP !== null && previousXP !== undefined) 
     ? previousXP + xpDelta 
@@ -221,13 +169,6 @@ export function LevelTrackerModal({
   const xpNeeded = xpForNextLevel - xpForCurrentLevel;
   const progressPercent = Math.min((xpProgress / xpNeeded) * 100, 100);
 
-  const handleTaskAction = (action: string | null) => {
-    if (action) {
-      onOpenChange(false);
-      setLocation(action);
-    }
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-gradient-to-b from-[#0F1520] via-[#134E4A]/20 to-[#0F1520] border-border/50 overflow-hidden">
@@ -278,43 +219,6 @@ export function LevelTrackerModal({
           </div>
         </div>
 
-        <div className="relative z-10 w-full space-y-3 max-h-[300px] overflow-y-auto">
-          <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-            <Star className="w-4 h-4 text-primary" />
-            Ways to Earn XP
-          </h3>
-          {XP_TASKS.map((task) => {
-            const Icon = task.icon;
-            return (
-              <div
-                key={task.id}
-                className="flex items-center gap-3 p-3 rounded-lg bg-background/30 border border-border/30 hover:bg-background/50 transition-colors"
-              >
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <Icon className="w-5 h-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground text-sm">{task.title}</p>
-                  <p className="text-xs text-muted-foreground truncate">{task.description}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-primary font-bold text-sm">+{task.xpReward}</span>
-                  {task.action && (
-                    <Button 
-                      size="sm" 
-                      variant="ghost"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => handleTaskAction(task.action)}
-                      data-testid={`button-task-${task.id}`}
-                    >
-                      Go
-                    </Button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </DialogContent>
     </Dialog>
   );
