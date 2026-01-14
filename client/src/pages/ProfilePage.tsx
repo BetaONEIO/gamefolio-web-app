@@ -1730,8 +1730,8 @@ const ProfilePage = () => {
               </div>
             )}
 
-            {/* Name Tag - positioned absolutely below banner */}
-            {nameTagData?.nameTag && (
+            {/* Name Tag - positioned absolutely below banner, only show if imageUrl exists */}
+            {nameTagData?.nameTag?.imageUrl && (
               <div 
                 className="absolute flex flex-col items-center hidden md:flex"
                 style={{
