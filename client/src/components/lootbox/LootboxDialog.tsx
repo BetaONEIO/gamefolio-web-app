@@ -171,7 +171,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                 className="flex flex-col items-center w-full"
               >
                 {/* Lootbox Video - paused on first frame */}
-                <div className="relative my-4 w-full max-w-[280px]">
+                <div className="relative my-4 w-full max-w-[420px]">
                   <video
                     muted
                     playsInline
@@ -286,7 +286,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                   muted
                   playsInline
                   onEnded={handleVideoEnded}
-                  className="w-full max-w-md rounded-lg"
+                  className="w-full max-w-[420px] rounded-lg"
                   src="https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-assets/lootbox%20animation%20full.webm"
                 />
               </motion.div>
