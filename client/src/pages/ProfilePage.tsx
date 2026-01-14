@@ -1266,8 +1266,8 @@ const ProfilePage = () => {
               })()}
             </div>
             <span className="text-base text-white/70 font-normal">@{profile.username}</span>
-            {/* Name Tag - positioned absolutely on mobile */}
-            {nameTagData?.nameTag && (
+            {/* Name Tag - positioned absolutely on mobile, only show if imageUrl exists */}
+            {nameTagData?.nameTag?.imageUrl && (
               <div 
                 className="absolute flex flex-col items-center"
                 style={{
