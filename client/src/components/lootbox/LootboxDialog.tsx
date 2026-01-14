@@ -151,7 +151,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-[#0f0f1a] border border-purple-900/30 rounded-2xl">
+      <DialogContent className="sm:max-w-lg p-0 overflow-hidden bg-[#0f0f1a] border border-purple-900/30 rounded-2xl">
         {/* Header */}
         <div className="flex items-center justify-start px-6 pt-6">
           <div className="flex items-center gap-2">
