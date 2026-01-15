@@ -1160,37 +1160,33 @@ const ProfilePage = () => {
         )}
       </div>
 
-      {/* 3 dots menu - positioned underneath banner on the right for mobile */}
+      {/* Share button - positioned on banner top right for mobile */}
       <div className="block md:hidden absolute top-4 right-4 z-30">
-        {isOwnProfile && (
-          <GamefolioShareDialog 
-            username={profile.username}
-            userProfile={{
-              displayName: profile.displayName,
-              bio: profile.bio,
-              avatarUrl: profile.avatarUrl,
-              bannerUrl: profile.bannerUrl,
-              selectedAvatarBorderId: profile.selectedAvatarBorderId,
-              avatarBorderColor: profile.avatarBorderColor
-            }}
-            userStats={{
-              clips: profile._count?.clips || 0,
-              followers: profile._count?.followers || 0,
-              following: profile._count?.following || 0
-            }}
-            trigger={
-              <Button
-                variant="ghost"
-                size="sm"
-                className="p-2 h-10 w-10 rounded-full hover:bg-primary/10 bg-background/80 backdrop-blur-sm"
-              >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                </svg>
-              </Button>
-            }
-          />
-        )}
+        <GamefolioShareDialog 
+          username={profile.username}
+          userProfile={{
+            displayName: profile.displayName,
+            bio: profile.bio,
+            avatarUrl: profile.avatarUrl,
+            bannerUrl: profile.bannerUrl,
+            selectedAvatarBorderId: profile.selectedAvatarBorderId,
+            avatarBorderColor: profile.avatarBorderColor
+          }}
+          userStats={{
+            clips: profile._count?.clips || 0,
+            followers: profile._count?.followers || 0,
+            following: profile._count?.following || 0
+          }}
+          trigger={
+            <Button
+              variant="ghost"
+              size="sm"
+              className="p-2 h-10 w-10 rounded-full hover:bg-primary/10 bg-background/80 backdrop-blur-sm"
+            >
+              <Share2 className="w-5 h-5" />
+            </Button>
+          }
+        />
       </div>
 
       {/* Profile Info - positioned below banner with overlapping profile picture */}
@@ -1227,8 +1223,12 @@ const ProfilePage = () => {
                   className="h-full w-full"
                 />
               </div>
-              {/* Level Badge with Progress */}
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-30">
+              {/* Online status indicator - green circle on top right of avatar */}
+              <div className="absolute top-0 right-0 z-30">
+                <div className="w-4 h-4 rounded-full bg-green-500 border-2 border-background"></div>
+              </div>
+              {/* Level Badge with Progress - at bottom of profile picture */}
+              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 z-30">
                 <LevelBadgeWithProgress 
                   userId={profile.id}
                   level={profile.level || 1}
@@ -1238,44 +1238,9 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          {/* Online status and Share button - positioned on the right */}
-          <div className="absolute right-2 flex items-center gap-2" style={{ top: '96px' }}>
-            {/* Online status indicator */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border/50">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              <span className="text-sm font-medium">Online</span>
-            </div>
-            {/* Share button */}
-            <GamefolioShareDialog 
-              username={profile.username}
-              userProfile={{
-                displayName: profile.displayName,
-                bio: profile.bio,
-                avatarUrl: profile.avatarUrl,
-                bannerUrl: profile.bannerUrl,
-                selectedAvatarBorderId: profile.selectedAvatarBorderId,
-                avatarBorderColor: profile.avatarBorderColor
-              }}
-              userStats={{
-                clips: profile._count?.clips || 0,
-                followers: profile._count?.followers || 0,
-                following: profile._count?.following || 0
-              }}
-              trigger={
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 w-9 p-0 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 hover:bg-primary/10"
-                >
-                  <Share2 className="h-4 w-4" />
-                </Button>
-              }
-            />
-          </div>
-
-          {/* Action buttons for mobile - X/Twitter style placement */}
+          {/* Action buttons for mobile - Message icon and Follow button on the right */}
           {!isOwnProfile && currentUser && (
-            <div className="absolute right-2 flex items-center gap-2" style={{ top: '136px' }}>
+            <div className="absolute right-2 flex items-center gap-2" style={{ top: '96px' }}>
               {/* Message icon button */}
               <Button 
                 onClick={() => {
