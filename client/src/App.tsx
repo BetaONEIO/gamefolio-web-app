@@ -155,8 +155,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                            location.startsWith("/reset-password") ||
                            location.startsWith("/embed/") ||
                            location.startsWith("/leaderboard/embed") ||
-                           location.startsWith("/view/") ||
-                           location.startsWith("/@"); // Also exclude shared content pages from layout
+                           location.startsWith("/view/");
 
   if (isAuthOrOnboarding) {
     return <>{children}</>;
