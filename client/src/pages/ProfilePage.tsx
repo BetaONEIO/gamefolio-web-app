@@ -1196,12 +1196,12 @@ const ProfilePage = () => {
       {/* Profile Info - positioned below banner with overlapping profile picture */}
       <div className="max-w-[90%] mx-auto relative z-20">
 
-        {/* Mobile Layout - Stacked Vertically */}
-        <div className="block md:hidden pb-6" style={{ marginTop: '-80px', paddingTop: '0px' }}>
-          {/* Profile Picture - Centered on Mobile */}
-          <div className="flex justify-center mb-6">
+        {/* Mobile Layout - Left-aligned like reference design */}
+        <div className="block md:hidden pb-6 relative" style={{ marginTop: '-80px', paddingTop: '0px' }}>
+          {/* Profile Picture - Left aligned on Mobile */}
+          <div className="flex justify-start mb-2 pl-2">
             {/* Explicit dimensions to ensure circular glow renders correctly - matches profile avatar sizes */}
-            <div className="relative h-40 w-40 sm:h-48 sm:w-48">
+            <div className="relative h-32 w-32">
               {/* Circular glow - only show when NO SVG border is selected (CustomAvatar handles its own glow) */}
               {!profile.selectedAvatarBorderId && (
                 <div 
@@ -1221,13 +1221,13 @@ const ProfilePage = () => {
               >
                 <CustomAvatar 
                   user={profile}
-                  size="profile"
+                  size="lg"
                   borderIntensity="strong"
                   showAvatarBorderOverlay={true}
                 />
               </div>
               {/* Level Badge with Progress */}
-              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 z-30">
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-30">
                 <LevelBadgeWithProgress 
                   userId={profile.id}
                   level={profile.level || 1}
@@ -1237,9 +1237,44 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          {/* Username and Display Name - Stacked on Mobile */}
-          <div className="flex flex-col items-center gap-1 mb-3 text-center" style={{ marginTop: '-20px' }}>
-            <div className="flex items-center gap-2 flex-wrap justify-center">
+          {/* Online status and Share button - positioned on the right */}
+          <div className="absolute right-2 flex items-center gap-2" style={{ top: '96px' }}>
+            {/* Online status indicator */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border/50">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              <span className="text-sm font-medium">Online</span>
+            </div>
+            {/* Share button */}
+            <GamefolioShareDialog 
+              username={profile.username}
+              userProfile={{
+                displayName: profile.displayName,
+                bio: profile.bio,
+                avatarUrl: profile.avatarUrl,
+                bannerUrl: profile.bannerUrl,
+                selectedAvatarBorderId: profile.selectedAvatarBorderId,
+                avatarBorderColor: profile.avatarBorderColor
+              }}
+              userStats={{
+                clips: profile._count?.clips || 0,
+                followers: profile._count?.followers || 0,
+                following: profile._count?.following || 0
+              }}
+              trigger={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 w-9 p-0 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 hover:bg-primary/10"
+                >
+                  <Share2 className="h-4 w-4" />
+                </Button>
+              }
+            />
+          </div>
+
+          {/* Username and Display Name - Left aligned on Mobile */}
+          <div className="flex flex-col items-start gap-0.5 mb-3 mt-4 pl-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-bold">{profile.displayName}</h1>
               <ModeratorBadge 
                 isModerator={profile.role === "moderator" || profile.role === "admin"} 
@@ -1266,250 +1301,126 @@ const ProfilePage = () => {
                 });
               })()}
             </div>
-            <span className="text-base text-white/70 font-normal">@{profile.username}</span>
-            {/* Name Tag - positioned absolutely on mobile, only show if imageUrl exists */}
-            {nameTagData?.nameTag?.imageUrl && (
-              <div 
-                className="absolute flex flex-col items-center md:hidden"
-                style={{
-                  top: '120px',
-                  right: '10px'
+            <span className="text-sm text-white/60 font-normal">@{profile.username}</span>
+          </div>
+
+          {/* Stats - Horizontal row with uppercase labels */}
+          <div className="flex gap-6 mb-3 pl-2">
+            <div className="flex flex-col">
+              <span className="font-bold text-lg">{Number(profile._count?.clips || 0)}</span>
+              <span className="text-xs text-primary uppercase tracking-wider">CLIPS</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-lg">{Number(profile._count?.followers || 0)}</span>
+              <span className="text-xs text-primary uppercase tracking-wider">FOLLOWERS</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-lg">{Number(profile._count?.following || 0)}</span>
+              <span className="text-xs text-primary uppercase tracking-wider">FOLLOWING</span>
+            </div>
+          </div>
+
+          {/* Member since date - uppercase */}
+          {profile.createdAt && (
+            <div className="mb-2 pl-2">
+              <span className="text-xs text-primary uppercase tracking-wider">
+                MEMBER SINCE {new Date(profile.createdAt).toLocaleDateString('en-US', { 
+                  year: 'numeric', 
+                  month: 'long' 
+                }).toUpperCase()}
+              </span>
+            </div>
+          )}
+
+          {/* Bio/description - left aligned */}
+          {profile.bio && (
+            <p className="text-sm text-foreground/90 mb-3 pl-2 pr-4">{profile.bio}</p>
+          )}
+
+          {/* Platform tags */}
+          <div className="flex flex-wrap gap-2 mb-4 pl-2">
+            {profile.steamUsername && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{ backgroundColor: 'rgba(27, 40, 56, 0.8)', color: '#FFFFFF' }}>
+                <SiSteam className="w-3.5 h-3.5" />
+                <span>PC</span>
+              </div>
+            )}
+            {profile.nintendoUsername && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{ backgroundColor: 'rgba(230, 0, 18, 0.8)', color: '#FFFFFF' }}>
+                <SiNintendo className="w-3.5 h-3.5" />
+                <span>Switch</span>
+              </div>
+            )}
+            {profile.xboxUsername && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{ backgroundColor: 'rgba(16, 124, 16, 0.8)', color: '#FFFFFF' }}>
+                <FaXbox className="w-3.5 h-3.5" />
+                <span>Xbox</span>
+              </div>
+            )}
+            {profile.playstationUsername && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{ backgroundColor: 'rgba(0, 55, 145, 0.8)', color: '#FFFFFF' }}>
+                <SiPlaystation className="w-3.5 h-3.5" />
+                <span>PlayStation</span>
+              </div>
+            )}
+            {profile.epicUsername && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{ backgroundColor: 'rgba(49, 49, 49, 0.8)', color: '#FFFFFF' }}>
+                <SiEpicgames className="w-3.5 h-3.5" />
+                <span>Desktop</span>
+              </div>
+            )}
+          </div>
+
+          {/* Action buttons for mobile - only for other users */}
+          {!isOwnProfile && currentUser && (
+            <div className="flex gap-2 px-2 mb-4">
+              <Button 
+                onClick={handleFollowClick}
+                variant={followRequestStatus === 'following' ? "outline" : "default"}
+                size="sm"
+                disabled={followMutation.isPending}
+                className="flex-1 relative overflow-hidden font-semibold transition-all duration-300"
+                style={followRequestStatus === 'following' ? {
+                  borderColor: 'hsl(var(--primary))',
+                  color: 'hsl(var(--primary))',
+                  backgroundColor: 'transparent',
+                } : followRequestStatus === 'requested' ? {
+                  borderColor: 'hsl(var(--primary))',
+                  color: 'hsl(var(--primary))',
+                  backgroundColor: 'transparent',
+                } : {
+                  backgroundColor: 'hsl(var(--primary))',
+                  borderColor: 'hsl(var(--primary))',
+                  color: 'hsl(var(--primary-foreground))',
                 }}
               >
-                {/* Name tag image only - no glass background */}
-                <img 
-                  src={nameTagData.nameTag.imageUrl} 
-                  alt={nameTagData.nameTag.name}
-                  title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                  style={{
-                    width: '192px',
-                    height: 'auto'
-                  }}
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-                <span className="text-xs text-white/60 mt-1 uppercase tracking-wider">Nametag</span>
-              </div>
-            )}
-          </div>
-
-          {/* Stats under username on mobile - Two rows */}
-          <div className="flex flex-col gap-3 mb-4 px-2">
-            {/* First row: Clips, Followers, Following */}
-            <div className="flex justify-center gap-x-3">
-              <div className="flex flex-col items-center min-w-[60px]">
-                <span className="font-bold text-lg">{Number(profile._count?.clips || 0)}</span>
-                <span className="text-muted-foreground text-xs">Clips</span>
-              </div>
-              <div className="flex flex-col items-center min-w-[60px]">
-                <span className="font-bold text-lg">{Number(profile._count?.followers || 0)}</span>
-                <span className="text-muted-foreground text-xs">Followers</span>
-              </div>
-              <div className="flex flex-col items-center min-w-[60px]">
-                <span className="font-bold text-lg">{Number(profile._count?.following || 0)}</span>
-                <span className="text-muted-foreground text-xs">Following</span>
-              </div>
+                {followMutation.isPending ? (
+                  <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-current animate-spin mr-2"></div>
+                ) : followRequestStatus === 'following' ? (
+                  <UserCheck className="mr-1.5 h-4 w-4" />
+                ) : followRequestStatus === 'requested' ? (
+                  <Clock className="mr-1.5 h-4 w-4" />
+                ) : (
+                  <UserPlus className="mr-1.5 h-4 w-4" />
+                )}
+                {followRequestStatus === 'following' ? "Following" : 
+                 followRequestStatus === 'requested' ? "Pending" : 
+                 "Follow"}
+              </Button>
+              
+              <Button 
+                onClick={() => {
+                  console.log('🎯 MESSAGE BUTTON CLICKED - Setting target user:', username);
+                  setLocation(`/messages?user=${username}`);
+                }}
+                variant="outline"
+                size="sm"
+                className="flex-1 relative overflow-hidden font-semibold transition-all duration-300 border-primary text-primary hover:bg-primary/20"
+              >
+                <MessageSquare className="mr-1.5 h-4 w-4" /> Message
+              </Button>
             </div>
-          </div>
-
-          {/* Bio and other content centered on mobile */}
-          <div className="text-center space-y-3">
-            {/* Member since date */}
-            {profile.createdAt && (
-              <div className="flex justify-center items-center gap-1">
-                <span className="text-sm text-muted-foreground">
-                  Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'long' 
-                  })}
-                </span>
-              </div>
-            )}
-
-            {/* Bio/description */}
-            {profile.bio && (
-              <p className="text-base text-foreground/90 px-4">{profile.bio}</p>
-            )}
-
-            {/* Action buttons for mobile */}
-            {!isOwnProfile && currentUser && (
-              <div className="flex flex-col gap-3 px-4">
-                <Button 
-                  onClick={handleFollowClick}
-                  variant={followRequestStatus === 'following' ? "default" : (followRequestStatus === 'requested' ? "outline" : "outline")}
-                  size="lg"
-                  disabled={followMutation.isPending}
-                  className="w-full relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                  style={followRequestStatus === 'following' ? {
-                    backgroundColor: 'hsl(var(--primary))',
-                    borderColor: 'hsl(var(--primary))',
-                    color: 'hsl(var(--primary-foreground))',
-                    boxShadow: `0 4px 15px hsl(var(--primary) / 0.4)`,
-                  } : {
-                    borderColor: 'hsl(var(--primary))',
-                    color: 'hsl(var(--primary))',
-                    backgroundColor: 'transparent',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (followRequestStatus !== 'following') {
-                      e.currentTarget.style.backgroundColor = 'hsl(var(--primary))';
-                      e.currentTarget.style.color = '#000000';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (followRequestStatus !== 'following') {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = 'hsl(var(--primary))';
-                    }
-                  }}
-                  data-testid="follow-button"
-                  data-following={followRequestStatus === 'following'}
-                >
-                  {followMutation.isPending ? (
-                    <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-current animate-spin mr-2"></div>
-                  ) : followRequestStatus === 'following' ? (
-                    <UserCheck className="mr-2 h-4 w-4" />
-                  ) : followRequestStatus === 'requested' ? (
-                    <Clock className="mr-2 h-4 w-4" />
-                  ) : (
-                    <UserPlus className="mr-2 h-4 w-4" />
-                  )}
-                  {followRequestStatus === 'following' ? "Following" : 
-                   followRequestStatus === 'requested' ? "Pending" : 
-                   "Follow"}
-                </Button>
-                
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={() => {
-                      console.log('🎯 MESSAGE BUTTON CLICKED - Setting target user:', username);
-                      setLocation(`/messages?user=${username}`);
-                    }}
-                    variant="outline"
-                    size="lg"
-                    className="flex-1 relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
-                  >
-                    <MessageSquare className="mr-2 h-4 w-4" /> Message
-                  </Button>
-
-                  <GamefolioShareDialog 
-                    username={profile.username}
-                    userProfile={{
-                      displayName: profile.displayName,
-                      bio: profile.bio,
-                      avatarUrl: profile.avatarUrl,
-                      bannerUrl: profile.bannerUrl,
-                      selectedAvatarBorderId: profile.selectedAvatarBorderId,
-                      avatarBorderColor: profile.avatarBorderColor
-                    }}
-                    userStats={{
-                      clips: profile._count?.clips || 0,
-                      followers: profile._count?.followers || 0,
-                      following: profile._count?.following || 0
-                    }}
-                    trigger={
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        className="flex-1 relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
-                      >
-                        <Share2 className="mr-2 h-4 w-4" /> Share
-                      </Button>
-                    }
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Platform Connections */}
-            <div className="flex flex-wrap justify-center gap-2 px-4">
-              {profile.steamUsername && (
-                <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#1B2838', color: '#FFFFFF' }}>
-                  <SiSteam className="w-3 h-3" />
-                  <span>{profile.steamUsername}</span>
-                </div>
-              )}
-              {profile.xboxUsername && (
-                <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#107C10', color: '#FFFFFF' }}>
-                  <FaXbox className="w-3 h-3" />
-                  <span>{profile.xboxUsername}</span>
-                </div>
-              )}
-              {profile.playstationUsername && (
-                <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#003791', color: '#FFFFFF' }}>
-                  <SiPlaystation className="w-3 h-3" />
-                  <span>{profile.playstationUsername}</span>
-                </div>
-              )}
-              {profile.nintendoUsername && (
-                <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#E60012', color: '#FFFFFF' }}>
-                  <SiNintendo className="w-3 h-3" />
-                  <span>{profile.nintendoUsername}</span>
-                </div>
-              )}
-              {profile.epicUsername && (
-                <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#313131', color: '#FFFFFF' }}>
-                  <SiEpicgames className="w-3 h-3" />
-                  <span>{profile.epicUsername}</span>
-                </div>
-              )}
-              {profile.discordUsername && (
-                <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#5865F2', color: '#FFFFFF' }}>
-                  <SiDiscord className="w-3 h-3" />
-                  <span>{profile.discordUsername}</span>
-                </div>
-              )}
-              {profile.twitterUsername && (
-                <a 
-                  href={`https://twitter.com/${profile.twitterUsername}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                  style={{ backgroundColor: '#1DA1F2', color: '#FFFFFF' }}
-                >
-                  <FaXTwitter className="w-3 h-3" />
-                  <span>{profile.twitterUsername}</span>
-                </a>
-              )}
-              {profile.youtubeUsername && (
-                <a 
-                  href={`https://youtube.com/@${profile.youtubeUsername}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                  style={{ backgroundColor: '#FF0000', color: '#FFFFFF' }}
-                >
-                  <FaYoutube className="w-3 h-3" />
-                  <span>{profile.youtubeUsername}</span>
-                </a>
-              )}
-              {profile.instagramUsername && (
-                <a 
-                  href={`https://instagram.com/${profile.instagramUsername}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                  style={{ backgroundColor: '#E4405F', color: '#FFFFFF' }}
-                >
-                  <FaInstagram className="w-3 h-3" />
-                  <span>{profile.instagramUsername}</span>
-                </a>
-              )}
-              {profile.facebookUsername && (
-                <a 
-                  href={`https://facebook.com/${profile.facebookUsername}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                  style={{ backgroundColor: '#1877F2', color: '#FFFFFF' }}
-                >
-                  <FaFacebook className="w-3 h-3" />
-                  <span>{profile.facebookUsername}</span>
-                </a>
-              )}
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Desktop Layout - Vertical stacked on left */}
