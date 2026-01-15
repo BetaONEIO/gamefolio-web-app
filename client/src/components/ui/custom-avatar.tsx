@@ -191,7 +191,7 @@ const SvgClipPath: React.FC<{ svgUrl: string; clipId: string }> = ({ svgUrl, cli
 
 interface CustomAvatarProps {
   user: User;
-  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "profile";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "mobile-profile" | "profile";
   className?: string;
   showBorder?: boolean;
   borderIntensity?: "subtle" | "normal" | "strong";
@@ -204,6 +204,7 @@ const sizeClasses = {
   lg: "h-16 w-16",
   xl: "h-20 w-20",
   "2xl": "h-32 w-32",
+  "mobile-profile": "h-28 w-28",
   "profile": "h-40 w-40 sm:h-48 sm:w-48 md:h-56 md:w-56"
 };
 
@@ -213,6 +214,7 @@ const containerSizes = {
   lg: "h-22 w-22",
   xl: "h-28 w-28",
   "2xl": "h-44 w-44",
+  "mobile-profile": "h-36 w-36",
   "profile": "h-52 w-52 sm:h-60 sm:w-60 md:h-72 md:w-72"
 };
 

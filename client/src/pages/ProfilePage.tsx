@@ -1201,7 +1201,7 @@ const ProfilePage = () => {
           {/* Profile Picture - Left aligned on Mobile */}
           <div className="flex justify-start mb-2 pl-2">
             {/* Explicit dimensions to ensure circular glow renders correctly - matches profile avatar sizes */}
-            <div className="relative h-32 w-32">
+            <div className="relative h-28 w-28">
               {/* Circular glow - only show when NO SVG border is selected (CustomAvatar handles its own glow) */}
               {!profile.selectedAvatarBorderId && (
                 <div 
@@ -1216,14 +1216,15 @@ const ProfilePage = () => {
                 </div>
               )}
               <div 
-                className="relative z-10 cursor-pointer hover:opacity-90 transition-opacity"
+                className="relative z-10 cursor-pointer hover:opacity-90 transition-opacity h-full w-full"
                 onClick={() => profile.avatarUrl && openLightbox(profile.avatarUrl, profile.displayName, profile.username)}
               >
                 <CustomAvatar 
                   user={profile}
-                  size="lg"
+                  size="mobile-profile"
                   borderIntensity="strong"
                   showAvatarBorderOverlay={true}
+                  className="h-full w-full"
                 />
               </div>
               {/* Level Badge with Progress */}
@@ -1304,6 +1305,57 @@ const ProfilePage = () => {
             <span className="text-sm text-white/60 font-normal">@{profile.username}</span>
           </div>
 
+          {/* Action buttons for mobile - moved above stats */}
+          {!isOwnProfile && currentUser && (
+            <div className="flex gap-2 px-2 mb-4">
+              <Button 
+                onClick={handleFollowClick}
+                variant={followRequestStatus === 'following' ? "outline" : "default"}
+                size="sm"
+                disabled={followMutation.isPending}
+                className="flex-1 relative overflow-hidden font-semibold transition-all duration-300"
+                style={followRequestStatus === 'following' ? {
+                  borderColor: 'hsl(var(--primary))',
+                  color: 'hsl(var(--primary))',
+                  backgroundColor: 'transparent',
+                } : followRequestStatus === 'requested' ? {
+                  borderColor: 'hsl(var(--primary))',
+                  color: 'hsl(var(--primary))',
+                  backgroundColor: 'transparent',
+                } : {
+                  backgroundColor: 'hsl(var(--primary))',
+                  borderColor: 'hsl(var(--primary))',
+                  color: 'hsl(var(--primary-foreground))',
+                }}
+              >
+                {followMutation.isPending ? (
+                  <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-current animate-spin mr-2"></div>
+                ) : followRequestStatus === 'following' ? (
+                  <UserCheck className="mr-1.5 h-4 w-4" />
+                ) : followRequestStatus === 'requested' ? (
+                  <Clock className="mr-1.5 h-4 w-4" />
+                ) : (
+                  <UserPlus className="mr-1.5 h-4 w-4" />
+                )}
+                {followRequestStatus === 'following' ? "Following" : 
+                 followRequestStatus === 'requested' ? "Pending" : 
+                 "Follow"}
+              </Button>
+              
+              <Button 
+                onClick={() => {
+                  console.log('🎯 MESSAGE BUTTON CLICKED - Setting target user:', username);
+                  setLocation(`/messages?user=${username}`);
+                }}
+                variant="outline"
+                size="sm"
+                className="flex-1 relative overflow-hidden font-semibold transition-all duration-300 border-primary text-primary hover:bg-primary/20"
+              >
+                <MessageSquare className="mr-1.5 h-4 w-4" /> Message
+              </Button>
+            </div>
+          )}
+
           {/* Stats - Horizontal row with uppercase labels */}
           <div className="flex gap-6 mb-3 pl-2">
             <div className="flex flex-col">
@@ -1370,57 +1422,6 @@ const ProfilePage = () => {
               </div>
             )}
           </div>
-
-          {/* Action buttons for mobile - only for other users */}
-          {!isOwnProfile && currentUser && (
-            <div className="flex gap-2 px-2 mb-4">
-              <Button 
-                onClick={handleFollowClick}
-                variant={followRequestStatus === 'following' ? "outline" : "default"}
-                size="sm"
-                disabled={followMutation.isPending}
-                className="flex-1 relative overflow-hidden font-semibold transition-all duration-300"
-                style={followRequestStatus === 'following' ? {
-                  borderColor: 'hsl(var(--primary))',
-                  color: 'hsl(var(--primary))',
-                  backgroundColor: 'transparent',
-                } : followRequestStatus === 'requested' ? {
-                  borderColor: 'hsl(var(--primary))',
-                  color: 'hsl(var(--primary))',
-                  backgroundColor: 'transparent',
-                } : {
-                  backgroundColor: 'hsl(var(--primary))',
-                  borderColor: 'hsl(var(--primary))',
-                  color: 'hsl(var(--primary-foreground))',
-                }}
-              >
-                {followMutation.isPending ? (
-                  <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-current animate-spin mr-2"></div>
-                ) : followRequestStatus === 'following' ? (
-                  <UserCheck className="mr-1.5 h-4 w-4" />
-                ) : followRequestStatus === 'requested' ? (
-                  <Clock className="mr-1.5 h-4 w-4" />
-                ) : (
-                  <UserPlus className="mr-1.5 h-4 w-4" />
-                )}
-                {followRequestStatus === 'following' ? "Following" : 
-                 followRequestStatus === 'requested' ? "Pending" : 
-                 "Follow"}
-              </Button>
-              
-              <Button 
-                onClick={() => {
-                  console.log('🎯 MESSAGE BUTTON CLICKED - Setting target user:', username);
-                  setLocation(`/messages?user=${username}`);
-                }}
-                variant="outline"
-                size="sm"
-                className="flex-1 relative overflow-hidden font-semibold transition-all duration-300 border-primary text-primary hover:bg-primary/20"
-              >
-                <MessageSquare className="mr-1.5 h-4 w-4" /> Message
-              </Button>
-            </div>
-          )}
         </div>
 
         {/* Desktop Layout - Vertical stacked on left */}
