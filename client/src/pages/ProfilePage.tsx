@@ -1744,7 +1744,7 @@ const ProfilePage = () => {
           </div>
 
           {/* Action buttons - positioned just below banner */}
-          <div className="absolute right-4 md:right-8" style={{ top: '104px' }}>
+          <div className="absolute right-4 md:right-8" style={{ top: '116px' }}>
             {!isOwnProfile && currentUser && (
               <div className="flex gap-2">
                   <Button 
