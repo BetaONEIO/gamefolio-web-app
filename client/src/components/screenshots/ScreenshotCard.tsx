@@ -208,13 +208,13 @@ export function ScreenshotCard({
         )}
         
         {/* Stats row */}
-        <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground pt-1">
+        <div className="flex items-center gap-4 text-xs sm:text-sm text-muted-foreground pt-1">
           <button 
             onClick={handleLikeClick}
-            className={`flex items-center gap-0.5 sm:gap-1 transition-colors ${hasUserLiked ? 'text-green-500' : 'hover:text-green-500'}`}
+            className={`flex items-center gap-1 transition-colors ${hasUserLiked ? 'text-green-500' : 'hover:text-green-500'}`}
           >
             <Heart 
-              className={`h-3.5 w-3.5 sm:h-4 sm:w-4 transition-all duration-300 ${
+              className={`h-4 w-4 transition-all duration-300 ${
                 hasUserLiked 
                   ? `fill-green-500 stroke-green-500 ${isAnimating ? 'animate-bounce scale-125' : ''}` 
                   : 'fill-transparent'
@@ -242,9 +242,9 @@ export function ScreenshotCard({
               e.stopPropagation();
               onSelect?.(screenshot);
             }}
-            className="flex items-center gap-0.5 sm:gap-1 hover:text-primary transition-colors"
+            className="flex items-center gap-1 hover:text-primary transition-colors"
           >
-            <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <MessageSquare className="h-4 w-4" />
             <span>{(screenshot as any)._count?.comments || 0}</span>
           </button>
         </div>
