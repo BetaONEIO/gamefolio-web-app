@@ -151,7 +151,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-xl p-0 overflow-hidden bg-[#0f0f1a]/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
+      <DialogContent className="sm:max-w-xl p-0 overflow-hidden bg-transparent border-none shadow-none">
         <div className="flex flex-col items-center px-6 py-6">
           <AnimatePresence mode="wait">
             {phase === "idle" && (
@@ -254,17 +254,36 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                 transition={{ type: "spring", duration: 0.6 }}
                 className="flex flex-col items-center gap-4 py-8"
               >
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                  className={cn(
-                    "relative p-1 rounded-2xl",
-                    rarityStyle.bg,
-                    "shadow-lg",
-                    rarityStyle.glow
-                  )}
-                >
+                <div className="relative">
+                  {/* Rotating yellow glow underneath */}
+                  <motion.div
+                    className="absolute inset-0 -z-10"
+                    style={{
+                      background: "conic-gradient(from 0deg, transparent, #fbbf24, #f59e0b, #fbbf24, transparent)",
+                      borderRadius: "50%",
+                      width: "180px",
+                      height: "180px",
+                      top: "50%",
+                      left: "50%",
+                      marginTop: "-90px",
+                      marginLeft: "-90px",
+                      filter: "blur(20px)",
+                    }}
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                  />
+                  
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                    className={cn(
+                      "relative p-1 rounded-2xl",
+                      rarityStyle.bg,
+                      "shadow-lg",
+                      rarityStyle.glow
+                    )}
+                  >
                   <div className={cn(
                     "w-40 h-40 rounded-xl border-2 overflow-hidden flex items-center justify-center bg-[#1a1a2e]",
                     rarityStyle.border
@@ -304,6 +323,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                     </div>
                   </motion.div>
                 </motion.div>
+                </div>
 
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
