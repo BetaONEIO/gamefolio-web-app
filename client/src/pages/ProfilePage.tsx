@@ -1599,7 +1599,7 @@ const ProfilePage = () => {
                 className="absolute flex-col items-center hidden md:flex"
                 style={{
                   top: '220px',
-                  right: '5%'
+                  right: '16px'
                 }}
               >
                 {/* Glass rectangular background layered underneath */}
@@ -1630,7 +1630,7 @@ const ProfilePage = () => {
                       (e.target as HTMLImageElement).style.display = 'none';
                     }}
                   />
-                  <span className="relative z-10 text-xs text-white/40 mt-3 uppercase tracking-widest">Nametag</span>
+                  <span className="relative z-10 text-xs text-white/40 mt-1 uppercase tracking-widest">Nametag</span>
                 </div>
               </div>
             )}
