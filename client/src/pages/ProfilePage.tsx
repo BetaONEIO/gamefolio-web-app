@@ -1602,20 +1602,22 @@ const ProfilePage = () => {
                   right: '5%'
                 }}
               >
-                {/* Name tag image only - no glass background */}
-                <img 
-                  src={nameTagData.nameTag.imageUrl} 
-                  alt={nameTagData.nameTag.name}
-                  title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                  style={{
-                    width: '336px',
-                    height: 'auto'
-                  }}
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-                <span className="text-xs text-white/60 mt-2 uppercase tracking-wider">Nametag</span>
+                {/* Glass background container */}
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 shadow-xl">
+                  <img 
+                    src={nameTagData.nameTag.imageUrl} 
+                    alt={nameTagData.nameTag.name}
+                    title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                    style={{
+                      width: '336px',
+                      height: 'auto'
+                    }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                  <span className="text-xs text-white/60 mt-2 uppercase tracking-wider block text-center">Nametag</span>
+                </div>
               </div>
             )}
           </div>
