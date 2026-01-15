@@ -1197,9 +1197,9 @@ const ProfilePage = () => {
       <div className="max-w-[90%] mx-auto relative z-20">
 
         {/* Mobile Layout - Stacked Vertically */}
-        <div className="block md:hidden pb-6" style={{ marginTop: '-56px', paddingTop: '24px' }}>
+        <div className="block md:hidden pb-6" style={{ marginTop: '-80px', paddingTop: '0px' }}>
           {/* Profile Picture - Centered on Mobile */}
-          <div className="flex justify-center mb-6" style={{ transform: 'translateY(-28px)' }}>
+          <div className="flex justify-center mb-6">
             {/* Explicit dimensions to ensure circular glow renders correctly - matches profile avatar sizes */}
             <div className="relative h-40 w-40 sm:h-48 sm:w-48">
               {/* Circular glow - only show when NO SVG border is selected (CustomAvatar handles its own glow) */}
@@ -1513,7 +1513,7 @@ const ProfilePage = () => {
         </div>
 
         {/* Desktop Layout - Vertical stacked on left */}
-        <div className="hidden md:flex flex-row pb-4 relative max-w-[90%] mx-auto" style={{ marginTop: '-100px' }}>
+        <div className="hidden md:flex flex-row pb-4 relative max-w-[90%] mx-auto" style={{ marginTop: '-112px' }}>
           {/* Left side - Profile info stacked vertically */}
           <div className="flex flex-col">
             {/* Profile Picture positioned to overlap banner - explicit dimensions to ensure circular glow renders correctly */}
