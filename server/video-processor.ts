@@ -1,12 +1,49 @@
 import ffmpeg from 'fluent-ffmpeg';
-import ffmpegStatic from 'ffmpeg-static';
 import path from 'path';
 import fs from 'fs/promises';
+import { accessSync } from 'fs';
+import { execSync } from 'child_process';
 import sharp from 'sharp';
 import { supabaseStorage } from './supabase-storage';
 
-// Configure FFmpeg with static binary
-ffmpeg.setFfmpegPath(ffmpegStatic!);
+// Find FFmpeg path and log its source
+const { path: ffmpegPath, source } = (function() {
+  // 1. Check environment variable
+  if (process.env.FFMPEG_PATH) {
+    try {
+      accessSync(process.env.FFMPEG_PATH);
+      return { path: process.env.FFMPEG_PATH, source: 'FFMPEG_PATH env var' };
+    } catch {}
+  }
+
+  // 2. Try to find system FFmpeg using 'which'
+  try {
+    const systemPath = execSync('which ffmpeg', { encoding: 'utf8' }).trim();
+    if (systemPath) {
+      accessSync(systemPath);
+      return { path: systemPath, source: 'system' };
+    }
+  } catch {}
+
+  // 3. Fall back to ffmpeg-static package
+  try {
+    const ffmpegStatic = require('ffmpeg-static');
+    if (ffmpegStatic) {
+      accessSync(ffmpegStatic);
+      return { path: ffmpegStatic, source: 'ffmpeg-static package' };
+    }
+  } catch {}
+
+  return { path: null, source: null };
+})();
+
+if (ffmpegPath) {
+  ffmpeg.setFfmpegPath(ffmpegPath);
+  console.log(`✅ Using FFmpeg (${source}): ${ffmpegPath}`);
+} else {
+  console.error('❌ FFmpeg not found - video processing will fail!');
+  console.error('   Install FFmpeg or set FFMPEG_PATH environment variable');
+}
 
 export class VideoProcessor {
   private static readonly TEMP_DIR = path.join(process.cwd(), 'temp');

@@ -718,9 +718,13 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
       const tempVideoPath = path.join(tempDir, `video-${Date.now()}.mp4`);
 
       // Download video from Supabase for processing
+      console.log(`🎬 Downloading video for thumbnail generation from: ${uploadResult.url.substring(0, 80)}...`);
       const videoResponse = await fetch(uploadResult.url);
+      console.log(`📥 Video download response: ${videoResponse.status} ${videoResponse.statusText}`);
+      
       if (videoResponse.ok) {
         const videoBuffer = await videoResponse.arrayBuffer();
+        console.log(`📦 Video downloaded: ${(videoBuffer.byteLength / (1024 * 1024)).toFixed(2)} MB`);
         await fs.promises.writeFile(tempVideoPath, Buffer.from(videoBuffer));
 
         // Get actual video duration first
@@ -738,7 +742,7 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
 
         if (videoType === 'reel') {
           // For reels: Process video with 9:16 cropping, using actual duration
-          console.log('Processing reel with 9:16 aspect ratio cropping');
+          console.log('🎬 Processing reel with 9:16 aspect ratio cropping');
           const { videoUrl: croppedVideoUrl, thumbnailUrl: reelThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
             tempVideoPath,
             tempClipId,
@@ -751,13 +755,16 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
           processedVideoUrl = croppedVideoUrl;
           thumbnailUrl = reelThumbnailUrl || '';
           actualDuration = processedDuration; // Use the duration from processed video
+          console.log(`✅ Reel processed successfully. Thumbnail: ${thumbnailUrl ? thumbnailUrl.substring(0, 60) + '...' : 'NONE'}`);
         } else {
           // For clips: Just generate thumbnail, keep original video
+          console.log('🖼️ Generating clip thumbnail...');
           thumbnailUrl = await VideoProcessor.generateAutoThumbnail(
             tempVideoPath, 
             req.user!.id, 
             `${videoType}_thumb`
           );
+          console.log(`✅ Clip thumbnail generated: ${thumbnailUrl ? thumbnailUrl.substring(0, 60) + '...' : 'NONE'}`);
         }
 
         // Clean up temp video file
@@ -825,9 +832,34 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
         thumbnailUrl = thumbnailResult.url;
       }
     } catch (thumbnailError) {
-      console.error('Thumbnail generation failed:', thumbnailError);
-      // Continue without thumbnail - it's not critical
-      thumbnailUrl = '';
+      console.error('❌ Thumbnail generation failed:', thumbnailError);
+      // Try to create a fallback thumbnail instead of leaving it empty
+      try {
+        console.log('🔄 Creating fallback thumbnail...');
+        const fallbackBuffer = await sharp({
+          create: {
+            width: videoType === 'reel' ? 720 : 1280,
+            height: videoType === 'reel' ? 1280 : 720,
+            channels: 3,
+            background: { r: 30, g: 30, b: 30 }
+          }
+        })
+        .jpeg({ quality: 80 })
+        .toBuffer();
+
+        const fallbackResult = await supabaseStorage.uploadBuffer(
+          fallbackBuffer,
+          `fallback_thumb_${Date.now()}.jpg`,
+          'image/jpeg',
+          'thumbnail',
+          req.user!.id
+        );
+        thumbnailUrl = fallbackResult.url;
+        console.log(`✅ Fallback thumbnail created: ${thumbnailUrl.substring(0, 60)}...`);
+      } catch (fallbackError) {
+        console.error('❌ Even fallback thumbnail failed:', fallbackError);
+        thumbnailUrl = '';
+      }
     }
 
     // Generate consistent share code
