@@ -1603,16 +1603,18 @@ const ProfilePage = () => {
                 }}
               >
                 {/* Glass rectangular background layered underneath */}
-                <div className="relative">
+                <div className="relative flex flex-col items-center">
                   <div 
-                    className="absolute inset-0 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-xl"
+                    className="absolute rounded-lg"
                     style={{
-                      top: '20px',
-                      left: '-16px',
-                      right: '-16px',
-                      bottom: '-16px',
-                      width: 'calc(100% + 32px)',
-                      height: 'calc(100% - 4px)'
+                      top: '10px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: '280px',
+                      height: '90px',
+                      background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
+                      border: '1px solid rgba(148, 163, 184, 0.2)',
+                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
                     }}
                   />
                   <img 
@@ -1628,7 +1630,7 @@ const ProfilePage = () => {
                       (e.target as HTMLImageElement).style.display = 'none';
                     }}
                   />
-                  <span className="relative z-10 text-xs text-white/60 mt-2 uppercase tracking-wider block text-center">Nametag</span>
+                  <span className="relative z-10 text-xs text-white/40 mt-3 uppercase tracking-widest">Nametag</span>
                 </div>
               </div>
             )}
