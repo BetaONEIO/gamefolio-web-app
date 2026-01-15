@@ -133,6 +133,7 @@ const ProfilePage = () => {
   // Profile picture action dialog state  
   const [profileActionDialogOpen, setProfileActionDialogOpen] = useState(false);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
+  const [nameTagPreviewOpen, setNameTagPreviewOpen] = useState(false);
 
   // Screenshot action handlers
   const handleScreenshotLike = () => {
@@ -1621,16 +1622,20 @@ const ProfilePage = () => {
                     src={nameTagData.nameTag.imageUrl} 
                     alt={nameTagData.nameTag.name}
                     title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                    className="relative z-10"
+                    className="relative z-10 cursor-pointer hover:scale-105 transition-transform"
                     style={{
                       width: '336px',
                       height: 'auto'
                     }}
+                    onClick={() => setNameTagPreviewOpen(true)}
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = 'none';
                     }}
                   />
-                  <span className="relative z-10 text-xs text-white/40 mt-1 uppercase tracking-widest">Nametag</span>
+                  <span 
+                    className="relative z-10 text-xs text-white/40 mt-1 uppercase tracking-widest cursor-pointer hover:text-white/60 transition-colors"
+                    onClick={() => setNameTagPreviewOpen(true)}
+                  >Nametag</span>
                 </div>
               </div>
             )}
@@ -2727,6 +2732,39 @@ const ProfilePage = () => {
             avatarUrl: profile.avatarUrl,
           }}
         />
+      )}
+
+      {/* Name Tag Preview Dialog */}
+      {nameTagData?.nameTag && (
+        <Dialog open={nameTagPreviewOpen} onOpenChange={setNameTagPreviewOpen}>
+          <DialogContent className="sm:max-w-lg bg-gradient-to-b from-slate-900 to-slate-950 border-slate-700">
+            <DialogHeader>
+              <DialogTitle className="text-center text-white">{nameTagData.nameTag.name}</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col items-center gap-4 py-4">
+              <img 
+                src={nameTagData.nameTag.imageUrl} 
+                alt={nameTagData.nameTag.name}
+                className="max-w-full h-auto"
+                style={{ maxHeight: '200px' }}
+              />
+              <div className={`px-4 py-2 rounded-full text-sm font-bold uppercase ${
+                nameTagData.nameTag.rarity === 'legendary' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
+                nameTagData.nameTag.rarity === 'epic' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                nameTagData.nameTag.rarity === 'rare' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                nameTagData.nameTag.rarity === 'uncommon' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+              }`}>
+                {nameTagData.nameTag.rarity}
+              </div>
+              {nameTagData.nameTag.description && (
+                <p className="text-sm text-gray-400 text-center">
+                  {nameTagData.nameTag.description}
+                </p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
