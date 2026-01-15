@@ -72,6 +72,7 @@ import { VerificationBadge } from "@/components/ui/verification-badge";
 import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import { ScreenshotShareDialog } from "@/components/screenshot/ScreenshotShareDialog";
 import { GamefolioShareDialog } from "@/components/profile/GamefolioShareDialog";
+import { MessageDialog } from "@/components/messages/MessageDialog";
 import { ReportDialog } from "@/components/content/ReportDialog";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { ProfilePictureLightbox, useProfilePictureLightbox } from "@/components/ui/profile-picture-lightbox";
@@ -131,6 +132,7 @@ const ProfilePage = () => {
 
   // Profile picture action dialog state  
   const [profileActionDialogOpen, setProfileActionDialogOpen] = useState(false);
+  const [messageDialogOpen, setMessageDialogOpen] = useState(false);
 
   // Screenshot action handlers
   const handleScreenshotLike = () => {
@@ -1244,8 +1246,8 @@ const ProfilePage = () => {
               {/* Message icon button */}
               <Button 
                 onClick={() => {
-                  console.log('🎯 MESSAGE BUTTON CLICKED - Setting target user:', username);
-                  setLocation(`/messages?user=${username}`);
+                  console.log('🎯 MESSAGE BUTTON CLICKED - Opening message dialog for:', username);
+                  setMessageDialogOpen(true);
                 }}
                 variant="outline"
                 size="sm"
@@ -1671,8 +1673,8 @@ const ProfilePage = () => {
 
                   <Button 
                     onClick={() => {
-                      console.log('🎯 MESSAGE BUTTON CLICKED - Setting target user:', username);
-                      setLocation(`/messages?user=${username}`);
+                      console.log('🎯 MESSAGE BUTTON CLICKED - Opening message dialog for:', username);
+                      setMessageDialogOpen(true);
                     }}
                     variant="outline"
                     size="sm"
@@ -2696,6 +2698,20 @@ const ProfilePage = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Message Dialog */}
+      {profile && (
+        <MessageDialog
+          open={messageDialogOpen}
+          onOpenChange={setMessageDialogOpen}
+          targetUser={{
+            id: profile.id,
+            username: profile.username,
+            displayName: profile.displayName,
+            avatarUrl: profile.avatarUrl,
+          }}
+        />
+      )}
     </div>
   );
 };
