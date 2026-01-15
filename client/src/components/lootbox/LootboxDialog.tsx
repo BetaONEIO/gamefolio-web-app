@@ -368,7 +368,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                     className="w-full py-6 text-lg font-bold bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 rounded-xl"
                     data-testid="button-close-lootbox"
                   >
-                    Awesome!
+                    Continue
                   </Button>
                 </motion.div>
               </motion.div>
