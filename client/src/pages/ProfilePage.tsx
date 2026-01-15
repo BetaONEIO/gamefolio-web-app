@@ -1273,75 +1273,10 @@ const ProfilePage = () => {
             />
           </div>
 
-          {/* Username and Display Name - Left aligned on Mobile */}
-          <div className="flex flex-col items-start gap-0.5 mb-3 mt-4 pl-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-bold">{profile.displayName}</h1>
-              <ModeratorBadge 
-                isModerator={profile.role === "moderator" || profile.role === "admin"} 
-                size="lg" 
-              />
-              {profile.userType && profile.showUserType !== false && (() => {
-                const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
-                const displayTypes = userTypes.slice(0, 2);
-                
-                return displayTypes.map((type, index) => {
-                  const config = userTypeConfig[type];
-                  if (!config) return null;
-                  const IconComponent = config.icon;
-                  return (
-                    <Badge 
-                      key={`${type}-${index}`}
-                      variant="outline" 
-                      className={`${config.color} border text-xs font-medium px-2 py-0.5`}
-                    >
-                      <IconComponent className="w-3 h-3 mr-1" />
-                      {config.label}
-                    </Badge>
-                  );
-                });
-              })()}
-            </div>
-            <span className="text-sm text-white/60 font-normal">@{profile.username}</span>
-          </div>
-
-          {/* Action buttons for mobile - moved above stats */}
+          {/* Action buttons for mobile - X/Twitter style placement */}
           {!isOwnProfile && currentUser && (
-            <div className="flex gap-2 px-2 mb-4">
-              <Button 
-                onClick={handleFollowClick}
-                variant={followRequestStatus === 'following' ? "outline" : "default"}
-                size="sm"
-                disabled={followMutation.isPending}
-                className="flex-1 relative overflow-hidden font-semibold transition-all duration-300"
-                style={followRequestStatus === 'following' ? {
-                  borderColor: 'hsl(var(--primary))',
-                  color: 'hsl(var(--primary))',
-                  backgroundColor: 'transparent',
-                } : followRequestStatus === 'requested' ? {
-                  borderColor: 'hsl(var(--primary))',
-                  color: 'hsl(var(--primary))',
-                  backgroundColor: 'transparent',
-                } : {
-                  backgroundColor: 'hsl(var(--primary))',
-                  borderColor: 'hsl(var(--primary))',
-                  color: 'hsl(var(--primary-foreground))',
-                }}
-              >
-                {followMutation.isPending ? (
-                  <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-current animate-spin mr-2"></div>
-                ) : followRequestStatus === 'following' ? (
-                  <UserCheck className="mr-1.5 h-4 w-4" />
-                ) : followRequestStatus === 'requested' ? (
-                  <Clock className="mr-1.5 h-4 w-4" />
-                ) : (
-                  <UserPlus className="mr-1.5 h-4 w-4" />
-                )}
-                {followRequestStatus === 'following' ? "Following" : 
-                 followRequestStatus === 'requested' ? "Pending" : 
-                 "Follow"}
-              </Button>
-              
+            <div className="absolute right-2 flex items-center gap-2" style={{ top: '136px' }}>
+              {/* Message icon button */}
               <Button 
                 onClick={() => {
                   console.log('🎯 MESSAGE BUTTON CLICKED - Setting target user:', username);
@@ -1349,12 +1284,75 @@ const ProfilePage = () => {
                 }}
                 variant="outline"
                 size="sm"
-                className="flex-1 relative overflow-hidden font-semibold transition-all duration-300 border-primary text-primary hover:bg-primary/20"
+                className="h-9 w-9 p-0 rounded-full border-border hover:bg-primary/10"
               >
-                <MessageSquare className="mr-1.5 h-4 w-4" /> Message
+                <MessageSquare className="h-4 w-4" />
+              </Button>
+              {/* Follow button */}
+              <Button 
+                onClick={handleFollowClick}
+                variant={followRequestStatus === 'following' ? "outline" : "default"}
+                size="sm"
+                disabled={followMutation.isPending}
+                className="px-4 rounded-full font-semibold"
+                style={followRequestStatus === 'following' ? {
+                  borderColor: 'hsl(var(--border))',
+                  color: 'hsl(var(--foreground))',
+                  backgroundColor: 'transparent',
+                } : followRequestStatus === 'requested' ? {
+                  borderColor: 'hsl(var(--border))',
+                  color: 'hsl(var(--foreground))',
+                  backgroundColor: 'transparent',
+                } : {
+                  backgroundColor: 'hsl(var(--foreground))',
+                  color: 'hsl(var(--background))',
+                }}
+              >
+                {followMutation.isPending ? (
+                  <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-current animate-spin"></div>
+                ) : followRequestStatus === 'following' ? "Following" : 
+                   followRequestStatus === 'requested' ? "Pending" : 
+                   "Follow"}
               </Button>
             </div>
           )}
+
+          {/* Username and Display Name - Left aligned on Mobile */}
+          <div className="flex flex-col items-start gap-0.5 mb-2 mt-4 pl-2">
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold">{profile.displayName}</h1>
+              <ModeratorBadge 
+                isModerator={profile.role === "moderator" || profile.role === "admin"} 
+                size="lg" 
+              />
+            </div>
+            <span className="text-sm text-white/60 font-normal">@{profile.username}</span>
+            {/* User type badges on their own line */}
+            {profile.userType && profile.showUserType !== false && (
+              <div className="flex items-center gap-2 flex-wrap mt-1">
+                {(() => {
+                  const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
+                  const displayTypes = userTypes.slice(0, 2);
+                  
+                  return displayTypes.map((type, index) => {
+                    const config = userTypeConfig[type];
+                    if (!config) return null;
+                    const IconComponent = config.icon;
+                    return (
+                      <Badge 
+                        key={`${type}-${index}`}
+                        variant="outline" 
+                        className={`${config.color} border text-xs font-medium px-2 py-0.5`}
+                      >
+                        <IconComponent className="w-3 h-3 mr-1" />
+                        {config.label}
+                      </Badge>
+                    );
+                  });
+                })()}
+              </div>
+            )}
+          </div>
 
           {/* Stats - Horizontal row with uppercase labels */}
           <div className="flex gap-6 mb-3 pl-2">
