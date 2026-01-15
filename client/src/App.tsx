@@ -215,7 +215,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
         {!isMobile && <Sidebar />}
 
         <main className={`flex-1 overflow-y-auto overflow-x-hidden w-full ${!isMobile ? 'ml-64' : ''}`}>
-          <div className="px-4 py-4 md:px-6">
+          <div className="px-2 py-2 md:px-6 md:py-4">
             {children}
           </div>
         </main>
