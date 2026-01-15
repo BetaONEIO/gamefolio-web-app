@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogOverlay, DialogPortal } from "@/components/ui/dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -151,10 +152,18 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent 
-        className="sm:max-w-xl p-0 overflow-hidden border-none shadow-none"
-        style={{ backgroundColor: 'transparent' }}
-      >
+      <DialogPortal>
+        <DialogPrimitive.Overlay 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+        />
+        <DialogPrimitive.Content
+          className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-xl translate-x-[-50%] translate-y-[-50%] p-0 overflow-hidden border-none shadow-none duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg"
+          style={{ backgroundColor: 'transparent' }}
+        >
+          <DialogPrimitive.Close className="absolute right-4 top-4 z-50 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+            <X className="h-5 w-5 text-white" />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
         <div className="flex flex-col items-center px-6 py-6" style={{ backgroundColor: 'transparent' }}>
           <AnimatePresence mode="wait">
             {phase === "idle" && (
@@ -367,7 +376,8 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
             )}
           </AnimatePresence>
         </div>
-      </DialogContent>
+        </DialogPrimitive.Content>
+      </DialogPortal>
     </Dialog>
   );
 }
