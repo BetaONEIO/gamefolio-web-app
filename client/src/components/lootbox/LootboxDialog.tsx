@@ -151,8 +151,11 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-xl p-0 overflow-hidden bg-transparent border-none shadow-none">
-        <div className="flex flex-col items-center px-6 py-6">
+      <DialogContent 
+        className="sm:max-w-xl p-0 overflow-hidden border-none shadow-none"
+        style={{ backgroundColor: 'transparent' }}
+      >
+        <div className="flex flex-col items-center px-6 py-6" style={{ backgroundColor: 'transparent' }}>
           <AnimatePresence mode="wait">
             {phase === "idle" && (
               <motion.div
