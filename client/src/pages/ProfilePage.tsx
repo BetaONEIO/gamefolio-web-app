@@ -1744,35 +1744,37 @@ const ProfilePage = () => {
           </div>
 
           {/* Action buttons - positioned just below banner */}
-          <div className="absolute right-4 md:right-8" style={{ top: '116px' }}>
+          <div className="absolute right-4 md:right-8" style={{ top: '180px' }}>
             {!isOwnProfile && currentUser && (
               <div className="flex gap-2">
                   <Button 
                     onClick={handleFollowClick}
-                    variant={followRequestStatus === 'following' ? "default" : (followRequestStatus === 'requested' ? "outline" : "outline")}
+                    variant={followRequestStatus === 'following' ? "outline" : "default"}
                     size="sm"
                     disabled={followMutation.isPending}
                     className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
                     style={followRequestStatus === 'following' ? {
+                      borderColor: 'hsl(var(--primary))',
+                      color: 'hsl(var(--primary))',
+                      backgroundColor: 'transparent',
+                    } : followRequestStatus === 'requested' ? {
+                      borderColor: 'hsl(var(--primary))',
+                      color: 'hsl(var(--primary))',
+                      backgroundColor: 'transparent',
+                    } : {
                       backgroundColor: 'hsl(var(--primary))',
                       borderColor: 'hsl(var(--primary))',
                       color: 'hsl(var(--primary-foreground))',
                       boxShadow: `0 4px 15px hsl(var(--primary) / 0.4)`,
-                    } : {
-                      borderColor: 'hsl(var(--primary))',
-                      color: 'hsl(var(--primary))',
-                      backgroundColor: 'transparent',
                     }}
                     onMouseEnter={(e) => {
-                      if (followRequestStatus !== 'following') {
-                        e.currentTarget.style.backgroundColor = 'hsl(var(--primary))';
-                        e.currentTarget.style.color = '#000000';
+                      if (followRequestStatus === 'following') {
+                        e.currentTarget.style.backgroundColor = 'hsl(var(--primary) / 0.1)';
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (followRequestStatus !== 'following') {
+                      if (followRequestStatus === 'following') {
                         e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color = 'hsl(var(--primary))';
                       }
                     }}
                     data-testid="follow-button"
