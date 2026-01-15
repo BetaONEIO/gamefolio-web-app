@@ -1225,10 +1225,10 @@ const ProfilePage = () => {
               </div>
               {/* Online status indicator - green circle on top right of avatar */}
               <div className="absolute top-0 right-0 z-30">
-                <div className="w-4 h-4 rounded-full bg-green-500 border-2 border-background"></div>
+                <div className="w-3 h-3 rounded-full bg-green-500 border-2 border-background"></div>
               </div>
-              {/* Level Badge with Progress - at bottom of profile picture */}
-              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 z-30">
+              {/* Level Badge with Progress - positioned 50% on border, 50% off */}
+              <div className="absolute left-1/2 -translate-x-1/2 z-30 scale-75" style={{ bottom: '-12px' }}>
                 <LevelBadgeWithProgress 
                   userId={profile.id}
                   level={profile.level || 1}
@@ -1238,9 +1238,9 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          {/* Action buttons for mobile - Message icon and Follow button on the right */}
+          {/* Action buttons for mobile - Message icon and Follow button near banner border */}
           {!isOwnProfile && currentUser && (
-            <div className="absolute right-2 flex items-center gap-2" style={{ top: '96px' }}>
+            <div className="absolute right-2 flex items-center gap-2" style={{ top: '8px' }}>
               {/* Message icon button */}
               <Button 
                 onClick={() => {
