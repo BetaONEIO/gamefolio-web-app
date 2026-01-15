@@ -1238,9 +1238,9 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          {/* Action buttons for mobile - Message icon and Follow button near banner border */}
+          {/* Action buttons for mobile - Message icon and Follow button below banner */}
           {!isOwnProfile && currentUser && (
-            <div className="absolute right-2 flex items-center gap-2" style={{ top: '8px' }}>
+            <div className="absolute right-2 flex items-center gap-2" style={{ top: '88px' }}>
               {/* Message icon button */}
               <Button 
                 onClick={() => {
