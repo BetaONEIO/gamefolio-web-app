@@ -1602,12 +1602,24 @@ const ProfilePage = () => {
                   right: '5%'
                 }}
               >
-                {/* Glass background container */}
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 shadow-xl">
+                {/* Glass rectangular background layered underneath */}
+                <div className="relative">
+                  <div 
+                    className="absolute inset-0 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-xl"
+                    style={{
+                      top: '20px',
+                      left: '-16px',
+                      right: '-16px',
+                      bottom: '-16px',
+                      width: 'calc(100% + 32px)',
+                      height: 'calc(100% - 4px)'
+                    }}
+                  />
                   <img 
                     src={nameTagData.nameTag.imageUrl} 
                     alt={nameTagData.nameTag.name}
                     title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                    className="relative z-10"
                     style={{
                       width: '336px',
                       height: 'auto'
@@ -1616,7 +1628,7 @@ const ProfilePage = () => {
                       (e.target as HTMLImageElement).style.display = 'none';
                     }}
                   />
-                  <span className="text-xs text-white/60 mt-2 uppercase tracking-wider block text-center">Nametag</span>
+                  <span className="relative z-10 text-xs text-white/60 mt-2 uppercase tracking-wider block text-center">Nametag</span>
                 </div>
               </div>
             )}
