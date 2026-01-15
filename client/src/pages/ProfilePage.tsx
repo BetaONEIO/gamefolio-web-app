@@ -1607,9 +1607,9 @@ const ProfilePage = () => {
                   <div 
                     className="absolute rounded-lg"
                     style={{
-                      top: '35px',
+                      top: '50%',
                       left: '50%',
-                      transform: 'translateX(-50%)',
+                      transform: 'translate(-50%, -50%)',
                       width: '300px',
                       height: '70px',
                       background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
