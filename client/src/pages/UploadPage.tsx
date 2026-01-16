@@ -1067,6 +1067,9 @@ const UploadPage = () => {
                                         const deltaTime = (deltaX / rect.width) * videoDuration;
                                         const newStart = Math.max(0, Math.min(trimEnd - 0.5, startTime + deltaTime));
                                         setTrimStart(newStart);
+                                        if (videoRef.current) {
+                                          videoRef.current.currentTime = newStart;
+                                        }
                                       };
                                       
                                       const handleMouseUp = () => {
@@ -1088,6 +1091,9 @@ const UploadPage = () => {
                                         const deltaTime = (deltaX / rect.width) * videoDuration;
                                         const newStart = Math.max(0, Math.min(trimEnd - 0.5, startTime + deltaTime));
                                         setTrimStart(newStart);
+                                        if (videoRef.current) {
+                                          videoRef.current.currentTime = newStart;
+                                        }
                                       };
                                       
                                       const handleTouchEnd = () => {
@@ -1119,6 +1125,9 @@ const UploadPage = () => {
                                         const deltaTime = (deltaX / rect.width) * videoDuration;
                                         const newEnd = Math.max(trimStart + 0.5, Math.min(videoDuration, startTime + deltaTime));
                                         setTrimEnd(newEnd);
+                                        if (videoRef.current) {
+                                          videoRef.current.currentTime = Math.max(newEnd - 0.1, trimStart);
+                                        }
                                       };
                                       
                                       const handleMouseUp = () => {
@@ -1140,6 +1149,9 @@ const UploadPage = () => {
                                         const deltaTime = (deltaX / rect.width) * videoDuration;
                                         const newEnd = Math.max(trimStart + 0.5, Math.min(videoDuration, startTime + deltaTime));
                                         setTrimEnd(newEnd);
+                                        if (videoRef.current) {
+                                          videoRef.current.currentTime = Math.max(newEnd - 0.1, trimStart);
+                                        }
                                       };
                                       
                                       const handleTouchEnd = () => {
@@ -1607,6 +1619,9 @@ const UploadPage = () => {
                                         const deltaTime = (deltaX / rect.width) * videoDuration;
                                         const newStart = Math.max(0, Math.min(trimEnd - 0.5, startTime + deltaTime));
                                         setTrimStart(newStart);
+                                        if (videoRef.current) {
+                                          videoRef.current.currentTime = newStart;
+                                        }
                                       };
                                       
                                       const handleMouseUp = () => {
@@ -1628,6 +1643,9 @@ const UploadPage = () => {
                                         const deltaTime = (deltaX / rect.width) * videoDuration;
                                         const newStart = Math.max(0, Math.min(trimEnd - 0.5, startTime + deltaTime));
                                         setTrimStart(newStart);
+                                        if (videoRef.current) {
+                                          videoRef.current.currentTime = newStart;
+                                        }
                                       };
                                       
                                       const handleTouchEnd = () => {
@@ -1659,6 +1677,9 @@ const UploadPage = () => {
                                         const deltaTime = (deltaX / rect.width) * videoDuration;
                                         const newEnd = Math.max(trimStart + 0.5, Math.min(videoDuration, startTime + deltaTime));
                                         setTrimEnd(newEnd);
+                                        if (videoRef.current) {
+                                          videoRef.current.currentTime = Math.max(newEnd - 0.1, trimStart);
+                                        }
                                       };
                                       
                                       const handleMouseUp = () => {
@@ -1680,6 +1701,9 @@ const UploadPage = () => {
                                         const deltaTime = (deltaX / rect.width) * videoDuration;
                                         const newEnd = Math.max(trimStart + 0.5, Math.min(videoDuration, startTime + deltaTime));
                                         setTrimEnd(newEnd);
+                                        if (videoRef.current) {
+                                          videoRef.current.currentTime = Math.max(newEnd - 0.1, trimStart);
+                                        }
                                       };
                                       
                                       const handleTouchEnd = () => {
