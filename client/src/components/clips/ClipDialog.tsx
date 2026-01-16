@@ -30,7 +30,9 @@ import {
   UserPlus,
   UserMinus,
   UserCheck,
-  AlertTriangle
+  AlertTriangle,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
 import { formatDistance } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -65,6 +67,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   const { isOpen: joinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
   const [showComments, setShowComments] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
   const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
@@ -106,6 +109,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   useEffect(() => {
     if (!isOpen) {
       setShowComments(false);
+      setIsFullscreen(false);
       setAgeRestrictionAccepted(false);
       setShowAgeRestrictionDialog(false);
       isAcceptingRef.current = false;
@@ -177,13 +181,21 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   // Keyboard navigation for clip dialog
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle navigation if dialog is open and we have navigation functions
-      if (!isOpen || !showNavigation || isTransitioning) return;
-      
       // Don't interfere with form inputs
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
+      
+      // Handle escape for fullscreen first
+      if (e.key === 'Escape' && isFullscreen) {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsFullscreen(false);
+        return;
+      }
+      
+      // Only handle navigation if dialog is open and we have navigation functions
+      if (!isOpen || !showNavigation || isTransitioning) return;
       
       switch (e.key) {
         case 'ArrowLeft':
@@ -211,7 +223,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
     return () => {
       document.removeEventListener('keydown', handleKeyDown, { capture: true });
     };
-  }, [isOpen, showNavigation, onNext, onPrevious, onClose, isTransitioning]);
+  }, [isOpen, showNavigation, onNext, onPrevious, onClose, isTransitioning, isFullscreen]);
 
   // Follow functionality
   const queryClient = useQueryClient();
@@ -582,21 +594,40 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                 // Desktop reels: maintain 9:16 aspect ratio
                 <div className="h-full flex items-center justify-center bg-black relative">
                   <div className="h-full max-h-full aspect-[9/16] bg-black relative flex items-center justify-center">
-                    <VideoPlayer 
-                      videoUrl={clip.videoUrl} 
-                      thumbnailUrl={clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined} 
-                      autoPlay={true}
-                      className="max-w-full max-h-full"
-                      objectFit="contain"
-                      clipId={clip.id}
-                      disableAspectRatio={true}
-                    />
+                    {!isFullscreen && (
+                      <VideoPlayer 
+                        videoUrl={clip.videoUrl} 
+                        thumbnailUrl={clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined} 
+                        autoPlay={true}
+                        className="max-w-full max-h-full"
+                        objectFit="contain"
+                        clipId={clip.id}
+                        disableAspectRatio={true}
+                      />
+                    )}
+                    {isFullscreen && (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <img 
+                          src={clip.thumbnailUrl || "/assets/video-placeholder.svg"} 
+                          alt={clip.title}
+                          className="max-w-full max-h-full object-contain opacity-50"
+                        />
+                      </div>
+                    )}
                     {/* Reel badge indicator */}
                     <div className="absolute top-4 right-4 z-50">
                       <span className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-bold">
                         Reel
                       </span>
                     </div>
+                    {/* Fullscreen button */}
+                    <button
+                      onClick={() => setIsFullscreen(true)}
+                      className="absolute bottom-4 right-4 z-50 p-2 rounded-full bg-black/60 hover:bg-black/80 transition-colors"
+                      title="View fullscreen"
+                    >
+                      <Maximize2 className="h-5 w-5 text-white" />
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -848,6 +879,48 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           }}
           contentType={clip.videoType === 'reel' ? 'reel' : 'clip'}
         />
+      )}
+      
+      {/* Fullscreen video overlay */}
+      {clip && isFullscreen && (
+        <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center">
+          <button
+            onClick={() => setIsFullscreen(false)}
+            className="absolute top-4 right-4 z-[110] p-3 rounded-full bg-black/60 hover:bg-black/80 transition-colors"
+            title="Exit fullscreen"
+          >
+            <X className="h-6 w-6 text-white" />
+          </button>
+          <button
+            onClick={() => setIsFullscreen(false)}
+            className="absolute top-4 left-4 z-[110] p-3 rounded-full bg-black/60 hover:bg-black/80 transition-colors"
+            title="Minimize"
+          >
+            <Minimize2 className="h-6 w-6 text-white" />
+          </button>
+          <div className="h-full max-h-full w-full flex items-center justify-center">
+            <div className="h-full aspect-[9/16] max-w-full">
+              <VideoPlayer 
+                videoUrl={clip.videoUrl} 
+                thumbnailUrl={clip.thumbnailUrl || undefined} 
+                autoPlay={true}
+                className="w-full h-full"
+                objectFit="contain"
+                clipId={clip.id}
+                disableAspectRatio={true}
+              />
+            </div>
+          </div>
+          {/* Fullscreen overlay info */}
+          <div className="absolute bottom-8 left-8 right-8 z-[110] text-white">
+            <h2 className="text-xl font-semibold mb-2">{clip.title}</h2>
+            {clip.game && (
+              <span className="bg-green-600 text-white px-3 py-1.5 rounded text-sm font-bold">
+                {clip.game.name}
+              </span>
+            )}
+          </div>
+        </div>
       )}
     </Dialog>
   );
