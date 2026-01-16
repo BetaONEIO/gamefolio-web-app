@@ -1014,8 +1014,8 @@ const UploadPage = () => {
                         {showEditingTools && videoDuration > 0 && (
                           <div className="space-y-4 mt-4 p-4 bg-muted/50 rounded-lg">
                             <div className="flex items-center justify-between">
-                              <h4 className="font-medium">Trim Video</h4>
-                              <div className="text-sm text-muted-foreground bg-green-500/20 text-green-400 px-2 py-1 rounded">
+                              <h4 className="font-medium">Trim Reel</h4>
+                              <div className="text-sm text-muted-foreground bg-primary/20 text-primary px-2 py-1 rounded">
                                 {formatDuration(trimEnd - trimStart)}
                               </div>
                             </div>
@@ -1026,13 +1026,13 @@ const UploadPage = () => {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-background/50 rounded-lg p-3 text-center">
                                   <div className="text-xs text-muted-foreground mb-1">Start</div>
-                                  <div className="font-mono text-sm text-green-400">
+                                  <div className="font-mono text-sm text-primary">
                                     {formatDuration(trimStart)}
                                   </div>
                                 </div>
                                 <div className="bg-background/50 rounded-lg p-3 text-center">
                                   <div className="text-xs text-muted-foreground mb-1">End</div>
-                                  <div className="font-mono text-sm text-red-400">
+                                  <div className="font-mono text-sm text-primary">
                                     {formatDuration(trimEnd)}
                                   </div>
                                 </div>
@@ -1043,7 +1043,7 @@ const UploadPage = () => {
                                 <div className="relative h-8 bg-muted/50 rounded-full overflow-hidden">
                                   {/* Timeline Track */}
                                   <div 
-                                    className="absolute top-0 h-full bg-gradient-to-r from-green-500/60 to-red-500/60 rounded-full transition-all duration-200"
+                                    className="absolute top-0 h-full bg-primary/60 rounded-full transition-all duration-200"
                                     style={{
                                       left: `${(trimStart / videoDuration) * 100}%`,
                                       width: `${((trimEnd - trimStart) / videoDuration) * 100}%`
@@ -1052,7 +1052,7 @@ const UploadPage = () => {
                                   
                                   {/* Start Handle */}
                                   <div 
-                                    className="absolute top-0 h-full w-4 bg-green-500 rounded-full cursor-grab active:cursor-grabbing transition-all duration-200 hover:bg-green-400 shadow-lg"
+                                    className="absolute top-0 h-full w-4 bg-primary rounded-full cursor-grab active:cursor-grabbing transition-all duration-200 hover:bg-primary/80 shadow-lg"
                                     style={{
                                       left: `${(trimStart / videoDuration) * 100}%`,
                                       transform: 'translateX(-50%)'
@@ -1099,12 +1099,12 @@ const UploadPage = () => {
                                       document.addEventListener('touchend', handleTouchEnd);
                                     }}
                                   >
-                                    <div className="absolute -top-1 -bottom-1 -left-1 -right-1 bg-green-500/20 rounded-full animate-pulse" />
+                                    <div className="absolute -top-1 -bottom-1 -left-1 -right-1 bg-primary/20 rounded-full animate-pulse" />
                                   </div>
                                   
                                   {/* End Handle */}
                                   <div 
-                                    className="absolute top-0 h-full w-4 bg-red-500 rounded-full cursor-grab active:cursor-grabbing transition-all duration-200 hover:bg-red-400 shadow-lg"
+                                    className="absolute top-0 h-full w-4 bg-primary rounded-full cursor-grab active:cursor-grabbing transition-all duration-200 hover:bg-primary/80 shadow-lg"
                                     style={{
                                       left: `${(trimEnd / videoDuration) * 100}%`,
                                       transform: 'translateX(-50%)'
@@ -1151,7 +1151,7 @@ const UploadPage = () => {
                                       document.addEventListener('touchend', handleTouchEnd);
                                     }}
                                   >
-                                    <div className="absolute -top-1 -bottom-1 -left-1 -right-1 bg-red-500/20 rounded-full animate-pulse" />
+                                    <div className="absolute -top-1 -bottom-1 -left-1 -right-1 bg-primary/20 rounded-full animate-pulse" />
                                   </div>
                                 </div>
                                 
@@ -1555,7 +1555,7 @@ const UploadPage = () => {
                           <div className="space-y-4 mt-4 p-4 bg-muted/50 rounded-lg">
                             <div className="flex items-center justify-between">
                               <h4 className="font-medium">Trim Reel</h4>
-                              <div className="text-sm text-muted-foreground bg-green-500/20 text-green-400 px-2 py-1 rounded">
+                              <div className="text-sm text-muted-foreground bg-primary/20 text-primary px-2 py-1 rounded">
                                 {formatDuration(trimEnd - trimStart)}
                               </div>
                             </div>
@@ -1566,13 +1566,13 @@ const UploadPage = () => {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-background/50 rounded-lg p-3 text-center">
                                   <div className="text-xs text-muted-foreground mb-1">Start</div>
-                                  <div className="font-mono text-sm text-green-400">
+                                  <div className="font-mono text-sm text-primary">
                                     {formatDuration(trimStart)}
                                   </div>
                                 </div>
                                 <div className="bg-background/50 rounded-lg p-3 text-center">
                                   <div className="text-xs text-muted-foreground mb-1">End</div>
-                                  <div className="font-mono text-sm text-red-400">
+                                  <div className="font-mono text-sm text-primary">
                                     {formatDuration(trimEnd)}
                                   </div>
                                 </div>
@@ -1583,7 +1583,7 @@ const UploadPage = () => {
                                 <div className="relative h-8 bg-muted/50 rounded-full overflow-hidden">
                                   {/* Timeline Track */}
                                   <div 
-                                    className="absolute top-0 h-full bg-gradient-to-r from-green-500/60 to-red-500/60 rounded-full transition-all duration-200"
+                                    className="absolute top-0 h-full bg-primary/60 rounded-full transition-all duration-200"
                                     style={{
                                       left: `${(trimStart / videoDuration) * 100}%`,
                                       width: `${((trimEnd - trimStart) / videoDuration) * 100}%`
@@ -1592,7 +1592,7 @@ const UploadPage = () => {
                                   
                                   {/* Start Handle */}
                                   <div 
-                                    className="absolute top-0 h-full w-4 bg-green-500 rounded-full cursor-grab active:cursor-grabbing transition-all duration-200 hover:bg-green-400 shadow-lg"
+                                    className="absolute top-0 h-full w-4 bg-primary rounded-full cursor-grab active:cursor-grabbing transition-all duration-200 hover:bg-primary/80 shadow-lg"
                                     style={{
                                       left: `${(trimStart / videoDuration) * 100}%`,
                                       transform: 'translateX(-50%)'
@@ -1639,12 +1639,12 @@ const UploadPage = () => {
                                       document.addEventListener('touchend', handleTouchEnd);
                                     }}
                                   >
-                                    <div className="absolute -top-1 -bottom-1 -left-1 -right-1 bg-green-500/20 rounded-full animate-pulse" />
+                                    <div className="absolute -top-1 -bottom-1 -left-1 -right-1 bg-primary/20 rounded-full animate-pulse" />
                                   </div>
                                   
                                   {/* End Handle */}
                                   <div 
-                                    className="absolute top-0 h-full w-4 bg-red-500 rounded-full cursor-grab active:cursor-grabbing transition-all duration-200 hover:bg-red-400 shadow-lg"
+                                    className="absolute top-0 h-full w-4 bg-primary rounded-full cursor-grab active:cursor-grabbing transition-all duration-200 hover:bg-primary/80 shadow-lg"
                                     style={{
                                       left: `${(trimEnd / videoDuration) * 100}%`,
                                       transform: 'translateX(-50%)'
@@ -1691,7 +1691,7 @@ const UploadPage = () => {
                                       document.addEventListener('touchend', handleTouchEnd);
                                     }}
                                   >
-                                    <div className="absolute -top-1 -bottom-1 -left-1 -right-1 bg-red-500/20 rounded-full animate-pulse" />
+                                    <div className="absolute -top-1 -bottom-1 -left-1 -right-1 bg-primary/20 rounded-full animate-pulse" />
                                   </div>
                                 </div>
                                 
