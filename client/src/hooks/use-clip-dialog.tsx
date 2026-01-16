@@ -41,9 +41,9 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
   // Enable navigation for any clip list with more than 1 clip
   const hasNavigation = clipsList && clipsList.length > 1;
 
-  // Check if we should show fullscreen reels viewer
-  // Show it when: it's a reel AND we have a clips list (for navigation)
-  const showFullscreenReelsViewer = isReel && clipsList && clipsList.length > 0;
+  // Reels now use the regular ClipDialog with 9:16 format and details panel
+  // The fullscreen viewer is only triggered via the fullscreen button in ClipDialog
+  const showFullscreenReelsViewer = false;
 
   const handleNext = () => {
     if (!clipsList || currentIndex === -1) return;
