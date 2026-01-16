@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Slider } from '@/components/ui/slider';
+import { Play, Pause, SkipBack, SkipForward } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
-// Helper function to format time in MM:SS format
 const formatTime = (seconds: number): string => {
-  if (isNaN(seconds)) return '00:00';
+  if (isNaN(seconds) || seconds < 0) return '0:00';
   
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
 interface VideoTrimmerProps {
@@ -23,119 +24,213 @@ const VideoTrimmer: React.FC<VideoTrimmerProps> = ({
 }) => {
   const [startTime, setStartTime] = useState(0);
   const [endTime, setEndTime] = useState(duration);
-  const [activeHandle, setActiveHandle] = useState<'start' | 'end' | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const timelineRef = useRef<HTMLDivElement>(null);
 
-  // Update end time when duration changes (video loaded)
   useEffect(() => {
     setEndTime(duration);
     onTrimChange(0, duration);
-  }, [duration, onTrimChange]);
+  }, [duration]);
 
-  // Handler for trim slider changes
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleTimeUpdate = () => {
+      setCurrentTime(video.currentTime);
+      
+      if (video.currentTime >= endTime) {
+        video.currentTime = startTime;
+        if (!video.paused) {
+          video.pause();
+          setIsPlaying(false);
+        }
+      }
+    };
+
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+
+    video.addEventListener('timeupdate', handleTimeUpdate);
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('pause', handlePause);
+
+    return () => {
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
+    };
+  }, [videoRef, startTime, endTime]);
+
+  const seekToPosition = useCallback((time: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = time;
+      setCurrentTime(time);
+    }
+  }, [videoRef]);
+
   const handleTrimChange = (values: number[]) => {
     if (!duration || values.length !== 2) return;
     
-    // Convert percentage values to seconds
     const start = (values[0] / 100) * duration;
     const end = (values[1] / 100) * duration;
     
-    // Ensure minimum clip duration (1 second or 5% of video, whichever is smaller)
     const minDuration = Math.min(1, duration * 0.05);
-    if (end - start < minDuration) {
-      return; // Prevent handles from getting too close
-    }
+    if (end - start < minDuration) return;
     
-    // Update local state
+    const startChanged = Math.abs(start - startTime) > 0.01;
+    const endChanged = Math.abs(end - endTime) > 0.01;
+    
     setStartTime(start);
     setEndTime(end);
-    
-    // Notify parent component
     onTrimChange(start, end);
     
-    // Update video playhead to reflect trim position
-    if (videoRef.current) {
-      const video = videoRef.current;
-      
-      // Move playhead based on which handle is being dragged
-      if (activeHandle === 'start') {
-        video.currentTime = start;
-      } else if (activeHandle === 'end') {
-        video.currentTime = Math.max(end - 0.5, start); // Show frame just before end
-      } else if (video.currentTime < start || video.currentTime > end) {
-        // If not dragging but playhead is outside bounds, reset to start
-        video.currentTime = start;
-      }
-      
-      // Create custom trim preview behavior for playback
-      video.ontimeupdate = () => {
-        // If video plays past end time, loop back to start time
-        if (video.currentTime >= end) {
-          video.currentTime = start;
-        }
-      };
+    if (startChanged) {
+      seekToPosition(start);
+    } else if (endChanged) {
+      seekToPosition(Math.max(end - 0.1, start));
     }
   };
 
-  // Handle the start of dragging to identify which handle is being moved
-  const handleDragStart = (handle: 'start' | 'end') => {
-    setActiveHandle(handle);
-    
-    // Pause video during trimming for better UX
-    if (videoRef.current) {
-      videoRef.current.pause();
+  const handlePlayPause = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.paused) {
+      if (video.currentTime < startTime || video.currentTime >= endTime) {
+        video.currentTime = startTime;
+      }
+      video.play();
+    } else {
+      video.pause();
     }
   };
-  
-  // Handle end of dragging
-  const handleDragEnd = () => {
-    setActiveHandle(null);
+
+  const handleSkipToStart = () => {
+    seekToPosition(startTime);
   };
+
+  const handleSkipToEnd = () => {
+    seekToPosition(Math.max(endTime - 0.5, startTime));
+  };
+
+  const clipDuration = endTime - startTime;
+  const startPercent = duration ? (startTime / duration) * 100 : 0;
+  const endPercent = duration ? (endTime / duration) * 100 : 100;
+  const currentPercent = duration ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="space-y-4">
-      {/* Improved start/end time display */}
-      <div className="flex justify-between mb-2 font-medium">
-        <div className="flex flex-col items-center">
-          <span className="text-sm text-muted-foreground">Start Time</span>
-          <span className="text-base bg-muted px-2 py-1 rounded mt-1">{formatTime(startTime)}</span>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-10 w-10 rounded-full border-primary/30 hover:bg-primary/20 hover:border-primary"
+            onClick={handleSkipToStart}
+          >
+            <SkipBack className="h-4 w-4" />
+          </Button>
+          
+          <Button
+            variant="default"
+            size="icon"
+            className="h-12 w-12 rounded-full bg-primary hover:bg-primary/80"
+            onClick={handlePlayPause}
+          >
+            {isPlaying ? (
+              <Pause className="h-5 w-5" />
+            ) : (
+              <Play className="h-5 w-5 ml-0.5" />
+            )}
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-10 w-10 rounded-full border-primary/30 hover:bg-primary/20 hover:border-primary"
+            onClick={handleSkipToEnd}
+          >
+            <SkipForward className="h-4 w-4" />
+          </Button>
         </div>
-        
-        <div className="flex flex-col items-center">
-          <span className="text-sm text-muted-foreground">Duration</span>
-          <span className="text-base text-primary font-bold">{formatTime(endTime - startTime)}</span>
-        </div>
-        
-        <div className="flex flex-col items-center">
-          <span className="text-sm text-muted-foreground">End Time</span>
-          <span className="text-base bg-muted px-2 py-1 rounded mt-1">{formatTime(endTime)}</span>
+
+        <div className="flex items-center gap-4 text-sm">
+          <div className="flex flex-col items-center">
+            <span className="text-xs text-muted-foreground uppercase tracking-wide">Start</span>
+            <span className="font-mono text-lg font-bold text-primary">{formatTime(startTime)}</span>
+          </div>
+          <div className="h-8 w-px bg-border"></div>
+          <div className="flex flex-col items-center">
+            <span className="text-xs text-muted-foreground uppercase tracking-wide">Duration</span>
+            <span className="font-mono text-lg font-bold text-foreground">{formatTime(clipDuration)}</span>
+          </div>
+          <div className="h-8 w-px bg-border"></div>
+          <div className="flex flex-col items-center">
+            <span className="text-xs text-muted-foreground uppercase tracking-wide">End</span>
+            <span className="font-mono text-lg font-bold text-primary">{formatTime(endTime)}</span>
+          </div>
         </div>
       </div>
-      
-      {/* Timeline with trim controls */}
-      <div className="relative py-6 mt-4 border-t border-b border-muted pt-8 mx-2 sm:mx-4">
-        {/* Timeline ticks */}
-        <div className="absolute top-0 left-0 right-0 h-2 flex justify-between px-2">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-2 w-px bg-muted-foreground/30"></div>
-          ))}
+
+      <div ref={timelineRef} className="relative">
+        <div className="absolute top-0 left-0 right-0 flex justify-between text-xs text-muted-foreground mb-2">
+          <span>{formatTime(0)}</span>
+          <span>{formatTime(duration / 4)}</span>
+          <span>{formatTime(duration / 2)}</span>
+          <span>{formatTime((duration * 3) / 4)}</span>
+          <span>{formatTime(duration)}</span>
         </div>
-        
-        {/* Track background */}
-        <div className="absolute top-8 left-2 right-2 h-3 bg-gray-700 rounded-full overflow-hidden">
-          {/* Selected portion */}
+
+        <div className="mt-6 relative h-16 bg-card rounded-lg overflow-hidden border border-border">
+          <div className="absolute inset-0 bg-muted/50"></div>
+          
           <div 
-            className="absolute top-0 h-full bg-primary" 
+            className="absolute top-0 bottom-0 bg-primary/20 border-x-2 border-primary"
             style={{
-              left: `${(startTime / duration) * 100}%`,
-              width: `${((endTime - startTime) / duration) * 100}%`
+              left: `${startPercent}%`,
+              width: `${endPercent - startPercent}%`
             }}
-          />
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10"></div>
+          </div>
+
+          <div 
+            className="absolute top-0 bottom-0 w-0.5 bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)] z-20 transition-all duration-75"
+            style={{ left: `${currentPercent}%` }}
+          >
+            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rounded-full shadow-lg"></div>
+          </div>
+
+          <div 
+            className="absolute top-0 bottom-0 w-1 bg-primary cursor-ew-resize z-10 group"
+            style={{ left: `${startPercent}%` }}
+          >
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-8 bg-primary rounded-sm flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+              <div className="flex gap-0.5">
+                <div className="w-0.5 h-4 bg-primary-foreground/50 rounded-full"></div>
+                <div className="w-0.5 h-4 bg-primary-foreground/50 rounded-full"></div>
+              </div>
+            </div>
+          </div>
+
+          <div 
+            className="absolute top-0 bottom-0 w-1 bg-primary cursor-ew-resize z-10 group"
+            style={{ left: `${endPercent}%`, transform: 'translateX(-100%)' }}
+          >
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-8 bg-primary rounded-sm flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+              <div className="flex gap-0.5">
+                <div className="w-0.5 h-4 bg-primary-foreground/50 rounded-full"></div>
+                <div className="w-0.5 h-4 bg-primary-foreground/50 rounded-full"></div>
+              </div>
+            </div>
+          </div>
         </div>
-        
-        {/* Dual-handle slider */}
-        <div className="px-2">
+
+        <div className="mt-2 px-1">
           <Slider
-            defaultValue={[0, 100]}
             value={[
               duration ? (startTime / duration) * 100 : 0,
               duration ? (endTime / duration) * 100 : 100
@@ -143,50 +238,27 @@ const VideoTrimmer: React.FC<VideoTrimmerProps> = ({
             max={100}
             step={0.1}
             onValueChange={handleTrimChange}
-            className="relative z-10 w-full cursor-ew-resize"
+            onPointerDown={() => setIsDragging(true)}
+            onPointerUp={() => setIsDragging(false)}
+            className="relative z-30 opacity-0 h-16 -mt-16 cursor-ew-resize"
           />
         </div>
-        
-        {/* Custom drag handles with visual feedback */}
-        <div className="absolute top-8 left-2 right-2 pointer-events-none">
-          {/* Start handle */}
-          <div 
-            className={`absolute h-4 w-4 rounded-full border-2 ${activeHandle === 'start' ? 'border-white scale-125' : 'border-primary/70'} bg-primary shadow-md transform -translate-x-1/2 -translate-y-1/4 cursor-ew-resize z-20 transition-all duration-150 pointer-events-auto`}
-            style={{ left: `${(startTime / duration) * 100}%` }}
-            onMouseDown={() => handleDragStart('start')}
-            onMouseUp={handleDragEnd}
-            onTouchStart={() => handleDragStart('start')}
-            onTouchEnd={handleDragEnd}
-          >
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1">
-              <div className="h-4 w-1 bg-primary rounded-full"></div>
-            </div>
-            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 -translate-y-1 text-xs bg-background/90 px-1 rounded text-primary font-medium whitespace-nowrap">
-              {formatTime(startTime)}
-            </span>
-          </div>
-          
-          {/* End handle */}
-          <div 
-            className={`absolute h-4 w-4 rounded-full border-2 ${activeHandle === 'end' ? 'border-white scale-125' : 'border-primary/70'} bg-primary shadow-md transform -translate-x-1/2 -translate-y-1/4 cursor-ew-resize z-20 transition-all duration-150 pointer-events-auto`}
-            style={{ left: `${(endTime / duration) * 100}%` }}
-            onMouseDown={() => handleDragStart('end')}
-            onMouseUp={handleDragEnd}
-            onTouchStart={() => handleDragStart('end')}
-            onTouchEnd={handleDragEnd}
-          >
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1">
-              <div className="h-4 w-1 bg-primary rounded-full"></div>
-            </div>
-            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 -translate-y-1 text-xs bg-background/90 px-1 rounded text-primary font-medium whitespace-nowrap">
-              {formatTime(endTime)}
-            </span>
-          </div>
+      </div>
+
+      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-sm bg-primary"></div>
+          <span>Trim handles</span>
+        </div>
+        <span className="text-muted-foreground/50">|</span>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-full bg-white border border-muted-foreground/30"></div>
+          <span>Playhead</span>
         </div>
       </div>
-      
-      <p className="text-sm text-muted-foreground mt-3">
-        Drag the handles to trim your clip from both the start and end.
+
+      <p className="text-center text-sm text-muted-foreground">
+        Drag the green handles to set your clip's start and end points. The video preview updates as you trim.
       </p>
     </div>
   );
