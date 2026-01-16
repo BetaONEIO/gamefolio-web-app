@@ -231,33 +231,6 @@ const ProfileHeader = ({
               {/* Handle */}
               <p className="text-sm text-muted-foreground">@{profile.username}</p>
 
-              {/* Name Tag */}
-              {nameTagData?.nameTag && (
-                <div className="mt-1">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <img 
-                          src={nameTagData.nameTag.imageUrl} 
-                          alt={nameTagData.nameTag.name}
-                          className="h-6 rounded-sm"
-                          style={{
-                            borderRadius: '2px',
-                            boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.1)'
-                          }}
-                        />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-sm font-medium">{nameTagData.nameTag.name}</p>
-                        {nameTagData.nameTag.description && (
-                          <p className="text-xs text-muted-foreground">{nameTagData.nameTag.description}</p>
-                        )}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              )}
-
               {/* Bio */}
               <div>
                 <p className="text-sm text-muted-foreground">{profile.bio}</p>
@@ -265,8 +238,33 @@ const ProfileHeader = ({
             </div>
           </div>
 
-          {/* Right side: Action Buttons */}
-          <div className="flex gap-2 flex-shrink-0">
+          {/* Right side: Name Tag and Action Buttons */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {/* Name Tag */}
+            {nameTagData?.nameTag && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <img 
+                      src={nameTagData.nameTag.imageUrl} 
+                      alt={nameTagData.nameTag.name}
+                      className="h-6 rounded-sm"
+                      style={{
+                        borderRadius: '2px',
+                        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.1)'
+                      }}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-sm font-medium">{nameTagData.nameTag.name}</p>
+                    {nameTagData.nameTag.description && (
+                      <p className="text-xs text-muted-foreground">{nameTagData.nameTag.description}</p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+
             {/* Follow Button */}
             {!isCurrentUser && (
               <Button
