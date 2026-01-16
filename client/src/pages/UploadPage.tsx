@@ -1012,199 +1012,94 @@ const UploadPage = () => {
                         
                         {/* Video Editing Tools */}
                         {showEditingTools && videoDuration > 0 && (
-                          <div className="space-y-4 mt-4 p-4 bg-muted/50 rounded-lg">
+                          <div className="space-y-4 mt-4">
                             <div className="flex items-center justify-between">
-                              <h4 className="font-medium">Trim Reel</h4>
-                              <div className="text-sm text-muted-foreground bg-primary/20 text-primary px-2 py-1 rounded">
+                              <h4 className="font-medium text-sm">Trim Clip</h4>
+                              <span className="text-xs text-muted-foreground font-mono">
                                 {formatDuration(trimEnd - trimStart)}
-                              </div>
+                              </span>
                             </div>
                             
-                            {/* Mobile-First Custom Trimmer */}
-                            <div className="space-y-4">
-                              {/* Time Display */}
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-background/50 rounded-lg p-3 text-center">
-                                  <div className="text-xs text-muted-foreground mb-1">Start</div>
-                                  <div className="font-mono text-sm text-primary">
-                                    {formatDuration(trimStart)}
-                                  </div>
-                                </div>
-                                <div className="bg-background/50 rounded-lg p-3 text-center">
-                                  <div className="text-xs text-muted-foreground mb-1">End</div>
-                                  <div className="font-mono text-sm text-primary">
-                                    {formatDuration(trimEnd)}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Custom Timeline */}
-                              <div className="relative bg-background/30 rounded-lg p-4">
-                                <div className="relative h-8 bg-muted/50 rounded-full overflow-hidden">
-                                  {/* Timeline Track */}
-                                  <div 
-                                    className="absolute top-0 h-full bg-primary/60 rounded-full transition-all duration-200"
-                                    style={{
-                                      left: `${(trimStart / videoDuration) * 100}%`,
-                                      width: `${((trimEnd - trimStart) / videoDuration) * 100}%`
-                                    }}
-                                  />
-                                  
-                                  {/* Start Handle */}
-                                  <div 
-                                    className="absolute top-0 h-full w-4 bg-primary rounded-full cursor-grab active:cursor-grabbing transition-all duration-200 hover:bg-primary/80 shadow-lg"
-                                    style={{
-                                      left: `${(trimStart / videoDuration) * 100}%`,
-                                      transform: 'translateX(-50%)'
-                                    }}
-                                    onMouseDown={(e) => {
-                                      const rect = e.currentTarget.parentElement!.getBoundingClientRect();
-                                      const startX = e.clientX;
-                                      const startTime = trimStart;
-                                      
-                                      const handleMouseMove = (e: MouseEvent) => {
-                                        const deltaX = e.clientX - startX;
-                                        const deltaTime = (deltaX / rect.width) * videoDuration;
-                                        const newStart = Math.max(0, Math.min(trimEnd - 0.5, startTime + deltaTime));
-                                        setTrimStart(newStart);
-                                        if (videoRef.current) {
-                                          videoRef.current.currentTime = newStart;
-                                        }
-                                      };
-                                      
-                                      const handleMouseUp = () => {
-                                        document.removeEventListener('mousemove', handleMouseMove);
-                                        document.removeEventListener('mouseup', handleMouseUp);
-                                      };
-                                      
-                                      document.addEventListener('mousemove', handleMouseMove);
-                                      document.addEventListener('mouseup', handleMouseUp);
-                                    }}
-                                    onTouchStart={(e) => {
-                                      const rect = e.currentTarget.parentElement!.getBoundingClientRect();
-                                      const startX = e.touches[0].clientX;
-                                      const startTime = trimStart;
-                                      
-                                      const handleTouchMove = (e: TouchEvent) => {
-                                        e.preventDefault();
-                                        const deltaX = e.touches[0].clientX - startX;
-                                        const deltaTime = (deltaX / rect.width) * videoDuration;
-                                        const newStart = Math.max(0, Math.min(trimEnd - 0.5, startTime + deltaTime));
-                                        setTrimStart(newStart);
-                                        if (videoRef.current) {
-                                          videoRef.current.currentTime = newStart;
-                                        }
-                                      };
-                                      
-                                      const handleTouchEnd = () => {
-                                        document.removeEventListener('touchmove', handleTouchMove);
-                                        document.removeEventListener('touchend', handleTouchEnd);
-                                      };
-                                      
-                                      document.addEventListener('touchmove', handleTouchMove);
-                                      document.addEventListener('touchend', handleTouchEnd);
-                                    }}
-                                  >
-                                    <div className="absolute -top-1 -bottom-1 -left-1 -right-1 bg-primary/20 rounded-full animate-pulse" />
-                                  </div>
-                                  
-                                  {/* End Handle */}
-                                  <div 
-                                    className="absolute top-0 h-full w-4 bg-primary rounded-full cursor-grab active:cursor-grabbing transition-all duration-200 hover:bg-primary/80 shadow-lg"
-                                    style={{
-                                      left: `${(trimEnd / videoDuration) * 100}%`,
-                                      transform: 'translateX(-50%)'
-                                    }}
-                                    onMouseDown={(e) => {
-                                      const rect = e.currentTarget.parentElement!.getBoundingClientRect();
-                                      const startX = e.clientX;
-                                      const startTime = trimEnd;
-                                      
-                                      const handleMouseMove = (e: MouseEvent) => {
-                                        const deltaX = e.clientX - startX;
-                                        const deltaTime = (deltaX / rect.width) * videoDuration;
-                                        const newEnd = Math.max(trimStart + 0.5, Math.min(videoDuration, startTime + deltaTime));
-                                        setTrimEnd(newEnd);
-                                        if (videoRef.current) {
-                                          videoRef.current.currentTime = Math.max(newEnd - 0.1, trimStart);
-                                        }
-                                      };
-                                      
-                                      const handleMouseUp = () => {
-                                        document.removeEventListener('mousemove', handleMouseMove);
-                                        document.removeEventListener('mouseup', handleMouseUp);
-                                      };
-                                      
-                                      document.addEventListener('mousemove', handleMouseMove);
-                                      document.addEventListener('mouseup', handleMouseUp);
-                                    }}
-                                    onTouchStart={(e) => {
-                                      const rect = e.currentTarget.parentElement!.getBoundingClientRect();
-                                      const startX = e.touches[0].clientX;
-                                      const startTime = trimEnd;
-                                      
-                                      const handleTouchMove = (e: TouchEvent) => {
-                                        e.preventDefault();
-                                        const deltaX = e.touches[0].clientX - startX;
-                                        const deltaTime = (deltaX / rect.width) * videoDuration;
-                                        const newEnd = Math.max(trimStart + 0.5, Math.min(videoDuration, startTime + deltaTime));
-                                        setTrimEnd(newEnd);
-                                        if (videoRef.current) {
-                                          videoRef.current.currentTime = Math.max(newEnd - 0.1, trimStart);
-                                        }
-                                      };
-                                      
-                                      const handleTouchEnd = () => {
-                                        document.removeEventListener('touchmove', handleTouchMove);
-                                        document.removeEventListener('touchend', handleTouchEnd);
-                                      };
-                                      
-                                      document.addEventListener('touchmove', handleTouchMove);
-                                      document.addEventListener('touchend', handleTouchEnd);
-                                    }}
-                                  >
-                                    <div className="absolute -top-1 -bottom-1 -left-1 -right-1 bg-primary/20 rounded-full animate-pulse" />
-                                  </div>
-                                </div>
-                                
-                                {/* Timeline Markers */}
-                                <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                                  <span>0:00</span>
-                                  <span>{formatDuration(videoDuration)}</span>
-                                </div>
-                              </div>
-
-                              {/* Quick Actions */}
-                              <div className="grid grid-cols-2 gap-2">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setTrimStart(0);
-                                    setTrimEnd(videoDuration);
-                                  }}
-                                  className="flex items-center gap-2"
-                                >
-                                  <RotateCcw className="h-3 w-3" />
-                                  Reset
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
+                            {/* Simple Range Inputs */}
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs text-muted-foreground w-10">Start</span>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max={videoDuration}
+                                  step="0.1"
+                                  value={trimStart}
+                                  onChange={(e) => {
+                                    const newStart = Math.min(parseFloat(e.target.value), trimEnd - 0.5);
+                                    setTrimStart(newStart);
                                     if (videoRef.current) {
-                                      videoRef.current.currentTime = trimStart;
-                                      videoRef.current.play();
+                                      videoRef.current.currentTime = newStart;
                                     }
                                   }}
-                                  className="flex items-center gap-2"
-                                >
-                                  <Play className="h-3 w-3" />
-                                  Preview
-                                </Button>
+                                  className="flex-1 h-1 bg-muted rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-foreground [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing"
+                                />
+                                <span className="text-xs font-mono text-muted-foreground w-10 text-right">
+                                  {formatDuration(trimStart)}
+                                </span>
                               </div>
+                              
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs text-muted-foreground w-10">End</span>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max={videoDuration}
+                                  step="0.1"
+                                  value={trimEnd}
+                                  onChange={(e) => {
+                                    const newEnd = Math.max(parseFloat(e.target.value), trimStart + 0.5);
+                                    setTrimEnd(newEnd);
+                                    if (videoRef.current) {
+                                      videoRef.current.currentTime = Math.max(newEnd - 0.1, trimStart);
+                                    }
+                                  }}
+                                  className="flex-1 h-1 bg-muted rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-foreground [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing"
+                                />
+                                <span className="text-xs font-mono text-muted-foreground w-10 text-right">
+                                  {formatDuration(trimEnd)}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Quick Actions */}
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setTrimStart(0);
+                                  setTrimEnd(videoDuration);
+                                  if (videoRef.current) {
+                                    videoRef.current.currentTime = 0;
+                                  }
+                                }}
+                                className="text-xs"
+                              >
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                                Reset
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (videoRef.current) {
+                                    videoRef.current.currentTime = trimStart;
+                                    videoRef.current.play();
+                                  }
+                                }}
+                                className="text-xs"
+                              >
+                                <Play className="h-3 w-3 mr-1" />
+                                Preview
+                              </Button>
                             </div>
                           </div>
                         )}
@@ -1564,199 +1459,94 @@ const UploadPage = () => {
                         
                         {/* Video Editing Tools for Reels */}
                         {showEditingTools && videoDuration > 0 && (
-                          <div className="space-y-4 mt-4 p-4 bg-muted/50 rounded-lg">
+                          <div className="space-y-4 mt-4">
                             <div className="flex items-center justify-between">
-                              <h4 className="font-medium">Trim Reel</h4>
-                              <div className="text-sm text-muted-foreground bg-primary/20 text-primary px-2 py-1 rounded">
+                              <h4 className="font-medium text-sm">Trim Reel</h4>
+                              <span className="text-xs text-muted-foreground font-mono">
                                 {formatDuration(trimEnd - trimStart)}
-                              </div>
+                              </span>
                             </div>
                             
-                            {/* Mobile-First Custom Trimmer */}
-                            <div className="space-y-4">
-                              {/* Time Display */}
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-background/50 rounded-lg p-3 text-center">
-                                  <div className="text-xs text-muted-foreground mb-1">Start</div>
-                                  <div className="font-mono text-sm text-primary">
-                                    {formatDuration(trimStart)}
-                                  </div>
-                                </div>
-                                <div className="bg-background/50 rounded-lg p-3 text-center">
-                                  <div className="text-xs text-muted-foreground mb-1">End</div>
-                                  <div className="font-mono text-sm text-primary">
-                                    {formatDuration(trimEnd)}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Custom Timeline */}
-                              <div className="relative bg-background/30 rounded-lg p-4">
-                                <div className="relative h-8 bg-muted/50 rounded-full overflow-hidden">
-                                  {/* Timeline Track */}
-                                  <div 
-                                    className="absolute top-0 h-full bg-primary/60 rounded-full transition-all duration-200"
-                                    style={{
-                                      left: `${(trimStart / videoDuration) * 100}%`,
-                                      width: `${((trimEnd - trimStart) / videoDuration) * 100}%`
-                                    }}
-                                  />
-                                  
-                                  {/* Start Handle */}
-                                  <div 
-                                    className="absolute top-0 h-full w-4 bg-primary rounded-full cursor-grab active:cursor-grabbing transition-all duration-200 hover:bg-primary/80 shadow-lg"
-                                    style={{
-                                      left: `${(trimStart / videoDuration) * 100}%`,
-                                      transform: 'translateX(-50%)'
-                                    }}
-                                    onMouseDown={(e) => {
-                                      const rect = e.currentTarget.parentElement!.getBoundingClientRect();
-                                      const startX = e.clientX;
-                                      const startTime = trimStart;
-                                      
-                                      const handleMouseMove = (e: MouseEvent) => {
-                                        const deltaX = e.clientX - startX;
-                                        const deltaTime = (deltaX / rect.width) * videoDuration;
-                                        const newStart = Math.max(0, Math.min(trimEnd - 0.5, startTime + deltaTime));
-                                        setTrimStart(newStart);
-                                        if (videoRef.current) {
-                                          videoRef.current.currentTime = newStart;
-                                        }
-                                      };
-                                      
-                                      const handleMouseUp = () => {
-                                        document.removeEventListener('mousemove', handleMouseMove);
-                                        document.removeEventListener('mouseup', handleMouseUp);
-                                      };
-                                      
-                                      document.addEventListener('mousemove', handleMouseMove);
-                                      document.addEventListener('mouseup', handleMouseUp);
-                                    }}
-                                    onTouchStart={(e) => {
-                                      const rect = e.currentTarget.parentElement!.getBoundingClientRect();
-                                      const startX = e.touches[0].clientX;
-                                      const startTime = trimStart;
-                                      
-                                      const handleTouchMove = (e: TouchEvent) => {
-                                        e.preventDefault();
-                                        const deltaX = e.touches[0].clientX - startX;
-                                        const deltaTime = (deltaX / rect.width) * videoDuration;
-                                        const newStart = Math.max(0, Math.min(trimEnd - 0.5, startTime + deltaTime));
-                                        setTrimStart(newStart);
-                                        if (videoRef.current) {
-                                          videoRef.current.currentTime = newStart;
-                                        }
-                                      };
-                                      
-                                      const handleTouchEnd = () => {
-                                        document.removeEventListener('touchmove', handleTouchMove);
-                                        document.removeEventListener('touchend', handleTouchEnd);
-                                      };
-                                      
-                                      document.addEventListener('touchmove', handleTouchMove);
-                                      document.addEventListener('touchend', handleTouchEnd);
-                                    }}
-                                  >
-                                    <div className="absolute -top-1 -bottom-1 -left-1 -right-1 bg-primary/20 rounded-full animate-pulse" />
-                                  </div>
-                                  
-                                  {/* End Handle */}
-                                  <div 
-                                    className="absolute top-0 h-full w-4 bg-primary rounded-full cursor-grab active:cursor-grabbing transition-all duration-200 hover:bg-primary/80 shadow-lg"
-                                    style={{
-                                      left: `${(trimEnd / videoDuration) * 100}%`,
-                                      transform: 'translateX(-50%)'
-                                    }}
-                                    onMouseDown={(e) => {
-                                      const rect = e.currentTarget.parentElement!.getBoundingClientRect();
-                                      const startX = e.clientX;
-                                      const startTime = trimEnd;
-                                      
-                                      const handleMouseMove = (e: MouseEvent) => {
-                                        const deltaX = e.clientX - startX;
-                                        const deltaTime = (deltaX / rect.width) * videoDuration;
-                                        const newEnd = Math.max(trimStart + 0.5, Math.min(videoDuration, startTime + deltaTime));
-                                        setTrimEnd(newEnd);
-                                        if (videoRef.current) {
-                                          videoRef.current.currentTime = Math.max(newEnd - 0.1, trimStart);
-                                        }
-                                      };
-                                      
-                                      const handleMouseUp = () => {
-                                        document.removeEventListener('mousemove', handleMouseMove);
-                                        document.removeEventListener('mouseup', handleMouseUp);
-                                      };
-                                      
-                                      document.addEventListener('mousemove', handleMouseMove);
-                                      document.addEventListener('mouseup', handleMouseUp);
-                                    }}
-                                    onTouchStart={(e) => {
-                                      const rect = e.currentTarget.parentElement!.getBoundingClientRect();
-                                      const startX = e.touches[0].clientX;
-                                      const startTime = trimEnd;
-                                      
-                                      const handleTouchMove = (e: TouchEvent) => {
-                                        e.preventDefault();
-                                        const deltaX = e.touches[0].clientX - startX;
-                                        const deltaTime = (deltaX / rect.width) * videoDuration;
-                                        const newEnd = Math.max(trimStart + 0.5, Math.min(videoDuration, startTime + deltaTime));
-                                        setTrimEnd(newEnd);
-                                        if (videoRef.current) {
-                                          videoRef.current.currentTime = Math.max(newEnd - 0.1, trimStart);
-                                        }
-                                      };
-                                      
-                                      const handleTouchEnd = () => {
-                                        document.removeEventListener('touchmove', handleTouchMove);
-                                        document.removeEventListener('touchend', handleTouchEnd);
-                                      };
-                                      
-                                      document.addEventListener('touchmove', handleTouchMove);
-                                      document.addEventListener('touchend', handleTouchEnd);
-                                    }}
-                                  >
-                                    <div className="absolute -top-1 -bottom-1 -left-1 -right-1 bg-primary/20 rounded-full animate-pulse" />
-                                  </div>
-                                </div>
-                                
-                                {/* Timeline Markers */}
-                                <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                                  <span>0:00</span>
-                                  <span>{formatDuration(videoDuration)}</span>
-                                </div>
-                              </div>
-
-                              {/* Quick Actions */}
-                              <div className="grid grid-cols-2 gap-2">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setTrimStart(0);
-                                    setTrimEnd(videoDuration);
-                                  }}
-                                  className="flex items-center gap-2"
-                                >
-                                  <RotateCcw className="h-3 w-3" />
-                                  Reset
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
+                            {/* Simple Range Inputs */}
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs text-muted-foreground w-10">Start</span>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max={videoDuration}
+                                  step="0.1"
+                                  value={trimStart}
+                                  onChange={(e) => {
+                                    const newStart = Math.min(parseFloat(e.target.value), trimEnd - 0.5);
+                                    setTrimStart(newStart);
                                     if (videoRef.current) {
-                                      videoRef.current.currentTime = trimStart;
-                                      videoRef.current.play();
+                                      videoRef.current.currentTime = newStart;
                                     }
                                   }}
-                                  className="flex items-center gap-2"
-                                >
-                                  <Play className="h-3 w-3" />
-                                  Preview
-                                </Button>
+                                  className="flex-1 h-1 bg-muted rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-foreground [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing"
+                                />
+                                <span className="text-xs font-mono text-muted-foreground w-10 text-right">
+                                  {formatDuration(trimStart)}
+                                </span>
                               </div>
+                              
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs text-muted-foreground w-10">End</span>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max={videoDuration}
+                                  step="0.1"
+                                  value={trimEnd}
+                                  onChange={(e) => {
+                                    const newEnd = Math.max(parseFloat(e.target.value), trimStart + 0.5);
+                                    setTrimEnd(newEnd);
+                                    if (videoRef.current) {
+                                      videoRef.current.currentTime = Math.max(newEnd - 0.1, trimStart);
+                                    }
+                                  }}
+                                  className="flex-1 h-1 bg-muted rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-foreground [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing"
+                                />
+                                <span className="text-xs font-mono text-muted-foreground w-10 text-right">
+                                  {formatDuration(trimEnd)}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Quick Actions */}
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setTrimStart(0);
+                                  setTrimEnd(videoDuration);
+                                  if (videoRef.current) {
+                                    videoRef.current.currentTime = 0;
+                                  }
+                                }}
+                                className="text-xs"
+                              >
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                                Reset
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (videoRef.current) {
+                                    videoRef.current.currentTime = trimStart;
+                                    videoRef.current.play();
+                                  }
+                                }}
+                                className="text-xs"
+                              >
+                                <Play className="h-3 w-3 mr-1" />
+                                Preview
+                              </Button>
                             </div>
                           </div>
                         )}
