@@ -4,11 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { useLocation } from "wouter";
-import { EmailVerificationNotice } from "./EmailVerificationNotice";
-import { sendVerificationEmail } from "@/services/email-service";
 import { GoogleAuthButton } from "./GoogleAuthButton";
-import { validatePassword, isPasswordValid } from "@/lib/password-validation";
 import { PasswordRequirementsDisplay } from "@/components/ui/password-requirements";
 import { FieldError, FieldStatus } from "@/components/ui/field-error";
 
@@ -33,7 +29,6 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     special: false,
   });
   const [passwordsMatch, setPasswordsMatch] = useState<boolean | null>(null);
-  const [registrationComplete, setRegistrationComplete] = useState(false);
   const [serverError, setServerError] = useState<string>("");
   const [fieldErrors, setFieldErrors] = useState<{
     username?: string;
@@ -43,7 +38,6 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
   }>({});
   const { toast } = useToast();
   const { registerMutation } = useAuth();
-  const [, setLocation] = useLocation();
   const isLoading = registerMutation.isPending;
 
   // Helper function to check for profanity
@@ -263,16 +257,8 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     setFieldErrors({});
 
     // Use register mutation from useAuth hook
+    // The useAuth hook handles the redirect to /verify-code or /onboarding automatically
     registerMutation.mutate(registrationData, {
-      onSuccess: async (user) => {
-        toast({
-          title: "Registration successful!",
-          description: "Please check your email to verify your account.",
-        });
-
-        // Show verification notice - email is automatically sent by server
-        setRegistrationComplete(true);
-      },
       onError: (error: Error) => {
         // Handle specific server errors contextually
         const errorMessage = error.message.toLowerCase();
@@ -290,26 +276,6 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       }
     });
   };
-
-  if (registrationComplete) {
-    return (
-      <div className="space-y-6 backdrop-blur-md p-6 rounded-lg border border-white/10">
-        <EmailVerificationNotice 
-          email={formData.email} 
-          displayName={formData.username}
-          onClose={() => onSuccess()}
-        />
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground mb-4">
-            You can now login with your credentials after verifying your email.
-          </p>
-          <Button onClick={onSuccess} variant="outline" className="w-full">
-            Back to Login
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 backdrop-blur-md p-6 rounded-lg border border-white/10">
