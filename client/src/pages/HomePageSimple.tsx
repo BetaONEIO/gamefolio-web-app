@@ -275,7 +275,7 @@ const HomePage = () => {
       )}
       
       {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-2xl mx-2 md:mx-6">
+      <section className="relative overflow-hidden -mx-2 md:-mx-6 -mt-2 md:-mt-4">
         <div className="relative">
           <div 
             className="h-[300px] sm:h-[350px] md:h-[500px] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center bg-cover bg-center"
