@@ -345,6 +345,7 @@ const HomePage = () => {
       
       {/* Recommended for You Section */}
       <RecommendedForYou userId={userId} />
+      <div className="mx-2 sm:mx-4 md:mx-6 border-b border-border/50" />
       
       {/* Latest Clips Section */}
       <section className="px-2 sm:px-4 md:px-6">
@@ -376,6 +377,7 @@ const HomePage = () => {
           </div>
         )}
       </section>
+      <div className="mx-2 sm:mx-4 md:mx-6 border-b border-border/50" />
 
       {/* Latest Reels Section (9:16 aspect ratio) */}
       <section className="px-2 sm:px-4 md:px-6 pt-6 sm:pt-8">
@@ -392,8 +394,7 @@ const HomePage = () => {
           userId={userId}
         />
       </section>
-
-
+      <div className="mx-2 sm:mx-4 md:mx-6 border-b border-border/50" />
 
     </div>
   );
