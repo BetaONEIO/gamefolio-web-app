@@ -345,16 +345,16 @@ const HomePage = () => {
       
       {/* Recommended for You Section */}
       <RecommendedForYou userId={userId} />
-      <div className="mx-2 sm:mx-4 md:mx-6 border-b border-border/50" />
       
       {/* Latest Clips Section */}
       <section className="px-2 sm:px-4 md:px-6">
-        <div className="flex justify-between items-center mb-4 sm:mb-6 md:mb-8">
+        <div className="flex justify-between items-center mb-2">
           <h2 className="text-xl sm:text-2xl font-bold">Latest Clips</h2>
           <Link href="/latest-clips" className="text-primary text-sm font-medium hover:underline flex items-center">
             View all <ChevronRight className="h-4 w-4 ml-1" />
           </Link>
         </div>
+        <div className="border-b border-border/50 mb-4 sm:mb-6 md:mb-8" />
 
         <TrendingContentCarousel 
           clips={trendingClips} 
@@ -377,16 +377,16 @@ const HomePage = () => {
           </div>
         )}
       </section>
-      <div className="mx-2 sm:mx-4 md:mx-6 border-b border-border/50" />
 
       {/* Latest Reels Section (9:16 aspect ratio) */}
       <section className="px-2 sm:px-4 md:px-6 pt-6 sm:pt-8">
-        <div className="flex justify-between items-center mb-4 sm:mb-6 md:mb-8">
+        <div className="flex justify-between items-center mb-2">
           <h2 className="text-xl sm:text-2xl font-bold">Latest Reels</h2>
           <Link href="/latest-reels" className="text-primary text-sm font-medium hover:underline flex items-center">
             View all <ChevronRight className="h-4 w-4 ml-1" />
           </Link>
         </div>
+        <div className="border-b border-border/50 mb-4 sm:mb-6 md:mb-8" />
 
         <LatestReelsCarousel 
           reels={latestReels}
@@ -394,7 +394,6 @@ const HomePage = () => {
           userId={userId}
         />
       </section>
-      <div className="mx-2 sm:mx-4 md:mx-6 border-b border-border/50" />
 
     </div>
   );

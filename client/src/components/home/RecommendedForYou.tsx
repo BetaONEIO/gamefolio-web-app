@@ -76,7 +76,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
   if (isLoading) {
     return (
       <section className="px-2 sm:px-4 md:px-6 mb-6 sm:mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4 sm:mb-6 md:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-2">
           <div className="flex items-center gap-2">
             <Star className="h-5 w-5 text-primary flex-shrink-0" />
             <h2 className="text-lg sm:text-xl md:text-2xl font-bold">Recommended for You</h2>
@@ -108,6 +108,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
             </Button>
           </div>
         </div>
+        <div className="border-b border-border/50 mb-4 sm:mb-6 md:mb-8" />
         
         <div className="relative">
           <div className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide pb-4 px-2 sm:px-8">
@@ -134,7 +135,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
 
   return (
     <section className="px-2 sm:px-4 md:px-6 mb-6 sm:mb-8" data-testid="recommended-for-you-section">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4 sm:mb-6 md:mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-2">
         <div className="flex items-center gap-2">
           <Star className="h-5 w-5 text-primary flex-shrink-0" />
           <h2 className="text-lg sm:text-xl md:text-2xl font-bold">Recommended for You</h2>
@@ -166,6 +167,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
           </Button>
         </div>
       </div>
+      <div className="border-b border-border/50 mb-4 sm:mb-6 md:mb-8" />
 
       {filteredContent.length > 0 ? (
         <div className="relative">
