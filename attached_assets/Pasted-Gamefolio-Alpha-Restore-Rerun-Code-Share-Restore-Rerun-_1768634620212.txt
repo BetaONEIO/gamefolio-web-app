@@ -1,0 +1,321 @@
+Gamefolio Alpha
+
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+Restore
+
+↩︎
+Rerun
+
+Code
+
+Share
+
+↩︎
+Rerun
+
+Code
+
+Share
+8 errors while running the app
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Details
+
+Fix all
+No file chosen
+Drop images here to upload them to the conversation
+
+PNG
+JPG
+Max 5MB
+Please fix the following errors:
+Error message:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+
+Error message:
+⚠️ REGISTER API RETURNED HTML INSTEAD OF JSON
+
+
+
+Error message:
+[API] URL: https://app.gamefolio.com/api/auth/token/register
+
+
+
+Error message:
+[API] Status: 200
+
+
+
+Error message:
+[API] Content-Type: text/html; charset=UTF-8
+
+
+
+Error message:
+[API] Backend URL: https://app.gamefolio.com
+
+
+
+Error message:
+[API] HTML preview: <!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8" /> <link rel="icon" type="image/jpeg" href="/favicon.jpg" /> <meta name="viewport" content="width=device-width, initial-scal
+
+
+
+Error message:
+[Register] Error: APIError: Server returned HTML instead of JSON. The registration endpoint may not exist or EXPO_PUBLIC_BACKEND_URL is not set correctly.
+
+
+
+
+
+
+
+Opus 4.5
+
+
+
+Preview
+
+
+Integrations
+
+
+
+Publish
+admin beta one
+
+Live
+
+
+
+
+
+Making changes...
+
+Test on your phone
+Scan QR code to test
+To test on your device:
+1. Open Camera app
+2. Scan the QR code above
+
+Browser preview lacks native functions & looks different. Test on device for the best results.
