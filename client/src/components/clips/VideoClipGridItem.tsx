@@ -161,19 +161,6 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         )}
       </div>
 
-      {/* Delete button for clip owner - positioned in top left corner, shows on hover */}
-      {canDelete && (
-        <Button
-          size="sm"
-          variant="destructive"
-          className="absolute top-2 left-2 bg-red-600 hover:bg-red-700 text-white p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 h-9 w-9 md:h-8 md:w-8"
-          onClick={handleDeleteClick}
-          title="Delete clip"
-          data-testid="button-delete-clip"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      )}
 
       {/* Top right section with stats - matches VideoClipCard styling */}
       <div className="absolute top-1.5 md:top-2 right-1.5 md:right-2 flex items-center gap-0.5 md:gap-1 z-10">

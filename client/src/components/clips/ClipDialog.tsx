@@ -32,7 +32,8 @@ import {
   UserCheck,
   AlertTriangle,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Trash2
 } from "lucide-react";
 import { formatDistance } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -426,15 +427,57 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
         <DialogDescription className="sr-only">
           {clip ? `Video by ${clip.user?.displayName || clip.user?.username || 'Unknown user'}` : 'Video content viewer'}
         </DialogDescription>
-        <DialogClose className={cn(
-          "absolute z-[60] rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
-          isMobile 
-            ? "right-2 top-2 p-3 bg-black/30 backdrop-blur-sm hover:bg-black/50" // Larger touch target with better visibility on mobile
-            : "right-4 top-4 p-2"
+        {/* Top right action buttons */}
+        <div className={cn(
+          "absolute z-[60] flex items-center gap-2",
+          isMobile ? "right-2 top-2" : "right-4 top-4"
         )}>
-          <X className={cn("text-white", isMobile ? "h-6 w-6" : "h-5 w-5")} />
-          <span className="sr-only">Close</span>
-        </DialogClose>
+          {/* Delete button - only show for clip owner */}
+          {isOwnClip && clip && (
+            <button
+              onClick={async (e) => {
+                e.stopPropagation();
+                if (confirm(`Are you sure you want to delete "${clip.title}"? This action cannot be undone.`)) {
+                  try {
+                    const response = await fetch(`/api/clips/${clip.id}`, { 
+                      method: 'DELETE',
+                      credentials: 'include'
+                    });
+                    if (response.ok) {
+                      toast({ title: "Clip deleted successfully" });
+                      queryClient.invalidateQueries({ queryKey: ['/api/clips'] });
+                      onClose();
+                    } else {
+                      toast({ title: "Failed to delete clip", variant: "destructive" });
+                    }
+                  } catch (error) {
+                    toast({ title: "Failed to delete clip", variant: "destructive" });
+                  }
+                }
+              }}
+              className={cn(
+                "rounded-sm opacity-70 ring-offset-background transition-all hover:opacity-100 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                isMobile 
+                  ? "p-3 bg-black/30 backdrop-blur-sm hover:bg-black/50"
+                  : "p-2"
+              )}
+              title="Delete clip"
+            >
+              <Trash2 className={cn("text-white hover:text-red-500 transition-colors", isMobile ? "h-6 w-6" : "h-5 w-5")} />
+              <span className="sr-only">Delete</span>
+            </button>
+          )}
+          {/* Close button */}
+          <DialogClose className={cn(
+            "rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
+            isMobile 
+              ? "p-3 bg-black/30 backdrop-blur-sm hover:bg-black/50"
+              : "p-2"
+          )}>
+            <X className={cn("text-white", isMobile ? "h-6 w-6" : "h-5 w-5")} />
+            <span className="sr-only">Close</span>
+          </DialogClose>
+        </div>
 
         {isLoading || !clip ? (
           <div className="space-y-4 p-6">
