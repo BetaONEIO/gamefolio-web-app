@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import badgeIcon56 from "@assets/yellow_badge_56x56_1759744373125.png";
 import badgeIcon40 from "@assets/yellow_badge_40x40_1759744552084.png";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -26,6 +27,7 @@ export function LevelBadgeWithProgress({
   size = "small",
   className = ""
 }: LevelBadgeWithProgressProps) {
+  const [, setLocation] = useLocation();
   const { data: progress } = useQuery<LevelProgress>({
     queryKey: ["/api/user", userId, "level-progress"],
     queryFn: async () => {
@@ -53,7 +55,11 @@ export function LevelBadgeWithProgress({
     <TooltipProvider delayDuration={300}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className={`relative ${className} cursor-pointer`} data-testid="level-badge-with-progress">
+          <div 
+            className={`relative ${className} cursor-pointer`} 
+            data-testid="level-badge-with-progress"
+            onClick={() => setLocation("/level-tracker")}
+          >
             {/* SVG Progress Ring */}
             <svg
               className="absolute inset-0 -rotate-90"
