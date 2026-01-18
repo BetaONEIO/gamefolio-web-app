@@ -269,7 +269,7 @@ const HomePage = () => {
     <div className="space-y-4 sm:space-y-6 md:space-y-8 pb-16 md:pb-8">
       {/* Email Verification Banner - Only for authenticated users */}
       {user && (
-        <div className="mx-2 sm:mx-4 md:mx-6">
+        <div className="mx-2 sm:mx-4 md:mx-6 -mb-4 sm:-mb-6 md:-mb-8">
           <EmailVerificationBanner />
         </div>
       )}
