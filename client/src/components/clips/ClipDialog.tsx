@@ -52,6 +52,16 @@ import { ReportDialog } from "@/components/content/ReportDialog";
 import { AgeRestrictionDialog } from "@/components/content/AgeRestrictionDialog";
 import { VideoAdPlayer } from "@/components/ads/VideoAdPlayer";
 import { useClipAdDecision } from "@/hooks/use-ad-manager";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ClipDialogProps {
   clipId: number | null;
@@ -76,6 +86,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   const [previousClipId, setPreviousClipId] = useState<number | null>(null);
   const [ageRestrictionAccepted, setAgeRestrictionAccepted] = useState(false);
   const [showAgeRestrictionDialog, setShowAgeRestrictionDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isAcceptingRef = useRef(false);
   
   const { showAd, adCompleted, isPro, decideAd, onAdFinished, reset: resetAd } = useClipAdDecision();
@@ -435,35 +446,19 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           {/* Delete button - only show for clip owner */}
           {isOwnClip && clip && (
             <button
-              onClick={async (e) => {
+              onClick={(e) => {
                 e.stopPropagation();
-                if (confirm(`Are you sure you want to delete "${clip.title}"? This action cannot be undone.`)) {
-                  try {
-                    const response = await fetch(`/api/clips/${clip.id}`, { 
-                      method: 'DELETE',
-                      credentials: 'include'
-                    });
-                    if (response.ok) {
-                      toast({ title: "Clip deleted successfully" });
-                      queryClient.invalidateQueries({ queryKey: ['/api/clips'] });
-                      onClose();
-                    } else {
-                      toast({ title: "Failed to delete clip", variant: "destructive" });
-                    }
-                  } catch (error) {
-                    toast({ title: "Failed to delete clip", variant: "destructive" });
-                  }
-                }
+                setShowDeleteConfirm(true);
               }}
               className={cn(
-                "rounded-sm opacity-70 ring-offset-background transition-all hover:opacity-100 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                "rounded-sm opacity-70 ring-offset-background transition-all hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 group/trash",
                 isMobile 
                   ? "p-3 bg-black/30 backdrop-blur-sm hover:bg-black/50"
                   : "p-2"
               )}
               title="Delete clip"
             >
-              <Trash2 className={cn("text-white hover:text-red-500 transition-colors", isMobile ? "h-6 w-6" : "h-5 w-5")} />
+              <Trash2 className={cn("text-white group-hover/trash:text-red-500 transition-colors", isMobile ? "h-6 w-6" : "h-5 w-5")} />
               <span className="sr-only">Delete</span>
             </button>
           )}
@@ -965,6 +960,45 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent className="z-[200]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this clip?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{clip?.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={async () => {
+                if (!clip) return;
+                try {
+                  const response = await fetch(`/api/clips/${clip.id}`, { 
+                    method: 'DELETE',
+                    credentials: 'include'
+                  });
+                  if (response.ok) {
+                    toast({ title: "Clip deleted successfully" });
+                    queryClient.invalidateQueries({ queryKey: ['/api/clips'] });
+                    setShowDeleteConfirm(false);
+                    onClose();
+                  } else {
+                    toast({ title: "Failed to delete clip", variant: "destructive" });
+                  }
+                } catch (error) {
+                  toast({ title: "Failed to delete clip", variant: "destructive" });
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };
