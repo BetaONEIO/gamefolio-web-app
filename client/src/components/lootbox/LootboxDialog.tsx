@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gift, Sparkles, Timer, Star, Crown, Gem, Package, Zap, Coins, X, RotateCcw } from "lucide-react";
+import { Gift, Sparkles, Timer, Star, Crown, Gem, Package, Zap, Coins, X, RotateCcw, TrendingUp } from "lucide-react";
+import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { AssetReward } from "@shared/schema";
 import { useLevelTracker } from "@/hooks/use-level-tracker";
@@ -44,6 +45,7 @@ const rarityIcons: Record<string, typeof Star> = {
 
 export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [phase, setPhase] = useState<"idle" | "opening" | "reveal">("idle");
   const [reward, setReward] = useState<AssetReward | null>(null);
   const [isDuplicate, setIsDuplicate] = useState(false);
@@ -358,8 +360,22 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.6 }}
-                  className="w-full"
+                  className="w-full space-y-3"
                 >
+                  {reward.assetType === 'xp_reward' && (
+                    <Button 
+                      onClick={() => {
+                        handleClose();
+                        setLocation('/level-tracker');
+                      }}
+                      variant="outline"
+                      className="w-full py-6 text-lg font-bold border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10 rounded-xl gap-2"
+                      data-testid="button-level-tracker"
+                    >
+                      <TrendingUp className="w-5 h-5" />
+                      Level Tracker
+                    </Button>
+                  )}
                   <Button 
                     onClick={handleClose} 
                     className="w-full py-6 text-lg font-bold bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 rounded-xl"

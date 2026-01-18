@@ -1794,6 +1794,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user's XP history (actual XP earnings from various sources)
+  app.get("/api/user/:userId/xp-history", authMiddleware, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const requestingUserId = (req.user as any).id;
+      const requestingUserRole = (req.user as any).role;
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      // Only allow users to view their own XP history, or admins can view any
+      if (userId !== requestingUserId && requestingUserRole !== 'admin') {
+        return res.status(403).json({ message: "You can only view your own XP history" });
+      }
+      
+      const limit = parseInt(req.query.limit as string) || 50;
+      const xpHistory = await storage.getUserXPHistory(userId, limit);
+      res.json(xpHistory);
+    } catch (error) {
+      console.error("Error fetching user XP history:", error);
+      res.status(500).json({ message: "Error fetching user XP history" });
+    }
+  });
+
   // Recalculate levels for all users based on their current XP
   app.post("/api/admin/recalculate-levels", authMiddleware, async (req, res) => {
     try {
