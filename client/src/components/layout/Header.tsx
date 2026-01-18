@@ -416,7 +416,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="cursor-pointer"
-                      onClick={() => setLevelTrackerOpen(true)}
+                      onClick={() => setLocation("/level-tracker")}
                       data-testid="button-level-tracker"
                     >
                       <Trophy className="mr-2 h-4 w-4" />
