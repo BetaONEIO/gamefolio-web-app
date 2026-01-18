@@ -323,13 +323,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                     animate={{ scale: 1, rotate: 0 }}
                     transition={{ delay: 0.4, type: "spring" }}
                   >
-                    <div className={cn(
-                      "px-3 py-1 rounded-full text-xs font-bold uppercase",
-                      rarityStyle.bg,
-                      rarityStyle.text,
-                      "border",
-                      rarityStyle.border
-                    )}>
+                    <div className="px-3 py-1 rounded-full text-xs font-bold uppercase bg-white text-gray-900 border border-gray-200 shadow-md">
                       {reward.rarity}
                     </div>
                   </motion.div>
