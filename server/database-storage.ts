@@ -1842,6 +1842,19 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getClipReactionById(reactionId: number): Promise<any | null> {
+    try {
+      const result = await db
+        .select()
+        .from(clipReactions)
+        .where(eq(clipReactions.id, reactionId));
+      return result[0] || null;
+    } catch (error) {
+      console.error('Error getting clip reaction by id:', error);
+      return null;
+    }
+  }
+
   async getUserClipReaction(userId: number, clipId: number, emoji: string): Promise<any> {
     try {
       const result = await db

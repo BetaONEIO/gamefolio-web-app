@@ -4636,14 +4636,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete a reaction
-  app.delete("/api/reactions/:id", authMiddleware, async (req, res) => {
+  // Delete a reaction (supports both session and JWT token auth for mobile apps)
+  app.delete("/api/reactions/:id", hybridAuth, async (req, res) => {
     try {
       const reactionId = parseInt(req.params.id);
 
-      // Get the reaction to check ownership
-      const reactions = await storage.getClipReactions(0); // This needs to be updated
-      const reaction = reactions.find(r => r.id === reactionId);
+      if (isNaN(reactionId)) {
+        return res.status(400).json({ message: "Invalid reaction ID" });
+      }
+
+      // Get the reaction by ID to check ownership
+      const reaction = await storage.getClipReactionById(reactionId);
 
       if (!reaction) {
         return res.status(404).json({ message: "Reaction not found" });
