@@ -312,7 +312,7 @@ const HomePage = () => {
   return (
     <div className="space-y-16 max-w-none">
       {/* Hero Banner - Full width with negative margin to compensate for parent padding */}
-      <section className="mb-10 -mx-2 md:-mx-6 -mt-2 md:-mt-4">
+      <section className="mb-10 -mx-2 md:-mx-6 -mt-4 md:-mt-6">
         <div className="relative overflow-hidden">
           {/* Forza Racing GIF Background */}
           <div className="w-full bg-black relative min-h-[350px] md:min-h-[450px] lg:min-h-[500px] xl:min-h-[550px] border-b-2 border-primary">
