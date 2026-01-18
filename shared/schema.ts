@@ -697,13 +697,14 @@ export const userPointsHistory = pgTable("user_points_history", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// User XP History table - tracks XP earned from clip views
+// User XP History table - tracks XP earned from various sources
 export const userXPHistory = pgTable("user_xp_history", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
-  clipId: integer("clip_id").notNull().references(() => clips.id),
-  xpAmount: integer("xp_amount").notNull(), // XP earned (1 XP per view)
-  viewCount: integer("view_count").notNull(), // The view count milestone that triggered this XP
+  clipId: integer("clip_id").references(() => clips.id), // Optional - only for clip-related XP
+  xpAmount: integer("xp_amount").notNull(), // XP earned
+  viewCount: integer("view_count"), // Optional - for view milestones
+  source: text("source").notNull().default("view"), // "view", "lootbox", "like_received", "fire_received", "upload", "daily_login", "welcome_bonus", "other"
   description: text("description"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -761,6 +762,9 @@ export const insertUserPointsHistorySchema = createInsertSchema(userPointsHistor
 export const insertUserXPHistorySchema = createInsertSchema(userXPHistory).omit({
   id: true,
   createdAt: true,
+}).extend({
+  clipId: z.number().optional(),
+  viewCount: z.number().optional(),
 });
 
 // Schema for inserting weekly leaderboard entries

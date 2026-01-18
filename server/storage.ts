@@ -246,7 +246,7 @@ export interface IStorage {
   // XP operations (legacy - kept for backward compatibility, totalXP now stores points)
   addUserXPHistory(xpHistory: InsertUserXPHistory): Promise<UserXPHistory>;
   incrementUserXP(userId: number, xpAmount: number): Promise<void>;
-  getUserXPHistory(userId: number, limit?: number): Promise<(UserXPHistory & { clip: Clip })[]>;
+  getUserXPHistory(userId: number, limit?: number): Promise<(UserXPHistory & { clip?: Clip | null })[]>;
   getXPLeaderboard(limit?: number): Promise<Array<{ id: number; username: string; displayName: string; avatarUrl: string | null; totalXP: number }>>;
   
   // Points operations (primary system for leveling and leaderboards)

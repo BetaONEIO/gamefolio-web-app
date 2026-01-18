@@ -2,6 +2,8 @@ import { storage } from "./storage";
 import { InsertUserXPHistory } from "@shared/schema";
 import { calculateLevel } from "./level-system";
 
+export type XPSource = "view" | "lootbox" | "like_received" | "fire_received" | "upload" | "daily_login" | "welcome_bonus" | "other";
+
 export class XPService {
   // Award XP to clip owner based on views (1 XP per view)
   static async awardXPForViews(
@@ -19,6 +21,7 @@ export class XPService {
         clipId,
         xpAmount,
         viewCount: currentViews,
+        source: "view",
         description: `Earned ${xpAmount} XP from clip reaching ${currentViews} views`,
       };
       
@@ -32,6 +35,37 @@ export class XPService {
       
     } catch (error) {
       console.error("Error awarding XP for views:", error);
+    }
+  }
+
+  // Award XP from any source
+  static async awardXP(
+    userId: number,
+    xpAmount: number,
+    source: XPSource,
+    description: string,
+    clipId?: number
+  ): Promise<void> {
+    try {
+      // Record the XP in history
+      const xpHistory: InsertUserXPHistory = {
+        userId,
+        xpAmount,
+        source,
+        description,
+        ...(clipId && { clipId }),
+      };
+      
+      await storage.addUserXPHistory(xpHistory);
+      
+      // Update user's total XP
+      await storage.incrementUserXP(userId, xpAmount);
+      
+      // Update user's level based on new XP total
+      await this.updateUserLevel(userId);
+      
+    } catch (error) {
+      console.error(`Error awarding XP from ${source}:`, error);
     }
   }
 

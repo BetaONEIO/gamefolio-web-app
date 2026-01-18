@@ -3393,7 +3393,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
   }
 
-  async getUserXPHistory(userId: number, limit: number = 50): Promise<(UserXPHistory & { clip: Clip })[]> {
+  async getUserXPHistory(userId: number, limit: number = 50): Promise<(UserXPHistory & { clip?: Clip | null })[]> {
     const results = await db
       .select()
       .from(userXPHistory)
@@ -3404,7 +3404,7 @@ export class DatabaseStorage implements IStorage {
 
     return results.map(row => ({
       ...row.user_xp_history,
-      clip: row.clips!
+      clip: row.clips || null
     }));
   }
   
@@ -4598,6 +4598,15 @@ export class DatabaseStorage implements IStorage {
         await db.update(users)
           .set({ totalXP: newXP, level: newLevel })
           .where(eq(users.id, userId));
+        
+        // Record XP history
+        await db.insert(userXPHistory).values({
+          userId,
+          xpAmount: rewardValue,
+          source: 'lootbox',
+          description: `Earned ${rewardValue} XP from Daily Lootbox (${selectedReward.rarity} reward)`,
+        });
+        
         consumed = true;
       } else if (selectedReward.assetType === 'gf_tokens' && rewardValue > 0) {
         // Grant GF tokens to user
