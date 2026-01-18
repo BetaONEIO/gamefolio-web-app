@@ -97,7 +97,9 @@ const userTypeConfig: Record<string, { label: string; icon: any; color: string }
 
 const ProfilePage = () => {
   const params = useParams();
-  const { username, screenshotId, shareCode, clipShareCode, reelShareCode } = params;
+  const { username: rawUsername, screenshotId, shareCode, clipShareCode, reelShareCode } = params;
+  // Normalize username by removing @ prefix if present (from /@username routes)
+  const username = rawUsername?.startsWith('@') ? rawUsername.slice(1) : rawUsername;
   const [location, setLocation] = useLocation();
   
   const { user: currentUser } = useAuth();
