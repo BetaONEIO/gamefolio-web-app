@@ -102,6 +102,7 @@ import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, in
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { IStorage } from "./storage";
+import { calculateLevel } from "./level-system";
 import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 
@@ -4590,9 +4591,12 @@ export class DatabaseStorage implements IStorage {
       const rewardValue = selectedReward.rewardValue || 0;
       
       if (selectedReward.assetType === 'xp_reward' && rewardValue > 0) {
-        // Grant XP to user
+        // Grant XP to user and recalculate level
+        const currentUser = await this.getUser(userId);
+        const newXP = (currentUser?.totalXP || 0) + rewardValue;
+        const newLevel = calculateLevel(newXP);
         await db.update(users)
-          .set({ totalXP: sql`COALESCE(${users.totalXP}, 0) + ${rewardValue}` })
+          .set({ totalXP: newXP, level: newLevel })
           .where(eq(users.id, userId));
         consumed = true;
       } else if (selectedReward.assetType === 'gf_tokens' && rewardValue > 0) {

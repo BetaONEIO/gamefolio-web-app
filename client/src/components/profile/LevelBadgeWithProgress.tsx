@@ -46,7 +46,7 @@ export function LevelBadgeWithProgress({
   const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
 
   const tooltipContent = progress 
-    ? `${progress.currentPoints} / ${progress.pointsForNextLevel} XP • ${progress.pointsRemaining} XP to Level ${progress.level + 1}`
+    ? `${Math.round(progress.currentPoints).toLocaleString()} XP`
     : `Level ${level}`;
 
   return (
