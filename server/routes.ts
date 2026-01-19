@@ -4568,8 +4568,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete a reaction
-  app.delete("/api/reactions/:id", authMiddleware, async (req, res) => {
+  // Delete a reaction (supports both session and JWT token auth for mobile apps)
+  app.delete("/api/reactions/:id", hybridAuth, async (req, res) => {
     try {
       const reactionId = parseInt(req.params.id);
 
