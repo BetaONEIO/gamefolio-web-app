@@ -4571,11 +4571,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Add reaction to a clip
+  // Add/toggle reaction to a clip (toggle behavior - adds if not exists, removes if exists)
   app.post("/api/clips/:id/reactions", hybridEmailVerification, async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);
       const userId = req.user!.id;
+      const emoji = req.body.emoji;
 
       // Check if the clip exists
       const clip = await storage.getClip(clipId);
@@ -4595,11 +4596,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Validate and create the reaction
+      // Check if user already has this reaction on this clip (toggle behavior)
+      const existingReaction = await storage.getUserClipReaction(userId, clipId, emoji);
+      
+      if (existingReaction) {
+        // Remove the existing reaction (toggle off)
+        await storage.deleteClipReaction(existingReaction.id);
+        
+        // Get updated reaction count
+        const reactions = await storage.getClipReactions(clipId);
+        const count = reactions.filter(r => r.emoji === emoji).length;
+        
+        return res.json({ 
+          message: "Reaction removed", 
+          reacted: false, 
+          count,
+          removedReactionId: existingReaction.id 
+        });
+      }
+
+      // Create new reaction (toggle on)
       const reactionData = insertClipReactionSchema.parse({
         clipId,
         userId: userId,
-        emoji: req.body.emoji,
+        emoji: emoji,
         positionX: req.body.positionX || 50,
         positionY: req.body.positionY || 50,
       });
@@ -4607,7 +4627,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const reaction = await storage.createClipReaction(reactionData);
       
       // Award points if this is a fire reaction (only if they haven't earned points for this clip before)
-      if (req.body.emoji === '🔥') {
+      if (emoji === '🔥') {
         const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'fire', 'clip', clipId);
         if (!hasEarnedPoints) {
           await LeaderboardService.awardPoints(
@@ -4618,7 +4638,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      res.status(201).json(reaction);
+      // Get updated reaction count
+      const reactions = await storage.getClipReactions(clipId);
+      const count = reactions.filter(r => r.emoji === emoji).length;
+      
+      res.status(201).json({ 
+        ...reaction, 
+        reacted: true, 
+        count 
+      });
     } catch (err) {
       return handleValidationError(err, res);
     }
