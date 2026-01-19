@@ -12,6 +12,7 @@ import sharp from 'sharp';
 import { nanoid } from 'nanoid';
 import QRCode from 'qrcode';
 import { fullAccessMiddleware } from '../middleware/full-access';
+import { hybridFullAccess } from '../middleware/hybrid-auth';
 import { LeaderboardService } from '../leaderboard-service';
 
 const router = express.Router();
@@ -145,7 +146,7 @@ const tusServer = new TusServer({
 });
 
 // Direct video upload endpoint (bypassing TUS for now)
-router.post('/video-direct', fullAccessMiddleware, upload.single('file'), async (req, res) => {
+router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req, res) => {
   try {
     console.log('📹 Video upload request received:', {
       fileProvided: !!req.file,
@@ -251,7 +252,7 @@ router.all('/tus', fullAccessMiddleware, (req, res) => {
 });
 
 // Screenshot upload endpoint (standard upload)
-router.post('/screenshot', fullAccessMiddleware, screenshotUpload.single('screenshot'), async (req, res) => {
+router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No screenshot file provided' });
@@ -475,7 +476,7 @@ router.post('/screenshot', fullAccessMiddleware, screenshotUpload.single('screen
 });
 
 // Video/Reel processing endpoint (called after TUS upload completes)
-router.post('/process-video', fullAccessMiddleware, async (req, res) => {
+router.post('/process-video', hybridFullAccess, async (req, res) => {
   try {
     const { uploadResult, title, description, gameId, tags, videoType = 'clip', ageRestricted } = req.body;
 

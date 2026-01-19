@@ -63,7 +63,7 @@ import { MentionService } from "./mention-service";
 import { initializeRealtimeNotificationService } from './realtime-notification-service';
 import { adminMiddleware } from "./middleware/admin";
 import { optionalHybridAuth } from "./middleware/optional-hybrid-auth";
-import { hybridAuth } from "./middleware/hybrid-auth";
+import { hybridAuth, hybridEmailVerification } from "./middleware/hybrid-auth";
 import QRCode from "qrcode";
 import { supabaseStorage } from "./supabase-storage";
 import { contentFilterService } from "./services/content-filter";
@@ -4121,7 +4121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add comment to a clip
-  app.post("/api/clips/:id/comments", emailVerificationMiddleware, async (req, res) => {
+  app.post("/api/clips/:id/comments", hybridEmailVerification, async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);
 
@@ -4317,7 +4317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Check if user has liked a clip
-  app.get("/api/clips/:id/likes/status", emailVerificationMiddleware, async (req, res) => {
+  app.get("/api/clips/:id/likes/status", hybridEmailVerification, async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);
       if (isNaN(clipId)) {
@@ -4351,7 +4351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Like/unlike clip (toggle behavior like screenshots)
-  app.post("/api/clips/:id/likes", emailVerificationMiddleware, async (req, res) => {
+  app.post("/api/clips/:id/likes", hybridEmailVerification, async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);
       if (isNaN(clipId)) {
@@ -4424,7 +4424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Keep DELETE endpoint for backward compatibility
-  app.delete("/api/clips/:id/likes", emailVerificationMiddleware, async (req, res) => {
+  app.delete("/api/clips/:id/likes", hybridEmailVerification, async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);
       if (isNaN(clipId)) {
@@ -4472,7 +4472,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add reaction to a clip
-  app.post("/api/clips/:id/reactions", emailVerificationMiddleware, async (req, res) => {
+  app.post("/api/clips/:id/reactions", hybridEmailVerification, async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -4568,8 +4568,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete a reaction
-  app.delete("/api/reactions/:id", authMiddleware, async (req, res) => {
+  // Delete a reaction (supports both session and JWT token auth for mobile apps)
+  app.delete("/api/reactions/:id", hybridAuth, async (req, res) => {
     try {
       const reactionId = parseInt(req.params.id);
 
