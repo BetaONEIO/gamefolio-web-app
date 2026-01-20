@@ -143,14 +143,14 @@ export default function LevelTrackerPage() {
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
-                    <div className="relative w-20 h-20 mx-auto mb-2">
+                    <div className="relative w-28 h-28 md:w-32 md:h-32 mx-auto">
                       <img 
                         src={badgeIcon} 
                         alt="Level Badge"
                         className="w-full h-full object-contain"
                       />
                       <span 
-                        className="absolute inset-0 flex items-center justify-center font-bold text-black text-2xl"
+                        className="absolute inset-0 flex items-center justify-center font-bold text-black text-4xl md:text-5xl"
                         style={{ textShadow: "0 1px 2px rgba(0, 0, 0, 0.3)" }}
                       >
                         {progress?.level || user.level || 1}
