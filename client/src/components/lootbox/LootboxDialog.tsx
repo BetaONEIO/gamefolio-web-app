@@ -176,12 +176,12 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                 className="flex flex-col items-center w-full bg-transparent"
               >
                 {/* Lootbox Video - paused on first frame */}
-                <div className="relative my-4 w-full">
+                <div className="relative my-4 w-full min-w-[280px] sm:min-w-[320px]">
                   <video
                     muted
                     playsInline
                     preload="metadata"
-                    className="w-full rounded-lg"
+                    className="w-full rounded-lg scale-125 sm:scale-100"
                     src="https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/sign/gamefolio-assets/lootbox%20animation%20full.webm?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hMzEyZGM4MC1lOGJlLTRjMDAtODFhNy1kOTI5MTgyYTJlYWEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJnYW1lZm9saW8tYXNzZXRzL2xvb3Rib3ggYW5pbWF0aW9uIGZ1bGwud2VibSIsImlhdCI6MTc2ODk0NTAwNCwiZXhwIjo0ODkxMDA5MDA0fQ.p8zCEdY5Zl7RclWOieN4nfuORrxS58FXOmvoRtcMEAQ#t=0.1"
                   />
                 </div>
@@ -246,14 +246,14 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex flex-col items-center justify-center w-full bg-transparent"
+                className="flex flex-col items-center justify-center w-full min-w-[280px] sm:min-w-[320px] bg-transparent"
               >
                 <video
                   autoPlay
                   muted
                   playsInline
                   onEnded={handleVideoEnded}
-                  className="w-full rounded-lg"
+                  className="w-full rounded-lg scale-125 sm:scale-100"
                   src="https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/sign/gamefolio-assets/lootbox%20animation%20full.webm?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hMzEyZGM4MC1lOGJlLTRjMDAtODFhNy1kOTI5MTgyYTJlYWEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJnYW1lZm9saW8tYXNzZXRzL2xvb3Rib3ggYW5pbWF0aW9uIGZ1bGwud2VibSIsImlhdCI6MTc2ODk0NTAwNCwiZXhwIjo0ODkxMDA5MDA0fQ.p8zCEdY5Zl7RclWOieN4nfuORrxS58FXOmvoRtcMEAQ"
                 />
               </motion.div>
