@@ -188,27 +188,30 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         </div>
       )}
       
-      {/* Close button */}
+      {/* Close button - subtle on mobile */}
       <Button
         variant="ghost"
         size="sm"
-        className="fixed top-2 left-2 md:top-4 md:left-4 z-20 text-white bg-black/50 hover:bg-black/70 w-8 h-8 md:w-auto md:h-auto p-1 md:p-2"
+        className="fixed top-3 left-3 md:top-4 md:left-4 z-20 text-white/80 hover:text-white bg-transparent hover:bg-white/10 w-8 h-8 p-0 rounded-full"
         onClick={onClose}
       >
-        <ChevronLeft className="h-4 w-4" />
+        <ChevronLeft className="h-5 w-5" />
       </Button>
 
-      {/* Progress indicators */}
-      <div className="fixed top-2 right-2 md:top-4 md:right-4 z-20 flex gap-0.5 md:gap-1">
-        {reels.map((_, index) => (
+      {/* Progress indicators - hidden on mobile for cleaner look */}
+      <div className="fixed top-4 right-4 z-20 hidden md:flex gap-1">
+        {reels.slice(0, 10).map((_, index) => (
           <div
             key={index}
             className={cn(
-              "w-0.5 h-4 md:w-1 md:h-8 rounded-full transition-colors",
-              index === currentIndex ? "bg-white" : "bg-white/30"
+              "w-1 h-6 rounded-full transition-colors",
+              index === currentIndex ? "bg-white" : "bg-white/20"
             )}
           />
         ))}
+        {reels.length > 10 && (
+          <span className="text-white/50 text-xs ml-1">+{reels.length - 10}</span>
+        )}
       </div>
 
       {/* Scrollable reels container */}
@@ -222,8 +225,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             key={reel.id}
             className="snap-start snap-always h-screen w-full flex items-center justify-center"
           >
-            {/* Video player */}
-            <div className="relative w-full h-full max-w-sm mx-auto md:max-w-md lg:max-w-lg pointer-events-none">
+            {/* Video player - full screen on mobile */}
+            <div className="relative w-full h-full md:max-w-lg lg:max-w-xl mx-auto pointer-events-none">
               <div className="w-full h-full pointer-events-auto flex items-center justify-center">
                 {(!reel.ageRestricted || ageRestrictionAccepted[reel.id]) ? (
                   <VideoPlayer
@@ -252,132 +255,140 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
 
               {/* Video overlay content */}
               <div className="absolute inset-0 pointer-events-none z-10">
-                {/* Left side - User info and title */}
-                <div className="absolute bottom-12 md:bottom-16 left-2 md:left-4 right-16 md:right-20 pointer-events-auto z-10">
-                  <div className="mb-2 md:mb-3">
+                {/* Left side - User info and title (TikTok-style) */}
+                <div className="absolute bottom-20 md:bottom-24 left-3 md:left-4 right-16 md:right-20 pointer-events-auto z-10">
+                  {/* User row with inline follow button */}
+                  <div className="flex items-center gap-2 mb-2">
                     <Link href={`/profile/${reel.user.username}`} onClick={onClose}>
-                      <div className="flex items-center gap-2 md:gap-3 mb-2 text-white cursor-pointer hover:opacity-80 transition-opacity">
-                        <div className="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-white/50">
-                          <img
-                            src={reel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                            alt={reel.user.displayName}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-xs md:text-sm">
-                            {reel.user.displayName || reel.user.username}
-                          </p>
-                          <p className="text-white/70 text-xs">@{reel.user.username}</p>
-                        </div>
+                      <div className="w-10 h-10 md:w-11 md:h-11 rounded-full overflow-hidden border-2 border-white/30 cursor-pointer hover:opacity-80 transition-opacity">
+                        <img
+                          src={reel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                          alt={reel.user.displayName}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
                     </Link>
-                    
-                    {/* Follow button */}
+                    <Link href={`/profile/${reel.user.username}`} onClick={onClose}>
+                      <span className="text-white font-semibold text-sm cursor-pointer hover:opacity-80">
+                        @{reel.user.username}
+                      </span>
+                    </Link>
+                    {/* Inline Follow button */}
                     {user && user.id !== reel.user.id && index === currentIndex && (
                       <Button
                         onClick={handleFollow}
                         disabled={followMutation.isPending}
                         size="sm"
                         className={cn(
-                          "h-7 md:h-8 px-3 md:px-4 text-xs font-semibold rounded-full transition-colors",
+                          "h-7 px-3 text-xs font-semibold rounded-md transition-colors ml-1",
                           isFollowing 
-                            ? "bg-white/20 text-white hover:bg-white/30" 
-                            : "bg-green-500 text-white hover:bg-green-600"
+                            ? "bg-transparent border border-white/50 text-white hover:bg-white/10" 
+                            : "bg-[#00E676] text-black hover:bg-[#00C853]"
                         )}
                         data-testid="button-follow"
                       >
-                        {isFollowing ? (
-                          <>
-                            <Check className="mr-1 h-3 w-3" />
-                            Following
-                          </>
-                        ) : (
-                          "Follow"
-                        )}
+                        {isFollowing ? "Following" : "Follow"}
                       </Button>
                     )}
                   </div>
 
-                  <h3 className="text-white font-medium text-xs md:text-sm mb-1 md:mb-2 leading-tight line-clamp-2">
+                  {/* Title */}
+                  <h3 className="text-white font-medium text-sm mb-1 leading-tight line-clamp-2">
                     {reel.title}
                   </h3>
 
-                  {/* Game badge */}
+                  {/* Description if available */}
+                  {reel.description && (
+                    <p className="text-white/80 text-xs mb-2 line-clamp-1">
+                      {reel.description}
+                    </p>
+                  )}
+
+                  {/* Game badge with icon */}
                   {reel.game && (
-                    <div className="inline-block bg-primary/80 text-white text-xs px-2 py-1 rounded-full mb-1 md:mb-2">
-                      {reel.game.name}
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <div className="w-4 h-4 rounded overflow-hidden bg-primary/20">
+                        {reel.game.imageUrl ? (
+                          <img src={reel.game.imageUrl} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-primary/40" />
+                        )}
+                      </div>
+                      <span className="text-[#00E676] text-xs font-medium">{reel.game.name}</span>
                     </div>
                   )}
 
-                  {/* Stats */}
-                  <div className="flex items-center gap-2 md:gap-4 text-white/80 text-xs">
-                    <span>{reel.views || 0} views</span>
-                    <span>{reel._count?.likes || 0} likes</span>
-                    <span className="hidden md:inline">{reel._count?.comments || 0} comments</span>
+                  {/* Audio/Original info */}
+                  <div className="flex items-center gap-1.5 text-white/70 text-xs">
+                    <span>♪</span>
+                    <span>Original audio • {reel.user.displayName || reel.user.username}</span>
                   </div>
                 </div>
 
-                {/* Right side - Engagement buttons */}
+                {/* Right side - Engagement buttons (TikTok-style) */}
                 {index === currentIndex && (
-                  <div className="absolute bottom-12 md:bottom-16 right-2 md:right-4 flex flex-col gap-2 md:gap-4 pointer-events-auto">
-                    <LikeButton
-                      contentId={reel.id}
-                      contentType="clip"
-                      contentOwnerId={reel.userId}
-                      initialLiked={false}
-                      initialCount={parseInt(reel._count?.likes?.toString() || '0')}
-                      size="lg"
-                      showCount={true}
-                      variant="vertical"
-                    />
-
-                    <FireButton
-                      contentId={reel.id}
-                      contentType="clip"
-                      contentOwnerId={reel.userId}
-                      initialCount={parseInt(reel._count?.reactions?.toString() || '0')}
-                      size="lg"
-                      showCount={true}
-                      variant="vertical"
-                    />
-
+                  <div className="absolute bottom-20 md:bottom-24 right-2 md:right-3 flex flex-col items-center gap-4 pointer-events-auto">
+                    {/* Fire/Reactions */}
                     <div className="flex flex-col items-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-white bg-black/50 hover:bg-black/70 w-10 h-10 md:w-12 md:h-12 rounded-full p-0"
+                      <FireButton
+                        contentId={reel.id}
+                        contentType="clip"
+                        contentOwnerId={reel.userId}
+                        initialCount={parseInt(reel._count?.reactions?.toString() || '0')}
+                        size="lg"
+                        showCount={true}
+                        variant="vertical"
+                      />
+                    </div>
+
+                    {/* Like */}
+                    <div className="flex flex-col items-center">
+                      <LikeButton
+                        contentId={reel.id}
+                        contentType="clip"
+                        contentOwnerId={reel.userId}
+                        initialLiked={false}
+                        initialCount={parseInt(reel._count?.likes?.toString() || '0')}
+                        size="lg"
+                        showCount={true}
+                        variant="vertical"
+                      />
+                    </div>
+
+                    {/* Comments */}
+                    <div className="flex flex-col items-center">
+                      <button
+                        className="w-11 h-11 rounded-full bg-transparent flex items-center justify-center text-white hover:bg-white/10 transition-colors"
                         onClick={() => setShowComments(true)}
                       >
-                        <MessageCircle className="h-5 w-5 md:h-6 md:w-6" />
-                      </Button>
-                      <span className="text-white text-xs text-center mt-1">
+                        <MessageCircle className="h-7 w-7" />
+                      </button>
+                      <span className="text-white text-xs mt-0.5">
                         {reel._count?.comments || 0}
                       </span>
                     </div>
 
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-white bg-black/50 hover:bg-black/70 w-10 h-10 md:w-12 md:h-12 rounded-full p-0"
-                      onClick={() => setShowShare(true)}
-                    >
-                      <Share2 className="h-5 w-5 md:h-6 md:w-6" />
-                    </Button>
+                    {/* Share */}
+                    <div className="flex flex-col items-center">
+                      <button
+                        className="w-11 h-11 rounded-full bg-transparent flex items-center justify-center text-white hover:bg-white/10 transition-colors"
+                        onClick={() => setShowShare(true)}
+                      >
+                        <Share2 className="h-6 w-6" />
+                      </button>
+                      <span className="text-white text-xs mt-0.5">Share</span>
+                    </div>
 
+                    {/* More options (Report) */}
                     <ReportDialog
                       contentType="clip"
                       contentId={reel.id}
                       contentTitle={reel.title}
                       contentAuthor={reel.user.username}
                       trigger={
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-white bg-black/50 hover:bg-black/70 w-10 h-10 md:w-12 md:h-12 rounded-full p-0"
-                        >
-                          <Flag className="h-5 w-5 md:h-6 md:w-6" />
-                        </Button>
+                        <button className="w-11 h-11 rounded-full bg-transparent flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors">
+                          <MoreVertical className="h-5 w-5" />
+                        </button>
                       }
                     />
                   </div>
@@ -388,10 +399,9 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         ))}
       </div>
 
-      {/* Navigation hints */}
-      <div className="fixed bottom-2 md:bottom-4 left-1/2 transform -translate-x-1/2 text-white/50 text-xs text-center px-4 z-20">
-        <p className="hidden md:block">Scroll or use arrow keys to navigate • ESC to close</p>
-        <p className="md:hidden">Scroll to navigate</p>
+      {/* Navigation hints - desktop only */}
+      <div className="fixed bottom-2 md:bottom-4 left-1/2 transform -translate-x-1/2 text-white/30 text-xs text-center px-4 z-20 hidden md:block">
+        <p>Scroll or use arrow keys to navigate • ESC to close</p>
       </div>
 
       {/* Comments overlay */}
