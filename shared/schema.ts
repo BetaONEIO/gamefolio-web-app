@@ -996,6 +996,27 @@ export const proLootboxGrants = pgTable("pro_lootbox_grants", {
   grantedAt: timestamp("granted_at").defaultNow().notNull(),
 });
 
+// Daily fire reactions tracking table - tracks fire reactions per user per day
+// Regular users: 1 fire/day, Pro users: 3 fires/day
+// Fire reactions cannot be removed once given
+export const userDailyFires = pgTable("user_daily_fires", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  fireDate: text("fire_date").notNull(), // YYYY-MM-DD format in UTC
+  firesCount: integer("fires_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  uniqueUserDate: unique().on(table.userId, table.fireDate),
+}));
+
+// Schema for inserting daily fire record
+export const insertUserDailyFiresSchema = createInsertSchema(userDailyFires).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Schema for inserting pro lootbox grant
 export const insertProLootboxGrantSchema = createInsertSchema(proLootboxGrants).omit({
   id: true,
@@ -1185,6 +1206,18 @@ export type InsertUserDailyUploads = z.infer<typeof insertUserDailyUploadsSchema
 // Types for Pro lootbox grants
 export type ProLootboxGrant = typeof proLootboxGrants.$inferSelect;
 export type InsertProLootboxGrant = z.infer<typeof insertProLootboxGrantSchema>;
+
+// Types for daily fire tracking
+export type UserDailyFires = typeof userDailyFires.$inferSelect;
+export type InsertUserDailyFires = z.infer<typeof insertUserDailyFiresSchema>;
+
+// Fire limits configuration type
+export interface FireLimits {
+  isPro: boolean;
+  maxFiresPerDay: number;
+  firesUsedToday: number;
+  canFire: boolean;
+}
 
 // Upload limits configuration type
 export interface UploadLimits {

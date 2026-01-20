@@ -9,7 +9,7 @@ export const POINT_VALUES = {
   screenshot_upload: 2,   // 2 points for uploading screenshots
   like: 1,                // 1 point for liking content
   comment: 1,             // 1 point for commenting
-  fire: 3,                // 3 points for fire reactions
+  fire: 5,                // 5 points for fire reactions (permanent, limited daily)
   view: 0.01,             // 0.01 points per view (1 point per 100 views)
 } as const;
 

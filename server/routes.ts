@@ -2009,11 +2009,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         pointValues: {
-          upload: 5,
+          upload: 20,
           screenshot_upload: 2,
           like: 1,
           comment: 1,
-          fire: 3,
+          fire: 5,
           view: 0.01
         },
         description: {
@@ -2021,7 +2021,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           screenshot_upload: "Points awarded for uploading screenshots",
           like: "Points awarded for liking content",
           comment: "Points awarded for commenting on content",
-          fire: "Points awarded for fire reactions",
+          fire: "Points awarded for fire reactions (permanent, 1/day for regular users, 3/day for Pro)",
           view: "Points awarded when content receives views (0.01 points per view, 1 point per 100 views)"
         }
       });
@@ -4571,11 +4571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-<<<<<<< HEAD
-  // Add/toggle reaction to a clip (toggle behavior - adds if not exists, removes if exists)
-=======
-  // Add reaction to a clip
->>>>>>> a8727d4876e715221d8128e1f8168eaea4db5a4c
+  // Add reaction to a clip (fire reactions are permanent, limited daily, and worth 5 points)
   app.post("/api/clips/:id/reactions", hybridEmailVerification, async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);
@@ -4600,14 +4596,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Check if user already has this reaction on this clip (toggle behavior)
+      // Check if user already has this reaction on this clip
       const existingReaction = await storage.getUserClipReaction(userId, clipId, emoji);
       
       if (existingReaction) {
-        // Remove the existing reaction (toggle off)
+        // Fire reactions cannot be removed
+        if (emoji === '🔥') {
+          return res.status(400).json({ 
+            message: "Fire reactions are permanent and cannot be removed",
+            reacted: true
+          });
+        }
+        
+        // Other reactions can be toggled off
         await storage.deleteClipReaction(existingReaction.id);
         
-        // Get updated reaction count
         const reactions = await storage.getClipReactions(clipId);
         const count = reactions.filter(r => r.emoji === emoji).length;
         
@@ -4619,7 +4622,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Create new reaction (toggle on)
+      // For fire reactions, check daily limit
+      if (emoji === '🔥') {
+        const fireLimits = await storage.getFireLimits(userId);
+        
+        if (!fireLimits.canFire) {
+          return res.status(400).json({ 
+            message: fireLimits.isPro 
+              ? "You've used all 3 fire reactions for today. Come back tomorrow!" 
+              : "You've used your daily fire reaction. Pro users can fire 3 times a day!",
+            firesRemaining: 0,
+            maxFires: fireLimits.maxFiresPerDay
+          });
+        }
+        
+        // Increment daily fire count
+        await storage.incrementDailyFireCount(userId);
+      }
+
+      // Create new reaction
       const reactionData = insertClipReactionSchema.parse({
         clipId,
         userId: userId,
@@ -4630,7 +4651,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const reaction = await storage.createClipReaction(reactionData);
       
-      // Award points if this is a fire reaction (only if they haven't earned points for this clip before)
+      // Award 5 points for fire reactions (only if they haven't earned points for this clip before)
       if (emoji === '🔥') {
         const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'fire', 'clip', clipId);
         if (!hasEarnedPoints) {
@@ -4640,9 +4661,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             `Fire reaction given to clip #${clipId}`
           );
         }
+        
+        // Get updated fire limits to return
+        const fireLimits = await storage.getFireLimits(userId);
+        
+        const reactions = await storage.getClipReactions(clipId);
+        const count = reactions.filter(r => r.emoji === emoji).length;
+        
+        return res.status(201).json({ 
+          ...reaction, 
+          reacted: true, 
+          count,
+          firesRemaining: fireLimits.maxFiresPerDay - fireLimits.firesUsedToday,
+          maxFires: fireLimits.maxFiresPerDay
+        });
       }
       
-      // Get updated reaction count
+      // Get updated reaction count for non-fire reactions
       const reactions = await storage.getClipReactions(clipId);
       const count = reactions.filter(r => r.emoji === emoji).length;
       
@@ -7211,7 +7246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Add reaction to screenshot (including fire 🔥)
+  // Add reaction to screenshot (fire reactions are permanent, limited daily, worth 5 points)
   app.post("/api/screenshots/:id/reactions", emailVerificationMiddleware, async (req, res) => {
     try {
       const screenshotId = parseInt(req.params.id);
@@ -7238,10 +7273,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingReaction = await storage.getUserScreenshotReaction(userId, screenshotId, emoji);
 
       if (existingReaction) {
-        // Remove the reaction
+        // Fire reactions cannot be removed
+        if (emoji === '🔥') {
+          return res.status(400).json({ 
+            message: "Fire reactions are permanent and cannot be removed",
+            reacted: true
+          });
+        }
+        
+        // Other reactions can be toggled off
         await storage.deleteScreenshotReaction(existingReaction.id);
         res.json({ message: "Reaction removed", reacted: false });
       } else {
+        // For fire reactions, check daily limit
+        if (emoji === '🔥') {
+          const fireLimits = await storage.getFireLimits(userId);
+          
+          if (!fireLimits.canFire) {
+            return res.status(400).json({ 
+              message: fireLimits.isPro 
+                ? "You've used all 3 fire reactions for today. Come back tomorrow!" 
+                : "You've used your daily fire reaction. Pro users can fire 3 times a day!",
+              firesRemaining: 0,
+              maxFires: fireLimits.maxFiresPerDay
+            });
+          }
+          
+          // Increment daily fire count
+          await storage.incrementDailyFireCount(userId);
+        }
+        
         // Add the reaction
         const reactionData = insertScreenshotReactionSchema.parse({
           screenshotId,
@@ -7251,7 +7312,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const reaction = await storage.createScreenshotReaction(reactionData);
         
-        // Award points if this is a fire reaction (only if they haven't earned points for this screenshot before)
+        // Award 5 points for fire reactions (only if they haven't earned points for this screenshot before)
         if (emoji === '🔥') {
           const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'fire', 'screenshot', screenshotId);
           if (!hasEarnedPoints) {
@@ -7261,6 +7322,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               `Fire reaction given to screenshot #${screenshotId}`
             );
           }
+          
+          // Get updated fire limits to return
+          const fireLimits = await storage.getFireLimits(userId);
+          
+          return res.status(201).json({ 
+            message: "Reaction added", 
+            reacted: true, 
+            reaction,
+            firesRemaining: fireLimits.maxFiresPerDay - fireLimits.firesUsedToday,
+            maxFires: fireLimits.maxFiresPerDay
+          });
         }
         
         res.status(201).json({ message: "Reaction added", reacted: true, reaction });
