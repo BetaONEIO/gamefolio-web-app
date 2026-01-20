@@ -92,10 +92,13 @@ import {
   assetRewardClaims,
   userDailyLootbox,
   userDailyUploads,
+  userDailyFires,
   proLootboxGrants,
   userUnlockedBanners,
   commentLikes,
-  screenshotCommentLikes
+  screenshotCommentLikes,
+  UserDailyFires, InsertUserDailyFires,
+  FireLimits
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, isNotNull, getTableColumns } from "drizzle-orm";
@@ -5071,5 +5074,68 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date() 
       })
       .where(eq(users.id, userId));
+  }
+
+  // Daily fire limit operations
+  async getUserDailyFires(userId: number, date: string): Promise<UserDailyFires | null> {
+    const [record] = await db
+      .select()
+      .from(userDailyFires)
+      .where(
+        and(
+          eq(userDailyFires.userId, userId),
+          eq(userDailyFires.fireDate, date)
+        )
+      );
+    return record || null;
+  }
+
+  async incrementDailyFireCount(userId: number): Promise<UserDailyFires> {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    
+    const existing = await this.getUserDailyFires(userId, today);
+    
+    if (existing) {
+      // Update existing record
+      const [updated] = await db
+        .update(userDailyFires)
+        .set({ 
+          firesCount: existing.firesCount + 1,
+          updatedAt: new Date()
+        })
+        .where(eq(userDailyFires.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      // Create new record for today
+      const [created] = await db
+        .insert(userDailyFires)
+        .values({
+          userId,
+          fireDate: today,
+          firesCount: 1
+        })
+        .returning();
+      return created;
+    }
+  }
+
+  async getFireLimits(userId: number): Promise<FireLimits> {
+    const user = await this.getUser(userId);
+    const isPro = user?.isPro ?? false;
+    
+    // Pro users get 3 fires per day, regular users get 1
+    const maxFiresPerDay = isPro ? 3 : 1;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const dailyFires = await this.getUserDailyFires(userId, today);
+    const firesUsedToday = dailyFires?.firesCount ?? 0;
+    
+    return {
+      isPro,
+      maxFiresPerDay,
+      firesUsedToday,
+      canFire: firesUsedToday < maxFiresPerDay
+    };
   }
 }

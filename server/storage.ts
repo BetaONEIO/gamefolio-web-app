@@ -2,7 +2,7 @@ import {
   users, games, clips, likes, comments, userGameFavorites, follows, messages, profileBanners,
   monthlyLeaderboard, weeklyLeaderboard, topContributors, userPointsHistory, userXPHistory, notifications, userBadges, contentFilterSettings, bannedWords,
   heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions, nftWatchlist, assetRewards, assetRewardClaims,
-  userDailyUploads, proLootboxGrants, nameTags, userUnlockedNameTags,
+  userDailyUploads, proLootboxGrants, nameTags, userUnlockedNameTags, userDailyFires,
   type User, type InsertUser,
   type Game, type InsertGame,
   type Clip, type InsertClip,
@@ -35,6 +35,8 @@ import {
   type UserDailyUploads, type InsertUserDailyUploads,
   type ProLootboxGrant, type InsertProLootboxGrant,
   type UploadLimits,
+  type UserDailyFires, type InsertUserDailyFires,
+  type FireLimits,
   type NameTag, type InsertNameTag,
   type UserUnlockedNameTag, type InsertUserUnlockedNameTag,
   type ClipWithUser,
@@ -424,6 +426,11 @@ export interface IStorage {
   unlockNameTagForUser(userId: number, nameTagId: number): Promise<UserUnlockedNameTag>;
   userHasUnlockedNameTag(userId: number, nameTagId: number): Promise<boolean>;
   updateUserNameTag(userId: number, nameTagId: number | null): Promise<void>;
+
+  // Daily fire limit operations (1/day for regular users, 3/day for Pro users)
+  getUserDailyFires(userId: number, date: string): Promise<UserDailyFires | null>;
+  incrementDailyFireCount(userId: number): Promise<UserDailyFires>;
+  getFireLimits(userId: number): Promise<FireLimits>;
 }
 
 // Use DatabaseStorage with Supabase - no fallback to in-memory storage
