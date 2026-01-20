@@ -182,7 +182,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                     playsInline
                     preload="metadata"
                     className="w-full rounded-lg"
-                    src="https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-assets/lootbox%20animation%20full.webm#t=0.1"
+                    src="https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/sign/gamefolio-assets/lootbox%20animation%20full.webm?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hMzEyZGM4MC1lOGJlLTRjMDAtODFhNy1kOTI5MTgyYTJlYWEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJnYW1lZm9saW8tYXNzZXRzL2xvb3Rib3ggYW5pbWF0aW9uIGZ1bGwud2VibSIsImlhdCI6MTc2ODk0NTAwNCwiZXhwIjo0ODkxMDA5MDA0fQ.p8zCEdY5Zl7RclWOieN4nfuORrxS58FXOmvoRtcMEAQ#t=0.1"
                   />
                 </div>
 
@@ -254,7 +254,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                   playsInline
                   onEnded={handleVideoEnded}
                   className="w-full rounded-lg"
-                  src="https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-assets/lootbox%20animation%20full.webm"
+                  src="https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/sign/gamefolio-assets/lootbox%20animation%20full.webm?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hMzEyZGM4MC1lOGJlLTRjMDAtODFhNy1kOTI5MTgyYTJlYWEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJnYW1lZm9saW8tYXNzZXRzL2xvb3Rib3ggYW5pbWF0aW9uIGZ1bGwud2VibSIsImlhdCI6MTc2ODk0NTAwNCwiZXhwIjo0ODkxMDA5MDA0fQ.p8zCEdY5Zl7RclWOieN4nfuORrxS58FXOmvoRtcMEAQ"
                 />
               </motion.div>
             )}
