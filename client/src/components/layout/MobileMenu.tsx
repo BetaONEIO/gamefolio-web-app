@@ -3,12 +3,8 @@ import { Link, useLocation } from "wouter";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-<<<<<<< HEAD
-import { X, Search, Home, Compass, Flame, Settings, LogOut, MessageSquare, Trophy, ShoppingBag, Wallet } from "lucide-react";
+import { X, Search, Home, Compass, Flame, User, Settings, LogOut, MessageSquare, Trophy, ShoppingBag, Wallet } from "lucide-react";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
-=======
-import { X, Search, Home, Compass, Flame, User, Settings, LogOut, MessageSquare, Trophy } from "lucide-react";
->>>>>>> a8727d4876e715221d8128e1f8168eaea4db5a4c
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

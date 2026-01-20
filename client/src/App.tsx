@@ -296,12 +296,7 @@ function Router() {
           <Route path="/privacy" component={PrivacyPage} />
           <Route path="/contact" component={ContactPage} />
           <Route path="/help" component={HelpPage} />
-<<<<<<< HEAD
-          {/* Hidden until ready to go live */}
-          {/* <Route path="/store" component={StorePage} /> */}
-=======
           <Route path="/store" component={StorePage} />
->>>>>>> a8727d4876e715221d8128e1f8168eaea4db5a4c
           <Route path="/wallet" component={WalletPage} />
           <Route path="/storage" component={StoragePage} />
           <Route path="/watchlist" component={WatchlistPage} />

@@ -55,16 +55,20 @@ export function FireButton({
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to toggle fire reaction');
+        throw new Error(error.message || 'Failed to add fire reaction');
       }
 
       return response.json();
     },
     onMutate: async () => {
+      // Only increment if not already fired (fire reactions are permanent)
+      if (fired) {
+        return { previousFired: true, previousCount: count };
+      }
       const previousFired = fired;
       const previousCount = count;
-      setFired(!fired);
-      setCount(prev => !fired ? prev + 1 : Math.max(0, prev - 1));
+      setFired(true);
+      setCount(prev => prev + 1);
       return { previousFired, previousCount };
     },
     onSuccess: (data) => {
@@ -73,6 +77,14 @@ export function FireButton({
       }
       if (data.count !== undefined) {
         setCount(data.count);
+      }
+      // Show success message with fires remaining info
+      if (data.firesRemaining !== undefined) {
+        toast({
+          title: "Fire sent!",
+          description: `You have ${data.firesRemaining} fire${data.firesRemaining !== 1 ? 's' : ''} left today`,
+          variant: "default",
+        });
       }
       queryClient.invalidateQueries({ 
         queryKey: [`/api/${contentType}s/${contentId}/reactions`] 
@@ -87,7 +99,7 @@ export function FireButton({
         setCount(context.previousCount);
       }
       toast({
-        title: "Error",
+        title: "Cannot fire",
         description: error.message,
         variant: "gamefolioError",
       });
@@ -109,6 +121,16 @@ export function FireButton({
       toast({
         title: "Cannot fire own content",
         description: "You cannot fire your own content, casual!",
+        variant: "default"
+      });
+      return;
+    }
+
+    // Fire reactions are permanent - once fired, cannot be removed
+    if (fired) {
+      toast({
+        title: "Already fired",
+        description: "Fire reactions are permanent and cannot be removed",
         variant: "default"
       });
       return;
