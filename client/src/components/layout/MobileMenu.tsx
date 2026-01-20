@@ -3,8 +3,12 @@ import { Link, useLocation } from "wouter";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
+<<<<<<< HEAD
 import { X, Search, Home, Compass, Flame, Settings, LogOut, MessageSquare, Trophy, ShoppingBag, Wallet } from "lucide-react";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
+=======
+import { X, Search, Home, Compass, Flame, User, Settings, LogOut, MessageSquare, Trophy } from "lucide-react";
+>>>>>>> a8727d4876e715221d8128e1f8168eaea4db5a4c
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -168,28 +172,6 @@ const MobileMenu = () => {
                   <span className="font-medium">Leaderboard</span>
                 </Link>
               </li>
-              {/* Hidden until ready to go live
-              <li>
-                <Link 
-                  href="/store"
-                  onClick={close}
-                  className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
-                >
-                  <ShoppingBag className="mr-3 h-5 w-5 text-primary" />
-                  <span className="font-medium">Store</span>
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  href="/wallet"
-                  onClick={close}
-                  className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
-                >
-                  <Wallet className="mr-3 h-5 w-5 text-primary" />
-                  <span className="font-medium">Wallet</span>
-                </Link>
-              </li>
-              */}
               {user && user.messagingEnabled !== false && (
                 <li>
                   <Link 

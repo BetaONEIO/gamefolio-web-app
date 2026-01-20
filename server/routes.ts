@@ -4571,7 +4571,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+<<<<<<< HEAD
   // Add/toggle reaction to a clip (toggle behavior - adds if not exists, removes if exists)
+=======
+  // Add reaction to a clip
+>>>>>>> a8727d4876e715221d8128e1f8168eaea4db5a4c
   app.post("/api/clips/:id/reactions", hybridEmailVerification, async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);

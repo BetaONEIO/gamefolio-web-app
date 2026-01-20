@@ -5,8 +5,14 @@ import {
   Plus,
   Search,
   X,
+<<<<<<< HEAD
   HelpCircle,
   ShoppingBag
+=======
+  Check,
+  Trash2,
+  HelpCircle
+>>>>>>> a8727d4876e715221d8128e1f8168eaea4db5a4c
 } from "lucide-react";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
@@ -225,12 +231,19 @@ const Sidebar = () => {
   };
 
   const menuItems = [
+<<<<<<< HEAD
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: GamefolioTrendingIcon, label: "Trending", href: "/trending" },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
     { icon: ShoppingBag, label: "Store", href: "/store" },
     { icon: GamefolioWalletIcon, label: "Wallet", href: "/wallet" },
+=======
+    { icon: Home, label: "Home", href: "/" },
+    { icon: Compass, label: "Explore", href: "/explore" },
+    { icon: Flame, label: "Trending", href: "/trending" },
+    { icon: Trophy, label: "Leaderboard", href: "/leaderboard" },
+>>>>>>> a8727d4876e715221d8128e1f8168eaea4db5a4c
 
     // Only show Messages link if user has messaging enabled - default to true for demo user
     ...(user && user.messagingEnabled !== false ? [{ icon: GamefolioMessagesIcon, label: "Messages", href: "/messages" }] : []),
