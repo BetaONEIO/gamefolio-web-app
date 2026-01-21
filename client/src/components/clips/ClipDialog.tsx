@@ -506,16 +506,18 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             {/* Video player area */}
             <div className={cn(
               "bg-black flex items-center justify-center transition-transform duration-200 relative",
-              isMobile
-                ? "w-full h-full" // Full screen on mobile for all clips
-                : clip.videoType === 'reel'
-                  ? "w-full lg:w-[400px] h-full flex-shrink-0 mx-auto"
-                  : "w-full lg:w-[65%] h-[60vh] lg:h-full",
+              clip.videoType === 'reel' && isMobile
+                ? "w-full h-full"
+                : isMobile
+                  ? "w-full flex-[0_0_clamp(280px,50vh,60vh)]"
+                  : clip.videoType === 'reel'
+                    ? "w-full lg:w-[400px] h-full flex-shrink-0 mx-auto"
+                    : "w-full lg:w-[65%] h-[60vh] lg:h-full",
               isTransitioning ? "scale-95" : "scale-100"
             )}>
               {(!clip.ageRestricted || ageRestrictionAccepted) ? (
-              isMobile ? (
-                // TikTok-style mobile fullscreen layout for all clips
+              clip.videoType === 'reel' && isMobile ? (
+                // TikTok-style mobile fullscreen layout for reels only
                 <div className="w-full h-full flex items-center justify-center bg-black relative">
                   <VideoPlayer 
                     videoUrl={clip.videoUrl} 
@@ -729,7 +731,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             </div>
 
             {/* Backdrop for mobile comments */}
-            {isMobile && showComments && (
+            {clip.videoType === 'reel' && isMobile && showComments && (
               <div 
                 className="fixed inset-0 bg-black/20 z-40" 
                 onClick={() => setShowComments(false)}
@@ -740,22 +742,24 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             {/* Right side - Info and comments */}
             <div className={cn(
               "flex flex-col",
-              isMobile && !showComments
-                ? "hidden" // Hide sidebar on mobile for all clips when comments not shown
-                : isMobile && showComments
-                  ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out" // Show comments as slide-up overlay on mobile
-                  : "w-full lg:w-[35%] h-full" // Desktop layout
+              clip.videoType === 'reel' && isMobile && !showComments
+                ? "hidden" // Hide sidebar on mobile for reels when comments not shown
+                : clip.videoType === 'reel' && isMobile && showComments
+                  ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out" // Show comments as slide-up overlay on mobile for reels
+                  : isMobile && clip.videoType !== 'reel'
+                    ? "w-full flex-1 min-h-0" // Take remaining space on mobile and allow proper scrolling
+                    : "w-full lg:w-[35%] h-full" // Desktop layout
             )}>
               {/* Header with username (mobile comments header or regular header) */}
               <div className={cn(
                 "border-b border-border flex items-center justify-between",
                 isMobile ? "p-3" : "p-4", // Better mobile padding
-                isMobile && showComments 
+                clip.videoType === 'reel' && isMobile && showComments 
                   ? "relative" // Add relative positioning for mobile comments header
                   : ""
               )}>                
                 {/* Close button for mobile comments - larger grab area */}
-                {isMobile && showComments && (
+                {clip.videoType === 'reel' && isMobile && showComments && (
                   <div className="absolute -top-4 left-0 right-0 h-8 flex justify-center items-center">
                     <button 
                       onClick={() => setShowComments(false)}
