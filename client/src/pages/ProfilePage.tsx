@@ -1245,45 +1245,121 @@ const ProfilePage = () => {
 
           {/* Action buttons for mobile - Message icon and Follow button below banner */}
           {!isOwnProfile && currentUser && (
-            <div className="absolute right-2 flex items-center gap-2" style={{ top: '88px' }}>
-              {/* Message icon button */}
-              <Button 
-                onClick={() => {
-                  console.log('🎯 MESSAGE BUTTON CLICKED - Opening message dialog for:', username);
-                  setMessageDialogOpen(true);
-                }}
-                variant="outline"
-                size="sm"
-                className="h-9 w-9 p-0 rounded-full border-border hover:bg-primary/10"
-              >
-                <MessageSquare className="h-4 w-4" />
-              </Button>
-              {/* Follow button */}
-              <Button 
-                onClick={handleFollowClick}
-                variant={followRequestStatus === 'following' ? "outline" : "default"}
-                size="sm"
-                disabled={followMutation.isPending}
-                className="px-4 rounded-full font-semibold"
-                style={followRequestStatus === 'following' ? {
-                  borderColor: 'hsl(var(--border))',
-                  color: 'hsl(var(--foreground))',
-                  backgroundColor: 'transparent',
-                } : followRequestStatus === 'requested' ? {
-                  borderColor: 'hsl(var(--border))',
-                  color: 'hsl(var(--foreground))',
-                  backgroundColor: 'transparent',
-                } : {
-                  backgroundColor: 'hsl(var(--foreground))',
-                  color: 'hsl(var(--background))',
-                }}
-              >
-                {followMutation.isPending ? (
-                  <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-current animate-spin"></div>
-                ) : followRequestStatus === 'following' ? "Following" : 
-                   followRequestStatus === 'requested' ? "Pending" : 
-                   "Follow"}
-              </Button>
+            <div className="absolute right-2 flex flex-col items-end gap-2" style={{ top: '88px' }}>
+              <div className="flex items-center gap-2">
+                {/* Message icon button */}
+                <Button 
+                  onClick={() => {
+                    console.log('🎯 MESSAGE BUTTON CLICKED - Opening message dialog for:', username);
+                    setMessageDialogOpen(true);
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="h-9 w-9 p-0 rounded-full border-border hover:bg-primary/10"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                </Button>
+                {/* Follow button */}
+                <Button 
+                  onClick={handleFollowClick}
+                  variant={followRequestStatus === 'following' ? "outline" : "default"}
+                  size="sm"
+                  disabled={followMutation.isPending}
+                  className="px-4 rounded-full font-semibold"
+                  style={followRequestStatus === 'following' ? {
+                    borderColor: 'hsl(var(--border))',
+                    color: 'hsl(var(--foreground))',
+                    backgroundColor: 'transparent',
+                  } : followRequestStatus === 'requested' ? {
+                    borderColor: 'hsl(var(--border))',
+                    color: 'hsl(var(--foreground))',
+                    backgroundColor: 'transparent',
+                  } : {
+                    backgroundColor: 'hsl(var(--foreground))',
+                    color: 'hsl(var(--background))',
+                  }}
+                >
+                  {followMutation.isPending ? (
+                    <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-current animate-spin"></div>
+                  ) : followRequestStatus === 'following' ? "Following" : 
+                     followRequestStatus === 'requested' ? "Pending" : 
+                     "Follow"}
+                </Button>
+              </div>
+              {/* Name Tag - Mobile view for other users (below follow buttons) */}
+              {nameTagData?.nameTag?.imageUrl && (
+                <div 
+                  className="flex flex-col items-center mt-1 cursor-pointer"
+                  onClick={() => setNameTagPreviewOpen(true)}
+                >
+                  <div className="relative">
+                    <div 
+                      className="absolute rounded-md"
+                      style={{
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: '140px',
+                        height: '32px',
+                        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
+                        border: '1px solid rgba(148, 163, 184, 0.2)',
+                        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
+                      }}
+                    />
+                    <img 
+                      src={nameTagData.nameTag.imageUrl} 
+                      alt={nameTagData.nameTag.name}
+                      title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                      className="relative z-10 hover:scale-105 transition-transform"
+                      style={{
+                        width: '160px',
+                        height: 'auto'
+                      }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Name Tag - Mobile view for own profile (right side under banner) */}
+          {isOwnProfile && nameTagData?.nameTag?.imageUrl && (
+            <div 
+              className="absolute right-2 flex flex-col items-center cursor-pointer"
+              style={{ top: '88px' }}
+              onClick={() => setNameTagPreviewOpen(true)}
+            >
+              <div className="relative">
+                <div 
+                  className="absolute rounded-md"
+                  style={{
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '140px',
+                    height: '32px',
+                    background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
+                    border: '1px solid rgba(148, 163, 184, 0.2)',
+                    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
+                  }}
+                />
+                <img 
+                  src={nameTagData.nameTag.imageUrl} 
+                  alt={nameTagData.nameTag.name}
+                  title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                  className="relative z-10 hover:scale-105 transition-transform"
+                  style={{
+                    width: '160px',
+                    height: 'auto'
+                  }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </div>
             </div>
           )}
 
