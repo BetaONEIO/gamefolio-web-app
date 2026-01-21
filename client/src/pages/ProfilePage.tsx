@@ -1357,37 +1357,91 @@ const ProfilePage = () => {
             <p className="text-sm text-foreground/90 mb-3 pl-2 pr-4">{profile.bio}</p>
           )}
 
-          {/* Platform tags */}
+          {/* Platform tags and Social Links */}
           <div className="flex flex-wrap gap-2 mb-4 pl-2">
             {profile.steamUsername && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{ backgroundColor: 'rgba(27, 40, 56, 0.8)', color: '#FFFFFF' }}>
                 <SiSteam className="w-3.5 h-3.5" />
-                <span>PC</span>
+                <span>{profile.steamUsername}</span>
               </div>
             )}
             {profile.nintendoUsername && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{ backgroundColor: 'rgba(230, 0, 18, 0.8)', color: '#FFFFFF' }}>
                 <SiNintendo className="w-3.5 h-3.5" />
-                <span>Switch</span>
+                <span>{profile.nintendoUsername}</span>
               </div>
             )}
             {profile.xboxUsername && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{ backgroundColor: 'rgba(16, 124, 16, 0.8)', color: '#FFFFFF' }}>
                 <FaXbox className="w-3.5 h-3.5" />
-                <span>Xbox</span>
+                <span>{profile.xboxUsername}</span>
               </div>
             )}
             {profile.playstationUsername && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{ backgroundColor: 'rgba(0, 55, 145, 0.8)', color: '#FFFFFF' }}>
                 <SiPlaystation className="w-3.5 h-3.5" />
-                <span>PlayStation</span>
+                <span>{profile.playstationUsername}</span>
               </div>
             )}
             {profile.epicUsername && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{ backgroundColor: 'rgba(49, 49, 49, 0.8)', color: '#FFFFFF' }}>
                 <SiEpicgames className="w-3.5 h-3.5" />
-                <span>Desktop</span>
+                <span>{profile.epicUsername}</span>
               </div>
+            )}
+            {profile.discordUsername && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{ backgroundColor: 'rgba(88, 101, 242, 0.8)', color: '#FFFFFF' }}>
+                <SiDiscord className="w-3.5 h-3.5" />
+                <span>{profile.discordUsername}</span>
+              </div>
+            )}
+            {profile.twitterUsername && (
+              <a 
+                href={`https://twitter.com/${profile.twitterUsername}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
+                style={{ backgroundColor: 'rgba(29, 161, 242, 0.8)', color: '#FFFFFF' }}
+              >
+                <FaXTwitter className="w-3.5 h-3.5" />
+                <span>{profile.twitterUsername}</span>
+              </a>
+            )}
+            {profile.youtubeUsername && (
+              <a 
+                href={`https://youtube.com/@${profile.youtubeUsername}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
+                style={{ backgroundColor: 'rgba(255, 0, 0, 0.8)', color: '#FFFFFF' }}
+              >
+                <FaYoutube className="w-3.5 h-3.5" />
+                <span>{profile.youtubeUsername}</span>
+              </a>
+            )}
+            {profile.instagramUsername && (
+              <a 
+                href={`https://instagram.com/${profile.instagramUsername}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
+                style={{ backgroundColor: 'rgba(228, 64, 95, 0.8)', color: '#FFFFFF' }}
+              >
+                <FaInstagram className="w-3.5 h-3.5" />
+                <span>{profile.instagramUsername}</span>
+              </a>
+            )}
+            {profile.facebookUsername && (
+              <a 
+                href={`https://facebook.com/${profile.facebookUsername}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
+                style={{ backgroundColor: 'rgba(24, 119, 242, 0.8)', color: '#FFFFFF' }}
+              >
+                <FaFacebook className="w-3.5 h-3.5" />
+                <span>{profile.facebookUsername}</span>
+              </a>
             )}
           </div>
         </div>
