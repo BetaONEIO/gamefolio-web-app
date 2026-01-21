@@ -426,8 +426,8 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             isMobile && clip?.videoType === 'reel' 
               ? "w-screen h-screen max-w-none max-h-none overflow-hidden" // Full screen on mobile for reels with no scroll
               : isMobile 
-                ? "w-screen h-screen max-w-none max-h-none overflow-y-auto sm:max-w-[95%] sm:w-[95%] sm:max-h-[90vh] sm:h-[90vh] sm:overflow-hidden" // Allow scrolling on mobile, fixed on larger screens
-                : "max-w-[95%] w-[95%] max-h-[90vh] h-[90vh] overflow-hidden" // Desktop size
+                ? "w-screen h-screen max-w-none max-h-none overflow-y-auto sm:max-w-[80%] sm:w-[80%] sm:max-h-[76vh] sm:h-[76vh] sm:overflow-hidden" // Allow scrolling on mobile, fixed on larger screens - 15% smaller
+                : "max-w-[80%] w-[80%] max-h-[76vh] h-[76vh] overflow-hidden" // Desktop size - 15% smaller
           )}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -513,7 +513,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   ? "w-full flex-[0_0_clamp(280px,50vh,60vh)]"
                   : clip.videoType === 'reel'
                     ? "w-full lg:w-[400px] h-full flex-shrink-0 mx-auto"
-                    : "w-full lg:w-[55%] h-[60vh] lg:h-full",
+                    : "w-full lg:w-[65%] h-[60vh] lg:h-full",
               isTransitioning ? "scale-95" : "scale-100"
             )}>
               {(!clip.ageRestricted || ageRestrictionAccepted) ? (
@@ -749,7 +749,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out" // Show comments as slide-up overlay on mobile for reels
                   : isMobile && clip.videoType !== 'reel'
                     ? "w-full flex-1 min-h-0" // Take remaining space on mobile and allow proper scrolling
-                    : "w-full lg:w-[45%] h-full" // Desktop layout - wider for more text space
+                    : "w-full lg:w-[35%] h-full" // Desktop layout
             )}>
               {/* Header with username (mobile comments header or regular header) */}
               <div className={cn(
