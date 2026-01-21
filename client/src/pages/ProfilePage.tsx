@@ -1358,7 +1358,7 @@ const ProfilePage = () => {
           )}
 
           {/* Platform tags and Social Links */}
-          <div className="flex flex-wrap gap-1.5 mb-4 pl-2">
+          <div className="flex flex-wrap gap-1.5 mb-4 pl-2 pr-8">
             {profile.steamUsername && (
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(27, 40, 56, 0.8)', color: '#FFFFFF' }}>
                 <SiSteam className="w-2.5 h-2.5" />
