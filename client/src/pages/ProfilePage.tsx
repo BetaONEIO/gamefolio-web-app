@@ -1292,7 +1292,7 @@ const ProfilePage = () => {
                   className="flex flex-col items-center mt-1 cursor-pointer"
                   onClick={() => setNameTagPreviewOpen(true)}
                 >
-                  <div className="relative">
+                  <div className="relative flex flex-col items-center">
                     <div 
                       className="absolute rounded-md"
                       style={{
@@ -1319,6 +1319,7 @@ const ProfilePage = () => {
                         (e.target as HTMLImageElement).style.display = 'none';
                       }}
                     />
+                    <span className="relative z-10 text-[10px] text-white/40 -mt-1 uppercase tracking-widest hover:text-white/60 transition-colors">Nametag</span>
                   </div>
                 </div>
               )}
@@ -1332,7 +1333,7 @@ const ProfilePage = () => {
               style={{ top: '88px' }}
               onClick={() => setNameTagPreviewOpen(true)}
             >
-              <div className="relative">
+              <div className="relative flex flex-col items-center">
                 <div 
                   className="absolute rounded-md"
                   style={{
@@ -1359,6 +1360,7 @@ const ProfilePage = () => {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
+                <span className="relative z-10 text-[10px] text-white/40 -mt-1 uppercase tracking-widest hover:text-white/60 transition-colors">Nametag</span>
               </div>
             </div>
           )}
