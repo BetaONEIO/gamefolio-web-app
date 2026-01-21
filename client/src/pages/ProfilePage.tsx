@@ -1228,12 +1228,12 @@ const ProfilePage = () => {
                   className="h-full w-full"
                 />
               </div>
-              {/* Online status indicator - green circle on top right of avatar */}
-              <div className="absolute top-0 right-0 z-30">
-                <div className="w-3 h-3 rounded-full bg-green-500 border-2 border-background"></div>
+              {/* Online status indicator - green circle on border of avatar */}
+              <div className="absolute z-30" style={{ top: '4px', right: '4px' }}>
+                <div className="w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-background"></div>
               </div>
-              {/* Level Badge with Progress - positioned 50% on border, 50% off */}
-              <div className="absolute left-1/2 -translate-x-1/2 z-30 scale-75" style={{ bottom: '-12px' }}>
+              {/* Level Badge with Progress - positioned on bottom border */}
+              <div className="absolute left-1/2 -translate-x-1/2 z-30 scale-75" style={{ bottom: '-8px' }}>
                 <LevelBadgeWithProgress 
                   userId={profile.id}
                   level={profile.level || 1}
