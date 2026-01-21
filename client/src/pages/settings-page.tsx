@@ -763,55 +763,34 @@ export default function SettingsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">Your Pro Benefits</p>
-                      <ul className="space-y-1.5">
-                        {[
-                          "Unlimited video and screenshot uploads",
-                          "500MB video file size limit",
-                          "100MB image file size limit",
-                          "Access to all avatar borders",
-                          "No video ads",
-                          "Monthly bonus lootboxes",
-                          "Priority support",
-                        ].map((benefit, idx) => (
-                          <li key={idx} className="flex items-center gap-2 text-sm">
-                            <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
-                            <span>{benefit}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="p-3 bg-muted/30 rounded-lg space-y-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">Plan:</span>
-                          <span className="font-medium">{user?.proSubscriptionType || 'Pro'}</span>
-                        </div>
-                        {customerInfo?.managementURL && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full"
-                            onClick={() => window.open(customerInfo.managementURL, '_blank')}
-                          >
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            Manage Billing
-                          </Button>
-                        )}
+                  <div className="space-y-3">
+                    <div className="p-3 bg-muted/30 rounded-lg space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Plan:</span>
+                        <span className="font-medium">{user?.proSubscriptionType || 'Pro'}</span>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                        onClick={() => setShowCancelConfirm(true)}
-                      >
-                        <AlertTriangle className="h-4 w-4 mr-2" />
-                        End Membership
-                      </Button>
+                      {customerInfo?.managementURL && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => window.open(customerInfo.managementURL, '_blank')}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Manage Billing
+                        </Button>
+                      )}
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                      onClick={() => setShowCancelConfirm(true)}
+                    >
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      End Membership
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
