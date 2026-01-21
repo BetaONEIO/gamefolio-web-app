@@ -1327,8 +1327,8 @@ const ProfilePage = () => {
           {/* Stats - Horizontal row with uppercase labels */}
           <div className="flex gap-6 mb-3 pl-2">
             <div className="flex flex-col">
-              <span className="font-bold text-lg">{Number(profile._count?.clips || 0)}</span>
-              <span className="text-xs text-primary uppercase tracking-wider">CLIPS</span>
+              <span className="font-bold text-lg">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+              <span className="text-xs text-primary uppercase tracking-wider">UPLOADS</span>
             </div>
             <div className="flex flex-col">
               <span className="font-bold text-lg">{Number(profile._count?.followers || 0)}</span>
@@ -1518,11 +1518,11 @@ const ProfilePage = () => {
             {/* Username */}
             <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
 
-            {/* Stats - Clips, Followers, Following */}
+            {/* Stats - Uploads, Followers, Following */}
             <div className="flex gap-6 items-center mt-4">
               <div className="flex flex-col">
-                <span className="font-bold text-lg">{Number(profile._count?.clips || 0)}</span>
-                <span className="text-muted-foreground text-xs uppercase tracking-wider">Clips</span>
+                <span className="font-bold text-lg">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                <span className="text-muted-foreground text-xs uppercase tracking-wider">Uploads</span>
               </div>
               <div className="flex flex-col">
                 <span className="font-bold text-lg">{Number(profile._count?.followers || 0)}</span>
