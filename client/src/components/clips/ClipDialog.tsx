@@ -50,6 +50,7 @@ import { FullscreenReelsViewer } from "./FullscreenReelsViewer";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { ReportDialog } from "@/components/content/ReportDialog";
 import { AgeRestrictionDialog } from "@/components/content/AgeRestrictionDialog";
+import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { VideoAdPlayer } from "@/components/ads/VideoAdPlayer";
 import { useClipAdDecision } from "@/hooks/use-ad-manager";
 import {
@@ -512,7 +513,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   ? "w-full flex-[0_0_clamp(280px,50vh,60vh)]"
                   : clip.videoType === 'reel'
                     ? "w-full lg:w-[400px] h-full flex-shrink-0 mx-auto"
-                    : "w-full lg:w-[65%] h-[60vh] lg:h-full",
+                    : "w-full lg:w-[55%] h-[60vh] lg:h-full",
               isTransitioning ? "scale-95" : "scale-100"
             )}>
               {(!clip.ageRestricted || ageRestrictionAccepted) ? (
@@ -748,7 +749,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out" // Show comments as slide-up overlay on mobile for reels
                   : isMobile && clip.videoType !== 'reel'
                     ? "w-full flex-1 min-h-0" // Take remaining space on mobile and allow proper scrolling
-                    : "w-full lg:w-[35%] h-full" // Desktop layout
+                    : "w-full lg:w-[45%] h-full" // Desktop layout - wider for more text space
             )}>
               {/* Header with username (mobile comments header or regular header) */}
               <div className={cn(
@@ -770,9 +771,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     </button>
                   </div>
                 )}
-                <div className="flex items-center">
+                <div className="flex items-center gap-3">
                   <div 
-                    className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3 ring-2"
+                    className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden ring-2 flex-shrink-0"
                     style={{ 
                       borderColor: clip.user?.avatarBorderColor || 'transparent',
                       boxShadow: clip.user?.avatarBorderColor ? `0 0 0 2px ${clip.user.avatarBorderColor}` : undefined
@@ -788,54 +789,54 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       <UserIcon className="h-5 w-5 text-muted-foreground" />
                     )}
                   </div>
-                  {clip.user?.username ? (
-                    <Link href={`/profile/${clip.user.username}`} onClick={(e: React.MouseEvent) => {
-                      e.stopPropagation();
-                      onClose(); // Close the dialog when navigating to profile
-                    }}>
-                      <div className="font-medium flex items-center hover:text-primary transition-colors cursor-pointer">
-                        @{clip.user.username}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {clip.user?.username ? (
+                      <Link href={`/profile/${clip.user.username}`} onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        onClose(); // Close the dialog when navigating to profile
+                      }}>
+                        <div className="font-medium flex items-center gap-1 hover:text-primary transition-colors cursor-pointer">
+                          @{clip.user.username}
+                          <ModeratorBadge isModerator={(clip.user as any).role === "moderator"} size="sm" />
+                        </div>
+                      </Link>
+                    ) : (
+                      <div className="font-medium text-muted-foreground">
+                        Unknown user
                       </div>
-                    </Link>
-                  ) : (
-                    <div className="font-medium text-muted-foreground">
-                      Unknown user
-                    </div>
-                  )}
-                </div>
-
-                <div className="text-sm">
-                  {/* Follow button */}
-                  {!isOwnClip && user && clip.user?.username && (
-                    <Button
-                      variant={followRequestStatus === 'following' ? "secondary" : "default"}
-                      size="sm"
-                      onClick={handleFollowClick}
-                      disabled={followMutation.isPending}
-                      className={cn(
-                        "transition-all duration-200",
-                        followRequestStatus === 'following' && "bg-secondary hover:bg-secondary/80",
-                        followRequestStatus === 'requested' && "bg-orange-500 hover:bg-orange-600"
-                      )}
-                      data-testid={`button-follow-${clip.user.username}`}
-                    >
-                      {followMutation.isPending ? (
-                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-1" />
-                      ) : followRequestStatus === 'following' ? (
-                        <UserCheck className="w-4 h-4 mr-1" />
-                      ) : followRequestStatus === 'requested' ? (
-                        <UserMinus className="w-4 h-4 mr-1" />
-                      ) : (
-                        <UserPlus className="w-4 h-4 mr-1" />
-                      )}
-                      {followRequestStatus === 'following' 
-                        ? 'Following' 
-                        : followRequestStatus === 'requested' 
-                          ? 'Requested' 
-                          : 'Follow'
-                      }
-                    </Button>
-                  )}
+                    )}
+                    {/* Follow button - next to username */}
+                    {!isOwnClip && user && clip.user?.username && (
+                      <Button
+                        variant={followRequestStatus === 'following' ? "secondary" : "default"}
+                        size="sm"
+                        onClick={handleFollowClick}
+                        disabled={followMutation.isPending}
+                        className={cn(
+                          "transition-all duration-200 h-7 px-2 text-xs",
+                          followRequestStatus === 'following' && "bg-secondary hover:bg-secondary/80",
+                          followRequestStatus === 'requested' && "bg-orange-500 hover:bg-orange-600"
+                        )}
+                        data-testid={`button-follow-${clip.user.username}`}
+                      >
+                        {followMutation.isPending ? (
+                          <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin mr-1" />
+                        ) : followRequestStatus === 'following' ? (
+                          <UserCheck className="w-3 h-3 mr-1" />
+                        ) : followRequestStatus === 'requested' ? (
+                          <UserMinus className="w-3 h-3 mr-1" />
+                        ) : (
+                          <UserPlus className="w-3 h-3 mr-1" />
+                        )}
+                        {followRequestStatus === 'following' 
+                          ? 'Following' 
+                          : followRequestStatus === 'requested' 
+                            ? 'Requested' 
+                            : 'Follow'
+                        }
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
 
