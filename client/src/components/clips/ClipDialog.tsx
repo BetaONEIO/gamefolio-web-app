@@ -506,39 +506,41 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             {/* Video player area */}
             <div className={cn(
               "bg-black flex items-center justify-center transition-transform duration-200 relative",
-              clip.videoType === 'reel' && isMobile
-                ? "w-full h-full"
-                : isMobile
-                  ? "w-full flex-[0_0_clamp(280px,50vh,60vh)]"
-                  : clip.videoType === 'reel'
-                    ? "w-full lg:w-[400px] h-full flex-shrink-0 mx-auto"
-                    : "w-full lg:w-[65%] h-[60vh] lg:h-full",
+              isMobile
+                ? "w-full h-full" // Full screen on mobile for all clips
+                : clip.videoType === 'reel'
+                  ? "w-full lg:w-[400px] h-full flex-shrink-0 mx-auto"
+                  : "w-full lg:w-[65%] h-[60vh] lg:h-full",
               isTransitioning ? "scale-95" : "scale-100"
             )}>
               {(!clip.ageRestricted || ageRestrictionAccepted) ? (
-              clip.videoType === 'reel' && isMobile ? (
-                // Special mobile fullscreen layout for reels only
-                <div className="h-full flex items-center justify-center bg-black relative">
-                  <div className="w-full max-w-full max-h-full aspect-[9/16] bg-black relative">
-                    <VideoPlayer 
-                      videoUrl={clip.videoUrl} 
-                      thumbnailUrl={clip.thumbnailUrl || (clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined)} 
-                      autoPlay={true}
-                      className="w-full h-full"
-                      objectFit="contain"
-                      clipId={clip.id}
-                    />
-                    {/* Mobile Instagram-like overlay for reels */}
-                    <div className="absolute inset-0 pointer-events-none">
-                      {/* Top overlay with user info - improved mobile design */}
-                      <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-50 pointer-events-auto">
-                        <div className="flex items-center">
+              isMobile ? (
+                // TikTok-style mobile fullscreen layout for all clips
+                <div className="w-full h-full flex items-center justify-center bg-black relative">
+                  <VideoPlayer 
+                    videoUrl={clip.videoUrl} 
+                    thumbnailUrl={clip.thumbnailUrl || (clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined)} 
+                    autoPlay={true}
+                    className="w-full h-full"
+                    objectFit="contain"
+                    clipId={clip.id}
+                  />
+                  {/* TikTok-style overlay */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    {/* Bottom left - User info with inline Follow button */}
+                    <div className="absolute bottom-24 left-4 right-20 z-40 pointer-events-auto">
+                      {/* User row with Follow button */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <Link href={`/profile/${clip.user?.username}`} onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          onClose();
+                        }}>
                           <div 
-                            className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3"
+                            className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden"
                             style={{ 
                               boxShadow: clip.user?.avatarBorderColor 
-                                ? `0 0 0 3px ${clip.user.avatarBorderColor}` 
-                                : '0 0 0 2px rgba(255,255,255,0.2)'
+                                ? `0 0 0 2px ${clip.user.avatarBorderColor}` 
+                                : '0 0 0 2px rgba(255,255,255,0.3)'
                             }}
                           >
                             {clip.user?.avatarUrl ? (
@@ -548,82 +550,117 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                                 className="w-full h-full object-cover"
                               />
                             ) : (
-                              <UserIcon className="h-6 w-6 text-white" />
+                              <UserIcon className="h-5 w-5 text-white" />
                             )}
                           </div>
-                          {clip.user?.username && (
-                            <div className="text-white font-semibold text-base drop-shadow-lg">
-                              @{clip.user.username}
-                            </div>
-                          )}
-                        </div>
-                        {/* Follow button for mobile */}
-                        <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
-                          <span className="text-white font-medium text-sm">Follow</span>
-                        </div>
-                      </div>
-                      
-                      {/* Right side action buttons - improved mobile spacing and positioning */}
-                      <div className="absolute right-4 bottom-28 flex flex-col items-center space-y-6 z-50 pointer-events-auto">
-                        <FireButton 
-                          contentId={clip.id}
-                          contentType="clip"
-                          contentOwnerId={clip.userId}
-                          initialFired={false}
-                          initialCount={clip._count?.reactions || 0}
-                          size="lg"
-                          variant="vertical"
-                          onUnauthenticatedAction={() => openDialog('general')}
-                        />
-                        
-                        <LikeButton 
-                          contentId={clip.id}
-                          contentType="clip"
-                          contentOwnerId={clip.userId}
-                          initialLiked={false}
-                          initialCount={clip._count?.likes || 0}
-                          size="lg"
-                          variant="vertical"
-                          onUnauthenticatedAction={() => openDialog('like')}
-                        />
-                        
-                        <div className="flex flex-col items-center">
-                          <button 
-                            onClick={() => setShowComments(true)}
-                            className="p-4 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors"
-                            data-testid="button-comments"
+                        </Link>
+                        <Link href={`/profile/${clip.user?.username}`} onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          onClose();
+                        }}>
+                          <span className="text-white font-semibold text-sm drop-shadow-lg">
+                            @{clip.user?.username || 'unknown'}
+                          </span>
+                        </Link>
+                        {/* Inline Follow button */}
+                        {!isOwnClip && clip.user?.username && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={handleFollowClick}
+                            disabled={followMutation.isPending}
+                            className={cn(
+                              "h-7 px-3 text-xs font-semibold rounded-md",
+                              followRequestStatus === 'following' 
+                                ? "bg-gray-600 hover:bg-gray-700 text-white" 
+                                : followRequestStatus === 'requested'
+                                  ? "bg-orange-500 hover:bg-orange-600 text-white"
+                                  : "bg-green-500 hover:bg-green-600 text-white"
+                            )}
                           >
-                            <MessageSquare className="h-7 w-7 text-white" />
-                          </button>
-                          <span className="text-white text-sm font-medium mt-1">{comments?.length || 0}</span>
-                        </div>
-                        
-                        <div className="flex flex-col items-center">
-                          <ClipShareDialog 
-                            clipId={clip.id} 
-                            isOwnContent={user?.id === clip.userId}
-                            trigger={
-                              <button className="p-4 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors">
-                                <Send className="h-7 w-7 text-white" />
-                              </button>
-                            } 
-                          />
-                        </div>
+                            {followRequestStatus === 'following' 
+                              ? 'Following' 
+                              : followRequestStatus === 'requested' 
+                                ? 'Requested' 
+                                : 'Follow'}
+                          </Button>
+                        )}
                       </div>
                       
-                      {/* Bottom overlay with title and description - improved mobile layout */}
-                      <div className="absolute bottom-4 left-4 right-20 z-40">
-                        <h2 className="text-white font-semibold text-xl mb-2 leading-tight">{clip.title}</h2>
-                        {clip.description && (
-                          <p className="text-white/90 text-base leading-relaxed line-clamp-3">{clip.description}</p>
-                        )}
-                        {clip.game && (
-                          <div className="mt-3">
-                            <span className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-bold shadow-lg">
-                              {clip.game.name}
-                            </span>
-                          </div>
-                        )}
+                      {/* Title */}
+                      <h2 className="text-white font-semibold text-base mb-1 leading-tight drop-shadow-lg">{clip.title}</h2>
+                      
+                      {/* Description */}
+                      {clip.description && (
+                        <p className="text-white/90 text-sm leading-relaxed line-clamp-2 drop-shadow-lg">{clip.description}</p>
+                      )}
+                      
+                      {/* Game tag with icon */}
+                      {clip.game && (
+                        <div className="mt-2 flex items-center gap-1.5">
+                          {clip.game.iconUrl && (
+                            <img src={clip.game.iconUrl} alt="" className="w-4 h-4 rounded" />
+                          )}
+                          <span className="text-green-400 text-sm font-medium drop-shadow-lg">
+                            {clip.game.name}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Original audio line */}
+                      <div className="mt-2 flex items-center gap-1.5 text-white/70 text-xs">
+                        <span>Original audio</span>
+                        <span>•</span>
+                        <span>{clip.user?.displayName || clip.user?.username || 'Unknown'}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Right side action buttons */}
+                    <div className="absolute right-3 bottom-28 flex flex-col items-center space-y-5 z-50 pointer-events-auto">
+                      <FireButton 
+                        contentId={clip.id}
+                        contentType="clip"
+                        contentOwnerId={clip.userId}
+                        initialFired={false}
+                        initialCount={clip._count?.reactions || 0}
+                        size="lg"
+                        variant="vertical"
+                        onUnauthenticatedAction={() => openDialog('general')}
+                      />
+                      
+                      <LikeButton 
+                        contentId={clip.id}
+                        contentType="clip"
+                        contentOwnerId={clip.userId}
+                        initialLiked={false}
+                        initialCount={clip._count?.likes || 0}
+                        size="lg"
+                        variant="vertical"
+                        onUnauthenticatedAction={() => openDialog('like')}
+                      />
+                      
+                      <div className="flex flex-col items-center">
+                        <button 
+                          onClick={() => setShowComments(true)}
+                          className="w-11 h-11 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors flex items-center justify-center"
+                          data-testid="button-comments"
+                        >
+                          <MessageSquare className="h-6 w-6 text-white" />
+                        </button>
+                        <span className="text-white text-xs font-medium mt-1">{comments?.length || 0}</span>
+                      </div>
+                      
+                      <div className="flex flex-col items-center">
+                        <ClipShareDialog 
+                          clipId={clip.id} 
+                          isOwnContent={user?.id === clip.userId}
+                          trigger={
+                            <button className="w-11 h-11 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors flex items-center justify-center">
+                              <Share2 className="h-6 w-6 text-white" />
+                            </button>
+                          } 
+                        />
+                        <span className="text-white text-xs font-medium mt-1">Share</span>
                       </div>
                     </div>
                   </div>
@@ -692,7 +729,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             </div>
 
             {/* Backdrop for mobile comments */}
-            {clip.videoType === 'reel' && isMobile && showComments && (
+            {isMobile && showComments && (
               <div 
                 className="fixed inset-0 bg-black/20 z-40" 
                 onClick={() => setShowComments(false)}
@@ -703,24 +740,22 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             {/* Right side - Info and comments */}
             <div className={cn(
               "flex flex-col",
-              clip.videoType === 'reel' && isMobile && !showComments
-                ? "hidden" // Hide sidebar on mobile for reels when comments not shown
-                : clip.videoType === 'reel' && isMobile && showComments
-                  ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out" // Show comments as slide-up overlay on mobile for reels
-                  : isMobile && clip.videoType !== 'reel'
-                    ? "w-full flex-1 min-h-0" // Take remaining space on mobile and allow proper scrolling
-                    : "w-full lg:w-[35%] h-full" // Desktop layout
+              isMobile && !showComments
+                ? "hidden" // Hide sidebar on mobile for all clips when comments not shown
+                : isMobile && showComments
+                  ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out" // Show comments as slide-up overlay on mobile
+                  : "w-full lg:w-[35%] h-full" // Desktop layout
             )}>
               {/* Header with username (mobile comments header or regular header) */}
               <div className={cn(
                 "border-b border-border flex items-center justify-between",
                 isMobile ? "p-3" : "p-4", // Better mobile padding
-                clip.videoType === 'reel' && isMobile && showComments 
+                isMobile && showComments 
                   ? "relative" // Add relative positioning for mobile comments header
                   : ""
               )}>                
                 {/* Close button for mobile comments - larger grab area */}
-                {clip.videoType === 'reel' && isMobile && showComments && (
+                {isMobile && showComments && (
                   <div className="absolute -top-4 left-0 right-0 h-8 flex justify-center items-center">
                     <button 
                       onClick={() => setShowComments(false)}
