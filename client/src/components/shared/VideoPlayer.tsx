@@ -18,6 +18,9 @@ interface VideoPlayerProps {
   objectFit?: 'contain' | 'cover' | 'fill';
   clipId?: number;
   disableAspectRatio?: boolean;
+  hideControls?: boolean;
+  onPlayingChange?: (isPlaying: boolean) => void;
+  onMutedChange?: (isMuted: boolean) => void;
 }
 
 const VideoPlayer = ({ 
@@ -30,7 +33,10 @@ const VideoPlayer = ({
   className,
   objectFit = 'contain',
   clipId,
-  disableAspectRatio = false
+  disableAspectRatio = false,
+  hideControls = false,
+  onPlayingChange,
+  onMutedChange
 }: VideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
@@ -75,6 +81,16 @@ const VideoPlayer = ({
       hasTrackedView.current = false;
     }
   };
+  
+  // Notify parent of playing state changes
+  useEffect(() => {
+    onPlayingChange?.(isPlaying);
+  }, [isPlaying, onPlayingChange]);
+  
+  // Notify parent of muted state changes
+  useEffect(() => {
+    onMutedChange?.(isMuted);
+  }, [isMuted, onMutedChange]);
   
   const togglePlay = () => {
     if (videoRef.current && videoRef.current.isConnected) {
@@ -296,13 +312,13 @@ const VideoPlayer = ({
         }}
       />
       
-      {!isPlaying && !duration && (
+      {!hideControls && !isPlaying && !duration && (
         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
         </div>
       )}
       
-      {!isPlaying && duration > 0 && (
+      {!hideControls && !isPlaying && duration > 0 && (
         <button
           className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50"
           onClick={togglePlay}
@@ -313,7 +329,8 @@ const VideoPlayer = ({
         </button>
       )}
       
-      {/* Video Controls */}
+      {/* Video Controls - hidden when hideControls is true */}
+      {!hideControls && (
       <div 
         className={cn(
           "absolute bottom-2 left-2 right-2 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-2 md:p-3 transition-opacity rounded-lg",
@@ -374,7 +391,7 @@ const VideoPlayer = ({
             <Maximize className="h-3 w-3 md:h-4 md:w-4" />
           </Button>
         </div>
-      </div>
+      </div>)}
     </div>
   );
 };

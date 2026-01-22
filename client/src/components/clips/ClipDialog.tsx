@@ -33,7 +33,11 @@ import {
   AlertTriangle,
   Maximize2,
   Minimize2,
-  Trash2
+  Trash2,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX
 } from "lucide-react";
 import { formatDistance } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -89,6 +93,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   const [showAgeRestrictionDialog, setShowAgeRestrictionDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isAcceptingRef = useRef(false);
+  const [reelIsPlaying, setReelIsPlaying] = useState(true);
+  const [reelIsMuted, setReelIsMuted] = useState(true);
+  const reelVideoRef = useRef<HTMLVideoElement | null>(null);
   
   const { showAd, adCompleted, isPro, decideAd, onAdFinished, reset: resetAd } = useClipAdDecision();
 
@@ -424,7 +431,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             "fixed left-[50%] top-[50%] z-50 grid w-full translate-x-[-50%] translate-y-[-50%] border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
             "p-0 bg-background text-foreground clip-dialog-content",
             isMobile && clip?.videoType === 'reel' 
-              ? "w-screen h-screen max-w-none max-h-none overflow-hidden" // Full screen on mobile for reels with no scroll
+              ? "w-screen h-[calc(100vh-64px)] max-w-none max-h-none overflow-hidden top-0 translate-y-0" // Leave space for footer on mobile reels
               : isMobile 
                 ? "w-screen h-screen max-w-none max-h-none overflow-y-auto sm:max-w-[80%] sm:w-[80%] sm:max-h-[76vh] sm:h-[76vh] sm:overflow-hidden" // Allow scrolling on mobile, fixed on larger screens - 15% smaller
                 : "max-w-[80%] w-[80%] max-h-[76vh] h-[76vh] overflow-hidden" // Desktop size - 15% smaller
@@ -528,7 +535,50 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     objectFit="cover"
                     clipId={clip.id}
                     disableAspectRatio={true}
+                    hideControls={true}
+                    onPlayingChange={setReelIsPlaying}
+                    onMutedChange={setReelIsMuted}
                   />
+                  {/* Top left play/volume controls */}
+                  <div className="absolute top-4 left-4 flex items-center gap-3 z-50">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const video = document.querySelector('video');
+                        if (video) {
+                          if (reelIsPlaying) {
+                            video.pause();
+                          } else {
+                            video.play();
+                          }
+                        }
+                      }}
+                      className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
+                    >
+                      {reelIsPlaying ? (
+                        <Pause className="h-5 w-5 text-white" />
+                      ) : (
+                        <Play className="h-5 w-5 text-white ml-0.5" />
+                      )}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const video = document.querySelector('video');
+                        if (video) {
+                          video.muted = !video.muted;
+                          setReelIsMuted(!reelIsMuted);
+                        }
+                      }}
+                      className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
+                    >
+                      {reelIsMuted ? (
+                        <VolumeX className="h-5 w-5 text-white" />
+                      ) : (
+                        <Volume2 className="h-5 w-5 text-white" />
+                      )}
+                    </button>
+                  </div>
                   {/* TikTok-style overlay */}
                   <div className="absolute inset-0 pointer-events-none">
                     {/* Bottom left - User info with inline Follow button */}
