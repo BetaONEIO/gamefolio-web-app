@@ -512,7 +512,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                 : isMobile
                   ? "w-full flex-[0_0_clamp(280px,50vh,60vh)]"
                   : clip.videoType === 'reel'
-                    ? "w-full lg:w-[400px] h-full flex-shrink-0 mx-auto"
+                    ? "w-auto h-full flex-shrink-0 mx-auto aspect-[9/16]"
                     : "w-full lg:w-[65%] h-[60vh] lg:h-full",
               isTransitioning ? "scale-95" : "scale-100"
             )}>
@@ -670,15 +670,15 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                 </div>
               ) : clip.videoType === 'reel' ? (
                 // Desktop reels: maintain 9:16 aspect ratio
-                <div className="h-full flex items-center justify-center bg-black relative">
-                  <div className="h-full max-h-full aspect-[9/16] bg-black relative flex items-center justify-center">
+                <div className="w-full h-full flex items-center justify-center bg-black relative">
+                  <div className="h-full aspect-[9/16] bg-black relative flex items-center justify-center overflow-hidden">
                     {!isFullscreen && (
                       <VideoPlayer 
                         videoUrl={clip.videoUrl} 
                         thumbnailUrl={clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined} 
                         autoPlay={true}
-                        className="max-w-full max-h-full"
-                        objectFit="contain"
+                        className="w-full h-full"
+                        objectFit="cover"
                         clipId={clip.id}
                         disableAspectRatio={true}
                       />
