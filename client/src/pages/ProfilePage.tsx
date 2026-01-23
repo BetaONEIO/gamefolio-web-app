@@ -1602,22 +1602,22 @@ const ProfilePage = () => {
             <div className="flex gap-6 items-center mt-4">
               <div className="flex flex-col">
                 <span className="font-bold text-lg">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                <span className="text-muted-foreground text-xs uppercase tracking-wider">Uploads</span>
+                <span className="text-primary text-xs uppercase tracking-wider">Uploads</span>
               </div>
               <div className="flex flex-col">
                 <span className="font-bold text-lg">{Number(profile._count?.followers || 0)}</span>
-                <span className="text-muted-foreground text-xs uppercase tracking-wider">Followers</span>
+                <span className="text-primary text-xs uppercase tracking-wider">Followers</span>
               </div>
               <div className="flex flex-col">
                 <span className="font-bold text-lg">{Number(profile._count?.following || 0)}</span>
-                <span className="text-muted-foreground text-xs uppercase tracking-wider">Following</span>
+                <span className="text-primary text-xs uppercase tracking-wider">Following</span>
               </div>
             </div>
 
             {/* Member since date */}
             {profile.createdAt && (
               <div className="mt-4">
-                <span className="text-xs text-muted-foreground uppercase tracking-wider">
+                <span className="text-xs text-primary uppercase tracking-wider">
                   Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
                     year: 'numeric', 
                     month: 'long' 
