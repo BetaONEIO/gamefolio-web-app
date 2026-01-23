@@ -1375,7 +1375,7 @@ const UploadPage = () => {
                   </div>
                   
                   <div 
-                    className={`border-2 border-dashed ${fileError ? 'border-destructive' : 'border-muted'} rounded-lg p-8 text-center ${!file ? 'cursor-pointer hover:border-primary transition-colors' : ''}`}
+                    className={`border-2 border-dashed ${fileError ? 'border-destructive' : 'border-muted'} rounded-lg text-center ${!file ? 'cursor-pointer hover:border-primary transition-colors aspect-[9/16] max-h-[400px] w-auto mx-auto flex items-center justify-center' : 'p-8'}`}
                     onClick={!file ? triggerFileInput : undefined}
                     onDragOver={(e) => {
                       e.preventDefault();
