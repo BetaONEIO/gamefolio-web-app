@@ -1759,7 +1759,7 @@ const ProfilePage = () => {
                     title={nameTagData.nameTag.description || nameTagData.nameTag.name}
                     className="absolute z-10 cursor-pointer hover:scale-105 transition-transform"
                     style={{
-                      width: '524px',
+                      width: '734px',
                       height: 'auto',
                       top: '50%',
                       left: '50%',
