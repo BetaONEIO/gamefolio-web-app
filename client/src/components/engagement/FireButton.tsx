@@ -81,8 +81,8 @@ export function FireButton({
       // Show success message with fires remaining info
       if (data.firesRemaining !== undefined) {
         toast({
-          title: "Fire sent!",
-          description: `You have ${data.firesRemaining} fire${data.firesRemaining !== 1 ? 's' : ''} left today`,
+          title: "🔥 sent!",
+          description: `You have ${data.firesRemaining} 🔥 left today`,
           variant: "default",
         });
       }
