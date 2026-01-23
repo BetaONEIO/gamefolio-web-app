@@ -1367,7 +1367,7 @@ const ProfilePage = () => {
           )}
 
           {/* Username and Display Name - Left aligned on Mobile */}
-          <div className="flex flex-col items-start gap-0.5 mb-2 mt-4 pl-2">
+          <div className="flex flex-col items-start gap-0.5 mb-2 mt-8 pl-2">
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold">{profile.displayName}</h1>
               <ModeratorBadge 
