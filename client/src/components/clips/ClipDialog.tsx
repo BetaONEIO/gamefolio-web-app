@@ -75,11 +75,9 @@ interface ClipDialogProps {
   onNext?: () => void;
   onPrevious?: () => void;
   showNavigation?: boolean;
-  currentIndex?: number;
-  totalClips?: number;
 }
 
-const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigation = false, currentIndex, totalClips }: ClipDialogProps) => {
+const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigation = false }: ClipDialogProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { isOpen: joinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
@@ -483,66 +481,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             <span className="sr-only">Close</span>
           </DialogClose>
         </div>
-
-        {/* Navigation dots indicator - only for clips with navigation */}
-        {showNavigation && typeof currentIndex === 'number' && typeof totalClips === 'number' && totalClips > 1 && clip?.videoType !== 'reel' && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2">
-            {/* Previous arrow */}
-            {onPrevious && currentIndex > 0 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPrevious();
-                }}
-                className="p-1.5 rounded-full bg-black/40 hover:bg-black/60 transition-colors"
-              >
-                <ChevronLeft className="h-4 w-4 text-white" />
-              </button>
-            )}
-            
-            {/* Dots indicator */}
-            <div className="flex items-center gap-1.5 px-2 py-1.5 bg-black/40 backdrop-blur-sm rounded-full">
-              {Array.from({ length: Math.min(totalClips, 7) }, (_, i) => {
-                // Show first 3, current (with neighbors), and last 3
-                let displayIndex = i;
-                if (totalClips > 7) {
-                  if (currentIndex < 3) {
-                    displayIndex = i;
-                  } else if (currentIndex > totalClips - 4) {
-                    displayIndex = totalClips - 7 + i;
-                  } else {
-                    displayIndex = currentIndex - 3 + i;
-                  }
-                }
-                const isActive = displayIndex === currentIndex;
-                return (
-                  <div
-                    key={displayIndex}
-                    className={cn(
-                      "rounded-full transition-all duration-200",
-                      isActive 
-                        ? "w-2.5 h-2.5 bg-[#00E676]" 
-                        : "w-2 h-2 bg-white/50"
-                    )}
-                  />
-                );
-              })}
-            </div>
-            
-            {/* Next arrow */}
-            {onNext && currentIndex < totalClips - 1 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onNext();
-                }}
-                className="p-1.5 rounded-full bg-black/40 hover:bg-black/60 transition-colors"
-              >
-                <ChevronRight className="h-4 w-4 text-white" />
-              </button>
-            )}
-          </div>
-        )}
 
         {isLoading || !clip ? (
           <div className="space-y-4 p-6">
