@@ -760,7 +760,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     )}
                     {/* Top left play/volume controls for desktop reels */}
                     {!isFullscreen && (
-                      <div className="absolute top-4 left-4 flex items-center gap-3 z-50">
+                      <div className="absolute top-3 left-3 flex items-center gap-2 z-50">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -773,12 +773,12 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                               }
                             }
                           }}
-                          className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
+                          className="w-9 h-9 rounded-full bg-gray-800/80 hover:bg-gray-700/90 transition-colors flex items-center justify-center shadow-md border border-white/10"
                         >
                           {reelIsPlaying ? (
-                            <Pause className="h-5 w-5 text-white" />
+                            <Pause className="h-4 w-4 text-white" />
                           ) : (
-                            <Play className="h-5 w-5 text-white ml-0.5" />
+                            <Play className="h-4 w-4 text-white ml-0.5" />
                           )}
                         </button>
                         <button
@@ -790,12 +790,12 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                               setReelIsMuted(!reelIsMuted);
                             }
                           }}
-                          className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
+                          className="w-9 h-9 rounded-full bg-gray-800/80 hover:bg-gray-700/90 transition-colors flex items-center justify-center shadow-md border border-white/10"
                         >
                           {reelIsMuted ? (
-                            <VolumeX className="h-5 w-5 text-white" />
+                            <VolumeX className="h-4 w-4 text-white" />
                           ) : (
-                            <Volume2 className="h-5 w-5 text-white" />
+                            <Volume2 className="h-4 w-4 text-white" />
                           )}
                         </button>
                       </div>
