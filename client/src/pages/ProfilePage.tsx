@@ -1769,7 +1769,7 @@ const ProfilePage = () => {
                     }}
                   />
                   <span 
-                    className="relative z-10 text-xs text-white/40 -mt-10 uppercase tracking-widest cursor-pointer hover:text-white/60 transition-colors"
+                    className="relative z-10 text-xs text-white/40 mt-1 uppercase tracking-widest cursor-pointer hover:text-white/60 transition-colors"
                     onClick={() => setNameTagPreviewOpen(true)}
                   >Nametag</span>
                 </div>
