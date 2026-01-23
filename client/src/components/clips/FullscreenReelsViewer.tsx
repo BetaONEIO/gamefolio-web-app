@@ -328,9 +328,11 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                   </div>
                 </div>
 
-                {/* Right side - Engagement buttons (TikTok-style) */}
-                {index === currentIndex && (
-                  <div className="absolute bottom-8 md:bottom-12 right-2 md:right-3 flex flex-col items-center gap-4 pointer-events-auto">
+                {/* Right side - Engagement buttons (TikTok-style) - Always show for consistent layout */}
+                <div className={cn(
+                  "absolute bottom-8 md:bottom-12 right-2 md:right-3 flex flex-col items-center gap-4",
+                  index === currentIndex ? "pointer-events-auto" : "pointer-events-none opacity-70"
+                )}>
                     {/* Fire/Reactions */}
                     <div className="flex flex-col items-center">
                       <FireButton
@@ -401,7 +403,6 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                       }
                     />
                   </div>
-                )}
               </div>
             </div>
           </div>
