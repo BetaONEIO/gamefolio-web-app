@@ -1744,7 +1744,7 @@ const ProfilePage = () => {
               >
                 {/* Glass rectangular background as main container */}
                 <div 
-                  className="relative rounded-lg flex items-center justify-center"
+                  className="relative rounded-lg"
                   style={{
                     width: '390px',
                     height: '91px',
@@ -1760,7 +1760,10 @@ const ProfilePage = () => {
                     className="absolute z-10 cursor-pointer hover:scale-105 transition-transform"
                     style={{
                       width: '437px',
-                      height: 'auto'
+                      height: 'auto',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)'
                     }}
                     onClick={() => setNameTagPreviewOpen(true)}
                     onError={(e) => {
