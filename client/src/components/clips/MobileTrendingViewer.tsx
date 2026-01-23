@@ -239,7 +239,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
         )}
 
         {/* Bottom overlay with user info and controls */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+        <div className="absolute bottom-16 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
           <div className="flex justify-between items-end">
             {/* Left side - User info and content details */}
             <div className="flex-1 pr-4">
