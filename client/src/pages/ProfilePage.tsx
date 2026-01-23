@@ -1300,8 +1300,8 @@ const ProfilePage = () => {
                         top: '50%',
                         left: '50%',
                         transform: 'translate(-50%, -50%)',
-                        width: '140px',
-                        height: '32px',
+                        width: '182px',
+                        height: '42px',
                         background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
                         border: '1px solid rgba(148, 163, 184, 0.2)',
                         boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
@@ -1313,7 +1313,7 @@ const ProfilePage = () => {
                       title={nameTagData.nameTag.description || nameTagData.nameTag.name}
                       className="relative z-10 hover:scale-105 transition-transform"
                       style={{
-                        width: '160px',
+                        width: '208px',
                         height: 'auto'
                       }}
                       onError={(e) => {
@@ -1341,8 +1341,8 @@ const ProfilePage = () => {
                     top: '50%',
                     left: '50%',
                     transform: 'translate(-50%, -50%)',
-                    width: '140px',
-                    height: '32px',
+                    width: '182px',
+                    height: '42px',
                     background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
                     border: '1px solid rgba(148, 163, 184, 0.2)',
                     boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
@@ -1354,7 +1354,7 @@ const ProfilePage = () => {
                   title={nameTagData.nameTag.description || nameTagData.nameTag.name}
                   className="relative z-10 hover:scale-105 transition-transform"
                   style={{
-                    width: '160px',
+                    width: '208px',
                     height: 'auto'
                   }}
                   onError={(e) => {
@@ -1747,8 +1747,8 @@ const ProfilePage = () => {
                       top: '50%',
                       left: '50%',
                       transform: 'translate(-50%, -50%)',
-                      width: '300px',
-                      height: '70px',
+                      width: '390px',
+                      height: '91px',
                       background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
                       border: '1px solid rgba(148, 163, 184, 0.2)',
                       boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
@@ -1760,7 +1760,7 @@ const ProfilePage = () => {
                     title={nameTagData.nameTag.description || nameTagData.nameTag.name}
                     className="relative z-10 cursor-pointer hover:scale-105 transition-transform"
                     style={{
-                      width: '336px',
+                      width: '437px',
                       height: 'auto'
                     }}
                     onClick={() => setNameTagPreviewOpen(true)}
@@ -2882,7 +2882,7 @@ const ProfilePage = () => {
                 src={nameTagData.nameTag.imageUrl} 
                 alt={nameTagData.nameTag.name}
                 className="max-w-full h-auto"
-                style={{ maxHeight: '200px' }}
+                style={{ maxHeight: '300px' }}
               />
               <div className={`px-4 py-2 rounded-full text-sm font-bold uppercase ${
                 nameTagData.nameTag.rarity === 'legendary' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
