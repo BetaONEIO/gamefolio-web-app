@@ -520,7 +520,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   ? "w-full flex-[0_0_clamp(280px,50vh,60vh)]"
                   : clip.videoType === 'reel'
                     ? "w-full lg:w-[400px] h-full flex-shrink-0 mx-auto"
-                    : "w-full lg:w-[65%] h-[60vh] lg:h-full",
+                    : "w-full lg:w-[65%] h-full",
               isTransitioning ? "scale-95" : "scale-100"
             )}>
               {(!clip.ageRestricted || ageRestrictionAccepted) ? (
@@ -766,15 +766,19 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   </div>
                 </div>
               ) : (
-                // Clips: use full container
-                <VideoPlayer 
-                  videoUrl={clip.videoUrl} 
-                  thumbnailUrl={clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined} 
-                  autoPlay={true}
-                  className="w-full h-full"
-                  objectFit="contain"
-                  clipId={clip.id}
-                />
+                // Clips: use fixed aspect ratio container (16:9) with video contained inside
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="w-full h-full max-h-full flex items-center justify-center">
+                    <VideoPlayer 
+                      videoUrl={clip.videoUrl} 
+                      thumbnailUrl={clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined} 
+                      autoPlay={true}
+                      className="max-w-full max-h-full w-auto h-auto"
+                      objectFit="contain"
+                      clipId={clip.id}
+                    />
+                  </div>
+                </div>
               )
               ) : (
                 // Age-restricted content placeholder
