@@ -806,8 +806,10 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                 : clip.videoType === 'reel' && isMobile && showComments
                   ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out" // Show comments as slide-up overlay on mobile for reels
                   : isMobile && clip.videoType !== 'reel'
-                    ? "w-full flex-1 min-h-0" // Take remaining space on mobile
-                    : "w-full lg:flex-1 lg:min-w-0 h-full max-h-full" // Desktop layout - take remaining space with max height
+                    ? "w-full flex-1 min-h-0" // Take remaining space on mobile for clips
+                  : clip.videoType === 'reel'
+                    ? "w-full lg:w-[35%] h-full" // Reels: fixed 35% width for comments
+                    : "w-full lg:flex-1 lg:min-w-0 h-full max-h-full" // Clips: take remaining space with max height
             )}>
               {/* Header with username (mobile comments header or regular header) - FIXED */}
               <div className={cn(
