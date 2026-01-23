@@ -259,7 +259,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
               {/* Video overlay content */}
               <div className="absolute inset-0 pointer-events-none z-10">
                 {/* Left side - User info and title (TikTok-style) */}
-                <div className="absolute bottom-20 md:bottom-24 left-3 md:left-4 right-16 md:right-20 pointer-events-auto z-10">
+                <div className="absolute bottom-8 md:bottom-12 left-3 md:left-4 right-16 md:right-20 pointer-events-auto z-10">
                   {/* User row with inline follow button */}
                   <div className="flex items-center gap-2 mb-2">
                     <Link href={`/profile/${reel.user.username}`} onClick={onClose}>
@@ -330,7 +330,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
 
                 {/* Right side - Engagement buttons (TikTok-style) */}
                 {index === currentIndex && (
-                  <div className="absolute bottom-20 md:bottom-24 right-2 md:right-3 flex flex-col items-center gap-4 pointer-events-auto">
+                  <div className="absolute bottom-8 md:bottom-12 right-2 md:right-3 flex flex-col items-center gap-4 pointer-events-auto">
                     {/* Fire/Reactions */}
                     <div className="flex flex-col items-center">
                       <FireButton
