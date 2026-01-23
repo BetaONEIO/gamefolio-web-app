@@ -901,10 +901,13 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               </div>
 
               {/* Comments and content section - scrollable area */}
-              <div className={cn(
-                "flex-1 overflow-y-auto space-y-3 min-h-0 max-h-full",
-                isMobile ? "px-3 py-2" : "px-4 py-3" // Better mobile padding
-              )}>
+              <div 
+                className={cn(
+                  "flex-1 overflow-y-auto space-y-3 min-h-0",
+                  isMobile ? "px-3 py-2" : "px-4 py-3" // Better mobile padding
+                )}
+                data-scroll-container
+              >
                 {/* Title and description */}
                 <div className="flex-shrink-0">
                   <h1 className={cn("font-semibold", isMobile ? "text-lg" : "text-xl")}>{clip.title}</h1>
@@ -962,11 +965,18 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                               if (!user) {
                                 openDialog('comment');
                               } else {
-                                // Focus the comment input field
+                                // Focus the comment input field within the scrollable container
                                 const commentInput = document.querySelector('[data-testid="input-comment"]') as HTMLTextAreaElement;
-                                if (commentInput) {
-                                  commentInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                const scrollContainer = document.querySelector('[data-scroll-container]');
+                                if (commentInput && scrollContainer) {
+                                  // Scroll the container to show the comment input
+                                  const containerRect = scrollContainer.getBoundingClientRect();
+                                  const inputRect = commentInput.getBoundingClientRect();
+                                  const scrollTop = scrollContainer.scrollTop + (inputRect.top - containerRect.top) - 100;
+                                  scrollContainer.scrollTo({ top: scrollTop, behavior: 'smooth' });
                                   setTimeout(() => commentInput.focus(), 300);
+                                } else if (commentInput) {
+                                  commentInput.focus();
                                 }
                               }
                             }}
