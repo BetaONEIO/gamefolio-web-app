@@ -1736,7 +1736,7 @@ const ProfilePage = () => {
                 className="absolute flex-col items-center hidden md:flex"
                 style={{
                   top: '20px',
-                  right: '80px'
+                  right: '0px'
                 }}
               >
                 {/* Glass rectangular background layered underneath */}
@@ -1769,7 +1769,7 @@ const ProfilePage = () => {
                     }}
                   />
                   <span 
-                    className="relative z-10 text-xs text-white/40 -mt-2 uppercase tracking-widest cursor-pointer hover:text-white/60 transition-colors"
+                    className="relative z-10 text-xs text-white/40 -mt-4 uppercase tracking-widest cursor-pointer hover:text-white/60 transition-colors"
                     onClick={() => setNameTagPreviewOpen(true)}
                   >Nametag</span>
                 </div>
@@ -1777,8 +1777,8 @@ const ProfilePage = () => {
             )}
           </div>
 
-          {/* Action buttons - positioned to align with name tag */}
-          <div className="absolute right-0 md:right-0" style={{ top: '20px' }}>
+          {/* Action buttons - positioned below banner */}
+          <div className="absolute right-0 md:right-0" style={{ top: '120px' }}>
             {!isOwnProfile && currentUser && (
               <div className="flex gap-2">
                   <Button 
