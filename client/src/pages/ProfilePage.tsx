@@ -2872,16 +2872,16 @@ const ProfilePage = () => {
       {/* Name Tag Preview Dialog */}
       {nameTagData?.nameTag && (
         <Dialog open={nameTagPreviewOpen} onOpenChange={setNameTagPreviewOpen}>
-          <DialogContent className="sm:max-w-lg bg-gradient-to-b from-slate-900 to-slate-950 border-slate-700">
+          <DialogContent className="max-w-[90vw] sm:max-w-md mx-4 bg-gradient-to-b from-slate-900 to-slate-950 border-slate-700 rounded-xl">
             <DialogHeader>
               <DialogTitle className="text-center text-white">{nameTagData.nameTag.name}</DialogTitle>
             </DialogHeader>
-            <div className="flex flex-col items-center gap-4 py-4">
+            <div className="flex flex-col items-center gap-3 py-3">
               <img 
                 src={nameTagData.nameTag.imageUrl} 
                 alt={nameTagData.nameTag.name}
                 className="max-w-full h-auto"
-                style={{ maxHeight: '300px' }}
+                style={{ maxHeight: '200px' }}
               />
               <div className={`px-4 py-2 rounded-full text-sm font-bold uppercase ${
                 nameTagData.nameTag.rarity === 'legendary' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
