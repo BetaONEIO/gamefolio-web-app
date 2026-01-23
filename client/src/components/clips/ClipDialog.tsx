@@ -539,8 +539,11 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     onPlayingChange={setReelIsPlaying}
                     onMutedChange={setReelIsMuted}
                   />
-                  {/* Top left play/volume controls */}
-                  <div className="absolute top-4 left-4 flex items-center gap-3 z-50">
+                  {/* Top left play/volume controls - hide during transitions */}
+                  <div className={cn(
+                    "absolute top-4 left-4 flex items-center gap-3 z-50 transition-opacity duration-150",
+                    isTransitioning ? "opacity-0" : "opacity-100"
+                  )}>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -579,8 +582,11 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       )}
                     </button>
                   </div>
-                  {/* TikTok-style overlay */}
-                  <div className="absolute inset-0 pointer-events-none">
+                  {/* TikTok-style overlay - hide during transitions to prevent overlap */}
+                  <div className={cn(
+                    "absolute inset-0 pointer-events-none transition-opacity duration-150",
+                    isTransitioning ? "opacity-0" : "opacity-100"
+                  )}>
                     {/* Bottom left - User info with inline Follow button */}
                     <div className="absolute bottom-24 left-4 right-20 z-40 pointer-events-auto">
                       {/* User row with Follow button */}
