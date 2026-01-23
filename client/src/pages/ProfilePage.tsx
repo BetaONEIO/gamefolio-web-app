@@ -1247,7 +1247,7 @@ const ProfilePage = () => {
           {/* Name Tag - Mobile view for own profile (absolute positioned) */}
           {isOwnProfile && nameTagData?.nameTag?.imageUrl && (
             <div 
-              className="absolute right-2 flex flex-col items-end gap-2 cursor-pointer"
+              className="absolute right-2 flex md:hidden flex-col items-end gap-2 cursor-pointer"
               style={{ top: '88px' }}
               onClick={() => setNameTagPreviewOpen(true)}
             >
