@@ -1738,7 +1738,7 @@ const ProfilePage = () => {
               <div 
                 className="absolute flex-col items-center hidden md:flex"
                 style={{
-                  top: '200px',
+                  top: '240px',
                   right: '0px'
                 }}
               >
@@ -1780,15 +1780,15 @@ const ProfilePage = () => {
           </div>
 
           {/* Action buttons - positioned below banner */}
-          <div className="absolute" style={{ top: '120px', right: '-40px' }}>
+          <div className="absolute hidden md:block" style={{ top: '160px', right: '-40px' }}>
             {!isOwnProfile && currentUser && (
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                   <Button 
                     onClick={handleFollowClick}
                     variant={followRequestStatus === 'following' ? "outline" : "default"}
-                    size="sm"
+                    size="default"
                     disabled={followMutation.isPending}
-                    className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                    className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg px-6 py-3 text-base"
                     style={followRequestStatus === 'following' ? {
                       borderColor: 'hsl(var(--primary))',
                       color: 'hsl(var(--primary))',
@@ -1817,13 +1817,13 @@ const ProfilePage = () => {
                     data-following={followRequestStatus === 'following'}
                   >
                     {followMutation.isPending ? (
-                      <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-current animate-spin mr-2"></div>
+                      <div className="w-5 h-5 rounded-full border-2 border-t-transparent border-current animate-spin mr-2"></div>
                     ) : followRequestStatus === 'following' ? (
-                      <UserCheck className="mr-1 h-4 w-4" />
+                      <UserCheck className="mr-2 h-5 w-5" />
                     ) : followRequestStatus === 'requested' ? (
-                      <Clock className="mr-1 h-4 w-4" />
+                      <Clock className="mr-2 h-5 w-5" />
                     ) : (
-                      <UserPlus className="mr-1 h-4 w-4" />
+                      <UserPlus className="mr-2 h-5 w-5" />
                     )}
                     {followRequestStatus === 'following' ? "Following" : 
                      followRequestStatus === 'requested' ? "Pending" : 
@@ -1836,10 +1836,10 @@ const ProfilePage = () => {
                       setMessageDialogOpen(true);
                     }}
                     variant="outline"
-                    size="sm"
-                    className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
+                    size="default"
+                    className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20 px-6 py-3 text-base"
                   >
-                    <MessageSquare className="mr-1 h-4 w-4" /> Message
+                    <MessageSquare className="mr-2 h-5 w-5" /> Message
                   </Button>
 
                   <GamefolioShareDialog 
@@ -1860,10 +1860,10 @@ const ProfilePage = () => {
                     trigger={
                       <Button
                         variant="outline"
-                        size="sm"
-                        className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
+                        size="default"
+                        className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20 px-4 py-3"
                       >
-                        <Share2 className="h-4 w-4" />
+                        <Share2 className="h-5 w-5" />
                       </Button>
                     }
                   />
