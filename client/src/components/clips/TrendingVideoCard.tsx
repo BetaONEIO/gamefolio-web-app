@@ -126,7 +126,7 @@ const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) 
             
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1"><Heart className="h-3 w-3" /> {formatNumber(parseInt(clip._count?.likes?.toString() || '0'))}</span>
-              <span className="flex items-center gap-1"><Flame className="h-3 w-3 text-orange-500" /> {formatNumber(parseInt(clip._count?.reactions?.toString() || '0'))}</span>
+              <span className="flex items-center gap-1"><Flame className="h-3 w-3" /> {formatNumber(parseInt(clip._count?.reactions?.toString() || '0'))}</span>
               <span className="flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {formatNumber(parseInt(clip._count?.comments?.toString() || '0'))}</span>
             </div>
           </div>
