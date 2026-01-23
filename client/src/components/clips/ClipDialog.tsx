@@ -511,16 +511,16 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             "flex flex-col lg:flex-row h-full transition-opacity duration-300",
             isTransitioning ? "opacity-60" : "opacity-100"
           )}>
-            {/* Video player area */}
+            {/* Video player area - fixed size container, video fits inside */}
             <div className={cn(
-              "bg-black flex items-center justify-center transition-transform duration-200 relative",
+              "bg-black flex items-center justify-center transition-transform duration-200 relative overflow-hidden",
               clip.videoType === 'reel' && isMobile
                 ? "w-full h-full"
                 : isMobile
                   ? "w-full flex-[0_0_clamp(280px,50vh,60vh)]"
                   : clip.videoType === 'reel'
                     ? "w-full lg:w-[400px] h-full flex-shrink-0 mx-auto"
-                    : "w-full lg:w-[65%] h-full",
+                    : "w-full lg:w-[65%] h-full flex-shrink-0",
               isTransitioning ? "scale-95" : "scale-100"
             )}>
               {(!clip.ageRestricted || ageRestrictionAccepted) ? (
@@ -806,7 +806,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out" // Show comments as slide-up overlay on mobile for reels
                   : isMobile && clip.videoType !== 'reel'
                     ? "w-full flex-1 min-h-0 overflow-y-auto" // Take remaining space on mobile and allow proper scrolling
-                    : "w-full lg:w-[35%] h-full overflow-y-auto" // Desktop layout
+                    : "w-full lg:flex-1 lg:min-w-0 h-full overflow-y-auto" // Desktop layout - take remaining space
             )}>
               {/* Header with username (mobile comments header or regular header) */}
               <div className={cn(
