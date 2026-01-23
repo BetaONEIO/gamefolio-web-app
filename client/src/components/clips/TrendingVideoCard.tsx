@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import { formatDuration } from "@/lib/constants";
-import { Eye, Play } from "lucide-react";
+import { Eye, Play, Heart, Flame, MessageSquare } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
@@ -125,9 +125,9 @@ const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) 
             </Link>
             
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span>♥ {formatNumber(parseInt(clip._count?.likes?.toString() || '0'))}</span>
-              <span>🔥 {formatNumber(parseInt(clip._count?.reactions?.toString() || '0'))}</span>
-              <span>💬 {formatNumber(parseInt(clip._count?.comments?.toString() || '0'))}</span>
+              <span className="flex items-center gap-1"><Heart className="h-3 w-3" /> {formatNumber(parseInt(clip._count?.likes?.toString() || '0'))}</span>
+              <span className="flex items-center gap-1"><Flame className="h-3 w-3 text-orange-500" /> {formatNumber(parseInt(clip._count?.reactions?.toString() || '0'))}</span>
+              <span className="flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {formatNumber(parseInt(clip._count?.comments?.toString() || '0'))}</span>
             </div>
           </div>
           
