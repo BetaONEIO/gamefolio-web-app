@@ -1735,8 +1735,8 @@ const ProfilePage = () => {
               <div 
                 className="absolute flex-col items-center hidden md:flex"
                 style={{
-                  top: '100px',
-                  right: '70px'
+                  top: '20px',
+                  right: '80px'
                 }}
               >
                 {/* Glass rectangular background layered underneath */}
@@ -1778,7 +1778,7 @@ const ProfilePage = () => {
           </div>
 
           {/* Action buttons - positioned to align with name tag */}
-          <div className="absolute right-4 md:right-8" style={{ top: '140px' }}>
+          <div className="absolute right-0 md:right-0" style={{ top: '20px' }}>
             {!isOwnProfile && currentUser && (
               <div className="flex gap-2">
                   <Button 
