@@ -257,7 +257,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                 )}
               </div>
 
-              {/* Video overlay content */}
+              {/* Video overlay content - Only show for current reel to avoid position issues during scroll */}
+              {index === currentIndex && (
               <div className="absolute inset-0 pointer-events-none z-10">
                 {/* Left side - User info and title (TikTok-style) */}
                 <div className="absolute bottom-20 md:bottom-12 left-3 md:left-4 right-16 md:right-20 pointer-events-auto z-10">
@@ -329,11 +330,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                   </div>
                 </div>
 
-                {/* Right side - Engagement buttons (TikTok-style) - Always show for consistent layout */}
-                <div className={cn(
-                  "absolute bottom-20 md:bottom-12 right-2 md:right-3 flex flex-col items-center gap-4",
-                  index === currentIndex ? "pointer-events-auto" : "pointer-events-none opacity-70"
-                )}>
+                {/* Right side - Engagement buttons (TikTok-style) */}
+                <div className="absolute bottom-20 md:bottom-12 right-2 md:right-3 flex flex-col items-center gap-4 pointer-events-auto">
                     {/* Fire/Reactions */}
                     <div className="flex flex-col items-center">
                       <FireButton
@@ -405,6 +403,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                     />
                   </div>
               </div>
+              )}
             </div>
           </div>
         ))}
