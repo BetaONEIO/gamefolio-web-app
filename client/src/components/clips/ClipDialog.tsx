@@ -904,10 +904,10 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                 isMobile ? "px-3 py-2" : "px-4 py-3" // Better mobile padding
               )}>
                 {/* Title and description */}
-                <div>
+                <div className="flex-shrink-0">
                   <h1 className={cn("font-semibold", isMobile ? "text-lg" : "text-xl")}>{clip.title}</h1>
                   {clip.description && (
-                    <p className={cn("text-foreground mt-1 leading-relaxed break-words", isMobile ? "text-sm" : "text-base")}>{clip.description}</p>
+                    <p className={cn("text-foreground mt-1 leading-relaxed break-words max-h-24 overflow-y-auto", isMobile ? "text-sm" : "text-base")}>{clip.description}</p>
                   )}
 
                   {/* Game name above views/time */}
