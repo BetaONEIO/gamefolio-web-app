@@ -1738,7 +1738,7 @@ const ProfilePage = () => {
               <div 
                 className="absolute flex-col items-center hidden md:flex"
                 style={{
-                  top: '50px',
+                  top: '160px',
                   right: '0px'
                 }}
               >
@@ -1746,8 +1746,8 @@ const ProfilePage = () => {
                 <div 
                   className="relative rounded-lg"
                   style={{
-                    width: '390px',
-                    height: '91px',
+                    width: '468px',
+                    height: '109px',
                     background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
                     border: '1px solid rgba(148, 163, 184, 0.2)',
                     boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
@@ -1759,7 +1759,7 @@ const ProfilePage = () => {
                     title={nameTagData.nameTag.description || nameTagData.nameTag.name}
                     className="absolute z-10 cursor-pointer hover:scale-105 transition-transform"
                     style={{
-                      width: '437px',
+                      width: '524px',
                       height: 'auto',
                       top: '50%',
                       left: '50%',
