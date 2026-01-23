@@ -1,14 +1,18 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 import badgeIcon56 from "@assets/yellow_badge_56x56_1759744373125.png";
 import badgeIcon40 from "@assets/yellow_badge_40x40_1759744552084.png";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface LevelBadgeWithProgressProps {
   userId: number;
   level: number;
   size?: "small" | "large";
   className?: string;
+  username?: string;
 }
 
 interface LevelProgress {
@@ -25,9 +29,14 @@ export function LevelBadgeWithProgress({
   userId, 
   level, 
   size = "small",
-  className = ""
+  className = "",
+  username
 }: LevelBadgeWithProgressProps) {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  const [showLevelDialog, setShowLevelDialog] = useState(false);
+  const isOwnProfile = user?.id === userId;
+  
   const { data: progress } = useQuery<LevelProgress>({
     queryKey: ["/api/user", userId, "level-progress"],
     queryFn: async () => {
@@ -52,13 +61,14 @@ export function LevelBadgeWithProgress({
     : `Level ${level}`;
 
   return (
+    <>
     <TooltipProvider delayDuration={300}>
       <Tooltip>
         <TooltipTrigger asChild>
           <div 
             className={`relative ${className} cursor-pointer`} 
             data-testid="level-badge-with-progress"
-            onClick={() => setLocation("/level-tracker")}
+            onClick={() => isOwnProfile ? setLocation("/level-tracker") : setShowLevelDialog(true)}
           >
             {/* SVG Progress Ring */}
             <svg
@@ -136,5 +146,62 @@ export function LevelBadgeWithProgress({
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
+
+    {/* Level info dialog for other users */}
+    <Dialog open={showLevelDialog} onOpenChange={setShowLevelDialog}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {username ? `${username}'s Level` : 'User Level'}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col items-center py-6">
+          <div className="relative mb-4">
+            <svg
+              className="-rotate-90"
+              width={100}
+              height={100}
+            >
+              <circle
+                cx={50}
+                cy={50}
+                r={42}
+                fill="none"
+                stroke="rgba(255, 255, 255, 0.1)"
+                strokeWidth={6}
+              />
+              <circle
+                cx={50}
+                cy={50}
+                r={42}
+                fill="none"
+                stroke="#EAB308"
+                strokeWidth={6}
+                strokeLinecap="round"
+                strokeDasharray={2 * Math.PI * 42}
+                strokeDashoffset={(2 * Math.PI * 42) - (progressPercent / 100) * (2 * Math.PI * 42)}
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img 
+                src={badgeIcon56} 
+                alt="Level Badge"
+                className="w-14 h-14 object-contain"
+              />
+              <span className="absolute font-bold text-black text-xl">
+                {level || 1}
+              </span>
+            </div>
+          </div>
+          <p className="text-2xl font-bold mb-1">Level {level || 1}</p>
+          {progress && (
+            <p className="text-muted-foreground">
+              {Math.round(progress.currentPoints).toLocaleString()} XP
+            </p>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

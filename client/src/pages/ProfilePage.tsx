@@ -1238,6 +1238,7 @@ const ProfilePage = () => {
                   userId={profile.id}
                   level={profile.level || 1}
                   size="small"
+                  username={profile.username}
                 />
               </div>
             </div>
@@ -1560,6 +1561,7 @@ const ProfilePage = () => {
                   userId={profile.id}
                   level={profile.level || 1}
                   size="large"
+                  username={profile.username}
                 />
               </div>
             </div>
