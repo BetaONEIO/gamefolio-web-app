@@ -180,9 +180,9 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Comments list - scrollable without visible scrollbar */}
-      <div className="flex-1 overflow-y-auto space-y-3 min-h-0 max-h-[300px] lg:max-h-[400px] scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+    <div className="flex flex-col">
+      {/* Comments list */}
+      <div className="space-y-3">
         {comments && comments.length > 0 ? (
           comments.map((comment) => (
             <div 
