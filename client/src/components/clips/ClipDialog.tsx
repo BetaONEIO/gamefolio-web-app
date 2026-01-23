@@ -771,9 +771,10 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   videoUrl={clip.videoUrl} 
                   thumbnailUrl={clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined} 
                   autoPlay={true}
-                  className="w-full h-full"
+                  className="w-full h-full max-w-full max-h-full"
                   objectFit="contain"
                   clipId={clip.id}
+                  disableAspectRatio={true}
                 />
               )
               ) : (
