@@ -513,13 +513,14 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           )}>
             {/* Video player area - fixed size container, video fits inside */}
             <div className={cn(
-              "bg-black flex items-center justify-center transition-transform duration-200 relative overflow-hidden",
+              "bg-black flex items-center justify-center transition-transform duration-200 relative",
+              clip.videoType === 'reel' ? "" : "overflow-hidden",
               clip.videoType === 'reel' && isMobile
                 ? "w-full h-full"
                 : isMobile
                   ? "w-full flex-[0_0_clamp(280px,50vh,60vh)]"
                   : clip.videoType === 'reel'
-                    ? "w-full lg:w-[400px] h-full flex-shrink-0 mx-auto"
+                    ? "w-full lg:w-[450px] h-full flex-shrink-0 mx-auto"
                     : "w-full lg:w-[65%] h-full flex-shrink-0",
               isTransitioning ? "scale-95" : "scale-100"
             )}>
@@ -732,15 +733,15 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   </div>
                 </div>
               ) : clip.videoType === 'reel' ? (
-                // Desktop reels: maintain 9:16 aspect ratio
-                <div className="h-full flex items-center justify-center bg-black relative">
-                  <div className="h-full max-h-full aspect-[9/16] bg-black relative flex items-center justify-center">
+                // Desktop reels: maintain 9:16 aspect ratio with room for controls
+                <div className="h-full w-full flex items-center justify-center bg-black relative pb-4">
+                  <div className="h-full w-full max-w-[400px] bg-black relative flex items-center justify-center">
                     {!isFullscreen && (
                       <VideoPlayer 
                         videoUrl={clip.videoUrl} 
                         thumbnailUrl={clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined} 
                         autoPlay={true}
-                        className="max-w-full max-h-full"
+                        className="w-full h-full"
                         objectFit="contain"
                         clipId={clip.id}
                         disableAspectRatio={true}
