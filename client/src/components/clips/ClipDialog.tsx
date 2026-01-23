@@ -733,9 +733,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   </div>
                 </div>
               ) : clip.videoType === 'reel' ? (
-                // Desktop reels: maintain 9:16 aspect ratio with room for controls
-                <div className="h-full w-full flex items-center justify-center bg-black relative pb-4">
-                  <div className="h-full w-full max-w-[400px] bg-black relative flex items-center justify-center">
+                // Desktop reels: maintain 9:16 aspect ratio with contained video
+                <div className="h-full w-full flex items-center justify-center bg-black relative">
+                  <div className="relative bg-black flex items-center justify-center" style={{ height: 'calc(100% - 16px)', aspectRatio: '9/16', maxWidth: '100%' }}>
                     {!isFullscreen && (
                       <VideoPlayer 
                         videoUrl={clip.videoUrl} 
@@ -744,7 +744,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         className="w-full h-full"
                         objectFit="contain"
                         clipId={clip.id}
-                        disableAspectRatio={true}
                       />
                     )}
                     {isFullscreen && (
