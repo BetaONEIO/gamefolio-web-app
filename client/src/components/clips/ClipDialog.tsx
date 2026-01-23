@@ -733,43 +733,41 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   </div>
                 </div>
               ) : clip.videoType === 'reel' ? (
-                // Desktop reels: maintain 9:16 aspect ratio with contained video
+                // Desktop reels: full height container with video player
                 <div className="h-full w-full flex items-center justify-center bg-black relative">
-                  <div className="relative bg-black flex items-center justify-center" style={{ height: 'calc(100% - 16px)', aspectRatio: '9/16', maxWidth: '100%' }}>
-                    {!isFullscreen && (
-                      <VideoPlayer 
-                        videoUrl={clip.videoUrl} 
-                        thumbnailUrl={clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined} 
-                        autoPlay={true}
-                        className="w-full h-full"
-                        objectFit="contain"
-                        clipId={clip.id}
+                  {!isFullscreen && (
+                    <VideoPlayer 
+                      videoUrl={clip.videoUrl} 
+                      thumbnailUrl={clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined} 
+                      autoPlay={true}
+                      className="h-full max-h-full"
+                      objectFit="contain"
+                      clipId={clip.id}
+                    />
+                  )}
+                  {isFullscreen && (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <img 
+                        src={clip.thumbnailUrl || "/assets/video-placeholder.svg"} 
+                        alt={clip.title}
+                        className="max-w-full max-h-full object-contain opacity-50"
                       />
-                    )}
-                    {isFullscreen && (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <img 
-                          src={clip.thumbnailUrl || "/assets/video-placeholder.svg"} 
-                          alt={clip.title}
-                          className="max-w-full max-h-full object-contain opacity-50"
-                        />
-                      </div>
-                    )}
-                    {/* Reel badge indicator */}
-                    <div className="absolute top-4 right-4 z-50">
-                      <span className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-bold">
-                        Reel
-                      </span>
                     </div>
-                    {/* Fullscreen button */}
-                    <button
-                      onClick={() => setIsFullscreen(true)}
-                      className="absolute bottom-4 right-4 z-50 p-2 rounded-full bg-black/60 hover:bg-black/80 transition-colors"
-                      title="View fullscreen"
-                    >
-                      <Maximize2 className="h-5 w-5 text-white" />
-                    </button>
+                  )}
+                  {/* Reel badge indicator */}
+                  <div className="absolute top-4 right-4 z-50">
+                    <span className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-bold">
+                      Reel
+                    </span>
                   </div>
+                  {/* Fullscreen button */}
+                  <button
+                    onClick={() => setIsFullscreen(true)}
+                    className="absolute bottom-16 right-4 z-50 p-2 rounded-full bg-black/60 hover:bg-black/80 transition-colors"
+                    title="View fullscreen"
+                  >
+                    <Maximize2 className="h-5 w-5 text-white" />
+                  </button>
                 </div>
               ) : (
                 // Clips: fixed container with video contained inside
