@@ -910,10 +910,16 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               {/* Comments and content section - scrollable area */}
               <div 
                 className={cn(
-                  "flex-1 overflow-y-auto space-y-3 min-h-0 scrollbar-hide",
+                  "overflow-y-auto space-y-3 scrollbar-hide",
                   isMobile ? "px-3 py-2" : "px-4 py-3" // Better mobile padding
                 )}
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                style={{ 
+                  scrollbarWidth: 'none', 
+                  msOverflowStyle: 'none',
+                  flex: '1 1 0',
+                  minHeight: 0,
+                  maxHeight: 'calc(100% - 80px)' // Account for header height
+                }}
                 data-scroll-container
               >
                 {/* Title and description */}
