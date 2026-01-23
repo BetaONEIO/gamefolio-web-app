@@ -806,7 +806,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
 
             {/* Right side - Info and comments */}
             <div className={cn(
-              "flex flex-col",
+              "flex flex-col overflow-hidden",
               clip.videoType === 'reel' && isMobile && !showComments
                 ? "hidden" // Hide sidebar on mobile for reels when comments not shown
                 : clip.videoType === 'reel' && isMobile && showComments
@@ -1020,7 +1020,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                 </div>
 
                 {/* Comments section */}
-                <div className="pt-2">
+                <div className="pt-2 pb-4">
                   <CommentSection 
                     clipId={clip.id}
                     currentUserId={user?.id || null} 
