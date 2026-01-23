@@ -556,12 +556,12 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           }
                         }
                       }}
-                      className="w-11 h-11 rounded-full bg-black/70 backdrop-blur-md hover:bg-black/90 transition-colors flex items-center justify-center shadow-lg border border-white/20"
+                      className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
                     >
                       {reelIsPlaying ? (
-                        <Pause className="h-6 w-6 text-white" />
+                        <Pause className="h-5 w-5 text-white" />
                       ) : (
-                        <Play className="h-6 w-6 text-white ml-0.5" />
+                        <Play className="h-5 w-5 text-white ml-0.5" />
                       )}
                     </button>
                     <button
@@ -573,12 +573,12 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           setReelIsMuted(!reelIsMuted);
                         }
                       }}
-                      className="w-11 h-11 rounded-full bg-black/70 backdrop-blur-md hover:bg-black/90 transition-colors flex items-center justify-center shadow-lg border border-white/20"
+                      className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
                     >
                       {reelIsMuted ? (
-                        <VolumeX className="h-6 w-6 text-white" />
+                        <VolumeX className="h-5 w-5 text-white" />
                       ) : (
-                        <Volume2 className="h-6 w-6 text-white" />
+                        <Volume2 className="h-5 w-5 text-white" />
                       )}
                     </button>
                   </div>
@@ -744,6 +744,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         objectFit="contain"
                         clipId={clip.id}
                         disableAspectRatio={true}
+                        hideControls={true}
+                        onPlayingChange={setReelIsPlaying}
+                        onMutedChange={setReelIsMuted}
                       />
                     )}
                     {isFullscreen && (
@@ -753,6 +756,48 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           alt={clip.title}
                           className="max-w-full max-h-full object-contain opacity-50"
                         />
+                      </div>
+                    )}
+                    {/* Top left play/volume controls for desktop reels */}
+                    {!isFullscreen && (
+                      <div className="absolute top-4 left-4 flex items-center gap-3 z-50">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const video = document.querySelector('video');
+                            if (video) {
+                              if (reelIsPlaying) {
+                                video.pause();
+                              } else {
+                                video.play();
+                              }
+                            }
+                          }}
+                          className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
+                        >
+                          {reelIsPlaying ? (
+                            <Pause className="h-5 w-5 text-white" />
+                          ) : (
+                            <Play className="h-5 w-5 text-white ml-0.5" />
+                          )}
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const video = document.querySelector('video');
+                            if (video) {
+                              video.muted = !video.muted;
+                              setReelIsMuted(!reelIsMuted);
+                            }
+                          }}
+                          className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
+                        >
+                          {reelIsMuted ? (
+                            <VolumeX className="h-5 w-5 text-white" />
+                          ) : (
+                            <Volume2 className="h-5 w-5 text-white" />
+                          )}
+                        </button>
                       </div>
                     )}
                     {/* Reel badge indicator */}
