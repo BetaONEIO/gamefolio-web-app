@@ -1738,8 +1738,8 @@ const ProfilePage = () => {
               <div 
                 className="absolute flex-col items-center hidden md:flex"
                 style={{
-                  top: '240px',
-                  right: '0px'
+                  top: '225px',
+                  right: '-40px'
                 }}
               >
                 {/* Glass rectangular background as main container */}
@@ -1780,7 +1780,7 @@ const ProfilePage = () => {
           </div>
 
           {/* Action buttons - positioned below banner */}
-          <div className="absolute hidden md:block" style={{ top: '160px', right: '-40px' }}>
+          <div className="absolute hidden md:block" style={{ top: '145px', right: '-40px' }}>
             {!isOwnProfile && currentUser && (
               <div className="flex gap-3">
                   <Button 
