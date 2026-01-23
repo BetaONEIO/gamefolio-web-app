@@ -9,6 +9,8 @@ import { FireButton } from "@/components/engagement/FireButton";
 import CommentSection from "@/components/clips/CommentSection";
 import ShareMenu from "@/components/clips/ShareMenu";
 import { useAuth } from "@/hooks/use-auth";
+import { useJoinDialog } from "@/hooks/use-join-dialog";
+import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { cn } from "@/lib/utils";
 import { ReportDialog } from "@/components/content/ReportDialog";
 
@@ -66,6 +68,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   }, []);
   const containerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+  const { isOpen: isJoinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
 
   const currentItem = content[currentIndex];
 
@@ -317,7 +320,13 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowComments(true)}
+                onClick={() => {
+                  if (!user) {
+                    openDialog('comment');
+                  } else {
+                    setShowComments(true);
+                  }
+                }}
                 className="text-white hover:bg-white/20 flex flex-col items-center gap-1"
                 data-testid="button-comments"
               >
@@ -413,6 +422,13 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
           <ShareMenu clipId={currentItem.id} clipTitle={currentItem.title} />
         </div>
       )}
+
+      {/* Join Dialog for unauthenticated users */}
+      <JoinGamefolioDialog
+        isOpen={isJoinDialogOpen}
+        onClose={closeDialog}
+        actionType={actionType}
+      />
     </div>
   );
 }

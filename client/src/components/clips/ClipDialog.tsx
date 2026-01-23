@@ -695,7 +695,13 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       
                       <div className="flex flex-col items-center">
                         <button 
-                          onClick={() => setShowComments(true)}
+                          onClick={() => {
+                            if (!user) {
+                              openDialog('comment');
+                            } else {
+                              setShowComments(true);
+                            }
+                          }}
                           className="w-11 h-11 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors flex items-center justify-center"
                           data-testid="button-comments"
                         >

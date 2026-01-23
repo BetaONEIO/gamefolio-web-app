@@ -10,6 +10,8 @@ import { FireButton } from "@/components/engagement/FireButton";
 import CommentSection from "@/components/clips/CommentSection";
 import ShareMenu from "@/components/clips/ShareMenu";
 import { useAuth } from "@/hooks/use-auth";
+import { useJoinDialog } from "@/hooks/use-join-dialog";
+import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { cn } from "@/lib/utils";
 import { ReportDialog } from "@/components/content/ReportDialog";
 import { AgeRestrictionDialog } from "@/components/content/AgeRestrictionDialog";
@@ -35,6 +37,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   const containerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isOpen: isJoinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
   
   const { showAd, isPro, onReelChange, onAdFinished, reset: resetAdTracker } = useReelAdTracker();
 
@@ -359,7 +362,13 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                     <div className="flex flex-col items-center">
                       <button
                         className="w-11 h-11 rounded-full bg-transparent flex items-center justify-center text-white hover:bg-white/10 transition-colors"
-                        onClick={() => setShowComments(true)}
+                        onClick={() => {
+                          if (!user) {
+                            openDialog('comment');
+                          } else {
+                            setShowComments(true);
+                          }
+                        }}
                       >
                         <MessageCircle className="h-7 w-7" />
                       </button>
@@ -472,6 +481,13 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           contentType="reel"
         />
       )}
+
+      {/* Join Dialog for unauthenticated users */}
+      <JoinGamefolioDialog
+        isOpen={isJoinDialogOpen}
+        onClose={closeDialog}
+        actionType={actionType}
+      />
     </div>
   );
 }
