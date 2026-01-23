@@ -44,7 +44,7 @@ const VideoPlayer = ({
   const [duration, setDuration] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasSetInitialTime = useRef(false);
   const hasTrackedView = useRef(false);
   
@@ -55,6 +55,21 @@ const VideoPlayer = ({
   useEffect(() => {
     hasTrackedView.current = false;
   }, [clipId]);
+  
+  // Cleanup: pause video and clear timers when component unmounts
+  useEffect(() => {
+    const video = videoRef.current;
+    return () => {
+      if (video) {
+        video.pause();
+        video.src = '';
+        video.load();
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
   
   // Function to track video view
   const trackView = async () => {
