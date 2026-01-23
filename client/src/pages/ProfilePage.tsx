@@ -2885,7 +2885,7 @@ const ProfilePage = () => {
                 src={nameTagData.nameTag.imageUrl} 
                 alt={nameTagData.nameTag.name}
                 className="h-auto"
-                style={{ width: '280px', maxWidth: '100%' }}
+                style={{ width: '320px', maxWidth: '100%' }}
               />
               <div className={`px-4 py-2 rounded-full text-sm font-bold uppercase ${
                 nameTagData.nameTag.rarity === 'legendary' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
