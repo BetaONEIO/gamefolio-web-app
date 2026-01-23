@@ -955,6 +955,25 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           size="lg"
                           onUnauthenticatedAction={() => openDialog('general')}
                         />
+
+                        <button
+                          onClick={() => {
+                            if (!user) {
+                              openDialog('comment');
+                            } else {
+                              // Scroll to comment section
+                              const commentSection = document.querySelector('[data-comment-section]');
+                              if (commentSection) {
+                                commentSection.scrollIntoView({ behavior: 'smooth' });
+                              }
+                            }
+                          }}
+                          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                          data-testid="button-comments-action"
+                        >
+                          <MessageSquare className="h-6 w-6" />
+                          <span className="text-sm">{comments?.length || 0}</span>
+                        </button>
                       </div>
 
                       <div className="flex items-center gap-2">
