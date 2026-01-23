@@ -973,7 +973,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                             className="p-1.5 h-auto transition-colors hover:bg-primary/10 rounded-md text-gray-500 hover:text-primary"
                             data-testid="button-comments-action"
                           >
-                            <MessageSquare size={24} />
+                            <MessageSquare size={28} />
                           </button>
                           <span className="font-medium min-w-[1rem] text-center text-base text-muted-foreground">
                             {comments?.length || 0}

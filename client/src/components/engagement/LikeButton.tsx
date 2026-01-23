@@ -136,7 +136,7 @@ export function LikeButton({
   const iconSizes = {
     sm: 16,
     md: 20,
-    lg: 24
+    lg: 28
   };
 
   // Define text sizes for the count

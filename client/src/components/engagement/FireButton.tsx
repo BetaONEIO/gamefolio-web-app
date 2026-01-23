@@ -148,7 +148,7 @@ export function FireButton({
   const iconSizes = {
     sm: 16,
     md: 20,
-    lg: 24
+    lg: 28
   };
 
   const countTextSizes = {
@@ -218,7 +218,7 @@ export function FireButton({
         >
           <Flame 
             className={cn(
-              size === 'sm' ? 'h-4 w-4' : size === 'lg' ? 'h-6 w-6' : 'h-5 w-5',
+              size === 'sm' ? 'h-4 w-4' : size === 'lg' ? 'h-7 w-7' : 'h-5 w-5',
               "transition-all duration-200",
               fired ? "fill-current scale-110" : "hover:scale-105"
             )} 
