@@ -956,25 +956,29 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           onUnauthenticatedAction={() => openDialog('general')}
                         />
 
-                        <button
-                          onClick={() => {
-                            if (!user) {
-                              openDialog('comment');
-                            } else {
-                              // Focus the comment input field
-                              const commentInput = document.querySelector('[data-testid="input-comment"]') as HTMLTextAreaElement;
-                              if (commentInput) {
-                                commentInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                setTimeout(() => commentInput.focus(), 300);
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              if (!user) {
+                                openDialog('comment');
+                              } else {
+                                // Focus the comment input field
+                                const commentInput = document.querySelector('[data-testid="input-comment"]') as HTMLTextAreaElement;
+                                if (commentInput) {
+                                  commentInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                  setTimeout(() => commentInput.focus(), 300);
+                                }
                               }
-                            }
-                          }}
-                          className="flex items-center gap-1 hover:text-primary transition-colors"
-                          data-testid="button-comments-action"
-                        >
-                          <MessageSquare className="h-5 w-5 md:h-6 md:w-6" />
-                          <span className="text-base">{comments?.length || 0}</span>
-                        </button>
+                            }}
+                            className="p-1.5 h-auto transition-colors hover:bg-primary/10 rounded-md text-gray-500 hover:text-primary"
+                            data-testid="button-comments-action"
+                          >
+                            <MessageSquare size={24} />
+                          </button>
+                          <span className="font-medium min-w-[1rem] text-center text-base text-muted-foreground">
+                            {comments?.length || 0}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="flex items-center gap-2">
