@@ -1746,7 +1746,7 @@ const ProfilePage = () => {
                 <div 
                   className="relative rounded-lg"
                   style={{
-                    width: '468px',
+                    width: '351px',
                     height: '109px',
                     background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
                     border: '1px solid rgba(148, 163, 184, 0.2)',
@@ -1772,7 +1772,7 @@ const ProfilePage = () => {
                   />
                 </div>
                 <span 
-                  className="text-xs text-white/40 mt-1 uppercase tracking-widest cursor-pointer hover:text-white/60 transition-colors"
+                  className="text-xs text-white/40 mt-3 uppercase tracking-widest cursor-pointer hover:text-white/60 transition-colors"
                   onClick={() => setNameTagPreviewOpen(true)}
                 >Nametag</span>
               </div>
