@@ -180,9 +180,9 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
   }
 
   return (
-    <div>
-      {/* Comments list */}
-      <div className="space-y-3">
+    <div className="flex flex-col h-full">
+      {/* Comments list - scrollable */}
+      <div className="flex-1 overflow-y-auto space-y-3 min-h-0 max-h-[300px] lg:max-h-[400px]">
         {comments && comments.length > 0 ? (
           comments.map((comment) => (
             <div 
@@ -273,7 +273,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
       {user ? (
         <form 
           onSubmit={handleSubmitComment} 
-          className="mt-4 space-y-3"
+          className="mt-4 space-y-3 flex-shrink-0"
         >
           <div className="flex items-start gap-3">
             <Avatar className="h-8 w-8 hidden sm:flex flex-shrink-0">
