@@ -800,18 +800,18 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
 
             {/* Right side - Info and comments */}
             <div className={cn(
-              "flex flex-col overflow-hidden",
+              "flex flex-col",
               clip.videoType === 'reel' && isMobile && !showComments
                 ? "hidden" // Hide sidebar on mobile for reels when comments not shown
                 : clip.videoType === 'reel' && isMobile && showComments
                   ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out" // Show comments as slide-up overlay on mobile for reels
                   : isMobile && clip.videoType !== 'reel'
-                    ? "w-full flex-1 min-h-0 overflow-y-auto" // Take remaining space on mobile and allow proper scrolling
-                    : "w-full lg:flex-1 lg:min-w-0 h-full overflow-y-auto" // Desktop layout - take remaining space
+                    ? "w-full flex-1 min-h-0" // Take remaining space on mobile
+                    : "w-full lg:flex-1 lg:min-w-0 h-full" // Desktop layout - take remaining space
             )}>
-              {/* Header with username (mobile comments header or regular header) */}
+              {/* Header with username (mobile comments header or regular header) - FIXED */}
               <div className={cn(
-                "border-b border-border flex items-center justify-between",
+                "border-b border-border flex items-center justify-between flex-shrink-0",
                 isMobile ? "p-3" : "p-4", // Better mobile padding
                 clip.videoType === 'reel' && isMobile && showComments 
                   ? "relative" // Add relative positioning for mobile comments header
@@ -898,9 +898,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                 </div>
               </div>
 
-              {/* Comments and content section - scrollable */}
+              {/* Comments and content section - scrollable area */}
               <div className={cn(
-                "flex-1 overflow-y-auto space-y-3 min-h-0",
+                "flex-1 overflow-y-auto space-y-3 min-h-0 max-h-full",
                 isMobile ? "px-3 py-2" : "px-4 py-3" // Better mobile padding
               )}>
                 {/* Title and description */}
