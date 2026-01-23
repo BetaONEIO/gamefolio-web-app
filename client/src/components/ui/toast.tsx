@@ -31,9 +31,9 @@ const toastVariants = cva(
         destructive:
           "destructive group border-destructive bg-destructive text-destructive-foreground",
         gamefolioError: 
-          "bg-gradient-to-r from-background/95 to-background border-destructive/30 text-foreground rounded-xl shadow-md",
+          "bg-card border-destructive/40 text-foreground rounded-xl shadow-lg shadow-destructive/10 backdrop-blur-sm",
         gamefolioSuccess:
-          "bg-gradient-to-r from-primary/95 to-primary/85 border-primary/50 text-primary-foreground rounded-xl shadow-xl shadow-primary/30 backdrop-blur-sm min-w-[300px]",
+          "bg-card border-primary/40 text-foreground rounded-xl shadow-lg shadow-primary/20 backdrop-blur-sm min-w-[300px]",
       },
     },
     defaultVariants: {
