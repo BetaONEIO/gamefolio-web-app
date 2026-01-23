@@ -1290,18 +1290,15 @@ const ProfilePage = () => {
               {/* Name Tag - Mobile view for other users (below follow buttons) */}
               {nameTagData?.nameTag?.imageUrl && (
                 <div 
-                  className="flex flex-col items-center mt-1 cursor-pointer"
+                  className="flex flex-col items-center mt-2 cursor-pointer"
                   onClick={() => setNameTagPreviewOpen(true)}
                 >
                   <div className="relative flex flex-col items-center">
                     <div 
-                      className="absolute rounded-md"
+                      className="rounded-md"
                       style={{
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        width: '140px',
-                        height: '32px',
+                        width: '120px',
+                        height: '28px',
                         background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
                         border: '1px solid rgba(148, 163, 184, 0.2)',
                         boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
@@ -1311,17 +1308,20 @@ const ProfilePage = () => {
                       src={nameTagData.nameTag.imageUrl} 
                       alt={nameTagData.nameTag.name}
                       title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                      className="relative z-10 hover:scale-105 transition-transform"
+                      className="absolute z-10 hover:scale-105 transition-transform"
                       style={{
-                        width: '160px',
-                        height: 'auto'
+                        width: '140px',
+                        height: 'auto',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)'
                       }}
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';
                       }}
                     />
-                    <span className="relative z-10 text-[10px] text-white/40 mt-1 uppercase tracking-widest hover:text-white/60 transition-colors">Nametag</span>
                   </div>
+                  <span className="text-[10px] text-white/40 mt-1 uppercase tracking-widest hover:text-white/60 transition-colors">Nametag</span>
                 </div>
               )}
             </div>
@@ -1387,11 +1387,8 @@ const ProfilePage = () => {
               >
                 <div className="relative flex flex-col items-center">
                   <div 
-                    className="absolute rounded-md"
+                    className="rounded-md"
                     style={{
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)',
                       width: '100px',
                       height: '24px',
                       background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
@@ -1403,17 +1400,20 @@ const ProfilePage = () => {
                     src={nameTagData.nameTag.imageUrl} 
                     alt={nameTagData.nameTag.name}
                     title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                    className="relative z-10 hover:scale-105 transition-transform"
+                    className="absolute z-10 hover:scale-105 transition-transform"
                     style={{
                       width: '120px',
-                      height: 'auto'
+                      height: 'auto',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)'
                     }}
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = 'none';
                     }}
                   />
-                  <span className="relative z-10 text-[10px] text-white/40 mt-1 uppercase tracking-widest hover:text-white/60 transition-colors">Nametag</span>
                 </div>
+                <span className="text-[10px] text-white/40 mt-1 uppercase tracking-widest hover:text-white/60 transition-colors">Nametag</span>
               </div>
             )}
           </div>
