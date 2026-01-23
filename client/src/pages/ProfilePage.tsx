@@ -1320,7 +1320,7 @@ const ProfilePage = () => {
                         (e.target as HTMLImageElement).style.display = 'none';
                       }}
                     />
-                    <span className="relative z-10 text-[10px] text-white/40 -mt-3 uppercase tracking-widest hover:text-white/60 transition-colors">Nametag</span>
+                    <span className="relative z-10 text-[10px] text-white/40 mt-1 uppercase tracking-widest hover:text-white/60 transition-colors">Nametag</span>
                   </div>
                 </div>
               )}
@@ -1361,7 +1361,7 @@ const ProfilePage = () => {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
-                <span className="relative z-10 text-[10px] text-white/40 -mt-3 uppercase tracking-widest hover:text-white/60 transition-colors">Nametag</span>
+                <span className="relative z-10 text-[10px] text-white/40 mt-1 uppercase tracking-widest hover:text-white/60 transition-colors">Nametag</span>
               </div>
             </div>
           )}
