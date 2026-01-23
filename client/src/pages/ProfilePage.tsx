@@ -2872,7 +2872,7 @@ const ProfilePage = () => {
       {/* Name Tag Preview Dialog */}
       {nameTagData?.nameTag && (
         <Dialog open={nameTagPreviewOpen} onOpenChange={setNameTagPreviewOpen}>
-          <DialogContent className="max-w-[90vw] sm:max-w-md mx-4 bg-gradient-to-b from-slate-900 to-slate-950 border-slate-700 rounded-xl">
+          <DialogContent className="max-w-[85vw] sm:max-w-md bg-gradient-to-b from-slate-900 to-slate-950 border-slate-700 rounded-xl left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
             <DialogHeader>
               <DialogTitle className="text-center text-white">{nameTagData.nameTag.name}</DialogTitle>
             </DialogHeader>
