@@ -1217,7 +1217,7 @@ const ProfilePage = () => {
                 </div>
               )}
               <div 
-                className="relative z-10 cursor-pointer hover:opacity-90 transition-opacity h-full w-full"
+                className="relative z-10 cursor-pointer h-full w-full"
                 onClick={() => profile.avatarUrl && openLightbox(profile.avatarUrl, profile.displayName, profile.username)}
               >
                 <CustomAvatar 
@@ -1548,7 +1548,7 @@ const ProfilePage = () => {
                 </div>
               )}
               <div 
-                className="relative z-10 cursor-pointer hover:opacity-90 transition-opacity"
+                className="relative z-10 cursor-pointer"
                 onClick={() => profile.avatarUrl && openLightbox(profile.avatarUrl, profile.displayName, profile.username)}
               >
                 <CustomAvatar 
