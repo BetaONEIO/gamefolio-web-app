@@ -226,7 +226,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         {reels.map((reel, index) => (
           <div 
             key={reel.id}
-            className="snap-start snap-always h-screen w-full flex items-center justify-center"
+            className="snap-start snap-always h-screen w-full flex items-center justify-center relative"
+            style={{ scrollSnapStop: 'always' }}
           >
             {/* Video player - full screen on mobile */}
             <div className="relative w-full h-full md:max-w-lg lg:max-w-xl mx-auto pointer-events-none">
