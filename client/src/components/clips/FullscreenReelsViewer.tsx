@@ -220,8 +220,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       {/* Scrollable reels container */}
       <div 
         ref={containerRef}
-        className="h-screen w-full overflow-y-scroll snap-y snap-mandatory [&::-webkit-scrollbar]:hidden"
-        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+        className="h-screen w-full overflow-y-scroll overflow-x-hidden snap-y snap-mandatory [&::-webkit-scrollbar]:hidden"
+        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
       >
         {reels.map((reel, index) => (
           <div 
@@ -259,7 +259,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
               {/* Video overlay content */}
               <div className="absolute inset-0 pointer-events-none z-10">
                 {/* Left side - User info and title (TikTok-style) */}
-                <div className="absolute bottom-8 md:bottom-12 left-3 md:left-4 right-16 md:right-20 pointer-events-auto z-10">
+                <div className="absolute bottom-20 md:bottom-12 left-3 md:left-4 right-16 md:right-20 pointer-events-auto z-10">
                   {/* User row with inline follow button */}
                   <div className="flex items-center gap-2 mb-2">
                     <Link href={`/profile/${reel.user.username}`} onClick={onClose}>
@@ -330,7 +330,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
 
                 {/* Right side - Engagement buttons (TikTok-style) - Always show for consistent layout */}
                 <div className={cn(
-                  "absolute bottom-8 md:bottom-12 right-2 md:right-3 flex flex-col items-center gap-4",
+                  "absolute bottom-20 md:bottom-12 right-2 md:right-3 flex flex-col items-center gap-4",
                   index === currentIndex ? "pointer-events-auto" : "pointer-events-none opacity-70"
                 )}>
                     {/* Fire/Reactions */}
