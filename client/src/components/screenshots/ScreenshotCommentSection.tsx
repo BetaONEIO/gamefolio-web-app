@@ -201,7 +201,7 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
                   <Link href={`/@${comment.user.username}`}>
                     <span className="font-semibold mr-1 text-sm hover:text-primary cursor-pointer flex items-center">
                       {comment.user.username}
-                      <VerificationBadge isVerified={(comment.user as any).emailVerified} size="sm" />
+                      <VerificationBadge isVerified={(comment.user as any).isPro} size="sm" />
                       <ModeratorBadge isModerator={(comment.user as any).role === "moderator"} size="sm" />
                     </span>
                   </Link>

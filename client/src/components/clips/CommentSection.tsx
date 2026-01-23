@@ -216,7 +216,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                       onClick={onUsernameClick}
                     >
                       {comment.user.username}
-                      <VerificationBadge isVerified={(comment.user as any).emailVerified} size="sm" />
+                      <VerificationBadge isVerified={(comment.user as any).isPro} size="sm" />
                       <ModeratorBadge isModerator={(comment.user as any).role === "moderator"} size="sm" />
                     </span>
                   </Link>

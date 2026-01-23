@@ -34,7 +34,7 @@ export function VerificationBadge({ isVerified, size = "md" }: VerificationBadge
           />
         </TooltipTrigger>
         <TooltipContent>
-          <p className="text-xs">This user is email verified</p>
+          <p className="text-xs">Gamefolio Pro member</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
