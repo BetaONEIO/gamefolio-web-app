@@ -732,68 +732,24 @@ export default function SettingsPage() {
 
           {/* Profile Tab */}
           <TabsContent value="profile">
-            {/* Pro Subscription Management Section */}
+            {/* Pro Subscription Banner */}
             {user?.isPro && (
-              <Card className="mb-6 relative overflow-hidden">
-                <div 
-                  className="absolute inset-0 rounded-lg pointer-events-none"
-                  style={{
-                    boxShadow: 'inset 0 0 30px rgba(74, 222, 128, 0.3), 0 0 20px rgba(74, 222, 128, 0.2)',
-                    border: '2px solid rgba(74, 222, 128, 0.5)'
-                  }}
-                />
-                <CardHeader className="pb-2">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-500/20 rounded-lg">
-                      <Crown className="h-6 w-6 text-yellow-500" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        Gamefolio Pro Subscription
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
-                          Active
-                        </span>
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {user?.proSubscriptionStartDate && (
-                          <>Member since {new Date(user.proSubscriptionStartDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="p-3 bg-muted/30 rounded-lg space-y-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Plan:</span>
-                        <span className="font-medium">{user?.proSubscriptionType || 'Pro'}</span>
-                      </div>
-                      {customerInfo?.managementURL && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full"
-                          onClick={() => window.open(customerInfo.managementURL, '_blank')}
-                        >
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          Manage Billing
-                        </Button>
-                      )}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                      onClick={() => setShowCancelConfirm(true)}
-                    >
-                      <AlertTriangle className="h-4 w-4 mr-2" />
-                      End Membership
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="mb-6 flex items-center justify-between px-4 py-3 rounded-lg bg-green-500/20 border border-green-500/40">
+                <div className="flex items-center gap-2">
+                  <Crown className="h-4 w-4 text-green-400" />
+                  <span className="font-medium text-green-400">Pro</span>
+                  <span className="text-green-400">-</span>
+                  <span className="text-green-400">Active</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-muted-foreground hover:text-red-400"
+                  onClick={() => setShowCancelConfirm(true)}
+                >
+                  Manage
+                </Button>
+              </div>
             )}
 
             <Card>
