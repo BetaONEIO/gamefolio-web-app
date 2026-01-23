@@ -1742,26 +1742,22 @@ const ProfilePage = () => {
                   right: '0px'
                 }}
               >
-                {/* Glass rectangular background layered underneath */}
-                <div className="relative flex flex-col items-center">
-                  <div 
-                    className="absolute rounded-lg"
-                    style={{
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      width: '390px',
-                      height: '91px',
-                      background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
-                      border: '1px solid rgba(148, 163, 184, 0.2)',
-                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
-                    }}
-                  />
+                {/* Glass rectangular background as main container */}
+                <div 
+                  className="relative rounded-lg flex items-center justify-center"
+                  style={{
+                    width: '390px',
+                    height: '91px',
+                    background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
+                    border: '1px solid rgba(148, 163, 184, 0.2)',
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+                  }}
+                >
                   <img 
                     src={nameTagData.nameTag.imageUrl} 
                     alt={nameTagData.nameTag.name}
                     title={nameTagData.nameTag.description || nameTagData.nameTag.name}
-                    className="relative z-10 cursor-pointer hover:scale-105 transition-transform"
+                    className="absolute z-10 cursor-pointer hover:scale-105 transition-transform"
                     style={{
                       width: '437px',
                       height: 'auto'
@@ -1771,11 +1767,11 @@ const ProfilePage = () => {
                       (e.target as HTMLImageElement).style.display = 'none';
                     }}
                   />
-                  <span 
-                    className="relative z-10 text-xs text-white/40 mt-1 uppercase tracking-widest cursor-pointer hover:text-white/60 transition-colors"
-                    onClick={() => setNameTagPreviewOpen(true)}
-                  >Nametag</span>
                 </div>
+                <span 
+                  className="text-xs text-white/40 mt-1 uppercase tracking-widest cursor-pointer hover:text-white/60 transition-colors"
+                  onClick={() => setNameTagPreviewOpen(true)}
+                >Nametag</span>
               </div>
             )}
           </div>
