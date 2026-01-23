@@ -1340,7 +1340,7 @@ const ProfilePage = () => {
             <span className="text-sm text-white/60 font-normal">@{profile.username}</span>
             {/* User type badges on their own line */}
             {profile.userType && profile.showUserType !== false && (
-              <div className="flex items-center gap-2 flex-wrap mt-1">
+              <div className="flex items-center gap-2 flex-wrap mt-3 mb-2">
                 {(() => {
                   const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
                   const displayTypes = userTypes.slice(0, 2);
