@@ -1300,8 +1300,8 @@ const ProfilePage = () => {
                         top: '50%',
                         left: '50%',
                         transform: 'translate(-50%, -50%)',
-                        width: '182px',
-                        height: '42px',
+                        width: '140px',
+                        height: '32px',
                         background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
                         border: '1px solid rgba(148, 163, 184, 0.2)',
                         boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
@@ -1313,7 +1313,7 @@ const ProfilePage = () => {
                       title={nameTagData.nameTag.description || nameTagData.nameTag.name}
                       className="relative z-10 hover:scale-105 transition-transform"
                       style={{
-                        width: '208px',
+                        width: '160px',
                         height: 'auto'
                       }}
                       onError={(e) => {
@@ -1341,12 +1341,12 @@ const ProfilePage = () => {
                     top: '50%',
                     left: '50%',
                     transform: 'translate(-50%, -50%)',
-                    width: '182px',
-                    height: '42px',
-                    background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
-                    border: '1px solid rgba(148, 163, 184, 0.2)',
-                    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
-                  }}
+                    width: '140px',
+                    height: '32px',
+                        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
+                        border: '1px solid rgba(148, 163, 184, 0.2)',
+                        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
+                      }}
                 />
                 <img 
                   src={nameTagData.nameTag.imageUrl} 
@@ -1354,7 +1354,7 @@ const ProfilePage = () => {
                   title={nameTagData.nameTag.description || nameTagData.nameTag.name}
                   className="relative z-10 hover:scale-105 transition-transform"
                   style={{
-                    width: '208px',
+                    width: '160px',
                     height: 'auto'
                   }}
                   onError={(e) => {
