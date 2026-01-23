@@ -961,18 +961,19 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                             if (!user) {
                               openDialog('comment');
                             } else {
-                              // Scroll to comment section
-                              const commentSection = document.querySelector('[data-comment-section]');
-                              if (commentSection) {
-                                commentSection.scrollIntoView({ behavior: 'smooth' });
+                              // Focus the comment input field
+                              const commentInput = document.querySelector('[data-testid="input-comment"]') as HTMLTextAreaElement;
+                              if (commentInput) {
+                                commentInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                setTimeout(() => commentInput.focus(), 300);
                               }
                             }
                           }}
-                          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                          className="flex items-center gap-1 hover:text-primary transition-colors"
                           data-testid="button-comments-action"
                         >
-                          <MessageSquare className="h-6 w-6" />
-                          <span className="text-sm">{comments?.length || 0}</span>
+                          <MessageSquare className="h-5 w-5 md:h-6 md:w-6" />
+                          <span className="text-base">{comments?.length || 0}</span>
                         </button>
                       </div>
 
