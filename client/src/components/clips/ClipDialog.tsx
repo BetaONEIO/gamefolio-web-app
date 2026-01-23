@@ -556,12 +556,12 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           }
                         }
                       }}
-                      className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
+                      className="w-11 h-11 rounded-full bg-black/70 backdrop-blur-md hover:bg-black/90 transition-colors flex items-center justify-center shadow-lg border border-white/20"
                     >
                       {reelIsPlaying ? (
-                        <Pause className="h-5 w-5 text-white" />
+                        <Pause className="h-6 w-6 text-white" />
                       ) : (
-                        <Play className="h-5 w-5 text-white ml-0.5" />
+                        <Play className="h-6 w-6 text-white ml-0.5" />
                       )}
                     </button>
                     <button
@@ -573,12 +573,12 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           setReelIsMuted(!reelIsMuted);
                         }
                       }}
-                      className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
+                      className="w-11 h-11 rounded-full bg-black/70 backdrop-blur-md hover:bg-black/90 transition-colors flex items-center justify-center shadow-lg border border-white/20"
                     >
                       {reelIsMuted ? (
-                        <VolumeX className="h-5 w-5 text-white" />
+                        <VolumeX className="h-6 w-6 text-white" />
                       ) : (
-                        <Volume2 className="h-5 w-5 text-white" />
+                        <Volume2 className="h-6 w-6 text-white" />
                       )}
                     </button>
                   </div>
