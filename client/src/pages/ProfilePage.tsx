@@ -1567,7 +1567,7 @@ const ProfilePage = () => {
             </div>
 
             {/* Display Name and Badges */}
-            <div className="flex items-center gap-2 flex-wrap mt-4">
+            <div className="flex items-center gap-2 flex-wrap mt-8">
               <h1 className="text-2xl font-bold">{profile.displayName}</h1>
               <ModeratorBadge 
                 isModerator={profile.role === "moderator" || profile.role === "admin"} 
