@@ -74,6 +74,8 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
           onNext={hasNavigation ? handleNext : undefined}
           onPrevious={hasNavigation ? handlePrevious : undefined}
           showNavigation={hasNavigation || false}
+          currentIndex={currentIndex >= 0 ? currentIndex : undefined}
+          totalClips={clipsList?.length}
         />
       )}
     </ClipDialogContext.Provider>
