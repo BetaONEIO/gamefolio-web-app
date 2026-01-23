@@ -766,19 +766,15 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   </div>
                 </div>
               ) : (
-                // Clips: use fixed aspect ratio container (16:9) with video contained inside
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="w-full h-full max-h-full flex items-center justify-center">
-                    <VideoPlayer 
-                      videoUrl={clip.videoUrl} 
-                      thumbnailUrl={clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined} 
-                      autoPlay={true}
-                      className="max-w-full max-h-full w-auto h-auto"
-                      objectFit="contain"
-                      clipId={clip.id}
-                    />
-                  </div>
-                </div>
+                // Clips: fixed container with video contained inside
+                <VideoPlayer 
+                  videoUrl={clip.videoUrl} 
+                  thumbnailUrl={clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined} 
+                  autoPlay={true}
+                  className="w-full h-full"
+                  objectFit="contain"
+                  clipId={clip.id}
+                />
               )
               ) : (
                 // Age-restricted content placeholder
@@ -803,14 +799,14 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
 
             {/* Right side - Info and comments */}
             <div className={cn(
-              "flex flex-col",
+              "flex flex-col overflow-hidden",
               clip.videoType === 'reel' && isMobile && !showComments
                 ? "hidden" // Hide sidebar on mobile for reels when comments not shown
                 : clip.videoType === 'reel' && isMobile && showComments
                   ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out" // Show comments as slide-up overlay on mobile for reels
                   : isMobile && clip.videoType !== 'reel'
-                    ? "w-full flex-1 min-h-0" // Take remaining space on mobile and allow proper scrolling
-                    : "w-full lg:w-[35%] h-full" // Desktop layout
+                    ? "w-full flex-1 min-h-0 overflow-y-auto" // Take remaining space on mobile and allow proper scrolling
+                    : "w-full lg:w-[35%] h-full overflow-y-auto" // Desktop layout
             )}>
               {/* Header with username (mobile comments header or regular header) */}
               <div className={cn(
