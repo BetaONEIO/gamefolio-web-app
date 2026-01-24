@@ -8661,6 +8661,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "URL is required" });
       }
 
+      // Only process gamefolio-media URLs (private bucket)
+      // Other URLs (like gamefolio-assets) are public and don't need signing
+      if (!url.includes('gamefolio-media')) {
+        return res.json({ signedUrl: url }); // Return original URL for public buckets
+      }
+
       const signedUrl = await supabaseStorage.convertToSignedUrl(url, 3600); // 1 hour expiry
       
       if (!signedUrl) {
@@ -8688,34 +8694,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Maximum 50 URLs per request" });
       }
 
-      // Extract storage paths from URLs
-      const storagePaths: string[] = [];
-      const urlToPathMap = new Map<string, string>();
+      // Separate URLs into private (gamefolio-media) and public (other buckets)
+      const privateUrls: string[] = [];
+      const publicUrls: string[] = [];
       
       for (const url of urls) {
         if (typeof url === 'string') {
-          const path = supabaseStorage.extractStoragePath(url);
-          if (path) {
-            storagePaths.push(path);
-            urlToPathMap.set(path, url);
+          if (url.includes('gamefolio-media')) {
+            privateUrls.push(url);
+          } else {
+            publicUrls.push(url);
           }
         }
       }
 
-      if (storagePaths.length === 0) {
-        return res.status(400).json({ error: "No valid URLs provided" });
+      // Extract storage paths from private URLs
+      const storagePaths: string[] = [];
+      const urlToPathMap = new Map<string, string>();
+      
+      for (const url of privateUrls) {
+        const path = supabaseStorage.extractStoragePath(url);
+        if (path) {
+          storagePaths.push(path);
+          urlToPathMap.set(path, url);
+        }
       }
 
-      // Generate signed URLs
-      const signedUrlsMap = await supabaseStorage.getSignedUrls(storagePaths, 3600);
-      
-      // Map back to original URLs
+      // Start with public URLs (they don't need signing)
       const results: Record<string, string> = {};
-      for (const [path, signedUrl] of signedUrlsMap) {
-        const originalUrl = Array.from(urlToPathMap.entries())
-          .find(([p, u]) => p === path)?.[1];
-        if (originalUrl) {
-          results[originalUrl] = signedUrl;
+      for (const url of publicUrls) {
+        results[url] = url; // Return original URL for public buckets
+      }
+
+      // Generate signed URLs for private bucket content
+      if (storagePaths.length > 0) {
+        const signedUrlsMap = await supabaseStorage.getSignedUrls(storagePaths, 3600);
+        
+        // Map back to original URLs
+        for (const [path, signedUrl] of signedUrlsMap) {
+          const originalUrl = Array.from(urlToPathMap.entries())
+            .find(([p, u]) => p === path)?.[1];
+          if (originalUrl) {
+            results[originalUrl] = signedUrl;
+          }
         }
       }
 
