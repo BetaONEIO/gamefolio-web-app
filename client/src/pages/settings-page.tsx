@@ -99,6 +99,32 @@ const InlineSvgBorder: React.FC<{
   );
 };
 
+// Component for name tag images with signed URL support
+const NameTagImage: React.FC<{
+  imageUrl: string;
+  alt: string;
+  className?: string;
+  style?: React.CSSProperties;
+}> = ({ imageUrl, alt, className, style }) => {
+  const { signedUrl, isLoading } = useSignedUrl(imageUrl);
+  
+  if (isLoading) {
+    return <div className={className} style={{ ...style, backgroundColor: 'rgba(255,255,255,0.1)' }} />;
+  }
+  
+  return (
+    <img
+      src={signedUrl || imageUrl}
+      alt={alt}
+      className={className}
+      style={style}
+      onError={(e) => {
+        (e.target as HTMLImageElement).style.opacity = '0.3';
+      }}
+    />
+  );
+};
+
 // Utility function to create a cropped image from canvas
 const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
@@ -1131,8 +1157,8 @@ export default function SettingsPage() {
                             <div className="p-3 bg-muted/30 rounded-lg w-full flex flex-col items-center">
                               {selectedTag ? (
                                 <>
-                                  <img
-                                    src={selectedTag.imageUrl}
+                                  <NameTagImage
+                                    imageUrl={selectedTag.imageUrl}
                                     alt={selectedTag.name}
                                     className="w-full max-w-sm h-auto object-contain"
                                   />
@@ -1191,8 +1217,8 @@ export default function SettingsPage() {
                                   : 'border border-border hover:border-primary/50'}
                               `}
                             >
-                              <img
-                                src={tag.imageUrl}
+                              <NameTagImage
+                                imageUrl={tag.imageUrl}
                                 alt={tag.name}
                                 className="w-full h-6 object-contain"
                                 style={{
