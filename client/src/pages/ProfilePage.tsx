@@ -337,6 +337,9 @@ const ProfilePage = () => {
     refetchOnMount: 'always',
   });
 
+  // Get signed URL for name tag image (private bucket)
+  const { signedUrl: nameTagSignedUrl } = useSignedUrl(nameTagData?.nameTag?.imageUrl);
+
   // Fetch screenshot by shareCode (when shareCode is present in URL)
   const { data: screenshotByShareCode, isLoading: isLoadingScreenshotByShareCode } = useQuery<Screenshot>({
     queryKey: [`/api/screenshots/share/${shareCode}`],
@@ -1249,7 +1252,7 @@ const ProfilePage = () => {
           </div>
 
           {/* Name Tag - Mobile view for own profile (absolute positioned) */}
-          {isOwnProfile && nameTagData?.nameTag?.imageUrl && (
+          {isOwnProfile && nameTagSignedUrl && (
             <div 
               className="absolute right-2 flex md:hidden flex-col items-end gap-2 cursor-pointer"
               style={{ top: '88px' }}
@@ -1268,9 +1271,9 @@ const ProfilePage = () => {
                     }}
                   />
                   <img 
-                    src={nameTagData.nameTag.imageUrl} 
-                    alt={nameTagData.nameTag.name}
-                    title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                    src={nameTagSignedUrl} 
+                    alt={nameTagData?.nameTag?.name || 'Name Tag'}
+                    title={nameTagData?.nameTag?.description || nameTagData?.nameTag?.name}
                     className="absolute z-10 hover:scale-105 transition-transform"
                     style={{
                       width: '140px',
@@ -1333,7 +1336,7 @@ const ProfilePage = () => {
                 </Button>
               </div>
               {/* Name Tag - Mobile view for other users (below follow buttons) */}
-              {nameTagData?.nameTag?.imageUrl && (
+              {nameTagSignedUrl && (
                 <div 
                   className="flex flex-col items-center mt-2 cursor-pointer"
                   onClick={() => setNameTagPreviewOpen(true)}
@@ -1350,9 +1353,9 @@ const ProfilePage = () => {
                       }}
                     />
                     <img 
-                      src={nameTagData.nameTag.imageUrl} 
-                      alt={nameTagData.nameTag.name}
-                      title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                      src={nameTagSignedUrl} 
+                      alt={nameTagData?.nameTag?.name || 'Name Tag'}
+                      title={nameTagData?.nameTag?.description || nameTagData?.nameTag?.name}
                       className="absolute z-10 hover:scale-105 transition-transform"
                       style={{
                         width: '140px',
@@ -1738,7 +1741,7 @@ const ProfilePage = () => {
             )}
 
             {/* Name Tag - positioned absolutely below banner and follow/message buttons, only show if imageUrl exists */}
-            {nameTagData?.nameTag?.imageUrl && (
+            {nameTagSignedUrl && (
               <div 
                 className="absolute flex-col items-center hidden md:flex"
                 style={{
@@ -1758,9 +1761,9 @@ const ProfilePage = () => {
                   }}
                 >
                   <img 
-                    src={nameTagData.nameTag.imageUrl} 
-                    alt={nameTagData.nameTag.name}
-                    title={nameTagData.nameTag.description || nameTagData.nameTag.name}
+                    src={nameTagSignedUrl} 
+                    alt={nameTagData?.nameTag?.name || 'Name Tag'}
+                    title={nameTagData?.nameTag?.description || nameTagData?.nameTag?.name}
                     className="absolute z-10 cursor-pointer hover:scale-105 transition-transform"
                     style={{
                       width: '734px',
@@ -2885,8 +2888,8 @@ const ProfilePage = () => {
             </DialogHeader>
             <div className="flex flex-col items-center gap-4 py-4 md:py-8">
               <img 
-                src={nameTagData.nameTag.imageUrl} 
-                alt={nameTagData.nameTag.name}
+                src={nameTagSignedUrl || ''} 
+                alt={nameTagData?.nameTag?.name || 'Name Tag'}
                 className="h-auto w-full max-w-[350px] md:max-w-[700px]"
               />
               <div className={`px-4 py-2 rounded-full text-sm font-bold uppercase ${
