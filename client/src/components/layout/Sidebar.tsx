@@ -247,8 +247,8 @@ const Sidebar = () => {
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="hidden lg:block w-64 bg-card fixed top-0 left-0 bottom-0 flex flex-col border-r border-border z-40">
-        <nav className="px-4 pt-40 pb-4 space-y-1 flex-1">
+      <div className="hidden lg:block w-64 bg-card fixed top-0 left-0 bottom-0 flex flex-col border-r border-border z-40 overflow-hidden">
+        <nav className="px-4 pt-40 pb-4 space-y-1 flex-1 overflow-y-auto">
           {menuItems.map((item) => (
             <Link key={item.href} href={item.href}>
               <div
