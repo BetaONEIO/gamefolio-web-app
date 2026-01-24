@@ -589,7 +589,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     isTransitioning ? "opacity-0" : "opacity-100"
                   )}>
                     {/* Bottom left - User info with inline Follow button */}
-                    <div className="absolute bottom-36 left-4 right-20 z-40 pointer-events-auto">
+                    <div className="absolute bottom-20 left-4 right-20 z-40 pointer-events-auto">
                       {/* User row with Follow button */}
                       <div className="flex items-center gap-2 mb-3">
                         <Link href={`/profile/${clip.user?.username}`} onClick={(e: React.MouseEvent) => {
@@ -677,7 +677,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     </div>
                     
                     {/* Right side action buttons */}
-                    <div className="absolute right-3 bottom-40 flex flex-col items-center space-y-5 z-50 pointer-events-auto">
+                    <div className="absolute right-3 bottom-24 flex flex-col items-center space-y-5 z-50 pointer-events-auto">
                       <FireButton 
                         contentId={clip.id}
                         contentType="clip"
