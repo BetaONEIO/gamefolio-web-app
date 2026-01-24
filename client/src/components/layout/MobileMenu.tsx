@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { X, Search, Home, Compass, Flame, User, Settings, LogOut, MessageSquare, Trophy, ShoppingBag, Wallet } from "lucide-react";
+import { X, Home, Compass, Flame, User, Settings, LogOut, MessageSquare, Trophy, ShoppingBag, Wallet } from "lucide-react";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import gamefolioLogo from '@assets/gamefolio social logo 3d circle web.png';
@@ -15,7 +14,6 @@ const MobileMenu = () => {
   const { isOpen, close } = useMobileMenu();
   const { user, logoutMutation } = useAuth();
   const [, setLocation] = useLocation();
-  const [searchQuery, setSearchQuery] = useState("");
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -49,21 +47,6 @@ const MobileMenu = () => {
     close();
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      const isHashtag = searchQuery.startsWith('#');
-      if (isHashtag) {
-        // For hashtag searches, route to dedicated hashtag page
-        setLocation(`/hashtag/${encodeURIComponent(searchQuery.slice(1))}`);
-      } else {
-        setLocation(`/explore?q=${encodeURIComponent(searchQuery)}`);
-      }
-      setSearchQuery("");
-      close();
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -86,28 +69,6 @@ const MobileMenu = () => {
             </Button>
           </div>
 
-          {/* Search Bar */}
-          <div className="p-4 border-b border-border">
-            <form onSubmit={handleSearch} className="relative">
-              <Input
-                type="text"
-                placeholder="Search #hashtags, users, games..."
-                className="w-full pr-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                data-testid="burger-menu-search-input"
-              />
-              <Button
-                type="submit"
-                variant="ghost"
-                size="icon"
-                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8"
-                data-testid="burger-menu-search-button"
-              >
-                <Search className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            </form>
-          </div>
 
           {/* User Profile */}
           {user && (
