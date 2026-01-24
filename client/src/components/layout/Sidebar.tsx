@@ -248,7 +248,7 @@ const Sidebar = () => {
     <>
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex w-64 bg-card fixed top-0 left-0 bottom-0 flex-col border-r border-border z-40">
-        <nav className="px-4 pt-40 pb-4 space-y-1 flex-1 overflow-y-auto">
+        <nav className="px-4 pt-40 pb-4 space-y-1 flex-1 overflow-y-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {menuItems.map((item) => (
             <Link key={item.href} href={item.href}>
               <div
