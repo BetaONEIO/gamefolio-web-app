@@ -78,6 +78,7 @@ import { ReportButton } from "@/components/reporting/ReportButton";
 import { ProfilePictureLightbox, useProfilePictureLightbox } from "@/components/ui/profile-picture-lightbox";
 import { BannerLightbox, useBannerLightbox } from "@/components/ui/banner-lightbox";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { formatDistance } from "date-fns";
@@ -247,6 +248,9 @@ const ProfilePage = () => {
       return failureCount < 3;
     },
   });
+
+  // Get signed URL for profile avatar (private bucket)
+  const { signedUrl: profileAvatarSignedUrl } = useSignedUrl(profile?.avatarUrl);
 
   // Follow state management with localStorage persistence for demo users
   const getStorageKey = () => `follow_${currentUser?.id}_${profile?.id}`;
@@ -1172,7 +1176,7 @@ const ProfilePage = () => {
           userProfile={{
             displayName: profile.displayName,
             bio: profile.bio,
-            avatarUrl: profile.avatarUrl,
+            avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
             bannerUrl: profile.bannerUrl,
             selectedAvatarBorderId: profile.selectedAvatarBorderId,
             avatarBorderColor: profile.avatarBorderColor
@@ -1218,7 +1222,7 @@ const ProfilePage = () => {
               )}
               <div 
                 className="relative z-10 cursor-pointer h-full w-full"
-                onClick={() => profile.avatarUrl && openLightbox(profile.avatarUrl, profile.displayName, profile.username)}
+                onClick={() => profileAvatarSignedUrl && openLightbox(profileAvatarSignedUrl, profile.displayName, profile.username)}
               >
                 <CustomAvatar 
                   user={profile}
@@ -1549,7 +1553,7 @@ const ProfilePage = () => {
               )}
               <div 
                 className="relative z-10 cursor-pointer"
-                onClick={() => profile.avatarUrl && openLightbox(profile.avatarUrl, profile.displayName, profile.username)}
+                onClick={() => profileAvatarSignedUrl && openLightbox(profileAvatarSignedUrl, profile.displayName, profile.username)}
               >
                 <CustomAvatar 
                   user={profile}
@@ -1847,7 +1851,7 @@ const ProfilePage = () => {
                     userProfile={{
                       displayName: profile.displayName,
                       bio: profile.bio,
-                      avatarUrl: profile.avatarUrl,
+                      avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
                       bannerUrl: profile.bannerUrl,
                       selectedAvatarBorderId: profile.selectedAvatarBorderId,
                       avatarBorderColor: profile.avatarBorderColor
@@ -1878,7 +1882,7 @@ const ProfilePage = () => {
                     userProfile={{
                       displayName: profile.displayName,
                       bio: profile.bio,
-                      avatarUrl: profile.avatarUrl,
+                      avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
                       bannerUrl: profile.bannerUrl,
                       selectedAvatarBorderId: profile.selectedAvatarBorderId,
                       avatarBorderColor: profile.avatarBorderColor
@@ -2629,10 +2633,10 @@ const ProfilePage = () => {
                 <div className="border-b border-border p-4 flex items-center justify-between">
                   <div className="flex items-center">
                     <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3">
-                      {profile?.avatarUrl ? (
+                      {profileAvatarSignedUrl ? (
                         <img 
-                          src={profile.avatarUrl} 
-                          alt={profile.displayName} 
+                          src={profileAvatarSignedUrl} 
+                          alt={profile?.displayName || ''} 
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -2820,7 +2824,7 @@ const ProfilePage = () => {
               userProfile={{
                 displayName: profile.displayName,
                 bio: profile.bio,
-                avatarUrl: profile.avatarUrl,
+                avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
                 bannerUrl: profile.bannerUrl,
                 selectedAvatarBorderId: profile.selectedAvatarBorderId,
                 avatarBorderColor: profile.avatarBorderColor
@@ -2867,7 +2871,7 @@ const ProfilePage = () => {
             id: profile.id,
             username: profile.username,
             displayName: profile.displayName,
-            avatarUrl: profile.avatarUrl,
+            avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
           }}
         />
       )}

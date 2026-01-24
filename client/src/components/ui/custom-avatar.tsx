@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { useState, useEffect, useMemo } from "react";
 import DOMPurify from "dompurify";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 
 // Helper to extract clip path from SVG and generate border content
 const useSvgBorderData = (svgUrl: string, color: string) => {
@@ -236,6 +237,9 @@ export const CustomAvatar = ({
   const safeDisplayName = user?.displayName || user?.username || "?";
   const clipId = useMemo(() => `avatar-clip-${user?.id || 'default'}-${Math.random().toString(36).substr(2, 6)}`, [user?.id]);
   
+  // Get signed URL for avatar (private bucket)
+  const { signedUrl: avatarSignedUrl } = useSignedUrl(user?.avatarUrl);
+  
   const { data: borderData } = useQuery<{ avatarBorder: AssetReward | null }>({
     queryKey: [`/api/user/${user?.id}/avatar-border`],
     queryFn: getQueryFn({ on401: 'returnNull' }),
@@ -264,7 +268,7 @@ export const CustomAvatar = ({
           style={{ zIndex: 10 }}
         >
           <AvatarImage 
-            src={user?.avatarUrl || ""} 
+            src={avatarSignedUrl || user?.avatarUrl || ""} 
             alt={safeDisplayName} 
             className="rounded-full object-cover w-full h-full"
           />
@@ -299,7 +303,7 @@ export const CustomAvatar = ({
         boxShadow: borderStyles[borderIntensity](borderColor)
       } : {}}
     >
-      <AvatarImage src={user?.avatarUrl || ""} alt={displayName} className="rounded-full object-cover" />
+      <AvatarImage src={avatarSignedUrl || user?.avatarUrl || ""} alt={displayName} className="rounded-full object-cover" />
       <AvatarFallback className="bg-primary/20 text-foreground font-semibold rounded-full">
         {displayName.substring(0, 2).toUpperCase()}
       </AvatarFallback>
