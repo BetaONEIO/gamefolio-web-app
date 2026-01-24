@@ -2685,16 +2685,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('Processing file:', req.file.filename);
 
-      // Process avatar with sharp and upload to Supabase
-      const avatarBuffer = await sharp(req.file.path)
-        .resize(400, 400, { fit: 'cover' })
-        .jpeg({ quality: 85 })
-        .toBuffer();
+      // Check if file is a GIF and user is Pro
+      const isGif = req.file.mimetype === 'image/gif' || req.file.originalname.toLowerCase().endsWith('.gif');
+      const user = await storage.getUser(userId);
+      const isPro = user?.isPro === true;
+      
+      let avatarBuffer: Buffer;
+      let fileName: string;
+      let mimeType: string;
+      
+      if (isGif && isPro) {
+        // Pro users can keep GIF avatars - preserve animation
+        console.log('Processing GIF avatar for Pro user - preserving animation');
+        
+        // Read the original GIF file directly to preserve animation
+        avatarBuffer = await fsPromises.readFile(req.file.path);
+        fileName = `avatar-${userId}-${Date.now()}.gif`;
+        mimeType = 'image/gif';
+      } else if (isGif && !isPro) {
+        // Non-Pro users trying to upload GIF - convert to static image
+        console.log('Non-Pro user tried to upload GIF - converting to static JPEG');
+        avatarBuffer = await sharp(req.file.path)
+          .resize(400, 400, { fit: 'cover' })
+          .jpeg({ quality: 85 })
+          .toBuffer();
+        fileName = `avatar-${userId}-${Date.now()}.jpg`;
+        mimeType = 'image/jpeg';
+      } else {
+        // Regular image processing for non-GIF files
+        avatarBuffer = await sharp(req.file.path)
+          .resize(400, 400, { fit: 'cover' })
+          .jpeg({ quality: 85 })
+          .toBuffer();
+        fileName = `avatar-${userId}-${Date.now()}.jpg`;
+        mimeType = 'image/jpeg';
+      }
 
       const { url: avatarUrl } = await supabaseStorage.uploadBuffer(
         avatarBuffer,
-        `avatar-${userId}-${Date.now()}.jpg`,
-        'image/jpeg',
+        fileName,
+        mimeType,
         'image',
         userId
       );

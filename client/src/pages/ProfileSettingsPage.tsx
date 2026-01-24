@@ -117,6 +117,10 @@ const ProfileSettingsPage: React.FC = () => {
       return;
     }
     
+    // Check if user is uploading a GIF without Pro status
+    const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
+    const isPro = user?.isPro === true;
+    
     // Create form data for upload
     const formData = new FormData();
     formData.append('avatar', file);
@@ -148,11 +152,26 @@ const ProfileSettingsPage: React.FC = () => {
       // Update the form value with the server path and mark it as dirty
       profileForm.setValue('avatarUrl', data.avatarUrl, { shouldDirty: true, shouldValidate: true });
       
-      toast({
-        title: "Avatar uploaded",
-        description: "Click save to update your profile with the new picture",
-        variant: "default"
-      });
+      // Show appropriate message based on GIF/Pro status
+      if (isGif && isPro) {
+        toast({
+          title: "Animated avatar uploaded!",
+          description: "Your GIF profile picture is ready. Click save to update your profile.",
+          variant: "default"
+        });
+      } else if (isGif && !isPro) {
+        toast({
+          title: "GIF converted to static image",
+          description: "Upgrade to Pro to keep your profile picture animated! Click save to update.",
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "Avatar uploaded",
+          description: "Click save to update your profile with the new picture",
+          variant: "default"
+        });
+      }
     } catch (error) {
       console.error("Error uploading avatar:", error);
       toast({
@@ -348,6 +367,17 @@ const ProfileSettingsPage: React.FC = () => {
                     <div className="space-y-2">
                       <h3 className="text-base font-medium">Profile Picture</h3>
                       <p className="text-sm text-muted-foreground">Your profile picture is visible to other users.</p>
+                      {user?.isPro && (
+                        <div className="flex items-center gap-2 text-sm text-purple-400 bg-purple-500/10 rounded-lg px-3 py-2 border border-purple-500/20">
+                          <Sparkles className="h-4 w-4" />
+                          <span>Pro Perk: You can upload animated GIFs as your profile picture!</span>
+                        </div>
+                      )}
+                      {!user?.isPro && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+                          <span>Want animated profile pictures? <a href="/settings/account" className="text-purple-400 hover:text-purple-300 underline">Upgrade to Pro</a> to use GIFs!</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 flex-wrap">
                         <Button
                           variant="outline"
