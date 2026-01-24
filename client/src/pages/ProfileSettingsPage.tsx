@@ -43,6 +43,7 @@ import { FaSteam, FaXbox, FaPlaystation, FaYoutube, FaDiscord } from 'react-icon
 import { FaXTwitter } from 'react-icons/fa6';
 import { SiEpicgames, SiNintendo } from 'react-icons/si';
 import { ProfilePictureSelector } from '@/components/profile/ProfilePictureSelector';
+import { LazyImage } from '@/components/ui/lazy-image';
 
 const userTypeOptions = [
   { id: "streamer", label: "Streamer", description: "I stream games live", icon: Video, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
@@ -334,9 +335,22 @@ const ProfileSettingsPage: React.FC = () => {
                         borderRadius: '8px !important'
                       }}
                     >
-                      {avatarPreview || user.avatarUrl ? (
+                      {avatarPreview ? (
                         <img
-                          src={avatarPreview || user.avatarUrl || ''}
+                          src={avatarPreview}
+                          alt={user.displayName}
+                          className="w-full h-full object-cover"
+                          style={{ 
+                            borderRadius: '6px !important',
+                            borderTopLeftRadius: '6px !important',
+                            borderTopRightRadius: '6px !important', 
+                            borderBottomLeftRadius: '6px !important',
+                            borderBottomRightRadius: '6px !important'
+                          }}
+                        />
+                      ) : user.avatarUrl ? (
+                        <LazyImage
+                          src={user.avatarUrl}
                           alt={user.displayName}
                           className="w-full h-full object-cover"
                           style={{ 
