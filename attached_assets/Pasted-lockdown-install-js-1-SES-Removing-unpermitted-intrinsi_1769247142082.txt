@@ -1,0 +1,35 @@
+lockdown-install.js:1 SES Removing unpermitted intrinsics
+client:536  WebSocket connection to 'wss://c9fa12a0-25f6-499c-85a1-3fdaf44e555f-00-2i2gmevrrbqn1.riker.replit.dev/?token=byWGw_dW5D6K' failed: 
+setupWebSocket @ client:536
+react-dom.development.js:29895 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+firebase.ts:44 Firebase initialized successfully
+use-theme.tsx:96 Theme accent color changed to: #4ADE80 (HSL: 142 69% 58%)
+lockdown-install.js:1 SES Removing unpermitted intrinsics
+mod_tom:1  Access to XMLHttpRequest at 'https://cloudflareinsights.com/cdn-cgi/rum' from origin 'https://c9fa12a0-25f6-499c-85a1-3fdaf44e555f-00-2i2gmevrrbqn1.riker.replit.dev' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+cloudflareinsights.com/cdn-cgi/rum:1   Failed to load resource: net::ERR_FAILED
+lockdown-install.js:1 SES Removing unpermitted intrinsics
+use-revenuecat.tsx:89 RevenueCat initialized successfully
+use-revenuecat.tsx:90 Offerings: Object
+use-revenuecat.tsx:91 Current offering: Object
+use-revenuecat.tsx:92 Available packages: Array(2)
+ProfilePage.tsx:1073 Profile colors: Object
+ProfilePage.tsx:1073 Profile colors: Object
+ProfilePage.tsx:1073 Profile colors: Object
+ProfilePage.tsx:1073 Profile colors: Object
+ProfilePage.tsx:1073 Profile colors: Object
+rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-assets/01-hud-corner-brackets-rotating.svg:1   Failed to load resource: the server responded with a status of 400 ()
+custom-avatar.tsx:136  Failed to load SVG: Error: HTTP 400
+    at custom-avatar.tsx:106:17
+(anonymous) @ custom-avatar.tsx:136
+rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-assets/01-hud-corner-brackets-rotating.svg:1   Failed to load resource: the server responded with a status of 400 ()
+custom-avatar.tsx:136  Failed to load SVG: Error: HTTP 400
+    at custom-avatar.tsx:106:17
+(anonymous) @ custom-avatar.tsx:136
+signed-url:1   Failed to load resource: the server responded with a status of 404 (Not Found)
+ProfilePage.tsx:1073 Profile colors: Object
+rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-assets/01-hud-corner-brackets-rotating.svg:1   Failed to load resource: the server responded with a status of 400 ()
+custom-avatar.tsx:136  Failed to load SVG: Error: HTTP 400
+    at custom-avatar.tsx:106:17
+(anonymous) @ custom-avatar.tsx:136
+ProfilePage.tsx:1073 Profile colors: Object
+ProfilePage.tsx:1073 Profile colors: Object
