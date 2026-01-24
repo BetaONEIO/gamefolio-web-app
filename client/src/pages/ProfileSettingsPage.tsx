@@ -73,7 +73,7 @@ const ProfileSettingsPage: React.FC = () => {
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   
   // Get signed URL for avatar (handles private Supabase bucket)
-  const { signedUrl: avatarSignedUrl } = useSignedUrl(user?.avatarUrl);
+  const { signedUrl: avatarSignedUrl, isLoading: avatarLoading } = useSignedUrl(user?.avatarUrl);
 
   // Fetch user's unlocked profile banners
   const { data: unlockedBanners = [], isLoading: bannersLoading } = useQuery<ProfileBanner[]>({
@@ -332,35 +332,27 @@ const ProfileSettingsPage: React.FC = () => {
                   {/* Profile Picture Upload Section */}
                   <div className="flex items-center space-x-6 mb-6">
                     <div 
-                      className="w-20 h-20 border-2 overflow-hidden relative"
+                      className="w-20 h-20 border-2 overflow-hidden relative bg-gray-800 rounded-lg"
                       style={{ 
                         borderColor: user.accentColor || '#4ADE80',
-                        borderRadius: '8px !important'
+                        borderRadius: '8px'
                       }}
                     >
-                      {avatarPreview || avatarSignedUrl ? (
+                      {avatarLoading ? (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-800 rounded-md">
+                          <div className="w-6 h-6 border-2 border-gray-600 border-t-gray-400 rounded-full animate-spin" />
+                        </div>
+                      ) : avatarPreview || avatarSignedUrl ? (
                         <img
                           src={avatarPreview || avatarSignedUrl || ''}
                           alt={user.displayName}
-                          className="w-full h-full object-cover"
-                          style={{ 
-                            borderRadius: '6px !important',
-                            borderTopLeftRadius: '6px !important',
-                            borderTopRightRadius: '6px !important', 
-                            borderBottomLeftRadius: '6px !important',
-                            borderBottomRightRadius: '6px !important'
-                          }}
+                          className="w-full h-full object-cover rounded-md"
                         />
                       ) : (
                         <div
-                          className="w-full h-full flex items-center justify-center text-lg font-bold text-primary-foreground"
+                          className="w-full h-full flex items-center justify-center text-lg font-bold text-primary-foreground rounded-md"
                           style={{ 
-                            backgroundColor: user.accentColor || '#4ADE80',
-                            borderRadius: '6px !important',
-                            borderTopLeftRadius: '6px !important',
-                            borderTopRightRadius: '6px !important', 
-                            borderBottomLeftRadius: '6px !important',
-                            borderBottomRightRadius: '6px !important'
+                            backgroundColor: user.accentColor || '#4ADE80'
                           }}
                         >
                           {user.displayName.charAt(0)}
