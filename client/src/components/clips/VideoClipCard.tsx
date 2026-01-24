@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import { formatDuration } from "@/lib/constants";
-import { Flame, Heart, MessageSquare, Eye, Tag, Share2 } from "lucide-react";
+import { Flame, Heart, MessageSquare, Eye, Tag, Share2, Play } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -135,16 +135,21 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
         }}
       >
         {/* Thumbnail with duration */}
-        <div className="relative overflow-hidden" style={{ aspectRatio: clip.videoType === 'reel' ? "9/16" : "16/9" }}>
+        <div className="relative overflow-hidden bg-gray-800" style={{ aspectRatio: clip.videoType === 'reel' ? "9/16" : "16/9" }}>
           <img
             src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
             alt={clip.title}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              target.src = "/placeholder-game.png";
+              target.style.display = 'none';
+              const fallback = target.nextElementSibling as HTMLElement;
+              if (fallback) fallback.style.display = 'flex';
             }}
           />
+          <div className="hidden w-full h-full items-center justify-center bg-gray-800 absolute inset-0">
+            <Play className="h-12 w-12 text-gray-500" />
+          </div>
           
           {/* Top right badges: duration and views */}
           <div className="absolute top-2 right-2 flex items-center gap-1">

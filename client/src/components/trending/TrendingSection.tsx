@@ -41,8 +41,13 @@ const ReelCard: React.FC<{ reel: any; reelsList?: any[] }> = ({ reel, reelsList 
         src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
         alt={reel.title}
         className="w-full h-full object-cover"
-        placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%23f3f4f6'/%3e%3c/svg%3e"
+        placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
         showLoadingSpinner={true}
+        fallback={
+          <div className="w-full h-full flex items-center justify-center bg-gray-800">
+            <Play className="h-12 w-12 text-gray-500" />
+          </div>
+        }
       />
 
       {/* Gradient overlay */}
