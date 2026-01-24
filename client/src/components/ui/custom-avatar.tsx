@@ -15,8 +15,17 @@ const useSvgBorderData = (svgUrl: string, color: string) => {
     if (!svgUrl) return;
     
     fetch(svgUrl)
-      .then(res => res.text())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        return res.text();
+      })
       .then(svg => {
+        if (!svg.includes('<svg') && !svg.includes('<?xml')) {
+          console.error('Invalid SVG content received');
+          return;
+        }
         const sanitized = DOMPurify.sanitize(svg, { 
           USE_PROFILES: { svg: true, svgFilters: true },
           ADD_TAGS: ['animate', 'animateTransform', 'animateMotion', 'set', 'clipPath', 'defs'],
@@ -92,8 +101,18 @@ const InlineSvgBorder: React.FC<{
     if (!svgUrl) return;
     
     fetch(svgUrl)
-      .then(res => res.text())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        return res.text();
+      })
       .then(svg => {
+        if (!svg.includes('<svg') && !svg.includes('<?xml')) {
+          console.error('Invalid SVG content received');
+          return;
+        }
+        
         const sanitized = DOMPurify.sanitize(svg, { 
           USE_PROFILES: { svg: true, svgFilters: true },
           ADD_TAGS: ['style', 'animate', 'animateTransform', 'animateMotion', 'set'],
@@ -137,8 +156,17 @@ const SvgClipPath: React.FC<{ svgUrl: string; clipId: string }> = ({ svgUrl, cli
     if (!svgUrl) return;
     
     fetch(svgUrl)
-      .then(res => res.text())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        return res.text();
+      })
       .then(svg => {
+        if (!svg.includes('<svg') && !svg.includes('<?xml')) {
+          console.error('Invalid SVG content received');
+          return;
+        }
         const parser = new DOMParser();
         const doc = parser.parseFromString(svg, 'image/svg+xml');
         const svgEl = doc.querySelector('svg');
