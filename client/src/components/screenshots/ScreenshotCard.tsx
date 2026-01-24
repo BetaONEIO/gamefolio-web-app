@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Heart, MessageSquare, Share2, Eye, Flag, X } from 'lucide-react';
+import { Heart, MessageSquare, Share2, Eye, Flag, X, ImageOff } from 'lucide-react';
 import { Card, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FireButton } from '@/components/engagement/FireButton';
@@ -10,6 +10,7 @@ import { ReportDialog } from '@/components/content/ReportDialog';
 import { useLikeScreenshot } from '@/hooks/use-clips';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import { LazyImage } from '@/components/ui/lazy-image';
 
 interface ScreenshotCardProps {
   screenshot: any;
@@ -130,10 +131,18 @@ export function ScreenshotCard({
         className="aspect-video rounded-lg overflow-hidden bg-black relative"
         onClick={() => onSelect?.(screenshot)}
       >
-        <img 
-          src={screenshot.imageUrl || undefined} 
+        <LazyImage 
+          src={screenshot.imageUrl || ''} 
           alt={screenshot.title}
           className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${screenshot.ageRestricted ? 'blur-2xl' : ''}`}
+          placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
+          showLoadingSpinner={true}
+          containerClassName="absolute inset-0"
+          fallback={
+            <div className="w-full h-full flex items-center justify-center bg-gray-800">
+              <ImageOff className="h-12 w-12 text-gray-500" />
+            </div>
+          }
         />
 
         {/* Age Restriction badge */}
