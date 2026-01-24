@@ -43,7 +43,7 @@ import { FaSteam, FaXbox, FaPlaystation, FaYoutube, FaDiscord } from 'react-icon
 import { FaXTwitter } from 'react-icons/fa6';
 import { SiEpicgames, SiNintendo } from 'react-icons/si';
 import { ProfilePictureSelector } from '@/components/profile/ProfilePictureSelector';
-import { LazyImage } from '@/components/ui/lazy-image';
+import { useSignedUrl } from '@/hooks/use-signed-url';
 
 const userTypeOptions = [
   { id: "streamer", label: "Streamer", description: "I stream games live", icon: Video, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
@@ -71,6 +71,9 @@ const ProfileSettingsPage: React.FC = () => {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
+  
+  // Get signed URL for avatar (handles private Supabase bucket)
+  const { signedUrl: avatarSignedUrl } = useSignedUrl(user?.avatarUrl);
 
   // Fetch user's unlocked profile banners
   const { data: unlockedBanners = [], isLoading: bannersLoading } = useQuery<ProfileBanner[]>({
@@ -335,22 +338,9 @@ const ProfileSettingsPage: React.FC = () => {
                         borderRadius: '8px !important'
                       }}
                     >
-                      {avatarPreview ? (
+                      {avatarPreview || avatarSignedUrl ? (
                         <img
-                          src={avatarPreview}
-                          alt={user.displayName}
-                          className="w-full h-full object-cover"
-                          style={{ 
-                            borderRadius: '6px !important',
-                            borderTopLeftRadius: '6px !important',
-                            borderTopRightRadius: '6px !important', 
-                            borderBottomLeftRadius: '6px !important',
-                            borderBottomRightRadius: '6px !important'
-                          }}
-                        />
-                      ) : user.avatarUrl ? (
-                        <LazyImage
-                          src={user.avatarUrl}
+                          src={avatarPreview || avatarSignedUrl || ''}
                           alt={user.displayName}
                           className="w-full h-full object-cover"
                           style={{ 
