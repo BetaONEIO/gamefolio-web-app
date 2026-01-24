@@ -40,25 +40,26 @@ const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) 
         }}
       >
         {/* Thumbnail with lazy loading */}
-        <div className="relative overflow-hidden aspect-video bg-gray-900">
-          {!imageError ? (
+        <div className="relative overflow-hidden aspect-video bg-gray-800">
+          {/* Default fallback - always visible as background */}
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-800 z-0">
+            <Play className="h-12 w-12 text-gray-500" />
+          </div>
+          {!imageError && (
             <LazyImage
               src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
               alt={clip.title}
-              className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${clip.ageRestricted ? 'blur-2xl' : ''}`}
-              placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%23374151'/%3e%3c/svg%3e"
-              showLoadingSpinner={true}
+              className={`relative z-10 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${clip.ageRestricted ? 'blur-2xl' : ''}`}
+              placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
+              showLoadingSpinner={false}
               rootMargin="50px"
+              containerClassName="absolute inset-0 z-10"
               fallback={
                 <div className="w-full h-full flex items-center justify-center bg-gray-800">
                   <Play className="h-12 w-12 text-gray-500" />
                 </div>
               }
             />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-800">
-              <Play className="h-12 w-12 text-gray-500" />
-            </div>
           )}
 
           {/* Age Restricted Overlay */}

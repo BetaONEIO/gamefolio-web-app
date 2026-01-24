@@ -136,20 +136,26 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
       >
         {/* Thumbnail with duration */}
         <div className="relative overflow-hidden bg-gray-800" style={{ aspectRatio: clip.videoType === 'reel' ? "9/16" : "16/9" }}>
+          {/* Default fallback - always visible as background */}
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-800 z-0">
+            <Play className="h-12 w-12 text-gray-500" />
+          </div>
           <img
             src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
             alt={clip.title}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className="relative z-10 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-              const fallback = target.nextElementSibling as HTMLElement;
-              if (fallback) fallback.style.display = 'flex';
+              target.style.opacity = '0';
+            }}
+            onLoad={(e) => {
+              const target = e.target as HTMLImageElement;
+              // Check if image actually loaded properly (has dimensions)
+              if (target.naturalWidth === 0 || target.naturalHeight === 0) {
+                target.style.opacity = '0';
+              }
             }}
           />
-          <div className="hidden w-full h-full items-center justify-center bg-gray-800 absolute inset-0">
-            <Play className="h-12 w-12 text-gray-500" />
-          </div>
           
           {/* Top right badges: duration and views */}
           <div className="absolute top-2 right-2 flex items-center gap-1">

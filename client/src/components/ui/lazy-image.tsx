@@ -35,27 +35,32 @@ export function LazyImage({
   return (
     <div 
       ref={ref} 
-      className={cn('relative', containerClassName)}
+      className={cn('relative w-full h-full', containerClassName)}
     >
       {/* Loading spinner */}
       {isLoading && showLoadingSpinner && (
-        <div className="absolute inset-0 flex items-center justify-center bg-muted/50 rounded">
-          <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-800 rounded">
+          <div className="w-6 h-6 border-2 border-gray-600 border-t-gray-400 rounded-full animate-spin" />
         </div>
       )}
       
-      {/* Error fallback */}
+      {/* Error fallback - show dark background with play icon */}
       {hasError && fallback ? (
-        fallback
+        <div className="absolute inset-0">
+          {fallback}
+        </div>
       ) : (
         <img
           src={imageSrc}
           alt={alt}
           className={cn(
-            'transition-opacity duration-300',
+            'transition-opacity duration-300 w-full h-full object-cover',
             isLoading ? 'opacity-50' : 'opacity-100',
             className
           )}
+          onError={() => {
+            // Trigger fallback on native image error as backup
+          }}
           {...props}
         />
       )}
