@@ -10,6 +10,54 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import gamefolioLogo from '@assets/gamefolio social logo 3d circle web.png';
 
+const LEVEL_THRESHOLDS = [
+  { level: 1, xpRequired: 0 },
+  { level: 2, xpRequired: 100 },
+  { level: 3, xpRequired: 500 },
+  { level: 4, xpRequired: 1000 },
+  { level: 5, xpRequired: 2000 },
+  { level: 6, xpRequired: 3500 },
+  { level: 7, xpRequired: 5500 },
+  { level: 8, xpRequired: 8000 },
+  { level: 9, xpRequired: 11000 },
+  { level: 10, xpRequired: 15000 },
+  { level: 11, xpRequired: 20000 },
+  { level: 12, xpRequired: 26000 },
+  { level: 13, xpRequired: 33000 },
+  { level: 14, xpRequired: 41000 },
+  { level: 15, xpRequired: 50000 },
+];
+
+function LevelProgressBar({ level, totalXP }: { level: number; totalXP: number }) {
+  const currentThreshold = LEVEL_THRESHOLDS.find(t => t.level === level) || LEVEL_THRESHOLDS[0];
+  const nextThreshold = LEVEL_THRESHOLDS.find(t => t.level === level + 1);
+  
+  const xpInCurrentLevel = totalXP - currentThreshold.xpRequired;
+  const xpNeededForNextLevel = nextThreshold 
+    ? nextThreshold.xpRequired - currentThreshold.xpRequired 
+    : 0;
+  const progress = nextThreshold 
+    ? Math.min(100, (xpInCurrentLevel / xpNeededForNextLevel) * 100) 
+    : 100;
+
+  return (
+    <div className="mt-3">
+      <div className="flex justify-between items-center text-xs mb-1">
+        <span className="text-primary font-semibold">Level {level}</span>
+        <span className="text-muted-foreground">
+          {xpInCurrentLevel} / {xpNeededForNextLevel} XP
+        </span>
+      </div>
+      <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden">
+        <div 
+          className="h-full bg-primary rounded-full transition-all duration-300"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 const MobileMenu = () => {
   const { isOpen, close } = useMobileMenu();
   const { user, logoutMutation } = useAuth();
@@ -72,17 +120,21 @@ const MobileMenu = () => {
 
           {/* User Profile */}
           {user && (
-            <div className="p-4 border-b border-border flex items-center">
-              <CustomAvatar 
-                user={user}
-                size="md"
-                borderIntensity="normal"
-                showAvatarBorderOverlay={true}
-              />
-              <div className="ml-3">
-                <p className="font-medium">{user.displayName}</p>
-                <p className="text-xs text-muted-foreground">@{user.username}</p>
+            <div className="p-4 border-b border-border">
+              <div className="flex items-center">
+                <CustomAvatar 
+                  user={user}
+                  size="md"
+                  borderIntensity="normal"
+                  showAvatarBorderOverlay={true}
+                />
+                <div className="ml-3">
+                  <p className="font-medium">{user.displayName}</p>
+                  <p className="text-xs text-muted-foreground">@{user.username}</p>
+                </div>
               </div>
+              {/* Level Progress Bar */}
+              <LevelProgressBar level={user.level || 1} totalXP={user.totalPoints || 0} />
             </div>
           )}
 
