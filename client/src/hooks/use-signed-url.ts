@@ -5,8 +5,8 @@ const signedUrlCache = new Map<string, { url: string; expires: number }>();
 const CACHE_BUFFER = 5 * 60 * 1000; // Refresh 5 minutes before expiry
 const URL_EXPIRY = 60 * 60 * 1000; // 1 hour
 
-function isGamefoliaMediaUrl(url: string): boolean {
-  return url?.includes('gamefolio-media');
+function isSupabaseStorageUrl(url: string): boolean {
+  return url?.includes('gamefolio-media') || url?.includes('gamefolio-assets');
 }
 
 function getCachedSignedUrl(originalUrl: string): string | null {
@@ -36,7 +36,7 @@ export function useSignedUrl(publicUrl: string | undefined | null) {
       return;
     }
 
-    if (!isGamefoliaMediaUrl(publicUrl)) {
+    if (!isSupabaseStorageUrl(publicUrl)) {
       setSignedUrl(publicUrl);
       return;
     }
@@ -83,7 +83,7 @@ export function useSignedUrls(publicUrls: (string | undefined | null)[]) {
 
   useEffect(() => {
     const validUrls = publicUrls.filter((url): url is string => 
-      !!url && isGamefoliaMediaUrl(url)
+      !!url && isSupabaseStorageUrl(url)
     );
 
     if (validUrls.length === 0) return;
@@ -131,7 +131,7 @@ export function useSignedUrls(publicUrls: (string | undefined | null)[]) {
 
   const getSignedUrl = useCallback((publicUrl: string | undefined | null): string | null => {
     if (!publicUrl) return null;
-    if (!isGamefoliaMediaUrl(publicUrl)) return publicUrl;
+    if (!isSupabaseStorageUrl(publicUrl)) return publicUrl;
     return signedUrls.get(publicUrl) || getCachedSignedUrl(publicUrl) || null;
   }, [signedUrls]);
 
@@ -139,7 +139,7 @@ export function useSignedUrls(publicUrls: (string | undefined | null)[]) {
 }
 
 export async function fetchSignedUrl(publicUrl: string): Promise<string> {
-  if (!publicUrl || !isGamefoliaMediaUrl(publicUrl)) {
+  if (!publicUrl || !isSupabaseStorageUrl(publicUrl)) {
     return publicUrl;
   }
 
@@ -167,7 +167,7 @@ export async function fetchSignedUrls(publicUrls: string[]): Promise<Map<string,
   const urlsToFetch: string[] = [];
 
   for (const url of publicUrls) {
-    if (!url || !isGamefoliaMediaUrl(url)) {
+    if (!url || !isSupabaseStorageUrl(url)) {
       if (url) results.set(url, url);
       continue;
     }

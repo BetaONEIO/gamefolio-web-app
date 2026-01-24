@@ -32,7 +32,7 @@ export class SupabaseStorage {
 
     // Enforce strict Supabase-only storage rules
     this.bucketName = 'gamefolio-media';
-    this.allowedBuckets = ['gamefolio-media'];
+    this.allowedBuckets = ['gamefolio-media', 'gamefolio-assets'];
     this.disallowedBuckets = ['gamefoliowebappmediacontent', 'gamefolio-media-v2'];
     this.strictMode = true;
     this.preventLocalStorageFallback = true;
@@ -418,28 +418,72 @@ export class SupabaseStorage {
   }
 
   /**
-   * Extract storage path from a public URL
+   * Extract storage path and bucket name from a public URL
    * @param publicUrl - The full public URL
-   * @returns The storage path or null if not a valid gamefolio-media URL
+   * @returns Object with bucket and path, or null if not a valid Supabase URL
    */
-  extractStoragePath(publicUrl: string): string | null {
+  extractStorageInfo(publicUrl: string): { bucket: string; path: string } | null {
     if (!publicUrl) return null;
     
-    const match = publicUrl.match(/gamefolio-media\/(.+)$/);
-    return match ? match[1] : null;
+    // Match both gamefolio-media and gamefolio-assets buckets
+    const match = publicUrl.match(/(gamefolio-media|gamefolio-assets)\/(.+)$/);
+    if (match) {
+      return { bucket: match[1], path: match[2] };
+    }
+    return null;
   }
 
   /**
-   * Convert a public URL to a signed URL
+   * Extract storage path from a public URL (for backward compatibility)
+   * @param publicUrl - The full public URL
+   * @returns The storage path or null if not a valid Supabase URL
+   */
+  extractStoragePath(publicUrl: string): string | null {
+    const info = this.extractStorageInfo(publicUrl);
+    return info ? info.path : null;
+  }
+
+  /**
+   * Convert a public URL to a signed URL (supports both buckets)
    * @param publicUrl - The full public URL
    * @param expiresIn - Expiration time in seconds
    * @returns Signed URL or null if conversion fails
    */
   async convertToSignedUrl(publicUrl: string, expiresIn: number = 3600): Promise<string | null> {
-    const storagePath = this.extractStoragePath(publicUrl);
-    if (!storagePath) return null;
+    const info = this.extractStorageInfo(publicUrl);
+    if (!info) return null;
     
-    return this.getSignedUrl(storagePath, expiresIn);
+    return this.getSignedUrlForBucket(info.bucket, info.path, expiresIn);
+  }
+
+  /**
+   * Generate a signed URL for any supported bucket
+   * @param bucketName - The bucket name
+   * @param storagePath - The path within the bucket
+   * @param expiresIn - Expiration time in seconds
+   * @returns Signed URL or null if generation fails
+   */
+  async getSignedUrlForBucket(bucketName: string, storagePath: string, expiresIn: number = 3600): Promise<string | null> {
+    try {
+      if (!this.allowedBuckets.includes(bucketName)) {
+        console.error(`Bucket "${bucketName}" is not in the allowed list`);
+        return null;
+      }
+
+      const { data, error } = await this.supabase.storage
+        .from(bucketName)
+        .createSignedUrl(storagePath, expiresIn);
+
+      if (error) {
+        console.error(`Error generating signed URL for ${bucketName}:`, error.message);
+        return null;
+      }
+
+      return data.signedUrl;
+    } catch (error) {
+      console.error('Error generating signed URL:', error);
+      return null;
+    }
   }
 
   /**

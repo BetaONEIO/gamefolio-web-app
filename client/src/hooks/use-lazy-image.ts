@@ -15,8 +15,8 @@ interface LazyImageState {
   hasError: boolean;
 }
 
-function isGamefoliaMediaUrl(url: string): boolean {
-  return url?.includes('gamefolio-media');
+function isSupabaseStorageUrl(url: string): boolean {
+  return url?.includes('gamefolio-media') || url?.includes('gamefolio-assets');
 }
 
 export function useLazyImage<T extends HTMLElement = HTMLElement>({
@@ -41,7 +41,7 @@ export function useLazyImage<T extends HTMLElement = HTMLElement>({
     try {
       let finalUrl = imageUrl;
       
-      if (isGamefoliaMediaUrl(imageUrl)) {
+      if (isSupabaseStorageUrl(imageUrl)) {
         finalUrl = await fetchSignedUrl(imageUrl);
       }
       
