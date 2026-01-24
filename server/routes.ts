@@ -8618,5 +8618,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==========================================
+  // SIGNED URL ENDPOINTS FOR PRIVATE BUCKET
+  // ==========================================
+
+  // Generate a signed URL for a single media file
+  app.post("/api/media/signed-url", async (req, res) => {
+    try {
+      const { url } = req.body;
+      
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ error: "URL is required" });
+      }
+
+      const signedUrl = await supabaseStorage.convertToSignedUrl(url, 3600); // 1 hour expiry
+      
+      if (!signedUrl) {
+        return res.status(404).json({ error: "Could not generate signed URL" });
+      }
+
+      res.json({ signedUrl });
+    } catch (error) {
+      console.error("Error generating signed URL:", error);
+      res.status(500).json({ error: "Failed to generate signed URL" });
+    }
+  });
+
+  // Generate signed URLs for multiple media files (batch operation)
+  app.post("/api/media/signed-urls", async (req, res) => {
+    try {
+      const { urls } = req.body;
+      
+      if (!Array.isArray(urls) || urls.length === 0) {
+        return res.status(400).json({ error: "URLs array is required" });
+      }
+
+      // Limit batch size to prevent abuse
+      if (urls.length > 50) {
+        return res.status(400).json({ error: "Maximum 50 URLs per request" });
+      }
+
+      // Extract storage paths from URLs
+      const storagePaths: string[] = [];
+      const urlToPathMap = new Map<string, string>();
+      
+      for (const url of urls) {
+        if (typeof url === 'string') {
+          const path = supabaseStorage.extractStoragePath(url);
+          if (path) {
+            storagePaths.push(path);
+            urlToPathMap.set(path, url);
+          }
+        }
+      }
+
+      if (storagePaths.length === 0) {
+        return res.status(400).json({ error: "No valid URLs provided" });
+      }
+
+      // Generate signed URLs
+      const signedUrlsMap = await supabaseStorage.getSignedUrls(storagePaths, 3600);
+      
+      // Map back to original URLs
+      const results: Record<string, string> = {};
+      for (const [path, signedUrl] of signedUrlsMap) {
+        const originalUrl = Array.from(urlToPathMap.entries())
+          .find(([p, u]) => p === path)?.[1];
+        if (originalUrl) {
+          results[originalUrl] = signedUrl;
+        }
+      }
+
+      res.json({ signedUrls: results });
+    } catch (error) {
+      console.error("Error generating signed URLs:", error);
+      res.status(500).json({ error: "Failed to generate signed URLs" });
+    }
+  });
+
   return httpServer;
 }

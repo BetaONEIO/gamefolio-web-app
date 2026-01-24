@@ -358,6 +358,96 @@ export class SupabaseStorage {
       return { totalFiles: 0, totalSize: 0, videoFiles: 0, imageFiles: 0 };
     }
   }
+
+  /**
+   * Generate a signed URL for accessing private bucket content
+   * @param storagePath - The path within the bucket (e.g., 'users/16/thumbnails/xxx.jpg')
+   * @param expiresIn - Expiration time in seconds (default: 1 hour)
+   * @returns Signed URL or null if generation fails
+   */
+  async getSignedUrl(storagePath: string, expiresIn: number = 3600): Promise<string | null> {
+    try {
+      const { data, error } = await this.supabase.storage
+        .from(this.bucketName)
+        .createSignedUrl(storagePath, expiresIn);
+
+      if (error) {
+        console.error('Error generating signed URL:', error.message);
+        return null;
+      }
+
+      return data.signedUrl;
+    } catch (error) {
+      console.error('Error generating signed URL:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Generate multiple signed URLs at once for better performance
+   * @param storagePaths - Array of storage paths
+   * @param expiresIn - Expiration time in seconds
+   * @returns Map of original paths to signed URLs
+   */
+  async getSignedUrls(storagePaths: string[], expiresIn: number = 3600): Promise<Map<string, string>> {
+    const results = new Map<string, string>();
+    
+    try {
+      const { data, error } = await this.supabase.storage
+        .from(this.bucketName)
+        .createSignedUrls(storagePaths, expiresIn);
+
+      if (error) {
+        console.error('Error generating signed URLs:', error.message);
+        return results;
+      }
+
+      if (data) {
+        data.forEach((item, index) => {
+          if (item.signedUrl) {
+            results.set(storagePaths[index], item.signedUrl);
+          }
+        });
+      }
+
+      return results;
+    } catch (error) {
+      console.error('Error generating signed URLs:', error);
+      return results;
+    }
+  }
+
+  /**
+   * Extract storage path from a public URL
+   * @param publicUrl - The full public URL
+   * @returns The storage path or null if not a valid gamefolio-media URL
+   */
+  extractStoragePath(publicUrl: string): string | null {
+    if (!publicUrl) return null;
+    
+    const match = publicUrl.match(/gamefolio-media\/(.+)$/);
+    return match ? match[1] : null;
+  }
+
+  /**
+   * Convert a public URL to a signed URL
+   * @param publicUrl - The full public URL
+   * @param expiresIn - Expiration time in seconds
+   * @returns Signed URL or null if conversion fails
+   */
+  async convertToSignedUrl(publicUrl: string, expiresIn: number = 3600): Promise<string | null> {
+    const storagePath = this.extractStoragePath(publicUrl);
+    if (!storagePath) return null;
+    
+    return this.getSignedUrl(storagePath, expiresIn);
+  }
+
+  /**
+   * Expose supabase client for direct access (needed for scripts)
+   */
+  get client() {
+    return this.supabase;
+  }
 }
 
 // Create singleton instance
