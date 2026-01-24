@@ -18,6 +18,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import { useLikeClip } from "@/hooks/use-clips";
 import { ReportButton } from "@/components/reporting/ReportButton";
+import { LazyImage } from "@/components/ui/lazy-image";
 
 interface VideoClipCardProps {
   clip: ClipWithUser;
@@ -140,21 +141,18 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
           <div className="absolute inset-0 flex items-center justify-center bg-gray-800 z-0">
             <Play className="h-12 w-12 text-gray-500" />
           </div>
-          <img
+          <LazyImage
             src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
             alt={clip.title}
             className="relative z-10 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.style.opacity = '0';
-            }}
-            onLoad={(e) => {
-              const target = e.target as HTMLImageElement;
-              // Check if image actually loaded properly (has dimensions)
-              if (target.naturalWidth === 0 || target.naturalHeight === 0) {
-                target.style.opacity = '0';
-              }
-            }}
+            placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
+            showLoadingSpinner={false}
+            containerClassName="absolute inset-0 z-10"
+            fallback={
+              <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                <Play className="h-12 w-12 text-gray-500" />
+              </div>
+            }
           />
           
           {/* Top right badges: duration and views */}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { fetchSignedUrl } from '@/hooks/use-signed-url';
 
 interface UseLazyImageOptions {
   src: string;
@@ -12,6 +13,10 @@ interface LazyImageState {
   isLoading: boolean;
   isInView: boolean;
   hasError: boolean;
+}
+
+function isGamefoliaMediaUrl(url: string): boolean {
+  return url?.includes('gamefolio-media');
 }
 
 export function useLazyImage<T extends HTMLElement = HTMLElement>({
@@ -30,30 +35,45 @@ export function useLazyImage<T extends HTMLElement = HTMLElement>({
   const elementRef = useRef<T>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
-  const loadImage = useCallback((imageUrl: string) => {
+  const loadImage = useCallback(async (imageUrl: string) => {
     setState(prev => ({ ...prev, isLoading: true, hasError: false }));
     
-    const img = new Image();
-    
-    img.onload = () => {
-      setState(prev => ({
-        ...prev,
-        imageSrc: imageUrl,
-        isLoading: false,
-        hasError: false,
-      }));
-    };
-    
-    img.onerror = () => {
+    try {
+      let finalUrl = imageUrl;
+      
+      if (isGamefoliaMediaUrl(imageUrl)) {
+        finalUrl = await fetchSignedUrl(imageUrl);
+      }
+      
+      const img = new Image();
+      
+      img.onload = () => {
+        setState(prev => ({
+          ...prev,
+          imageSrc: finalUrl,
+          isLoading: false,
+          hasError: false,
+        }));
+      };
+      
+      img.onerror = () => {
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          hasError: true,
+          imageSrc: placeholder,
+        }));
+      };
+      
+      img.src = finalUrl;
+    } catch (error) {
       setState(prev => ({
         ...prev,
         isLoading: false,
         hasError: true,
-        imageSrc: placeholder, // Fallback to placeholder on error
+        imageSrc: placeholder,
       }));
-    };
-    
-    img.src = imageUrl;
+    }
   }, [placeholder]);
 
   useEffect(() => {
