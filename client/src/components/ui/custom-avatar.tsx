@@ -11,10 +11,18 @@ const useSvgBorderData = (svgUrl: string, color: string) => {
   const [data, setData] = useState<{ borderSvg: string; clipPath: string } | null>(null);
   const clipId = useMemo(() => `clip-${Math.random().toString(36).substr(2, 9)}`, []);
   
+  // Get signed URL for the SVG
+  const { signedUrl } = useSignedUrl(svgUrl);
+  
   useEffect(() => {
-    if (!svgUrl) return;
+    // Wait for signed URL if the original URL is a Supabase URL
+    const urlToFetch = signedUrl || svgUrl;
+    if (!urlToFetch) return;
     
-    fetch(svgUrl)
+    // Don't fetch if we need a signed URL but don't have one yet
+    if (svgUrl && svgUrl.includes('supabase.co') && !signedUrl) return;
+    
+    fetch(urlToFetch)
       .then(res => {
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
@@ -83,7 +91,7 @@ const useSvgBorderData = (svgUrl: string, color: string) => {
         setData({ borderSvg: colorized, clipPath: clipPathContent ? clipId : '' });
       })
       .catch(err => console.error('Failed to load SVG:', err));
-  }, [svgUrl, color, clipId]);
+  }, [svgUrl, signedUrl, color, clipId]);
   
   return { ...data, clipId };
 };
@@ -97,10 +105,18 @@ const InlineSvgBorder: React.FC<{
 }> = ({ svgUrl, color, className, style }) => {
   const [svgContent, setSvgContent] = useState<string>('');
   
+  // Get signed URL for the SVG
+  const { signedUrl } = useSignedUrl(svgUrl);
+  
   useEffect(() => {
-    if (!svgUrl) return;
+    // Wait for signed URL if the original URL is a Supabase URL
+    const urlToFetch = signedUrl || svgUrl;
+    if (!urlToFetch) return;
     
-    fetch(svgUrl)
+    // Don't fetch if we need a signed URL but don't have one yet
+    if (svgUrl && svgUrl.includes('supabase.co') && !signedUrl) return;
+    
+    fetch(urlToFetch)
       .then(res => {
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
@@ -134,7 +150,7 @@ const InlineSvgBorder: React.FC<{
         setSvgContent(colorized);
       })
       .catch(err => console.error('Failed to load SVG:', err));
-  }, [svgUrl, color]);
+  }, [svgUrl, signedUrl, color]);
   
   if (!svgContent) return null;
   
@@ -152,10 +168,18 @@ const SvgClipPath: React.FC<{ svgUrl: string; clipId: string }> = ({ svgUrl, cli
   const [clipContent, setClipContent] = useState<string>('');
   const [viewBox, setViewBox] = useState<string>('0 0 128 128');
   
+  // Get signed URL for the SVG
+  const { signedUrl } = useSignedUrl(svgUrl);
+  
   useEffect(() => {
-    if (!svgUrl) return;
+    // Wait for signed URL if the original URL is a Supabase URL
+    const urlToFetch = signedUrl || svgUrl;
+    if (!urlToFetch) return;
     
-    fetch(svgUrl)
+    // Don't fetch if we need a signed URL but don't have one yet
+    if (svgUrl && svgUrl.includes('supabase.co') && !signedUrl) return;
+    
+    fetch(urlToFetch)
       .then(res => {
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
@@ -203,7 +227,7 @@ const SvgClipPath: React.FC<{ svgUrl: string; clipId: string }> = ({ svgUrl, cli
         }
       })
       .catch(err => console.error('Failed to parse SVG for clip path:', err));
-  }, [svgUrl]);
+  }, [svgUrl, signedUrl]);
   
   if (!clipContent) return null;
   

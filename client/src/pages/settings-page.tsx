@@ -23,6 +23,7 @@ import Cropper from "react-easy-crop";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import DOMPurify from "dompurify";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 import type { NameTag } from "@shared/schema";
 
 // Component to fetch SVG and render it inline with color replacement
@@ -34,12 +35,29 @@ const InlineSvgBorder: React.FC<{
 }> = ({ svgUrl, color, className, style }) => {
   const [svgContent, setSvgContent] = useState<string>('');
   
+  // Get signed URL for the SVG
+  const { signedUrl } = useSignedUrl(svgUrl);
+  
   useEffect(() => {
-    if (!svgUrl) return;
+    // Wait for signed URL if the original URL is a Supabase URL
+    const urlToFetch = signedUrl || svgUrl;
+    if (!urlToFetch) return;
     
-    fetch(svgUrl)
-      .then(res => res.text())
+    // Don't fetch if we need a signed URL but don't have one yet
+    if (svgUrl && svgUrl.includes('supabase.co') && !signedUrl) return;
+    
+    fetch(urlToFetch)
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        return res.text();
+      })
       .then(svg => {
+        if (!svg.includes('<svg') && !svg.includes('<?xml')) {
+          console.error('Invalid SVG content received');
+          return;
+        }
         // Sanitize the SVG - preserve style tags, CSS animations, and SMIL animations
         const sanitized = DOMPurify.sanitize(svg, { 
           USE_PROFILES: { svg: true, svgFilters: true },
@@ -65,7 +83,7 @@ const InlineSvgBorder: React.FC<{
         setSvgContent(colorized);
       })
       .catch(err => console.error('Failed to load SVG:', err));
-  }, [svgUrl, color]);
+  }, [svgUrl, signedUrl, color]);
   
   if (!svgContent) return null;
   
