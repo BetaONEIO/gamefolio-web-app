@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { ClipWithUser, CommentWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 import { 
   Dialog,
   DialogDescription,
@@ -107,6 +108,10 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
     queryKey: [`/api/clips/${clipId}`],
     enabled: isOpen && clipId !== null,
   });
+
+  // Get signed URLs for private bucket assets
+  const { signedUrl: signedThumbnailUrl } = useSignedUrl(clip?.thumbnailUrl);
+  const { signedUrl: signedGameIconUrl } = useSignedUrl(clip?.game?.iconUrl);
 
   // Fetch comments for mobile overlay
   const { data: comments } = useQuery<CommentWithUser[]>({
@@ -662,8 +667,8 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       {/* Game tag with icon */}
                       {clip.game && (
                         <div className="mt-2 flex items-center gap-1.5">
-                          {clip.game.iconUrl && (
-                            <img src={clip.game.iconUrl} alt="" className="w-4 h-4 rounded" />
+                          {signedGameIconUrl && (
+                            <img src={signedGameIconUrl} alt="" className="w-4 h-4 rounded" />
                           )}
                           <span className="text-green-400 text-sm font-medium drop-shadow-lg">
                             {clip.game.name}
@@ -751,7 +756,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   {isFullscreen && (
                     <div className="w-full h-full flex items-center justify-center">
                       <img 
-                        src={clip.thumbnailUrl || "/assets/video-placeholder.svg"} 
+                        src={signedThumbnailUrl || "/assets/video-placeholder.svg"} 
                         alt={clip.title}
                         className="max-w-full max-h-full object-contain opacity-50"
                       />

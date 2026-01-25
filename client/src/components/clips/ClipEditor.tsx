@@ -4,6 +4,7 @@ import { Clip } from "@shared/schema";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
@@ -61,6 +62,7 @@ const ClipEditor = ({ clip, onSaved, onCancel }: ClipEditorProps) => {
   const [trimEnd, setTrimEnd] = useState(clip.trimEnd || 0);
   const [trimRange, setTrimRange] = useState<[number, number]>([0, 100]);
   const { toast } = useToast();
+  const { signedUrl: signedThumbnailUrl } = useSignedUrl(clip.thumbnailUrl);
 
   // Initialize video duration and trim values
   useEffect(() => {
@@ -348,7 +350,7 @@ const ClipEditor = ({ clip, onSaved, onCancel }: ClipEditorProps) => {
                   <div 
                     className={`mx-auto w-12 h-12 mb-1 rounded overflow-hidden ${filterOption.className}`}
                     style={{
-                      backgroundImage: `url(${clip.thumbnailUrl || '/assets/video-placeholder.svg'})`,
+                      backgroundImage: `url(${signedThumbnailUrl || '/assets/video-placeholder.svg'})`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center'
                     }}

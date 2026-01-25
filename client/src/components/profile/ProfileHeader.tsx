@@ -13,6 +13,7 @@ import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import PlatformConnections from "./PlatformConnections";
 import { GamefolioShareDialog } from "./GamefolioShareDialog";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 
 const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
   streamer: { label: "Streamer", icon: Video, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
@@ -66,6 +67,10 @@ const ProfileHeader = ({
     refetchOnMount: 'always',
   });
 
+  // Get signed URLs for private bucket assets
+  const { signedUrl: signedBannerUrl } = useSignedUrl(profile.bannerUrl);
+  const { signedUrl: signedNameTagUrl } = useSignedUrl(nameTagData?.nameTag?.imageUrl);
+
   const handleFollowClick = () => {
     if (!user) {
       openDialog('general');
@@ -94,7 +99,7 @@ const ProfileHeader = ({
   // Define banner style with theme-independent fallback
   const bannerStyle = {
     backgroundColor: '#02172C', // Fixed neutral background, independent of theme
-    backgroundImage: profile.bannerUrl ? `url(${profile.bannerUrl})` : undefined,
+    backgroundImage: signedBannerUrl ? `url(${signedBannerUrl})` : undefined,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
   };
@@ -207,12 +212,12 @@ const ProfileHeader = ({
                   {profile.displayName}
                 </h1>
                 {/* Name Tag - next to username */}
-                {nameTagData?.nameTag && (
+                {nameTagData?.nameTag && signedNameTagUrl && (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <img 
-                          src={nameTagData.nameTag.imageUrl} 
+                          src={signedNameTagUrl} 
                           alt={nameTagData.nameTag.name}
                           className="h-5 rounded-sm"
                           style={{

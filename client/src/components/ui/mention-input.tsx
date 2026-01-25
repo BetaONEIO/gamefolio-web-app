@@ -3,6 +3,12 @@ import { cn } from "@/lib/utils";
 import { Textarea } from "./textarea";
 import { useQuery } from "@tanstack/react-query";
 import { Gamepad2, Hash, User as UserIcon } from "lucide-react";
+import { useSignedUrl } from "@/hooks/use-signed-url";
+
+function SignedImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
+  const { signedUrl } = useSignedUrl(src);
+  return <img src={signedUrl || src} alt={alt} className={className} />;
+}
 
 interface User {
   id: number;
@@ -241,7 +247,7 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
                       >
                         <div className="flex items-center space-x-2">
                           {user.avatarUrl ? (
-                            <img src={user.avatarUrl} alt={user.username} className="w-6 h-6 rounded-full" />
+                            <SignedImage src={user.avatarUrl} alt={user.username} className="w-6 h-6 rounded-full" />
                           ) : (
                             <div className="w-6 h-6 rounded-full bg-[#00d26a]/20 text-[#00d26a] flex items-center justify-center text-xs font-medium">
                               {user.username.charAt(0).toUpperCase()}
@@ -308,7 +314,7 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
                       >
                         <div className="flex items-center space-x-2">
                           {game.imageUrl ? (
-                            <img src={game.imageUrl} alt={game.name} className="w-6 h-6 rounded object-cover" />
+                            <SignedImage src={game.imageUrl} alt={game.name} className="w-6 h-6 rounded object-cover" />
                           ) : (
                             <div className="w-6 h-6 rounded bg-purple-500/20 text-purple-400 flex items-center justify-center">
                               <Gamepad2 className="w-3.5 h-3.5" />
@@ -652,7 +658,7 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
                       >
                         <div className="flex items-center space-x-2">
                           {user.avatarUrl ? (
-                            <img src={user.avatarUrl} alt={user.username} className="w-6 h-6 rounded-full" />
+                            <SignedImage src={user.avatarUrl} alt={user.username} className="w-6 h-6 rounded-full" />
                           ) : (
                             <div className="w-6 h-6 rounded-full bg-[#00d26a]/20 text-[#00d26a] flex items-center justify-center text-xs font-medium">
                               {user.username.charAt(0).toUpperCase()}
@@ -719,7 +725,7 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
                       >
                         <div className="flex items-center space-x-2">
                           {game.imageUrl ? (
-                            <img src={game.imageUrl} alt={game.name} className="w-6 h-6 rounded object-cover" />
+                            <SignedImage src={game.imageUrl} alt={game.name} className="w-6 h-6 rounded object-cover" />
                           ) : (
                             <div className="w-6 h-6 rounded bg-purple-500/20 text-purple-400 flex items-center justify-center">
                               <Gamepad2 className="w-3.5 h-3.5" />

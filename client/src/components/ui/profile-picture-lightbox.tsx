@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useSignedUrl } from '@/hooks/use-signed-url';
 
 interface ProfilePictureLightboxProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ export function ProfilePictureLightbox({
   displayName, 
   username 
 }: ProfilePictureLightboxProps) {
+  const { signedUrl } = useSignedUrl(avatarUrl);
+  
   if (!avatarUrl) return null;
 
   return (
@@ -27,7 +30,7 @@ export function ProfilePictureLightbox({
         <div className="relative flex flex-col items-center justify-center p-4 md:p-8">
           <div className="relative">
             <img
-              src={avatarUrl}
+              src={signedUrl || avatarUrl}
               alt={`${displayName}'s profile picture`}
               className="w-64 h-64 md:w-80 md:h-80 object-cover rounded-full shadow-2xl"
             />

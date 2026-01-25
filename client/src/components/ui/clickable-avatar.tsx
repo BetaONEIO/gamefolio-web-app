@@ -1,6 +1,7 @@
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useProfilePictureLightbox, ProfilePictureLightbox } from '@/components/ui/profile-picture-lightbox';
 import { cn } from '@/lib/utils';
+import { useSignedUrl } from '@/hooks/use-signed-url';
 
 interface ClickableAvatarProps {
   avatarUrl?: string;
@@ -36,10 +37,14 @@ export function ClickableAvatar({
   showLightbox = true,
 }: ClickableAvatarProps) {
   const { lightboxData, openLightbox, closeLightbox } = useProfilePictureLightbox();
+  const { signedUrl } = useSignedUrl(avatarUrl);
+  
+  // Use signed URL if available, otherwise fall back to original URL
+  const effectiveUrl = signedUrl || avatarUrl;
 
   const handleClick = () => {
-    if (showLightbox && avatarUrl) {
-      openLightbox(avatarUrl, displayName, username);
+    if (showLightbox && effectiveUrl) {
+      openLightbox(effectiveUrl, displayName, username);
     }
   };
 
@@ -48,13 +53,13 @@ export function ClickableAvatar({
       <Avatar 
         className={cn(
           sizeClasses[size],
-          showLightbox && avatarUrl ? 'cursor-pointer hover:opacity-80 transition-opacity' : '',
+          showLightbox && effectiveUrl ? 'cursor-pointer hover:opacity-80 transition-opacity' : '',
           className
         )}
         onClick={handleClick}
       >
         <AvatarImage 
-          src={avatarUrl || undefined} 
+          src={effectiveUrl || undefined} 
           alt={`${displayName}'s profile picture`}
         />
         <AvatarFallback className={cn(fallbackSizeClasses[size], fallbackClassName)}>

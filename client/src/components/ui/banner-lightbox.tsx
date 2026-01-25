@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useSignedUrl } from '@/hooks/use-signed-url';
 
 interface BannerLightboxProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ export function BannerLightbox({
   displayName, 
   username 
 }: BannerLightboxProps) {
+  const { signedUrl } = useSignedUrl(bannerUrl);
+  
   if (!bannerUrl) return null;
 
   return (
@@ -27,7 +30,7 @@ export function BannerLightbox({
         <div className="relative flex flex-col items-center justify-center p-8 overflow-hidden">
           <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
             <img
-              src={bannerUrl}
+              src={signedUrl || bannerUrl}
               alt={`${displayName}'s banner`}
               className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
             />
