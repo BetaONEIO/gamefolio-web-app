@@ -8,7 +8,8 @@ import {
   Check,
   Trash2,
   HelpCircle,
-  ShoppingBag
+  ShoppingBag,
+  Gift
 } from "lucide-react";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
@@ -233,6 +234,7 @@ const Sidebar = () => {
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
     { icon: ShoppingBag, label: "Store", href: "/store" },
     { icon: GamefolioWalletIcon, label: "Wallet", href: "/wallet" },
+    { icon: Gift, label: "Collection", href: "/collection" },
 
     // Only show Messages link if user has messaging enabled - default to true for demo user
     ...(user && user.messagingEnabled !== false ? [{ icon: GamefolioMessagesIcon, label: "Messages", href: "/messages" }] : []),
