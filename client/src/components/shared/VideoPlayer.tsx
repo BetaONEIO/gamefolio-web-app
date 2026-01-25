@@ -5,6 +5,7 @@ import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { formatDuration } from "@/lib/constants";
 import { useVideoAudioPreference } from "@/hooks/use-video-audio-preference";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 
 
 interface VideoPlayerProps {
@@ -50,6 +51,14 @@ const VideoPlayer = ({
   
   // Use shared audio preferences across all video players
   const { muted: isMuted, volume, setMuted, setVolume: setGlobalVolume, toggleMuted, isInitialized } = useVideoAudioPreference();
+  
+  // Get signed URL for private Supabase storage
+  const { signedUrl: signedVideoUrl, isLoading: isVideoUrlLoading } = useSignedUrl(videoUrl);
+  const { signedUrl: signedThumbnailUrl } = useSignedUrl(thumbnailUrl);
+  
+  // Use signed URL if available, otherwise fallback to original
+  const effectiveVideoUrl = signedVideoUrl || videoUrl;
+  const effectiveThumbnailUrl = signedThumbnailUrl || thumbnailUrl;
   
   // Reset view tracking when clipId changes
   useEffect(() => {
@@ -281,8 +290,8 @@ const VideoPlayer = ({
     >
       <video
         ref={videoRef}
-        src={videoUrl}
-        poster={thumbnailUrl || (videoUrl ? videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined)}
+        src={effectiveVideoUrl}
+        poster={effectiveThumbnailUrl || (effectiveVideoUrl ? effectiveVideoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined)}
         className={cn(
           objectFit === 'contain' ? 'w-full h-full object-contain' : 
           objectFit === 'fill' ? 'w-full h-full object-fill' : 'w-full h-full object-cover',
@@ -296,13 +305,13 @@ const VideoPlayer = ({
         preload="metadata"
         onError={(e) => {
           console.error("Video playback error:", e);
-          console.error("Failed video URL:", videoUrl);
+          console.error("Failed video URL:", effectiveVideoUrl);
           console.error("Video element src:", videoRef.current?.src);
           console.error("Video readyState:", videoRef.current?.readyState);
           console.error("Video networkState:", videoRef.current?.networkState);
         }}
         onLoadStart={() => {
-          console.log("Video loading started for:", videoUrl);
+          console.log("Video loading started for:", effectiveVideoUrl);
         }}
         onCanPlay={() => {
           console.log("Video can play:", videoUrl);
