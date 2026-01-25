@@ -8252,6 +8252,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user's complete collection data (for Collection page)
+  app.get("/api/lootbox/collection", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const collectionData = await storage.getUserCollectionData(userId);
+      res.json(collectionData);
+    } catch (error) {
+      console.error("Error getting collection data:", error);
+      res.status(500).json({ message: "Failed to get collection data" });
+    }
+  });
+
   // Get available rewards for lootbox (public)
   app.get("/api/lootbox/available-rewards", async (req, res) => {
     try {

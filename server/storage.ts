@@ -378,6 +378,24 @@ export interface IStorage {
   openDailyLootbox(userId: number): Promise<{ reward: AssetReward; isDuplicate: boolean; consumed: boolean } | null>;
   getUserClaimedRewards(userId: number): Promise<AssetReward[]>;
   getActiveRewardsForLootbox(): Promise<AssetReward[]>;
+  getUserCollectionData(userId: number): Promise<{
+    stats: {
+      totalLootboxesOpened: number;
+      totalXpEarned: number;
+      legendaryCount: number;
+      epicCount: number;
+      rareCount: number;
+      commonCount: number;
+    };
+    items: Array<{
+      id: number;
+      name: string;
+      imageUrl: string;
+      rarity: string;
+      rewardType: string;
+      claimedAt: Date;
+    }>;
+  }>;
   
   // Admin lootbox operations
   getAllLootboxOpens(): Promise<Array<{

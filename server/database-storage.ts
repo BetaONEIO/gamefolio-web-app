@@ -4676,6 +4676,78 @@ export class DatabaseStorage implements IStorage {
       .orderBy(assetRewards.rarity);
   }
 
+  async getUserCollectionData(userId: number): Promise<{
+    stats: {
+      totalLootboxesOpened: number;
+      totalXpEarned: number;
+      legendaryCount: number;
+      epicCount: number;
+      rareCount: number;
+      commonCount: number;
+    };
+    items: Array<{
+      id: number;
+      name: string;
+      imageUrl: string;
+      rarity: string;
+      rewardType: string;
+      claimedAt: Date;
+    }>;
+  }> {
+    // Get total lootboxes opened
+    const lootboxRecord = await db
+      .select({ openCount: userDailyLootbox.openCount })
+      .from(userDailyLootbox)
+      .where(eq(userDailyLootbox.userId, userId))
+      .limit(1);
+    
+    const totalLootboxesOpened = lootboxRecord[0]?.openCount || 0;
+
+    // Get total XP earned from lootboxes
+    const xpResult = await db
+      .select({ total: sql<number>`COALESCE(SUM(${xpHistory.xpAmount}), 0)` })
+      .from(xpHistory)
+      .where(and(
+        eq(xpHistory.userId, userId),
+        eq(xpHistory.source, 'lootbox')
+      ));
+    
+    const totalXpEarned = Number(xpResult[0]?.total || 0);
+
+    // Get all claimed rewards with claim dates
+    const claimedItems = await db
+      .select({
+        id: assetRewards.id,
+        name: assetRewards.name,
+        imageUrl: assetRewards.imageUrl,
+        rarity: assetRewards.rarity,
+        rewardType: assetRewards.rewardType,
+        claimedAt: assetRewardClaims.claimedAt,
+      })
+      .from(assetRewardClaims)
+      .innerJoin(assetRewards, eq(assetRewardClaims.rewardId, assetRewards.id))
+      .where(eq(assetRewardClaims.userId, userId))
+      .orderBy(desc(assetRewardClaims.claimedAt));
+
+    // Count by rarity
+    const legendaryCount = claimedItems.filter(i => i.rarity === 'legendary').length;
+    const epicCount = claimedItems.filter(i => i.rarity === 'epic').length;
+    const rareCount = claimedItems.filter(i => i.rarity === 'rare').length;
+    const commonCount = claimedItems.filter(i => i.rarity === 'common').length;
+
+    return {
+      stats: {
+        totalLootboxesOpened,
+        totalXpEarned,
+        legendaryCount,
+        epicCount,
+        rareCount,
+        commonCount,
+      },
+      items: claimedItems,
+    };
+  }
+
   // Admin lootbox operations
   async getAllLootboxOpens(): Promise<Array<{
     id: number;
