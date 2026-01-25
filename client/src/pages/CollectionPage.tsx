@@ -155,9 +155,9 @@ export default function CollectionPage() {
 
   const filteredItems = data?.items.filter((item: CollectionItem) => {
     if (filter === "all") return true;
-    if (filter === "xp") return item.rewardType === "xp";
-    if (filter === "coins") return item.rewardType === "coins";
-    if (filter === "special") return ["avatar_border", "badge", "special"].includes(item.rewardType);
+    if (filter === "xp") return item.rewardType === "xp_reward";
+    if (filter === "coins") return item.rewardType === "gf_tokens";
+    if (filter === "special") return ["avatar_border", "profile_banner", "profile_background", "badge", "emoji", "sound_effect"].includes(item.rewardType);
     return true;
   }) || [];
 

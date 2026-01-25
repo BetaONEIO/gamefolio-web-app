@@ -4721,7 +4721,7 @@ export class DatabaseStorage implements IStorage {
         name: assetRewards.name,
         imageUrl: assetRewards.imageUrl,
         rarity: assetRewards.rarity,
-        rewardType: assetRewards.rewardType,
+        rewardType: assetRewards.assetType,
         claimedAt: assetRewardClaims.claimedAt,
       })
       .from(assetRewardClaims)
