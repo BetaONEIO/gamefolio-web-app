@@ -104,6 +104,7 @@ export const clips = pgTable("clips", {
   videoType: text("video_type").default("clip"), // "clip" or "reel"
   ageRestricted: boolean("age_restricted").default(false).notNull(),
   shareCode: text("share_code").unique(),
+  pinnedAt: timestamp("pinned_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -146,6 +147,7 @@ export const screenshots = pgTable("screenshots", {
   views: integer("views").default(0),
   ageRestricted: boolean("age_restricted").default(false).notNull(),
   shareCode: text("share_code").unique(),
+  pinnedAt: timestamp("pinned_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

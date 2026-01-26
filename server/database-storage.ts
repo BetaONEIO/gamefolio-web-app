@@ -1786,6 +1786,15 @@ export class DatabaseStorage implements IStorage {
     return screenshot;
   }
 
+  async updateScreenshot(id: number, screenshotData: Partial<Screenshot>): Promise<Screenshot | null> {
+    const [updatedScreenshot] = await db
+      .update(screenshots)
+      .set(screenshotData)
+      .where(eq(screenshots.id, id))
+      .returning();
+    return updatedScreenshot || null;
+  }
+
   async getScreenshotsByUserId(userId: number): Promise<Screenshot[]> {
     const results = await db
       .select({

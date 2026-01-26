@@ -4061,6 +4061,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Pin/unpin clip
+  app.patch("/api/clips/:id/pin", authMiddleware, async (req, res) => {
+    try {
+      const clipId = parseInt(req.params.id);
+      const clip = await storage.getClip(clipId);
+
+      if (!clip) {
+        return res.status(404).json({ message: "Clip not found" });
+      }
+
+      // Ensure the user is pinning their own clip
+      if (req.user?.id !== clip.userId) {
+        return res.status(403).json({ message: "You can only pin your own clips" });
+      }
+
+      // Toggle pin state
+      const pinnedAt = clip.pinnedAt ? null : new Date();
+      const updatedClip = await storage.updateClip(clipId, { pinnedAt });
+
+      if (!updatedClip) {
+        return res.status(404).json({ message: "Failed to update clip" });
+      }
+
+      res.json(updatedClip);
+    } catch (err) {
+      console.error("Error pinning clip:", err);
+      return res.status(500).json({ message: "Error pinning clip" });
+    }
+  });
+
   // Update clip thumbnail
   app.put("/api/clips/:id/thumbnail", authMiddleware, async (req, res) => {
     try {
@@ -6270,6 +6300,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Error fetching game screenshots:", err);
       return res.status(500).json({ message: "Error fetching screenshots" });
+    }
+  });
+
+  // Pin/unpin screenshot
+  app.patch("/api/screenshots/:id/pin", authMiddleware, async (req, res) => {
+    try {
+      const screenshotId = parseInt(req.params.id);
+      const screenshot = await storage.getScreenshot(screenshotId);
+
+      if (!screenshot) {
+        return res.status(404).json({ message: "Screenshot not found" });
+      }
+
+      // Ensure the user is pinning their own screenshot
+      if (req.user?.id !== screenshot.userId) {
+        return res.status(403).json({ message: "You can only pin your own screenshots" });
+      }
+
+      // Toggle pin state
+      const pinnedAt = screenshot.pinnedAt ? null : new Date();
+      const updatedScreenshot = await storage.updateScreenshot(screenshotId, { pinnedAt });
+
+      if (!updatedScreenshot) {
+        return res.status(404).json({ message: "Failed to update screenshot" });
+      }
+
+      res.json(updatedScreenshot);
+    } catch (err) {
+      console.error("Error pinning screenshot:", err);
+      return res.status(500).json({ message: "Error pinning screenshot" });
     }
   });
 
