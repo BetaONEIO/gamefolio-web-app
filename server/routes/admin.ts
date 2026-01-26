@@ -1349,6 +1349,20 @@ adminRouter.post("/asset-rewards", async (req: Request, res: Response) => {
   }
 });
 
+// Update schema for asset rewards (partial validation)
+const updateAssetRewardSchema = z.object({
+  name: z.string().min(1).optional(),
+  imageUrl: z.string().url().optional(),
+  assetType: z.string().optional(),
+  rarity: z.enum(["common", "rare", "epic", "legendary"]).optional(),
+  unlockChance: z.number().min(0).max(100).optional(),
+  isActive: z.boolean().optional(),
+  availableInLootbox: z.boolean().optional(),
+  availableInStore: z.boolean().optional(),
+  proOnly: z.boolean().optional(),
+  storePrice: z.number().int().min(1).nullable().optional(),
+});
+
 // PATCH /api/admin/asset-rewards/:id - Update asset reward
 adminRouter.patch("/asset-rewards/:id", async (req: Request, res: Response) => {
   try {
@@ -1362,9 +1376,21 @@ adminRouter.patch("/asset-rewards/:id", async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Asset reward not found" });
     }
 
-    const updated = await storage.updateAssetReward(id, req.body);
+    const validatedData = updateAssetRewardSchema.parse(req.body);
+    
+    if (validatedData.availableInStore && !validatedData.storePrice && !existing.storePrice) {
+      return res.status(400).json({ message: "Store price is required when available in store" });
+    }
+
+    const updated = await storage.updateAssetReward(id, validatedData);
     res.json(updated);
   } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ 
+        message: "Invalid input", 
+        errors: err.errors 
+      });
+    }
     console.error("Error updating asset reward:", err);
     res.status(500).json({ message: "Error updating asset reward" });
   }
