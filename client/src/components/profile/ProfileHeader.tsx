@@ -313,7 +313,7 @@ const ProfileHeader = ({
                 className="h-8 px-4"
                 onClick={handleMessageClick}
               >
-                <MessageSquare className="mr-1 h-4 w-4" /> Message
+                Message
               </Button>
             ) : (
               <GamefolioShareDialog 
