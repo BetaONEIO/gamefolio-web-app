@@ -60,6 +60,10 @@ interface AssetReward {
   unlockChance: number;
   timesRewarded: number;
   isActive: boolean;
+  availableInLootbox: boolean;
+  availableInStore: boolean;
+  proOnly: boolean;
+  storePrice: number | null;
   createdBy: number | null;
   createdAt: string;
   updatedAt: string;
@@ -767,6 +771,8 @@ import {
   Trophy,
   Flame,
   Gift,
+  ShoppingBag,
+  Store,
 } from "lucide-react";
 
 const AdminPage = () => {
@@ -824,6 +830,10 @@ const AdminPage = () => {
   const [newRewardImageFile, setNewRewardImageFile] = useState<File | null>(null);
   const [newRewardRarity, setNewRewardRarity] = useState<"common" | "rare" | "epic" | "legendary">("common");
   const [newRewardAssetType, setNewRewardAssetType] = useState<AssetType>("other");
+  const [newRewardAvailableInLootbox, setNewRewardAvailableInLootbox] = useState(true);
+  const [newRewardAvailableInStore, setNewRewardAvailableInStore] = useState(false);
+  const [newRewardProOnly, setNewRewardProOnly] = useState(false);
+  const [newRewardStorePrice, setNewRewardStorePrice] = useState("");
   const [createRewardLoading, setCreateRewardLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   
@@ -3376,13 +3386,72 @@ const AdminPage = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="flex items-end">
+                  </div>
+                  
+                  <div className="grid gap-4 md:grid-cols-4 mt-4 border-t pt-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Availability</Label>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={newRewardAvailableInLootbox}
+                            onCheckedChange={setNewRewardAvailableInLootbox}
+                            id="new-reward-lootbox"
+                          />
+                          <Label htmlFor="new-reward-lootbox" className="text-sm cursor-pointer">
+                            <Gift className="h-4 w-4 inline mr-1" /> Available in Lootbox
+                          </Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={newRewardAvailableInStore}
+                            onCheckedChange={setNewRewardAvailableInStore}
+                            id="new-reward-store"
+                          />
+                          <Label htmlFor="new-reward-store" className="text-sm cursor-pointer">
+                            <ShoppingBag className="h-4 w-4 inline mr-1" /> Available in Store
+                          </Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={newRewardProOnly}
+                            onCheckedChange={setNewRewardProOnly}
+                            id="new-reward-pro"
+                          />
+                          <Label htmlFor="new-reward-pro" className="text-sm cursor-pointer">
+                            <Crown className="h-4 w-4 inline mr-1" /> Pro Subscribers Only
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
+                    {newRewardAvailableInStore && (
+                      <div className="space-y-2">
+                        <Label htmlFor="reward-store-price">Store Price (GF Tokens)</Label>
+                        <Input
+                          id="reward-store-price"
+                          type="number"
+                          placeholder="e.g., 500"
+                          value={newRewardStorePrice}
+                          onChange={(e) => setNewRewardStorePrice(e.target.value)}
+                          min="1"
+                        />
+                      </div>
+                    )}
+                    <div className="flex items-end col-span-2 justify-end">
                       <Button
                         onClick={async () => {
                           if (!newRewardName.trim() || !newRewardImageUrl) {
                             toast({
                               title: "Missing fields",
                               description: "Please provide a name and upload an image",
+                              variant: "gamefolioError",
+                            });
+                            return;
+                          }
+                          if (newRewardAvailableInStore && !newRewardStorePrice) {
+                            toast({
+                              title: "Missing price",
+                              description: "Please provide a store price for store items",
                               variant: "gamefolioError",
                             });
                             return;
@@ -3395,6 +3464,10 @@ const AdminPage = () => {
                               rarity: newRewardRarity,
                               assetType: newRewardAssetType,
                               unlockChance: rarityChanceMap[newRewardRarity],
+                              availableInLootbox: newRewardAvailableInLootbox,
+                              availableInStore: newRewardAvailableInStore,
+                              proOnly: newRewardProOnly,
+                              storePrice: newRewardAvailableInStore ? parseInt(newRewardStorePrice) : null,
                             });
                             toast({
                               title: "Reward created",
@@ -3406,7 +3479,10 @@ const AdminPage = () => {
                             setNewRewardImageFile(null);
                             setNewRewardRarity("common");
                             setNewRewardAssetType("other");
-                            // Reset file input
+                            setNewRewardAvailableInLootbox(true);
+                            setNewRewardAvailableInStore(false);
+                            setNewRewardProOnly(false);
+                            setNewRewardStorePrice("");
                             const fileInput = document.getElementById('reward-image') as HTMLInputElement;
                             if (fileInput) fileInput.value = '';
                             refetchRewards();
@@ -3422,6 +3498,7 @@ const AdminPage = () => {
                         }}
                         disabled={createRewardLoading || uploadingImage || !newRewardName.trim() || !newRewardImageUrl}
                         data-testid="button-create-reward"
+                        className="h-10"
                       >
                         {createRewardLoading ? "Creating..." : <><Plus className="h-4 w-4 mr-2" /> Add Reward</>}
                       </Button>
@@ -3438,7 +3515,7 @@ const AdminPage = () => {
                         <TableHead>Name</TableHead>
                         <TableHead>Asset Type</TableHead>
                         <TableHead>Rarity</TableHead>
-                        <TableHead>Unlock Chance</TableHead>
+                        <TableHead>Availability</TableHead>
                         <TableHead>Times Rewarded</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -3488,7 +3565,28 @@ const AdminPage = () => {
                                 {reward.rarity ? reward.rarity.charAt(0).toUpperCase() + reward.rarity.slice(1) : 'Common'}
                               </Badge>
                             </TableCell>
-                            <TableCell>{reward.unlockChance}%</TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {reward.availableInLootbox && (
+                                  <Badge variant="outline" className="text-xs">
+                                    <Gift className="h-3 w-3 mr-1" /> Lootbox
+                                  </Badge>
+                                )}
+                                {reward.availableInStore && (
+                                  <Badge variant="outline" className="text-xs">
+                                    <Store className="h-3 w-3 mr-1" /> Store {reward.storePrice ? `(${reward.storePrice})` : ''}
+                                  </Badge>
+                                )}
+                                {reward.proOnly && (
+                                  <Badge className="bg-amber-500 text-xs">
+                                    <Crown className="h-3 w-3 mr-1" /> Pro
+                                  </Badge>
+                                )}
+                                {!reward.availableInLootbox && !reward.availableInStore && !reward.proOnly && (
+                                  <span className="text-muted-foreground text-xs">None set</span>
+                                )}
+                              </div>
+                            </TableCell>
                             <TableCell>
                               <Badge variant="outline" className="cursor-pointer" onClick={async () => {
                                 try {
@@ -3728,6 +3826,68 @@ const AdminPage = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                  
+                  <div className="border-t pt-4 space-y-3">
+                    <Label className="font-medium">Availability Settings</Label>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={editingReward.availableInLootbox ?? true}
+                          onCheckedChange={(checked) => setEditingReward({ 
+                            ...editingReward, 
+                            availableInLootbox: checked 
+                          })}
+                          id="edit-reward-lootbox"
+                        />
+                        <Label htmlFor="edit-reward-lootbox" className="text-sm cursor-pointer">
+                          <Gift className="h-4 w-4 inline mr-1" /> Available in Lootbox
+                        </Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={editingReward.availableInStore ?? false}
+                          onCheckedChange={(checked) => setEditingReward({ 
+                            ...editingReward, 
+                            availableInStore: checked,
+                            storePrice: checked ? (editingReward.storePrice ?? null) : null
+                          })}
+                          id="edit-reward-store"
+                        />
+                        <Label htmlFor="edit-reward-store" className="text-sm cursor-pointer">
+                          <ShoppingBag className="h-4 w-4 inline mr-1" /> Available in Store
+                        </Label>
+                      </div>
+                      {editingReward.availableInStore && (
+                        <div className="pl-8">
+                          <Input
+                            type="number"
+                            placeholder="Store price (GF tokens)"
+                            value={editingReward.storePrice || ""}
+                            onChange={(e) => setEditingReward({ 
+                              ...editingReward, 
+                              storePrice: e.target.value ? parseInt(e.target.value) : null 
+                            })}
+                            min="1"
+                            className="max-w-[200px]"
+                          />
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={editingReward.proOnly ?? false}
+                          onCheckedChange={(checked) => setEditingReward({ 
+                            ...editingReward, 
+                            proOnly: checked 
+                          })}
+                          id="edit-reward-pro"
+                        />
+                        <Label htmlFor="edit-reward-pro" className="text-sm cursor-pointer">
+                          <Crown className="h-4 w-4 inline mr-1" /> Pro Subscribers Only
+                        </Label>
+                      </div>
+                    </div>
+                  </div>
+                  
                   {editingReward.imageUrl && (
                     <div className="flex justify-center">
                       <img
@@ -3742,12 +3902,24 @@ const AdminPage = () => {
                     onClick={async () => {
                       try {
                         const rarity = editingReward.rarity || "common";
+                        if (editingReward.availableInStore && !editingReward.storePrice) {
+                          toast({
+                            title: "Missing price",
+                            description: "Please provide a store price for store items",
+                            variant: "gamefolioError",
+                          });
+                          return;
+                        }
                         await apiRequest('PATCH', `/api/admin/asset-rewards/${editingReward.id}`, {
                           name: editingReward.name,
                           imageUrl: editingReward.imageUrl,
                           rarity: rarity,
                           assetType: editingReward.assetType || "other",
                           unlockChance: rarityChanceMap[rarity],
+                          availableInLootbox: editingReward.availableInLootbox,
+                          availableInStore: editingReward.availableInStore,
+                          proOnly: editingReward.proOnly,
+                          storePrice: editingReward.availableInStore ? editingReward.storePrice : null,
                         });
                         toast({
                           title: "Reward updated",

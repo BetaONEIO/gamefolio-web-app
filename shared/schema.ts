@@ -902,6 +902,10 @@ export const assetRewards = pgTable("asset_rewards", {
   rewardValue: integer("reward_value"), // For consumable rewards like XP or GF tokens - the amount to grant
   timesRewarded: integer("times_rewarded").default(0).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
+  availableInLootbox: boolean("available_in_lootbox").default(true).notNull(),
+  availableInStore: boolean("available_in_store").default(false).notNull(),
+  proOnly: boolean("pro_only").default(false).notNull(),
+  storePrice: integer("store_price"),
   createdBy: integer("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
