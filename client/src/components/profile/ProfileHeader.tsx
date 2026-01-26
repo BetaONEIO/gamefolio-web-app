@@ -4,7 +4,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { UserWithStats } from "@shared/schema";
-import { Mail, UserPlus, UserCheck, Share2, CheckCircle2, MessageSquare, Trophy, Heart, Flame, Video, Gamepad2, Upload, Code, Eye, Coffee, Scroll } from "lucide-react";
+import { Mail, UserPlus, UserCheck, Share2, CheckCircle2, MessageSquare, Trophy, Heart, Flame, Video, Gamepad2, Upload, Code, Eye, Coffee, Scroll, Settings } from "lucide-react";
+import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
@@ -269,8 +270,19 @@ const ProfileHeader = ({
 
           {/* Right side: Action Buttons */}
           <div className="flex items-center gap-3 flex-shrink-0">
-            {/* Follow Button */}
-            {!isCurrentUser && (
+            {/* Edit Profile Button for own profile, Follow Button for others */}
+            {isCurrentUser ? (
+              <Link href="/settings">
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="h-8 px-4 text-gray-900"
+                  style={buttonStyle}
+                >
+                  <Settings className="mr-1 h-4 w-4" /> Edit Profile
+                </Button>
+              </Link>
+            ) : (
               <Button
                 onClick={handleFollowClick}
                 size="sm"
