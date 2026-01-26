@@ -3,6 +3,7 @@ import { Home, ArrowLeft, Search } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
+import notFoundImage from "@assets/404_gamefolio_1769456375736.png";
 
 export default function NotFound() {
   const [location, setLocation] = useLocation();
@@ -22,22 +23,21 @@ export default function NotFound() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-secondary/20">
-      <div className="max-w-2xl w-full text-center space-y-8">
-        {/* Logo */}
-        <div className="flex justify-center mb-8">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-black">
+      <div className="max-w-2xl w-full text-center space-y-6">
+        {/* 404 Image */}
+        <div className="flex justify-center mb-4">
           <img
-            src="/attached_assets/Gamefolio logo copy.png"
-            alt="Gamefolio"
-            className="h-24 w-auto drop-shadow-lg"
+            src={notFoundImage}
+            alt="404 - Page Not Found"
+            className="max-w-xs sm:max-w-sm md:max-w-md w-auto h-auto drop-shadow-2xl"
           />
         </div>
 
         {/* Error Message */}
-        <div className="space-y-4">
-          <h1 className="text-6xl font-bold text-primary tracking-tight">404</h1>
-          <h2 className="text-3xl font-semibold text-foreground">Page Not Found</h2>
-          <p className="text-lg text-muted-foreground max-w-md mx-auto leading-relaxed">
+        <div className="space-y-3">
+          <h2 className="text-2xl sm:text-3xl font-semibold text-foreground">Page Not Found</h2>
+          <p className="text-base text-muted-foreground max-w-md mx-auto leading-relaxed">
             Oops! The page you're looking for doesn't exist. It might have been moved, deleted, or you entered the wrong URL.
           </p>
         </div>
