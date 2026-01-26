@@ -41,7 +41,8 @@ import {
   Upload,
   Code,
   Coffee,
-  Scroll
+  Scroll,
+  Pin
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -388,6 +389,52 @@ const ProfilePage = () => {
       toast({
         title: "Delete failed",
         description: error.message || "Failed to delete clip. Please try again.",
+        variant: "gamefolioError",
+      });
+    },
+  });
+
+  // Pin/unpin clip mutation
+  const pinClipMutation = useMutation({
+    mutationFn: async (clipId: number) => {
+      const response = await apiRequest('PATCH', `/api/clips/${clipId}/pin`);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${username}/clips`] });
+      toast({
+        title: "Updated",
+        description: "Clip pin status updated.",
+        variant: "default",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed",
+        description: error.message || "Failed to update pin status.",
+        variant: "gamefolioError",
+      });
+    },
+  });
+
+  // Pin/unpin screenshot mutation
+  const pinScreenshotMutation = useMutation({
+    mutationFn: async (screenshotId: number) => {
+      const response = await apiRequest('PATCH', `/api/screenshots/${screenshotId}/pin`);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${profile?.id}/screenshots`] });
+      toast({
+        title: "Updated",
+        description: "Screenshot pin status updated.",
+        variant: "default",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed",
+        description: error.message || "Failed to update pin status.",
         variant: "gamefolioError",
       });
     },
@@ -2078,14 +2125,46 @@ const ProfilePage = () => {
               </div>
             ) : clips && clips.filter(clip => clip.videoType !== 'reel').length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                {clips.filter(clip => clip.videoType !== 'reel').map((clip) => {
+                {clips
+                  .filter(clip => clip.videoType !== 'reel')
+                  .sort((a, b) => {
+                    // Pinned items first, then by creation date
+                    if (a.pinnedAt && !b.pinnedAt) return -1;
+                    if (!a.pinnedAt && b.pinnedAt) return 1;
+                    return 0;
+                  })
+                  .map((clip) => {
                   const isHighlighted = highlightedContent?.type === 'clip' && highlightedContent.id === clip.id.toString();
+                  const isPinned = !!clip.pinnedAt;
                   return (
                     <div 
                       key={clip.id}
-                      className={`${isHighlighted ? 'ring-4 ring-primary ring-offset-2 rounded-lg' : ''}`}
+                      className={`relative group ${isHighlighted ? 'ring-4 ring-primary ring-offset-2 rounded-lg' : ''}`}
                       id={isHighlighted ? `clip-${clip.id}` : undefined}
                     >
+                      {isPinned && (
+                        <div className="absolute top-2 left-2 z-10 bg-primary/90 text-primary-foreground px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1">
+                          <Pin className="w-3 h-3" />
+                          Pinned
+                        </div>
+                      )}
+                      {isOwnProfile && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            pinClipMutation.mutate(clip.id);
+                          }}
+                          disabled={pinClipMutation.isPending}
+                          className={`absolute top-2 right-2 z-10 p-2 rounded-full transition-all ${
+                            isPinned 
+                              ? 'bg-primary text-primary-foreground' 
+                              : 'bg-black/50 text-white opacity-0 group-hover:opacity-100'
+                          } hover:scale-110`}
+                          title={isPinned ? 'Unpin from profile' : 'Pin to profile'}
+                        >
+                          <Pin className="w-4 h-4" />
+                        </button>
+                      )}
                       <VideoClipGridItem 
                         clip={clip}
                         userId={currentUser?.id}
@@ -2186,14 +2265,45 @@ const ProfilePage = () => {
               </div>
             ) : clips && clips.filter(clip => clip.videoType === 'reel').length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                {clips.filter(clip => clip.videoType === 'reel').map((reel) => {
+                {clips
+                  .filter(clip => clip.videoType === 'reel')
+                  .sort((a, b) => {
+                    if (a.pinnedAt && !b.pinnedAt) return -1;
+                    if (!a.pinnedAt && b.pinnedAt) return 1;
+                    return 0;
+                  })
+                  .map((reel) => {
                   const isHighlighted = highlightedContent?.type === 'reel' && highlightedContent.id === reel.id.toString();
+                  const isPinned = !!reel.pinnedAt;
                   return (
                     <div 
                       key={`reel-${reel.id}`}
-                      className={`${isHighlighted ? 'ring-4 ring-primary ring-offset-2 rounded-lg' : ''}`}
+                      className={`relative group ${isHighlighted ? 'ring-4 ring-primary ring-offset-2 rounded-lg' : ''}`}
                       id={isHighlighted ? `reel-${reel.id}` : undefined}
                     >
+                      {isPinned && (
+                        <div className="absolute top-2 left-2 z-10 bg-primary/90 text-primary-foreground px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1">
+                          <Pin className="w-3 h-3" />
+                          Pinned
+                        </div>
+                      )}
+                      {isOwnProfile && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            pinClipMutation.mutate(reel.id);
+                          }}
+                          disabled={pinClipMutation.isPending}
+                          className={`absolute top-2 right-2 z-10 p-2 rounded-full transition-all ${
+                            isPinned 
+                              ? 'bg-primary text-primary-foreground' 
+                              : 'bg-black/50 text-white opacity-0 group-hover:opacity-100'
+                          } hover:scale-110`}
+                          title={isPinned ? 'Unpin from profile' : 'Pin to profile'}
+                        >
+                          <Pin className="w-4 h-4" />
+                        </button>
+                      )}
                       <VideoClipGridItem 
                         clip={reel}
                         userId={currentUser?.id}
@@ -2295,22 +2405,55 @@ const ProfilePage = () => {
               </div>
             ) : screenshots && screenshots.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {screenshots.map((screenshot) => {
+                {[...screenshots]
+                  .sort((a, b) => {
+                    if (a.pinnedAt && !b.pinnedAt) return -1;
+                    if (!a.pinnedAt && b.pinnedAt) return 1;
+                    return 0;
+                  })
+                  .map((screenshot) => {
                   const isHighlighted = highlightedContent?.type === 'screenshot' && highlightedContent.id === screenshot.id.toString();
+                  const isPinned = !!screenshot.pinnedAt;
                   
                   return (
-                    <ScreenshotCard
+                    <div 
                       key={`screenshot-${screenshot.id}`}
-                      screenshot={screenshot}
-                      isHighlighted={isHighlighted}
-                      isOwnProfile={isOwnProfile}
-                      profile={profile}
-                      onDelete={(id) => deleteScreenshotMutation.mutate(id)}
-                      onSelect={(screenshot) => {
-                        setSelectedScreenshot(screenshot);
-                        // Screenshot will open in dialog - no navigation needed
-                      }}
-                    />
+                      className="relative group"
+                    >
+                      {isPinned && (
+                        <div className="absolute top-2 left-2 z-10 bg-primary/90 text-primary-foreground px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1">
+                          <Pin className="w-3 h-3" />
+                          Pinned
+                        </div>
+                      )}
+                      {isOwnProfile && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            pinScreenshotMutation.mutate(screenshot.id);
+                          }}
+                          disabled={pinScreenshotMutation.isPending}
+                          className={`absolute top-2 right-2 z-10 p-2 rounded-full transition-all ${
+                            isPinned 
+                              ? 'bg-primary text-primary-foreground' 
+                              : 'bg-black/50 text-white opacity-0 group-hover:opacity-100'
+                          } hover:scale-110`}
+                          title={isPinned ? 'Unpin from profile' : 'Pin to profile'}
+                        >
+                          <Pin className="w-4 h-4" />
+                        </button>
+                      )}
+                      <ScreenshotCard
+                        screenshot={screenshot}
+                        isHighlighted={isHighlighted}
+                        isOwnProfile={isOwnProfile}
+                        profile={profile}
+                        onDelete={(id) => deleteScreenshotMutation.mutate(id)}
+                        onSelect={(screenshot) => {
+                          setSelectedScreenshot(screenshot);
+                        }}
+                      />
+                    </div>
                   );
                 })}
               </div>
