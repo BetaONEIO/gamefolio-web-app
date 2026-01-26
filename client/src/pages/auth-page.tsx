@@ -9,6 +9,7 @@ import { FaPlaystation, FaSteam, FaGamepad, FaXbox } from "react-icons/fa";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, AlertTriangle, X } from "lucide-react";
+import { KeyboardAvoidingWrapper } from "@/components/shared/KeyboardAvoidingWrapper";
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState("login");
@@ -79,7 +80,7 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen w-full relative flex items-center justify-center p-4 overflow-hidden">
+    <KeyboardAvoidingWrapper className="min-h-screen w-full relative flex items-center justify-center p-4 overflow-hidden">
       {/* Video Background */}
       <video
         className="fixed inset-0 w-full h-full object-cover z-0"
@@ -159,6 +160,6 @@ export default function AuthPage() {
           <p className="text-white/60 text-sm font-medium">www.gamefolio.com</p>
         </div>
       </div>
-    </div>
+    </KeyboardAvoidingWrapper>
   );
 }

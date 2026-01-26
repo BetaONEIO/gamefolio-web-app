@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { MessageSquare, Send, Trash2, UserX, Search } from "lucide-react";
+import { KeyboardAvoidingWrapper } from "@/components/shared/KeyboardAvoidingWrapper";
 import { formatDistanceToNow } from "date-fns";
 import {
   Dialog,
@@ -299,7 +300,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="h-screen bg-navy text-white">
+    <KeyboardAvoidingWrapper className="h-screen bg-navy text-white">
       <div className="flex h-full">
         {/* Left Sidebar - Conversations */}
         <div className="w-80 border-r border-navy-light flex flex-col">
@@ -560,6 +561,6 @@ export default function MessagesPage() {
           )}
         </div>
       </div>
-    </div>
+    </KeyboardAvoidingWrapper>
   );
 }

@@ -25,6 +25,7 @@ import { Slider } from "@/components/ui/slider";
 import DOMPurify from "dompurify";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import type { NameTag } from "@shared/schema";
+import { KeyboardAvoidingWrapper } from "@/components/shared/KeyboardAvoidingWrapper";
 
 // Component to fetch SVG and render it inline with color replacement
 const InlineSvgBorder: React.FC<{
@@ -732,7 +733,7 @@ export default function SettingsPage() {
   const accentRgb = user?.accentColor ? hexToRgb(user.accentColor) : null;
 
   return (
-    <div 
+    <KeyboardAvoidingWrapper 
       className="min-h-screen p-6 pb-24 md:pb-6"
     >
       <div className="max-w-4xl mx-auto">
@@ -1605,6 +1606,6 @@ export default function SettingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </KeyboardAvoidingWrapper>
   );
 }
