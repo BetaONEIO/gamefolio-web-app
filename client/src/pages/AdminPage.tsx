@@ -63,10 +63,31 @@ interface AssetReward {
   availableInLootbox: boolean;
   availableInStore: boolean;
   proOnly: boolean;
+  freeItem: boolean;
+  redeemable: boolean;
+  rewardCategory: string;
   storePrice: number | null;
+  sourceBucket: string | null;
+  sourcePath: string | null;
   createdBy: number | null;
   createdAt: string;
   updatedAt: string;
+}
+
+interface BucketFile {
+  name: string;
+  id: string;
+  size: number;
+  createdAt: string;
+  publicUrl: string;
+  path: string;
+}
+
+interface BucketContents {
+  files: BucketFile[];
+  folders: string[];
+  bucket: string;
+  currentFolder: string;
 }
 
 interface AssetRewardWithClaims extends AssetReward {
@@ -773,6 +794,11 @@ import {
   Gift,
   ShoppingBag,
   Store,
+  FolderOpen,
+  Users,
+  ArrowLeft,
+  Ticket,
+  HelpCircle,
 } from "lucide-react";
 
 const AdminPage = () => {
@@ -833,9 +859,28 @@ const AdminPage = () => {
   const [newRewardAvailableInLootbox, setNewRewardAvailableInLootbox] = useState(true);
   const [newRewardAvailableInStore, setNewRewardAvailableInStore] = useState(false);
   const [newRewardProOnly, setNewRewardProOnly] = useState(false);
+  const [newRewardFreeItem, setNewRewardFreeItem] = useState(false);
+  const [newRewardRedeemable, setNewRewardRedeemable] = useState(false);
+  const [newRewardCategory, setNewRewardCategory] = useState<string>("other");
   const [newRewardStorePrice, setNewRewardStorePrice] = useState("");
   const [createRewardLoading, setCreateRewardLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  
+  // Bucket browser state
+  const [selectedBucket, setSelectedBucket] = useState<string>("gamefolio-name-tags");
+  const [currentBucketFolder, setCurrentBucketFolder] = useState<string>("");
+  const [bucketContents, setBucketContents] = useState<BucketContents | null>(null);
+  const [loadingBucket, setLoadingBucket] = useState(false);
+  
+  // Reward category options
+  const rewardCategoryOptions = [
+    { value: "pro_user", label: "Pro User Exclusive", icon: "crown" },
+    { value: "lootbox", label: "Loot Box Reward", icon: "gift" },
+    { value: "free_item", label: "Free Item (All Users)", icon: "users" },
+    { value: "store_item", label: "Store/Buyable Item", icon: "shopping-bag" },
+    { value: "redeemable", label: "Redeemable Item", icon: "ticket" },
+    { value: "other", label: "Other (TBD)", icon: "help-circle" },
+  ];
   
   // Asset type display names
   const assetTypeDisplayNames: Record<string, string> = {
@@ -974,6 +1019,23 @@ const AdminPage = () => {
   const { data: assetRewardsData, isLoading: rewardsLoading, refetch: refetchRewards } = useQuery<AssetReward[]>({
     queryKey: ["/api/admin/asset-rewards"],
   });
+
+  // Bucket contents query - uses default fetcher with query parameters
+  const bucketFilesUrl = `/api/admin/storage/buckets/${selectedBucket}/files`;
+  const { data: bucketData, isLoading: bucketLoading, refetch: refetchBucket } = useQuery<BucketContents>({
+    queryKey: [bucketFilesUrl, currentBucketFolder ? { folder: currentBucketFolder } : undefined],
+  });
+
+  // Function to select a file from bucket and use it as reward image
+  const selectBucketFileAsReward = (file: BucketFile) => {
+    setNewRewardImageUrl(file.publicUrl);
+    setNewRewardName(file.name.replace(/\.[^/.]+$/, "")); // Remove file extension for name
+    toast({
+      title: "Asset Selected",
+      description: `Selected "${file.name}" from ${selectedBucket}`,
+      variant: "gamefolioSuccess",
+    });
+  };
 
   // Update form fields when data loads
   React.useEffect(() => {
@@ -3279,11 +3341,107 @@ const AdminPage = () => {
 
         {/* Asset Rewards Tab */}
         <TabsContent value="asset-rewards" className="space-y-4">
+          {/* Bucket Browser Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FolderOpen className="h-5 w-5" />
+                Asset Browser
+              </CardTitle>
+              <CardDescription>
+                Browse assets from Supabase storage buckets and assign them as rewards
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex gap-4 items-center">
+                  <div className="space-y-2 flex-1">
+                    <Label>Select Bucket</Label>
+                    <Select value={selectedBucket} onValueChange={(v) => { setSelectedBucket(v); setCurrentBucketFolder(""); }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a bucket" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="gamefolio-name-tags">gamefolio-name-tags (Name Tags)</SelectItem>
+                        <SelectItem value="gamefolio-assets">gamefolio-assets (Borders, Backgrounds)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {currentBucketFolder && (
+                    <Button variant="outline" size="sm" onClick={() => setCurrentBucketFolder("")}>
+                      <ArrowLeft className="h-4 w-4 mr-1" /> Back to Root
+                    </Button>
+                  )}
+                </div>
+                
+                {currentBucketFolder && (
+                  <div className="text-sm text-muted-foreground">
+                    Current folder: <span className="font-mono bg-muted px-2 py-1 rounded">{currentBucketFolder}</span>
+                  </div>
+                )}
+
+                {bucketLoading ? (
+                  <div className="text-center py-8 text-muted-foreground">Loading bucket contents...</div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Folders */}
+                    {bucketData?.folders && bucketData.folders.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Folders</h4>
+                        <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+                          {bucketData.folders.map((folder) => (
+                            <button
+                              key={folder}
+                              onClick={() => setCurrentBucketFolder(currentBucketFolder ? `${currentBucketFolder}/${folder}` : folder)}
+                              className="flex flex-col items-center p-2 rounded border hover:bg-muted transition-colors"
+                            >
+                              <FolderOpen className="h-8 w-8 text-yellow-500" />
+                              <span className="text-xs truncate w-full text-center mt-1">{folder}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Files */}
+                    {bucketData?.files && bucketData.files.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Assets ({bucketData.files.length})</h4>
+                        <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 max-h-64 overflow-y-auto">
+                          {bucketData.files.map((file) => (
+                            <button
+                              key={file.id}
+                              onClick={() => selectBucketFileAsReward(file)}
+                              className="flex flex-col items-center p-2 rounded border hover:bg-primary/10 hover:border-primary transition-colors group"
+                            >
+                              <img 
+                                src={file.publicUrl} 
+                                alt={file.name}
+                                className="w-12 h-12 object-contain rounded"
+                                onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
+                              />
+                              <span className="text-xs truncate w-full text-center mt-1">{file.name}</span>
+                              <span className="text-xs text-primary opacity-0 group-hover:opacity-100">Select</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {bucketData?.files?.length === 0 && bucketData?.folders?.length === 0 && (
+                      <div className="text-center py-8 text-muted-foreground">No files or folders in this location</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Asset Rewards Management</CardTitle>
               <CardDescription>
-                Manage loot box rewards for the mobile app
+                Create and manage reward items with availability settings
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -3422,7 +3580,67 @@ const AdminPage = () => {
                             <Crown className="h-4 w-4 inline mr-1" /> Pro Subscribers Only
                           </Label>
                         </div>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={newRewardFreeItem}
+                            onCheckedChange={setNewRewardFreeItem}
+                            id="new-reward-free"
+                          />
+                          <Label htmlFor="new-reward-free" className="text-sm cursor-pointer">
+                            <Users className="h-4 w-4 inline mr-1" /> Free Item (All Users)
+                          </Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={newRewardRedeemable}
+                            onCheckedChange={setNewRewardRedeemable}
+                            id="new-reward-redeemable"
+                          />
+                          <Label htmlFor="new-reward-redeemable" className="text-sm cursor-pointer">
+                            <Ticket className="h-4 w-4 inline mr-1" /> Redeemable Item
+                          </Label>
+                        </div>
                       </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Primary Category</Label>
+                      <Select value={newRewardCategory} onValueChange={setNewRewardCategory}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pro_user">
+                            <span className="flex items-center gap-2">
+                              <Crown className="h-4 w-4 text-purple-500" /> Pro User Exclusive
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="lootbox">
+                            <span className="flex items-center gap-2">
+                              <Gift className="h-4 w-4 text-yellow-500" /> Loot Box Reward
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="free_item">
+                            <span className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-green-500" /> Free Item (All Users)
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="store_item">
+                            <span className="flex items-center gap-2">
+                              <ShoppingBag className="h-4 w-4 text-blue-500" /> Store/Buyable Item
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="redeemable">
+                            <span className="flex items-center gap-2">
+                              <Ticket className="h-4 w-4 text-orange-500" /> Redeemable Item
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="other">
+                            <span className="flex items-center gap-2">
+                              <HelpCircle className="h-4 w-4 text-gray-500" /> Other (TBD)
+                            </span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     {newRewardAvailableInStore && (
                       <div className="space-y-2">
@@ -3467,7 +3685,12 @@ const AdminPage = () => {
                               availableInLootbox: newRewardAvailableInLootbox,
                               availableInStore: newRewardAvailableInStore,
                               proOnly: newRewardProOnly,
+                              freeItem: newRewardFreeItem,
+                              redeemable: newRewardRedeemable,
+                              rewardCategory: newRewardCategory,
                               storePrice: newRewardAvailableInStore ? parseInt(newRewardStorePrice) : null,
+                              sourceBucket: selectedBucket,
+                              sourcePath: bucketData?.currentFolder || null,
                             });
                             toast({
                               title: "Reward created",
@@ -3482,6 +3705,9 @@ const AdminPage = () => {
                             setNewRewardAvailableInLootbox(true);
                             setNewRewardAvailableInStore(false);
                             setNewRewardProOnly(false);
+                            setNewRewardFreeItem(false);
+                            setNewRewardRedeemable(false);
+                            setNewRewardCategory("other");
                             setNewRewardStorePrice("");
                             const fileInput = document.getElementById('reward-image') as HTMLInputElement;
                             if (fileInput) fileInput.value = '';

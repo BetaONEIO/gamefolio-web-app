@@ -892,6 +892,10 @@ export type AssetType = typeof assetTypes[number];
 export const borderCategories = ["static", "animated", "pro"] as const;
 export type BorderCategory = typeof borderCategories[number];
 
+// Reward categories for categorizing how items are obtained
+export const rewardCategories = ["pro_user", "lootbox", "free_item", "store_item", "redeemable", "other"] as const;
+export type RewardCategory = typeof rewardCategories[number];
+
 // Asset rewards table for loot box rewards
 export const assetRewards = pgTable("asset_rewards", {
   id: serial("id").primaryKey(),
@@ -907,7 +911,12 @@ export const assetRewards = pgTable("asset_rewards", {
   availableInLootbox: boolean("available_in_lootbox").default(true).notNull(),
   availableInStore: boolean("available_in_store").default(false).notNull(),
   proOnly: boolean("pro_only").default(false).notNull(),
+  freeItem: boolean("free_item").default(false).notNull(), // Available to all users for free
+  redeemable: boolean("redeemable").default(false).notNull(), // Can be redeemed via code/promotion
+  rewardCategory: text("reward_category").default("other"), // Primary category: pro_user, lootbox, free_item, store_item, redeemable, other
   storePrice: integer("store_price"),
+  sourceBucket: text("source_bucket"), // Supabase bucket name: gamefolio-name-tags, gamefolio-assets
+  sourcePath: text("source_path"), // Path within the bucket
   createdBy: integer("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

@@ -32,7 +32,7 @@ export class SupabaseStorage {
 
     // Enforce strict Supabase-only storage rules
     this.bucketName = 'gamefolio-media';
-    this.allowedBuckets = ['gamefolio-media', 'gamefolio-assets'];
+    this.allowedBuckets = ['gamefolio-media', 'gamefolio-assets', 'gamefolio-name-tags'];
     this.disallowedBuckets = ['gamefoliowebappmediacontent', 'gamefolio-media-v2'];
     this.strictMode = true;
     this.preventLocalStorageFallback = true;
@@ -73,6 +73,30 @@ export class SupabaseStorage {
     if (this.preventLocalStorageFallback) {
       throw new Error('Local storage fallback is disabled. All media must use Supabase storage exclusively.');
     }
+  }
+
+  /**
+   * Sanitize folder path to prevent path traversal attacks
+   * Removes dangerous patterns like .., leading slashes, and normalizes the path
+   */
+  private sanitizeFolderPath(folderPath: string): string {
+    if (!folderPath) return '';
+    
+    // Remove path traversal patterns
+    let sanitized = folderPath
+      .replace(/\.\./g, '')  // Remove .. sequences
+      .replace(/^\/+/, '')   // Remove leading slashes
+      .replace(/\/+/g, '/')  // Normalize multiple slashes
+      .replace(/\/+$/, '');  // Remove trailing slashes
+    
+    // Split and filter out empty segments and hidden folders
+    const segments = sanitized.split('/').filter(segment => 
+      segment && 
+      segment !== '.' && 
+      !segment.startsWith('.')
+    );
+    
+    return segments.join('/');
   }
 
   /**
@@ -503,6 +527,104 @@ export class SupabaseStorage {
    */
   get client() {
     return this.supabase;
+  }
+
+  /**
+   * List all files in a bucket (for admin asset management)
+   * @param bucketName - The bucket name to list files from
+   * @param folderPath - Optional folder path within the bucket
+   * @returns Array of file objects with metadata
+   */
+  async listBucketFiles(bucketName: string, folderPath: string = ''): Promise<{
+    name: string;
+    id: string;
+    size: number;
+    createdAt: string;
+    publicUrl: string;
+    path: string;
+  }[]> {
+    try {
+      if (!this.allowedBuckets.includes(bucketName)) {
+        console.error(`Bucket "${bucketName}" is not in the allowed list`);
+        return [];
+      }
+
+      // Validate folder path to prevent path traversal attacks
+      const sanitizedPath = this.sanitizeFolderPath(folderPath);
+
+      const { data, error } = await this.supabase.storage
+        .from(bucketName)
+        .list(sanitizedPath, {
+          limit: 1000,
+          sortBy: { column: 'name', order: 'asc' }
+        });
+
+      if (error) {
+        console.error(`Error listing files from ${bucketName}:`, error.message);
+        return [];
+      }
+
+      if (!data) return [];
+
+      // Filter out folders (they have no id) and map to usable format
+      const files = data
+        .filter(item => item.id) // Only include actual files
+        .map(item => {
+          const fullPath = folderPath ? `${folderPath}/${item.name}` : item.name;
+          const { data: urlData } = this.supabase.storage
+            .from(bucketName)
+            .getPublicUrl(fullPath);
+          
+          return {
+            name: item.name,
+            id: item.id!,
+            size: item.metadata?.size || 0,
+            createdAt: item.created_at || new Date().toISOString(),
+            publicUrl: urlData.publicUrl,
+            path: fullPath
+          };
+        });
+
+      return files;
+    } catch (error) {
+      console.error('Error listing bucket files:', error);
+      return [];
+    }
+  }
+
+  /**
+   * List all folders in a bucket
+   * @param bucketName - The bucket name
+   * @param folderPath - Parent folder path
+   * @returns Array of folder names
+   */
+  async listBucketFolders(bucketName: string, folderPath: string = ''): Promise<string[]> {
+    try {
+      if (!this.allowedBuckets.includes(bucketName)) {
+        console.error(`Bucket "${bucketName}" is not in the allowed list`);
+        return [];
+      }
+
+      // Validate folder path to prevent path traversal attacks
+      const sanitizedPath = this.sanitizeFolderPath(folderPath);
+
+      const { data, error } = await this.supabase.storage
+        .from(bucketName)
+        .list(sanitizedPath, { limit: 1000 });
+
+      if (error) {
+        console.error(`Error listing folders from ${bucketName}:`, error.message);
+        return [];
+      }
+
+      if (!data) return [];
+
+      // Folders don't have an id
+      return data.filter(item => !item.id).map(item => item.name);
+    } catch (error) {
+      console.error('Error listing bucket folders:', error);
+      return [];
+    }
   }
 }
 

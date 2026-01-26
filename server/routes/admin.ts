@@ -1360,7 +1360,12 @@ const updateAssetRewardSchema = z.object({
   availableInLootbox: z.boolean().optional(),
   availableInStore: z.boolean().optional(),
   proOnly: z.boolean().optional(),
+  freeItem: z.boolean().optional(),
+  redeemable: z.boolean().optional(),
+  rewardCategory: z.enum(["pro_user", "lootbox", "free_item", "store_item", "redeemable", "other"]).optional(),
   storePrice: z.number().int().min(1).nullable().optional(),
+  sourceBucket: z.string().nullable().optional(),
+  sourcePath: z.string().nullable().optional(),
 });
 
 // PATCH /api/admin/asset-rewards/:id - Update asset reward
@@ -1444,6 +1449,42 @@ adminRouter.get("/pro-subscribers", async (req: Request, res: Response) => {
   } catch (err) {
     console.error("Error fetching Pro subscribers:", err);
     res.status(500).json({ message: "Error fetching Pro subscribers" });
+  }
+});
+
+// GET /api/admin/storage/buckets - List available Supabase buckets for admin
+adminRouter.get("/storage/buckets", async (req: Request, res: Response) => {
+  try {
+    const buckets = [
+      { name: 'gamefolio-name-tags', description: 'Name tag assets' },
+      { name: 'gamefolio-assets', description: 'General assets (borders, backgrounds, etc.)' }
+    ];
+    res.json(buckets);
+  } catch (err) {
+    console.error("Error fetching buckets:", err);
+    res.status(500).json({ message: "Error fetching buckets" });
+  }
+});
+
+// GET /api/admin/storage/buckets/:bucketName/files - List files in a bucket
+adminRouter.get("/storage/buckets/:bucketName/files", async (req: Request, res: Response) => {
+  try {
+    const { bucketName } = req.params;
+    const { folder } = req.query;
+    
+    const allowedBuckets = ['gamefolio-name-tags', 'gamefolio-assets'];
+    if (!allowedBuckets.includes(bucketName)) {
+      return res.status(400).json({ message: "Invalid bucket name" });
+    }
+
+    const { supabaseStorage } = await import('../supabase-storage');
+    const files = await supabaseStorage.listBucketFiles(bucketName, folder as string || '');
+    const folders = await supabaseStorage.listBucketFolders(bucketName, folder as string || '');
+    
+    res.json({ files, folders, bucket: bucketName, currentFolder: folder || '' });
+  } catch (err) {
+    console.error("Error listing bucket files:", err);
+    res.status(500).json({ message: "Error listing bucket files" });
   }
 });
 
