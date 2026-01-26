@@ -115,14 +115,14 @@ const ProfileHeader = ({
       {/* Banner with overlapping profile picture */}
       <div className="relative">
         <div 
-          className="w-full h-64 relative"
+          className="w-full h-48 md:h-64 relative"
           style={bannerStyle}
         >
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/90"></div>
         </div>
         
         {/* Profile Image - Positioned halfway on banner */}
-        <div className="absolute left-8 bottom-0 transform translate-y-1/2">
+        <div className="absolute left-4 md:left-8 bottom-0 transform translate-y-1/2">
           <div className="flex flex-col items-center">
             <CustomAvatar 
               user={profile}
@@ -132,8 +132,8 @@ const ProfileHeader = ({
               showAvatarBorderOverlay={true}
             />
             
-            {/* Profile Stats underneath profile picture */}
-            <div className="flex space-x-4 text-xs mt-3 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 border">
+            {/* Profile Stats underneath profile picture - Desktop only */}
+            <div className="hidden md:flex space-x-4 text-xs mt-3 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 border">
               <div className="text-center">
                 <span className="font-bold block">{(profile._count?.clips || 0) + (profile._count?.screenshots || 0)}</span>
                 <span className="text-muted-foreground">Uploads</span>
@@ -199,17 +199,17 @@ const ProfileHeader = ({
 
       {/* Profile Header Content */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 pt-20 relative z-10">
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           {/* Left side: Profile info next to image */}
-          <div className="flex items-start gap-6 flex-grow">
+          <div className="flex items-start gap-4 md:gap-6 flex-grow">
             {/* Spacer for profile image */}
-            <div className="flex-shrink-0 w-32"></div>
+            <div className="flex-shrink-0 w-24 md:w-32"></div>
 
             {/* Profile Info */}
-            <div className="space-y-2">
+            <div className="space-y-2 flex-1 min-w-0">
               {/* Username with user type badge(s) */}
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl font-bold text-foreground">
+                <h1 className="text-xl md:text-2xl font-bold text-foreground truncate">
                   {profile.displayName}
                 </h1>
                 {/* Name Tag - next to username */}
@@ -269,14 +269,14 @@ const ProfileHeader = ({
           </div>
 
           {/* Right side: Action Buttons */}
-          <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex items-center gap-2 md:gap-3 flex-shrink-0 ml-28 md:ml-0">
             {/* Edit Profile Button for own profile, Follow Button for others */}
             {isCurrentUser ? (
               <Link href="/settings">
                 <Button
                   size="sm"
                   variant="default"
-                  className="h-8 px-4 text-gray-900"
+                  className="h-8 px-3 md:px-4 text-gray-900 text-sm"
                   style={buttonStyle}
                 >
                   <Settings className="mr-1 h-4 w-4" /> Edit Profile
@@ -287,7 +287,7 @@ const ProfileHeader = ({
                 onClick={handleFollowClick}
                 size="sm"
                 variant={isFollowing ? "outline" : "default"}
-                className={`h-8 px-4 ${!isFollowing ? 'text-gray-900' : ''}`}
+                className={`h-8 px-3 md:px-4 text-sm ${!isFollowing ? 'text-gray-900' : ''}`}
                 disabled={isFollowLoading}
                 style={!isFollowing ? buttonStyle : undefined}
               >
@@ -310,7 +310,7 @@ const ProfileHeader = ({
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="h-8 px-4"
+                className="h-8 px-3 md:px-4 text-sm"
                 onClick={handleMessageClick}
               >
                 Message
@@ -321,7 +321,7 @@ const ProfileHeader = ({
                 open={shareDialogOpen}
                 onOpenChange={setShareDialogOpen}
                 trigger={(
-                  <Button variant="outline" size="sm" className="h-8 px-4">
+                  <Button variant="outline" size="sm" className="h-8 px-3 md:px-4 text-sm">
                     <Share2 className="mr-1 h-4 w-4" /> Share
                   </Button>
                 )}
@@ -330,6 +330,35 @@ const ProfileHeader = ({
           </div>
         </div>
 
+        {/* Mobile Stats Row */}
+        <div className="md:hidden mt-4 ml-28">
+          <div className="flex flex-wrap gap-3 text-xs">
+            <div className="text-center">
+              <span className="font-bold">{(profile._count?.clips || 0) + (profile._count?.screenshots || 0)}</span>
+              <span className="text-muted-foreground ml-1">Uploads</span>
+            </div>
+            <div className="text-center">
+              <span className="font-bold">{profile._count?.followers || 0}</span>
+              <span className="text-muted-foreground ml-1">Followers</span>
+            </div>
+            <div className="text-center">
+              <span className="font-bold">{profile._count?.following || 0}</span>
+              <span className="text-muted-foreground ml-1">Following</span>
+            </div>
+            <div className="text-center flex items-center gap-1">
+              <Heart className="w-3 h-3 text-red-500" />
+              <span className="font-bold">{profile._count?.likesReceived || 0}</span>
+            </div>
+            <div className="text-center flex items-center gap-1">
+              <Flame className="w-3 h-3 text-orange-500" />
+              <span className="font-bold">{profile._count?.firesReceived || 0}</span>
+            </div>
+            <div className="text-center flex items-center gap-1">
+              <Trophy className="w-3 h-3 text-yellow-500" />
+              <span className="font-bold">{profile.level || 1}</span>
+            </div>
+          </div>
+        </div>
 
         {/* Platform connections */}
         <div className="max-w-5xl mx-auto px-4 md:px-8 mt-4">
