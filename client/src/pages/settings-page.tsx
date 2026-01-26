@@ -434,7 +434,7 @@ export default function SettingsPage() {
     }
   };
 
-  // Handle avatar file selection - opens crop modal
+  // Handle avatar file selection - opens crop modal (or directly sets file for Pro GIFs)
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -458,9 +458,35 @@ export default function SettingsPage() {
         return;
       }
 
-      console.log('🖼️ Avatar file selected:', file.name, 'Size:', file.size);
+      console.log('🖼️ Avatar file selected:', file.name, 'Size:', file.size, 'Type:', file.type);
       
-      // Create preview URL and open crop modal
+      // Check if file is a GIF
+      const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
+      
+      if (isGif) {
+        if (user?.isPro) {
+          // Pro users: Skip crop modal to preserve GIF animation
+          console.log('🎬 Pro user uploading GIF - skipping crop to preserve animation');
+          setAvatarFile(file);
+          setAvatarPreview(URL.createObjectURL(file));
+          toast({
+            title: "Animated GIF selected",
+            description: "Your animated avatar will be preserved. Click 'Save Changes' to upload.",
+            variant: "gamefolioSuccess",
+          });
+          return;
+        } else {
+          // Non-Pro users: Show message that animated GIFs are Pro-only, continue with cropping
+          toast({
+            title: "Animated avatars are Pro-only",
+            description: "Your GIF will be converted to a static image. Upgrade to Pro to keep animations!",
+            variant: "default",
+          });
+          // Continue to crop modal which will convert to JPEG
+        }
+      }
+      
+      // Create preview URL and open crop modal (for non-GIF or non-Pro GIF uploads)
       const reader = new FileReader();
       reader.onload = (e) => {
         const imageUrl = e.target?.result as string;

@@ -367,9 +367,15 @@ export class SupabaseStorage {
    */
   async getSignedUrl(storagePath: string, expiresIn: number = 3600): Promise<string | null> {
     try {
+      // Check if file is a GIF - need to bypass image transformation to preserve animation
+      const isGif = storagePath.toLowerCase().endsWith('.gif');
+      
+      // For GIFs, use download option to bypass imgproxy transformation which strips animation
+      const options = isGif ? { download: false } : undefined;
+
       const { data, error } = await this.supabase.storage
         .from(this.bucketName)
-        .createSignedUrl(storagePath, expiresIn);
+        .createSignedUrl(storagePath, expiresIn, options);
 
       if (error) {
         console.error('Error generating signed URL:', error.message);
@@ -470,9 +476,15 @@ export class SupabaseStorage {
         return null;
       }
 
+      // Check if file is a GIF - need to bypass image transformation to preserve animation
+      const isGif = storagePath.toLowerCase().endsWith('.gif');
+
+      // For GIFs, use download option to bypass imgproxy transformation which strips animation
+      const options = isGif ? { download: false } : undefined;
+
       const { data, error } = await this.supabase.storage
         .from(bucketName)
-        .createSignedUrl(storagePath, expiresIn);
+        .createSignedUrl(storagePath, expiresIn, options);
 
       if (error) {
         console.error(`Error generating signed URL for ${bucketName}:`, error.message);
