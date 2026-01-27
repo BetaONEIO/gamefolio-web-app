@@ -2054,7 +2054,7 @@ const ProfilePage = () => {
         <div className="h-[12px]"></div>
 
         {/* Enhanced Tabs section with rounded container style */}
-        <div className="max-w-[90%] mx-auto">
+        <div className="max-w-[90%] mx-auto mt-8">
         <Tabs 
           defaultValue="clips" 
           value={activeTab} 
