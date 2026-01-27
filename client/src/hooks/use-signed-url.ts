@@ -34,30 +34,22 @@ export function useSignedUrl(publicUrl: string | undefined | null) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  // For public URLs, return immediately without async fetch
-  const effectiveUrl = useMemo(() => {
-    if (!publicUrl) return null;
-    // Public URLs don't need signing - return them directly
-    if (!isSupabaseStorageUrl(publicUrl)) return publicUrl;
-    // Check cache for signed URLs
-    return getCachedSignedUrl(publicUrl);
-  }, [publicUrl]);
-
   useEffect(() => {
-    // If we already have an effective URL (public or cached), use it
-    if (effectiveUrl) {
-      setSignedUrl(effectiveUrl);
-      return;
-    }
-
     if (!publicUrl) {
       setSignedUrl(null);
       return;
     }
 
-    // Only fetch signed URL for private Supabase storage URLs
+    // For public Supabase URLs or non-Supabase URLs, use directly without signing
     if (!isSupabaseStorageUrl(publicUrl)) {
       setSignedUrl(publicUrl);
+      return;
+    }
+
+    // Check cache first for private URLs
+    const cached = getCachedSignedUrl(publicUrl);
+    if (cached) {
+      setSignedUrl(cached);
       return;
     }
 
@@ -86,10 +78,16 @@ export function useSignedUrl(publicUrl: string | undefined | null) {
       });
 
     return () => { cancelled = true; };
-  }, [publicUrl, effectiveUrl]);
+  }, [publicUrl]);
 
-  // Return effectiveUrl immediately if available, otherwise signedUrl from state
-  return { signedUrl: effectiveUrl || signedUrl, isLoading, error };
+  // For public URLs, return directly; otherwise return from state
+  const finalUrl = useMemo(() => {
+    if (!publicUrl) return null;
+    if (!isSupabaseStorageUrl(publicUrl)) return publicUrl;
+    return signedUrl;
+  }, [publicUrl, signedUrl]);
+
+  return { signedUrl: finalUrl, isLoading, error };
 }
 
 export function useSignedUrls(publicUrls: (string | undefined | null)[]) {
