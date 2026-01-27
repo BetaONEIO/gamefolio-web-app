@@ -1718,7 +1718,7 @@ const ProfilePage = () => {
               />
               
               {/* Content aligned with username above */}
-              <div className="pl-4 pt-4">
+              <div className="pl-8 pt-4">
                 {/* Stats - Uploads, Followers, Following */}
                 <div className="flex gap-6 items-center">
                   <div className="flex flex-col">
