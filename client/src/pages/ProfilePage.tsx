@@ -1671,38 +1671,53 @@ const ProfilePage = () => {
             {/* Username */}
             <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
 
-            {/* Stats - Uploads, Followers, Following */}
-            <div className="flex gap-6 items-center mt-4">
-              <div className="flex flex-col">
-                <span className="font-bold text-lg">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                <span className="text-primary text-xs uppercase tracking-wider">Uploads</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-lg">{Number(profile._count?.followers || 0)}</span>
-                <span className="text-primary text-xs uppercase tracking-wider">Followers</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-lg">{Number(profile._count?.following || 0)}</span>
-                <span className="text-primary text-xs uppercase tracking-wider">Following</span>
+            {/* Curved fading gradient border around stats/bio section */}
+            <div 
+              className="mt-4 p-[1px] rounded-2xl self-start"
+              style={{
+                background: `linear-gradient(90deg, ${backgroundColor || '#0B2232'} 0%, ${accentColor || 'hsl(var(--primary))'} 15%, ${accentColor || 'hsl(var(--primary))'} 85%, ${backgroundColor || '#0B2232'} 100%)`,
+              }}
+            >
+              <div 
+                className="rounded-[15px] px-4 py-3"
+                style={{ 
+                  backgroundColor: backgroundColor || 'hsl(var(--background))',
+                }}
+              >
+                {/* Stats - Uploads, Followers, Following */}
+                <div className="flex gap-6 items-center">
+                  <div className="flex flex-col">
+                    <span className="font-bold text-lg">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                    <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>Uploads</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-lg">{Number(profile._count?.followers || 0)}</span>
+                    <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>Followers</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-lg">{Number(profile._count?.following || 0)}</span>
+                    <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>Following</span>
+                  </div>
+                </div>
+
+                {/* Member since date */}
+                {profile.createdAt && (
+                  <div className="mt-3">
+                    <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>
+                      Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long' 
+                      })}
+                    </span>
+                  </div>
+                )}
+
+                {/* Bio/description */}
+                {profile.bio && (
+                  <p className="mt-3 text-base text-foreground/90 max-w-xl">{profile.bio}</p>
+                )}
               </div>
             </div>
-
-            {/* Member since date */}
-            {profile.createdAt && (
-              <div className="mt-4">
-                <span className="text-xs text-primary uppercase tracking-wider">
-                  Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'long' 
-                  })}
-                </span>
-              </div>
-            )}
-
-            {/* Bio/description */}
-            {profile.bio && (
-              <p className="mt-3 text-base text-foreground/90 max-w-xl">{profile.bio}</p>
-            )}
 
             {/* Platform Connections */}
             {(profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
