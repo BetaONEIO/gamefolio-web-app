@@ -1672,7 +1672,7 @@ const ProfilePage = () => {
             <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
 
             {/* L-shaped fading border with curved corner and button */}
-            <div className="relative mt-4" style={{ marginLeft: '-16px' }}>
+            <div className="relative mt-4" style={{ marginLeft: '-32px' }}>
               {/* Curved corner piece with glow */}
               <div 
                 className="absolute top-0 left-0 w-4 h-4 pointer-events-none"
