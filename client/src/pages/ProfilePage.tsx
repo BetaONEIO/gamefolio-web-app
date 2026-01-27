@@ -1699,7 +1699,7 @@ const ProfilePage = () => {
                 {/* Collection button at the end of top line */}
                 <button 
                   onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
-                  className="absolute px-4 py-1.5 text-sm font-semibold rounded-lg transition-all hover:opacity-90 hover:scale-105"
+                  className="absolute px-4 py-1.5 text-sm font-semibold rounded-full transition-all hover:opacity-90 hover:scale-105"
                   style={{ 
                     top: '-12px',
                     right: '0px',
@@ -1707,15 +1707,21 @@ const ProfilePage = () => {
                       ? '#1a1a2e'
                       : 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
                     color: profileSectionTab === 'collection' ? '#ffffff' : '#1f2937',
-                    border: profileSectionTab === 'collection' 
-                      ? '2px solid'
-                      : 'none',
-                    borderImage: profileSectionTab === 'collection' 
-                      ? 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%) 1'
-                      : undefined,
-                    borderRadius: '8px',
+                    position: 'relative',
                   }}
                 >
+                  {profileSectionTab === 'collection' && (
+                    <span 
+                      className="absolute inset-0 rounded-full pointer-events-none"
+                      style={{
+                        background: 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
+                        padding: '2px',
+                        mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                        maskComposite: 'xor',
+                        WebkitMaskComposite: 'xor',
+                      }}
+                    />
+                  )}
                   Collection
                 </button>
               </div>
@@ -1732,7 +1738,7 @@ const ProfilePage = () => {
               
               {/* Content aligned with username above */}
               <div className="pl-8 pt-4" style={{ minHeight: '120px' }}>
-                {profileSectionTab === 'stats' && (
+                {profileSectionTab === 'stats' ? (
                   <>
                     {/* Stats - Uploads, Followers, Following */}
                     <div className="flex gap-6 items-center">
@@ -1767,6 +1773,8 @@ const ProfilePage = () => {
                       <p className="mt-3 text-base text-foreground/90 max-w-xl">{profile.bio}</p>
                     )}
                   </>
+                ) : (
+                  <p className="text-base text-foreground/70 mt-8">Coming soon</p>
                 )}
               </div>
             </div>
