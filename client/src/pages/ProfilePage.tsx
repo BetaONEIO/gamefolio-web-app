@@ -1700,8 +1700,9 @@ const ProfilePage = () => {
                 {/* Collection button at the end of top line */}
                 <button 
                   onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
-                  className="absolute right-0 -top-4 px-4 py-1.5 text-sm font-semibold rounded-lg transition-all hover:opacity-90 hover:scale-105"
+                  className="absolute right-0 px-4 py-1.5 text-sm font-semibold rounded-lg transition-all hover:opacity-90 hover:scale-105"
                   style={{ 
+                    top: '-14px',
                     background: profileSectionTab === 'collection'
                       ? 'rgba(0,0,0,0.6)'
                       : 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
