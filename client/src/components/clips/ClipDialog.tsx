@@ -617,6 +617,10 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                                 src={clip.user.avatarUrl} 
                                 alt={clip.user?.displayName || clip.user?.username || 'User'} 
                                 className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                }}
                               />
                             ) : (
                               <UserIcon className="h-5 w-5 text-white" />
@@ -857,6 +861,10 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         src={clip.user.avatarUrl} 
                         alt={clip.user?.displayName || clip.user?.username || 'User'} 
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
                       />
                     ) : (
                       <UserIcon className="h-5 w-5 text-muted-foreground" />

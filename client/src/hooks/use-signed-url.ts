@@ -6,7 +6,11 @@ const CACHE_BUFFER = 5 * 60 * 1000; // Refresh 5 minutes before expiry
 const URL_EXPIRY = 60 * 60 * 1000; // 1 hour
 
 function isSupabaseStorageUrl(url: string): boolean {
-  return url?.includes('gamefolio-media') || url?.includes('gamefolio-assets');
+  // Check if it's a Supabase storage URL that needs signing
+  // Skip URLs that are already public (contain /object/public/)
+  if (!url) return false;
+  if (url.includes('/object/public/')) return false; // Already public, no need to sign
+  return url.includes('gamefolio-media') || url.includes('gamefolio-assets');
 }
 
 function getCachedSignedUrl(originalUrl: string): string | null {
