@@ -1673,23 +1673,25 @@ const ProfilePage = () => {
 
             {/* L-shaped fading border with curved corner and button */}
             <div className="relative mt-4 ml-0">
-              {/* Curved corner piece */}
+              {/* Curved corner piece with inner glow */}
               <div 
                 className="absolute -top-0 -left-0 w-4 h-4"
                 style={{
                   borderLeft: `1px solid ${accentColor || 'hsl(var(--primary))'}`,
                   borderTop: `1px solid ${accentColor || 'hsl(var(--primary))'}`,
                   borderTopLeftRadius: '12px',
+                  boxShadow: `inset 8px 8px 15px ${accentColor || 'hsl(var(--primary))'}40`,
                 }}
               />
               
-              {/* Top horizontal line - extends far right and fades */}
+              {/* Top horizontal line - extends far right and fades with inner glow */}
               <div 
                 className="absolute top-0 left-4 h-[1px] flex items-center"
                 style={{
                   width: 'calc(100% - 16px)',
                   maxWidth: '550px',
                   background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 50%, ${backgroundColor || '#0B2232'} 100%)`,
+                  boxShadow: `0 0 12px 2px ${accentColor || 'hsl(var(--primary))'}50, 0 2px 8px ${accentColor || 'hsl(var(--primary))'}30`,
                 }}
               >
                 {/* Collection button at the end of top line */}
@@ -1705,12 +1707,13 @@ const ProfilePage = () => {
                 </button>
               </div>
               
-              {/* Left vertical line - starts after curved corner */}
+              {/* Left vertical line - starts after curved corner with inner glow */}
               <div 
                 className="absolute top-4 left-0 w-[1px]"
                 style={{
                   height: 'calc(100% - 16px)',
                   background: `linear-gradient(180deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, ${backgroundColor || '#0B2232'} 100%)`,
+                  boxShadow: `0 0 12px 2px ${accentColor || 'hsl(var(--primary))'}50, 2px 0 8px ${accentColor || 'hsl(var(--primary))'}30`,
                 }}
               />
               
