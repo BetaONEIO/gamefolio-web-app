@@ -1702,7 +1702,7 @@ const ProfilePage = () => {
                   className="px-4 py-1.5 text-sm font-semibold rounded-full hover:opacity-90 hover:scale-105"
                   style={{ 
                     position: 'absolute',
-                    top: '-12px',
+                    top: '-14px',
                     right: '0px',
                     background: profileSectionTab === 'collection'
                       ? '#1a1a2e'
