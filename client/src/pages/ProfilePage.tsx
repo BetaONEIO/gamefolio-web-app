@@ -1699,7 +1699,7 @@ const ProfilePage = () => {
                 {/* Collection button at the end of top line */}
                 <button 
                   onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
-                  className="px-4 py-1.5 text-sm font-semibold rounded-full transition-all hover:opacity-90 hover:scale-105"
+                  className="px-4 py-1.5 text-sm font-semibold rounded-full hover:opacity-90 hover:scale-105"
                   style={{ 
                     position: 'absolute',
                     top: '-12px',
@@ -1708,20 +1708,21 @@ const ProfilePage = () => {
                       ? '#1a1a2e'
                       : 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
                     color: profileSectionTab === 'collection' ? '#ffffff' : '#1f2937',
+                    border: '2px solid transparent',
+                    backgroundClip: 'padding-box',
                   }}
                 >
-                  {profileSectionTab === 'collection' && (
-                    <span 
-                      className="absolute inset-0 rounded-full pointer-events-none"
-                      style={{
-                        background: 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
-                        padding: '2px',
-                        mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                        maskComposite: 'xor',
-                        WebkitMaskComposite: 'xor',
-                      }}
-                    />
-                  )}
+                  <span 
+                    className="absolute inset-0 rounded-full pointer-events-none"
+                    style={{
+                      background: 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
+                      padding: '2px',
+                      mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                      maskComposite: 'xor',
+                      WebkitMaskComposite: 'xor',
+                      opacity: profileSectionTab === 'collection' ? 1 : 0,
+                    }}
+                  />
                   Collection
                 </button>
               </div>
