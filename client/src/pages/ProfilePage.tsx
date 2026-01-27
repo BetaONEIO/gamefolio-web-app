@@ -1744,7 +1744,7 @@ const ProfilePage = () => {
               />
               
               {/* Content aligned with username above */}
-              <div className="pl-8 pt-4">
+              <div className="pl-8 pt-4" style={{ minHeight: '120px' }}>
                 {profileSectionTab === 'stats' ? (
                   <>
                     {/* Stats - Uploads, Followers, Following */}
