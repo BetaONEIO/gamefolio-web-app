@@ -42,7 +42,8 @@ import {
   Code,
   Coffee,
   Scroll,
-  Pin
+  Pin,
+  FolderOpen
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -1961,7 +1962,7 @@ const ProfilePage = () => {
         {/* Spacer for tabs section */}
         <div className="h-[12px]"></div>
 
-        {/* Enhanced Tabs section with theme colors - reduced width */}
+        {/* Enhanced Tabs section with curved fading border */}
         <div className="max-w-[90%] mx-auto">
         <Tabs 
           defaultValue="clips" 
@@ -1969,96 +1970,72 @@ const ProfilePage = () => {
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList 
-            className="w-full justify-start rounded-none h-12 md:h-14 p-0 relative overflow-hidden flex"
-            style={{ 
-              backgroundColor: `hsl(var(--background) / 0.4)`
-            }}
-          >
-            <TabsTrigger 
-              ref={clipsTabRef}
-              value="clips" 
-              className={`relative rounded-none h-12 md:h-14 transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6 border ${activeTab === 'clips' ? 'font-bold' : 'font-medium'}`}
-              style={{ 
-                color: activeTab === 'clips' ? '#FFFFFF' : '#9CA3AF',
-                backgroundColor: activeTab === 'clips' ? 'hsl(var(--primary) / 0.1)' : 'transparent',
-                borderColor: activeTab === 'clips' ? 'hsl(var(--primary))' : 'transparent',
+          {/* Curved fading line container */}
+          <div className="relative flex items-center justify-center py-2">
+            {/* Left fading gradient */}
+            <div 
+              className="absolute left-0 top-0 bottom-0 w-24 pointer-events-none z-10"
+              style={{
+                background: 'linear-gradient(to right, hsl(var(--background)), transparent)',
               }}
-            >
-              <span className="relative z-10">Clips</span>
-              {activeTab === 'clips' && (
-                <div 
-                  className="absolute inset-0 opacity-20 animate-pulse"
-                  style={{
-                    background: `linear-gradient(135deg, hsl(var(--primary) / 0.2), transparent)`
-                  }}
-                ></div>
-              )}
-            </TabsTrigger>
+            />
+            
+            {/* Main curved rectangle with tabs */}
+            <div className="relative flex items-center gap-1 px-3 py-2 rounded-2xl border border-border/40 bg-background/60 backdrop-blur-sm shadow-lg">
+              <TabsList className="bg-transparent h-auto p-0 gap-1">
+                <TabsTrigger 
+                  ref={clipsTabRef}
+                  value="clips" 
+                  className={`relative rounded-xl h-10 md:h-11 transition-all duration-300 px-4 md:px-6 ${activeTab === 'clips' ? 'font-bold bg-primary text-white shadow-md' : 'font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
+                >
+                  <span className="relative z-10">Clips</span>
+                </TabsTrigger>
 
-            <TabsTrigger 
-              ref={reelsTabRef}
-              value="reels" 
-              className={`relative rounded-none h-12 md:h-14 transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6 border ${activeTab === 'reels' ? 'font-bold' : 'font-medium'}`}
-              style={{ 
-                color: activeTab === 'reels' ? '#FFFFFF' : '#9CA3AF',
-                backgroundColor: activeTab === 'reels' ? 'hsl(var(--primary) / 0.1)' : 'transparent',
-                borderColor: activeTab === 'reels' ? 'hsl(var(--primary))' : 'transparent',
-              }}
-            >
-              <span className="relative z-10">Reels</span>
-              {activeTab === 'reels' && (
-                <div 
-                  className="absolute inset-0 opacity-20 animate-pulse"
-                  style={{
-                    background: `linear-gradient(135deg, hsl(var(--primary) / 0.2), transparent)`
-                  }}
-                ></div>
-              )}
-            </TabsTrigger>
+                <TabsTrigger 
+                  ref={reelsTabRef}
+                  value="reels" 
+                  className={`relative rounded-xl h-10 md:h-11 transition-all duration-300 px-4 md:px-6 ${activeTab === 'reels' ? 'font-bold bg-primary text-white shadow-md' : 'font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
+                >
+                  <span className="relative z-10">Reels</span>
+                </TabsTrigger>
 
-            <TabsTrigger 
-              ref={screenshotsTabRef}
-              value="screenshots" 
-              className={`relative rounded-none h-12 md:h-14 transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6 text-xs md:text-base border ${activeTab === 'screenshots' ? 'font-bold' : 'font-medium'}`}
-              style={{ 
-                color: activeTab === 'screenshots' ? '#FFFFFF' : '#9CA3AF',
-                backgroundColor: activeTab === 'screenshots' ? 'hsl(var(--primary) / 0.1)' : 'transparent',
-                borderColor: activeTab === 'screenshots' ? 'hsl(var(--primary))' : 'transparent',
-              }}
-            >
-              <span className="relative z-10">Screenshots</span>
-              {activeTab === 'screenshots' && (
-                <div 
-                  className="absolute inset-0 opacity-20 animate-pulse"
-                  style={{
-                    background: `linear-gradient(135deg, hsl(var(--primary) / 0.2), transparent)`
-                  }}
-                ></div>
-              )}
-            </TabsTrigger>
+                <TabsTrigger 
+                  ref={screenshotsTabRef}
+                  value="screenshots" 
+                  className={`relative rounded-xl h-10 md:h-11 transition-all duration-300 px-3 md:px-6 text-xs md:text-sm ${activeTab === 'screenshots' ? 'font-bold bg-primary text-white shadow-md' : 'font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
+                >
+                  <span className="relative z-10">Screenshots</span>
+                </TabsTrigger>
 
-            <TabsTrigger 
-              ref={favoritesTabRef}
-              value="favorites" 
-              className={`relative rounded-none h-12 md:h-14 transition-all duration-300 hover:scale-105 flex-1 px-2 md:px-6 border ${activeTab === 'favorites' ? 'font-bold' : 'font-medium'}`}
-              style={{ 
-                color: activeTab === 'favorites' ? '#FFFFFF' : '#9CA3AF',
-                backgroundColor: activeTab === 'favorites' ? 'hsl(var(--primary) / 0.1)' : 'transparent',
-                borderColor: activeTab === 'favorites' ? 'hsl(var(--primary))' : 'transparent',
+                <TabsTrigger 
+                  ref={favoritesTabRef}
+                  value="favorites" 
+                  className={`relative rounded-xl h-10 md:h-11 transition-all duration-300 px-4 md:px-6 ${activeTab === 'favorites' ? 'font-bold bg-primary text-white shadow-md' : 'font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
+                >
+                  <span className="relative z-10">Favorites</span>
+                </TabsTrigger>
+              </TabsList>
+              
+              {/* Collection button */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-2 rounded-xl h-10 md:h-11 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary px-4"
+                onClick={() => setActiveTab("collection")}
+              >
+                <FolderOpen className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Collection</span>
+              </Button>
+            </div>
+            
+            {/* Right fading gradient */}
+            <div 
+              className="absolute right-0 top-0 bottom-0 w-24 pointer-events-none z-10"
+              style={{
+                background: 'linear-gradient(to left, hsl(var(--background)), transparent)',
               }}
-            >
-              <span className="relative z-10">Favorites</span>
-              {activeTab === 'favorites' && (
-                <div 
-                  className="absolute inset-0 opacity-20 animate-pulse"
-                  style={{
-                    background: `linear-gradient(135deg, hsl(var(--primary) / 0.2), transparent)`
-                  }}
-                ></div>
-              )}
-            </TabsTrigger>
-          </TabsList>
+            />
+          </div>
 
           {/* Clips Tab */}
           <TabsContent value="clips" className="pt-4">
@@ -2631,6 +2608,23 @@ const ProfilePage = () => {
                 )}
               </div>
             )}
+          </TabsContent>
+
+          {/* Collection Tab */}
+          <TabsContent value="collection" className="pt-6">
+            <div className="py-12 text-center">
+              <div className="max-w-md mx-auto">
+                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                  <FolderOpen className="w-10 h-10 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">Collection</h3>
+                <p className="text-muted-foreground">
+                  {isOwnProfile 
+                    ? "Your collection is empty. Start adding items to build your collection!" 
+                    : `${profile?.displayName || username}'s collection is empty.`}
+                </p>
+              </div>
+            </div>
           </TabsContent>
 
           {/* About Tab */}
