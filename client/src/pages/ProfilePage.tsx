@@ -138,6 +138,9 @@ const ProfilePage = () => {
   const [profileActionDialogOpen, setProfileActionDialogOpen] = useState(false);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [nameTagPreviewOpen, setNameTagPreviewOpen] = useState(false);
+  
+  // Profile section tab state (stats/bio vs collection)
+  const [profileSectionTab, setProfileSectionTab] = useState<'stats' | 'collection'>('stats');
 
   // Screenshot action handlers
   const handleScreenshotLike = () => {
@@ -1694,17 +1697,35 @@ const ProfilePage = () => {
                   boxShadow: `0 0 12px 2px ${accentColor || 'hsl(var(--primary))'}50, 0 2px 8px ${accentColor || 'hsl(var(--primary))'}30`,
                 }}
               >
-                {/* Collection button at the end of top line */}
-                <button 
-                  className="absolute right-0 -top-4 px-4 py-1.5 text-sm font-semibold rounded-lg transition-all hover:opacity-90 hover:scale-105"
-                  style={{ 
-                    background: 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
-                    color: '#1f2937',
-                    border: 'none',
-                  }}
-                >
-                  Collection
-                </button>
+                {/* Tab buttons at the end of top line */}
+                <div className="absolute right-0 -top-4 flex gap-2">
+                  <button 
+                    onClick={() => setProfileSectionTab('stats')}
+                    className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-all hover:opacity-90 hover:scale-105 ${profileSectionTab === 'stats' ? 'opacity-100' : 'opacity-60'}`}
+                    style={{ 
+                      background: profileSectionTab === 'stats' 
+                        ? `linear-gradient(135deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'}cc 100%)`
+                        : 'rgba(255,255,255,0.1)',
+                      color: profileSectionTab === 'stats' ? '#1f2937' : '#ffffff',
+                      border: 'none',
+                    }}
+                  >
+                    Stats
+                  </button>
+                  <button 
+                    onClick={() => setProfileSectionTab('collection')}
+                    className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-all hover:opacity-90 hover:scale-105 ${profileSectionTab === 'collection' ? 'opacity-100' : 'opacity-60'}`}
+                    style={{ 
+                      background: profileSectionTab === 'collection'
+                        ? 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)'
+                        : 'rgba(255,255,255,0.1)',
+                      color: profileSectionTab === 'collection' ? '#1f2937' : '#ffffff',
+                      border: 'none',
+                    }}
+                  >
+                    Collection
+                  </button>
+                </div>
               </div>
               
               {/* Left vertical line - starts after curved corner with inner glow */}
@@ -1719,37 +1740,53 @@ const ProfilePage = () => {
               
               {/* Content aligned with username above */}
               <div className="pl-8 pt-4">
-                {/* Stats - Uploads, Followers, Following */}
-                <div className="flex gap-6 items-center">
-                  <div className="flex flex-col">
-                    <span className="font-bold text-lg">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                    <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>Uploads</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-bold text-lg">{Number(profile._count?.followers || 0)}</span>
-                    <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>Followers</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-bold text-lg">{Number(profile._count?.following || 0)}</span>
-                    <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>Following</span>
-                  </div>
-                </div>
+                {profileSectionTab === 'stats' ? (
+                  <>
+                    {/* Stats - Uploads, Followers, Following */}
+                    <div className="flex gap-6 items-center">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-lg">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                        <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>Uploads</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-lg">{Number(profile._count?.followers || 0)}</span>
+                        <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>Followers</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-lg">{Number(profile._count?.following || 0)}</span>
+                        <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>Following</span>
+                      </div>
+                    </div>
 
-                {/* Member since date */}
-                {profile.createdAt && (
-                  <div className="mt-3">
-                    <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>
-                      Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'long' 
-                      })}
-                    </span>
-                  </div>
-                )}
+                    {/* Member since date */}
+                    {profile.createdAt && (
+                      <div className="mt-3">
+                        <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>
+                          Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'long' 
+                          })}
+                        </span>
+                      </div>
+                    )}
 
-                {/* Bio/description */}
-                {profile.bio && (
-                  <p className="mt-3 text-base text-foreground/90 max-w-xl">{profile.bio}</p>
+                    {/* Bio/description */}
+                    {profile.bio && (
+                      <p className="mt-3 text-base text-foreground/90 max-w-xl">{profile.bio}</p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {/* Collection content */}
+                    <div className="flex flex-col gap-3">
+                      <p className="text-sm text-foreground/70">
+                        Your collection of saved clips and screenshots from other users.
+                      </p>
+                      <div className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>
+                        Coming soon
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
