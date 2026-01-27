@@ -1737,7 +1737,7 @@ const ProfilePage = () => {
               <div 
                 className="absolute top-4 left-0 w-[1px]"
                 style={{
-                  height: 'calc(100% - 16px)',
+                  height: '120px',
                   background: `linear-gradient(180deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, ${backgroundColor || '#0B2232'} 100%)`,
                   boxShadow: `0 0 12px 2px ${accentColor || 'hsl(var(--primary))'}50, 2px 0 8px ${accentColor || 'hsl(var(--primary))'}30`,
                 }}
