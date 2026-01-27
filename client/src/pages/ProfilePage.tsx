@@ -1691,8 +1691,7 @@ const ProfilePage = () => {
               <div 
                 className="absolute top-0 left-4 h-[1px] flex items-center"
                 style={{
-                  width: 'calc(100% + 16px)',
-                  maxWidth: '550px',
+                  width: '550px',
                   background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 50%, ${backgroundColor || '#0B2232'} 100%)`,
                   boxShadow: `0 0 12px 2px ${accentColor || 'hsl(var(--primary))'}50, 0 2px 8px ${accentColor || 'hsl(var(--primary))'}30`,
                 }}
