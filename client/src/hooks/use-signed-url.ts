@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 
 const signedUrlCache = new Map<string, { url: string; expires: number }>();
@@ -30,31 +30,34 @@ function setCachedSignedUrl(originalUrl: string, signedUrl: string): void {
 }
 
 export function useSignedUrl(publicUrl: string | undefined | null) {
-  // Initialize with the public URL directly if it doesn't need signing
-  const getInitialUrl = () => {
-    if (!publicUrl) return null;
-    if (!isSupabaseStorageUrl(publicUrl)) return publicUrl;
-    return getCachedSignedUrl(publicUrl);
-  };
-  
-  const [signedUrl, setSignedUrl] = useState<string | null>(getInitialUrl);
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
+  // For public URLs, return immediately without async fetch
+  const effectiveUrl = useMemo(() => {
+    if (!publicUrl) return null;
+    // Public URLs don't need signing - return them directly
+    if (!isSupabaseStorageUrl(publicUrl)) return publicUrl;
+    // Check cache for signed URLs
+    return getCachedSignedUrl(publicUrl);
+  }, [publicUrl]);
+
   useEffect(() => {
+    // If we already have an effective URL (public or cached), use it
+    if (effectiveUrl) {
+      setSignedUrl(effectiveUrl);
+      return;
+    }
+
     if (!publicUrl) {
       setSignedUrl(null);
       return;
     }
 
+    // Only fetch signed URL for private Supabase storage URLs
     if (!isSupabaseStorageUrl(publicUrl)) {
       setSignedUrl(publicUrl);
-      return;
-    }
-
-    const cached = getCachedSignedUrl(publicUrl);
-    if (cached) {
-      setSignedUrl(cached);
       return;
     }
 
@@ -74,6 +77,7 @@ export function useSignedUrl(publicUrl: string | undefined | null) {
       .catch((err) => {
         if (!cancelled) {
           setError(err);
+          // Fall back to original URL on error
           setSignedUrl(publicUrl);
         }
       })
@@ -82,9 +86,10 @@ export function useSignedUrl(publicUrl: string | undefined | null) {
       });
 
     return () => { cancelled = true; };
-  }, [publicUrl]);
+  }, [publicUrl, effectiveUrl]);
 
-  return { signedUrl, isLoading, error };
+  // Return effectiveUrl immediately if available, otherwise signedUrl from state
+  return { signedUrl: effectiveUrl || signedUrl, isLoading, error };
 }
 
 export function useSignedUrls(publicUrls: (string | undefined | null)[]) {
