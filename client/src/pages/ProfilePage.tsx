@@ -1703,7 +1703,7 @@ const ProfilePage = () => {
                   className="absolute px-4 py-1.5 text-sm font-semibold rounded-lg transition-all hover:opacity-90 hover:scale-105"
                   style={{ 
                     top: '-12px',
-                    right: '-8px',
+                    right: '0px',
                     background: profileSectionTab === 'collection'
                       ? 'rgba(0,0,0,0.6)'
                       : 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
@@ -1715,7 +1715,6 @@ const ProfilePage = () => {
                     boxShadow: profileSectionTab === 'collection' 
                       ? '0 0 0 2px transparent, inset 0 0 0 0 transparent'
                       : undefined,
-                    position: 'relative',
                   }}
                 >
                   {profileSectionTab === 'collection' && (
