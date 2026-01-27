@@ -1461,21 +1461,19 @@ const ProfilePage = () => {
           </div>
 
           {/* Curved fading border container for profile info */}
-          <div className="relative my-4 mx-4">
-            {/* Gradient border wrapper - creates the fading border effect */}
+          <div 
+            className="relative my-4 mx-4 p-[1px] rounded-2xl"
+            style={{
+              background: `linear-gradient(90deg, transparent 0%, ${accentColor || 'hsl(var(--primary))'} 20%, ${accentColor || 'hsl(var(--primary))'} 80%, transparent 100%)`,
+            }}
+          >
+            {/* Inner content with background to create border effect */}
             <div 
-              className="absolute inset-0 rounded-2xl pointer-events-none"
-              style={{
-                background: `linear-gradient(90deg, transparent 0%, ${accentColor || 'hsl(var(--primary))'} 15%, ${accentColor || 'hsl(var(--primary))'} 85%, transparent 100%)`,
-                padding: '1px',
-                WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                WebkitMaskComposite: 'xor',
-                maskComposite: 'exclude',
+              className="rounded-2xl px-4 py-4"
+              style={{ 
+                backgroundColor: backgroundColor || 'hsl(var(--background))',
               }}
-            />
-            
-            {/* Main content */}
-            <div className="relative rounded-2xl px-4 py-4">
+            >
               {/* Stats - Horizontal row with uppercase labels */}
               <div className="flex gap-6 mb-3 items-start">
                 <div className="flex flex-col">
