@@ -433,6 +433,17 @@ const Header = () => {
                         <span>Go Pro</span>
                       </DropdownMenuItem>
                     )}
+                    
+                    {(isPro || user?.isPro) && (
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setManageProOpen(true)}
+                        data-testid="button-manage-pro"
+                      >
+                        <Crown className="mr-2 h-4 w-4 text-yellow-500" />
+                        <span>Manage Pro Subscription</span>
+                      </DropdownMenuItem>
+                    )}
 
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
