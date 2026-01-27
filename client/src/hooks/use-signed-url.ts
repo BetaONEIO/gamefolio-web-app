@@ -7,10 +7,10 @@ const URL_EXPIRY = 60 * 60 * 1000; // 1 hour
 
 function isSupabaseStorageUrl(url: string): boolean {
   // Check if it's a Supabase storage URL that needs signing
-  // Both gamefolio-media and gamefolio-assets buckets are private and need signed URLs
+  // All Supabase storage buckets are private and need signed URLs
   // Note: Old URLs may still have /object/public/ path but bucket is now private
   if (!url) return false;
-  return url.includes('gamefolio-media') || url.includes('gamefolio-assets');
+  return url.includes('gamefolio-media') || url.includes('gamefolio-assets') || url.includes('gamefolio-name-tags');
 }
 
 function getCachedSignedUrl(originalUrl: string): string | null {

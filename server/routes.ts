@@ -8735,8 +8735,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "URL is required" });
       }
 
-      // Process both gamefolio-media and gamefolio-assets URLs (both are now private)
-      if (!url.includes('gamefolio-media') && !url.includes('gamefolio-assets')) {
+      // Process all private Supabase bucket URLs
+      if (!url.includes('gamefolio-media') && !url.includes('gamefolio-assets') && !url.includes('gamefolio-name-tags')) {
         return res.json({ signedUrl: url }); // Return original URL for non-Supabase URLs
       }
 
@@ -8773,7 +8773,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       for (const url of urls) {
         if (typeof url === 'string') {
-          if (url.includes('gamefolio-media') || url.includes('gamefolio-assets')) {
+          if (url.includes('gamefolio-media') || url.includes('gamefolio-assets') || url.includes('gamefolio-name-tags')) {
             supabaseUrls.push(url);
           } else {
             otherUrls.push(url);

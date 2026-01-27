@@ -16,7 +16,8 @@ interface LazyImageState {
 }
 
 function isSupabaseStorageUrl(url: string): boolean {
-  return url?.includes('gamefolio-media') || url?.includes('gamefolio-assets');
+  // All Supabase storage buckets are private and need signed URLs
+  return url?.includes('gamefolio-media') || url?.includes('gamefolio-assets') || url?.includes('gamefolio-name-tags');
 }
 
 export function useLazyImage<T extends HTMLElement = HTMLElement>({
