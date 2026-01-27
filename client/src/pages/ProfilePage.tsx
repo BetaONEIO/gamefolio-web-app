@@ -1705,30 +1705,18 @@ const ProfilePage = () => {
                     top: '-12px',
                     right: '0px',
                     background: profileSectionTab === 'collection'
-                      ? 'rgba(0,0,0,0.6)'
+                      ? '#1a1a2e'
                       : 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
                     color: profileSectionTab === 'collection' ? '#ffffff' : '#1f2937',
                     border: profileSectionTab === 'collection' 
-                      ? '2px solid transparent'
+                      ? '2px solid'
                       : 'none',
-                    backgroundClip: profileSectionTab === 'collection' ? 'padding-box' : undefined,
-                    boxShadow: profileSectionTab === 'collection' 
-                      ? '0 0 0 2px transparent, inset 0 0 0 0 transparent'
+                    borderImage: profileSectionTab === 'collection' 
+                      ? 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%) 1'
                       : undefined,
+                    borderRadius: '8px',
                   }}
                 >
-                  {profileSectionTab === 'collection' && (
-                    <span 
-                      className="absolute inset-0 rounded-lg pointer-events-none"
-                      style={{
-                        background: 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
-                        mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                        maskComposite: 'xor',
-                        WebkitMaskComposite: 'xor',
-                        padding: '2px',
-                      }}
-                    />
-                  )}
                   Collection
                 </button>
               </div>
@@ -1745,7 +1733,7 @@ const ProfilePage = () => {
               
               {/* Content aligned with username above */}
               <div className="pl-8 pt-4" style={{ minHeight: '120px' }}>
-                {profileSectionTab === 'stats' ? (
+                {profileSectionTab === 'stats' && (
                   <>
                     {/* Stats - Uploads, Followers, Following */}
                     <div className="flex gap-6 items-center">
@@ -1779,18 +1767,6 @@ const ProfilePage = () => {
                     {profile.bio && (
                       <p className="mt-3 text-base text-foreground/90 max-w-xl">{profile.bio}</p>
                     )}
-                  </>
-                ) : (
-                  <>
-                    {/* Collection content - Digital Collectibles */}
-                    <div className="flex flex-col gap-3">
-                      <p className="text-sm text-foreground/70">
-                        Your digital collectibles, NFTs, and exclusive collections.
-                      </p>
-                      <div className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>
-                        Coming soon
-                      </div>
-                    </div>
                   </>
                 )}
               </div>
