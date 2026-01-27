@@ -1462,14 +1462,14 @@ const ProfilePage = () => {
 
           {/* Curved fading border container for profile info */}
           <div 
-            className="relative my-4 mx-4 p-[1px] rounded-2xl"
+            className="relative my-4 mx-4 p-[2px] rounded-2xl"
             style={{
-              background: `linear-gradient(90deg, transparent 0%, ${accentColor || 'hsl(var(--primary))'} 20%, ${accentColor || 'hsl(var(--primary))'} 80%, transparent 100%)`,
+              background: `linear-gradient(90deg, ${backgroundColor || '#0B2232'} 0%, ${accentColor || 'hsl(var(--primary))'} 15%, ${accentColor || 'hsl(var(--primary))'} 85%, ${backgroundColor || '#0B2232'} 100%)`,
             }}
           >
             {/* Inner content with background to create border effect */}
             <div 
-              className="rounded-2xl px-4 py-4"
+              className="rounded-[14px] px-4 py-4"
               style={{ 
                 backgroundColor: backgroundColor || 'hsl(var(--background))',
               }}
