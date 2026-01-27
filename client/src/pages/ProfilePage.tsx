@@ -1692,21 +1692,16 @@ const ProfilePage = () => {
                   background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 50%, ${backgroundColor || '#0B2232'} 100%)`,
                 }}
               >
-                {/* Button at the end of top line */}
+                {/* Collection button at the end of top line */}
                 <button 
-                  className="absolute right-0 -top-3 px-3 py-1 text-xs font-medium rounded-full border transition-colors hover:opacity-80"
+                  className="absolute right-0 -top-4 px-4 py-1.5 text-sm font-semibold rounded-lg transition-all hover:opacity-90 hover:scale-105"
                   style={{ 
-                    borderColor: accentColor || 'hsl(var(--primary))',
-                    color: accentColor || 'hsl(var(--primary))',
-                    backgroundColor: 'transparent',
-                  }}
-                  onClick={() => {
-                    if (isOwnProfile) {
-                      setShowProfileEditDialog(true);
-                    }
+                    background: 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
+                    color: '#1f2937',
+                    border: 'none',
                   }}
                 >
-                  {isOwnProfile ? 'Edit' : 'Follow'}
+                  Collection
                 </button>
               </div>
               
