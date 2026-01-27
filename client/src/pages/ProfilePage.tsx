@@ -1680,8 +1680,8 @@ const ProfilePage = () => {
               <div 
                 className="absolute top-0 left-0 w-4 h-4 pointer-events-none"
                 style={{
-                  borderLeft: `1px solid ${accentColor || 'hsl(var(--primary))'}`,
-                  borderTop: `1px solid ${accentColor || 'hsl(var(--primary))'}`,
+                  borderLeft: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
+                  borderTop: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
                   borderTopLeftRadius: '12px',
                   filter: `drop-shadow(0 0 6px ${accentColor || 'hsl(var(--primary))'})`,
                 }}
@@ -1689,7 +1689,7 @@ const ProfilePage = () => {
               
               {/* Top horizontal line - extends far right and fades with inner glow */}
               <div 
-                className="absolute top-0 left-4 h-[1px] flex items-center"
+                className="absolute top-0 left-4 h-[2px] flex items-center"
                 style={{
                   width: '550px',
                   background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 50%, ${backgroundColor || '#0B2232'} 100%)`,
@@ -1729,7 +1729,7 @@ const ProfilePage = () => {
               
               {/* Left vertical line - starts after curved corner with inner glow */}
               <div 
-                className="absolute top-4 left-0 w-[1px]"
+                className="absolute top-4 left-0 w-[2px]"
                 style={{
                   height: '120px',
                   background: `linear-gradient(180deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, ${backgroundColor || '#0B2232'} 100%)`,
