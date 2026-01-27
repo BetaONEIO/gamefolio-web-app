@@ -44,6 +44,8 @@ interface ShareData {
   clipUrl: string;
   title: string;
   description: string;
+  thumbnailUrl?: string | null;
+  videoUrl?: string | null;
 }
 
 const SOCIAL_PLATFORMS = [
@@ -54,16 +56,11 @@ const SOCIAL_PLATFORMS = [
 ];
 
 // Component to handle clip thumbnail display
-function ClipThumbnail({ clipId, shareUrl }: { clipId: number; shareUrl: string }) {
-  const { data: clipData } = useQuery({
-    queryKey: [`/api/clips/${clipId}`],
-    enabled: !!clipId,
-  });
-
-  if (clipData?.thumbnailUrl) {
+function ClipThumbnail({ thumbnailUrl, videoUrl }: { thumbnailUrl?: string | null; videoUrl?: string | null }) {
+  if (thumbnailUrl) {
     return (
       <img
-        src={clipData.thumbnailUrl}
+        src={thumbnailUrl}
         alt="Video thumbnail"
         className="w-full h-full object-cover"
         onError={(e) => {
@@ -80,13 +77,22 @@ function ClipThumbnail({ clipId, shareUrl }: { clipId: number; shareUrl: string 
   }
 
   // Fallback to video preview if no thumbnail
+  if (videoUrl) {
+    return (
+      <video
+        className="w-full h-full object-cover"
+        src={videoUrl}
+        preload="metadata"
+        muted
+      />
+    );
+  }
+
+  // No thumbnail or video available
   return (
-    <video
-      className="w-full h-full object-cover"
-      src={clipData?.videoUrl || shareUrl}
-      preload="metadata"
-      muted
-    />
+    <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+      <span className="text-gray-400 text-sm">No preview available</span>
+    </div>
   );
 }
 
@@ -222,8 +228,8 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
             {/* Clip Thumbnail - Responsive sizing */}
             <div className="flex justify-center">
               <div className="relative w-full max-w-sm sm:max-w-md h-48 sm:h-56 bg-gray-800 rounded-lg overflow-hidden border border-gray-600">
-                {/* Use a query to fetch clip data to get the thumbnail URL */}
-                <ClipThumbnail clipId={clipId} shareUrl={shareData.clipUrl} />
+                {/* Display clip thumbnail from share data */}
+                <ClipThumbnail thumbnailUrl={shareData.thumbnailUrl} videoUrl={shareData.videoUrl} />
                 <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center">
                     <div className="w-0 h-0 border-l-[6px] sm:border-l-[8px] border-l-gray-900 border-y-[4px] sm:border-y-[6px] border-y-transparent ml-0.5"></div>

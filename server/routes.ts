@@ -3581,7 +3581,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         shareUrl: clipUrl, // Use shareUrl to match frontend expectations
         clipUrl, // Keep both for backward compatibility
         title: clip.title,
-        description: clip.description
+        description: clip.description,
+        thumbnailUrl: clip.thumbnailUrl || null,
+        videoUrl: clip.videoUrl || null
       });
     } catch (err) {
       console.error("Error generating share data:", err);
