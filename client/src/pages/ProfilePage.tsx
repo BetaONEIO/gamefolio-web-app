@@ -1671,19 +1671,46 @@ const ProfilePage = () => {
             {/* Username */}
             <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
 
-            {/* Curved fading gradient border around stats/bio section */}
-            <div 
-              className="mt-4 p-[1px] rounded-2xl self-start"
-              style={{
-                background: `linear-gradient(90deg, ${backgroundColor || '#0B2232'} 0%, ${accentColor || 'hsl(var(--primary))'} 15%, ${accentColor || 'hsl(var(--primary))'} 85%, ${backgroundColor || '#0B2232'} 100%)`,
-              }}
-            >
+            {/* L-shaped fading border with button */}
+            <div className="relative mt-4">
+              {/* Top horizontal line - extends far right and fades */}
               <div 
-                className="rounded-[15px] px-4 py-3"
-                style={{ 
-                  backgroundColor: backgroundColor || 'hsl(var(--background))',
+                className="absolute top-0 left-0 h-[1px] flex items-center"
+                style={{
+                  width: '100%',
+                  maxWidth: '600px',
+                  background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, ${backgroundColor || '#0B2232'} 100%)`,
                 }}
               >
+                {/* Button at the end of top line */}
+                <button 
+                  className="absolute right-0 -top-3 px-3 py-1 text-xs font-medium rounded-full border transition-colors hover:opacity-80"
+                  style={{ 
+                    borderColor: accentColor || 'hsl(var(--primary))',
+                    color: accentColor || 'hsl(var(--primary))',
+                    backgroundColor: 'transparent',
+                  }}
+                  onClick={() => {
+                    if (isOwnProfile) {
+                      setShowProfileEditDialog(true);
+                    }
+                  }}
+                >
+                  {isOwnProfile ? 'Edit' : 'Follow'}
+                </button>
+              </div>
+              
+              {/* Left vertical line */}
+              <div 
+                className="absolute top-0 left-0 w-[1px]"
+                style={{
+                  height: '100%',
+                  background: `linear-gradient(180deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 70%, ${backgroundColor || '#0B2232'} 100%)`,
+                }}
+              />
+              
+              {/* Content with left padding for the border */}
+              <div className="pl-4 pt-4">
                 {/* Stats - Uploads, Followers, Following */}
                 <div className="flex gap-6 items-center">
                   <div className="flex flex-col">
