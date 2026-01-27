@@ -3,8 +3,9 @@ import { ClipWithUser } from "@shared/schema";
 import UserClipItem from "@/components/clips/UserClipItem";
 import ClipSkeleton from "@/components/clips/ClipSkeleton";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Layers3, BarChart, Bookmark } from "lucide-react";
+import { Layers3, BarChart, Bookmark, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 interface ProfileTabsProps {
   username: string;
@@ -57,52 +58,32 @@ const ProfileTabs = ({ username }: ProfileTabsProps) => {
             ))}
           </div>
         );
-        
-      case "gaming-stats":
-        if (isLoading) {
-          return (
-            <div className="space-y-4 py-6">
-              {Array.from({ length: 3 }).map((_, index) => (
-                <div key={`stat-skeleton-${index}`} className="bg-card p-4 rounded-md">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="rounded-full bg-card p-1">
-                      <div className="w-8 h-8 rounded-full overflow-hidden">
-                        <div className="animate-pulse bg-slate-700 w-full h-full" />
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <div className="animate-pulse bg-slate-700 h-4 w-1/3 mb-1 rounded-sm" />
-                      <div className="animate-pulse bg-slate-700 h-3 w-1/2 rounded-sm" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          );
-        }
-        
+
+      case "reels":
         return (
           <div className="py-10 text-center">
-            <p className="text-muted-foreground">Gaming statistics coming soon!</p>
+            <p className="text-muted-foreground">No reels uploaded yet.</p>
+          </div>
+        );
+
+      case "screenshots":
+        return (
+          <div className="py-10 text-center">
+            <p className="text-muted-foreground">No screenshots uploaded yet.</p>
           </div>
         );
         
-      case "saved":
-        if (isLoading) {
-          return (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Array.from({ length: 3 }).map((_, index) => (
-                <div className="w-full" key={`saved-skeleton-${index}`}>
-                  <ClipSkeleton />
-                </div>
-              ))}
-            </div>
-          );
-        }
-        
+      case "favorites":
         return (
           <div className="py-10 text-center">
-            <p className="text-muted-foreground">Saved clips coming soon!</p>
+            <p className="text-muted-foreground">No favorites saved yet.</p>
+          </div>
+        );
+
+      case "collection":
+        return (
+          <div className="py-10 text-center">
+            <p className="text-muted-foreground">Your collection is empty.</p>
           </div>
         );
         
@@ -111,59 +92,86 @@ const ProfileTabs = ({ username }: ProfileTabsProps) => {
     }
   };
 
+  const tabs = [
+    { id: "clips", label: "Clips", icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+      </svg>
+    )},
+    { id: "reels", label: "Reels", icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+      </svg>
+    )},
+    { id: "screenshots", label: "Screenshots", icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    )},
+    { id: "favorites", label: "Favorites", icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+      </svg>
+    )},
+  ];
+
   return (
     <div>
-      {/* Instagram-style tabs with icons */}
-      <div className="border-t border-border">
-        <div className="flex justify-center">
-          <button
-            className={cn(
-              "flex items-center justify-center px-3 md:px-6 py-3 gap-1 md:gap-2 font-medium text-xs uppercase tracking-wider relative",
-              activeTab === "clips" 
-                ? "text-primary" 
-                : "text-muted-foreground",
-              // Mobile-friendly underline using pseudo-element
-              activeTab === "clips" && "after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-6 md:after:w-8 after:h-0.5 after:bg-primary after:rounded-full"
-            )}
-            onClick={() => setActiveTab("clips")}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-            </svg>
-            Clips
-          </button>
-          <button
-            className={cn(
-              "flex items-center justify-center px-3 md:px-6 py-3 gap-1 md:gap-2 font-medium text-xs uppercase tracking-wider relative",
-              activeTab === "gaming-stats" 
-                ? "text-primary" 
-                : "text-muted-foreground",
-              // Mobile-friendly underline using pseudo-element
-              activeTab === "gaming-stats" && "after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-6 md:after:w-8 after:h-0.5 after:bg-primary after:rounded-full"
-            )}
-            onClick={() => setActiveTab("gaming-stats")}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            Stats
-          </button>
-          <button
-            className={cn(
-              "flex items-center justify-center px-3 md:px-6 py-3 gap-1 md:gap-2 font-medium text-xs uppercase tracking-wider relative",
-              activeTab === "saved" 
-                ? "text-primary" 
-                : "text-muted-foreground",
-              // Mobile-friendly underline using pseudo-element
-              activeTab === "saved" && "after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-6 md:after:w-8 after:h-0.5 after:bg-primary after:rounded-full"
-            )}
-            onClick={() => setActiveTab("saved")}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-            </svg>
-            Saved
-          </button>
+      {/* Curved fading line with tabs */}
+      <div className="relative py-4">
+        {/* Curved line container with fading ends */}
+        <div className="relative flex items-center justify-center">
+          {/* Left fading gradient */}
+          <div 
+            className="absolute left-0 top-1/2 -translate-y-1/2 w-32 h-12 pointer-events-none"
+            style={{
+              background: 'linear-gradient(to right, transparent, hsl(var(--border)) 100%)',
+              maskImage: 'linear-gradient(to right, transparent, black)',
+              WebkitMaskImage: 'linear-gradient(to right, transparent, black)',
+            }}
+          />
+          
+          {/* Main curved rectangle border */}
+          <div className="relative flex items-center gap-1 px-2 py-1 rounded-xl border border-border/60 bg-background/50 backdrop-blur-sm">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                className={cn(
+                  "relative px-4 md:px-6 py-2 rounded-lg font-medium text-sm transition-all duration-200",
+                  activeTab === tab.id 
+                    ? "text-white bg-primary/90 shadow-md" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <span className="flex items-center gap-2">
+                  {tab.icon}
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </span>
+              </button>
+            ))}
+            
+            {/* Collection button */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-2 rounded-lg border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
+              onClick={() => setActiveTab("collection")}
+            >
+              <FolderOpen className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Collection</span>
+            </Button>
+          </div>
+          
+          {/* Right fading gradient */}
+          <div 
+            className="absolute right-0 top-1/2 -translate-y-1/2 w-32 h-12 pointer-events-none"
+            style={{
+              background: 'linear-gradient(to left, transparent, hsl(var(--border)) 100%)',
+              maskImage: 'linear-gradient(to left, transparent, black)',
+              WebkitMaskImage: 'linear-gradient(to left, transparent, black)',
+            }}
+          />
         </div>
       </div>
 
