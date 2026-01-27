@@ -1697,35 +1697,39 @@ const ProfilePage = () => {
                   boxShadow: `0 0 12px 2px ${accentColor || 'hsl(var(--primary))'}50, 0 2px 8px ${accentColor || 'hsl(var(--primary))'}30`,
                 }}
               >
-                {/* Tab buttons at the end of top line */}
-                <div className="absolute right-0 -top-4 flex gap-2">
-                  <button 
-                    onClick={() => setProfileSectionTab('stats')}
-                    className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-all hover:opacity-90 hover:scale-105 ${profileSectionTab === 'stats' ? 'opacity-100' : 'opacity-60'}`}
-                    style={{ 
-                      background: profileSectionTab === 'stats' 
-                        ? `linear-gradient(135deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'}cc 100%)`
-                        : 'rgba(255,255,255,0.1)',
-                      color: profileSectionTab === 'stats' ? '#1f2937' : '#ffffff',
-                      border: 'none',
-                    }}
-                  >
-                    Stats
-                  </button>
-                  <button 
-                    onClick={() => setProfileSectionTab('collection')}
-                    className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-all hover:opacity-90 hover:scale-105 ${profileSectionTab === 'collection' ? 'opacity-100' : 'opacity-60'}`}
-                    style={{ 
-                      background: profileSectionTab === 'collection'
-                        ? 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)'
-                        : 'rgba(255,255,255,0.1)',
-                      color: profileSectionTab === 'collection' ? '#1f2937' : '#ffffff',
-                      border: 'none',
-                    }}
-                  >
-                    Collection
-                  </button>
-                </div>
+                {/* Collection button at the end of top line */}
+                <button 
+                  onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
+                  className="absolute right-0 -top-4 px-4 py-1.5 text-sm font-semibold rounded-lg transition-all hover:opacity-90 hover:scale-105"
+                  style={{ 
+                    background: profileSectionTab === 'collection'
+                      ? 'rgba(0,0,0,0.6)'
+                      : 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
+                    color: profileSectionTab === 'collection' ? '#ffffff' : '#1f2937',
+                    border: profileSectionTab === 'collection' 
+                      ? '2px solid transparent'
+                      : 'none',
+                    backgroundClip: profileSectionTab === 'collection' ? 'padding-box' : undefined,
+                    boxShadow: profileSectionTab === 'collection' 
+                      ? '0 0 0 2px transparent, inset 0 0 0 0 transparent'
+                      : undefined,
+                    position: 'relative',
+                  }}
+                >
+                  {profileSectionTab === 'collection' && (
+                    <span 
+                      className="absolute inset-0 rounded-lg pointer-events-none"
+                      style={{
+                        background: 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
+                        mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                        maskComposite: 'xor',
+                        WebkitMaskComposite: 'xor',
+                        padding: '2px',
+                      }}
+                    />
+                  )}
+                  Collection
+                </button>
               </div>
               
               {/* Left vertical line - starts after curved corner with inner glow */}
@@ -1777,10 +1781,10 @@ const ProfilePage = () => {
                   </>
                 ) : (
                   <>
-                    {/* Collection content */}
+                    {/* Collection content - Digital Collectibles */}
                     <div className="flex flex-col gap-3">
                       <p className="text-sm text-foreground/70">
-                        Your collection of saved clips and screenshots from other users.
+                        Your digital collectibles, NFTs, and exclusive collections.
                       </p>
                       <div className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>
                         Coming soon
@@ -1791,8 +1795,8 @@ const ProfilePage = () => {
               </div>
             </div>
 
-            {/* Platform Connections */}
-            {(profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
+            {/* Platform Connections - hidden when collection tab is active */}
+            {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
               <div className="flex flex-wrap gap-2 mt-4">
                 {profile.steamUsername && (
                     <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#1B2838', color: '#FFFFFF' }}>
