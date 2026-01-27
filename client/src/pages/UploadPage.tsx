@@ -499,21 +499,11 @@ const UploadPage = () => {
       
       console.log('Starting upload with user:', user.username);
 
-      // Determine video type based on content type and aspect ratio
-      let videoType: 'clip' | 'reel' = contentType === 'clips' ? 'clip' : 'reel';
+      // Determine video type based on user's selected tab (clips or reels)
+      // Don't auto-detect based on aspect ratio - respect user's explicit selection
+      const videoType: 'clip' | 'reel' = contentType === 'clips' ? 'clip' : 'reel';
       
-      if (videoRef.current) {
-        const determinedType = getVideoType(videoRef.current);
-        console.log('getVideoType returned:', determinedType);
-        videoType = determinedType;
-      }
-      
-      // Force video type to reel for reel uploads
-      if (contentType === 'reels') {
-        videoType = 'reel';
-      }
-      
-      console.log('Final video type for upload:', videoType);
+      console.log('Video type for upload (based on user selection):', videoType);
 
       // Direct Supabase upload (bypasses all backend size limits)
       setIsUploading(true);
