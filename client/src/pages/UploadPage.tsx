@@ -1439,9 +1439,11 @@ const UploadPage = () => {
                     
                     {file ? (
                       <div className="space-y-4">
-                        {/* Video Preview */}
-                        <div className="w-full max-w-md mx-auto mb-6">
-                          <div className="relative bg-black rounded-lg overflow-hidden aspect-[9/16]">
+                        {/* Video Preview with Immersive Crop UI */}
+                        <div className="w-full max-w-lg mx-auto mb-6">
+                          {/* Crop container with dark background */}
+                          <div className={`relative rounded-xl overflow-hidden ${isReelAspectMismatch ? 'bg-slate-900/95 p-6' : ''}`}>
+                            {/* Remove button */}
                             <button
                               type="button"
                               onClick={() => {
@@ -1461,140 +1463,145 @@ const UploadPage = () => {
                                   fileInputRef.current.value = '';
                                 }
                               }}
-                              className="absolute top-2 right-2 z-10 p-1.5 bg-black/70 hover:bg-black/90 rounded-full transition-colors"
+                              className="absolute top-2 right-2 z-20 p-1.5 bg-black/70 hover:bg-black/90 rounded-full transition-colors"
                               title="Remove video"
                             >
                               <X className="h-4 w-4 text-white" />
                             </button>
-                            <video
-                              ref={videoRef}
-                              src={videoSrc}
-                              controls
-                              preload="auto"
-                              muted
-                              playsInline
-                              className="w-full h-full"
-                              style={{
-                                objectFit: isReelAspectMismatch ? 'cover' : 'cover',
-                                transform: isReelAspectMismatch ? `scale(${reelZoom}) translate(${reelPanX}%, ${reelPanY}%)` : 'none',
-                                transformOrigin: 'center center',
-                              }}
-                              onLoadedMetadata={() => {
-                                if (videoRef.current && videoDuration === 0) {
-                                  const duration = videoRef.current.duration;
-                                  setVideoDuration(duration);
-                                  setTrimEnd(duration);
-                                  setShowEditingTools(true);
-                                  
-                                  const aspectRatio = videoRef.current.videoWidth / videoRef.current.videoHeight;
-                                  const targetRatio = 9 / 16;
-                                  setVideoAspectRatio(aspectRatio);
-                                  
-                                  if (Math.abs(aspectRatio - targetRatio) > 0.1) {
-                                    setIsReelAspectMismatch(true);
-                                    const isWider = aspectRatio > targetRatio;
-                                    setReelZoom(isWider ? 1 : 1);
-                                    setReelPanX(0);
-                                    setReelPanY(0);
-                                  } else {
-                                    setIsReelAspectMismatch(false);
-                                  }
-                                  
-                                  setTimeout(() => {
-                                    generateThumbnails();
-                                  }, 1000);
-                                }
-                              }}
-                            />
-                          </div>
-                          
-                          {/* Zoom/Crop controls for non-9:16 videos */}
-                          {isReelAspectMismatch && file && (
-                            <div className="mt-4 space-y-3 p-4 bg-muted/30 rounded-lg">
-                              <div className="flex items-center justify-between">
-                                <h4 className="font-medium text-sm flex items-center gap-2">
-                                  <Info className="h-4 w-4 text-muted-foreground" />
-                                  Adjust Crop
-                                </h4>
-                                <span className="text-xs text-muted-foreground">
-                                  Video: {videoAspectRatio.toFixed(2)}:1 → 9:16
-                                </span>
+                            
+                            {/* Header for aspect mismatch */}
+                            {isReelAspectMismatch && (
+                              <div className="text-center mb-4">
+                                <h4 className="text-white font-medium text-sm">Adjust Crop</h4>
+                                <p className="text-slate-400 text-xs mt-1">
+                                  Drag the slider to zoom and adjust what's visible in the 9:16 frame
+                                </p>
                               </div>
-                              
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-3">
-                                  <span className="text-xs text-muted-foreground w-12">Zoom</span>
-                                  <input
-                                    type="range"
-                                    min="1"
-                                    max="2"
-                                    step="0.05"
-                                    value={reelZoom}
-                                    onChange={(e) => setReelZoom(parseFloat(e.target.value))}
-                                    className="flex-1 h-1 bg-muted rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-foreground [&::-webkit-slider-thumb]:cursor-grab"
+                            )}
+                            
+                            {/* Video preview area */}
+                            <div className={`relative mx-auto ${isReelAspectMismatch ? 'bg-black' : 'bg-black'} rounded-lg overflow-hidden aspect-[9/16]`} style={{ maxHeight: '400px', width: 'auto' }}>
+                              <video
+                                ref={videoRef}
+                                src={videoSrc}
+                                controls
+                                preload="auto"
+                                muted
+                                playsInline
+                                className="w-full h-full"
+                                style={{
+                                  objectFit: 'cover',
+                                  transform: isReelAspectMismatch ? `scale(${reelZoom}) translate(${reelPanX}%, ${reelPanY}%)` : 'none',
+                                  transformOrigin: 'center center',
+                                }}
+                                onLoadedMetadata={() => {
+                                  if (videoRef.current && videoDuration === 0) {
+                                    const duration = videoRef.current.duration;
+                                    setVideoDuration(duration);
+                                    setTrimEnd(duration);
+                                    setShowEditingTools(true);
+                                    
+                                    const aspectRatio = videoRef.current.videoWidth / videoRef.current.videoHeight;
+                                    const targetRatio = 9 / 16;
+                                    setVideoAspectRatio(aspectRatio);
+                                    
+                                    if (Math.abs(aspectRatio - targetRatio) > 0.1) {
+                                      setIsReelAspectMismatch(true);
+                                      setReelZoom(1);
+                                      setReelPanX(0);
+                                      setReelPanY(0);
+                                    } else {
+                                      setIsReelAspectMismatch(false);
+                                    }
+                                    
+                                    setTimeout(() => {
+                                      generateThumbnails();
+                                    }, 1000);
+                                  }
+                                }}
+                              />
+                            </div>
+                            
+                            {/* Zoom slider for aspect mismatch - styled like profile picture crop */}
+                            {isReelAspectMismatch && (
+                              <div className="mt-6 space-y-4">
+                                {/* Zoom Slider */}
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-white text-sm font-medium flex items-center gap-2">
+                                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <circle cx="11" cy="11" r="8"/>
+                                        <path d="M21 21l-4.35-4.35"/>
+                                        <path d="M11 8v6M8 11h6"/>
+                                      </svg>
+                                      Zoom
+                                    </span>
+                                    <span className="text-slate-400 text-sm">{Math.round(reelZoom * 100)}%</span>
+                                  </div>
+                                  <Slider
+                                    value={[reelZoom]}
+                                    min={1}
+                                    max={2.5}
+                                    step={0.05}
+                                    onValueChange={([value]) => setReelZoom(value)}
+                                    className="w-full"
                                   />
-                                  <span className="text-xs font-mono text-muted-foreground w-10 text-right">
-                                    {Math.round(reelZoom * 100)}%
-                                  </span>
                                 </div>
                                 
+                                {/* Position slider for wide videos */}
                                 {videoAspectRatio > (9/16) && (
-                                  <div className="flex items-center gap-3">
-                                    <span className="text-xs text-muted-foreground w-12">Pan X</span>
-                                    <input
-                                      type="range"
-                                      min="-20"
-                                      max="20"
-                                      step="1"
-                                      value={reelPanX}
-                                      onChange={(e) => setReelPanX(parseFloat(e.target.value))}
-                                      className="flex-1 h-1 bg-muted rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-foreground [&::-webkit-slider-thumb]:cursor-grab"
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-white text-sm font-medium">Horizontal Position</span>
+                                      <span className="text-slate-400 text-sm">{reelPanX > 0 ? '+' : ''}{reelPanX}%</span>
+                                    </div>
+                                    <Slider
+                                      value={[reelPanX]}
+                                      min={-25}
+                                      max={25}
+                                      step={1}
+                                      onValueChange={([value]) => setReelPanX(value)}
+                                      className="w-full"
                                     />
-                                    <span className="text-xs font-mono text-muted-foreground w-10 text-right">
-                                      {reelPanX > 0 ? '+' : ''}{reelPanX}%
-                                    </span>
                                   </div>
                                 )}
                                 
+                                {/* Position slider for tall videos */}
                                 {videoAspectRatio < (9/16) && (
-                                  <div className="flex items-center gap-3">
-                                    <span className="text-xs text-muted-foreground w-12">Pan Y</span>
-                                    <input
-                                      type="range"
-                                      min="-20"
-                                      max="20"
-                                      step="1"
-                                      value={reelPanY}
-                                      onChange={(e) => setReelPanY(parseFloat(e.target.value))}
-                                      className="flex-1 h-1 bg-muted rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-foreground [&::-webkit-slider-thumb]:cursor-grab"
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-white text-sm font-medium">Vertical Position</span>
+                                      <span className="text-slate-400 text-sm">{reelPanY > 0 ? '+' : ''}{reelPanY}%</span>
+                                    </div>
+                                    <Slider
+                                      value={[reelPanY]}
+                                      min={-25}
+                                      max={25}
+                                      step={1}
+                                      onValueChange={([value]) => setReelPanY(value)}
+                                      className="w-full"
                                     />
-                                    <span className="text-xs font-mono text-muted-foreground w-10 text-right">
-                                      {reelPanY > 0 ? '+' : ''}{reelPanY}%
-                                    </span>
                                   </div>
                                 )}
+                                
+                                {/* Reset button */}
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setReelZoom(1);
+                                    setReelPanX(0);
+                                    setReelPanY(0);
+                                  }}
+                                  className="w-full border-slate-600 text-slate-300 hover:bg-slate-700"
+                                >
+                                  <RotateCcw className="h-3 w-3 mr-2" />
+                                  Reset to Default
+                                </Button>
                               </div>
-                              
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setReelZoom(1);
-                                  setReelPanX(0);
-                                  setReelPanY(0);
-                                }}
-                                className="text-xs"
-                              >
-                                <RotateCcw className="h-3 w-3 mr-1" />
-                                Reset Crop
-                              </Button>
-                              
-                              <p className="text-xs text-muted-foreground">
-                                Adjust zoom and position to choose what content to show in the 9:16 frame.
-                              </p>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
 
                         <div className="flex justify-between items-center">
