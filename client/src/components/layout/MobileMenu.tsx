@@ -134,7 +134,7 @@ const MobileMenu = () => {
                 </div>
               </div>
               {/* Level Progress Bar */}
-              <LevelProgressBar level={user.level || 1} totalXP={user.totalPoints || 0} />
+              <LevelProgressBar level={user.level || 1} totalXP={user.totalXp || 0} />
             </div>
           )}
 
