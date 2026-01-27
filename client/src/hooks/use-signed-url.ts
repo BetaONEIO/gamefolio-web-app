@@ -7,9 +7,9 @@ const URL_EXPIRY = 60 * 60 * 1000; // 1 hour
 
 function isSupabaseStorageUrl(url: string): boolean {
   // Check if it's a Supabase storage URL that needs signing
-  // Skip URLs that are already public (contain /object/public/)
+  // Both gamefolio-media and gamefolio-assets buckets are private and need signed URLs
+  // Note: Old URLs may still have /object/public/ path but bucket is now private
   if (!url) return false;
-  if (url.includes('/object/public/')) return false; // Already public, no need to sign
   return url.includes('gamefolio-media') || url.includes('gamefolio-assets');
 }
 
@@ -80,10 +80,12 @@ export function useSignedUrl(publicUrl: string | undefined | null) {
     return () => { cancelled = true; };
   }, [publicUrl]);
 
-  // For public URLs, return directly; otherwise return from state
+  // For non-Supabase URLs, return directly; for Supabase URLs, use signed URL from state
   const finalUrl = useMemo(() => {
     if (!publicUrl) return null;
+    // Non-Supabase URLs don't need signing
     if (!isSupabaseStorageUrl(publicUrl)) return publicUrl;
+    // Supabase URLs need signed URLs - return from state (will be null until signed)
     return signedUrl;
   }, [publicUrl, signedUrl]);
 
