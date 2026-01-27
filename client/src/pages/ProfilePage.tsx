@@ -1672,15 +1672,15 @@ const ProfilePage = () => {
             <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
 
             {/* L-shaped fading border with curved corner and button */}
-            <div className="relative mt-4 ml-0">
-              {/* Curved corner piece with inner glow */}
+            <div className="relative mt-4" style={{ marginLeft: '-16px' }}>
+              {/* Curved corner piece with glow */}
               <div 
-                className="absolute -top-0 -left-0 w-4 h-4"
+                className="absolute top-0 left-0 w-4 h-4 pointer-events-none"
                 style={{
                   borderLeft: `1px solid ${accentColor || 'hsl(var(--primary))'}`,
                   borderTop: `1px solid ${accentColor || 'hsl(var(--primary))'}`,
                   borderTopLeftRadius: '12px',
-                  boxShadow: `inset 8px 8px 15px ${accentColor || 'hsl(var(--primary))'}40`,
+                  filter: `drop-shadow(0 0 6px ${accentColor || 'hsl(var(--primary))'})`,
                 }}
               />
               
@@ -1688,7 +1688,7 @@ const ProfilePage = () => {
               <div 
                 className="absolute top-0 left-4 h-[1px] flex items-center"
                 style={{
-                  width: 'calc(100% - 16px)',
+                  width: 'calc(100% + 16px)',
                   maxWidth: '550px',
                   background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 50%, ${backgroundColor || '#0B2232'} 100%)`,
                   boxShadow: `0 0 12px 2px ${accentColor || 'hsl(var(--primary))'}50, 0 2px 8px ${accentColor || 'hsl(var(--primary))'}30`,
@@ -1717,8 +1717,8 @@ const ProfilePage = () => {
                 }}
               />
               
-              {/* Content with left padding for the border */}
-              <div className="pl-5 pt-5">
+              {/* Content aligned with username above */}
+              <div className="pl-4 pt-4">
                 {/* Stats - Uploads, Followers, Following */}
                 <div className="flex gap-6 items-center">
                   <div className="flex flex-col">
