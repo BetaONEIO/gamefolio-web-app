@@ -923,6 +923,25 @@ const UploadPage = () => {
                         {/* Video Preview */}
                         <div className="w-full max-w-5xl mx-auto mb-6">
                           <div className="relative bg-black rounded-lg overflow-hidden">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFile(null);
+                                setVideoDuration(0);
+                                setTrimStart(0);
+                                setTrimEnd(0);
+                                setShowEditingTools(false);
+                                setGeneratedThumbnails([]);
+                                setThumbnailUrl("");
+                                if (fileInputRef.current) {
+                                  fileInputRef.current.value = '';
+                                }
+                              }}
+                              className="absolute top-2 right-2 z-10 p-1.5 bg-black/70 hover:bg-black/90 rounded-full transition-colors"
+                              title="Remove video"
+                            >
+                              <X className="h-4 w-4 text-white" />
+                            </button>
                             <video
                               ref={videoRef}
                               key={videoSrc} // Force remount when src changes
@@ -1423,6 +1442,30 @@ const UploadPage = () => {
                         {/* Video Preview */}
                         <div className="w-full max-w-md mx-auto mb-6">
                           <div className="relative bg-black rounded-lg overflow-hidden aspect-[9/16]">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFile(null);
+                                setVideoDuration(0);
+                                setTrimStart(0);
+                                setTrimEnd(0);
+                                setShowEditingTools(false);
+                                setGeneratedThumbnails([]);
+                                setThumbnailUrl("");
+                                setReelZoom(1);
+                                setReelPanX(0);
+                                setReelPanY(0);
+                                setIsReelAspectMismatch(false);
+                                setVideoAspectRatio(0);
+                                if (fileInputRef.current) {
+                                  fileInputRef.current.value = '';
+                                }
+                              }}
+                              className="absolute top-2 right-2 z-10 p-1.5 bg-black/70 hover:bg-black/90 rounded-full transition-colors"
+                              title="Remove video"
+                            >
+                              <X className="h-4 w-4 text-white" />
+                            </button>
                             <video
                               ref={videoRef}
                               src={videoSrc}
