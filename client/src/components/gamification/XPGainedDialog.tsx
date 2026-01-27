@@ -103,9 +103,9 @@ export function XPGainedDialog({
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogOverlay className="bg-black/80 backdrop-blur-sm" />
+      <DialogOverlay className="bg-black/60 backdrop-blur-md" />
       <DialogContent 
-        className="sm:max-w-md !border-none p-12 !shadow-none [&>button]:hidden"
+        className="sm:max-w-md !border-none p-12 !shadow-none [&>button]:hidden !bg-transparent"
         style={{ 
           background: 'transparent',
           backgroundColor: 'transparent',
