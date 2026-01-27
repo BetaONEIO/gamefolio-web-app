@@ -1475,7 +1475,7 @@ const UploadPage = () => {
                               playsInline
                               className="w-full h-full"
                               style={{
-                                objectFit: isReelAspectMismatch ? 'cover' : 'cover',
+                                objectFit: 'contain',
                                 transform: isReelAspectMismatch ? `scale(${reelZoom}) translate(${reelPanX}%, ${reelPanY}%)` : 'none',
                                 transformOrigin: 'center center',
                               }}
@@ -1492,8 +1492,7 @@ const UploadPage = () => {
                                   
                                   if (Math.abs(aspectRatio - targetRatio) > 0.1) {
                                     setIsReelAspectMismatch(true);
-                                    const isWider = aspectRatio > targetRatio;
-                                    setReelZoom(isWider ? 1 : 1);
+                                    setReelZoom(1);
                                     setReelPanX(0);
                                     setReelPanY(0);
                                   } else {
@@ -1527,7 +1526,7 @@ const UploadPage = () => {
                                   <input
                                     type="range"
                                     min="1"
-                                    max="2"
+                                    max={videoAspectRatio > (9/16) ? Math.ceil((videoAspectRatio / (9/16)) * 10) / 10 : Math.ceil(((9/16) / videoAspectRatio) * 10) / 10}
                                     step="0.05"
                                     value={reelZoom}
                                     onChange={(e) => setReelZoom(parseFloat(e.target.value))}
@@ -1538,13 +1537,13 @@ const UploadPage = () => {
                                   </span>
                                 </div>
                                 
-                                {videoAspectRatio > (9/16) && (
+                                {videoAspectRatio > (9/16) && reelZoom > 1 && (
                                   <div className="flex items-center gap-3">
                                     <span className="text-xs text-muted-foreground w-12">Pan X</span>
                                     <input
                                       type="range"
-                                      min="-20"
-                                      max="20"
+                                      min={-Math.round((reelZoom - 1) * 30)}
+                                      max={Math.round((reelZoom - 1) * 30)}
                                       step="1"
                                       value={reelPanX}
                                       onChange={(e) => setReelPanX(parseFloat(e.target.value))}
@@ -1556,13 +1555,13 @@ const UploadPage = () => {
                                   </div>
                                 )}
                                 
-                                {videoAspectRatio < (9/16) && (
+                                {videoAspectRatio < (9/16) && reelZoom > 1 && (
                                   <div className="flex items-center gap-3">
                                     <span className="text-xs text-muted-foreground w-12">Pan Y</span>
                                     <input
                                       type="range"
-                                      min="-20"
-                                      max="20"
+                                      min={-Math.round((reelZoom - 1) * 30)}
+                                      max={Math.round((reelZoom - 1) * 30)}
                                       step="1"
                                       value={reelPanY}
                                       onChange={(e) => setReelPanY(parseFloat(e.target.value))}
@@ -1591,7 +1590,7 @@ const UploadPage = () => {
                               </Button>
                               
                               <p className="text-xs text-muted-foreground">
-                                Adjust zoom and position to choose what content to show in the 9:16 frame.
+                                Your video starts fully visible. Zoom in to crop and fill the frame, then pan to adjust position.
                               </p>
                             </div>
                           )}
