@@ -4712,16 +4712,21 @@ export class DatabaseStorage implements IStorage {
     
     const totalLootboxesOpened = lootboxRecord[0]?.openCount || 0;
 
-    // Get total XP earned from lootboxes
-    const xpResult = await db
-      .select({ total: sql<number>`COALESCE(SUM(${xpHistory.xpAmount}), 0)` })
-      .from(xpHistory)
-      .where(and(
-        eq(xpHistory.userId, userId),
-        eq(xpHistory.source, 'lootbox')
-      ));
-    
-    const totalXpEarned = Number(xpResult[0]?.total || 0);
+    // Get total XP earned from lootboxes (handle missing table gracefully)
+    let totalXpEarned = 0;
+    try {
+      const xpResult = await db
+        .select({ total: sql<number>`COALESCE(SUM(${xpHistory.xpAmount}), 0)` })
+        .from(xpHistory)
+        .where(and(
+          eq(xpHistory.userId, userId),
+          eq(xpHistory.source, 'lootbox')
+        ));
+      totalXpEarned = Number(xpResult[0]?.total || 0);
+    } catch (error) {
+      // xp_history table may not exist yet, default to 0
+      totalXpEarned = 0;
+    }
 
     // Get all claimed rewards with claim dates
     const claimedItems = await db
