@@ -132,6 +132,21 @@ const ProfileHeader = ({
               showAvatarBorderOverlay={true}
             />
             
+            {/* Collections Tab */}
+            <Link href={`/${profile.username}/collections`}>
+              <div 
+                className="mt-3 px-4 py-1.5 rounded-lg cursor-pointer transition-opacity hover:opacity-80"
+                style={{
+                  background: 'linear-gradient(90deg, #4ade80, #22d3d3, #a78bfa, #38bdf8)',
+                  padding: '1px',
+                }}
+              >
+                <div className="bg-background rounded-lg px-4 py-1.5">
+                  <span className="text-sm font-medium text-foreground">Collection</span>
+                </div>
+              </div>
+            </Link>
+            
             {/* Profile Stats underneath profile picture */}
             <div className="flex space-x-4 text-xs mt-3 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 border">
               <div className="text-center">
