@@ -30,7 +30,14 @@ function setCachedSignedUrl(originalUrl: string, signedUrl: string): void {
 }
 
 export function useSignedUrl(publicUrl: string | undefined | null) {
-  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  // Initialize with the public URL directly if it doesn't need signing
+  const getInitialUrl = () => {
+    if (!publicUrl) return null;
+    if (!isSupabaseStorageUrl(publicUrl)) return publicUrl;
+    return getCachedSignedUrl(publicUrl);
+  };
+  
+  const [signedUrl, setSignedUrl] = useState<string | null>(getInitialUrl);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
