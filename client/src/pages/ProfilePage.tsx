@@ -1461,23 +1461,21 @@ const ProfilePage = () => {
           </div>
 
           {/* Curved fading border container for profile info */}
-          <div className="relative my-4">
-            {/* Left fading gradient border */}
+          <div className="relative my-4 mx-4">
+            {/* Gradient border wrapper - creates the fading border effect */}
             <div 
-              className="absolute left-0 top-0 bottom-0 w-16 pointer-events-none z-10"
+              className="absolute inset-0 rounded-2xl pointer-events-none"
               style={{
-                background: `linear-gradient(to right, hsl(var(--background)), transparent)`,
+                background: `linear-gradient(90deg, transparent 0%, ${accentColor || 'hsl(var(--primary))'} 15%, ${accentColor || 'hsl(var(--primary))'} 85%, transparent 100%)`,
+                padding: '1px',
+                WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                WebkitMaskComposite: 'xor',
+                maskComposite: 'exclude',
               }}
             />
             
-            {/* Main content with curved border */}
-            <div 
-              className="relative rounded-2xl px-4 py-4 mx-4"
-              style={{
-                border: '1px solid transparent',
-                borderImage: `linear-gradient(90deg, transparent, ${accentColor || 'hsl(var(--primary))'} 20%, ${accentColor || 'hsl(var(--primary))'} 80%, transparent) 1`,
-              }}
-            >
+            {/* Main content */}
+            <div className="relative rounded-2xl px-4 py-4">
               {/* Stats - Horizontal row with uppercase labels */}
               <div className="flex gap-6 mb-3 items-start">
                 <div className="flex flex-col">
@@ -1511,14 +1509,6 @@ const ProfilePage = () => {
                 <p className="text-sm text-foreground/90 mb-3 pr-4">{profile.bio}</p>
               )}
             </div>
-            
-            {/* Right fading gradient border */}
-            <div 
-              className="absolute right-0 top-0 bottom-0 w-16 pointer-events-none z-10"
-              style={{
-                background: `linear-gradient(to left, hsl(var(--background)), transparent)`,
-              }}
-            />
           </div>
 
           {/* Platform tags and Social Links */}
