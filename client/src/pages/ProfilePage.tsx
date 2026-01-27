@@ -1671,15 +1671,25 @@ const ProfilePage = () => {
             {/* Username */}
             <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
 
-            {/* L-shaped fading border with button */}
-            <div className="relative mt-4">
+            {/* L-shaped fading border with curved corner and button */}
+            <div className="relative mt-4 ml-0">
+              {/* Curved corner piece */}
+              <div 
+                className="absolute -top-0 -left-0 w-4 h-4"
+                style={{
+                  borderLeft: `1px solid ${accentColor || 'hsl(var(--primary))'}`,
+                  borderTop: `1px solid ${accentColor || 'hsl(var(--primary))'}`,
+                  borderTopLeftRadius: '12px',
+                }}
+              />
+              
               {/* Top horizontal line - extends far right and fades */}
               <div 
-                className="absolute top-0 left-0 h-[1px] flex items-center"
+                className="absolute top-0 left-4 h-[1px] flex items-center"
                 style={{
-                  width: '100%',
-                  maxWidth: '600px',
-                  background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, ${backgroundColor || '#0B2232'} 100%)`,
+                  width: 'calc(100% - 16px)',
+                  maxWidth: '550px',
+                  background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 50%, ${backgroundColor || '#0B2232'} 100%)`,
                 }}
               >
                 {/* Button at the end of top line */}
@@ -1700,17 +1710,17 @@ const ProfilePage = () => {
                 </button>
               </div>
               
-              {/* Left vertical line */}
+              {/* Left vertical line - starts after curved corner */}
               <div 
-                className="absolute top-0 left-0 w-[1px]"
+                className="absolute top-4 left-0 w-[1px]"
                 style={{
-                  height: '100%',
-                  background: `linear-gradient(180deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 70%, ${backgroundColor || '#0B2232'} 100%)`,
+                  height: 'calc(100% - 16px)',
+                  background: `linear-gradient(180deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, ${backgroundColor || '#0B2232'} 100%)`,
                 }}
               />
               
               {/* Content with left padding for the border */}
-              <div className="pl-4 pt-4">
+              <div className="pl-5 pt-5">
                 {/* Stats - Uploads, Followers, Following */}
                 <div className="flex gap-6 items-center">
                   <div className="flex flex-col">
