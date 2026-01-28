@@ -9,6 +9,7 @@ import authRoutes from './routes/auth-routes';
 import adminRoutes from './routes/admin';
 import uploadRoutes from './routes/upload';
 import twitchGamesRoutes from './routes/twitch-games';
+import gfCheckoutRoutes from './routes/gf-checkout';
 import { createOGMetaMiddleware } from './og-meta';
 import { storage } from './storage';
 import path from 'path';
@@ -116,6 +117,7 @@ app.use((req, res, next) => {
     app.use('/api/admin', adminRoutes);
     app.use('/api', uploadRoutes);
     app.use('/api/twitch', twitchGamesRoutes);
+    app.use(gfCheckoutRoutes);
 
     // Social media preview route - must be before Vite middleware
     app.get('/profile/:username', async (req, res, next) => {
