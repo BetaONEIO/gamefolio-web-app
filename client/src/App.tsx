@@ -9,6 +9,7 @@ import { ClipDialogProvider } from "@/hooks/use-clip-dialog";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { AuthModalProvider, useAuthModal } from "@/hooks/use-auth-modal";
 import { CrossmintProvider } from "@/hooks/use-crossmint";
+import { WalletProvider } from "@/hooks/use-wallet";
 import { RevenueCatProvider } from "@/hooks/use-revenuecat";
 import { LevelTrackerProvider } from "@/hooks/use-level-tracker";
 import { WelcomePackProvider, useWelcomePack } from "@/hooks/use-welcome-pack";
@@ -78,6 +79,7 @@ const WatchlistPage = React.lazy(() => import("./pages/WatchlistPage"));
 const UserBattlesPage = React.lazy(() => import("./pages/UserBattlesPage"));
 const LevelTrackerPage = React.lazy(() => import("./pages/LevelTrackerPage"));
 const CollectionPage = React.lazy(() => import("./pages/CollectionPage"));
+const DebugWalletPage = React.lazy(() => import("./pages/DebugWalletPage"));
 
 // Loading component for lazy-loaded routes
 function RouteLoader() {
@@ -306,6 +308,7 @@ function Router() {
           <ProtectedRoute path="/level-tracker" component={LevelTrackerPage} />
           <ProtectedRoute path="/collection" component={CollectionPage} />
           <Route path="/leaderboard/embed" component={LeaderboardEmbedPage} />
+          <Route path="/debug/wallet" component={DebugWalletPage} />
 
           {/* Public view routes for shareable content */}
           <Route path="/view/screenshot/:id" component={ViewContentPage} />
@@ -352,15 +355,17 @@ function App() {
               <LevelTrackerProvider>
                 <WelcomePackProvider>
                   <CrossmintProvider>
-                    <AuthModalProvider>
-                      <ClipDialogProvider>
-                        <MainLayout>
-                          <Router />
-                        </MainLayout>
-                        <WelcomePackComponents />
-                      </ClipDialogProvider>
-                      <Toaster />
-                    </AuthModalProvider>
+                    <WalletProvider>
+                      <AuthModalProvider>
+                        <ClipDialogProvider>
+                          <MainLayout>
+                            <Router />
+                          </MainLayout>
+                          <WelcomePackComponents />
+                        </ClipDialogProvider>
+                        <Toaster />
+                      </AuthModalProvider>
+                    </WalletProvider>
                   </CrossmintProvider>
                 </WelcomePackProvider>
               </LevelTrackerProvider>

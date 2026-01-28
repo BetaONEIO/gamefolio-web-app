@@ -7758,6 +7758,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update wallet address for authenticated user
+  app.post("/api/wallet/address", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { walletAddress } = req.body;
+
+      if (!walletAddress || typeof walletAddress !== 'string') {
+        return res.status(400).json({ message: "Valid wallet address is required" });
+      }
+
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(walletAddress)) {
+        return res.status(400).json({ message: "Invalid Ethereum address format" });
+      }
+
+      const normalizedAddress = walletAddress.toLowerCase();
+
+      const user = await storage.getUser(userId);
+      const updateData: { walletAddress: string; walletChain: string; walletCreatedAt?: Date } = {
+        walletAddress: normalizedAddress,
+        walletChain: 'skale-nebula-testnet',
+      };
+
+      if (!user?.walletAddress) {
+        updateData.walletCreatedAt = new Date();
+      }
+
+      await storage.updateUser(userId, updateData);
+
+      res.json({
+        success: true,
+        walletAddress: normalizedAddress,
+        message: "Wallet address updated successfully",
+      });
+    } catch (error) {
+      console.error("Error updating wallet address:", error);
+      res.status(500).json({ error: "Failed to update wallet address" });
+    }
+  });
+
   // Get wallet info for authenticated user
   app.get("/api/wallet/info", authMiddleware, async (req, res) => {
     try {
