@@ -1280,3 +1280,46 @@ export const insertGfOrderSchema = createInsertSchema(gfOrders).omit({
 
 export type GfOrder = typeof gfOrders.$inferSelect;
 export type InsertGfOrder = z.infer<typeof insertGfOrderSchema>;
+
+export const storeItems = pgTable("store_items", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  image: text("image"),
+  gfCost: real("gf_cost").notNull(),
+  category: text("category").notNull().default("general"),
+  rarity: text("rarity").default("common"),
+  available: boolean("available").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertStoreItemSchema = createInsertSchema(storeItems).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertStoreItem = z.infer<typeof insertStoreItemSchema>;
+export type StoreItem = typeof storeItems.$inferSelect;
+
+export const storePurchases = pgTable("store_purchases", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }).notNull(),
+  itemId: integer("item_id").references(() => storeItems.id, { onDelete: "cascade" }).notNull(),
+  walletAddress: text("wallet_address").notNull(),
+  gfAmount: real("gf_amount").notNull(),
+  status: text("status").notNull().default("pending"),
+  txHash: text("tx_hash"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+}, (table) => ({
+  userIdIdx: index("store_purchases_user_id_idx").on(table.userId),
+  itemIdIdx: index("store_purchases_item_id_idx").on(table.itemId),
+  statusIdx: index("store_purchases_status_idx").on(table.status),
+}));
+
+export const insertStorePurchaseSchema = createInsertSchema(storePurchases).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+export type InsertStorePurchase = z.infer<typeof insertStorePurchaseSchema>;
+export type StorePurchase = typeof storePurchases.$inferSelect;
