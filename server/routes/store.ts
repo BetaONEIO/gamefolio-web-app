@@ -3,6 +3,15 @@ import { db } from '../db';
 import { storeItems, storePurchases, users } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { privateKeyToAccount } from 'viem/accounts';
+import { createPublicClient, http, parseUnits, decodeEventLog, type Address } from 'viem';
+import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } from '../../shared/contracts';
+
+const GF_DECIMALS = 18;
+
+const publicClient = createPublicClient({
+  chain: SKALE_NEBULA_TESTNET,
+  transport: http(SKALE_NEBULA_TESTNET.rpcUrls.default.http[0]),
+});
 
 const router = Router();
 
@@ -153,6 +162,54 @@ router.post('/api/store/verify-purchase', async (req: Request, res: Response) =>
 
     if (purchase[0].status === 'completed') {
       return res.json({ success: true, message: 'Already verified' });
+    }
+
+    if (purchase[0].status !== 'pending') {
+      return res.status(400).json({ error: 'Purchase cannot be verified in current status' });
+    }
+
+    const treasuryAddress = getTreasuryAddress().toLowerCase();
+    const expectedAmount = parseUnits(String(purchase[0].gfAmount), GF_DECIMALS);
+    const buyerAddress = purchase[0].walletAddress.toLowerCase();
+
+    const receipt = await publicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
+
+    if (receipt.status !== 'success') {
+      await db.update(storePurchases).set({ status: 'failed' }).where(eq(storePurchases.id, purchaseId));
+      return res.status(400).json({ error: 'Transaction failed on-chain' });
+    }
+
+    let validTransfer = false;
+    for (const log of receipt.logs) {
+      if (log.address.toLowerCase() !== GF_TOKEN_ADDRESS.toLowerCase()) continue;
+      
+      try {
+        const decoded = decodeEventLog({
+          abi: GF_TOKEN_ABI,
+          data: log.data,
+          topics: log.topics,
+        });
+
+        if (decoded.eventName === 'Transfer') {
+          const { from, to, value } = decoded.args as { from: Address; to: Address; value: bigint };
+          
+          if (
+            from.toLowerCase() === buyerAddress &&
+            to.toLowerCase() === treasuryAddress &&
+            value >= expectedAmount
+          ) {
+            validTransfer = true;
+            break;
+          }
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+
+    if (!validTransfer) {
+      await db.update(storePurchases).set({ status: 'failed' }).where(eq(storePurchases.id, purchaseId));
+      return res.status(400).json({ error: 'Invalid transfer: amount, sender, or recipient mismatch' });
     }
 
     await db

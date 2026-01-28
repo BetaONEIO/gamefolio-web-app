@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useCrossmint } from "@/hooks/use-crossmint";
 import { Link } from "wouter";
-import { ShoppingCart, DollarSign, Sparkles, Wallet, Menu, Filter, Heart } from "lucide-react";
+import { ShoppingCart, DollarSign, Sparkles, Wallet, Menu, Filter, Heart, Loader2, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,6 +21,10 @@ import {
 } from "@/components/ui/select";
 import { NFTPurchaseDialog } from "@/components/store/NFTPurchaseDialog";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
+import { useAccount, useWalletClient, usePublicClient, useChainId } from "wagmi";
+import { useOpenConnectModal } from "@0xsequence/connect";
+import { parseUnits, type Address } from "viem";
+import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } from "@shared/contracts";
 import nft1 from "@assets/1_1762777399632.png";
 import nft2 from "@assets/2_1762777399661.png";
 import nft3 from "@assets/3_1762777399661.png";
@@ -42,6 +46,23 @@ import { useToast } from "@/hooks/use-toast";
 
 type TabType = "buy" | "sell" | "mint";
 
+interface StoreItem {
+  id: number;
+  name: string;
+  description: string | null;
+  image: string | null;
+  gfCost: number;
+  category: string;
+  rarity: string | null;
+  available: boolean;
+}
+
+interface OwnedItem extends StoreItem {
+  purchaseId: string;
+  purchasedAt: string;
+  txHash: string | null;
+}
+
 interface NFT {
   id: number;
   name: string;
@@ -54,6 +75,9 @@ interface NFT {
   currentBid: number;
   owner: string;
 }
+
+const GF_DECIMALS = 18;
+const SKALE_CHAIN_ID = SKALE_NEBULA_TESTNET.id;
 
 export default function StorePage() {
   const { user } = useAuth();
@@ -68,6 +92,106 @@ export default function StorePage() {
   const [mintFilter, setMintFilter] = useState<string>("all");
   const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null);
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
+  const [purchasingItemId, setPurchasingItemId] = useState<number | null>(null);
+
+  const { address, isConnected } = useAccount();
+  const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
+  const chainId = useChainId();
+  const { setOpenConnectModal } = useOpenConnectModal();
+
+  const { data: storeItems = [], isLoading: isLoadingItems } = useQuery<StoreItem[]>({
+    queryKey: ["/api/store/items"],
+  });
+
+  const { data: ownedItems = [], refetch: refetchOwned } = useQuery<OwnedItem[]>({
+    queryKey: ["/api/store/owned"],
+    enabled: !!user,
+  });
+
+  const ownedItemIds = new Set(ownedItems.map(item => item.id));
+
+  const handlePurchaseWithGF = async (item: StoreItem) => {
+    if (!user) {
+      toast({ title: "Login required", description: "Please log in to purchase items", variant: "destructive" });
+      return;
+    }
+
+    if (!isConnected || !walletClient || !publicClient) {
+      toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
+      setOpenConnectModal(true);
+      return;
+    }
+
+    if (chainId !== SKALE_CHAIN_ID) {
+      toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
+      return;
+    }
+
+    if (ownedItemIds.has(item.id)) {
+      toast({ title: "Already owned", description: "You already own this item", variant: "destructive" });
+      return;
+    }
+
+    setPurchasingItemId(item.id);
+
+    try {
+      const intentRes = await fetch("/api/store/purchase-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ itemId: item.id }),
+      });
+
+      if (!intentRes.ok) {
+        const error = await intentRes.json();
+        throw new Error(error.error || "Failed to create purchase intent");
+      }
+
+      const { purchaseId, gfCost, treasuryAddress } = await intentRes.json();
+
+      toast({ title: "Confirm transaction", description: `Sending ${gfCost} GF tokens...` });
+
+      const amountRaw = parseUnits(String(gfCost), GF_DECIMALS);
+
+      const txHash = await walletClient.writeContract({
+        address: GF_TOKEN_ADDRESS,
+        abi: GF_TOKEN_ABI,
+        functionName: "transfer",
+        args: [treasuryAddress as Address, amountRaw],
+      });
+
+      toast({ title: "Verifying purchase...", description: "Please wait while we confirm your transaction" });
+
+      await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
+
+      const verifyRes = await fetch("/api/store/verify-purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ purchaseId, txHash }),
+      });
+
+      if (!verifyRes.ok) {
+        throw new Error("Failed to verify purchase");
+      }
+
+      toast({ title: "Item unlocked!", description: `You now own ${item.name}` });
+      refetchOwned();
+      queryClient.invalidateQueries({ queryKey: ["/api/store/owned"] });
+
+    } catch (error: any) {
+      let description = error.message || "Transaction failed";
+      if (error.message?.includes("user rejected") || error.message?.includes("User rejected")) {
+        description = "Transaction was cancelled";
+      } else if (error.message?.includes("insufficient")) {
+        description = "Insufficient GF token balance";
+      }
+      toast({ title: "Purchase failed", description, variant: "destructive" });
+    } finally {
+      setPurchasingItemId(null);
+    }
+  };
 
   // Fetch user's watchlist
   const { data: watchlist = [] } = useQuery<any[]>({
@@ -689,53 +813,59 @@ export default function StorePage() {
                 </div>
               </div>
 
+              {isLoadingItems ? (
+                <div className="col-span-full flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
+              ) : (
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
-                {gamefolioNFTs.map((nft) => (
+                {storeItems.map((item) => {
+                  const isOwned = ownedItemIds.has(item.id);
+                  const isPurchasing = purchasingItemId === item.id;
+                  
+                  return (
                   <Card
-                    key={nft.id}
-                    className="bg-gray-800/50 border-gray-700 overflow-hidden hover:border-blue-500 transition-all hover:shadow-lg hover:shadow-blue-500/20"
-                    data-testid={`card-nft-${nft.id}`}
+                    key={item.id}
+                    className={`bg-gray-800/50 border-gray-700 overflow-hidden transition-all hover:shadow-lg ${isOwned ? "border-green-500 hover:border-green-400 hover:shadow-green-500/20" : "hover:border-blue-500 hover:shadow-blue-500/20"}`}
+                    data-testid={`card-item-${item.id}`}
                   >
                     <div 
-                      className="relative aspect-square overflow-hidden cursor-pointer"
-                      onClick={() => handleBuyNFT(nft)}
-                      data-testid={`img-nft-${nft.id}`}
+                      className="relative aspect-square overflow-hidden"
+                      data-testid={`img-item-${item.id}`}
                     >
                       <img
-                        src={nft.image}
-                        alt={nft.name}
+                        src={item.image || gfTokenLogo}
+                        alt={item.name}
                         className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
                       />
-                      <Badge className="absolute top-2 right-2 bg-blue-600 text-xs">
-                        For Sale
-                      </Badge>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="absolute top-2 left-2 h-8 w-8 bg-black/50 hover:bg-black/70"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleWatchlist(nft);
-                        }}
-                        data-testid={`button-watchlist-${nft.id}`}
-                      >
-                        <Heart
-                          className={`h-4 w-4 ${
-                            isInWatchlist(nft.id)
-                              ? "fill-red-500 text-red-500"
-                              : "text-white"
-                          }`}
-                        />
-                      </Button>
+                      {isOwned ? (
+                        <Badge className="absolute top-2 right-2 bg-green-600 text-xs">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Unlocked
+                        </Badge>
+                      ) : (
+                        <Badge className="absolute top-2 right-2 bg-blue-600 text-xs">
+                          For Sale
+                        </Badge>
+                      )}
+                      {item.rarity && (
+                        <Badge className={`absolute top-2 left-2 text-xs ${
+                          item.rarity === "legendary" ? "bg-yellow-600" :
+                          item.rarity === "epic" ? "bg-purple-600" :
+                          item.rarity === "rare" ? "bg-blue-600" : "bg-gray-600"
+                        }`}>
+                          {item.rarity}
+                        </Badge>
+                      )}
                     </div>
                     
                     <div className="p-3 space-y-2">
                       <div>
-                        <h3 className="font-semibold text-sm md:text-base mb-1 line-clamp-1" data-testid={`text-nft-name-${nft.id}`}>
-                          {nft.name}
+                        <h3 className="font-semibold text-sm md:text-base mb-1 line-clamp-1" data-testid={`text-item-name-${item.id}`}>
+                          {item.name}
                         </h3>
-                        <p className="text-xs text-gray-400 line-clamp-2" data-testid={`text-nft-description-${nft.id}`}>
-                          {nft.description}
+                        <p className="text-xs text-gray-400 line-clamp-2" data-testid={`text-item-description-${item.id}`}>
+                          {item.description}
                         </p>
                       </div>
                       
@@ -744,29 +874,48 @@ export default function StorePage() {
                           <p className="text-xs text-gray-400">Price</p>
                           <div className="flex items-center gap-1">
                             <img src={gfTokenLogo} alt="GF Token" className="w-4 h-4" />
-                            <p className="text-sm md:text-base font-bold text-blue-400" data-testid={`text-nft-price-${nft.id}`}>
-                              {nft.price} GF
+                            <p className="text-sm md:text-base font-bold text-blue-400" data-testid={`text-item-price-${item.id}`}>
+                              {item.gfCost} GF
                             </p>
                           </div>
-                          <p className="text-xs text-gray-500" data-testid={`text-nft-price-usd-${nft.id}`}>
-                            ≈ ${nft.priceUSD}
-                          </p>
                         </div>
                         
-                        <Button
-                          size="sm"
-                          className="bg-blue-600 hover:bg-blue-700 text-xs"
-                          onClick={() => handleBuyNFT(nft)}
-                          data-testid={`button-buy-nft-${nft.id}`}
-                        >
-                          <ShoppingCart className="h-3 w-3 md:h-4 md:w-4 mr-1" />
-                          Buy
-                        </Button>
+                        {isOwned ? (
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-600 text-xs cursor-default"
+                            disabled
+                          >
+                            <CheckCircle className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                            Owned
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700 text-xs"
+                            onClick={() => handlePurchaseWithGF(item)}
+                            disabled={isPurchasing}
+                            data-testid={`button-buy-item-${item.id}`}
+                          >
+                            {isPurchasing ? (
+                              <>
+                                <Loader2 className="h-3 w-3 md:h-4 md:w-4 mr-1 animate-spin" />
+                                Buying...
+                              </>
+                            ) : (
+                              <>
+                                <ShoppingCart className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                                Buy
+                              </>
+                            )}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </Card>
-                ))}
+                );})}
               </div>
+              )}
             </div>
           )}
 
