@@ -8,7 +8,8 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ClipDialogProvider } from "@/hooks/use-clip-dialog";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { AuthModalProvider, useAuthModal } from "@/hooks/use-auth-modal";
-import { CrossmintProvider } from "@/hooks/use-crossmint";
+import { SequenceConnect } from "@0xsequence/connect";
+import { sequenceConfig } from "@/lib/sequence-config";
 import { WalletProvider } from "@/hooks/use-wallet";
 import { RevenueCatProvider } from "@/hooks/use-revenuecat";
 import { LevelTrackerProvider } from "@/hooks/use-level-tracker";
@@ -354,7 +355,7 @@ function App() {
             <RevenueCatProvider>
               <LevelTrackerProvider>
                 <WelcomePackProvider>
-                  <CrossmintProvider>
+                  <SequenceConnect config={sequenceConfig}>
                     <WalletProvider>
                       <AuthModalProvider>
                         <ClipDialogProvider>
@@ -366,7 +367,7 @@ function App() {
                         <Toaster />
                       </AuthModalProvider>
                     </WalletProvider>
-                  </CrossmintProvider>
+                  </SequenceConnect>
                 </WelcomePackProvider>
               </LevelTrackerProvider>
             </RevenueCatProvider>

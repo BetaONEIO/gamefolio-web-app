@@ -1,170 +1,111 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
-import { createWalletClient, createPublicClient, custom, http, type WalletClient, type PublicClient, type Address } from 'viem';
+import { createContext, useContext, useEffect, ReactNode, useCallback, useRef } from 'react';
+import { useAccount, useDisconnect, useWalletClient, useChainId } from 'wagmi';
+import { useOpenConnectModal } from '@0xsequence/connect';
+import { createPublicClient, http, type PublicClient, type Address } from 'viem';
 import { useAuth } from './use-auth';
-import { useCrossmint } from './use-crossmint';
+import { useToast } from './use-toast';
 import { SKALE_CHAIN_ID, SKALE_RPC_URL, SKALE_EXPLORER_BASE_URL } from '../../../config/web3';
+import { skaleNebulaTestnet } from '../lib/sequence-config';
 
-export const skaleTestnet = {
-  id: SKALE_CHAIN_ID,
-  name: 'SKALE Testnet',
-  nativeCurrency: {
-    decimals: 18,
-    name: 'sFUEL',
-    symbol: 'sFUEL',
-  },
-  rpcUrls: {
-    default: { http: [SKALE_RPC_URL] },
-    public: { http: [SKALE_RPC_URL] },
-  },
-  blockExplorers: {
-    default: { name: 'SKALE Explorer', url: SKALE_EXPLORER_BASE_URL },
-  },
-} as const;
+export const skaleTestnet = skaleNebulaTestnet;
 
 interface WalletContextType {
   walletAddress: Address | null;
   isReady: boolean;
-  signer: WalletClient | null;
   chainId: number;
-  publicClient: PublicClient | null;
+  publicClient: PublicClient;
   isConnecting: boolean;
   isEmbeddedWallet: boolean;
-  connect: () => Promise<void>;
-  connectInjected: () => Promise<void>;
+  connect: () => void;
   disconnect: () => void;
-  updateWalletAddress: (address: string) => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
+const publicClient = createPublicClient({
+  chain: skaleTestnet,
+  transport: http(SKALE_RPC_URL),
+});
+
+async function updateWalletAddressOnServer(walletAddress: string): Promise<void> {
+  try {
+    const response = await fetch('/api/wallet/address', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ walletAddress }),
+    });
+    if (!response.ok) {
+      console.error('Failed to update wallet address on server');
+    }
+  } catch (error) {
+    console.error('Error updating wallet address:', error);
+  }
+}
+
 export function WalletProvider({ children }: { children: ReactNode }) {
   const { user, refreshUser } = useAuth();
-  const { wallet: crossmintWallet, isLoading: crossmintLoading, createWallet: createCrossmintWallet } = useCrossmint();
-  const [injectedAddress, setInjectedAddress] = useState<Address | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [injectedSigner, setInjectedSigner] = useState<WalletClient | null>(null);
+  const { toast } = useToast();
+  const lastSavedAddress = useRef<string | null>(null);
 
-  const walletAddress = useMemo<Address | null>(() => {
-    if (crossmintWallet?.address) {
-      return crossmintWallet.address as Address;
+  const { address, isConnected, isConnecting } = useAccount();
+  const { disconnect: wagmiDisconnect } = useDisconnect();
+  const { data: walletClient } = useWalletClient();
+  const chainId = useChainId();
+  const { setOpenConnectModal } = useOpenConnectModal();
+
+  const walletAddress = (address as Address) || null;
+  const isReady = isConnected && !!address;
+  const isEmbeddedWallet = isConnected && !!walletClient;
+
+  useEffect(() => {
+    if (isReady && walletAddress && user && walletAddress !== lastSavedAddress.current) {
+      lastSavedAddress.current = walletAddress;
+      updateWalletAddressOnServer(walletAddress).then(() => {
+        refreshUser();
+      });
     }
-    if (user?.walletAddress) {
-      return user.walletAddress as Address;
-    }
-    return injectedAddress;
-  }, [crossmintWallet?.address, user?.walletAddress, injectedAddress]);
+  }, [isReady, walletAddress, user?.id, refreshUser]);
 
-  const isEmbeddedWallet = !!crossmintWallet?.address || (!!user?.walletAddress && !injectedAddress);
-
-  const isReady = !!walletAddress && !crossmintLoading;
-
-  const signer = useMemo<WalletClient | null>(() => {
-    if (injectedSigner) {
-      return injectedSigner;
-    }
-    return null;
-  }, [injectedSigner]);
-
-  const publicClient = useMemo(() => {
-    return createPublicClient({
-      chain: skaleTestnet,
-      transport: http(SKALE_RPC_URL),
-    });
-  }, []);
-
-  const connect = async () => {
+  const connect = useCallback(() => {
     if (!user) {
-      console.error('User must be logged in to create wallet');
+      toast({
+        title: 'Please log in first',
+        description: 'You need to be logged in to connect a wallet',
+        variant: 'destructive',
+      });
       return;
     }
+    setOpenConnectModal(true);
+  }, [user, setOpenConnectModal, toast]);
 
-    setIsConnecting(true);
-    try {
-      await createCrossmintWallet();
-    } catch (error) {
-      console.error('Failed to create embedded wallet:', error);
-    } finally {
-      setIsConnecting(false);
-    }
-  };
+  const disconnect = useCallback(() => {
+    wagmiDisconnect();
+    toast({
+      title: 'Wallet disconnected',
+      description: 'Your wallet has been disconnected',
+    });
+  }, [wagmiDisconnect, toast]);
 
-  const connectInjected = async () => {
-    if (typeof window === 'undefined' || !(window as any).ethereum) {
-      console.error('No ethereum provider found');
-      return;
-    }
-
-    setIsConnecting(true);
-    try {
-      const accounts = await (window as any).ethereum.request({
-        method: 'eth_requestAccounts',
-      });
-
-      if (accounts && accounts.length > 0) {
-        const address = accounts[0] as Address;
-        
-        const walletClient = createWalletClient({
-          account: address,
-          chain: skaleTestnet,
-          transport: custom((window as any).ethereum),
-        });
-
-        setInjectedSigner(walletClient);
-        setInjectedAddress(address);
-
-        await updateWalletAddress(address);
-      }
-    } catch (error) {
-      console.error('Failed to connect injected wallet:', error);
-    } finally {
-      setIsConnecting(false);
-    }
-  };
-
-  const disconnect = () => {
-    setInjectedSigner(null);
-    setInjectedAddress(null);
-  };
-
-  const updateWalletAddress = async (address: string) => {
-    try {
-      const response = await fetch('/api/wallet/address', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ walletAddress: address }),
-      });
-
-      if (response.ok) {
-        await refreshUser();
-      }
-    } catch (error) {
-      console.error('Failed to update wallet address:', error);
-    }
+  const value: WalletContextType = {
+    walletAddress,
+    isReady,
+    chainId: chainId || SKALE_CHAIN_ID,
+    publicClient,
+    isConnecting,
+    isEmbeddedWallet,
+    connect,
+    disconnect,
   };
 
   return (
-    <WalletContext.Provider
-      value={{
-        walletAddress,
-        isReady,
-        signer,
-        chainId: SKALE_CHAIN_ID,
-        publicClient,
-        isConnecting: isConnecting || crossmintLoading,
-        isEmbeddedWallet,
-        connect,
-        connectInjected,
-        disconnect,
-        updateWalletAddress,
-      }}
-    >
+    <WalletContext.Provider value={value}>
       {children}
     </WalletContext.Provider>
   );
 }
 
-export function useWallet() {
+export function useWallet(): WalletContextType {
   const context = useContext(WalletContext);
   if (context === undefined) {
     throw new Error('useWallet must be used within a WalletProvider');

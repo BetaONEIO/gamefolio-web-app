@@ -10,7 +10,7 @@ import { SKALE_EXPLORER_BASE_URL, GF_TOKEN_ADDRESS, STAKING_ADDRESS } from "../.
 
 export default function DebugWalletPage() {
   const { user } = useAuth();
-  const { walletAddress, isReady, chainId, signer, isConnecting, isEmbeddedWallet, connect, connectInjected } = useWallet();
+  const { walletAddress, isReady, chainId, isConnecting, isEmbeddedWallet, connect, disconnect } = useWallet();
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
@@ -110,16 +110,9 @@ export default function DebugWalletPage() {
               </div>
 
               <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                <span className="text-sm text-muted-foreground">Signer Available</span>
-                <span className={`text-sm font-medium ${signer ? 'text-green-500' : 'text-yellow-500'}`}>
-                  {signer ? 'Yes' : 'No (Embedded Wallet)'}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
                 <span className="text-sm text-muted-foreground">Wallet Type</span>
                 <span className="text-sm font-medium">
-                  {isEmbeddedWallet ? 'Embedded (Crossmint)' : walletAddress ? 'Injected' : 'None'}
+                  {isEmbeddedWallet ? 'Embedded (Sequence)' : walletAddress ? 'External' : 'None'}
                 </span>
               </div>
             </div>
@@ -177,35 +170,33 @@ export default function DebugWalletPage() {
           </CardContent>
         </Card>
 
-        {!isReady && (
-          <div className="flex flex-col gap-3">
-            <Button
-              onClick={connect}
-              disabled={isConnecting || !user}
-              className="w-full"
-            >
-              {isConnecting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                <>
-                  <Wallet className="mr-2 h-4 w-4" />
-                  Create Embedded Wallet
-                </>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={connectInjected}
-              disabled={isConnecting}
-              className="w-full"
-            >
-              <Wallet className="mr-2 h-4 w-4" />
-              Connect External Wallet
-            </Button>
-          </div>
+        {!isReady ? (
+          <Button
+            onClick={connect}
+            disabled={isConnecting || !user}
+            className="w-full"
+          >
+            {isConnecting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Connecting...
+              </>
+            ) : (
+              <>
+                <Wallet className="mr-2 h-4 w-4" />
+                Connect Wallet
+              </>
+            )}
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            onClick={disconnect}
+            className="w-full"
+          >
+            <Wallet className="mr-2 h-4 w-4" />
+            Disconnect Wallet
+          </Button>
         )}
       </div>
     </div>
