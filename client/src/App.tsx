@@ -11,6 +11,7 @@ import { AuthModalProvider, useAuthModal } from "@/hooks/use-auth-modal";
 import { SequenceConnect } from "@0xsequence/connect";
 import { sequenceConfig } from "@/lib/sequence-config";
 import { WalletProvider } from "@/hooks/use-wallet";
+import { CrossmintProvider } from "@/hooks/use-crossmint";
 import { RevenueCatProvider } from "@/hooks/use-revenuecat";
 import { LevelTrackerProvider } from "@/hooks/use-level-tracker";
 import { WelcomePackProvider, useWelcomePack } from "@/hooks/use-welcome-pack";
@@ -357,15 +358,17 @@ function App() {
                 <WelcomePackProvider>
                   <SequenceConnect config={sequenceConfig}>
                     <WalletProvider>
-                      <AuthModalProvider>
-                        <ClipDialogProvider>
-                          <MainLayout>
-                            <Router />
-                          </MainLayout>
-                          <WelcomePackComponents />
-                        </ClipDialogProvider>
-                        <Toaster />
-                      </AuthModalProvider>
+                      <CrossmintProvider>
+                        <AuthModalProvider>
+                          <ClipDialogProvider>
+                            <MainLayout>
+                              <Router />
+                            </MainLayout>
+                            <WelcomePackComponents />
+                          </ClipDialogProvider>
+                          <Toaster />
+                        </AuthModalProvider>
+                      </CrossmintProvider>
                     </WalletProvider>
                   </SequenceConnect>
                 </WelcomePackProvider>
