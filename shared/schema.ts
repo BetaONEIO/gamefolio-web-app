@@ -1250,3 +1250,33 @@ export interface UploadLimits {
   canUploadReel: boolean;
   canUploadScreenshot: boolean;
 }
+
+// GF Token Orders table - for tracking GF token purchases via Stripe
+export const gfOrders = pgTable("gf_orders", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+  walletAddress: text("wallet_address"),
+  gbpAmount: real("gbp_amount").notNull(),
+  gfAmount: real("gf_amount").notNull(),
+  priceUsed: real("price_used").notNull(),
+  status: text("status").notNull().default("pending"), // "pending", "processing", "completed", "failed", "refunded"
+  stripeSessionId: text("stripe_session_id"),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  txHash: text("tx_hash"),
+  errorReason: text("error_reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("gf_orders_user_id_idx").on(table.userId),
+  stripeSessionIdIdx: index("gf_orders_stripe_session_id_idx").on(table.stripeSessionId),
+  statusIdx: index("gf_orders_status_idx").on(table.status),
+}));
+
+export const insertGfOrderSchema = createInsertSchema(gfOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type GfOrder = typeof gfOrders.$inferSelect;
+export type InsertGfOrder = z.infer<typeof insertGfOrderSchema>;
