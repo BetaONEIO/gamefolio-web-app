@@ -39,13 +39,15 @@ function LevelProgressBar({ level, totalXP }: { level: number; totalXP: number }
   const progress = nextThreshold 
     ? Math.min(100, (xpInCurrentLevel / xpNeededForNextLevel) * 100) 
     : 100;
+  
+  const nextLevelXP = nextThreshold ? nextThreshold.xpRequired : currentThreshold.xpRequired;
 
   return (
     <div className="mt-3">
       <div className="flex justify-between items-center text-xs mb-1">
         <span className="text-primary font-semibold">Level {level}</span>
         <span className="text-muted-foreground">
-          {Math.floor(xpInCurrentLevel)} / {Math.floor(xpNeededForNextLevel)} XP
+          {Math.floor(totalXP)} / {Math.floor(nextLevelXP)} XP
         </span>
       </div>
       <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden">
