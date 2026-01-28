@@ -183,6 +183,26 @@ const MobileMenu = () => {
               </li>
               <li>
                 <Link 
+                  href="/store"
+                  onClick={close}
+                  className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                >
+                  <ShoppingBag className="mr-3 h-5 w-5 text-primary" />
+                  <span className="font-medium">Store</span>
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  href="/wallet"
+                  onClick={close}
+                  className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                >
+                  <Wallet className="mr-3 h-5 w-5 text-primary" />
+                  <span className="font-medium">Wallet</span>
+                </Link>
+              </li>
+              <li>
+                <Link 
                   href="/collection"
                   onClick={close}
                   className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
