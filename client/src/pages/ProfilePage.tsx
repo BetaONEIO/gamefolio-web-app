@@ -104,6 +104,13 @@ const ProfilePage = () => {
   const username = rawUsername?.startsWith('@') ? rawUsername.slice(1) : rawUsername;
   const [location, setLocation] = useLocation();
   
+  // Block access to the gamefolio system user - redirect to home
+  useEffect(() => {
+    if (username?.toLowerCase() === "gamefolio") {
+      setLocation("/");
+    }
+  }, [username, setLocation]);
+
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const { lightboxData, openLightbox, closeLightbox } = useProfilePictureLightbox();

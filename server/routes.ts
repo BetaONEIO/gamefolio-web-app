@@ -2167,6 +2167,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user by username
   app.get("/api/users/:username", async (req, res) => {
     try {
+      // Block access to the gamefolio system user
+      const requestedUsername = req.params.username.startsWith('@') ? req.params.username.slice(1) : req.params.username;
+      if (requestedUsername.toLowerCase() === "gamefolio") {
+        return res.status(403).json({ message: "ACCESS_RESTRICTED", redirect: "/" });
+      }
+
       // Support demo user lookup
       if (req.params.username === "demo") {
         const demoUser = await storage.getUserWithStats(999);
