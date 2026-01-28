@@ -10,6 +10,7 @@ import adminRoutes from './routes/admin';
 import uploadRoutes from './routes/upload';
 import twitchGamesRoutes from './routes/twitch-games';
 import gfCheckoutRoutes from './routes/gf-checkout';
+import gfWebhookRoutes from './routes/gf-webhook';
 import { createOGMetaMiddleware } from './og-meta';
 import { storage } from './storage';
 import path from 'path';
@@ -67,6 +68,10 @@ app.use((req, res, next) => {
 
   next();
 });
+
+// IMPORTANT: Register webhook routes BEFORE express.json() middleware
+// Webhooks need raw body for signature verification
+app.use(gfWebhookRoutes);
 
 // Configure body parser with larger limits to support file uploads
 app.use(express.json({ limit: '500mb' }));
