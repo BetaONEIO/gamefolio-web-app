@@ -1,14 +1,14 @@
-export const SKALE_CHAIN_ID = 2046399126 as const;
+export const SKALE_CHAIN_ID = 37084624 as const;
 
-export const SKALE_RPC_URL = "https://mainnet.skalenodes.com/v1/elated-tan-skat" as const;
+export const SKALE_RPC_URL = "https://testnet.skalenodes.com/v1/lanky-ill-funny-testnet" as const;
 
-export const SKALE_EXPLORER_BASE_URL = "https://elated-tan-skat.explorer.mainnet.skalenodes.com" as const;
+export const SKALE_EXPLORER_BASE_URL = "https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com" as const;
 
-export const GF_TOKEN_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
+export const GF_TOKEN_ADDRESS = "0x2Db1fFAbbc41b8667B408a5F5e0E42bB6c6BA7f7" as const;
 
 export const GF_TOKEN_DECIMALS = 18 as const;
 
-export const STAKING_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
+export const STAKING_ADDRESS = "0x9C4aC24C7Bb36AA3772ccd5aCbcB48A20A1704B7" as const;
 
 export const GF_PRICING_CONFIG = {
   gbpPerGf: 0.01,
