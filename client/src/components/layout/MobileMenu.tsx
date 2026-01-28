@@ -45,7 +45,7 @@ function LevelProgressBar({ level, totalXP }: { level: number; totalXP: number }
       <div className="flex justify-between items-center text-xs mb-1">
         <span className="text-primary font-semibold">Level {level}</span>
         <span className="text-muted-foreground">
-          {xpInCurrentLevel} / {xpNeededForNextLevel} XP
+          {Math.floor(xpInCurrentLevel)} / {Math.floor(xpNeededForNextLevel)} XP
         </span>
       </div>
       <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden">
