@@ -2,9 +2,11 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { db } from '../db';
 import { gfOrders, users } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { getUncachableStripeClient } from '../stripeClient';
 import { hybridAuth } from '../middleware/hybrid-auth';
+
+const SKALE_NEBULA_TESTNET_CHAIN_ID = 37084624;
 
 const router = Router();
 
@@ -101,6 +103,90 @@ router.post('/api/gf/checkout', hybridAuth, async (req: Request, res: Response) 
       error: 'Failed to create checkout session',
       message: error.message 
     });
+  }
+});
+
+router.get('/api/me/wallet', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const [user] = await db.select({
+      walletAddress: users.walletAddress,
+      walletChain: users.walletChain,
+    }).from(users).where(eq(users.id, userId));
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.json({
+      walletAddress: user.walletAddress || null,
+      chainId: user.walletAddress ? SKALE_NEBULA_TESTNET_CHAIN_ID : null,
+    });
+  } catch (error: any) {
+    console.error('Get wallet error:', error);
+    return res.status(500).json({ error: 'Failed to get wallet info' });
+  }
+});
+
+router.get('/api/gf/orders', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const orders = await db.select({
+      id: gfOrders.id,
+      gbpAmount: gfOrders.gbpAmount,
+      gfAmount: gfOrders.gfAmount,
+      status: gfOrders.status,
+      txHash: gfOrders.txHash,
+      createdAt: gfOrders.createdAt,
+    })
+    .from(gfOrders)
+    .where(eq(gfOrders.userId, userId))
+    .orderBy(desc(gfOrders.createdAt))
+    .limit(20);
+
+    return res.json(orders);
+  } catch (error: any) {
+    console.error('Get orders error:', error);
+    return res.status(500).json({ error: 'Failed to get orders' });
+  }
+});
+
+router.get('/api/gf/orders/:id', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { id } = req.params;
+
+    const [order] = await db.select({
+      id: gfOrders.id,
+      gbpAmount: gfOrders.gbpAmount,
+      gfAmount: gfOrders.gfAmount,
+      status: gfOrders.status,
+      txHash: gfOrders.txHash,
+      createdAt: gfOrders.createdAt,
+    })
+    .from(gfOrders)
+    .where(and(eq(gfOrders.id, id), eq(gfOrders.userId, userId)));
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    return res.json(order);
+  } catch (error: any) {
+    console.error('Get order error:', error);
+    return res.status(500).json({ error: 'Failed to get order' });
   }
 });
 
