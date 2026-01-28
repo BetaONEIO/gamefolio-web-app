@@ -76,6 +76,7 @@ const HelpPage = React.lazy(() => import("./pages/HelpPage"));
 const LeaderboardEmbedPage = React.lazy(() => import("./pages/LeaderboardEmbedPage"));
 const StorePage = React.lazy(() => import("./pages/StorePage"));
 const WalletPage = React.lazy(() => import("./pages/WalletPage"));
+const StakingPage = React.lazy(() => import("./pages/StakingPage"));
 const StoragePage = React.lazy(() => import("./pages/StoragePage"));
 const WatchlistPage = React.lazy(() => import("./pages/WatchlistPage"));
 const UserBattlesPage = React.lazy(() => import("./pages/UserBattlesPage"));
@@ -303,6 +304,7 @@ function Router() {
           <Route path="/help" component={HelpPage} />
           <Route path="/store" component={StorePage} />
           <Route path="/wallet" component={WalletPage} />
+          <Route path="/staking" component={StakingPage} />
           <Route path="/storage" component={StoragePage} />
           <Route path="/watchlist" component={WatchlistPage} />
           <Route path="/battles" component={UserBattlesPage} />

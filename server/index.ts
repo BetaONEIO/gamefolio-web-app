@@ -11,6 +11,7 @@ import uploadRoutes from './routes/upload';
 import twitchGamesRoutes from './routes/twitch-games';
 import gfCheckoutRoutes from './routes/gf-checkout';
 import gfWebhookRoutes from './routes/gf-webhook';
+import gfStakingRoutes from './routes/gf-staking';
 import { createOGMetaMiddleware } from './og-meta';
 import { storage } from './storage';
 import path from 'path';
@@ -123,6 +124,7 @@ app.use((req, res, next) => {
     app.use('/api', uploadRoutes);
     app.use('/api/twitch', twitchGamesRoutes);
     app.use(gfCheckoutRoutes);
+    app.use(gfStakingRoutes);
 
     // Social media preview route - must be before Vite middleware
     app.get('/profile/:username', async (req, res, next) => {
