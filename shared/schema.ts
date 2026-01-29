@@ -71,6 +71,9 @@ export const users = pgTable("users", {
   selectedNameTagId: integer("selected_name_tag_id"), // References name_tags table
   // Welcome Pack
   welcomePackClaimed: boolean("welcome_pack_claimed").default(false).notNull(), // Whether the user has claimed their welcome pack
+  // Two-Factor Authentication
+  twoFactorEnabled: boolean("two_factor_enabled").default(false).notNull(),
+  twoFactorSecret: text("two_factor_secret"), // Encrypted TOTP secret
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
