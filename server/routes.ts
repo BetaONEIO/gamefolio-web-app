@@ -1355,7 +1355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify the TOTP code
-      const isValid = TwoFactorService.verifyToken(code, fullUser.twoFactorSecret);
+      const isValid = await TwoFactorService.verifyToken(code, fullUser.twoFactorSecret);
       if (!isValid) {
         return res.status(400).json({ message: "Invalid verification code" });
       }
@@ -1402,7 +1402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Optionally verify 2FA code if provided
       if (code && fullUser.twoFactorSecret) {
-        const isCodeValid = TwoFactorService.verifyToken(code, fullUser.twoFactorSecret);
+        const isCodeValid = await TwoFactorService.verifyToken(code, fullUser.twoFactorSecret);
         if (!isCodeValid) {
           return res.status(400).json({ message: "Invalid 2FA code" });
         }
@@ -1442,7 +1442,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "2FA is not enabled for this user" });
       }
 
-      const isValid = TwoFactorService.verifyToken(code, user.twoFactorSecret);
+      const isValid = await TwoFactorService.verifyToken(code, user.twoFactorSecret);
       if (!isValid) {
         return res.status(401).json({ message: "Invalid 2FA code" });
       }

@@ -61,6 +61,7 @@ import { HexColorPicker } from "react-colorful";
 import { FaSteam, FaXbox, FaPlaystation, FaYoutube, FaDiscord } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
 import { SiEpicgames, SiNintendo } from 'react-icons/si';
+import { TwoFactorSettings } from '@/components/TwoFactorSettings';
 
 // Form validation schemas
 
@@ -750,6 +751,10 @@ const AccountSettingsPage: React.FC = () => {
               </Button>
             </CardFooter>
           </Card>
+          
+          <div className="mt-6">
+            <TwoFactorSettings />
+          </div>
         </TabsContent>
       </Tabs>
 

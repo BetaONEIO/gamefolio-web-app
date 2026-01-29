@@ -162,6 +162,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: async (responseData: any) => {
+      // Check if 2FA is required
+      if (responseData.requires2FA) {
+        sessionStorage.setItem('2fa_userId', responseData.userId.toString());
+        setLocation('/2fa-verify');
+        return;
+      }
+
       const user = responseData as User;
       const streakInfo = responseData.streakInfo;
       

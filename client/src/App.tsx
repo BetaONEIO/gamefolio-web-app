@@ -83,6 +83,7 @@ const UserBattlesPage = React.lazy(() => import("./pages/UserBattlesPage"));
 const LevelTrackerPage = React.lazy(() => import("./pages/LevelTrackerPage"));
 const CollectionPage = React.lazy(() => import("./pages/CollectionPage"));
 const DebugWalletPage = React.lazy(() => import("./pages/DebugWalletPage"));
+const TwoFactorVerifyPage = React.lazy(() => import("./pages/TwoFactorVerifyPage"));
 
 // Loading component for lazy-loaded routes
 function RouteLoader() {
@@ -298,6 +299,7 @@ function Router() {
           <Route path="/verify-email" component={VerifyEmailPage} />
           <Route path="/verify-code" component={VerifyCodePage} />
           <Route path="/reset-password" component={ResetPasswordPage} />
+          <Route path="/2fa-verify" component={TwoFactorVerifyPage} />
           <Route path="/terms" component={TermsPage} />
           <Route path="/privacy" component={PrivacyPage} />
           <Route path="/contact" component={ContactPage} />
