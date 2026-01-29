@@ -52,7 +52,7 @@ export function TwoFactorSettings() {
       const response = await apiRequest('POST', '/api/2fa/enable', { code });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: 'Two-Factor Authentication Enabled',
         description: 'Your account is now protected with 2FA',
@@ -60,7 +60,8 @@ export function TwoFactorSettings() {
       setShowSetupDialog(false);
       setSetupData(null);
       setVerificationCode('');
-      queryClient.invalidateQueries({ queryKey: ['/api/2fa/status'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/2fa/status'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/2fa/status'] });
     },
     onError: (error: Error) => {
       toast({
@@ -76,14 +77,15 @@ export function TwoFactorSettings() {
       const response = await apiRequest('POST', '/api/2fa/disable', { password });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: 'Two-Factor Authentication Disabled',
         description: '2FA has been removed from your account',
       });
       setShowDisableDialog(false);
       setDisablePassword('');
-      queryClient.invalidateQueries({ queryKey: ['/api/2fa/status'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/2fa/status'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/2fa/status'] });
     },
     onError: (error: Error) => {
       toast({
