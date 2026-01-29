@@ -69,6 +69,7 @@ import { supabaseStorage } from "./supabase-storage";
 import { contentFilterService } from "./services/content-filter";
 import { addPlayButtonOverlay } from "./og-thumbnail";
 import { getTokenBalance, getTokenInfo } from "./blockchain";
+import { TwoFactorService } from "./services/two-factor-service";
 
 // Import upload middlewares from upload router
 import multer from "multer";
@@ -1189,7 +1190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     // Handle normal authentication
-    passport.authenticate("local", (err: any, user: any, info: any) => {
+    passport.authenticate("local", async (err: any, user: any, info: any) => {
       if (err) {
         console.error("Login error:", err);
         return next(err);
@@ -1198,6 +1199,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Login failed for user:", req.body.username);
         return res.status(401).json({ message: info?.message || "Authentication failed" });
       }
+
+      // Check if 2FA is enabled for this user
+      if (user.twoFactorEnabled && user.twoFactorSecret) {
+        console.log(`🔐 2FA required for user: ${user.username}`);
+        // Don't log the user in yet, return a 2FA challenge
+        return res.status(200).json({
+          requires2FA: true,
+          userId: user.id,
+          message: "Two-factor authentication required"
+        });
+      }
+
       req.login(user as any, async (err) => {
         if (err) {
           console.error("Session error:", err);
@@ -1232,20 +1245,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const updatedUser = await storage.getUserById(user.id);
         const userToReturn = updatedUser || user;
 
-        // Remove password from response
-        const { password, ...userWithoutPassword } = userToReturn;
+        // Remove password and 2FA secret from response
+        const { password, twoFactorSecret, ...userWithoutSensitive } = userToReturn;
         console.log("Login successful for user:", userToReturn.username);
         
         // Include streak info in response if available
         const response = streakInfo ? {
-          ...userWithoutPassword,
+          ...userWithoutSensitive,
           streakInfo: {
             currentStreak: streakInfo.currentStreak,
             bonusAwarded: streakInfo.bonusAwarded,
             message: streakInfo.message,
             isNewMilestone: streakInfo.isNewMilestone
           }
-        } : userWithoutPassword;
+        } : userWithoutSensitive;
         
         return res.json(response);
       });
@@ -1260,6 +1273,223 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       return res.status(200).json({ message: "Logged out successfully" });
     });
+  });
+
+  // ==========================================
+  // Two-Factor Authentication Routes
+  // ==========================================
+
+  // Get 2FA status for current user
+  app.get("/api/2fa/status", authMiddleware, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const fullUser = await storage.getUserById(user.id);
+      
+      if (!fullUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      return res.json({
+        enabled: fullUser.twoFactorEnabled || false
+      });
+    } catch (error) {
+      console.error("Error checking 2FA status:", error);
+      return res.status(500).json({ message: "Failed to check 2FA status" });
+    }
+  });
+
+  // Setup 2FA - generate secret and QR code
+  app.post("/api/2fa/setup", authMiddleware, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const fullUser = await storage.getUserById(user.id);
+
+      if (!fullUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (fullUser.twoFactorEnabled) {
+        return res.status(400).json({ message: "2FA is already enabled" });
+      }
+
+      const email = fullUser.email || fullUser.username;
+      const { secret, qrCode, keyUri } = await TwoFactorService.setupTwoFactor(email);
+
+      // Store the secret temporarily (not enabled yet)
+      await storage.updateUser(user.id, {
+        twoFactorSecret: secret
+      });
+
+      return res.json({
+        qrCode,
+        secret, // Manual entry backup
+        keyUri
+      });
+    } catch (error) {
+      console.error("Error setting up 2FA:", error);
+      return res.status(500).json({ message: "Failed to setup 2FA" });
+    }
+  });
+
+  // Enable 2FA after verifying a TOTP code
+  app.post("/api/2fa/enable", authMiddleware, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const { code } = req.body;
+
+      if (!code) {
+        return res.status(400).json({ message: "Verification code is required" });
+      }
+
+      const fullUser = await storage.getUserById(user.id);
+      if (!fullUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (fullUser.twoFactorEnabled) {
+        return res.status(400).json({ message: "2FA is already enabled" });
+      }
+
+      if (!fullUser.twoFactorSecret) {
+        return res.status(400).json({ message: "Please initiate 2FA setup first" });
+      }
+
+      // Verify the TOTP code
+      const isValid = TwoFactorService.verifyToken(code, fullUser.twoFactorSecret);
+      if (!isValid) {
+        return res.status(400).json({ message: "Invalid verification code" });
+      }
+
+      // Enable 2FA
+      await storage.updateUser(user.id, {
+        twoFactorEnabled: true
+      });
+
+      return res.json({ 
+        message: "2FA has been enabled successfully",
+        enabled: true
+      });
+    } catch (error) {
+      console.error("Error enabling 2FA:", error);
+      return res.status(500).json({ message: "Failed to enable 2FA" });
+    }
+  });
+
+  // Disable 2FA (requires password verification)
+  app.post("/api/2fa/disable", authMiddleware, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const { password, code } = req.body;
+
+      if (!password) {
+        return res.status(400).json({ message: "Password is required to disable 2FA" });
+      }
+
+      const fullUser = await storage.getUserById(user.id);
+      if (!fullUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (!fullUser.twoFactorEnabled) {
+        return res.status(400).json({ message: "2FA is not enabled" });
+      }
+
+      // Verify password
+      const passwordValid = await comparePasswords(password, fullUser.password);
+      if (!passwordValid) {
+        return res.status(401).json({ message: "Invalid password" });
+      }
+
+      // Optionally verify 2FA code if provided
+      if (code && fullUser.twoFactorSecret) {
+        const isCodeValid = TwoFactorService.verifyToken(code, fullUser.twoFactorSecret);
+        if (!isCodeValid) {
+          return res.status(400).json({ message: "Invalid 2FA code" });
+        }
+      }
+
+      // Disable 2FA
+      await storage.updateUser(user.id, {
+        twoFactorEnabled: false,
+        twoFactorSecret: null
+      });
+
+      return res.json({ 
+        message: "2FA has been disabled",
+        enabled: false
+      });
+    } catch (error) {
+      console.error("Error disabling 2FA:", error);
+      return res.status(500).json({ message: "Failed to disable 2FA" });
+    }
+  });
+
+  // Verify 2FA code during login (used after initial password auth)
+  app.post("/api/2fa/verify", async (req, res) => {
+    try {
+      const { userId, code } = req.body;
+
+      if (!userId || !code) {
+        return res.status(400).json({ message: "User ID and code are required" });
+      }
+
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (!user.twoFactorEnabled || !user.twoFactorSecret) {
+        return res.status(400).json({ message: "2FA is not enabled for this user" });
+      }
+
+      const isValid = TwoFactorService.verifyToken(code, user.twoFactorSecret);
+      if (!isValid) {
+        return res.status(401).json({ message: "Invalid 2FA code" });
+      }
+
+      // Log the user in
+      req.login(user, async (err) => {
+        if (err) {
+          console.error("2FA login error:", err);
+          return res.status(500).json({ message: "Login failed after 2FA verification" });
+        }
+
+        // Track login time for session security
+        req.session.loginTime = Date.now();
+
+        // Update user's last login time
+        try {
+          await storage.updateUserLoginTime(user.id, 0);
+        } catch (error) {
+          console.error("Error updating login time:", error);
+        }
+
+        // Update login streak
+        let streakInfo;
+        try {
+          streakInfo = await StreakService.updateLoginStreak(user.id);
+        } catch (error) {
+          console.error("Error updating login streak:", error);
+        }
+
+        const { password: _, twoFactorSecret: __, ...userWithoutSensitive } = user;
+        
+        const response = streakInfo ? {
+          ...userWithoutSensitive,
+          streakInfo: {
+            currentStreak: streakInfo.currentStreak,
+            bonusAwarded: streakInfo.bonusAwarded,
+            message: streakInfo.message,
+            isNewMilestone: streakInfo.isNewMilestone
+          }
+        } : userWithoutSensitive;
+
+        return res.json(response);
+      });
+    } catch (error) {
+      console.error("Error verifying 2FA:", error);
+      return res.status(500).json({ message: "Failed to verify 2FA code" });
+    }
   });
 
   // Get app version for cache busting
