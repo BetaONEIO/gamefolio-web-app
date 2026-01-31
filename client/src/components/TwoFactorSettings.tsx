@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { apiRequest, queryClient, getQueryFn } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,7 @@ export function TwoFactorSettings() {
 
   const { data: twoFactorStatus, isLoading: statusLoading } = useQuery<{ enabled: boolean }>({
     queryKey: ['/api/2fa/status'],
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   const setupMutation = useMutation({
