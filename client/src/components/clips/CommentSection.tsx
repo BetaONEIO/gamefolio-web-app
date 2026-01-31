@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { Heart, Trash2 } from "lucide-react";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
+import { ProBadge } from "@/components/ui/pro-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
@@ -216,8 +217,8 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                       onClick={onUsernameClick}
                     >
                       {comment.user.username}
-                      <VerificationBadge isVerified={(comment.user as any).isPro} size="sm" />
-                      <ModeratorBadge isModerator={(comment.user as any).role === "moderator"} size="sm" />
+                      <ModeratorBadge isModerator={(comment.user as any).role === "moderator" || (comment.user as any).role === "admin"} size="sm" />
+                      <ProBadge isPro={(comment.user as any).isPro === true} size="sm" />
                     </span>
                   </Link>
                   <MentionText text={comment.content} className="inline text-sm break-words" onLinkClick={onUsernameClick} />

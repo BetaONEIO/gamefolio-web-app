@@ -25,6 +25,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { LootboxDialog, LootboxTrigger } from "@/components/lootbox/LootboxDialog";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
+import { ProBadge } from "@/components/ui/pro-badge";
 import { LevelTrackerModal } from "@/components/level/LevelTrackerModal";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { useLevelTracker } from "@/hooks/use-level-tracker";
@@ -303,6 +304,7 @@ const Header = () => {
                               isModerator={user.role === "moderator" || user.role === "admin"} 
                               size="sm" 
                             />
+                            <ProBadge isPro={user.isPro === true} size="sm" />
                           </div>
                           <div className="text-sm text-muted-foreground">@{user.username}</div>
                         </div>
@@ -627,6 +629,7 @@ const Header = () => {
                                   isModerator={user.role === "moderator" || user.role === "admin"} 
                                   size="sm" 
                                 />
+                                <ProBadge isPro={user.isPro === true} size="sm" />
                               </div>
                               <div className="text-sm text-muted-foreground">@{user.username}</div>
                             </div>

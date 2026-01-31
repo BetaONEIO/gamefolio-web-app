@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { Heart, Send } from "lucide-react";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
+import { ProBadge } from "@/components/ui/pro-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -201,8 +202,8 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
                   <Link href={`/@${comment.user.username}`}>
                     <span className="font-semibold mr-1 text-sm hover:text-primary cursor-pointer flex items-center">
                       {comment.user.username}
-                      <VerificationBadge isVerified={(comment.user as any).isPro} size="sm" />
-                      <ModeratorBadge isModerator={(comment.user as any).role === "moderator"} size="sm" />
+                      <ModeratorBadge isModerator={(comment.user as any).role === "moderator" || (comment.user as any).role === "admin"} size="sm" />
+                      <ProBadge isPro={(comment.user as any).isPro === true} size="sm" />
                     </span>
                   </Link>
                   <MentionText text={comment.content} className="inline text-sm break-words" onLinkClick={onUsernameClick} />
