@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { Game, User, UserWithStats, ClipWithUser, Screenshot } from "@shared/schema";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -251,6 +251,7 @@ const ProfilePage = () => {
   // Fetch user profile data with stats
   const { data: profile, isLoading: isLoadingProfile, error: profileError } = useQuery<UserWithStats>({
     queryKey: [`/api/users/${username}`],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!username,
     retry: (failureCount, error: any) => {
       // Don't retry on 404 (user not found) or 403 (private profile)
@@ -278,6 +279,7 @@ const ProfilePage = () => {
   // Check if current user is following this profile
   const { data: followStatus, isLoading: isLoadingFollowStatus } = useQuery({
     queryKey: [`/api/users/${username}/follow-status`],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !isOwnProfile && !!currentUser,
     refetchOnWindowFocus: false,
   });
@@ -315,24 +317,28 @@ const ProfilePage = () => {
   // Fetch user clips (only if allowed to view content)
   const { data: clips, isLoading: isLoadingClips } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/users/${username}/clips`],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!username && canViewContent,
   });
 
   // Fetch user favorite games (only if allowed to view content)
   const { data: favoriteGames, isLoading: isLoadingFavorites } = useQuery<Game[]>({
     queryKey: [`/api/users/${username}/games/favorites`],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!username && canViewContent,
   });
 
   // Fetch all games for screenshot lightbox
   const { data: games = [] } = useQuery<Game[]>({
     queryKey: ['/api/games'],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!selectedScreenshot, // Only fetch when screenshot lightbox is open
   });
 
   // Fetch user screenshots (only if allowed to view content)
   const { data: screenshots, isLoading: isLoadingScreenshots } = useQuery<Screenshot[]>({
     queryKey: [`/api/users/${profile?.id}/screenshots`],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!profile?.id && canViewContent,
   });
 
@@ -355,18 +361,21 @@ const ProfilePage = () => {
   // Fetch screenshot by shareCode (when shareCode is present in URL)
   const { data: screenshotByShareCode, isLoading: isLoadingScreenshotByShareCode } = useQuery<Screenshot>({
     queryKey: [`/api/screenshots/share/${shareCode}`],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!shareCode,
   });
 
   // Fetch clip by shareCode (when clipShareCode is present in URL)
   const { data: clipByShareCode, isLoading: isLoadingClipByShareCode } = useQuery<ClipWithUser>({
     queryKey: [`/api/clips/share/${clipShareCode}`],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!clipShareCode,
   });
 
   // Fetch reel by shareCode (when reelShareCode is present in URL)
   const { data: reelByShareCode, isLoading: isLoadingReelByShareCode } = useQuery<ClipWithUser>({
     queryKey: [`/api/reels/share/${reelShareCode}`],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!reelShareCode,
   });
 
