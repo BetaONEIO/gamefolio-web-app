@@ -20,6 +20,7 @@ interface WalletHomepageProps {
   onStakeClick?: () => void;
   onSettingsClick?: () => void;
   onProfileClick?: () => void;
+  onActivityClick?: () => void;
   isLoadingBalance?: boolean;
 }
 
@@ -32,6 +33,7 @@ export default function WalletHomepage({
   onStakeClick,
   onSettingsClick,
   onProfileClick,
+  onActivityClick,
 }: WalletHomepageProps) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
@@ -400,7 +402,13 @@ export default function WalletHomepage({
             >
               <div className="flex items-center justify-between">
                 <span className="text-lg font-bold" style={{ color: '#f8fafc' }}>Recent Activity</span>
-                <button style={{ color: '#4ade80', fontSize: '14px' }}>View All</button>
+                <button 
+                  onClick={onActivityClick}
+                  className="hover:opacity-80 transition-opacity"
+                  style={{ color: '#4ade80', fontSize: '14px', fontWeight: 600 }}
+                >
+                  View All
+                </button>
               </div>
 
               <div className="flex flex-col gap-4">

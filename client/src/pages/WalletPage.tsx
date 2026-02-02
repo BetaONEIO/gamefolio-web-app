@@ -13,6 +13,7 @@ import BuyGFTScreen from "@/components/wallet/BuyGFTScreen";
 import ReviewOrderScreen from "@/components/wallet/ReviewOrderScreen";
 import PaymentRedirectScreen from "@/components/wallet/PaymentRedirectScreen";
 import BuyGFTResultScreen from "@/components/wallet/BuyGFTResultScreen";
+import ActivityHistoryScreen from "@/components/wallet/ActivityHistoryScreen";
 import crossmintBadge from "@assets/badge-color-background_1762859702329.png";
 import walletPromo from "@assets/Wallet promo new_1762876656607.png";
 
@@ -25,6 +26,7 @@ export default function WalletPage() {
   const [showReviewScreen, setShowReviewScreen] = useState(false);
   const [showPaymentRedirect, setShowPaymentRedirect] = useState(false);
   const [showResultScreen, setShowResultScreen] = useState(false);
+  const [showActivityHistory, setShowActivityHistory] = useState(false);
   const [purchaseAmount, setPurchaseAmount] = useState(0);
   const [gftAmount, setGftAmount] = useState(0);
   const [isCreating, setIsCreating] = useState(false);
@@ -107,6 +109,10 @@ export default function WalletPage() {
           onComplete={handleCreationComplete}
           isError={false}
         />
+      ) : showActivityHistory ? (
+        <ActivityHistoryScreen
+          onBack={() => setShowActivityHistory(false)}
+        />
       ) : showResultScreen ? (
         <BuyGFTResultScreen
           onDone={handleResultDone}
@@ -146,6 +152,7 @@ export default function WalletPage() {
           onBuyClick={() => setShowBuyScreen(true)}
           onStakeClick={() => {}}
           onProfileClick={() => setShowWalletDetails(false)}
+          onActivityClick={() => setShowActivityHistory(true)}
           isLoadingBalance={isLoadingBalance}
         />
       ) : (
