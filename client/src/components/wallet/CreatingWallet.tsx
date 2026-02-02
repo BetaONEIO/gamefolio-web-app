@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 interface CreatingWalletProps {
   onBack?: () => void;
   onRetry?: () => void;
-  currentStep?: number;
+  onComplete?: () => void;
   isError?: boolean;
 }
 
@@ -16,32 +16,47 @@ const steps = [
 export default function CreatingWallet({
   onBack,
   onRetry,
-  currentStep = 1,
+  onComplete,
   isError = false,
 }: CreatingWalletProps) {
   const [progress, setProgress] = useState(0);
-  const [animatedStep, setAnimatedStep] = useState(currentStep);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [ringProgress, setRingProgress] = useState(0);
 
   useEffect(() => {
     if (isError) return;
-    
-    const targetProgress = (currentStep / steps.length) * 100;
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= targetProgress) {
-          clearInterval(interval);
-          return targetProgress;
-        }
-        return prev + 2;
-      });
-    }, 50);
 
-    return () => clearInterval(interval);
-  }, [currentStep, isError]);
+    const stepDuration = 1800;
+    const totalDuration = stepDuration * steps.length;
+    const startTime = Date.now();
 
-  useEffect(() => {
-    setAnimatedStep(currentStep);
-  }, [currentStep]);
+    const animationFrame = () => {
+      const elapsed = Date.now() - startTime;
+      const overallProgress = Math.min(elapsed / totalDuration, 1);
+      
+      setProgress(overallProgress * 100);
+      setRingProgress(overallProgress * 100);
+      
+      const stepIndex = Math.min(
+        Math.floor((elapsed / stepDuration)),
+        steps.length - 1
+      );
+      setCurrentStep(stepIndex);
+
+      if (overallProgress < 1) {
+        requestAnimationFrame(animationFrame);
+      } else {
+        setTimeout(() => {
+          onComplete?.();
+        }, 500);
+      }
+    };
+
+    requestAnimationFrame(animationFrame);
+  }, [isError, onComplete]);
+
+  const circumference = 2 * Math.PI * 88;
+  const strokeDashoffset = circumference - (ringProgress / 100) * circumference;
 
   return (
     <div 
@@ -52,7 +67,7 @@ export default function CreatingWallet({
       <div className="flex items-center justify-between px-6 pt-12 pb-4">
         <button
           onClick={onBack}
-          className="w-10 h-10 rounded-full flex items-center justify-center"
+          className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-slate-700"
           style={{ background: '#1e293b', border: '1px solid #1e293b' }}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -64,51 +79,71 @@ export default function CreatingWallet({
 
       {/* Main content - centered */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 max-w-[600px] mx-auto w-full">
-        {/* Animated Icon with rings */}
+        {/* Animated Icon with circular progress ring */}
         <div className="relative w-48 h-48 md:w-56 md:h-56 mb-8">
           {/* Glow effect */}
           <div 
-            className="absolute inset-0 rounded-full animate-pulse"
+            className="absolute inset-0 rounded-full"
             style={{ 
-              background: 'rgba(74, 222, 128, 0.2)',
-              filter: 'blur(32px)'
+              background: 'rgba(74, 222, 128, 0.15)',
+              filter: 'blur(40px)',
+              transform: 'scale(1.2)'
             }}
           />
           
-          {/* Outer ring */}
+          {/* Outer static ring */}
+          <svg 
+            className="absolute inset-0 w-full h-full"
+            viewBox="0 0 192 192"
+          >
+            <circle
+              cx="96"
+              cy="96"
+              r="88"
+              fill="none"
+              stroke="rgba(74, 222, 128, 0.1)"
+              strokeWidth="4"
+            />
+          </svg>
+
+          {/* Animated progress ring */}
+          <svg 
+            className="absolute inset-0 w-full h-full -rotate-90"
+            viewBox="0 0 192 192"
+          >
+            <circle
+              cx="96"
+              cy="96"
+              r="88"
+              fill="none"
+              stroke="#4ade80"
+              strokeWidth="4"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              style={{ 
+                transition: 'stroke-dashoffset 0.3s ease-out',
+                filter: 'drop-shadow(0 0 8px #4ade80)'
+              }}
+            />
+          </svg>
+
+          {/* Inner decorative ring */}
           <div 
-            className="absolute inset-0 rounded-full animate-spin"
+            className="absolute inset-8 rounded-full"
             style={{ 
-              border: '2px solid rgba(74, 222, 128, 0.2)',
-              animationDuration: '8s'
-            }}
-          />
-          
-          {/* Middle ring */}
-          <div 
-            className="absolute inset-4 rounded-full"
-            style={{ 
-              border: '4px solid rgba(74, 222, 128, 0.1)'
-            }}
-          />
-          
-          {/* Inner ring */}
-          <div 
-            className="absolute inset-8 rounded-full animate-spin"
-            style={{ 
-              border: '2px solid rgba(74, 222, 128, 0.3)',
-              animationDuration: '4s',
-              animationDirection: 'reverse'
+              border: '2px solid rgba(74, 222, 128, 0.2)'
             }}
           />
 
           {/* Center icon container */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div 
-              className="w-24 h-24 md:w-28 md:h-28 rounded-3xl flex items-center justify-center backdrop-blur-sm"
+              className="w-24 h-24 md:w-28 md:h-28 rounded-3xl flex items-center justify-center backdrop-blur-sm transition-all duration-500"
               style={{ 
                 background: 'rgba(20, 83, 45, 0.3)',
-                border: '1px solid rgba(74, 222, 128, 0.3)'
+                border: '1px solid rgba(74, 222, 128, 0.3)',
+                boxShadow: ringProgress > 50 ? '0 0 30px rgba(74, 222, 128, 0.3)' : 'none'
               }}
             >
               <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -141,11 +176,12 @@ export default function CreatingWallet({
             style={{ background: '#1e293b' }}
           >
             <div 
-              className="h-full rounded-full transition-all duration-300"
+              className="h-full rounded-full"
               style={{ 
                 width: `${progress}%`,
                 background: '#4ade80',
-                boxShadow: '0 0 10px #4ade80'
+                boxShadow: '0 0 10px #4ade80',
+                transition: 'width 0.3s ease-out'
               }}
             />
           </div>
@@ -154,30 +190,49 @@ export default function CreatingWallet({
         {/* Steps */}
         <div className="flex flex-col gap-3 w-full max-w-[240px] md:max-w-[280px]">
           {steps.map((step, index) => {
-            const stepNumber = index + 1;
-            const isCompleted = stepNumber < animatedStep;
-            const isActive = stepNumber === animatedStep;
-            const isPending = stepNumber > animatedStep;
+            const isCompleted = index < currentStep;
+            const isActive = index === currentStep;
+            const isPending = index > currentStep;
 
             return (
-              <div key={step.key} className="flex items-center gap-3 justify-center">
+              <div 
+                key={step.key} 
+                className="flex items-center gap-3 justify-center transition-all duration-300"
+                style={{
+                  opacity: isPending ? 0.5 : 1,
+                  transform: isActive ? 'scale(1.02)' : 'scale(1)'
+                }}
+              >
                 {/* Step indicator */}
-                {isCompleted ? (
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M18.3334 10C18.3334 14.6025 14.6026 18.3333 10.0001 18.3333C5.39757 18.3333 1.66675 14.6025 1.66675 10C1.66675 5.39751 5.39757 1.66669 10.0001 1.66669C14.6026 1.66669 18.3334 5.39751 18.3334 10ZM13.3584 7.47501C13.6021 7.71902 13.6021 8.11432 13.3584 8.35834L9.19173 12.525C8.94772 12.7687 8.55241 12.7687 8.3084 12.525L6.64174 10.8583C6.47453 10.7025 6.4057 10.4679 6.46225 10.2464C6.5188 10.025 6.69172 9.85207 6.91316 9.79552C7.1346 9.73897 7.36918 9.8078 7.52507 9.97501L8.75007 11.2L12.475 7.47501C12.7191 7.23099 13.1144 7.23099 13.3584 7.47501Z" fill="#4ADE80" />
-                  </svg>
-                ) : (
-                  <div 
-                    className="w-2 h-2 rounded-full"
-                    style={{ 
-                      background: isActive ? '#4ade80' : '#94a3b8'
-                    }}
-                  />
-                )}
+                <div className="w-5 h-5 flex items-center justify-center">
+                  {isCompleted ? (
+                    <svg 
+                      width="20" 
+                      height="20" 
+                      viewBox="0 0 20 20" 
+                      fill="none" 
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="animate-[scaleIn_0.3s_ease-out]"
+                      style={{
+                        animation: 'scaleIn 0.3s ease-out'
+                      }}
+                    >
+                      <path fillRule="evenodd" clipRule="evenodd" d="M18.3334 10C18.3334 14.6025 14.6026 18.3333 10.0001 18.3333C5.39757 18.3333 1.66675 14.6025 1.66675 10C1.66675 5.39751 5.39757 1.66669 10.0001 1.66669C14.6026 1.66669 18.3334 5.39751 18.3334 10ZM13.3584 7.47501C13.6021 7.71902 13.6021 8.11432 13.3584 8.35834L9.19173 12.525C8.94772 12.7687 8.55241 12.7687 8.3084 12.525L6.64174 10.8583C6.47453 10.7025 6.4057 10.4679 6.46225 10.2464C6.5188 10.025 6.69172 9.85207 6.91316 9.79552C7.1346 9.73897 7.36918 9.8078 7.52507 9.97501L8.75007 11.2L12.475 7.47501C12.7191 7.23099 13.1144 7.23099 13.3584 7.47501Z" fill="#4ADE80" />
+                    </svg>
+                  ) : (
+                    <div 
+                      className="w-2 h-2 rounded-full transition-all duration-300"
+                      style={{ 
+                        background: isActive ? '#4ade80' : '#94a3b8',
+                        boxShadow: isActive ? '0 0 8px #4ade80' : 'none'
+                      }}
+                    />
+                  )}
+                </div>
                 
                 {/* Step label */}
                 <span 
-                  className="text-sm font-medium"
+                  className="text-sm font-medium transition-all duration-300"
                   style={{ 
                     color: isPending ? '#94a3b8' : '#f8fafc'
                   }}
@@ -196,7 +251,7 @@ export default function CreatingWallet({
         {isError && (
           <button
             onClick={onRetry}
-            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-bold mb-4"
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-bold mb-4 transition-all hover:bg-slate-700"
             style={{ 
               background: '#1e293b',
               border: '1px solid #1e293b',
@@ -218,6 +273,15 @@ export default function CreatingWallet({
           This usually takes less than 30 seconds
         </p>
       </div>
+
+      {/* CSS for scale animation */}
+      <style>{`
+        @keyframes scaleIn {
+          0% { transform: scale(0); opacity: 0; }
+          50% { transform: scale(1.2); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }

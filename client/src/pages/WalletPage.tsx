@@ -18,7 +18,6 @@ export default function WalletPage() {
   const [showWalletDetails, setShowWalletDetails] = useState(false);
   const [showBuyDialog, setShowBuyDialog] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [creationStep, setCreationStep] = useState(1);
   const { data: tokenBalance, isLoading: isLoadingBalance } = useTokenBalance();
 
   useEffect(() => {
@@ -28,29 +27,13 @@ export default function WalletPage() {
     }
   }, [wallet, user?.walletAddress]);
 
-  useEffect(() => {
-    if (isCreating && !isLoading && (wallet || user?.walletAddress)) {
-      setCreationStep(3);
-      const timer = setTimeout(() => {
-        setShowWalletDetails(true);
-        setIsCreating(false);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [isLoading, isCreating, wallet, user?.walletAddress]);
-
-  useEffect(() => {
-    if (isCreating) {
-      const stepTimer = setInterval(() => {
-        setCreationStep((prev) => (prev < 3 ? prev + 1 : prev));
-      }, 1500);
-      return () => clearInterval(stepTimer);
-    }
-  }, [isCreating]);
+  const handleCreationComplete = () => {
+    setShowWalletDetails(true);
+    setIsCreating(false);
+  };
 
   const handleCreateWallet = () => {
     setIsCreating(true);
-    setCreationStep(1);
     createWallet();
   };
 
@@ -83,12 +66,11 @@ export default function WalletPage() {
     <div className="min-h-screen bg-background">
       {isCreating ? (
         <CreatingWallet
-          currentStep={creationStep}
           onBack={() => {
             setIsCreating(false);
-            setCreationStep(1);
           }}
           onRetry={handleCreateWallet}
+          onComplete={handleCreationComplete}
           isError={false}
         />
       ) : showWalletDetails ? (
