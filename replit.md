@@ -40,6 +40,7 @@ Gamefolio is a comprehensive gaming portfolio and social platform for gamers to 
 - **GF Token Economy**: In-app currency for NFT purchases, starting balance for new users, and on-chain/off-chain balance management.
 - **NFT Marketplace**: Store for purchasing NFT avatars with GF tokens, with balance checks and wallet requirements.
 - **Crossmint Wallet Integration**: Simplified onboarding for creating/connecting SKALE Nebula Hub Testnet wallets, with zero gas fees and `getOrCreateWallet()` pattern.
+- **Wallet Homepage (Desktop)**: Desktop-optimized wallet dashboard with 3-column layout, animated balance card, Portfolio/Staking tabs, quick stats sidebar, and transaction history. Components in `client/src/components/wallet/`.
 - **RevenueCat Integration**: Pro subscription management via `@revenuecat/purchases-js` SDK, syncing subscription status to the database.
 - **Video Ads System**: Google IMA SDK integration for monetization with 25% chance on clips, every 5 reels for non-Pro users. Pro subscribers are exempt from all ads.
 - **Animated GIF Avatars**: Pro users can upload animated GIF profile pictures that preserve animation. Non-Pro users' GIFs are automatically converted to static JPEG images with appropriate messaging.
