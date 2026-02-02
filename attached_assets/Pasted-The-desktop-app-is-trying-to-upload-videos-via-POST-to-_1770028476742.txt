@@ -1,0 +1,26 @@
+The desktop app is trying to upload videos via POST to /api/videos/upload as multipart/form-data with 
+  these fields:                                                                                         
+                                                                                                        
+  - title (string)                                                                                      
+  - videoType (string: "clip" or "reel")                                                                
+  - description (string, optional)                                                                      
+  - tags (comma-separated string, optional)                                                             
+  - gameId (number, optional)                                                                           
+  - video (file, video/mp4)                                                                             
+                                                                                                        
+  Authorization header: Bearer <accessToken>                                                            
+                                                                                                        
+  Expected JSON response:                                                                               
+  {                                                                                                     
+    success: boolean,                                                                                   
+    id: number,                                                                                         
+    shareCode: string,                                                                                  
+    shareUrl: string,                                                                                   
+    xpGained: number,                                                                                   
+    userXP: number,                                                                                     
+    userLevel: number                                                                                   
+  }                                                                                                     
+                                                                                                        
+  Currently POST /api/videos/upload returns the SPA HTML instead of hitting an API handler. Can you     
+  check if this route exists and if not, create it? The auth routes at /api/auth/token/login already    
+  work correctly.        
