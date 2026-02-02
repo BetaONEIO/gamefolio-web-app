@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { useTokenBalance } from "@/hooks/use-token";
 import BuyGFTokenDialog from "@/components/BuyGFTokenDialog";
 import WalletHomepage from "@/components/wallet/WalletHomepage";
+import CreatingWallet from "@/components/wallet/CreatingWallet";
 import crossmintBadge from "@assets/badge-color-background_1762859702329.png";
 import walletPromo from "@assets/Wallet promo new_1762876656607.png";
 
@@ -16,13 +17,42 @@ export default function WalletPage() {
   const { wallet, isLoading, createWallet } = useCrossmint();
   const [showWalletDetails, setShowWalletDetails] = useState(false);
   const [showBuyDialog, setShowBuyDialog] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [creationStep, setCreationStep] = useState(1);
   const { data: tokenBalance, isLoading: isLoadingBalance } = useTokenBalance();
 
   useEffect(() => {
     if (wallet || user?.walletAddress) {
       setShowWalletDetails(true);
+      setIsCreating(false);
     }
   }, [wallet, user?.walletAddress]);
+
+  useEffect(() => {
+    if (isCreating && !isLoading && (wallet || user?.walletAddress)) {
+      setCreationStep(3);
+      const timer = setTimeout(() => {
+        setShowWalletDetails(true);
+        setIsCreating(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, isCreating, wallet, user?.walletAddress]);
+
+  useEffect(() => {
+    if (isCreating) {
+      const stepTimer = setInterval(() => {
+        setCreationStep((prev) => (prev < 3 ? prev + 1 : prev));
+      }, 1500);
+      return () => clearInterval(stepTimer);
+    }
+  }, [isCreating]);
+
+  const handleCreateWallet = () => {
+    setIsCreating(true);
+    setCreationStep(1);
+    createWallet();
+  };
 
   if (!user) {
     return (
@@ -51,7 +81,17 @@ export default function WalletPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {showWalletDetails ? (
+      {isCreating ? (
+        <CreatingWallet
+          currentStep={creationStep}
+          onBack={() => {
+            setIsCreating(false);
+            setCreationStep(1);
+          }}
+          onRetry={handleCreateWallet}
+          isError={false}
+        />
+      ) : showWalletDetails ? (
         <WalletHomepage
           gfBalance={tokenBalance ? parseFloat(tokenBalance.balance) + (user?.gfTokenBalance || 0) : (user?.gfTokenBalance || 0)}
           onChainBalance={tokenBalance?.balance || "0"}
@@ -101,8 +141,8 @@ export default function WalletPage() {
 
               <div className="space-y-4">
                 <Button 
-                  onClick={(wallet || user?.walletAddress) ? () => setShowWalletDetails(true) : createWallet} 
-                  disabled={isLoading}
+                  onClick={(wallet || user?.walletAddress) ? () => setShowWalletDetails(true) : handleCreateWallet} 
+                  disabled={isLoading || isCreating}
                   className="w-auto px-6"
                   data-testid={(wallet || user?.walletAddress) ? "button-continue-wallet" : "button-create-wallet"}
                 >

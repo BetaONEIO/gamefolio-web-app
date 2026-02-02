@@ -1,0 +1,466 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/CreatingYourWallet.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,400;0,500&display=swap";
+.CreatingYourWallet_4_545 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_4_546 {
+  flex-direction: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  display: flex;
+}
+.Container_4_547 {
+  background: #020617;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  display: flex;
+}
+.Container_4_548 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 302px;
+  height: 104px;
+  padding: 48px 24px 16px;
+  display: flex;
+}
+.Button_4_549 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 33554400px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_4_550 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_4_552 {
+  width: 40px;
+  height: 40px;
+}
+.Container_4_553 {
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 690px;
+  display: flex;
+}
+.Container_4_554 {
+  justify-content: center;
+  align-items: center;
+  width: 337px;
+  height: 32px;
+  padding: 1px 0;
+  display: flex;
+}
+.CreatingYourSecureWallet_4_555 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 340px;
+  height: 30px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_4_556 {
+  justify-content: center;
+  align-items: center;
+  width: 280px;
+  height: 78px;
+  padding: 2px 4.859px 3px 5.141px;
+  display: flex;
+}
+.EncryptingYourPrivateKeysAndEstablishingASecureConnectionToTheBlockchain_4_557 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 270px;
+  height: 73px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 26px;
+  display: inline-block;
+}
+.Container_4_558 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px;
+  width: 240px;
+  height: 114px;
+  display: flex;
+}
+.Container_4_559 {
+  background: #1e293b;
+  border-radius: 33554400px;
+  flex-shrink: 0;
+  align-items: center;
+  height: 6px;
+  padding-right: 80px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_4_560 {
+  background: #4ade80;
+  border-radius: 33554400px;
+  flex: 1 0 0;
+  height: 6px;
+  box-shadow: 0 0 10px #4ade80;
+}
+.Container_4_561 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  height: 84px;
+  display: flex;
+}
+.Container_4_562 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  height: 20px;
+  padding: 0 22.047px 0 22.953px;
+  display: flex;
+}
+.Container_4_563 {
+  flex: 1 0 0;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_4_565 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.GeneratingSeedPhrase_4_566 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 165px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_567 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  height: 20px;
+  padding: 0 26.031px 0 26.969px;
+  display: flex;
+}
+.Container_4_568 {
+  background: #4ade80;
+  border-radius: 33554400px;
+  width: 8px;
+  height: 8px;
+}
+.Container_4_569 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.SecuringWithBiometrics_4_570 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 169px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_571 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  height: 20px;
+  padding: 0 38.469px 0 38.531px;
+  display: flex;
+}
+.Container_4_572 {
+  background: #94a3b8;
+  border-radius: 33554400px;
+  width: 8px;
+  height: 8px;
+}
+.Container_4_573 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.FinalizingHubAccess_4_574 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 145px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_575 {
+  width: 192px;
+  height: 192px;
+}
+.Container_4_576 {
+  filter: blur(32px);
+  background: #4ade8033;
+  border-radius: 33554400px;
+  width: 192px;
+  height: 192px;
+}
+.Container_4_577 {
+  width: 192px;
+  height: 192px;
+}
+.Container_4_578 {
+  backdrop-filter: blur(4px);
+  box-sizing: border-box;
+  background: #14532d4d;
+  border: 1px solid #4ade804d;
+  border-radius: 24px;
+  justify-content: center;
+  align-items: center;
+  width: 96px;
+  height: 96px;
+  padding: 24px;
+  display: flex;
+}
+.Container_4_579 {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+}
+.Container_4_581 {
+  box-sizing: border-box;
+  border: 4px solid #4ade801a;
+  border-radius: 33554400px;
+  width: 192px;
+  height: 192px;
+}
+.Container_4_582 {
+  border-radius: 33554400px;
+  width: 242px;
+  height: 242px;
+}
+.Container_4_583 {
+  box-sizing: border-box;
+  border: 2px solid #4ade8033;
+  border-radius: 33554400px;
+  width: 160px;
+  height: 160px;
+}
+.Container_4_584 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 0 24px 48px;
+  display: flex;
+}
+.Button_4_585 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 16px;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  height: 58px;
+  padding: 17px 120.266px 17px 120.734px;
+  display: flex;
+}
+.Container_4_586 {
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_4_588 {
+  justify-content: center;
+  align-items: center;
+  width: 113px;
+  height: 24px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.RetryCreation_4_589 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 116px;
+  height: 21px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_4_590 {
+  justify-content: center;
+  align-items: center;
+  width: 382px;
+  height: 16px;
+  padding: 0 80.688px 1px 81.313px;
+  display: flex;
+}
+.ThisUsuallyTakesLessThan_30Seconds_4_591 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 220px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  display: inline-block;
+}
+
+```
+
+---
+
+```src/components/CreatingYourWallet.tsx
+import React from 'react';
+import styles from '../styles/CreatingYourWallet.module.css';
+
+
+export default function CreatingYourWallet() {
+  return (
+    <div className={styles.CreatingYourWallet_4_545}>
+      <div className={styles.Container_4_546}>
+        <div className={styles.Container_4_547}>
+          <div className={styles.Container_4_548}>
+            <div className={styles.Button_4_549}>
+              <div className={styles.Container_4_550}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_4_552}></div>
+          </div>
+          <div className={styles.Container_4_553}>
+            <div className={styles.Container_4_554}><span className={styles.CreatingYourSecureWallet_4_555}>Creating your secure wallet&#x2026;</span></div>
+            <div className={styles.Container_4_556}><span className={styles.EncryptingYourPrivateKeysAndEstablishingASecureConnectionToTheBlockchain_4_557}>Encrypting your private keys and establishing a secure connection to the blockchain.</span></div>
+            <div className={styles.Container_4_558}>
+              <div className={styles.Container_4_559}>
+                <div className={styles.Container_4_560}></div>
+              </div>
+              <div className={styles.Container_4_561}>
+                <div className={styles.Container_4_562}>
+                  <div className={styles.Container_4_563}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M18.3334 10C18.3334 14.6025 14.6026 18.3333 10.0001 18.3333C5.39757 18.3333 1.66675 14.6025 1.66675 10C1.66675 5.39751 5.39757 1.66669 10.0001 1.66669C14.6026 1.66669 18.3334 5.39751 18.3334 10ZM13.3584 7.47501C13.6021 7.71902 13.6021 8.11432 13.3584 8.35834L9.19173 12.525C8.94772 12.7687 8.55241 12.7687 8.3084 12.525L6.64174 10.8583C6.47453 10.7025 6.4057 10.4679 6.46225 10.2464C6.5188 10.025 6.69172 9.85207 6.91316 9.79551C7.13461 9.73896 7.36926 9.80779 7.52507 9.975L8.75006 11.2L10.6126 9.3375L12.4751 7.47501C12.7191 7.2313 13.1144 7.2313 13.3584 7.47501Z" fill="#4ADE80" />
+                    </svg>
+                  </div>
+                  <div className={styles.Container_4_565}><span className={styles.GeneratingSeedPhrase_4_566}>Generating Seed Phrase</span></div>
+                </div>
+                <div className={styles.Container_4_567}>
+                  <div className={styles.Container_4_568}></div>
+                  <div className={styles.Container_4_569}><span className={styles.SecuringWithBiometrics_4_570}>Securing with Biometrics</span></div>
+                </div>
+                <div className={styles.Container_4_571}>
+                  <div className={styles.Container_4_572}></div>
+                  <div className={styles.Container_4_573}><span className={styles.FinalizingHubAccess_4_574}>Finalizing Hub Access</span></div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_4_575}>
+              <div className={styles.Container_4_576}></div>
+              <div className={styles.Container_4_577}>
+                <div className={styles.Container_4_578}>
+                  <div className={styles.Container_4_579}><svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M6.756 10.164C6 11.24 6 14.44 6 20.834V23.982C6 35.258 14.478 40.732 19.798 43.054C21.24 43.684 21.962 44 24 44C26.04 44 26.76 43.684 28.202 43.054C33.522 40.73 42 35.26 42 23.982V20.834C42 14.438 42 11.24 41.244 10.164C40.49 9.09 37.484 8.06 31.47 6.002L30.324 5.61C27.19 4.536 25.624 4 24 4C22.376 4 20.81 4.536 17.676 5.61L16.53 6C10.516 8.06 7.51 9.09 6.756 10.164ZM27 30C27 31.1046 26.1046 32 25 32H23C21.8954 32 21 31.1046 21 30V27.198C18.6429 25.843 17.492 23.072 18.1956 20.4458C18.8992 17.8196 21.2812 15.9951 24 16C26.7169 15.9985 29.0957 17.823 29.7988 20.4473C30.5019 23.0717 29.3538 25.841 27 27.198V30Z" fill="#4ADE80" />
+                    </svg>
+                  </div>
+                </div>
+                <div className={styles.Container_4_581}></div>
+                <div className={styles.Container_4_582}></div>
+                <div className={styles.Container_4_583}></div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_4_584}>
+            <div className={styles.Button_4_585}>
+              <div className={styles.Container_4_586}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M10.0187 1.875C6.02369 1.875 2.74036 4.9275 2.42036 8.81917H1.61952C1.36611 8.81905 1.1377 8.97196 1.04126 9.20631C0.944817 9.44066 0.99943 9.71005 1.17952 9.88833L2.57952 11.2767C2.82315 11.5182 3.2159 11.5182 3.45952 11.2767L4.85952 9.88833C5.03962 9.71005 5.09423 9.44066 4.99779 9.20631C4.90135 8.97196 4.67294 8.81905 4.41952 8.81917H3.67536C3.99202 5.62667 6.70702 3.125 10.0187 3.125C12.2389 3.12072 14.3019 4.27039 15.4662 6.16083C15.5802 6.35723 15.7919 6.47629 16.0189 6.47184C16.246 6.46739 16.4528 6.34011 16.559 6.1394C16.6653 5.93869 16.6543 5.69613 16.5304 5.50583C15.1388 3.24603 12.6726 1.87118 10.0187 1.875Z" fill="#4ADE80" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M17.3204 8.7225C17.0769 8.4821 16.6855 8.4821 16.442 8.7225L15.0362 10.1108C14.8556 10.2889 14.8006 10.5585 14.8969 10.7931C14.9932 11.0278 15.2217 11.181 15.4754 11.1808H16.2245C15.9062 14.3725 13.182 16.875 9.85452 16.875C7.62751 16.8807 5.55678 15.7313 4.38369 13.8383C4.26639 13.6482 4.05658 13.5352 3.8333 13.5417C3.61003 13.5482 3.4072 13.6734 3.30122 13.87C3.19525 14.0667 3.20222 14.3049 3.31952 14.495C4.72041 16.757 7.19389 18.1309 9.85452 18.125C13.8612 18.125 17.1587 15.075 17.4795 11.1808H18.2862C18.5398 11.181 18.7684 11.0278 18.8647 10.7931C18.961 10.5585 18.9059 10.2889 18.7254 10.1108L17.3204 8.7225Z" fill="#4ADE80" />
+                </svg>
+              </div>
+              <div className={styles.Container_4_588}><span className={styles.RetryCreation_4_589}>Retry Creation</span></div>
+            </div>
+            <div className={styles.Container_4_590}><span className={styles.ThisUsuallyTakesLessThan_30Seconds_4_591}>This usually takes less than 30 seconds</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
