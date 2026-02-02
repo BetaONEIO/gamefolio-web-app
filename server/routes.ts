@@ -201,6 +201,33 @@ const screenshotUpload = multer({
   }
 });
 
+// Video upload configuration for desktop app
+const videoUploadStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, tempDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueId = nanoid(8);
+    const fileName = `${Date.now()}-${uniqueId}${path.extname(file.originalname)}`;
+    cb(null, fileName);
+  }
+});
+
+const videoUpload = multer({
+  storage: videoUploadStorage,
+  limits: {
+    fileSize: 500 * 1024 * 1024, // 500MB max for videos
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/avi', 'video/x-msvideo'];
+    if (allowedVideoTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Only video files are allowed. Supported formats: ${allowedVideoTypes.join(', ')}`));
+    }
+  }
+});
+
 // Extend Express Request with user property
 declare global {
   namespace Express {
@@ -7088,6 +7115,277 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Mount upload routes
   app.use('/api/upload', uploadRouter);
+
+  // Desktop app video upload endpoint - combines upload and processing in one step
+  // Expected by desktop app: POST /api/videos/upload with multipart/form-data
+  app.post('/api/videos/upload', hybridAuth, videoUpload.single('video'), async (req: Request, res: Response) => {
+    try {
+      console.log('📹 Desktop video upload request received:', {
+        fileProvided: !!req.file,
+        fileName: req.file?.originalname,
+        fileSize: req.file?.size ? `${(req.file.size / (1024 * 1024)).toFixed(2)} MB` : 'N/A',
+        mimeType: req.file?.mimetype,
+        videoType: req.body.videoType,
+        title: req.body.title,
+        userId: req.user?.id
+      });
+
+      if (!req.file) {
+        console.error('❌ No video file provided in desktop upload request');
+        return res.status(400).json({ success: false, error: 'No video file provided' });
+      }
+
+      const { title, videoType = 'clip', description, tags, gameId } = req.body;
+
+      if (!title) {
+        if (req.file?.path) fs.unlink(req.file.path, () => {});
+        return res.status(400).json({ success: false, error: 'Title is required' });
+      }
+
+      if (!['clip', 'reel'].includes(videoType)) {
+        if (req.file?.path) fs.unlink(req.file.path, () => {});
+        return res.status(400).json({ success: false, error: 'Invalid video type. Must be "clip" or "reel"' });
+      }
+
+      // Check upload limits
+      const limits = await storage.getUploadLimits(req.user!.id);
+      const isReel = videoType === 'reel';
+
+      if (!limits.isPro) {
+        if (isReel && !limits.canUploadReel) {
+          if (req.file?.path) fs.unlink(req.file.path, () => {});
+          return res.status(403).json({ 
+            success: false,
+            error: 'Daily reel upload limit reached',
+            message: `Free users can upload ${limits.maxReelsPerDay} reels per day. Upgrade to Pro for unlimited uploads.`
+          });
+        }
+        if (!isReel && !limits.canUploadClip) {
+          if (req.file?.path) fs.unlink(req.file.path, () => {});
+          return res.status(403).json({ 
+            success: false,
+            error: 'Daily clip upload limit reached',
+            message: `Free users can upload ${limits.maxClipsPerDay} clips per day. Upgrade to Pro for unlimited uploads.`
+          });
+        }
+      }
+
+      // Check file size limit
+      const fileSizeMB = req.file.size / (1024 * 1024);
+      if (fileSizeMB > limits.maxVideoSizeMB) {
+        if (req.file?.path) fs.unlink(req.file.path, () => {});
+        return res.status(403).json({ 
+          success: false,
+          error: 'File size exceeds limit',
+          message: `Maximum video size is ${limits.maxVideoSizeMB}MB.`
+        });
+      }
+
+      // Handle game ID - ensure game exists in database (same logic as process-video)
+      let finalGameId = null;
+      if (gameId) {
+        try {
+          const parsedGameId = parseInt(gameId);
+          let game = await storage.getGame(parsedGameId);
+          if (!game) {
+            console.log(`Game ${parsedGameId} not found in database, checking Twitch ID...`);
+            game = await storage.getGameByTwitchId(parsedGameId.toString());
+            
+            if (!game) {
+              // Fetch from Twitch API to get game details and create it
+              try {
+                const gameData = await twitchApi.getGameById(parsedGameId.toString());
+                if (gameData) {
+                  const existingGameByName = await storage.getGameByName(gameData.name);
+                  if (existingGameByName) {
+                    console.log(`Found existing game by name: ${gameData.name} (ID: ${existingGameByName.id})`);
+                    game = existingGameByName;
+                    finalGameId = existingGameByName.id;
+                  } else {
+                    try {
+                      game = await storage.createGame({
+                        name: gameData.name,
+                        imageUrl: gameData.box_art_url ? 
+                          gameData.box_art_url.replace('{width}', '600').replace('{height}', '800') : '',
+                        twitchId: gameData.id
+                      });
+                      console.log(`Created game: ${game.name} (ID: ${game.id})`);
+                      finalGameId = game.id;
+                    } catch (createError: any) {
+                      if (createError.code === '23505') {
+                        const raceGame = await storage.getGameByName(gameData.name);
+                        if (raceGame) {
+                          game = raceGame;
+                          finalGameId = raceGame.id;
+                        }
+                      }
+                    }
+                  }
+                }
+              } catch (apiError) {
+                console.error('Error fetching from Twitch API:', apiError);
+              }
+            } else {
+              console.log(`Found existing game by Twitch ID: ${game.name} (ID: ${game.id})`);
+              finalGameId = game.id;
+            }
+          } else {
+            finalGameId = parsedGameId;
+          }
+        } catch (error) {
+          console.warn('Invalid game ID provided:', gameId);
+        }
+      }
+
+      // Parse tags - support both comma-separated string and JSON array
+      let parsedTags: string[] = [];
+      if (tags) {
+        if (typeof tags === 'string') {
+          // Try parsing as JSON first
+          try {
+            const jsonParsed = JSON.parse(tags);
+            if (Array.isArray(jsonParsed)) {
+              parsedTags = jsonParsed.filter((t: any) => typeof t === 'string' && t.length > 0);
+            }
+          } catch {
+            // Fallback to comma-separated string
+            parsedTags = tags.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
+          }
+        } else if (Array.isArray(tags)) {
+          parsedTags = tags;
+        }
+      }
+
+      // Read the uploaded file
+      const fileBuffer = fs.readFileSync(req.file.path);
+
+      // Generate filename and upload to Supabase
+      const timestamp = Date.now();
+      const randomId = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const extension = path.extname(req.file.originalname);
+      const prefix = videoType === 'reel' ? 'reels' : 'videos';
+      const fileName = `${prefix}/${timestamp}-${randomId}${extension}`;
+
+      console.log('📤 Uploading to Supabase:', fileName);
+
+      const uploadResult = await supabaseStorage.uploadBuffer(
+        fileBuffer,
+        fileName,
+        req.file.mimetype,
+        videoType,
+        req.user!.id
+      );
+
+      if (!uploadResult.url) {
+        throw new Error('Supabase upload failed - no URL returned');
+      }
+
+      console.log('✅ Video uploaded successfully:', uploadResult.url);
+
+      // Generate thumbnail and get video duration
+      let thumbnailUrl = '';
+      let actualDuration = 0;
+
+      try {
+        const videoInfo = await VideoProcessor.getVideoInfo(req.file.path);
+        actualDuration = Math.round(videoInfo.duration);
+        console.log(`📹 Video duration: ${actualDuration} seconds`);
+
+        if (videoType === 'reel') {
+          const processed = await VideoProcessor.processVideo(
+            req.file.path,
+            Date.now(),
+            0,
+            actualDuration,
+            true,
+            req.user!.id,
+            'reel'
+          );
+          thumbnailUrl = processed.thumbnailUrl || '';
+        } else {
+          thumbnailUrl = await VideoProcessor.generateAutoThumbnail(
+            req.file.path,
+            req.user!.id,
+            'clip_thumb'
+          );
+        }
+      } catch (thumbError) {
+        console.warn('Thumbnail generation failed:', thumbError);
+        actualDuration = actualDuration || 30;
+      }
+
+      // Clean up temp file
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.warn('Could not delete temp file:', err);
+      });
+
+      // Generate share code
+      const shareCode = nanoid(8);
+
+      // Create the clip in database
+      const clipData = {
+        userId: req.user!.id,
+        title,
+        description: description || '',
+        gameId: finalGameId,
+        tags: parsedTags,
+        videoUrl: uploadResult.url,
+        videoType,
+        thumbnailUrl: thumbnailUrl,
+        duration: actualDuration || 30,
+        shareCode: shareCode,
+        ageRestricted: false,
+      };
+
+      const validatedClipData = insertClipSchema.parse(clipData);
+      const clip = await storage.createClip(validatedClipData);
+
+      // Increment daily upload count
+      const contentType = isReel ? 'reel' : 'clip';
+      await storage.incrementDailyUploadCount(req.user!.id, contentType);
+      console.log(`📊 Incremented ${contentType} upload count for user ${req.user!.id}`);
+
+      // Award upload points
+      const leaderboardService = new LeaderboardService();
+      await LeaderboardService.awardPoints(
+        req.user!.id,
+        'upload',
+        `Upload: ${videoType === 'reel' ? 'Reel' : 'Clip'} - ${title}`
+      );
+
+      // Get updated user data
+      const user = await storage.getUser(req.user!.id);
+      const username = user?.username || 'unknown';
+      const baseUrl = 'https://app.gamefolio.com';
+      const shareUrl = `${baseUrl}/@${username}/${videoType}/${shareCode}`;
+
+      console.log(`✅ Desktop video upload complete: ID=${clip.id}, shareCode=${shareCode}`);
+
+      res.json({
+        success: true,
+        id: clip.id,
+        shareCode: shareCode,
+        shareUrl: shareUrl,
+        xpGained: 5,
+        userXP: user?.totalXP || 0,
+        userLevel: user?.level || 1
+      });
+
+    } catch (error) {
+      console.error('❌ Desktop video upload error:', error);
+
+      if (req.file?.path) {
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.warn('Could not delete temp file:', err);
+        });
+      }
+
+      res.status(500).json({ 
+        success: false,
+        error: error instanceof Error ? error.message : 'Video upload failed' 
+      });
+    }
+  });
 
   // Mount migration routes
   app.use('/api/migration', migrationRouter);
