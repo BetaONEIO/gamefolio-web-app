@@ -32,6 +32,7 @@ export default function CreatingWallet({
     if (isError) return;
 
     startTimeRef.current = Date.now();
+    let lastStepIndex = -1;
 
     const animate = () => {
       const elapsed = Date.now() - startTimeRef.current;
@@ -44,18 +45,15 @@ export default function CreatingWallet({
         steps.length - 1
       );
       
-      if (stepIndex !== currentStep) {
+      if (stepIndex !== lastStepIndex) {
+        lastStepIndex = stepIndex;
         setCurrentStep(stepIndex);
         if (stepIndex > 0) {
-          setCompletedSteps(prev => {
-            const newCompleted = [...prev];
-            for (let i = 0; i < stepIndex; i++) {
-              if (!newCompleted.includes(i)) {
-                newCompleted.push(i);
-              }
-            }
-            return newCompleted;
-          });
+          const completed: number[] = [];
+          for (let i = 0; i < stepIndex; i++) {
+            completed.push(i);
+          }
+          setCompletedSteps(completed);
         }
       }
 
@@ -76,7 +74,7 @@ export default function CreatingWallet({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [isError, onComplete, currentStep, stepDuration, totalDuration]);
+  }, [isError]);
 
   const circumference = 2 * Math.PI * 88;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
