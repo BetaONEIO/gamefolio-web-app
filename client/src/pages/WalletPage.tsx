@@ -1,8 +1,7 @@
 import { Link } from "wouter";
-import { ArrowLeft, Wallet, Loader2, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Wallet, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 import { useCrossmint } from "@/hooks/use-crossmint";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
@@ -141,78 +140,28 @@ export default function WalletPage() {
               />
             </div>
           </div>
-        ) : (
-          <div>
-            <Button 
-              variant="ghost" 
-              className="mb-6" 
-              onClick={() => setShowWalletDetails(false)}
-              data-testid="button-back-to-welcome"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Welcome
-            </Button>
-            
-            <div className="bg-gradient-to-b from-slate-900 to-slate-800 rounded-lg p-6" data-testid="wallet-homepage">
-              <Tabs defaultValue="tokens" className="space-y-6" data-testid="tabs-wallet">
-                <TabsList className="grid w-full grid-cols-2 bg-white/5">
-                  <TabsTrigger value="tokens" className="data-[state=active]:bg-white data-[state=active]:text-slate-900" data-testid="tab-tokens">
-                    <Wallet className="w-4 h-4 mr-2" />
-                    Wallet & Staking
-                  </TabsTrigger>
-                  <TabsTrigger value="nfts" className="data-[state=active]:bg-white data-[state=active]:text-slate-900" data-testid="tab-nfts">
-                    <ImageIcon className="w-4 h-4 mr-2" />
-                    NFTs & Collectibles
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="tokens" className="space-y-6">
-                  <WalletHomepage
-                    gfBalance={tokenBalance ? parseFloat(tokenBalance.balance) + (user?.gfTokenBalance || 0) : (user?.gfTokenBalance || 0)}
-                    onChainBalance={tokenBalance?.balance || "0"}
-                    offChainBalance={user?.gfTokenBalance || 0}
-                    walletAddress={wallet?.address || ""}
-                    onBuyClick={() => setShowBuyDialog(true)}
-                    onStakeClick={() => {}}
-                    isLoadingBalance={isLoadingBalance}
-                  />
-                </TabsContent>
-
-              <TabsContent value="nfts" className="space-y-6">
-                <Card className="bg-white/5 border-white/10" data-testid="card-nfts-collectibles">
-                  <CardHeader>
-                    <div className="flex items-center gap-4">
-                      <ImageIcon className="w-12 h-12 text-indigo-400" />
-                      <div>
-                        <CardTitle className="text-white">NFTs & Collectibles</CardTitle>
-                        <CardDescription className="text-white/60">Your digital collectibles and rewards</CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <ImageIcon className="w-16 h-16 text-white/40 mb-4" />
-                      <h3 className="text-lg font-semibold mb-2 text-white" data-testid="heading-no-nfts">
-                        No NFTs Yet
-                      </h3>
-                      <p className="text-sm text-white/60 mb-6 max-w-md" data-testid="text-no-nfts-description">
-                        You haven't received any NFTs or collectibles yet. Browse the store to purchase NFT avatars or earn lootbox rewards through staking and platform activities.
-                      </p>
-                      <Link href="/store">
-                        <Button className="bg-white text-slate-900 hover:bg-white/90" data-testid="button-browse-store">
-                          <Wallet className="w-4 h-4 mr-2" />
-                          Browse NFT Store
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-          </div>
-        )}
+        ) : null}
       </div>
+
+      {/* Full-screen WalletHomepage - rendered at viewport level */}
+      {showWalletDetails && (
+        <div 
+          className="fixed inset-0 z-50 overflow-y-auto pb-20"
+          style={{ background: '#020617' }}
+          data-testid="wallet-homepage"
+        >
+          <WalletHomepage
+            gfBalance={tokenBalance ? parseFloat(tokenBalance.balance) + (user?.gfTokenBalance || 0) : (user?.gfTokenBalance || 0)}
+            onChainBalance={tokenBalance?.balance || "0"}
+            offChainBalance={user?.gfTokenBalance || 0}
+            walletAddress={wallet?.address || ""}
+            onBuyClick={() => setShowBuyDialog(true)}
+            onStakeClick={() => {}}
+            onProfileClick={() => setShowWalletDetails(false)}
+            isLoadingBalance={isLoadingBalance}
+          />
+        </div>
+      )}
 
       {/* Buy GF Token Dialog */}
       <BuyGFTokenDialog 
