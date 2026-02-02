@@ -1,0 +1,760 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/BuyGftResult.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,500&display=swap";
+.BuyGftResult_4_669 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_4_670 {
+  flex-direction: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  display: flex;
+}
+.Container_4_671 {
+  background: #020617;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  display: flex;
+}
+.Container_4_672 {
+  box-sizing: border-box;
+  border-bottom: 1px solid #1e293b4d;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 61.3281px;
+  height: 113px;
+  padding: 48px 24px 25px;
+  display: flex;
+}
+.Button_4_673 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 33554400px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_4_674 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_4_676 {
+  justify-content: center;
+  align-items: center;
+  width: 180px;
+  height: 28px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.TransactionStatus_4_677 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 183px;
+  height: 25px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_4_678 {
+  width: 40px;
+  height: 40px;
+}
+.Container_4_679 {
+  flex-flow: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 48px;
+  height: 819px;
+  padding: 32px 24px 0;
+  display: flex;
+}
+.Container_4_680 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  width: 382px;
+  height: 455px;
+  display: flex;
+}
+.Container_4_681 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+  display: flex;
+}
+.Container_4_682 {
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 1px 44.5px;
+  display: flex;
+}
+.GftAddedToYourWallet_4_683 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 293px;
+  height: 30px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_4_684 {
+  justify-content: center;
+  align-items: center;
+  height: 48px;
+  padding: 1px 5.5px 2px;
+  display: flex;
+}
+.YourPurchaseOf_446_42GftWasSuccessfulAndIsNowAvailableInYourBalance_4_685 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 371px;
+  height: 45px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_4_686 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  height: 131px;
+  padding: 21px;
+  display: flex;
+}
+.Container_4_687 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 112.703px;
+  width: 340px;
+  height: 28px;
+  padding: 4px 0;
+  display: flex;
+}
+.Container_4_688 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 114px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.TransactionHash_4_689 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 116px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_690 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 5.29688px;
+  width: 114px;
+  height: 20px;
+  padding-right: 0.703px;
+  display: flex;
+}
+.Container_4_691 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.x7a2_3f4e_4_692 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 95px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_693 {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+}
+.G_4_694 {
+  width: 12.636px;
+  height: 13.333px;
+}
+.Container_4_697 {
+  background: #1e293b4d;
+  flex-shrink: 0;
+  width: 340px;
+  height: 1px;
+}
+.Container_4_698 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 115.688px;
+  width: 340px;
+  height: 28px;
+  padding: 4px 0;
+  display: flex;
+}
+.Container_4_699 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 115px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.PaymentMethod_4_700 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 117px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_701 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 110px;
+  height: 20px;
+  display: flex;
+}
+.Visa_4242_4_702 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 113px;
+  height: 20px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Button_4_703 {
+  background: #4ade80;
+  border-radius: 16px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 68px;
+  padding: 22px 0 23px;
+  display: flex;
+  box-shadow: 0 0 30px -10px #4ade80;
+}
+.Done_4_704 {
+  color: #022c22;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 50px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_4_705 {
+  background: #4ade8033;
+  border-radius: 33554400px;
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 96px;
+  height: 96px;
+  display: flex;
+}
+.Container_4_706 {
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+}
+.Container_4_708 {
+  background: #4ade801a;
+  border-radius: 33554400px;
+  width: 176px;
+  height: 176px;
+}
+.Container_4_709 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 15.5781px;
+  height: 16px;
+  display: flex;
+}
+.Container_4_710 {
+  background: #1e293b80;
+  width: 116px;
+  height: 1px;
+}
+.Container_4_711 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding-bottom: 1px;
+  display: flex;
+}
+.OtherVariants_4_712 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  width: 122px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_4_713 {
+  background: #1e293b80;
+  width: 116px;
+  height: 1px;
+}
+.Container_4_714 {
+  box-sizing: border-box;
+  background: #0f172a66;
+  border: 1px solid #1e293b;
+  border-radius: 24px;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px;
+  width: 382px;
+  padding: 25px;
+  display: flex;
+}
+.Container_4_715 {
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+  width: 332px;
+  height: 48px;
+  padding-right: 66px;
+  display: flex;
+}
+.Container_4_716 {
+  background: #22c55e33;
+  border-radius: 33554400px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 48px;
+  padding: 8.674px 8.326px 8.326px 8.674px;
+  display: flex;
+}
+.Container_4_717 {
+  width: 31px;
+  height: 31px;
+  overflow: hidden;
+}
+.Container_4_719 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  height: 48px;
+  display: flex;
+}
+.Container_4_720 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 28px;
+  padding: 2px 41.5px 3px 0;
+  display: flex;
+}
+.PaymentReceived_4_721 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  width: 162px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_4_722 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.DeliveringGftToYourWallet_4_723 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 204px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_724 {
+  background: #1e293b80;
+  border-radius: 33554400px;
+  align-items: center;
+  width: 332px;
+  height: 8px;
+  padding-right: 110px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_4_725 {
+  background: #22c55e;
+  border-radius: 33554400px;
+  flex: 1 0 0;
+  height: 8px;
+}
+.Container_4_726 {
+  box-sizing: border-box;
+  background: #0f172a66;
+  border: 1px solid #1e293b;
+  border-radius: 24px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 382px;
+  height: 288px;
+  padding: 25px;
+  display: flex;
+}
+.Container_4_727 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  width: 332px;
+  height: 238px;
+  display: flex;
+}
+.Container_4_728 {
+  background: #ef44441a;
+  border-radius: 33554400px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 64px;
+  height: 64px;
+  padding: 12px;
+  display: flex;
+}
+.Container_4_729 {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+}
+.Container_4_731 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  height: 92px;
+  display: flex;
+}
+.Container_4_732 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 28px;
+  padding: 2px 61.563px 3px 62.438px;
+  display: flex;
+}
+.SomethingWentWrong_4_733 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 208px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_4_734 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 60px;
+  padding: 1px 24.203px 1px 24.797px;
+  display: flex;
+}
+.YourPaymentCouldNotBeProcessedPleaseCheckYourBankDetailsOrTryAgainLater_4_735 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 283px;
+  height: 58px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_736 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  height: 50px;
+  display: flex;
+}
+.Button_4_737 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 16px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 50px;
+  padding: 16px 20.156px 16px 20.844px;
+  display: flex;
+}
+.ContactSupport_4_738 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 119px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Button_4_739 {
+  background: #4ade80;
+  border-radius: 16px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 50px;
+  padding: 16px 47.234px 16px 47.766px;
+  display: flex;
+}
+.TryAgain_4_740 {
+  color: #022c22;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 65px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_741 {
+  flex-shrink: 0;
+  width: 382px;
+  height: 40px;
+}
+
+```
+
+---
+
+```src/components/BuyGftResult.tsx
+import React from 'react';
+import styles from '../styles/BuyGftResult.module.css';
+
+
+export default function BuyGftResult() {
+  return (
+    <div className={styles.BuyGftResult_4_669}>
+      <div className={styles.Container_4_670}>
+        <div className={styles.Container_4_671}>
+          <div className={styles.Container_4_672}>
+            <div className={styles.Button_4_673}>
+              <div className={styles.Container_4_674}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_4_676}><span className={styles.TransactionStatus_4_677}>Transaction Status</span></div>
+            <div className={styles.Container_4_678}></div>
+          </div>
+          <div className={styles.Container_4_679}>
+            <div className={styles.Container_4_680}>
+              <div className={styles.Container_4_681}>
+                <div className={styles.Container_4_682}><span className={styles.GftAddedToYourWallet_4_683}>GFT added to your wallet</span></div>
+                <div className={styles.Container_4_684}><span className={styles.YourPurchaseOf_446_42GftWasSuccessfulAndIsNowAvailableInYourBalance_4_685}>Your purchase of 446.42 GFT was successful and is now available in your balance.</span></div>
+              </div>
+              <div className={styles.Container_4_686}>
+                <div className={styles.Container_4_687}>
+                  <div className={styles.Container_4_688}><span className={styles.TransactionHash_4_689}>Transaction Hash</span></div>
+                  <div className={styles.Container_4_690}>
+                    <div className={styles.Container_4_691}><span className={styles.x7a2_3f4e_4_692}>0x7a2...3f4e</span></div>
+                    <div className={styles.Container_4_693}>
+                      <div className={styles.G_4_694}><svg width="13" height="14" viewBox="0 0 13 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M4.66699 7.99991C3.56673 6.89526 3.66609 5.00451 4.88836 3.77786L8.43024 0.222829C9.65251 -1.00455 11.5352 -1.10391 12.6362 0C13.7372 1.10391 13.6371 2.9954 12.4148 4.22278L10.6439 6.0003" stroke="#4ADE80" strokeWidth="1.09588" strokeLinecap="round" />
+                          <path d="M7.96922 5.33322C9.06949 6.43787 8.97013 8.32862 7.74786 9.55527L5.97692 11.3328L4.20598 13.1103C2.98371 14.3377 1.10099 14.437 0 13.3331C-1.10099 12.2292 -1.0009 10.3377 0.221367 9.11035L1.99231 7.33283" stroke="#4ADE80" strokeWidth="1.09588" strokeLinecap="round" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.Container_4_697}></div>
+                <div className={styles.Container_4_698}>
+                  <div className={styles.Container_4_699}><span className={styles.PaymentMethod_4_700}>Payment Method</span></div>
+                  <div className={styles.Container_4_701}><span className={styles.Visa_4242_4_702}>Visa &#x2022;&#x2022;&#x2022;&#x2022; 4242</span></div>
+                </div>
+              </div>
+              <div className={styles.Button_4_703}><span className={styles.Done_4_704}>Done</span></div>
+              <div className={styles.Container_4_705}>
+                <div className={styles.Container_4_706}><svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M51.3332 28C51.3332 40.887 40.8868 51.3333 27.9998 51.3333C15.1128 51.3333 4.6665 40.887 4.6665 28C4.6665 15.113 15.1128 4.66667 27.9998 4.66667C40.8868 4.66667 51.3332 15.113 51.3332 28ZM37.4032 20.93C38.0856 21.6132 38.0856 22.7201 37.4032 23.4033L25.7365 35.07C25.0533 35.7524 23.9464 35.7524 23.2632 35.07L18.5965 30.4033C18.1283 29.9671 17.9356 29.31 18.0939 28.69C18.2523 28.0699 18.7364 27.5858 19.3565 27.4274C19.9765 27.2691 20.6336 27.4618 21.0698 27.93L24.4998 31.36L29.7148 26.145L34.9298 20.93C35.6131 20.2476 36.7199 20.2476 37.4032 20.93Z" fill="#4ADE80" />
+                  </svg>
+                </div>
+                <div className={styles.Container_4_708}></div>
+              </div>
+            </div>
+            <div className={styles.Container_4_709}>
+              <div className={styles.Container_4_710}></div>
+              <div className={styles.Container_4_711}><span className={styles.OtherVariants_4_712}>Other Variants</span></div>
+              <div className={styles.Container_4_713}></div>
+            </div>
+            <div className={styles.Container_4_714}>
+              <div className={styles.Container_4_715}>
+                <div className={styles.Container_4_716}>
+                  <div className={styles.Container_4_717}><svg width="31" height="31" viewBox="0 0 31 31" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M28.0973 15.3259C28.0973 22.3796 22.3795 28.0974 15.3257 28.0974C8.27202 28.0974 2.5542 22.3796 2.5542 15.3259C2.5542 8.27214 8.27202 2.55432 15.3257 2.55432C22.3795 2.55432 28.0973 8.27214 28.0973 15.3259ZM6.97315 14.1547C7.46434 9.90702 11.0625 6.70272 15.3385 6.70507C17.9643 6.70376 20.4403 7.92806 22.0334 10.0155C22.3546 10.4358 22.2743 11.0371 21.8539 11.3584C21.4335 11.6797 20.8323 11.5993 20.511 11.1789C19.2805 9.56578 17.3674 8.61963 15.3385 8.62081C12.1199 8.61853 9.38417 10.9719 8.90549 14.1547H9.37037C9.75809 14.1545 10.1077 14.3881 10.2559 14.7464C10.4041 15.1046 10.3218 15.5169 10.0473 15.7908L8.55427 17.2812C8.1803 17.6547 7.57446 17.6547 7.20049 17.2812L5.70877 15.7908C5.43518 15.5168 5.35339 15.1051 5.50151 14.7474C5.64962 14.3897 5.9985 14.1563 6.38566 14.156L6.97315 14.1547ZM23.451 13.3705C23.077 12.997 22.4712 12.997 22.0972 13.3705L20.6055 14.861C20.3319 15.1349 20.2501 15.5466 20.3982 15.9043C20.5463 16.262 20.8952 16.4954 21.2824 16.4957H21.746C21.268 19.6786 18.5328 22.0325 15.3142 22.0309C13.2941 22.0345 11.3875 21.0968 10.1571 19.4945C9.83405 19.0755 9.23251 18.9978 8.81353 19.3208C8.39455 19.6439 8.31679 20.2454 8.63984 20.6644C10.233 22.7371 12.7 23.9503 15.3142 23.9467C19.5898 23.9484 23.1872 20.7442 23.6783 16.497H24.2658C24.6535 16.4972 25.0031 16.2636 25.1514 15.9054C25.2996 15.5471 25.2172 15.1348 24.9427 14.861L23.451 13.3705Z" fill="#22C55E" />
+                    </svg>
+                  </div>
+                </div>
+                <div className={styles.Container_4_719}>
+                  <div className={styles.Container_4_720}><span className={styles.PaymentReceived_4_721}>Payment received</span></div>
+                  <div className={styles.Container_4_722}><span className={styles.DeliveringGftToYourWallet_4_723}>Delivering GFT to your wallet...</span></div>
+                </div>
+              </div>
+              <div className={styles.Container_4_724}>
+                <div className={styles.Container_4_725}></div>
+              </div>
+            </div>
+            <div className={styles.Container_4_726}>
+              <div className={styles.Container_4_727}>
+                <div className={styles.Container_4_728}>
+                  <div className={styles.Container_4_729}><svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M13.0717 6.33665C16.4533 4.33498 18.1433 3.33331 20 3.33331C21.8567 3.33331 23.5467 4.33331 26.9283 6.33665L28.0717 7.01331C31.4533 9.01665 33.1433 10.0183 34.0717 11.6666C35 13.3166 35 15.3166 35 19.3233V20.6766C35 24.6816 35 26.685 34.0717 28.3333C33.1433 29.9816 31.4533 30.9833 28.0717 32.985L26.9283 33.6633C23.5467 35.665 21.8567 36.6666 20 36.6666C18.1433 36.6666 16.4533 35.6666 13.0717 33.6633L11.9283 32.985C8.54667 30.985 6.85667 29.9816 5.92833 28.3333C5 26.6833 5 24.6833 5 20.6766V19.3233C5 15.3166 5 13.315 5.92833 11.6666C6.85667 10.0183 8.54667 9.01665 11.9283 7.01331L13.0717 6.33665ZM21.6667 26.6666C21.6667 27.5871 20.9205 28.3333 20 28.3333C19.0795 28.3333 18.3333 27.5871 18.3333 26.6666C18.3333 25.7462 19.0795 25 20 25C20.9205 25 21.6667 25.7462 21.6667 26.6666ZM20 10.4166C20.6904 10.4166 21.25 10.9763 21.25 11.6666V21.6666C21.25 22.357 20.6904 22.9166 20 22.9166C19.3096 22.9166 18.75 22.357 18.75 21.6666V11.6666C18.75 10.9763 19.3096 10.4166 20 10.4166Z" fill="#EF4444" />
+                    </svg>
+                  </div>
+                </div>
+                <div className={styles.Container_4_731}>
+                  <div className={styles.Container_4_732}><span className={styles.SomethingWentWrong_4_733}>Something went wrong</span></div>
+                  <div className={styles.Container_4_734}><span className={styles.YourPaymentCouldNotBeProcessedPleaseCheckYourBankDetailsOrTryAgainLater_4_735}>Your payment could not be processed. Please check your bank details or try again later.</span></div>
+                </div>
+                <div className={styles.Container_4_736}>
+                  <div className={styles.Button_4_737}><span className={styles.ContactSupport_4_738}>Contact Support</span></div>
+                  <div className={styles.Button_4_739}><span className={styles.TryAgain_4_740}>Try Again</span></div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_4_741}></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
