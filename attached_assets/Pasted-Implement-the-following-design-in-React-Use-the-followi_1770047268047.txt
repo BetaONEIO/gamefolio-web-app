@@ -1,0 +1,934 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/BuyGftReview.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,500;0,400&display=swap";
+@import "https://fonts.googleapis.com/css?family=JetBrains+Mono:0,700&display=swap";
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,500;0,400&display=swap";
+.BuyGftReview_4_785 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_4_786 {
+  flex-direction: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  display: flex;
+}
+.Container_4_787 {
+  background: #020617;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  display: flex;
+}
+.Container_4_788 {
+  box-sizing: border-box;
+  border-bottom: 1px solid #1e293b4d;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 84.6563px;
+  height: 113px;
+  padding: 48px 24px 25px;
+  display: flex;
+}
+.Button_4_789 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 33554400px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_4_790 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_4_792 {
+  justify-content: center;
+  align-items: center;
+  width: 133px;
+  height: 28px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.ReviewOrder_4_793 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 136px;
+  height: 25px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_4_794 {
+  width: 40px;
+  height: 40px;
+}
+.Container_4_795 {
+  flex-flow: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 40px;
+  height: 618px;
+  padding: 32px 24px 0;
+  display: flex;
+}
+.Container_4_796 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 382px;
+  height: 169px;
+  display: flex;
+}
+.Container_4_797 {
+  background: #4ade801a;
+  border-radius: 33554400px;
+  justify-content: center;
+  align-items: center;
+  width: 80px;
+  height: 80px;
+  padding: 20px;
+  display: flex;
+}
+.Container_4_798 {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+}
+.Container_4_800 {
+  justify-content: center;
+  align-items: center;
+  width: 149px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.YouWillReceive_4_801 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 151px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_802 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 7.875px;
+  width: 225px;
+  padding-right: 0.125px;
+  display: flex;
+}
+.Container_4_803 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 170px;
+  height: 48px;
+  display: flex;
+}
+._42_4_804 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 173px;
+  height: 61px;
+  font-family: Plus Jakarta Sans;
+  font-size: 48px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 48px;
+  display: inline-block;
+}
+.Container_4_805 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 47px;
+  height: 32px;
+  padding: 1px 0;
+  display: flex;
+}
+.Gft_4_806 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 50px;
+  height: 30px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_4_807 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 382px;
+  height: 415px;
+  display: flex;
+}
+.Container_4_808 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  height: 215px;
+  padding: 21px;
+  display: flex;
+}
+.Container_4_809 {
+  box-sizing: border-box;
+  border-bottom: 1px solid #1e293b4d;
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 112.953px;
+  height: 57px;
+  padding-bottom: 17px;
+  display: flex;
+}
+.Container_4_810 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  width: 161px;
+  height: 40px;
+  display: flex;
+}
+.Container_4_811 {
+  background: #1e293b;
+  border-radius: 16px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 10px;
+  display: flex;
+}
+.Container_4_812 {
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_4_814 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 109px;
+  height: 39px;
+  display: flex;
+}
+.Container_4_815 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.PurchaseAmount_4_816 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  width: 112px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_4_817 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 24px;
+  padding: 1px 4.5px 2px 0;
+  display: flex;
+}
+.BritishPound_4_818 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  width: 106px;
+  height: 21px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_4_819 {
+  justify-content: center;
+  align-items: center;
+  width: 67px;
+  height: 28px;
+  display: flex;
+}
+.Container_4_820 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  padding: 2px 0 3px;
+  display: flex;
+}
+._00_4_821 {
+  color: #fff;
+  text-align: right;
+  font-feature-settings: "dlig" on;
+  width: 70px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_4_822 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 340px;
+  height: 100px;
+  display: flex;
+}
+.Container_4_823 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 141.656px;
+  height: 20px;
+  display: flex;
+}
+.Container_4_824 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.ExchangeRate_4_825 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 101px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_826 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.Gft_0_056_4_827 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  width: 103px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_828 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 224.844px;
+  height: 20px;
+  display: flex;
+}
+.Container_4_829 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.NetworkFee_4_830 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 87px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_831 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.Free_4_832 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  width: 34px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_833 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 217.688px;
+  height: 28px;
+  padding-top: 8px;
+  display: flex;
+}
+.Container_4_834 {
+  justify-content: center;
+  align-items: center;
+  width: 78px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.ServiceFee_4_835 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 80px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_836 {
+  justify-content: center;
+  align-items: center;
+  width: 45px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+._00_4_837 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 48px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_838 {
+  box-sizing: border-box;
+  background: #1e293b4d;
+  border: 1px solid #1e293b4d;
+  border-radius: 16px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 101px;
+  padding: 21px;
+  display: flex;
+}
+.Container_4_839 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 340px;
+  height: 59px;
+  display: flex;
+}
+.Container_4_840 {
+  background: #4ade801a;
+  border-radius: 33554400px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+  display: flex;
+}
+.Container_4_841 {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.G_4_842 {
+  width: 17.292px;
+  height: 14.583px;
+}
+.Container_4_845 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  height: 59px;
+  display: flex;
+}
+.Container_4_846 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 15px;
+  padding: 1px 80.5px 2px 0;
+  display: flex;
+}
+.DestinationWallet_4_847 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  width: 120px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_4_848 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 20px;
+  padding: 1px 87.5px 1px 0;
+  display: flex;
+}
+.x71C7F3A9_4_849 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  width: 113px;
+  height: 18px;
+  font-family: JetBrains Mono;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_850 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 16px;
+  padding: 0 78px 1px 0;
+  display: flex;
+}
+.GftMainnetAddress_4_851 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 122px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  display: inline-block;
+}
+.Button_4_852 {
+  background: #4ade801a;
+  border-radius: 12px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 70px;
+  height: 24px;
+  padding: 4px 10.5px 5px;
+  display: flex;
+}
+.Change_4_853 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 49px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_4_854 {
+  box-sizing: border-box;
+  background: #14532d1a;
+  border: 1px solid #4ade8033;
+  border-radius: 16px;
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 11.0313px;
+  height: 67px;
+  padding: 17px 16.969px 17px 17px;
+  display: flex;
+}
+.Container_4_855 {
+  width: 15px;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_4_857 {
+  align-items: center;
+  width: 322px;
+  height: 33px;
+  padding: 0 11px 1px 0;
+  display: flex;
+}
+.TheGftTokensWillBeSentInstantlyToYourWalletOnceThePaymentIsConfirmed_4_858 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 312px;
+  height: 32px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_4_859 {
+  box-sizing: border-box;
+  background: #020617;
+  border-top: 1px solid #1e293b4d;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 25px 24px 40px;
+  display: flex;
+}
+.Container_4_860 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 164.922px;
+  height: 44px;
+  padding: 0 3.078px 0 4px;
+  display: flex;
+}
+.Container_4_861 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6px;
+  height: 44px;
+  padding-bottom: 3px;
+  display: flex;
+}
+.Container_4_862 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 20px;
+  padding: 1px 22px 1px 0;
+  display: flex;
+}
+.TotalToPay_4_863 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 78px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_864 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  display: flex;
+}
+.IncludesAllTaxes_4_865 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  width: 102px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_4_866 {
+  justify-content: center;
+  align-items: center;
+  width: 111px;
+  height: 36px;
+  display: flex;
+}
+._00_4_867 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 114px;
+  height: 38px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 36px;
+  display: inline-block;
+}
+.Button_4_868 {
+  background: #4ade80;
+  border-radius: 16px;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 7.51563px;
+  height: 68px;
+  padding: 20px 87.75px 20px 87.734px;
+  display: flex;
+  box-shadow: 0 0 30px -10px #4ade80;
+}
+.Container_4_869 {
+  justify-content: center;
+  align-items: center;
+  width: 179px;
+  height: 28px;
+  padding: 2px 0 3px;
+  display: flex;
+}
+.ProceedToPayment_4_870 {
+  color: #022c22;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 182px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_4_871 {
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+
+```
+
+---
+
+```src/components/BuyGftReview.tsx
+import React from 'react';
+import styles from '../styles/BuyGftReview.module.css';
+
+
+export default function BuyGftReview() {
+  return (
+    <div className={styles.BuyGftReview_4_785}>
+      <div className={styles.Container_4_786}>
+        <div className={styles.Container_4_787}>
+          <div className={styles.Container_4_788}>
+            <div className={styles.Button_4_789}>
+              <div className={styles.Container_4_790}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_4_792}><span className={styles.ReviewOrder_4_793}>Review Order</span></div>
+            <div className={styles.Container_4_794}></div>
+          </div>
+          <div className={styles.Container_4_795}>
+            <div className={styles.Container_4_796}>
+              <div className={styles.Container_4_797}>
+                <div className={styles.Container_4_798}><svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M29.2968 7.38666L25.9635 5.63666C23.0368 4.10166 21.5735 3.33333 20.0002 3.33333C18.4268 3.33333 16.9635 4.1 14.0368 5.63666L10.7035 7.38666C7.7485 8.93666 6.01016 9.85 4.9335 11.07L20.0002 18.6033L35.0668 11.07C33.9902 9.85 32.2535 8.93666 29.2968 7.38666Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M36.2468 13.2733L21.2502 20.7733V36.5067C22.4468 36.2083 23.8085 35.495 25.9635 34.3633L29.2968 32.6133C32.8818 30.7317 34.6752 29.7917 35.6718 28.1C36.6668 26.41 36.6668 24.305 36.6668 20.1V19.905C36.6668 16.75 36.6668 14.7767 36.2468 13.2733Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M18.7502 36.5067V20.7733L3.7535 13.2733C3.3335 14.7767 3.3335 16.75 3.3335 19.9017V20.0967C3.3335 24.305 3.3335 26.41 4.3285 28.1C5.32516 29.7917 7.1185 30.7333 10.7035 32.615L14.0368 34.3633C16.1918 35.495 17.5535 36.2083 18.7502 36.5067Z" fill="#4ADE80" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Container_4_800}><span className={styles.YouWillReceive_4_801}>You will receive</span></div>
+              <div className={styles.Container_4_802}>
+                <div className={styles.Container_4_803}><span className={styles._42_4_804}>446.42</span></div>
+                <div className={styles.Container_4_805}><span className={styles.Gft_4_806}>GFT</span></div>
+              </div>
+            </div>
+            <div className={styles.Container_4_807}>
+              <div className={styles.Container_4_808}>
+                <div className={styles.Container_4_809}>
+                  <div className={styles.Container_4_810}>
+                    <div className={styles.Container_4_811}>
+                      <div className={styles.Container_4_812}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path fillRule="evenodd" clipRule="evenodd" d="M6.87484 4.16666C4.944 4.17166 3.91067 4.21916 3.14817 4.72832C2.78405 4.97158 2.47143 5.2842 2.22817 5.64832C1.6665 6.48916 1.6665 7.65832 1.6665 9.99999C1.6665 12.3417 1.6665 13.5108 2.22817 14.3517C2.47143 14.7158 2.78405 15.0284 3.14817 15.2717C3.91067 15.7808 4.944 15.8283 6.87484 15.8333V12.4217C5.771 12.1363 4.99988 11.1405 4.99988 10.0004C4.99988 8.86029 5.771 7.86449 6.87484 7.57916L6.87484 4.16666Z" fill="#94A3B8" />
+                          <path fillRule="evenodd" clipRule="evenodd" d="M8.12484 15.8333H11.8748V4.16666H8.12484V15.8333Z" fill="#94A3B8" />
+                          <path fillRule="evenodd" clipRule="evenodd" d="M13.1248 4.16666V7.57916C14.2279 7.86507 14.9982 8.86049 14.9982 9.99999C14.9982 11.1395 14.2279 12.1349 13.1248 12.4208V15.8333C15.0557 15.8283 16.0898 15.7808 16.8515 15.2717C17.2156 15.0284 17.5282 14.7158 17.7715 14.3517C18.3332 13.5108 18.3332 12.3417 18.3332 9.99999C18.3332 7.65832 18.3332 6.48916 17.7715 5.64832C17.5282 5.2842 17.2156 4.97158 16.8515 4.72832C16.089 4.21916 15.0557 4.17082 13.1248 4.16666Z" fill="#94A3B8" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className={styles.Container_4_814}>
+                      <div className={styles.Container_4_815}><span className={styles.PurchaseAmount_4_816}>Purchase Amount</span></div>
+                      <div className={styles.Container_4_817}><span className={styles.BritishPound_4_818}>British Pound</span></div>
+                    </div>
+                  </div>
+                  <div className={styles.Container_4_819}>
+                    <div className={styles.Container_4_820}><span className={styles._00_4_821}>&#xA3;25.00</span></div>
+                  </div>
+                </div>
+                <div className={styles.Container_4_822}>
+                  <div className={styles.Container_4_823}>
+                    <div className={styles.Container_4_824}><span className={styles.ExchangeRate_4_825}>Exchange Rate</span></div>
+                    <div className={styles.Container_4_826}><span className={styles.Gft_0_056_4_827}>1 GFT &#x2248; &#xA3;0.056</span></div>
+                  </div>
+                  <div className={styles.Container_4_828}>
+                    <div className={styles.Container_4_829}><span className={styles.NetworkFee_4_830}>Network Fee</span></div>
+                    <div className={styles.Container_4_831}><span className={styles.Free_4_832}>Free</span></div>
+                  </div>
+                  <div className={styles.Container_4_833}>
+                    <div className={styles.Container_4_834}><span className={styles.ServiceFee_4_835}>Service Fee</span></div>
+                    <div className={styles.Container_4_836}><span className={styles._00_4_837}>&#xA3;0.00</span></div>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.Container_4_838}>
+                <div className={styles.Container_4_839}>
+                  <div className={styles.Container_4_840}>
+                    <div className={styles.Container_4_841}>
+                      <div className={styles.G_4_842}><svg width="18" height="15" viewBox="0 0 18 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path fillRule="evenodd" clipRule="evenodd" d="M15.9169 4.16984C15.8696 4.16706 15.8194 4.16595 15.766 4.1665H13.6619C11.9385 4.1665 10.4644 5.52317 10.4644 7.2915C10.4644 9.05984 11.9394 10.4165 13.6619 10.4165H15.766C15.8194 10.4171 15.8699 10.4159 15.9177 10.4132C16.6503 10.369 17.2367 9.78864 17.2885 9.0565C17.2919 9.0065 17.2919 8.95234 17.2919 8.90234V5.68067C17.2919 5.63067 17.2919 5.5765 17.2885 5.5265C17.2367 4.79437 16.6495 4.21401 15.9169 4.16984ZM13.4777 8.12484C13.921 8.12484 14.2802 7.7515 14.2802 7.2915C14.2802 6.8315 13.921 6.45817 13.4777 6.45817C13.0335 6.45817 12.6744 6.8315 12.6744 7.2915C12.6744 7.7515 13.0335 8.12484 13.4777 8.12484Z" fill="#4ADE80" />
+                          <path fillRule="evenodd" clipRule="evenodd" d="M15.765 11.6667C15.8234 11.6643 15.8795 11.69 15.9158 11.7357C15.9522 11.7815 15.9646 11.8419 15.9491 11.8983C15.7825 12.4916 15.5166 12.9983 15.0908 13.4233C14.4666 14.0483 13.6758 14.3241 12.6991 14.4558C11.7492 14.5833 10.5367 14.5833 9.00499 14.5833H7.24499C5.71333 14.5833 4.49999 14.5833 3.55083 14.4558C2.57416 14.3241 1.78333 14.0475 1.15917 13.4241C0.535833 12.8 0.259166 12.0092 0.1275 11.0325C0 10.0825 0 8.86999 0 7.33832V7.24499C0 5.71333 0 4.49999 0.1275 3.54999C0.259166 2.57333 0.535833 1.7825 1.15917 1.15833C1.78333 0.534999 2.57416 0.258333 3.55083 0.126666C4.50083 0 5.71333 0 7.24499 0H9.00499C10.5367 0 11.75 0 12.6991 0.1275C13.6758 0.259166 14.4666 0.535833 15.0908 1.15917C15.5166 1.58583 15.7825 2.09166 15.9491 2.685C15.9646 2.74139 15.9522 2.80179 15.9158 2.84756C15.8795 2.89334 15.8234 2.91901 15.765 2.91666H13.6616C11.2975 2.91666 9.21415 4.78333 9.21415 7.29166C9.21415 9.79999 11.2975 11.6667 13.6616 11.6667H15.765ZM4.16666 10.4167C3.82148 10.4167 3.54166 10.1368 3.54166 9.79165V4.79166C3.54166 4.44648 3.82148 4.16666 4.16666 4.16666C4.51184 4.16666 4.79166 4.44648 4.79166 4.79166V9.79165C4.79166 10.1368 4.51184 10.4167 4.16666 10.4167Z" fill="#4ADE80" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.Container_4_845}>
+                    <div className={styles.Container_4_846}><span className={styles.DestinationWallet_4_847}>Destination Wallet</span></div>
+                    <div className={styles.Container_4_848}><span className={styles.x71C7F3A9_4_849}>0x71C7...f3A9</span></div>
+                    <div className={styles.Container_4_850}><span className={styles.GftMainnetAddress_4_851}>GFT Mainnet Address</span></div>
+                  </div>
+                  <div className={styles.Button_4_852}><span className={styles.Change_4_853}>Change</span></div>
+                </div>
+              </div>
+              <div className={styles.Container_4_854}>
+                <div className={styles.Container_4_855}><svg width="15" height="20" viewBox="0 0 15 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M1.9749 5.95547C1.75391 6.27001 1.75391 7.20542 1.75391 9.0745V9.99472C1.75391 13.2909 4.23218 14.891 5.78731 15.5698C6.20883 15.754 6.41988 15.8463 7.01562 15.8463C7.61195 15.8463 7.82242 15.754 8.24394 15.5698C9.79907 14.8905 12.2773 13.2915 12.2773 9.99472V9.0745C12.2773 7.20484 12.2773 6.27001 12.0564 5.95547C11.8359 5.64152 10.9572 5.34044 9.19924 4.73885L8.86424 4.62426C7.94812 4.31031 7.49035 4.15363 7.01562 4.15363C6.5409 4.15363 6.08313 4.31031 5.16701 4.62426L4.83201 4.73826C3.07401 5.34044 2.19531 5.64152 1.9749 5.95547ZM8.80461 9.12303C8.90894 9.00606 8.94294 8.84232 8.89381 8.69348C8.84468 8.54464 8.71988 8.43332 8.56642 8.40146C8.41296 8.36959 8.25415 8.42201 8.14982 8.53898L6.38948 10.5115L5.88085 9.9421C5.71902 9.76328 5.44317 9.74872 5.26341 9.9095C5.08366 10.0703 5.06749 10.3461 5.22723 10.5267L6.06208 11.4622C6.14528 11.5553 6.26427 11.6086 6.38919 11.6086C6.51411 11.6086 6.6331 11.5553 6.71629 11.4622L8.80461 9.12303Z" fill="#4ADE80" />
+                  </svg>
+                </div>
+                <div className={styles.Container_4_857}><span className={styles.TheGftTokensWillBeSentInstantlyToYourWalletOnceThePaymentIsConfirmed_4_858}>The GFT tokens will be sent instantly to your wallet once the payment is confirmed.</span></div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_4_859}>
+            <div className={styles.Container_4_860}>
+              <div className={styles.Container_4_861}>
+                <div className={styles.Container_4_862}><span className={styles.TotalToPay_4_863}>Total to Pay</span></div>
+                <div className={styles.Container_4_864}><span className={styles.IncludesAllTaxes_4_865}>Includes all taxes</span></div>
+              </div>
+              <div className={styles.Container_4_866}><span className={styles._00_4_867}>&#xA3;25.00</span></div>
+            </div>
+            <div className={styles.Button_4_868}>
+              <div className={styles.Container_4_869}><span className={styles.ProceedToPayment_4_870}>Proceed to Payment</span></div>
+              <div className={styles.Container_4_871}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3.3335 9.99999H16.6668M16.6668 9.99999L11.6668 5M16.6668 9.99999L11.6668 15" stroke="#022C22" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+

@@ -10,6 +10,7 @@ import BuyGFTokenDialog from "@/components/BuyGFTokenDialog";
 import WalletHomepage from "@/components/wallet/WalletHomepage";
 import CreatingWallet from "@/components/wallet/CreatingWallet";
 import BuyGFTScreen from "@/components/wallet/BuyGFTScreen";
+import ReviewOrderScreen from "@/components/wallet/ReviewOrderScreen";
 import crossmintBadge from "@assets/badge-color-background_1762859702329.png";
 import walletPromo from "@assets/Wallet promo new_1762876656607.png";
 
@@ -19,6 +20,9 @@ export default function WalletPage() {
   const [showWalletDetails, setShowWalletDetails] = useState(false);
   const [showBuyDialog, setShowBuyDialog] = useState(false);
   const [showBuyScreen, setShowBuyScreen] = useState(false);
+  const [showReviewScreen, setShowReviewScreen] = useState(false);
+  const [purchaseAmount, setPurchaseAmount] = useState(0);
+  const [gftAmount, setGftAmount] = useState(0);
   const [isCreating, setIsCreating] = useState(false);
   const { data: tokenBalance, isLoading: isLoadingBalance } = useTokenBalance();
 
@@ -64,8 +68,15 @@ export default function WalletPage() {
     );
   }
 
-  const handleBuyContinue = (amount: number, gftAmount: number) => {
+  const handleBuyContinue = (amount: number, gft: number) => {
+    setPurchaseAmount(amount);
+    setGftAmount(gft);
     setShowBuyScreen(false);
+    setShowReviewScreen(true);
+  };
+
+  const handleReviewProceed = () => {
+    setShowReviewScreen(false);
     setShowBuyDialog(true);
   };
 
@@ -85,6 +96,17 @@ export default function WalletPage() {
           onBack={() => setShowBuyScreen(false)}
           onContinue={handleBuyContinue}
           currentBalance={tokenBalance ? parseFloat(tokenBalance.balance) + (user?.gfTokenBalance || 0) : (user?.gfTokenBalance || 0)}
+        />
+      ) : showReviewScreen ? (
+        <ReviewOrderScreen
+          onBack={() => {
+            setShowReviewScreen(false);
+            setShowBuyScreen(true);
+          }}
+          onProceed={handleReviewProceed}
+          amount={purchaseAmount}
+          gftAmount={gftAmount}
+          walletAddress={wallet?.address || user?.walletAddress || ""}
         />
       ) : showWalletDetails ? (
         <WalletHomepage
