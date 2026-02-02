@@ -26,7 +26,7 @@ export default function CreatingWallet({
   useEffect(() => {
     if (isError) return;
 
-    const stepDuration = 1800;
+    const stepDuration = 3333;
     const totalDuration = stepDuration * steps.length;
     const startTime = Date.now();
 
