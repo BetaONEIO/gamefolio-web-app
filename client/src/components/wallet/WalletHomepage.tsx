@@ -1,31 +1,36 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { 
-  ArrowUpRight, 
-  ArrowDownLeft, 
-  Eye, 
-  EyeOff, 
-  TrendingUp,
-  Wallet,
+  User,
+  Settings,
+  Copy,
+  CheckCircle2,
+  ArrowDownLeft,
+  ArrowUpRight,
   Coins,
-  RefreshCw,
-  ShoppingCart,
-  CircleDollarSign
+  CreditCard,
+  ExternalLink
 } from "lucide-react";
-import CoinCard from "./CoinCard";
-import StakingCard from "./StakingCard";
-import PortfolioChart from "./PortfolioChart";
-import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
+import { useToast } from "@/hooks/use-toast";
+
+interface Transaction {
+  id: string;
+  type: "received" | "staked" | "purchased" | "sent";
+  title: string;
+  subtitle: string;
+  amount: number;
+  time: string;
+}
 
 interface WalletHomepageProps {
   gfBalance?: number;
   onChainBalance?: string;
   offChainBalance?: number;
+  walletAddress?: string;
+  fiatValue?: number;
   onBuyClick?: () => void;
-  onSellClick?: () => void;
-  onSendClick?: () => void;
-  onReceiveClick?: () => void;
-  onRefreshBalance?: () => void;
+  onStakeClick?: () => void;
+  onSettingsClick?: () => void;
   isLoadingBalance?: boolean;
 }
 
@@ -33,361 +38,202 @@ export default function WalletHomepage({
   gfBalance = 0,
   onChainBalance = "0",
   offChainBalance = 0,
+  walletAddress = "",
+  fiatValue,
   onBuyClick,
-  onSellClick,
-  onSendClick,
-  onReceiveClick,
-  onRefreshBalance,
-  isLoadingBalance = false,
+  onStakeClick,
+  onSettingsClick,
 }: WalletHomepageProps) {
-  const [activeTab, setActiveTab] = useState("portfolio");
-  const [balanceVisible, setBalanceVisible] = useState(true);
+  const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
 
-  const coins = [
+  const totalBalance = parseFloat(onChainBalance) + offChainBalance;
+  const estimatedFiat = fiatValue ?? totalBalance * 0.05;
+
+  const transactions: Transaction[] = [
     {
-      id: "gf-token",
-      name: "Gamefolio Token",
-      symbol: "GF",
-      balance: parseFloat(onChainBalance) + offChainBalance,
-      value: (parseFloat(onChainBalance) + offChainBalance) * 0.05,
-      change: 12.5,
-      color: "from-indigo-500 to-purple-600",
-      icon: "🎮",
+      id: "1",
+      type: "received",
+      title: "Received GFT",
+      subtitle: walletAddress ? `From: ${walletAddress.slice(0, 6)}...${walletAddress.slice(-3)}` : "From: 0x82...124",
+      amount: 150.00,
+      time: "2 hours ago"
     },
+    {
+      id: "2", 
+      type: "staked",
+      title: "Staked GFT",
+      subtitle: "Validator: #042",
+      amount: -500.00,
+      time: "Yesterday"
+    },
+    {
+      id: "3",
+      type: "purchased",
+      title: "GFT Purchase",
+      subtitle: "Via Bank Card",
+      amount: 25.00,
+      time: "3 days ago"
+    }
   ];
 
-  const stakingPools = [
-    {
-      id: "gf-stake-30",
-      name: "GF Staking Pool",
-      symbol: "GF",
-      apy: 15.0,
-      staked: 0,
-      rewards: 0,
-      color: "from-indigo-500 to-purple-600",
-      icon: "🎮",
-      daysLeft: 30,
-      progress: 0,
-    },
-    {
-      id: "gf-stake-90",
-      name: "GF Premium Pool",
-      symbol: "GF",
-      apy: 25.0,
-      staked: 0,
-      rewards: 0,
-      color: "from-purple-500 to-pink-600",
-      icon: "💎",
-      daysLeft: 90,
-      progress: 0,
-    },
-  ];
+  const handleCopyAddress = async () => {
+    if (walletAddress) {
+      await navigator.clipboard.writeText(walletAddress);
+      setCopied(true);
+      toast({
+        title: "Address copied",
+        description: "Wallet address copied to clipboard",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
-  const totalBalance = coins.reduce((sum, coin) => sum + coin.value, 0);
+  const shortenAddress = (address: string) => {
+    if (!address) return "0x12a8...3b89";
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
+  const getTransactionIcon = (type: string) => {
+    switch (type) {
+      case "received":
+        return <ArrowDownLeft className="w-5 h-5 text-green-400" />;
+      case "sent":
+        return <ArrowUpRight className="w-5 h-5 text-red-400" />;
+      case "staked":
+        return <Coins className="w-5 h-5 text-green-400" />;
+      case "purchased":
+        return <CreditCard className="w-5 h-5 text-green-400" />;
+      default:
+        return <ArrowDownLeft className="w-5 h-5 text-green-400" />;
+    }
+  };
 
   return (
-    <div className="w-full text-white">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-3xl p-8 overflow-hidden">
-              <motion.div
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.3, 0.5, 0.3],
-                }}
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="absolute -top-12 -right-12 w-64 h-64 bg-white/20 rounded-full blur-3xl"
-              />
-              <motion.div
-                animate={{
-                  scale: [1, 1.3, 1],
-                  opacity: [0.2, 0.4, 0.2],
-                }}
-                transition={{
-                  duration: 5,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  delay: 1,
-                }}
-                className="absolute -bottom-12 -left-12 w-64 h-64 bg-white/20 rounded-full blur-3xl"
-              />
+    <div className="w-full max-w-2xl mx-auto">
+      <div className="flex items-center justify-between mb-8">
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          className="w-10 h-10 rounded-full bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center"
+        >
+          <User className="w-5 h-5 text-white" />
+        </motion.button>
+        
+        <h1 className="text-xl font-semibold text-white">Wallet Hub</h1>
+        
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={onSettingsClick}
+          className="w-10 h-10 rounded-full bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center"
+        >
+          <Settings className="w-5 h-5 text-white" />
+        </motion.button>
+      </div>
 
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <img src={gfTokenLogo} alt="GF Token" className="w-10 h-10" />
-                    <span className="text-white/80 text-lg">Total Balance</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setBalanceVisible(!balanceVisible)}
-                      className="p-2 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
-                    >
-                      {balanceVisible ? (
-                        <Eye className="w-5 h-5" />
-                      ) : (
-                        <EyeOff className="w-5 h-5" />
-                      )}
-                    </motion.button>
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      onClick={onRefreshBalance}
-                      disabled={isLoadingBalance}
-                      className="p-2 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
-                    >
-                      <RefreshCw className={`w-5 h-5 ${isLoadingBalance ? 'animate-spin' : ''}`} />
-                    </motion.button>
-                  </div>
-                </div>
+      <div className="text-center mb-8">
+        <p className="text-gray-400 text-sm mb-2">Total Balance</p>
+        <div className="flex items-baseline justify-center gap-2">
+          <span className="text-5xl font-bold text-white">
+            {totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+          <span className="text-2xl font-medium text-green-400">GFT</span>
+        </div>
+        <p className="text-gray-500 text-sm mt-2">
+          ≈ ${estimatedFiat.toFixed(2)} USD
+        </p>
+      </div>
 
-                <AnimatePresence mode="wait">
-                  {balanceVisible ? (
-                    <motion.div
-                      key="visible"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <div className="text-5xl md:text-6xl font-bold mb-3">
-                        {(parseFloat(onChainBalance) + offChainBalance).toLocaleString(undefined, { 
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 2 
-                        })} GF
-                      </div>
-                      <div className="flex flex-wrap items-center gap-4 text-white/80 mb-4">
-                        <span className="text-sm">On-Chain: {parseFloat(onChainBalance).toLocaleString()} GF</span>
-                        <span className="text-sm">•</span>
-                        <span className="text-sm">Off-Chain: {offChainBalance.toLocaleString()} GF</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-green-300" />
-                        <span className="text-green-300 text-lg">
-                          ≈ ${totalBalance.toFixed(2)} USD
-                        </span>
-                      </div>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="hidden"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <div className="text-5xl md:text-6xl font-bold mb-3">
-                        ••••••
-                      </div>
-                      <div className="text-white/80 text-sm">Balance hidden</div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={onBuyClick}
-                className="flex items-center justify-center gap-2 bg-white text-slate-900 py-4 rounded-2xl shadow-lg font-medium"
-              >
-                <ShoppingCart className="w-5 h-5" />
-                <span>Buy</span>
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={onSellClick}
-                className="flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm text-white py-4 rounded-2xl border border-white/20 font-medium"
-              >
-                <CircleDollarSign className="w-5 h-5" />
-                <span>Sell</span>
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={onSendClick}
-                className="flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm text-white py-4 rounded-2xl border border-white/20 font-medium"
-              >
-                <ArrowUpRight className="w-5 h-5" />
-                <span>Send</span>
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={onReceiveClick}
-                className="flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm text-white py-4 rounded-2xl border border-white/20 font-medium"
-              >
-                <ArrowDownLeft className="w-5 h-5" />
-                <span>Receive</span>
-              </motion.button>
-            </div>
-          </motion.div>
-
-          <div className="flex items-center gap-3">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setActiveTab("portfolio")}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-colors font-medium ${
-                activeTab === "portfolio"
-                  ? "bg-white text-slate-900"
-                  : "bg-white/5 text-white/60 hover:bg-white/10"
-              }`}
-            >
-              <Wallet className="w-4 h-4" />
-              <span>Portfolio</span>
-            </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setActiveTab("staking")}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-colors font-medium ${
-                activeTab === "staking"
-                  ? "bg-white text-slate-900"
-                  : "bg-white/5 text-white/60 hover:bg-white/10"
-              }`}
-            >
-              <Coins className="w-4 h-4" />
-              <span>Staking</span>
-            </motion.button>
+      <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-5 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400 text-sm">Wallet Status</span>
           </div>
-
-          <AnimatePresence mode="wait">
-            {activeTab === "portfolio" ? (
-              <motion.div
-                key="portfolio"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-white font-medium text-lg">Portfolio Performance</h3>
-                    <span className="text-green-400 text-sm font-medium">7D</span>
-                  </div>
-                  <PortfolioChart />
-                </div>
-
-                <div>
-                  <h3 className="text-white font-medium text-lg mb-4">Assets</h3>
-                  <div className="space-y-3">
-                    {coins.map((coin, index) => (
-                      <CoinCard key={coin.id} {...coin} index={index} />
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="staking"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                <div className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 backdrop-blur-sm rounded-2xl p-6 border border-green-500/20">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Coins className="w-5 h-5 text-green-400" />
-                    <span className="text-white/80">Total Staked Value</span>
-                  </div>
-                  <div className="text-4xl font-bold text-white mb-2">
-                    0 GF
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-green-400" />
-                    <span className="text-green-400">Start staking to earn rewards</span>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-white font-medium text-lg mb-4">Available Staking Pools</h3>
-                  <div className="space-y-3">
-                    {stakingPools.map((pool, index) => (
-                      <StakingCard key={pool.id} {...pool} index={index} />
-                    ))}
-                  </div>
-                </div>
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-2xl font-medium"
-                >
-                  Explore More Staking Pools
-                </motion.button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <div className="px-3 py-1 bg-green-500/20 border border-green-500/30 rounded-full">
+            <span className="text-green-400 text-xs font-medium">SKALE Network</span>
+          </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
-            <h3 className="text-white font-medium text-lg mb-4">Quick Stats</h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-white/60">Total Value</span>
-                <span className="text-white font-medium">${totalBalance.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-white/60">24h Change</span>
-                <span className="text-green-400 font-medium">+$0.00</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-white/60">Total Staked</span>
-                <span className="text-white font-medium">0 GF</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-white/60">Rewards Earned</span>
-                <span className="text-green-400 font-medium">0 GF</span>
-              </div>
-            </div>
-          </div>
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-2 h-2 rounded-full bg-green-400"></div>
+          <span className="text-white font-medium">Active Wallet</span>
+        </div>
 
-          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
-            <h3 className="text-white font-medium text-lg mb-4">Recent Activity</h3>
-            <div className="text-center py-8">
-              <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-3">
-                <Wallet className="w-6 h-6 text-white/40" />
-              </div>
-              <p className="text-white/60 text-sm">No recent transactions</p>
-              <p className="text-white/40 text-xs mt-1">Your activity will appear here</p>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-indigo-600/20 to-purple-600/20 backdrop-blur-sm rounded-2xl p-6 border border-indigo-500/20">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-indigo-500/30 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-indigo-400" />
-              </div>
-              <div>
-                <h3 className="text-white font-medium">Earn More GF</h3>
-                <p className="text-white/60 text-sm">Stake your tokens for rewards</p>
-              </div>
-            </div>
-            <p className="text-white/80 text-sm mb-4">
-              Stake your GF tokens to earn up to 25% APY and unlock exclusive benefits.
-            </p>
+        <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-4">
+          <p className="text-gray-500 text-xs mb-2">Wallet Address</p>
+          <div className="flex items-center justify-between">
+            <code className="text-white font-mono text-sm">
+              {shortenAddress(walletAddress)}
+            </code>
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setActiveTab("staking")}
-              className="w-full bg-white/10 text-white py-3 rounded-xl font-medium hover:bg-white/20 transition-colors"
+              whileTap={{ scale: 0.95 }}
+              onClick={handleCopyAddress}
+              className="p-2 hover:bg-white/5 rounded-lg transition-colors"
             >
-              Start Staking
+              {copied ? (
+                <CheckCircle2 className="w-4 h-4 text-green-400" />
+              ) : (
+                <Copy className="w-4 h-4 text-gray-400" />
+              )}
             </motion.button>
           </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={onBuyClick}
+          className="flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-green-500 text-green-400 font-medium hover:bg-green-500/10 transition-colors"
+        >
+          <ArrowDownLeft className="w-5 h-5" />
+          <span>Buy GFT</span>
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={onStakeClick}
+          className="flex items-center justify-center gap-2 py-4 rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] text-white font-medium hover:bg-[#252525] transition-colors"
+        >
+          <Coins className="w-5 h-5" />
+          <span>Stake GFT</span>
+        </motion.button>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-white font-semibold text-lg">Recent Activity</h2>
+          <button className="text-green-400 text-sm hover:underline">
+            View All
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {transactions.map((tx, index) => (
+            <motion.div
+              key={tx.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="flex items-center justify-between p-4 bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl hover:border-[#2a2a2a] transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#1a1a1a] flex items-center justify-center">
+                  {getTransactionIcon(tx.type)}
+                </div>
+                <div>
+                  <p className="text-white font-medium">{tx.title}</p>
+                  <p className="text-gray-500 text-sm">{tx.subtitle}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className={`font-medium ${tx.amount >= 0 ? 'text-green-400' : 'text-white'}`}>
+                  {tx.amount >= 0 ? '+' : ''}{tx.amount.toFixed(2)}
+                </p>
+                <p className="text-gray-500 text-sm">{tx.time}</p>
+              </div>
+            </motion.div>
+          ))}
         </div>
       </div>
     </div>

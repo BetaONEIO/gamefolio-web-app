@@ -1,12 +1,11 @@
 import { Link } from "wouter";
-import { ArrowLeft, Wallet, Copy, ExternalLink, CheckCircle2, Loader2, LogIn, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Wallet, Loader2, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCrossmint } from "@/hooks/use-crossmint";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
 import { useTokenBalance } from "@/hooks/use-token";
 import BuyGFTokenDialog from "@/components/BuyGFTokenDialog";
 import WalletHomepage from "@/components/wallet/WalletHomepage";
@@ -15,55 +14,16 @@ import walletPromo from "@assets/Wallet promo new_1762876656607.png";
 
 export default function WalletPage() {
   const { user } = useAuth();
-  const { wallet, isLoading, createWallet, loginToWallet } = useCrossmint();
-  const { toast } = useToast();
-  const [copied, setCopied] = useState(false);
+  const { wallet, isLoading, createWallet } = useCrossmint();
   const [showWalletDetails, setShowWalletDetails] = useState(false);
   const [showBuyDialog, setShowBuyDialog] = useState(false);
-  const { data: tokenBalance, isLoading: isLoadingBalance, refetch: refetchBalance } = useTokenBalance();
+  const { data: tokenBalance, isLoading: isLoadingBalance } = useTokenBalance();
 
   useEffect(() => {
     if (wallet || user?.walletAddress) {
       setShowWalletDetails(true);
     }
   }, [wallet, user?.walletAddress]);
-
-  const handleCopyAddress = async () => {
-    if (wallet?.address) {
-      await navigator.clipboard.writeText(wallet.address);
-      setCopied(true);
-      toast({
-        title: "Address copied",
-        description: "Wallet address copied to clipboard",
-      });
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  const getExplorerUrl = () => {
-    if (!wallet) return '';
-    const chain = wallet.chain || 'skale-nebula-testnet';
-    
-    const explorers: Record<string, string> = {
-      'polygon': 'https://polygonscan.com',
-      'ethereum': 'https://etherscan.io',
-      'base': 'https://basescan.org',
-      'polygon-amoy': 'https://amoy.polygonscan.com',
-      'base-sepolia': 'https://sepolia.basescan.org',
-      'ethereum-sepolia': 'https://sepolia.etherscan.io',
-      'skale-nebula': 'https://lanky-ill-funny-testnet.explorer.mainnet.skalenodes.com',
-      'skale-nebula-testnet': 'https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com',
-      'skale-calypso': 'https://honorable-steel-rasalhague.explorer.mainnet.skalenodes.com',
-      'skale-calypso-testnet': 'https://giant-half-dual-testnet.explorer.testnet.skalenodes.com',
-      'skale-europa': 'https://elated-tan-skat.explorer.mainnet.skalenodes.com',
-      'skale-europa-testnet': 'https://juicy-low-small-testnet.explorer.testnet.skalenodes.com',
-      'skale-titan': 'https://parallel-stormy-spica.explorer.mainnet.skalenodes.com',
-      'skale-titan-testnet': 'https://aware-fake-trim-testnet.explorer.testnet.skalenodes.com',
-    };
-
-    const baseUrl = explorers[chain] || explorers['skale-nebula-testnet'];
-    return `${baseUrl}/address/${wallet.address}`;
-  };
 
   if (!user) {
     return (
@@ -211,91 +171,11 @@ export default function WalletPage() {
                     gfBalance={tokenBalance ? parseFloat(tokenBalance.balance) + (user?.gfTokenBalance || 0) : (user?.gfTokenBalance || 0)}
                     onChainBalance={tokenBalance?.balance || "0"}
                     offChainBalance={user?.gfTokenBalance || 0}
+                    walletAddress={wallet?.address || ""}
                     onBuyClick={() => setShowBuyDialog(true)}
-                    onSellClick={() => {}}
-                    onSendClick={() => {}}
-                    onReceiveClick={() => handleCopyAddress()}
-                    onRefreshBalance={() => refetchBalance()}
+                    onStakeClick={() => {}}
                     isLoadingBalance={isLoadingBalance}
                   />
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                    <Card className="bg-white/5 border-white/10" data-testid="card-wallet-address">
-                      <CardHeader>
-                        <div className="flex items-center gap-4">
-                          <Wallet className="w-10 h-10 text-indigo-400" />
-                          <div>
-                            <CardTitle className="text-white">Wallet Address</CardTitle>
-                            <CardDescription className="text-white/60">Your blockchain wallet address</CardDescription>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="flex items-center gap-2">
-                          <code className="flex-1 text-sm bg-white/10 text-white/80 px-3 py-2 rounded-md font-mono break-all" data-testid="text-wallet-address">
-                            {wallet?.address}
-                          </code>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleCopyAddress}
-                            className="border-white/20 text-white hover:bg-white/10"
-                            data-testid="button-copy-address"
-                          >
-                            {copied ? (
-                              <CheckCircle2 className="w-4 h-4 text-green-400" />
-                            ) : (
-                              <Copy className="w-4 h-4" />
-                            )}
-                          </Button>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-white/60">
-                            Blockchain Network
-                          </label>
-                          <div className="mt-1">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-500/20 text-indigo-400" data-testid="text-wallet-chain">
-                              {wallet?.chain ? wallet.chain.charAt(0).toUpperCase() + wallet.chain.slice(1) : 'Unknown'}
-                            </span>
-                          </div>
-                        </div>
-                        <Button
-                          variant="outline"
-                          className="w-full border-white/20 text-white hover:bg-white/10"
-                          asChild
-                          data-testid="button-view-explorer"
-                        >
-                          <a href={getExplorerUrl()} target="_blank" rel="noopener noreferrer">
-                            View on Block Explorer
-                            <ExternalLink className="w-4 h-4 ml-2" />
-                          </a>
-                        </Button>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="bg-white/5 border-white/10" data-testid="card-transaction-history">
-                      <CardHeader>
-                        <CardTitle className="text-white">Transaction History</CardTitle>
-                        <CardDescription className="text-white/60">Recent transactions on your wallet</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex flex-col items-center justify-center py-8 text-center">
-                          <p className="text-sm text-white/60 mb-4">
-                            No transactions yet. Buy or sell GF tokens to get started.
-                          </p>
-                          <Button
-                            variant="default"
-                            onClick={loginToWallet}
-                            className="bg-white text-slate-900 hover:bg-white/90"
-                            data-testid="button-view-full-history"
-                          >
-                            <LogIn className="w-4 h-4 mr-2" />
-                            View Full History in Crossmint
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
                 </TabsContent>
 
               <TabsContent value="nfts" className="space-y-6">
