@@ -14,6 +14,7 @@ import ReviewOrderScreen from "@/components/wallet/ReviewOrderScreen";
 import PaymentRedirectScreen from "@/components/wallet/PaymentRedirectScreen";
 import BuyGFTResultScreen from "@/components/wallet/BuyGFTResultScreen";
 import ActivityHistoryScreen from "@/components/wallet/ActivityHistoryScreen";
+import StakingHubScreen from "@/components/wallet/StakingHubScreen";
 import crossmintBadge from "@assets/badge-color-background_1762859702329.png";
 import walletPromo from "@assets/Wallet promo new_1762876656607.png";
 
@@ -27,6 +28,7 @@ export default function WalletPage() {
   const [showPaymentRedirect, setShowPaymentRedirect] = useState(false);
   const [showResultScreen, setShowResultScreen] = useState(false);
   const [showActivityHistory, setShowActivityHistory] = useState(false);
+  const [showStakingHub, setShowStakingHub] = useState(false);
   const [purchaseAmount, setPurchaseAmount] = useState(0);
   const [gftAmount, setGftAmount] = useState(0);
   const [isCreating, setIsCreating] = useState(false);
@@ -109,6 +111,11 @@ export default function WalletPage() {
           onComplete={handleCreationComplete}
           isError={false}
         />
+      ) : showStakingHub ? (
+        <StakingHubScreen
+          onBack={() => setShowStakingHub(false)}
+          availableGft={tokenBalance ? parseFloat(tokenBalance.balance) + (user?.gfTokenBalance || 0) : (user?.gfTokenBalance || 0)}
+        />
       ) : showActivityHistory ? (
         <ActivityHistoryScreen
           onBack={() => setShowActivityHistory(false)}
@@ -150,7 +157,7 @@ export default function WalletPage() {
           offChainBalance={user?.gfTokenBalance || 0}
           walletAddress={wallet?.address || ""}
           onBuyClick={() => setShowBuyScreen(true)}
-          onStakeClick={() => {}}
+          onStakeClick={() => setShowStakingHub(true)}
           onProfileClick={() => setShowWalletDetails(false)}
           onActivityClick={() => setShowActivityHistory(true)}
           isLoadingBalance={isLoadingBalance}
