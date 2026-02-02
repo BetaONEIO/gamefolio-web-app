@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ArrowLeft, Gift, TrendingUp, ShoppingCart, Award, Filter } from "lucide-react";
+import ActivityDetailScreen from "./ActivityDetailScreen";
 
 type ActivityType = "all" | "purchases" | "staking" | "rewards";
 
@@ -83,6 +84,30 @@ const mockActivities: Activity[] = [
 
 export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenProps) {
   const [activeFilter, setActiveFilter] = useState<ActivityType>("all");
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+
+  if (selectedActivity) {
+    return (
+      <ActivityDetailScreen
+        onBack={() => setSelectedActivity(null)}
+        activity={{
+          id: selectedActivity.id,
+          type: selectedActivity.type,
+          title: selectedActivity.title,
+          status: selectedActivity.status,
+          amount: selectedActivity.amount,
+          isPositive: selectedActivity.isPositive,
+          date: selectedActivity.date === "today" ? "Today" : selectedActivity.date === "yesterday" ? "Yesterday" : selectedActivity.date,
+          time: selectedActivity.time,
+          transactionHash: "0x7a2f...3b4e",
+          fromAddress: "0x82a1...1f24",
+          toAddress: "0x12a8...3b89",
+          networkFee: "Free",
+          paymentMethod: selectedActivity.type === "purchase" ? "VISA •••• 4242" : undefined,
+        }}
+      />
+    );
+  }
 
   const filters: { id: ActivityType; label: string }[] = [
     { id: "all", label: "All Activities" },
@@ -235,9 +260,10 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
               {/* Activities */}
               <div className="flex flex-col gap-3">
                 {activities.map((activity) => (
-                  <div
+                  <button
                     key={activity.id}
-                    className="flex items-center gap-4 p-3 rounded-2xl"
+                    onClick={() => setSelectedActivity(activity)}
+                    className="flex items-center gap-4 p-3 rounded-2xl w-full text-left transition-all hover:bg-slate-800/50"
                     style={{
                       background: 'rgba(15, 23, 42, 0.4)',
                       border: '1px solid rgba(30, 41, 59, 0.2)',
@@ -285,7 +311,7 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
                         GFT
                       </span>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
