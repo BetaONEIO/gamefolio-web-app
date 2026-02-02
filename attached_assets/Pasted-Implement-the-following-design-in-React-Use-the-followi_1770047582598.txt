@@ -1,0 +1,403 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/RedirectingToCheckout.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,500;0,undefined&display=swap";
+.RedirectingToCheckout_4_742 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_4_743 {
+  flex-direction: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  display: flex;
+}
+.Container_4_744 {
+  background: #020617;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  display: flex;
+}
+.Container_4_745 {
+  box-sizing: border-box;
+  border-bottom: 1px solid #1e293b4d;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 107.766px;
+  height: 113px;
+  padding: 48px 24px 25px;
+  display: flex;
+}
+.Button_4_746 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 33554400px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_4_747 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_4_749 {
+  justify-content: center;
+  align-items: center;
+  width: 87px;
+  height: 28px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Payment_4_750 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 90px;
+  height: 25px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_4_751 {
+  width: 40px;
+  height: 40px;
+}
+.Container_4_752 {
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 679px;
+  display: flex;
+}
+.Container_4_753 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 280px;
+  display: flex;
+}
+.Container_4_754 {
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 1px 60.969px 1px 61.031px;
+  display: flex;
+}
+.Redirecting_4_755 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.6px;
+  width: 158px;
+  height: 30px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_4_756 {
+  justify-content: center;
+  align-items: center;
+  height: 78px;
+  padding: 2px 11.453px 3px 11.547px;
+  display: flex;
+}
+.PreparingYourSecurePaymentSessionPleaseDoNotRefreshThePage_4_757 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 257px;
+  height: 73px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 26px;
+  display: inline-block;
+}
+.Container_4_758 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  width: 205px;
+  height: 116px;
+  display: flex;
+}
+.Container_4_759 {
+  box-sizing: border-box;
+  background: #1e293b80;
+  border: 1px solid #1e293b80;
+  border-radius: 33554400px;
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+  height: 38px;
+  padding: 9px 17px;
+  display: flex;
+}
+.Container_4_760 {
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_4_762 {
+  justify-content: center;
+  align-items: center;
+  width: 143px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.SecureCheckout_4_763 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 146px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_764 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  width: 92px;
+  height: 62px;
+  display: flex;
+}
+.Container_4_765 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding-bottom: 1px;
+  display: flex;
+}
+.PoweredBy_4_766 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  width: 94px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_4_767 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  display: flex;
+}
+.Container_4_768 {
+  flex: 1 0 0;
+  height: 40px;
+  overflow: hidden;
+}
+.Container_4_770 {
+  width: 96px;
+  height: 96px;
+}
+.Container_4_771 {
+  filter: blur(32px);
+  background: #4ade8033;
+  border-radius: 33554400px;
+  width: 96px;
+  height: 96px;
+}
+.Container_4_772 {
+  justify-content: center;
+  align-items: center;
+  width: 96px;
+  height: 96px;
+  display: flex;
+}
+.Container_4_773 {
+  flex-shrink: 0;
+  width: 106px;
+  height: 106px;
+  overflow: hidden;
+}
+.Container_4_775 {
+  box-sizing: border-box;
+  background: #02061780;
+  border-top: 1px solid #1e293b4d;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  padding: 41px 88px 40px;
+  display: flex;
+}
+.Container_4_776 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 92px;
+  height: 20px;
+  display: flex;
+}
+.Container_4_777,
+.Container_4_779,
+.Container_4_781 {
+  flex: 1 0 0;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_4_783 {
+  justify-content: center;
+  align-items: center;
+  width: 254px;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.BitSslEncryptedConnection_4_784 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 256px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 15px;
+  display: inline-block;
+}
+
+```
+
+---
+
+```src/components/RedirectingToCheckout.tsx
+import React from 'react';
+import styles from '../styles/RedirectingToCheckout.module.css';
+
+
+export default function RedirectingToCheckout() {
+  return (
+    <div className={styles.RedirectingToCheckout_4_742}>
+      <div className={styles.Container_4_743}>
+        <div className={styles.Container_4_744}>
+          <div className={styles.Container_4_745}>
+            <div className={styles.Button_4_746}>
+              <div className={styles.Container_4_747}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_4_749}><span className={styles.Payment_4_750}>Payment</span></div>
+            <div className={styles.Container_4_751}></div>
+          </div>
+          <div className={styles.Container_4_752}>
+            <div className={styles.Container_4_753}>
+              <div className={styles.Container_4_754}><span className={styles.Redirecting_4_755}>Redirecting...</span></div>
+              <div className={styles.Container_4_756}><span className={styles.PreparingYourSecurePaymentSessionPleaseDoNotRefreshThePage_4_757}>Preparing your secure payment session. Please do not refresh the page.</span></div>
+            </div>
+            <div className={styles.Container_4_758}>
+              <div className={styles.Container_4_759}>
+                <div className={styles.Container_4_760}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M2.815 4.23501C2.5 4.68335 2.5 6.01668 2.5 8.68084V9.9925C2.5 14.6908 6.03249 16.9717 8.24915 17.9391C8.84998 18.2016 9.15082 18.3333 9.99998 18.3333C10.85 18.3333 11.15 18.2016 11.7508 17.9391C13.9675 16.9708 17.5 14.6917 17.5 9.9925V8.68084C17.5 6.01584 17.5 4.68335 17.185 4.23501C16.8708 3.78752 15.6183 3.35835 13.1125 2.50085L12.635 2.33752C11.3291 1.89002 10.6766 1.66669 9.99998 1.66669C9.32332 1.66669 8.67082 1.89002 7.36499 2.33752L6.88749 2.50002C4.38166 3.35835 3.12917 3.78752 2.815 4.23501ZM12.55 8.75C12.6987 8.58328 12.7472 8.34988 12.6771 8.13773C12.6071 7.92558 12.4292 7.76691 12.2105 7.72149C11.9917 7.67606 11.7654 7.75078 11.6166 7.91751L9.10748 10.7292L8.38249 9.9175C8.15182 9.66262 7.75862 9.64186 7.5024 9.87103C7.24618 10.1002 7.22314 10.4933 7.45082 10.7508L8.64082 12.0842C8.7594 12.217 8.92901 12.2929 9.10707 12.2929C9.28513 12.2929 9.45474 12.217 9.57332 12.0842L12.55 8.75Z" fill="#4ADE80" />
+                  </svg>
+                </div>
+                <div className={styles.Container_4_762}><span className={styles.SecureCheckout_4_763}>Secure Checkout</span></div>
+              </div>
+              <div className={styles.Container_4_764}>
+                <div className={styles.Container_4_765}><span className={styles.PoweredBy_4_766}>Powered by</span></div>
+                <div className={styles.Container_4_767}>
+                  <div className={styles.Container_4_768}><svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M20.0002 36.6667C17.6946 36.6667 15.528 36.2289 13.5002 35.3533C11.4724 34.4778 9.7085 33.2906 8.2085 31.7917C6.7085 30.2928 5.52128 28.5289 4.64683 26.5C3.77239 24.4711 3.33461 22.3044 3.3335 20C3.33238 17.6955 3.77016 15.5289 4.64683 13.5C5.5235 11.4711 6.71072 9.70721 8.2085 8.20832C9.70628 6.70943 11.4702 5.5222 13.5002 4.64665C15.5302 3.77109 17.6968 3.33331 20.0002 3.33331C22.3035 3.33331 24.4702 3.77109 26.5002 4.64665C28.5302 5.5222 30.2941 6.70943 31.7919 8.20832C33.2896 9.70721 34.4774 11.4711 35.3552 13.5C36.233 15.5289 36.6702 17.6955 36.6669 20C36.6635 22.3044 36.2257 24.4711 35.3535 26.5C34.4813 28.5289 33.2941 30.2928 31.7919 31.7917C30.2896 33.2906 28.5257 34.4783 26.5002 35.355C24.4746 36.2317 22.308 36.6689 20.0002 36.6667Z" fill="#635BFF" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_4_770}>
+              <div className={styles.Container_4_771}></div>
+              <div className={styles.Container_4_772}>
+                <div className={styles.Container_4_773}><svg width="106" height="106" viewBox="0 0 106 106" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M52.7256 96.6637C46.6475 96.6637 40.9356 95.5096 35.5898 93.2014C30.244 90.8932 25.5939 87.7633 21.6395 83.8118C17.6851 79.8603 14.5552 75.2102 12.2499 69.8615C9.94463 64.5128 8.79053 58.8008 8.7876 52.7256C8.78467 46.6505 9.93877 40.9385 12.2499 35.5898C14.5611 30.2411 17.6909 25.591 21.6395 21.6395C25.588 17.688 30.2382 14.5581 35.5898 12.2499C40.9415 9.9417 46.6534 8.7876 52.7256 8.7876C58.7979 8.7876 64.5098 9.9417 69.8615 12.2499C75.2131 14.5581 79.8633 17.688 83.8118 21.6395C87.7604 25.591 90.8917 30.2411 93.2058 35.5898C95.5198 40.9385 96.6725 46.6505 96.6637 52.7256C96.6549 58.8008 95.5008 64.5128 93.2014 69.8615C90.902 75.2102 87.7721 79.8603 83.8118 83.8118C79.8515 87.7633 75.2014 90.8946 69.8615 93.2058C64.5215 95.5169 58.8096 96.6696 52.7256 96.6637Z" fill="#4ADE80" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_4_775}>
+            <div className={styles.Container_4_776}>
+              <div className={styles.Container_4_777}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M16.25 6.25H13.75V4.375C13.75 2.30393 12.0711 0.625 10 0.625C7.92893 0.625 6.25 2.30393 6.25 4.375V6.25H3.75C3.05964 6.25 2.5 6.80964 2.5 7.5V16.25C2.5 16.9404 3.05964 17.5 3.75 17.5H16.25C16.9404 17.5 17.5 16.9404 17.5 16.25V7.5C17.5 6.80964 16.9404 6.25 16.25 6.25Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M10.625 12.393V14.375C10.625 14.7202 10.3452 15 10 15C9.65482 15 9.375 14.7202 9.375 14.375V12.393C8.51403 12.0886 7.99758 11.2082 8.152 10.3081C8.30643 9.40809 9.08681 8.7502 10 8.7502C10.9132 8.7502 11.6936 9.40809 11.848 10.3081C12.0024 11.2082 11.486 12.0886 10.625 12.393Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M12.5 6.25H7.5V4.375C7.5 2.99429 8.61929 1.875 10 1.875C11.3807 1.875 12.5 2.99429 12.5 4.375V6.25Z" fill="#F8FAFC" />
+                </svg>
+              </div>
+              <div className={styles.Container_4_779}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M16.25 3.125H3.75C3.05964 3.125 2.5 3.68464 2.5 4.375V8.75C2.5 12.8687 4.49375 15.3648 6.16641 16.7336C7.96797 18.207 9.76016 18.707 9.83828 18.7281C9.9457 18.7573 10.059 18.7573 10.1664 18.7281C10.2445 18.707 12.0344 18.207 13.8383 16.7336C15.5063 15.3648 17.5 12.8687 17.5 8.75V4.375C17.5 3.68464 16.9404 3.125 16.25 3.125Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M13.5688 8.56719L9.19375 12.9422C9.07652 13.0595 8.91744 13.1255 8.75156 13.1255C8.58568 13.1255 8.4266 13.0595 8.30937 12.9422L6.43438 11.0672C6.19016 10.823 6.19016 10.427 6.43438 10.1828C6.67859 9.9386 7.07454 9.9386 7.31875 10.1828L8.75 11.6164L12.6828 7.68281C12.927 7.4386 13.323 7.4386 13.5672 7.68281C13.8114 7.92703 13.8114 8.32297 13.5672 8.56719H13.5688Z" fill="#F8FAFC" />
+                </svg>
+              </div>
+              <div className={styles.Container_4_781}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M17.5 3.75H2.5C1.80964 3.75 1.25 4.30964 1.25 5V15C1.25 15.6904 1.80964 16.25 2.5 16.25H17.5C18.1904 16.25 18.75 15.6904 18.75 15V5C18.75 4.30964 18.1904 3.75 17.5 3.75Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M10.625 13.75H9.375C9.02982 13.75 8.75 13.4702 8.75 13.125C8.75 12.7798 9.02982 12.5 9.375 12.5H10.625C10.9702 12.5 11.25 12.7798 11.25 13.125C11.25 13.4702 10.9702 13.75 10.625 13.75Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M15.625 13.75H13.125C12.7798 13.75 12.5 13.4702 12.5 13.125C12.5 12.7798 12.7798 12.5 13.125 12.5H15.625C15.9702 12.5 16.25 12.7798 16.25 13.125C16.25 13.4702 15.9702 13.75 15.625 13.75Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M2.5 6.875V5H17.5V6.875H2.5Z" fill="#F8FAFC" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_4_783}><span className={styles.BitSslEncryptedConnection_4_784}>256-bit SSL encrypted connection</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+

@@ -11,6 +11,7 @@ import WalletHomepage from "@/components/wallet/WalletHomepage";
 import CreatingWallet from "@/components/wallet/CreatingWallet";
 import BuyGFTScreen from "@/components/wallet/BuyGFTScreen";
 import ReviewOrderScreen from "@/components/wallet/ReviewOrderScreen";
+import PaymentRedirectScreen from "@/components/wallet/PaymentRedirectScreen";
 import crossmintBadge from "@assets/badge-color-background_1762859702329.png";
 import walletPromo from "@assets/Wallet promo new_1762876656607.png";
 
@@ -21,6 +22,7 @@ export default function WalletPage() {
   const [showBuyDialog, setShowBuyDialog] = useState(false);
   const [showBuyScreen, setShowBuyScreen] = useState(false);
   const [showReviewScreen, setShowReviewScreen] = useState(false);
+  const [showPaymentRedirect, setShowPaymentRedirect] = useState(false);
   const [purchaseAmount, setPurchaseAmount] = useState(0);
   const [gftAmount, setGftAmount] = useState(0);
   const [isCreating, setIsCreating] = useState(false);
@@ -77,6 +79,11 @@ export default function WalletPage() {
 
   const handleReviewProceed = () => {
     setShowReviewScreen(false);
+    setShowPaymentRedirect(true);
+  };
+
+  const handlePaymentReady = () => {
+    setShowPaymentRedirect(false);
     setShowBuyDialog(true);
   };
 
@@ -90,6 +97,14 @@ export default function WalletPage() {
           onRetry={handleCreateWallet}
           onComplete={handleCreationComplete}
           isError={false}
+        />
+      ) : showPaymentRedirect ? (
+        <PaymentRedirectScreen
+          onBack={() => {
+            setShowPaymentRedirect(false);
+            setShowReviewScreen(true);
+          }}
+          onReady={handlePaymentReady}
         />
       ) : showBuyScreen ? (
         <BuyGFTScreen
