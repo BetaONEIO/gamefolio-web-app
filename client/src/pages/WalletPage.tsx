@@ -9,6 +9,7 @@ import { useTokenBalance } from "@/hooks/use-token";
 import BuyGFTokenDialog from "@/components/BuyGFTokenDialog";
 import WalletHomepage from "@/components/wallet/WalletHomepage";
 import CreatingWallet from "@/components/wallet/CreatingWallet";
+import BuyGFTScreen from "@/components/wallet/BuyGFTScreen";
 import crossmintBadge from "@assets/badge-color-background_1762859702329.png";
 import walletPromo from "@assets/Wallet promo new_1762876656607.png";
 
@@ -17,6 +18,7 @@ export default function WalletPage() {
   const { wallet, isLoading, createWallet } = useCrossmint();
   const [showWalletDetails, setShowWalletDetails] = useState(false);
   const [showBuyDialog, setShowBuyDialog] = useState(false);
+  const [showBuyScreen, setShowBuyScreen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const { data: tokenBalance, isLoading: isLoadingBalance } = useTokenBalance();
 
@@ -62,6 +64,11 @@ export default function WalletPage() {
     );
   }
 
+  const handleBuyContinue = (amount: number, gftAmount: number) => {
+    setShowBuyScreen(false);
+    setShowBuyDialog(true);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {isCreating ? (
@@ -73,13 +80,19 @@ export default function WalletPage() {
           onComplete={handleCreationComplete}
           isError={false}
         />
+      ) : showBuyScreen ? (
+        <BuyGFTScreen
+          onBack={() => setShowBuyScreen(false)}
+          onContinue={handleBuyContinue}
+          currentBalance={tokenBalance ? parseFloat(tokenBalance.balance) + (user?.gfTokenBalance || 0) : (user?.gfTokenBalance || 0)}
+        />
       ) : showWalletDetails ? (
         <WalletHomepage
           gfBalance={tokenBalance ? parseFloat(tokenBalance.balance) + (user?.gfTokenBalance || 0) : (user?.gfTokenBalance || 0)}
           onChainBalance={tokenBalance?.balance || "0"}
           offChainBalance={user?.gfTokenBalance || 0}
           walletAddress={wallet?.address || ""}
-          onBuyClick={() => setShowBuyDialog(true)}
+          onBuyClick={() => setShowBuyScreen(true)}
           onStakeClick={() => {}}
           onProfileClick={() => setShowWalletDetails(false)}
           isLoadingBalance={isLoadingBalance}
