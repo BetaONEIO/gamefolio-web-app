@@ -21,19 +21,19 @@ export default function WalletPage() {
   const { data: tokenBalance, isLoading: isLoadingBalance } = useTokenBalance();
 
   useEffect(() => {
-    if (wallet || user?.walletAddress) {
+    if ((wallet || user?.walletAddress) && !isCreating) {
       setShowWalletDetails(true);
-      setIsCreating(false);
     }
-  }, [wallet, user?.walletAddress]);
+  }, [wallet, user?.walletAddress, isCreating]);
 
   const handleCreationComplete = () => {
-    setShowWalletDetails(true);
     setIsCreating(false);
+    setShowWalletDetails(true);
   };
 
   const handleCreateWallet = () => {
     setIsCreating(true);
+    setShowWalletDetails(false);
     createWallet();
   };
 
