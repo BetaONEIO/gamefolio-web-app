@@ -41,7 +41,8 @@ export default function MintNFTPage() {
   ]);
 
   const gfBalance = user?.gfTokenBalance || 0;
-  const isConnected = !!wallet?.address;
+  const walletAddress = wallet?.address || user?.walletAddress;
+  const isConnected = !!walletAddress;
 
   const mintPrice = MINT_PRICE * quantity;
   const networkFee = NETWORK_FEE * quantity;
