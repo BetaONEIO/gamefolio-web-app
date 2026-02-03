@@ -86,7 +86,7 @@ export default function WalletPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-0 py-0 max-w-6xl">
+        <div className="container mx-auto px-4 py-4 md:px-6 md:py-6 max-w-6xl">
           <div className="mb-8">
             <Link href="/">
               <Button variant="ghost" className="mb-4" data-testid="button-back">
@@ -208,7 +208,7 @@ export default function WalletPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-0 py-0 max-w-6xl">
+      <div className="container mx-auto px-4 py-4 md:px-6 md:py-6 max-w-6xl">
         <div className="mb-8">
           <Link href="/">
             <Button variant="ghost" className="mb-4" data-testid="button-back">

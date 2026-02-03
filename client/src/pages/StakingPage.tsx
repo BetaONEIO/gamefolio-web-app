@@ -267,7 +267,7 @@ export default function StakingPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-0 py-0 max-w-4xl">
+        <div className="container mx-auto px-4 py-4 md:px-6 md:py-6 max-w-4xl">
           <Link href="/">
             <Button variant="ghost" className="mb-4">
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -294,7 +294,7 @@ export default function StakingPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-0 py-0 max-w-4xl">
+      <div className="container mx-auto px-4 py-4 md:px-6 md:py-6 max-w-4xl">
         <Link href="/wallet">
           <Button variant="ghost" className="mb-4">
             <ArrowLeft className="w-4 h-4 mr-2" />

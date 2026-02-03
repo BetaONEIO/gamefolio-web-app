@@ -519,7 +519,7 @@ const TrendingPage: React.FC = () => {
   }, [isMobile, activeTab, activeTabContent.length]);
 
   return (
-    <div className="container mx-auto px-0 py-0 max-w-7xl">
+    <div className="container mx-auto px-4 py-4 md:px-6 md:py-6 max-w-7xl">
       {/* Tabs at the top - Mobile responsive */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ContentType)} className="w-full">
         <div className="bg-card/50 dark:bg-card/30 backdrop-blur-sm border-b border-border mb-0 md:mb-6 md:rounded-xl md:border sticky top-0 z-30">

@@ -310,7 +310,7 @@ const HomePage = () => {
   const isLoadingGames = isLoadingTwitchGames;
 
   return (
-    <div className="space-y-16 max-w-none">
+    <div className="space-y-16 max-w-none p-4 md:p-6">
       {/* Hero Banner - Full width with negative margin to compensate for parent padding */}
       <section className="mb-10 -mx-2 md:-mx-6 -mt-2 md:-mt-4">
         <div className="relative overflow-hidden">

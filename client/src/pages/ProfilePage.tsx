@@ -957,7 +957,7 @@ const ProfilePage = () => {
   // Handle loading state
   if (isLoadingProfile || isLoadingFollowStatus) {
     return (
-      <div className="container mx-auto py-0 space-y-8">
+      <div className="container mx-auto py-4 md:py-6 px-4 md:px-6 space-y-8">
         <div className="flex items-center space-x-4">
           <Skeleton className="h-24 w-24 rounded-full" />
           <div className="space-y-2">
@@ -1141,7 +1141,7 @@ const ProfilePage = () => {
 
   return (
     <div 
-      className="min-h-screen pb-12 relative profile-theme-scope" 
+      className="min-h-screen pb-12 px-4 md:px-6 relative profile-theme-scope" 
       ref={profileThemeScopeRef}
       style={{ 
         background: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
