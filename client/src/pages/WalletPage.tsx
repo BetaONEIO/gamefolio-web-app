@@ -211,23 +211,26 @@ export default function WalletPage() {
               </ul>
 
               <div className="space-y-4">
-                <Button 
-                  onClick={(isReady && walletAddress) || user?.walletAddress ? () => setShowWalletDetails(true) : handleConnectWallet} 
-                  disabled={isConnecting}
-                  className="w-auto px-6"
-                  data-testid={(isReady && walletAddress) || user?.walletAddress ? "button-continue-wallet" : "button-connect-wallet"}
-                >
-                  {isConnecting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Connecting...
-                    </>
-                  ) : (
-                    <>
-                      {(isReady && walletAddress) || user?.walletAddress ? (
+                {(() => {
+                  const hasExistingWallet = !!user?.walletAddress || (isReady && walletAddress);
+                  const showConnectingState = isConnecting && !user?.walletAddress;
+                  
+                  return (
+                    <Button 
+                      onClick={hasExistingWallet ? () => setShowWalletDetails(true) : handleConnectWallet} 
+                      disabled={showConnectingState}
+                      className="w-auto px-6"
+                      data-testid={hasExistingWallet ? "button-access-wallet" : "button-connect-wallet"}
+                    >
+                      {showConnectingState ? (
                         <>
-                          <ArrowLeft className="w-4 h-4 mr-2 rotate-180" />
-                          Continue to Wallet
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Connecting...
+                        </>
+                      ) : hasExistingWallet ? (
+                        <>
+                          <Wallet className="w-4 h-4 mr-2" />
+                          Access Wallet
                         </>
                       ) : (
                         <>
@@ -235,9 +238,9 @@ export default function WalletPage() {
                           Connect Wallet
                         </>
                       )}
-                    </>
-                  )}
-                </Button>
+                    </Button>
+                  );
+                })()}
                 <div className="flex items-center justify-start">
                   <span className="text-sm text-muted-foreground">Powered by Sequence</span>
                 </div>
