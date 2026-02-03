@@ -1,0 +1,846 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/InsufficientGft.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,400;0,undefined;0,900;0,500&display=swap";
+.InsufficientGft_4_2025 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_4_2026 {
+  flex-direction: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  display: flex;
+}
+.Container_4_2027 {
+  background: #020617;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  display: flex;
+}
+.Container_4_2028 {
+  box-sizing: border-box;
+  background: linear-gradient(#ef44441a 0%, #020617 100%);
+  border-bottom: 1px solid #1e293b4d;
+  width: 430px;
+  height: 305px;
+}
+.Container_4_2029 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: center;
+  gap: 69.125px;
+  width: 382px;
+  display: flex;
+}
+.Container_4_2030 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 33554400px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_4_2031 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_4_2033 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 164px;
+  height: 28px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.TransactionError_4_2034 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 167px;
+  height: 25px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_4_2035 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 33554400px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_4_2036 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_4_2038 {
+  box-sizing: border-box;
+  background: #ef44441a;
+  border: 1px solid #ef444433;
+  border-radius: 33554400px;
+  justify-content: center;
+  align-items: center;
+  width: 80px;
+  height: 80px;
+  padding: 20px;
+  display: flex;
+}
+.Container_4_2039 {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+}
+.Container_4_2041 {
+  justify-content: center;
+  align-items: center;
+  width: 183px;
+  height: 32px;
+  padding: 1px 0;
+  display: flex;
+}
+.InsufficientGft_4_2042 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 186px;
+  height: 30px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_4_2043 {
+  justify-content: center;
+  align-items: center;
+  width: 280px;
+  height: 40px;
+  padding: 1px 16.672px 1px 17.328px;
+  display: flex;
+}
+.YourCurrentBalanceIsNotEnoughToCoverTheTransactionAndGasFees_4_2044 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 246px;
+  height: 38px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_2045 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 24px;
+  width: 430px;
+  padding: 32px 24px 20.5px;
+  display: flex;
+}
+.Container_4_2046 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 382px;
+  height: 228px;
+  padding: 25px;
+  display: flex;
+}
+.Container_4_2047 {
+  box-sizing: border-box;
+  border-bottom: 1px solid #1e293b4d;
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 97.9219px;
+  height: 41px;
+  padding-bottom: 17px;
+  display: flex;
+}
+.Container_4_2048 {
+  justify-content: center;
+  align-items: center;
+  width: 111px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.TransactionType_4_2049 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 113px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_2050 {
+  justify-content: center;
+  align-items: center;
+  width: 124px;
+  height: 24px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.StakingDeposit_4_2051 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 126px;
+  height: 21px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_4_2052 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 12px;
+  width: 332px;
+  height: 121px;
+  padding-top: 8px;
+  display: flex;
+}
+.Container_4_2053 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 143.75px;
+  height: 24px;
+  display: flex;
+}
+.Container_4_2054 {
+  justify-content: center;
+  align-items: center;
+  width: 95px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.TotalRequired_4_2055 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 97px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_2056 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 24px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+._00Gft_4_2057 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 97px;
+  height: 21px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_4_2058 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 139.813px;
+  height: 24px;
+  display: flex;
+}
+.Container_4_2059 {
+  justify-content: center;
+  align-items: center;
+  width: 116px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.AvailableBalance_4_2060 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 118px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_2061 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 24px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+._45Gft_4_2062 {
+  color: #ef4444;
+  font-feature-settings: "dlig" on;
+  width: 80px;
+  height: 21px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_4_2063 {
+  box-sizing: border-box;
+  border-top: 1px solid #1e293b4d;
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 121.688px;
+  height: 41px;
+  padding-top: 13px;
+  display: flex;
+}
+.Container_4_2064 {
+  justify-content: center;
+  align-items: center;
+  width: 112px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.AmountNeeded_4_2065 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 115px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_2066 {
+  justify-content: center;
+  align-items: center;
+  width: 99px;
+  height: 28px;
+  padding: 2px 0 3px;
+  display: flex;
+}
+._55Gft_4_2067 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 104px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_4_2068 {
+  box-sizing: border-box;
+  background: #1e293b80;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  height: 93px;
+  padding: 17px;
+  display: flex;
+}
+.Container_4_2069 {
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_4_2071 {
+  justify-content: center;
+  align-items: center;
+  width: 316px;
+  height: 59px;
+  padding: 2px 0 3px;
+  display: flex;
+}
+.GftTokensAreRequiredForAllTransactionsOnTheSkaleNetworkYouCanTopUpYourWalletUsingACreditCardOrByBridgingFromAnotherNetwork_4_2072 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 318px;
+  height: 54px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 19.5px;
+  display: inline-block;
+}
+.Container_4_2073 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 12px;
+  width: 382px;
+  padding-top: 16px;
+  display: flex;
+}
+.Button_4_2074 {
+  background: #4ade80;
+  border-radius: 16px;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 6.5px;
+  height: 56px;
+  padding: 16px 114.078px 16px 116.422px;
+  display: flex;
+  box-shadow: 0 0 20px -5px #4ade80;
+}
+.Container_4_2075 {
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.BuyGftTokens_4_2077 {
+  color: #022c22;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 125px;
+  height: 24px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 24px;
+  display: inline-block;
+}
+.Button_4_2078 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  height: 58px;
+  padding: 18px 103.938px 19px 104.063px;
+  display: flex;
+}
+.BridgeFromEthereum_4_2079 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 174px;
+  height: 21px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 24px;
+  display: inline-block;
+}
+.Button_4_2080 {
+  justify-content: center;
+  align-items: center;
+  height: 52px;
+  padding: 17px 125.531px 17px 126.469px;
+  display: flex;
+}
+.CancelTransaction_4_2081 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 130px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_2082 {
+  box-sizing: border-box;
+  background: #020617;
+  border-top: 1px solid #1e293b;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 63.4063px;
+  padding: 13px 55.797px 32px 56.109px;
+  display: flex;
+}
+.Button_4_2083 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: 30px;
+  height: 43px;
+  display: flex;
+}
+.Container_4_2084 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.G_4_2085 {
+  width: 20px;
+  height: 20px;
+}
+.Container_4_2088 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Home_4_2089 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 32px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 15px;
+  display: inline-block;
+}
+.Button_4_2090 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: 31px;
+  height: 43px;
+  display: flex;
+}
+.Container_4_2091 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.G_4_2092 {
+  width: 20.75px;
+  height: 17.5px;
+}
+.Container_4_2095 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Wallet_4_2096 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 33px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 15px;
+  display: inline-block;
+}
+.Button_4_2097 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  width: 26px;
+  height: 43px;
+  display: flex;
+}
+.Container_4_2098 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.G_4_2099 {
+  width: 18px;
+  height: 20px;
+}
+.Container_4_2102 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Stats_4_2103 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 28px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 15px;
+  display: inline-block;
+}
+.Button_4_2104 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: 41px;
+  height: 43px;
+  display: flex;
+}
+.Container_4_2105 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.G_4_2106 {
+  width: 20px;
+  height: 20px;
+}
+.Container_4_2110 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Account_4_2111 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 43px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 15px;
+  display: inline-block;
+}
+
+```
+
+---
+
+```src/components/InsufficientGft.tsx
+import React from 'react';
+import styles from '../styles/InsufficientGft.module.css';
+
+
+export default function InsufficientGft() {
+  return (
+    <div className={styles.InsufficientGft_4_2025}>
+      <div className={styles.Container_4_2026}>
+        <div className={styles.Container_4_2027}>
+          <div className={styles.Container_4_2028}>
+            <div className={styles.Container_4_2029}>
+              <div className={styles.Container_4_2030}>
+                <div className={styles.Container_4_2031}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Container_4_2033}><span className={styles.TransactionError_4_2034}>Transaction Error</span></div>
+              <div className={styles.Container_4_2035}>
+                <div className={styles.Container_4_2036}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M22 12C22 17.523 17.523 22 12 22C6.477 22 2 17.523 2 12C2 6.477 6.477 2 12 2C17.523 2 22 6.477 22 12ZM12 17.75C12.4142 17.75 12.75 17.4142 12.75 17V11C12.75 10.5858 12.4142 10.25 12 10.25C11.5858 10.25 11.25 10.5858 11.25 11V17C11.25 17.414 11.586 17.75 12 17.75ZM12 7C12.5523 7 13 7.44772 13 8C13 8.55228 12.5523 9 12 9C11.4477 9 11 8.55228 11 8C11 7.44772 11.4477 7 12 7Z" fill="#94A3B8" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_4_2038}>
+              <div className={styles.Container_4_2039}><svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M5 17.3617C5 12.0317 5 9.36667 5.63 8.47C6.25833 7.575 8.76333 6.71667 13.775 5.00167L14.73 4.675C17.3417 3.78 18.6467 3.33334 20 3.33334C21.3533 3.33334 22.6583 3.78 25.27 4.675L26.225 5.00167C31.2367 6.71667 33.7417 7.575 34.37 8.47C35 9.36667 35 12.0333 35 17.3617V19.985C35 29.3817 27.935 33.9433 23.5017 35.8783C22.3 36.4033 21.7 36.6667 20 36.6667C18.3 36.6667 17.7 36.4033 16.4983 35.8783C12.065 33.9417 5 29.3833 5 19.985V17.3617ZM20 12.0833C20.6904 12.0833 21.25 12.643 21.25 13.3333V20C21.25 20.6904 20.6904 21.25 20 21.25C19.3096 21.25 18.75 20.6904 18.75 20V13.3333C18.75 12.643 19.3096 12.0833 20 12.0833ZM20 26.6667C20.9205 26.6667 21.6667 25.9205 21.6667 25C21.6667 24.0795 20.9205 23.3333 20 23.3333C19.0795 23.3333 18.3333 24.0795 18.3333 25C18.3333 25.9205 19.0795 26.6667 20 26.6667Z" fill="#EF4444" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_4_2041}><span className={styles.InsufficientGft_4_2042}>Insufficient GFT</span></div>
+            <div className={styles.Container_4_2043}><span className={styles.YourCurrentBalanceIsNotEnoughToCoverTheTransactionAndGasFees_4_2044}>Your current balance is not enough to cover the transaction and gas fees.</span></div>
+          </div>
+          <div className={styles.Container_4_2045}>
+            <div className={styles.Container_4_2046}>
+              <div className={styles.Container_4_2047}>
+                <div className={styles.Container_4_2048}><span className={styles.TransactionType_4_2049}>Transaction Type</span></div>
+                <div className={styles.Container_4_2050}><span className={styles.StakingDeposit_4_2051}>Staking Deposit</span></div>
+              </div>
+              <div className={styles.Container_4_2052}>
+                <div className={styles.Container_4_2053}>
+                  <div className={styles.Container_4_2054}><span className={styles.TotalRequired_4_2055}>Total Required</span></div>
+                  <div className={styles.Container_4_2056}><span className={styles._00Gft_4_2057}>250.00 GFT</span></div>
+                </div>
+                <div className={styles.Container_4_2058}>
+                  <div className={styles.Container_4_2059}><span className={styles.AvailableBalance_4_2060}>Available Balance</span></div>
+                  <div className={styles.Container_4_2061}><span className={styles._45Gft_4_2062}>12.45 GFT</span></div>
+                </div>
+                <div className={styles.Container_4_2063}>
+                  <div className={styles.Container_4_2064}><span className={styles.AmountNeeded_4_2065}>Amount Needed</span></div>
+                  <div className={styles.Container_4_2066}><span className={styles._55Gft_4_2067}>237.55 GFT</span></div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_4_2068}>
+              <div className={styles.Container_4_2069}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <g clipPath="url(#clip0_4_2069)">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M0 0H20V20H0V0Z" fill="#4ADE80" />
+                  </g>
+                  <defs>
+                    <clipPath id="clip0_4_2069">
+                      <rect width="20" height="20" fill="white" />
+                    </clipPath>
+                  </defs>
+                </svg>
+              </div>
+              <div className={styles.Container_4_2071}><span className={styles.GftTokensAreRequiredForAllTransactionsOnTheSkaleNetworkYouCanTopUpYourWalletUsingACreditCardOrByBridgingFromAnotherNetwork_4_2072}>GFT tokens are required for all transactions on the SKALE network. You can top up your wallet using a credit card or by bridging from another network.</span></div>
+            </div>
+            <div className={styles.Container_4_2073}>
+              <div className={styles.Button_4_2074}>
+                <div className={styles.Container_4_2075}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M2.50006 1.87469C2.17347 1.76007 1.8158 1.93189 1.70117 2.25848C1.58654 2.58506 1.75837 2.94274 2.08496 3.05737L2.30295 3.13337C2.86088 3.32965 3.22754 3.45911 3.49731 3.59191C3.75039 3.71636 3.86147 3.81742 3.93497 3.92433C4.01014 4.03457 4.0686 4.18659 4.10201 4.48977C4.13542 4.80715 4.13709 5.22059 4.13709 5.83865V8.0119C4.13709 10.4691 4.18971 11.2793 4.91385 12.0427C5.63715 12.8061 6.80145 12.8061 9.13171 12.8061H13.5601C14.8638 12.8061 15.5161 12.8061 15.9763 12.4302C16.4374 12.0544 16.5693 11.4163 16.8324 10.14L17.2501 8.11463C17.5399 6.66134 17.6844 5.93554 17.3135 5.45361C16.9427 4.97169 15.6765 4.97169 14.2692 4.97169H5.38324C5.37972 4.76582 5.36774 4.56019 5.34733 4.3553C5.30223 3.9402 5.20534 3.56184 4.96981 3.21773C4.7326 2.87028 4.41689 2.64811 4.04856 2.46687C3.70445 2.29815 3.26679 2.14447 2.7523 1.96323L2.50006 1.87469ZM8.51365 7.37295C8.45599 7.0316 8.13253 6.80163 7.79118 6.85929C7.44984 6.91695 7.21986 7.24041 7.27752 7.58176L7.71935 10.186C7.77854 10.5256 8.10098 10.7535 8.44087 10.6961C8.78075 10.6386 9.01035 10.3173 8.95464 9.97717L8.51365 7.37295ZM13.0355 6.86013C12.8717 6.83231 12.7036 6.87071 12.5681 6.96689C12.4326 7.06307 12.3408 7.20913 12.3131 7.37295L11.8721 9.97717C11.8335 10.1984 11.9163 10.4233 12.0891 10.5668C12.2619 10.7102 12.4983 10.7501 12.7086 10.6715C12.9189 10.5928 13.0711 10.4076 13.1074 10.186L13.5484 7.58176C13.6058 7.24093 13.3763 6.918 13.0355 6.86013ZM6.22514 14.9943C6.91706 14.9943 7.47797 15.5553 7.47797 16.2472C7.47797 16.9391 6.91706 17.5 6.22514 17.5C5.53322 17.5 4.97231 16.9391 4.97231 16.2472C4.97231 15.5553 5.53322 14.9943 6.22514 14.9943ZM13.7421 14.9943C14.434 14.9943 14.995 15.5553 14.995 16.2472C14.995 16.9391 14.434 17.5 13.7421 17.5C13.0502 17.5 12.4893 16.9391 12.4893 16.2472C12.4893 15.5553 13.0502 14.9943 13.7421 14.9943Z" fill="#022C22" />
+                  </svg>
+                </div><span className={styles.BuyGftTokens_4_2077}>Buy GFT Tokens</span>
+              </div>
+              <div className={styles.Button_4_2078}><span className={styles.BridgeFromEthereum_4_2079}>Bridge from Ethereum</span></div>
+              <div className={styles.Button_4_2080}><span className={styles.CancelTransaction_4_2081}>Cancel Transaction</span></div>
+            </div>
+          </div>
+          <div className={styles.Container_4_2082}>
+            <div className={styles.Button_4_2083}>
+              <div className={styles.Container_4_2084}>
+                <div className={styles.G_4_2085}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M0 10.204C0 7.915 0 6.771 0.52 5.823C1.038 4.874 1.987 4.286 3.884 3.108L5.884 1.867C7.889 0.622 8.892 0 10 0C11.108 0 12.11 0.622 14.116 1.867L16.116 3.108C18.013 4.286 18.962 4.874 19.481 5.823C20 6.772 20 7.915 20 10.203V11.725C20 15.625 20 17.576 18.828 18.788C17.656 20 15.771 20 12 20H8C4.229 20 2.343 20 1.172 18.788C0.00100005 17.576 0 15.626 0 11.725V10.204Z" stroke="#94A3B8" strokeWidth="1.5" />
+                    <path d="M10 13V16" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Container_4_2088}><span className={styles.Home_4_2089}>Home</span></div>
+            </div>
+            <div className={styles.Button_4_2090}>
+              <div className={styles.Container_4_2091}>
+                <div className={styles.G_4_2092}><svg width="21" height="18" viewBox="0 0 21 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M19.0996 5.00382C19.043 5.00048 18.9826 4.99915 18.9186 4.99982H16.3936C14.3256 4.99982 12.5566 6.62782 12.5566 8.74981C12.5566 10.8718 14.3266 12.4998 16.3936 12.4998H18.9186C18.9826 12.5005 19.0433 12.4991 19.1006 12.4958C19.9798 12.4428 20.6835 11.7464 20.7456 10.8678C20.7496 10.8078 20.7496 10.7428 20.7496 10.6828V6.81682C20.7496 6.75682 20.7496 6.69182 20.7456 6.63182C20.6835 5.75325 19.9788 5.05683 19.0996 5.00382ZM16.1726 9.74981C16.7046 9.74981 17.1356 9.30181 17.1356 8.74981C17.1356 8.19781 16.7046 7.74981 16.1726 7.74981C15.6396 7.74981 15.2086 8.19781 15.2086 8.74981C15.2086 9.30181 15.6396 9.74981 16.1726 9.74981Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M18.918 14C18.9881 13.9972 19.0554 14.028 19.099 14.0829C19.1427 14.1379 19.1576 14.2103 19.139 14.278C18.939 14.99 18.62 15.598 18.109 16.108C17.36 16.858 16.411 17.189 15.239 17.347C14.099 17.5 12.644 17.5 10.806 17.5H8.694C6.856 17.5 5.4 17.5 4.261 17.347C3.089 17.189 2.14 16.857 1.391 16.109C0.643 15.36 0.311 14.411 0.153 13.239C0 12.099 0 10.644 0 8.806V8.694C0 6.856 0 5.4 0.153 4.26C0.311 3.088 0.643 2.139 1.391 1.39C2.14 0.642 3.089 0.31 4.261 0.152C5.401 0 6.856 0 8.694 0H10.806C12.644 0 14.1 0 15.239 0.153C16.411 0.311 17.36 0.643 18.109 1.391C18.62 1.903 18.939 2.51 19.139 3.222C19.1576 3.28968 19.1427 3.36215 19.099 3.41708C19.0554 3.47201 18.9881 3.50282 18.918 3.5H16.394C13.557 3.5 11.057 5.74 11.057 8.75C11.057 11.76 13.557 14 16.394 14H18.918ZM5 12.5C4.58579 12.5 4.25 12.1642 4.25 11.75V5.75C4.25 5.33579 4.58579 5 5 5C5.41421 5 5.75 5.33579 5.75 5.75V11.75C5.75 12.1642 5.41421 12.5 5 12.5Z" fill="#4ADE80" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Container_4_2095}><span className={styles.Wallet_4_2096}>Wallet</span></div>
+            </div>
+            <div className={styles.Button_4_2097}>
+              <div className={styles.Container_4_2098}>
+                <div className={styles.G_4_2099}><svg width="18" height="20" viewBox="0 0 18 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M0 20H18" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M0 9C0 8.057 0 7.586 0.293 7.293C0.586 7 1.057 7 2 7C2.943 7 3.414 7 3.707 7.293C4 7.586 4 8.057 4 9V15C4 15.943 4 16.414 3.707 16.707C3.414 17 2.943 17 2 17C1.057 17 0.586 17 0.293 16.707C0 16.414 0 15.943 0 15V9Z" stroke="#94A3B8" strokeWidth="1.5" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M7 5C7 4.057 7 3.586 7.293 3.293C7.586 3 8.057 3 9 3C9.943 3 10.414 3 10.707 3.293C11 3.586 11 4.057 11 5V15C11 15.943 11 16.414 10.707 16.707C10.414 17 9.943 17 9 17C8.057 17 7.586 17 7.293 16.707C7 16.414 7 15.943 7 15V5Z" stroke="#94A3B8" strokeWidth="1.5" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M14 2C14 1.057 14 0.586 14.293 0.293C14.586 0 15.057 0 16 0C16.943 0 17.414 0 17.707 0.293C18 0.586 18 1.057 18 2V15C18 15.943 18 16.414 17.707 16.707C17.414 17 16.943 17 16 17C15.057 17 14.586 17 14.293 16.707C14 16.414 14 15.943 14 15V2Z" stroke="#94A3B8" strokeWidth="1.5" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Container_4_2102}><span className={styles.Stats_4_2103}>Stats</span></div>
+            </div>
+            <div className={styles.Button_4_2104}>
+              <div className={styles.Container_4_2105}>
+                <div className={styles.G_4_2106}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M7 7C7 5.34315 8.34315 4 10 4C11.6569 4 13 5.34315 13 7C13 8.65685 11.6569 10 10 10C8.34315 10 7 8.65685 7 7Z" stroke="#94A3B8" strokeWidth="1.5" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M0 10C0 4.47715 4.47715 0 10 0C15.5228 0 20 4.47715 20 10C20 15.5228 15.5228 20 10 20C4.47715 20 0 15.5228 0 10Z" stroke="#94A3B8" strokeWidth="1.5" />
+                    <path d="M15.9703 18C15.8103 15.108 14.9253 13 10.0003 13C5.07527 13 4.19027 15.108 4.03027 18" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Container_4_2110}><span className={styles.Account_4_2111}>Account</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
