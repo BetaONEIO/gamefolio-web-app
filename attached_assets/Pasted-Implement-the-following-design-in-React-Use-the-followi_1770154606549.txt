@@ -1,0 +1,774 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/BuySuccess.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,400&display=swap";
+.BuySuccess_70_881 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_70_882 {
+  background: #020617;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 100%;
+  padding-bottom: 255px;
+  display: flex;
+}
+.Container_70_883 {
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 24px 24px 0;
+  display: flex;
+}
+.Container_70_884 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 32px;
+  width: 382px;
+  height: 848px;
+  padding-bottom: 0.5px;
+  display: flex;
+}
+.Container_70_885 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+  width: 300px;
+  display: flex;
+}
+.Container_70_886 {
+  justify-content: center;
+  align-items: center;
+  height: 36px;
+  display: flex;
+}
+.PurchaseComplete_70_887 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 302px;
+  height: 38px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 36px;
+  display: inline-block;
+}
+.Container_70_888 {
+  justify-content: center;
+  align-items: center;
+  height: 46px;
+  padding: 2.5px 7.766px 2.5px 8.234px;
+  display: flex;
+}
+.YourNftHasBeenSuccessfullyMintedAndTransferredToYourWallet_70_889 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 284px;
+  height: 41px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 22.75px;
+  display: inline-block;
+}
+.Container_70_890 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  height: 566px;
+  display: flex;
+}
+.Container_70_891 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b80;
+  border-radius: 24px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 382px;
+  padding: 1px;
+  display: flex;
+  overflow: hidden;
+  box-shadow:
+    0 8px 10px -6px #0000001a,
+    0 20px 25px -5px #0000001a;
+}
+.Container_70_892 {
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 380px;
+  height: 380px;
+  display: flex;
+}
+.Image_70_893 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 380px;
+  height: 380px;
+}
+.Container_70_894 {
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+  background: #02061799;
+  border: 1px solid #ffffff1a;
+  border-radius: 16px;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 95.2734px;
+  padding: 17px 16.727px 17px 17px;
+  display: flex;
+}
+.Container_70_895 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 142px;
+  height: 43px;
+  display: flex;
+}
+.Container_70_896 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 64px;
+  height: 15px;
+  padding: 1px 0;
+  display: flex;
+}
+.ItemName_70_897 {
+  color: #f8fafcb3;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 67px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_70_898 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 28px;
+  padding: 2.5px 0;
+  display: flex;
+}
+.Guardian_4412_70_899 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 145px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_70_900 {
+  box-sizing: border-box;
+  background: #4ade8033;
+  border: 1px solid #4ade804d;
+  border-radius: 16777200px;
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+  width: 77px;
+  height: 26px;
+  padding: 5px 13px;
+  display: flex;
+}
+.Container_70_901 {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+}
+.Container_70_903 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 27px;
+  height: 16px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.Rare_70_904 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 30px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_70_905 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 21px;
+  display: flex;
+}
+.Container_70_906 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 204px;
+  width: 340px;
+  height: 20px;
+  display: flex;
+}
+.Container_70_907 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.Status_70_908 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 45px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_70_909 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  gap: 2.5px;
+  height: 20px;
+  display: flex;
+}
+.Confirmed_70_910 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 76px;
+  height: 20px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_70_911 {
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+}
+.Container_70_913 {
+  background: #1e293b80;
+  width: 340px;
+  height: 1px;
+}
+.Container_70_914 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 118.867px;
+  width: 340px;
+  height: 20px;
+  display: flex;
+}
+.Container_70_915 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.TransactionHash_70_916 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 115px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_70_917 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  gap: 5.63281px;
+  height: 20px;
+  display: flex;
+}
+.x4f_9c2d_70_918 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 88px;
+  height: 20px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_70_919 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_70_922 {
+  background: #1e293b80;
+  width: 340px;
+  height: 1px;
+}
+.Container_70_923 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 200.063px;
+  width: 340px;
+  height: 20px;
+  display: flex;
+}
+.Container_70_924 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.TotalPaid_70_925 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 66px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_70_926 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+._50Gft_70_927 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 79px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_70_928 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 128px;
+  height: 128px;
+  display: flex;
+}
+.Container_70_929 {
+  filter: blur(32px);
+  background: #4ade804d;
+  border-radius: 16777200px;
+  width: 128px;
+  height: 128px;
+}
+.Container_70_930 {
+  width: 128px;
+  height: 128px;
+}
+.Container_70_931 {
+  background: #4ade80;
+  border-radius: 16777200px;
+  justify-content: center;
+  align-items: center;
+  width: 96px;
+  height: 96px;
+  padding: 20px;
+  display: flex;
+  box-shadow: 0 25px 50px -12px #4ade8066;
+}
+.Container_70_932 {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+}
+.Container_70_934 {
+  box-sizing: border-box;
+  border: 4px solid #4ade80;
+  border-radius: 16777200px;
+  width: 128px;
+  height: 128px;
+}
+.Container_70_935 {
+  box-sizing: border-box;
+  background: #020617;
+  border-top: 1px solid #1e293b80;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 33px 24px 32px;
+  display: flex;
+}
+.Button_70_936 {
+  background: #4ade80;
+  border-radius: 16px;
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6.5px;
+  width: 382px;
+  height: 52px;
+  padding: 16px 118.695px 16px 120.805px;
+  display: flex;
+  box-shadow:
+    0 4px 6px -4px #4ade8033,
+    0 10px 15px -3px #4ade8033;
+}
+.Container_70_937 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  overflow: hidden;
+}
+.ViewNftDetails_70_940 {
+  color: #022c22;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 116px;
+  height: 20px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Button_70_941 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6.5px;
+  width: 382px;
+  height: 54px;
+  padding: 17px 127.469px 17px 129.031px;
+  display: flex;
+}
+.Container_70_942 {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.G_70_943 {
+  width: 17.291px;
+  height: 14.583px;
+}
+.GoToMyNfTs_70_946 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 99px;
+  height: 20px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Header_70_947 {
+  backdrop-filter: blur(6px);
+  background: #020617cc;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 209px;
+  height: 104px;
+  padding: 48px 16px 16px;
+  display: flex;
+}
+.Container_70_948 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  width: 149px;
+  height: 40px;
+  display: flex;
+}
+.Button_70_949 {
+  box-sizing: border-box;
+  background: #1e293bcc;
+  border: 1px solid #1e293b80;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_70_950 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_70_952 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 93px;
+  height: 28px;
+  padding: 1px 0;
+  display: flex;
+}
+.Success_70_953 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.5px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 96px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Button_70_954 {
+  box-sizing: border-box;
+  background: #1e293bcc;
+  border: 1px solid #1e293b80;
+  border-radius: 16777200px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+  display: flex;
+}
+.Container_70_955 {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+
+```
+
+---
+
+```src/components/BuySuccess.tsx
+import React from 'react';
+import styles from '../styles/BuySuccess.module.css';
+
+
+export default function BuySuccess() {
+  return (
+    <div className={styles.BuySuccess_70_881}>
+      <div className={styles.Container_70_882}>
+        <div className={styles.Container_70_883}>
+          <div className={styles.Container_70_884}>
+            <div className={styles.Container_70_885}>
+              <div className={styles.Container_70_886}><span className={styles.PurchaseComplete_70_887}>Purchase Complete!</span></div>
+              <div className={styles.Container_70_888}><span className={styles.YourNftHasBeenSuccessfullyMintedAndTransferredToYourWallet_70_889}>Your NFT has been successfully minted and transferred to your wallet.</span></div>
+            </div>
+            <div className={styles.Container_70_890}>
+              <div className={styles.Container_70_891}>
+                <div className={styles.Container_70_892}>
+                  <div className={styles.Image_70_893}></div>
+                  <div className={styles.Container_70_894}>
+                    <div className={styles.Container_70_895}>
+                      <div className={styles.Container_70_896}><span className={styles.ItemName_70_897}>Item Name</span></div>
+                      <div className={styles.Container_70_898}><span className={styles.Guardian_4412_70_899}>Guardian #4412</span></div>
+                    </div>
+                    <div className={styles.Container_70_900}>
+                      <div className={styles.Container_70_901}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path fillRule="evenodd" clipRule="evenodd" d="M8.55467 14.4517C10.6387 14.0344 13.3333 12.5351 13.3333 8.6584C13.3333 5.13106 10.7513 2.78173 8.89467 1.70239C8.48201 1.46239 8.00001 1.77773 8.00001 2.25439V3.47306C8.00001 4.4344 7.596 6.18906 6.47334 6.91906C5.9 7.29173 5.28 6.73373 5.21067 6.05373L5.15334 5.49506C5.08667 4.84573 4.42534 4.45173 3.90667 4.84773C2.974 5.55773 2 6.8044 2 8.65773C2 13.3984 5.526 14.5844 7.28867 14.5844C7.39178 14.5844 7.49934 14.5811 7.61134 14.5744C6.74067 14.5004 5.33334 13.9604 5.33334 12.2137C5.33334 10.8471 6.33 9.92373 7.08734 9.47373C7.29134 9.35373 7.52934 9.5104 7.52934 9.74707V10.1404C7.52934 10.4404 7.646 10.9104 7.92267 11.2317C8.23601 11.5957 8.69534 11.2144 8.73201 10.7357C8.74401 10.5851 8.89601 10.4891 9.02667 10.5651C9.45401 10.8151 10 11.3484 10 12.2137C10 13.5791 9.24734 14.2071 8.55467 14.4517Z" fill="#4ADE80" />
+                        </svg>
+                      </div>
+                      <div className={styles.Container_70_903}><span className={styles.Rare_70_904}>Rare</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.Container_70_905}>
+                <div className={styles.Container_70_906}>
+                  <div className={styles.Container_70_907}><span className={styles.Status_70_908}>Status</span></div>
+                  <div className={styles.Container_70_909}><span className={styles.Confirmed_70_910}>Confirmed</span>
+                    <div className={styles.Container_70_911}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M6.3515 1.97329C6.24341 2.0703 6.13026 2.1615 6.01252 2.24653C5.80845 2.38349 5.57904 2.47799 5.338 2.52593C5.23322 2.54647 5.12365 2.55537 4.9052 2.57249C4.35668 2.61632 4.08208 2.63823 3.85335 2.71904C3.3235 2.9058 2.90677 3.32253 2.72001 3.85238C2.63921 4.0811 2.61729 4.3557 2.57347 4.90423C2.5656 5.04921 2.55006 5.19368 2.5269 5.33702C2.47897 5.57807 2.38446 5.80748 2.2475 6.01154C2.18793 6.10057 2.11671 6.18411 1.97427 6.35052C1.61749 6.76962 1.43876 6.97916 1.33398 7.1983C1.09225 7.70505 1.09225 8.29397 1.33398 8.80072C1.43876 9.01986 1.61749 9.22941 1.97427 9.6485C2.11671 9.81491 2.18793 9.89846 2.2475 9.98748C2.38446 10.1915 2.47897 10.421 2.5269 10.662C2.54745 10.7668 2.55635 10.8763 2.57347 11.0948C2.61729 11.6433 2.63921 11.9179 2.72001 12.1466C2.90677 12.6765 3.3235 13.0932 3.85335 13.28C4.08208 13.3608 4.35668 13.3827 4.9052 13.4265C5.12365 13.4437 5.23322 13.4526 5.338 13.4731C5.57904 13.521 5.80845 13.6162 6.01252 13.7525C6.10154 13.8121 6.18509 13.8833 6.3515 14.0257C6.77059 14.3825 6.98014 14.5612 7.19928 14.666C7.70603 14.9077 8.29495 14.9077 8.8017 14.666C9.02084 14.5612 9.23038 14.3825 9.64948 14.0257C9.81589 13.8833 9.89943 13.8121 9.98846 13.7525C10.1925 13.6155 10.4219 13.521 10.663 13.4731C10.7678 13.4526 10.8773 13.4437 11.0958 13.4265C11.6443 13.3827 11.9189 13.3608 12.1476 13.28C12.6775 13.0932 13.0942 12.6765 13.281 12.1466C13.3618 11.9179 13.3837 11.6433 13.4275 11.0948C13.4446 10.8763 13.4535 10.7668 13.4741 10.662C13.522 10.421 13.6172 10.1915 13.7535 9.98748C13.813 9.89846 13.8843 9.81491 14.0267 9.6485C14.3835 9.22941 14.5622 9.01986 14.667 8.80072C14.9087 8.29397 14.9087 7.70505 14.667 7.1983C14.5622 6.97916 14.3835 6.76962 14.0267 6.35052C13.9297 6.24244 13.8385 6.12929 13.7535 6.01154C13.6164 5.80751 13.5214 5.5782 13.4741 5.33702C13.4509 5.19368 13.4354 5.04921 13.4275 4.90423C13.3837 4.3557 13.3618 4.0811 13.281 3.85238C13.0942 3.32253 12.6775 2.9058 12.1476 2.71904C11.9189 2.63823 11.6443 2.61632 11.0958 2.57249C10.9508 2.56463 10.8063 2.54908 10.663 2.52593C10.4218 2.47855 10.1925 2.38357 9.98846 2.24653C9.87071 2.1615 9.75756 2.0703 9.64948 1.97329C9.23038 1.61651 9.02084 1.43778 8.8017 1.33301C8.29508 1.09052 7.7059 1.09052 7.19928 1.33301C6.98014 1.43778 6.77059 1.61651 6.3515 1.97329ZM10.9951 6.5361C11.1962 6.31603 11.1885 5.97673 10.9777 5.76595C10.767 5.55517 10.4277 5.54752 10.2076 5.74858L6.88632 9.06985L5.79339 7.9776C5.57332 7.77653 5.23401 7.78418 5.02323 7.99496C4.81245 8.20574 4.8048 8.54505 5.00587 8.76512L6.49188 10.2511C6.70948 10.4683 7.0618 10.4683 7.2794 10.2511L10.9951 6.5361Z" fill="#4ADE80" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.Container_70_913}></div>
+                <div className={styles.Container_70_914}>
+                  <div className={styles.Container_70_915}><span className={styles.TransactionHash_70_916}>Transaction Hash</span></div>
+                  <div className={styles.Container_70_917}><span className={styles.x4f_9c2d_70_918}>0x4f...9c2d</span>
+                    <div className={styles.Container_70_919}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M10.16 1.33325H7.564C6.388 1.33325 5.456 1.33325 4.72733 1.43192C3.97667 1.53325 3.36933 1.74659 2.89067 2.22725C2.41133 2.70792 2.19867 3.31792 2.098 4.07125C2 4.80325 2 5.73858 2 6.91925V10.8112C2 11.8166 2.61333 12.6779 3.48467 13.0392C3.44 12.4326 3.44 11.5826 3.44 10.8746V7.53458C3.44 6.68058 3.44 5.94392 3.51867 5.35458C3.60333 4.72258 3.794 4.11725 4.28333 3.62592C4.77267 3.13458 5.376 2.94325 6.00533 2.85792C6.592 2.77925 7.32533 2.77925 8.17666 2.77925H10.2233C11.074 2.77925 11.806 2.77925 12.3933 2.85792C12.0333 1.93876 11.1472 1.33381 10.16 1.33325Z" fill="#94A3B8" />
+                        <path fillRule="evenodd" clipRule="evenodd" d="M4.40039 7.59801C4.40039 5.78068 4.40039 4.87201 4.96306 4.30734C5.52506 3.74268 6.42973 3.74268 8.24039 3.74268H10.1604C11.9704 3.74268 12.8757 3.74268 13.4384 4.30734C14.0011 4.87201 14.0004 5.78068 14.0004 7.59801V10.8113C14.0004 12.6287 14.0004 13.5373 13.4384 14.102C12.8757 14.6667 11.9704 14.6667 10.1604 14.6667H8.24039C6.43039 14.6667 5.52506 14.6667 4.96306 14.102C4.40039 13.5373 4.40039 12.6287 4.40039 10.8113L4.40039 7.59801Z" fill="#94A3B8" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.Container_70_922}></div>
+                <div className={styles.Container_70_923}>
+                  <div className={styles.Container_70_924}><span className={styles.TotalPaid_70_925}>Total Paid</span></div>
+                  <div className={styles.Container_70_926}><span className={styles._50Gft_70_927}>321.50 GFT</span></div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_70_928}>
+              <div className={styles.Container_70_929}></div>
+              <div className={styles.Container_70_930}>
+                <div className={styles.Container_70_931}>
+                  <div className={styles.Container_70_932}><svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M51.3336 28.0001C51.3336 40.8871 40.8873 51.3334 28.0003 51.3334C15.1133 51.3334 4.66699 40.8871 4.66699 28.0001C4.66699 15.1131 15.1133 4.66675 28.0003 4.66675C40.8873 4.66675 51.3336 15.1131 51.3336 28.0001ZM37.4037 20.9301C38.086 21.6133 38.086 22.7202 37.4037 23.4034L25.737 35.0701C25.0537 35.7525 23.9469 35.7525 23.2637 35.0701L18.597 30.4034C18.1288 29.9671 17.9361 29.3101 18.0944 28.6901C18.2528 28.07 18.7369 27.5859 19.357 27.4275C19.977 27.2692 20.6341 27.4619 21.0703 27.9301L24.5003 31.3601L29.7153 26.1451L34.9303 20.9301C35.6136 20.2477 36.7204 20.2477 37.4037 20.9301Z" fill="#022C22" />
+                    </svg>
+                  </div>
+                </div>
+                <div className={styles.Container_70_934}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_70_935}>
+          <div className={styles.Button_70_936}>
+            <div className={styles.Container_70_937}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" clipRule="evenodd" d="M8.125 10C8.125 8.96447 8.96447 8.125 10 8.125C11.0355 8.125 11.875 8.96447 11.875 10C11.875 11.0355 11.0355 11.875 10 11.875C8.96447 11.875 8.125 11.0355 8.125 10Z" fill="#022C22" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M1.66699 9.99991C1.66699 11.3666 2.02116 11.8257 2.72949 12.7466C4.14366 14.5832 6.51532 16.6666 10.0003 16.6666C13.4853 16.6666 15.857 14.5832 17.2711 12.7466C17.9795 11.8266 18.3336 11.3657 18.3336 9.99991C18.3336 8.63325 17.9795 8.17408 17.2711 7.25325C15.857 5.41658 13.4853 3.33325 10.0003 3.33325C6.51532 3.33325 4.14366 5.41658 2.72949 7.25325C2.02116 8.17492 1.66699 8.63408 1.66699 9.99991ZM10.0003 6.87492C8.27443 6.87492 6.87532 8.27403 6.87532 9.99991C6.87532 11.7258 8.27443 13.1249 10.0003 13.1249C11.7262 13.1249 13.1253 11.7258 13.1253 9.99991C13.1253 8.27403 11.7262 6.87492 10.0003 6.87492Z" fill="#022C22" />
+              </svg>
+            </div><span className={styles.ViewNftDetails_70_940}>View NFT Details</span>
+          </div>
+          <div className={styles.Button_70_941}>
+            <div className={styles.Container_70_942}>
+              <div className={styles.G_70_943}><svg width="18" height="15" viewBox="0 0 18 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M15.9164 4.16984C15.8691 4.16706 15.8189 4.16595 15.7655 4.1665H13.6614C11.938 4.1665 10.4639 5.52317 10.4639 7.2915C10.4639 9.05984 11.9389 10.4165 13.6614 10.4165H15.7655C15.8189 10.4171 15.8694 10.4159 15.9172 10.4132C16.6498 10.369 17.2363 9.78864 17.288 9.0565C17.2914 9.0065 17.2914 8.95234 17.2914 8.90234V5.68067C17.2914 5.63067 17.2914 5.5765 17.288 5.5265C17.2363 4.79437 16.649 4.21401 15.9164 4.16984ZM13.4772 8.12484C13.9205 8.12484 14.2797 7.7515 14.2797 7.2915C14.2797 6.8315 13.9205 6.45817 13.4772 6.45817C13.033 6.45817 12.6739 6.8315 12.6739 7.2915C12.6739 7.7515 13.033 8.12484 13.4772 8.12484Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M15.765 11.6667C15.8234 11.6643 15.8795 11.69 15.9158 11.7357C15.9522 11.7815 15.9646 11.8419 15.9491 11.8983C15.7825 12.4916 15.5166 12.9983 15.0908 13.4233C14.4666 14.0483 13.6758 14.3241 12.6991 14.4558C11.7492 14.5833 10.5367 14.5833 9.00499 14.5833H7.24499C5.71333 14.5833 4.49999 14.5833 3.55083 14.4558C2.57416 14.3241 1.78333 14.0475 1.15917 13.4241C0.535833 12.8 0.259166 12.0092 0.1275 11.0325C0 10.0825 0 8.86999 0 7.33832V7.24499C0 5.71333 0 4.49999 0.1275 3.54999C0.259166 2.57333 0.535833 1.7825 1.15917 1.15833C1.78333 0.534999 2.57416 0.258333 3.55083 0.126666C4.50083 0 5.71333 0 7.24499 0H9.00499C10.5367 0 11.75 0 12.6991 0.1275C13.6758 0.259166 14.4666 0.535833 15.0908 1.15917C15.5166 1.58583 15.7825 2.09166 15.9491 2.685C15.9646 2.74139 15.9522 2.80179 15.9158 2.84756C15.8795 2.89334 15.8234 2.91901 15.765 2.91666H13.6616C11.2975 2.91666 9.21415 4.78333 9.21415 7.29166C9.21415 9.79999 11.2975 11.6667 13.6616 11.6667H15.765ZM4.16666 10.4167C3.82148 10.4167 3.54166 10.1368 3.54166 9.79165V4.79166C3.54166 4.44648 3.82148 4.16666 4.16666 4.16666C4.51184 4.16666 4.79166 4.44648 4.79166 4.79166V9.79165C4.79166 10.1368 4.51184 10.4167 4.16666 10.4167Z" fill="#F8FAFC" />
+                </svg>
+              </div>
+            </div><span className={styles.GoToMyNfTs_70_946}>Go to My NFTs</span>
+          </div>
+        </div>
+        <div className={styles.Header_70_947}>
+          <div className={styles.Container_70_948}>
+            <div className={styles.Button_70_949}>
+              <div className={styles.Container_70_950}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_70_952}><span className={styles.Success_70_953}>Success</span></div>
+          </div>
+          <div className={styles.Button_70_954}>
+            <div className={styles.Container_70_955}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" clipRule="evenodd" d="M11.5028 4.44413C11.5028 2.91079 12.7528 1.66663 14.2928 1.66663C15.0313 1.66463 15.7403 1.9562 16.2637 2.47713C16.7872 2.99806 17.0821 3.70565 17.0837 4.44413C17.0837 5.9783 15.8337 7.22247 14.2928 7.22247C13.5465 7.22301 12.831 6.9247 12.3062 6.39413L8.44367 9.02414C8.55104 9.55998 8.49829 10.1156 8.292 10.6216L12.527 13.405C13.026 12.9984 13.6501 12.7767 14.2937 12.7775C15.0321 12.7757 15.7411 13.0675 16.2643 13.5886C16.7876 14.1097 17.0824 14.8173 17.0837 15.5558C17.0837 17.0891 15.8337 18.3333 14.2928 18.3333C13.5545 18.3351 12.8457 18.0434 12.3225 17.5225C11.7992 17.0016 11.5044 16.2941 11.5028 15.5558C11.5022 15.1663 11.5843 14.7812 11.7437 14.4258L7.542 11.6666C7.03302 12.1088 6.38121 12.3518 5.707 12.3508C4.96852 12.3526 4.25961 12.0608 3.73634 11.5397C3.21306 11.0186 2.91832 10.3109 2.91699 9.57247C2.91854 8.83414 3.21338 8.12667 3.73663 7.60576C4.25988 7.08486 4.96866 6.7932 5.707 6.79497C6.59366 6.79497 7.382 7.2058 7.89283 7.8458L11.637 5.29663C11.5477 5.0213 11.5024 4.73359 11.5028 4.44413Z" fill="#F8FAFC" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+

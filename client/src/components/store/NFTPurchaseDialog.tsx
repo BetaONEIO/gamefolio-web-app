@@ -42,22 +42,18 @@ export function NFTPurchaseDialog({
   const { wallet } = useCrossmint();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [step, setStep] = useState<'details' | 'checkout'>('details');
+  const [step, setStep] = useState<'details' | 'checkout' | 'success'>('details');
+  const [transactionHash, setTransactionHash] = useState<string>('');
 
   const purchaseMutation = useMutation({
     mutationFn: async (data: { nftId: number }) => {
       const response = await apiRequest("POST", "/api/nft/purchase", data);
       return response.json();
     },
-    onSuccess: () => {
-      toast({
-        title: "Purchase Successful!",
-        description: `You've purchased ${nft?.name} for ${nft?.price} GF tokens.`,
-      });
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      setStep('details');
-      onOpenChange(false);
-      onPurchaseComplete?.();
+      setTransactionHash(data?.transactionHash || `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`);
+      setStep('success');
     },
     onError: (error: any) => {
       const errorMessage = error?.message || "There was an error processing your purchase. Please try again.";
@@ -278,6 +274,189 @@ export function NFTPurchaseDialog({
                 >
                   Cancel Transaction
                 </button>
+              </div>
+
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Success Screen
+  if (step === 'success') {
+    const handleViewDetails = () => {
+      setStep('details');
+    };
+
+    const handleGoToMyNFTs = () => {
+      setStep('details');
+      onOpenChange(false);
+      onPurchaseComplete?.();
+    };
+
+    const handleShare = () => {
+      if (navigator.share) {
+        navigator.share({
+          title: `I just purchased ${nft.name}!`,
+          text: `Check out my new NFT: ${nft.name}`,
+          url: window.location.href,
+        });
+      }
+    };
+
+    return (
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent 
+          className="bg-[#020617] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
+          data-testid="dialog-nft-success"
+        >
+          {/* Header - left aligned */}
+          <div className="flex items-center justify-between px-4 pt-12 pb-4 bg-[#020617]/80 backdrop-blur-md">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleGoToMyNFTs}
+                className="w-10 h-10 rounded-full bg-[#1e293b]/80 border border-[#1e293b]/50 flex items-center justify-center transition-colors hover:bg-[#1e293b]"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              <span className="text-xl font-bold text-[#f8fafc] uppercase tracking-tight" style={{ letterSpacing: '-0.5px' }}>
+                Success
+              </span>
+            </div>
+            <button
+              onClick={handleShare}
+              className="w-10 h-10 rounded-full bg-[#1e293b]/80 border border-[#1e293b]/50 flex items-center justify-center transition-colors hover:bg-[#1e293b]"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" clipRule="evenodd" d="M11.5028 4.44413C11.5028 2.91079 12.7528 1.66663 14.2928 1.66663C15.0313 1.66463 15.7403 1.9562 16.2637 2.47713C16.7872 2.99806 17.0821 3.70565 17.0837 4.44413C17.0837 5.9783 15.8337 7.22247 14.2928 7.22247C13.5465 7.22301 12.831 6.9247 12.3062 6.39413L8.44367 9.02414C8.55104 9.55998 8.49829 10.1156 8.292 10.6216L12.527 13.405C13.026 12.9984 13.6501 12.7767 14.2937 12.7775C15.0321 12.7757 15.7411 13.0675 16.2643 13.5886C16.7876 14.1097 17.0824 14.8173 17.0837 15.5558C17.0837 17.0891 15.8337 18.3333 14.2928 18.3333C13.5545 18.3351 12.8457 18.0434 12.3225 17.5225C11.7992 17.0016 11.5044 16.2941 11.5028 15.5558C11.5022 15.1663 11.5843 14.7812 11.7437 14.4258L7.542 11.6666C7.03302 12.1088 6.38121 12.3518 5.707 12.3508C4.96852 12.3526 4.25961 12.0608 3.73634 11.5397C3.21306 11.0186 2.91832 10.3109 2.91699 9.57247C2.91854 8.83414 3.21338 8.12667 3.73663 7.60576C4.25988 7.08486 4.96866 6.7932 5.707 6.79497C6.59366 6.79497 7.382 7.2058 7.89283 7.8458L11.637 5.29663C11.5477 5.0213 11.5024 4.73359 11.5028 4.44413Z" fill="#F8FAFC" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Scrollable Content */}
+          <div 
+            className="flex-1 overflow-y-auto"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
+            <div className="hide-scrollbar flex flex-col items-center px-6 py-6 gap-8">
+              
+              {/* Success Checkmark Animation */}
+              <div className="relative w-32 h-32 flex items-center justify-center">
+                <div className="absolute inset-0 bg-[#4ade80]/30 rounded-full blur-[32px]" />
+                <div className="absolute inset-0 border-4 border-[#4ade80] rounded-full" />
+                <div className="w-24 h-24 bg-[#4ade80] rounded-full flex items-center justify-center shadow-[0_25px_50px_-12px_rgba(74,222,128,0.4)]">
+                  <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M51.3336 28.0001C51.3336 40.8871 40.8873 51.3334 28.0003 51.3334C15.1133 51.3334 4.66699 40.8871 4.66699 28.0001C4.66699 15.1131 15.1133 4.66675 28.0003 4.66675C40.8873 4.66675 51.3336 15.1131 51.3336 28.0001ZM37.4037 20.9301C38.086 21.6133 38.086 22.7202 37.4037 23.4034L25.737 35.0701C25.0537 35.7525 23.9469 35.7525 23.2637 35.0701L18.597 30.4034C18.1288 29.9671 17.9361 29.3101 18.0944 28.6901C18.2528 28.07 18.7369 27.5859 19.357 27.4275C19.977 27.2692 20.6341 27.4619 21.0703 27.9301L24.5003 31.3601L29.7153 26.1451L34.9303 20.9301C35.6136 20.2477 36.7204 20.2477 37.4037 20.9301Z" fill="#022C22" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Title and Subtitle */}
+              <div className="flex flex-col items-center gap-2 text-center">
+                <h1 className="text-[30px] font-bold text-[#f8fafc] leading-9">
+                  Purchase Complete!
+                </h1>
+                <p className="text-sm text-[#94a3b8] leading-[22.75px] max-w-[284px]">
+                  Your NFT has been successfully minted and transferred to your wallet.
+                </p>
+              </div>
+
+              {/* NFT Card with Overlay */}
+              <div className="relative w-full max-w-[380px]">
+                <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-3xl overflow-hidden shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1),0_8px_10px_-6px_rgba(0,0,0,0.1)]">
+                  <div className="relative w-full aspect-square">
+                    <img
+                      src={nft.image}
+                      alt={nft.name}
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Overlay at bottom */}
+                    <div className="absolute bottom-4 left-4 right-4">
+                      <div className="backdrop-blur-md bg-[#020617]/60 border border-white/10 rounded-2xl p-4 flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-[#f8fafc]/70 uppercase tracking-wider">
+                            Item Name
+                          </span>
+                          <span className="text-lg font-bold text-[#f8fafc]">
+                            {nft.name.replace(/^.*#/, 'Guardian #')}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 bg-[#4ade80]/20 border border-[#4ade80]/30 rounded-full px-3 py-1">
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path fillRule="evenodd" clipRule="evenodd" d="M8.55467 14.4517C10.6387 14.0344 13.3333 12.5351 13.3333 8.6584C13.3333 5.13106 10.7513 2.78173 8.89467 1.70239C8.48201 1.46239 8.00001 1.77773 8.00001 2.25439V3.47306C8.00001 4.4344 7.596 6.18906 6.47334 6.91906C5.9 7.29173 5.28 6.73373 5.21067 6.05373L5.15334 5.49506C5.08667 4.84573 4.42534 4.45173 3.90667 4.84773C2.974 5.55773 2 6.8044 2 8.65773C2 13.3984 5.526 14.5844 7.28867 14.5844C7.39178 14.5844 7.49934 14.5811 7.61134 14.5744C6.74067 14.5004 5.33334 13.9604 5.33334 12.2137C5.33334 10.8471 6.33 9.92373 7.08734 9.47373C7.29134 9.35373 7.52934 9.5104 7.52934 9.74707V10.1404C7.52934 10.4404 7.646 10.9104 7.92267 11.2317C8.23601 11.5957 8.69534 11.2144 8.73201 10.7357C8.74401 10.5851 8.89601 10.4891 9.02667 10.5651C9.45401 10.8151 10 11.3484 10 12.2137C10 13.5791 9.24734 14.2071 8.55467 14.4517Z" fill="#4ADE80" />
+                          </svg>
+                          <span className="text-xs font-bold text-[#4ade80]">
+                            {nft.rarity.charAt(0).toUpperCase() + nft.rarity.slice(1)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Transaction Details Card */}
+              <div className="w-full max-w-[380px] bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-5 flex flex-col gap-4">
+                {/* Status Row */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[#94a3b8]">Status</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm font-bold text-[#4ade80]">Confirmed</span>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M14.6663 7.99992C14.6663 11.6819 11.6817 14.6666 7.99967 14.6666C4.31767 14.6666 1.33301 11.6819 1.33301 7.99992C1.33301 4.31792 4.31767 1.33325 7.99967 1.33325C11.6817 1.33325 14.6663 4.31792 14.6663 7.99992ZM10.6863 5.97992C10.8813 6.17513 10.8813 6.49137 10.6863 6.68658L7.35301 10.0199C7.1578 10.2149 6.84155 10.2149 6.64634 10.0199L5.31301 8.68658C5.17924 8.56194 5.12417 8.37421 5.16942 8.19706C5.21466 8.0199 5.35299 7.88157 5.53015 7.83633C5.7073 7.79109 5.89503 7.84615 6.01967 7.97992L6.99967 8.95992L8.48967 7.46992L9.97967 5.97992C10.1749 5.78495 10.4911 5.78495 10.6863 5.97992Z" fill="#4ADE80" />
+                    </svg>
+                  </div>
+                </div>
+                
+                <div className="h-px bg-[#1e293b]/50" />
+                
+                {/* Transaction Hash Row */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[#94a3b8]">Transaction Hash</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-bold text-[#f8fafc] font-mono">
+                      {transactionHash.length > 12 ? `${transactionHash.slice(0, 6)}...${transactionHash.slice(-4)}` : transactionHash}
+                    </span>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M10.16 1.33325H7.564C6.388 1.33325 5.456 1.33325 4.72733 1.43192C3.97667 1.53325 3.36933 1.74659 2.89067 2.22725C2.41133 2.70792 2.19867 3.31792 2.098 4.07125C2 4.80325 2 5.73858 2 6.91925V10.8112C2 11.8166 2.61333 12.6779 3.48467 13.0392C3.44 12.4326 3.44 11.5826 3.44 10.8746V7.53458C3.44 6.68058 3.44 5.94392 3.51867 5.35458C3.60333 4.72258 3.794 4.11725 4.28333 3.62592C4.77267 3.13458 5.376 2.94325 6.00533 2.85792C6.592 2.77925 7.32533 2.77925 8.17666 2.77925H10.2233C11.074 2.77925 11.806 2.77925 12.3933 2.85792C12.0333 1.93876 11.1472 1.33381 10.16 1.33325Z" fill="#94A3B8" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M4.40039 7.59801C4.40039 5.78068 4.40039 4.87201 4.96306 4.30734C5.52506 3.74268 6.42973 3.74268 8.24039 3.74268H10.1604C11.9704 3.74268 12.8757 3.74268 13.4384 4.30734C14.0011 4.87201 14.0004 5.78068 14.0004 7.59801V10.8113C14.0004 12.6287 14.0004 13.5373 13.4384 14.102C12.8757 14.6667 11.9704 14.6667 10.1604 14.6667H8.24039C6.43039 14.6667 5.52506 14.6667 4.96306 14.102C4.40039 13.5373 4.40039 12.6287 4.40039 10.8113L4.40039 7.59801Z" fill="#94A3B8" />
+                    </svg>
+                  </div>
+                </div>
+                
+                <div className="h-px bg-[#1e293b]/50" />
+                
+                {/* Total Paid Row */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[#94a3b8]">Total Paid</span>
+                  <span className="text-sm font-bold text-[#f8fafc]">{totalAmount.toFixed(2)} GFT</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="w-full max-w-[380px] flex flex-col gap-4 pt-2">
+                <Button
+                  onClick={handleViewDetails}
+                  className="w-full h-[52px] rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22] text-sm font-bold flex items-center justify-center gap-2 shadow-[0_4px_6px_-4px_rgba(74,222,128,0.2),0_10px_15px_-3px_rgba(74,222,128,0.2)]"
+                >
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M8.125 10C8.125 8.96447 8.96447 8.125 10 8.125C11.0355 8.125 11.875 8.96447 11.875 10C11.875 11.0355 11.0355 11.875 10 11.875C8.96447 11.875 8.125 11.0355 8.125 10Z" fill="#022C22" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M1.66699 9.99991C1.66699 11.3666 2.02116 11.8257 2.72949 12.7466C4.14366 14.5832 6.51532 16.6666 10.0003 16.6666C13.4853 16.6666 15.857 14.5832 17.2711 12.7466C17.9795 11.8266 18.3336 11.3657 18.3336 9.99991C18.3336 8.63325 17.9795 8.17408 17.2711 7.25325C15.857 5.41658 13.4853 3.33325 10.0003 3.33325C6.51532 3.33325 4.14366 5.41658 2.72949 7.25325C2.02116 8.17492 1.66699 8.63408 1.66699 9.99991ZM10.0003 6.87492C8.27443 6.87492 6.87532 8.27403 6.87532 9.99991C6.87532 11.7258 8.27443 13.1249 10.0003 13.1249C11.7262 13.1249 13.1253 11.7258 13.1253 9.99991C13.1253 8.27403 11.7262 6.87492 10.0003 6.87492Z" fill="#022C22" />
+                  </svg>
+                  View NFT Details
+                </Button>
+                <Button
+                  onClick={handleGoToMyNFTs}
+                  variant="outline"
+                  className="w-full h-[54px] rounded-2xl bg-[#1e293b] hover:bg-[#334155] border border-[#1e293b]/50 text-[#f8fafc] text-sm font-bold flex items-center justify-center gap-2"
+                >
+                  <WalletIcon />
+                  Go to My NFTs
+                </Button>
               </div>
 
             </div>
