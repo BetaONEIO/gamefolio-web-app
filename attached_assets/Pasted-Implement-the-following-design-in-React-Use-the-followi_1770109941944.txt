@@ -1,0 +1,870 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/ConfirmingTransaction.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,400;0,900&display=swap";
+.ConfirmingTransaction_4_1400 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_4_1401 {
+  flex-direction: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  display: flex;
+}
+.Container_4_1402 {
+  background: #020617;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  display: flex;
+}
+.Container_4_1403 {
+  box-sizing: border-box;
+  background: #020617;
+  border-bottom: 1px solid #1e293b4d;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 96.8125px;
+  height: 113px;
+  padding: 48px 24px 25px;
+  display: flex;
+}
+.Button_4_1404 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 33554400px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_4_1405 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_4_1407 {
+  justify-content: center;
+  align-items: center;
+  width: 109px;
+  height: 28px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Processing_4_1408 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 112px;
+  height: 25px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_4_1409 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 33554400px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_4_1410 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_4_1412 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 48px;
+  height: 686px;
+  padding: 0 24px;
+  display: flex;
+}
+.Container_4_1413 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  width: 297px;
+  display: flex;
+}
+.Container_4_1414 {
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 1px 0;
+  display: flex;
+}
+.SubmittingTransaction_4_1415 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 300px;
+  height: 30px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_4_1416 {
+  justify-content: center;
+  align-items: center;
+  width: 280px;
+  height: 72px;
+  padding: 1px 10.188px 2px 10.813px;
+  display: flex;
+}
+.PleaseDonTCloseTheAppOrLockYourScreenWhileWeProcessYourRequest_4_1417 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 259px;
+  height: 69px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_4_1418 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px;
+  width: 382px;
+  height: 336px;
+  display: flex;
+}
+.Container_4_1419 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+  height: 76px;
+  padding-right: 188px;
+  display: flex;
+}
+.Container_4_1420 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 146px;
+  height: 36px;
+  display: flex;
+}
+.Container_4_1421 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.TransactionPrepared_4_1422 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 149px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1423 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 16px;
+  padding: 0 17px 1px 0;
+  display: flex;
+}
+.SuccessfullyInitialized_4_1424 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 130px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_4_1425 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  height: 76px;
+  display: flex;
+}
+.Container_4_1426 {
+  background: #4ade80;
+  border-radius: 33554400px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 6px;
+  display: flex;
+}
+.Container_4_1427 {
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_4_1429 {
+  background: #4ade804d;
+  flex-shrink: 0;
+  width: 2px;
+  height: 40px;
+}
+.Container_4_1430 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+  height: 76px;
+  padding-right: 201px;
+  display: flex;
+}
+.Container_4_1431 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 133px;
+  height: 36px;
+  display: flex;
+}
+.Container_4_1432 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.SigningTransaction_4_1433 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 136px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1434 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 16px;
+  padding: 0 7px 1px 0;
+  display: flex;
+}
+.AuthenticatedByUser_4_1435 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 127px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_4_1436 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  height: 76px;
+  display: flex;
+}
+.Container_4_1437 {
+  background: #4ade80;
+  border-radius: 33554400px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 6px;
+  display: flex;
+}
+.Container_4_1438 {
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_4_1440 {
+  background: #4ade80;
+  flex-shrink: 0;
+  width: 2px;
+  height: 40px;
+}
+.Container_4_1441 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+  height: 76px;
+  padding-right: 162px;
+  display: flex;
+}
+.Container_4_1442 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 172px;
+  height: 36px;
+  display: flex;
+}
+.Container_4_1443 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.BroadcastingToNetwork_4_1444 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  width: 175px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1445 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 16px;
+  padding: 0 5px 1px 0;
+  display: flex;
+}
+.WaitingForNodeAcceptance_4_1446 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 168px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_4_1447 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  height: 76px;
+  display: flex;
+}
+.Container_4_1448 {
+  box-sizing: border-box;
+  background: #4ade8033;
+  border: 2px solid #4ade80;
+  border-radius: 33554400px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 4.175px 3.825px 3.825px 4.175px;
+  display: flex;
+}
+.Container_4_1449 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_4_1451 {
+  background: #1e293b80;
+  flex-shrink: 0;
+  width: 2px;
+  height: 40px;
+}
+.Container_4_1452 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+  height: 36px;
+  padding-right: 210px;
+  display: flex;
+}
+.Container_4_1453 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  height: 36px;
+  display: flex;
+}
+.Container_4_1454 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.FinalConfirmation_4_1455 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 127px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1456 {
+  flex-shrink: 0;
+  height: 16px;
+}
+.Container_4_1457 {
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  display: flex;
+}
+.Container_4_1458 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 2px solid #1e293b;
+  border-radius: 33554400px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  padding: 6px;
+  display: flex;
+}
+.Container_4_1459 {
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_4_1461 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  width: 382px;
+  height: 94px;
+  padding: 21px;
+  display: flex;
+}
+.Container_4_1462 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 130.438px;
+  width: 340px;
+  height: 20px;
+  display: flex;
+}
+.Container_4_1463 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 128px;
+  height: 16px;
+  padding-bottom: 1px;
+  display: flex;
+}
+.TransactionType_4_1464 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 131px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_4_1465 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.StakingGft_4_1466 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  width: 85px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1467 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 156.859px;
+  width: 340px;
+  height: 20px;
+  display: flex;
+}
+.Container_4_1468 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 92px;
+  height: 16px;
+  padding-bottom: 1px;
+  display: flex;
+}
+.NetworkFee_4_1469 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 95px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_4_1470 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+._00042Eth_4_1471 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 95px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1472 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 128px;
+  height: 128px;
+  display: flex;
+}
+.Container_4_1473 {
+  filter: blur(20px);
+  background: #4ade8033;
+  border-radius: 33554400px;
+  width: 192px;
+  height: 192px;
+}
+.Container_4_1474 {
+  box-sizing: border-box;
+  border: 4px solid #4ade80;
+  border-radius: 33554400px;
+  width: 177px;
+  height: 177px;
+}
+.Container_4_1475 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 33554400px;
+  justify-content: center;
+  align-items: center;
+  width: 128px;
+  height: 128px;
+  padding: 44px 31.281px 44px 31.719px;
+  display: flex;
+  box-shadow:
+    0 8px 10px -6px #0000001a,
+    0 20px 25px -5px #0000001a;
+}
+.Container_4_1476 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 65px;
+  height: 40px;
+  display: flex;
+}
+.Gft_4_1477 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.8px;
+  flex-shrink: 0;
+  width: 70px;
+  height: 45px;
+  font-family: Plus Jakarta Sans;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 40px;
+  display: inline-block;
+}
+.Container_4_1478 {
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+  background: #020617cc;
+  border-top: 1px solid #1e293b4d;
+  justify-content: center;
+  align-items: center;
+  height: 133px;
+  padding: 25px 24px 40px;
+  display: flex;
+}
+.Button_4_1479 {
+  background: #1e293b;
+  border-radius: 16px;
+  flex-flow: row;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  width: 382px;
+  height: 68px;
+  padding: 20px 113.984px 20px 114.016px;
+  display: flex;
+}
+.Container_4_1480 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_4_1482 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 118px;
+  height: 28px;
+  padding: 2px 0 3px;
+  display: flex;
+}
+.Processing_4_1483 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 121px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+
+```
+
+---
+
+```src/components/ConfirmingTransaction.tsx
+import React from 'react';
+import styles from '../styles/ConfirmingTransaction.module.css';
+
+
+export default function ConfirmingTransaction() {
+  return (
+    <div className={styles.ConfirmingTransaction_4_1400}>
+      <div className={styles.Container_4_1401}>
+        <div className={styles.Container_4_1402}>
+          <div className={styles.Container_4_1403}>
+            <div className={styles.Button_4_1404}>
+              <div className={styles.Container_4_1405}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_4_1407}><span className={styles.Processing_4_1408}>Processing</span></div>
+            <div className={styles.Container_4_1409}>
+              <div className={styles.Container_4_1410}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M22 12C22 17.523 17.523 22 12 22C6.477 22 2 17.523 2 12C2 6.477 6.477 2 12 2C17.523 2 22 6.477 22 12ZM12 17.75C12.4142 17.75 12.75 17.4142 12.75 17V11C12.75 10.5858 12.4142 10.25 12 10.25C11.5858 10.25 11.25 10.5858 11.25 11V17C11.25 17.414 11.586 17.75 12 17.75ZM12 7C12.5523 7 13 7.44772 13 8C13 8.55228 12.5523 9 12 9C11.4477 9 11 8.55228 11 8C11 7.44772 11.4477 7 12 7Z" fill="#4ADE80" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_4_1412}>
+            <div className={styles.Container_4_1413}>
+              <div className={styles.Container_4_1414}><span className={styles.SubmittingTransaction_4_1415}>Submitting Transaction...</span></div>
+              <div className={styles.Container_4_1416}><span className={styles.PleaseDonTCloseTheAppOrLockYourScreenWhileWeProcessYourRequest_4_1417}>Please don&#x27;t close the app or lock your screen while we process your request.</span></div>
+            </div>
+            <div className={styles.Container_4_1418}>
+              <div className={styles.Container_4_1419}>
+                <div className={styles.Container_4_1420}>
+                  <div className={styles.Container_4_1421}><span className={styles.TransactionPrepared_4_1422}>Transaction Prepared</span></div>
+                  <div className={styles.Container_4_1423}><span className={styles.SuccessfullyInitialized_4_1424}>Successfully initialized</span></div>
+                </div>
+                <div className={styles.Container_4_1425}>
+                  <div className={styles.Container_4_1426}>
+                    <div className={styles.Container_4_1427}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M18.3332 9.99999C18.3332 14.6025 14.6023 18.3333 9.99984 18.3333C5.39734 18.3333 1.6665 14.6025 1.6665 9.99999C1.6665 5.39749 5.39734 1.66666 9.99984 1.66666C14.6023 1.66666 18.3332 5.39749 18.3332 9.99999ZM13.3582 7.47499C13.6019 7.71901 13.6019 8.11431 13.3582 8.35832L9.19151 12.525C8.94749 12.7687 8.55219 12.7687 8.30817 12.525L6.6415 10.8583C6.47429 10.7025 6.40546 10.4679 6.46202 10.2464C6.51857 10.025 6.69149 9.85206 6.91293 9.7955C7.13438 9.73895 7.36903 9.80778 7.52484 9.97499L8.74984 11.2L10.6123 9.33749L12.4748 7.47499C12.7189 7.23128 13.1142 7.23128 13.3582 7.47499Z" fill="#022C22" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className={styles.Container_4_1429}></div>
+                </div>
+              </div>
+              <div className={styles.Container_4_1430}>
+                <div className={styles.Container_4_1431}>
+                  <div className={styles.Container_4_1432}><span className={styles.SigningTransaction_4_1433}>Signing Transaction</span></div>
+                  <div className={styles.Container_4_1434}><span className={styles.AuthenticatedByUser_4_1435}>Authenticated by user</span></div>
+                </div>
+                <div className={styles.Container_4_1436}>
+                  <div className={styles.Container_4_1437}>
+                    <div className={styles.Container_4_1438}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M18.3332 9.99999C18.3332 14.6025 14.6023 18.3333 9.99984 18.3333C5.39734 18.3333 1.6665 14.6025 1.6665 9.99999C1.6665 5.39749 5.39734 1.66666 9.99984 1.66666C14.6023 1.66666 18.3332 5.39749 18.3332 9.99999ZM13.3582 7.47499C13.6019 7.71901 13.6019 8.11431 13.3582 8.35832L9.19151 12.525C8.94749 12.7687 8.55219 12.7687 8.30817 12.525L6.6415 10.8583C6.47429 10.7025 6.40546 10.4679 6.46202 10.2464C6.51857 10.025 6.69149 9.85206 6.91293 9.7955C7.13438 9.73895 7.36903 9.80778 7.52484 9.97499L8.74984 11.2L10.6123 9.33749L12.4748 7.47499C12.7189 7.23128 13.1142 7.23128 13.3582 7.47499Z" fill="#022C22" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className={styles.Container_4_1440}></div>
+                </div>
+              </div>
+              <div className={styles.Container_4_1441}>
+                <div className={styles.Container_4_1442}>
+                  <div className={styles.Container_4_1443}><span className={styles.BroadcastingToNetwork_4_1444}>Broadcasting to Network</span></div>
+                  <div className={styles.Container_4_1445}><span className={styles.WaitingForNodeAcceptance_4_1446}>Waiting for node acceptance</span></div>
+                </div>
+                <div className={styles.Container_4_1447}>
+                  <div className={styles.Container_4_1448}>
+                    <div className={styles.Container_4_1449}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M11.8966 1.40094C7.51362 1.40094 3.91146 4.74986 3.56038 9.01943H2.68178C2.40376 9.0193 2.15317 9.18707 2.04736 9.44417C1.94156 9.70128 2.00147 9.99682 2.19905 10.1924L3.735 11.7156C4.00229 11.9805 4.43317 11.9805 4.70046 11.7156L6.23641 10.1924C6.43399 9.99682 6.49391 9.70128 6.3881 9.44417C6.28229 9.18707 6.03171 9.0193 5.75368 9.01943H4.93725C5.28467 5.51692 8.26331 2.77232 11.8966 2.77232C14.3324 2.76763 16.5957 4.02893 17.8731 6.10296C17.9982 6.31842 18.2303 6.44905 18.4795 6.44417C18.7286 6.43928 18.9554 6.29965 19.072 6.07944C19.1886 5.85924 19.1766 5.59313 19.0406 5.38435C17.5139 2.90511 14.8082 1.39674 11.8966 1.40094Z" fill="#4ADE80" />
+                        <path fillRule="evenodd" clipRule="evenodd" d="M19.9073 8.91338C19.6402 8.64963 19.2107 8.64963 18.9436 8.91338L17.4013 10.4365C17.2032 10.6319 17.1428 10.9277 17.2484 11.1851C17.3541 11.4425 17.6048 11.6106 17.8831 11.6104H18.705C18.3558 15.112 15.3671 17.8575 11.7165 17.8575C9.27318 17.8638 7.00137 16.6028 5.71437 14.526C5.58567 14.3174 5.35549 14.1934 5.11053 14.2006C4.86557 14.2077 4.64305 14.345 4.52678 14.5608C4.41052 14.7765 4.41817 15.0379 4.54686 15.2464C6.08378 17.7281 8.79745 19.2354 11.7165 19.2289C16.1122 19.2289 19.7299 15.8828 20.0819 11.6104H20.9669C21.2452 11.6106 21.4959 11.4425 21.6016 11.1851C21.7072 10.9277 21.6468 10.6319 21.4487 10.4365L19.9073 8.91338Z" fill="#4ADE80" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className={styles.Container_4_1451}></div>
+                </div>
+              </div>
+              <div className={styles.Container_4_1452}>
+                <div className={styles.Container_4_1453}>
+                  <div className={styles.Container_4_1454}><span className={styles.FinalConfirmation_4_1455}>Final Confirmation</span></div>
+                  <div className={styles.Container_4_1456}></div>
+                </div>
+                <div className={styles.Container_4_1457}>
+                  <div className={styles.Container_4_1458}>
+                    <div className={styles.Container_4_1459}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M4.27533 2.75002C4.77699 1.66669 6.49949 1.66669 9.94364 1.66669C13.3878 1.66669 15.1103 1.66669 15.612 2.75002C15.6553 2.84224 15.6914 2.93835 15.7203 3.03835C16.062 4.19418 14.8436 5.53418 12.4086 8.21334L10.777 10L12.4086 11.7858C14.8436 14.4658 16.0611 15.8058 15.7203 16.9608C15.6914 17.06 15.6552 17.157 15.612 17.2508C15.1103 18.3333 13.3878 18.3333 9.94364 18.3333C6.49949 18.3333 4.77699 18.3333 4.27533 17.25C4.23215 17.1567 4.19594 17.0603 4.16699 16.9616C3.82533 15.8058 5.04366 14.4658 7.47865 11.7867L9.11031 10L7.47865 8.21417C5.04366 5.53334 3.82699 4.19418 4.16699 3.03918C4.19588 2.93918 4.23199 2.84335 4.27533 2.75002Z" fill="#94A3B8" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_4_1461}>
+              <div className={styles.Container_4_1462}>
+                <div className={styles.Container_4_1463}><span className={styles.TransactionType_4_1464}>Transaction Type</span></div>
+                <div className={styles.Container_4_1465}><span className={styles.StakingGft_4_1466}>Staking GFT</span></div>
+              </div>
+              <div className={styles.Container_4_1467}>
+                <div className={styles.Container_4_1468}><span className={styles.NetworkFee_4_1469}>Network Fee</span></div>
+                <div className={styles.Container_4_1470}><span className={styles._00042Eth_4_1471}>0.00042 ETH</span></div>
+              </div>
+            </div>
+            <div className={styles.Container_4_1472}>
+              <div className={styles.Container_4_1473}></div>
+              <div className={styles.Container_4_1474}></div>
+              <div className={styles.Container_4_1475}>
+                <div className={styles.Container_4_1476}><span className={styles.Gft_4_1477}>GFT</span></div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_4_1478}>
+            <div className={styles.Button_4_1479}>
+              <div className={styles.Container_4_1480}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22ZM8.586 8.586C8 9.172 8 10.114 8 12C8 13.886 8 14.828 8.586 15.414C9.172 16 10.114 16 12 16C13.886 16 14.828 16 15.414 15.414C16 14.828 16 13.886 16 12C16 10.114 16 9.172 15.414 8.586C14.828 8 13.886 8 12 8C10.114 8 9.172 8 8.586 8.586Z" fill="#94A3B8" />
+                </svg>
+              </div>
+              <div className={styles.Container_4_1482}><span className={styles.Processing_4_1483}>Processing...</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+

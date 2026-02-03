@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { ArrowLeft, Info, TrendingUp, Lock, Loader2 } from "lucide-react";
+import { ArrowLeft, Info, TrendingUp, Lock } from "lucide-react";
+import StakeProcessingScreen from "./StakeProcessingScreen";
+import StakeSuccessScreen from "./StakeSuccessScreen";
 
 interface ConfirmStakeScreenProps {
   onBack: () => void;
@@ -11,6 +13,8 @@ interface ConfirmStakeScreenProps {
 
 const GFT_TO_GBP = 0.056;
 
+type StakeFlowStep = "confirm" | "processing" | "success";
+
 export default function ConfirmStakeScreen({
   onBack,
   onConfirm,
@@ -19,7 +23,8 @@ export default function ConfirmStakeScreen({
   apy = 12.5,
 }: ConfirmStakeScreenProps) {
   const [amount, setAmount] = useState<string>("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [flowStep, setFlowStep] = useState<StakeFlowStep>("confirm");
+  const [stakedAmount, setStakedAmount] = useState(0);
 
   const numericAmount = parseFloat(amount) || 0;
   const newTotalBalance = currentStake + numericAmount;
@@ -29,14 +34,35 @@ export default function ConfirmStakeScreen({
     setAmount(availableBalance.toString());
   };
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     if (numericAmount <= 0 || numericAmount > availableBalance) return;
-    setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    onConfirm(numericAmount);
+    setStakedAmount(numericAmount);
+    setFlowStep("processing");
   };
 
   const isValidAmount = numericAmount > 0 && numericAmount <= availableBalance;
+
+  if (flowStep === "processing") {
+    return (
+      <StakeProcessingScreen
+        onBack={() => setFlowStep("confirm")}
+        onComplete={() => setFlowStep("success")}
+        stakeAmount={stakedAmount}
+      />
+    );
+  }
+
+  if (flowStep === "success") {
+    return (
+      <StakeSuccessScreen
+        onBack={onBack}
+        onDone={() => onConfirm(stakedAmount)}
+        amount={stakedAmount}
+        newTotalStaked={currentStake + stakedAmount}
+        apy={apy}
+      />
+    );
+  }
 
   return (
     <div
@@ -231,7 +257,7 @@ export default function ConfirmStakeScreen({
       >
         <button
           onClick={handleConfirm}
-          disabled={!isValidAmount || isSubmitting}
+          disabled={!isValidAmount}
           className="w-full h-[68px] rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
             background: isValidAmount ? "#4ade80" : "rgba(74, 222, 128, 0.3)",
@@ -239,17 +265,8 @@ export default function ConfirmStakeScreen({
             boxShadow: isValidAmount ? "0 0 20px -5px #4ade80" : "none",
           }}
         >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="w-6 h-6 animate-spin" />
-              <span>Processing...</span>
-            </>
-          ) : (
-            <>
-              <Lock className="w-6 h-6" />
-              <span>Confirm Stake</span>
-            </>
-          )}
+          <Lock className="w-6 h-6" />
+          <span>Confirm Stake</span>
         </button>
       </div>
     </div>
