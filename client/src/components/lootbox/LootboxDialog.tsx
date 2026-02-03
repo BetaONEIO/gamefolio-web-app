@@ -55,6 +55,11 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
 
   const { data: status, isLoading: statusLoading } = useQuery<LootboxStatus>({
     queryKey: ["/api/lootbox/status"],
+    queryFn: async () => {
+      const response = await fetch("/api/lootbox/status", { credentials: "include" });
+      if (!response.ok) throw new Error("Failed to fetch lootbox status");
+      return response.json();
+    },
     enabled: open,
   });
 
@@ -397,6 +402,11 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
 export function LootboxTrigger({ onClick }: { onClick: () => void }) {
   const { data: status } = useQuery<LootboxStatus>({
     queryKey: ["/api/lootbox/status"],
+    queryFn: async () => {
+      const response = await fetch("/api/lootbox/status", { credentials: "include" });
+      if (!response.ok) throw new Error("Failed to fetch lootbox status");
+      return response.json();
+    },
   });
 
   return (
