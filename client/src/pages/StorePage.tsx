@@ -828,17 +828,10 @@ export default function StorePage() {
                         alt={nft.name}
                         className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                       />
-                      <Badge className={`absolute top-2 left-2 text-xs ${
-                        nft.rarity === "legendary" ? "bg-yellow-600" :
-                        nft.rarity === "epic" ? "bg-purple-600" :
-                        nft.rarity === "rare" ? "bg-blue-600" : "bg-gray-600"
-                      }`}>
-                        {nft.rarity}
-                      </Badge>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleWatchlistToggle(nft);
+                          toggleWatchlist(nft);
                         }}
                         className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
                       >
@@ -852,6 +845,13 @@ export default function StorePage() {
                       <div>
                         <h3 className="font-semibold text-sm line-clamp-1">{nft.name}</h3>
                         <p className="text-xs text-gray-400">by {nft.owner}</p>
+                        <Badge className={`mt-1 text-xs ${
+                          nft.rarity === "legendary" ? "bg-yellow-600" :
+                          nft.rarity === "epic" ? "bg-purple-600" :
+                          nft.rarity === "rare" ? "bg-blue-600" : "bg-gray-600"
+                        }`}>
+                          {nft.rarity}
+                        </Badge>
                       </div>
                       
                       <div className="flex items-center justify-between pt-2 border-t border-gray-700">
@@ -912,15 +912,6 @@ export default function StorePage() {
                           For Sale
                         </Badge>
                       )}
-                      {item.rarity && (
-                        <Badge className={`absolute top-2 left-2 text-xs ${
-                          item.rarity === "legendary" ? "bg-yellow-600" :
-                          item.rarity === "epic" ? "bg-purple-600" :
-                          item.rarity === "rare" ? "bg-blue-600" : "bg-gray-600"
-                        }`}>
-                          {item.rarity}
-                        </Badge>
-                      )}
                     </div>
                     
                     <div className="p-3 space-y-2">
@@ -931,6 +922,15 @@ export default function StorePage() {
                         <p className="text-xs text-gray-400 line-clamp-2" data-testid={`text-item-description-${item.id}`}>
                           {item.description}
                         </p>
+                        {item.rarity && (
+                          <Badge className={`mt-1 text-xs ${
+                            item.rarity === "legendary" ? "bg-yellow-600" :
+                            item.rarity === "epic" ? "bg-purple-600" :
+                            item.rarity === "rare" ? "bg-blue-600" : "bg-gray-600"
+                          }`}>
+                            {item.rarity}
+                          </Badge>
+                        )}
                       </div>
                       
                       <div className="flex items-center justify-between pt-2 border-t border-gray-700">
