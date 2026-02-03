@@ -570,7 +570,7 @@ export default function StorePage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white">
       <div className="flex flex-col md:flex-row">
         {/* Desktop Sidebar */}
-        <aside className="hidden md:block w-64 min-h-screen bg-gray-900/50 backdrop-blur-sm border-r border-gray-800 p-6">
+        <aside className="hidden md:block w-64 min-h-screen bg-gray-900/50 backdrop-blur-sm border-r border-gray-800 p-4">
           <SidebarContent />
         </aside>
 
@@ -713,7 +713,7 @@ export default function StorePage() {
         {/* Main Content Area */}
         <main className="flex-1">
           {/* Header */}
-          <div className="mb-6 md:mb-8">
+          <div className="mb-4 md:mb-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
                 <p className="text-sm md:text-base text-gray-400" data-testid="text-section-description">
