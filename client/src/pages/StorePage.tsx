@@ -935,19 +935,21 @@ export default function StorePage() {
             </div>
           )}
 
-          {/* Mint NFT Section */}
+          {/* Mint NFT Section - Redirects to dedicated page */}
           {activeTab === "mint" && (
             <div className="flex flex-col items-center justify-center min-h-[50vh] md:min-h-[60vh] px-4">
-              <Sparkles className="h-16 w-16 md:h-20 md:w-20 text-gray-600 mb-4" />
+              <Sparkles className="h-16 w-16 md:h-20 md:w-20 text-[#4ade80] mb-4" />
               <h3 className="text-xl md:text-2xl font-semibold mb-2 text-center" data-testid="heading-mint-coming-soon">
                 Mint Your Own NFT
               </h3>
               <p className="text-sm md:text-base text-gray-400 text-center max-w-md" data-testid="text-mint-description">
                 Create and mint custom NFT avatars for your profile. Upload your gaming clips or artwork to mint as NFTs!
               </p>
-              <Button className="mt-6" variant="outline" size="sm" data-testid="button-start-minting">
-                Start Minting
-              </Button>
+              <Link href="/mint-nft">
+                <Button className="mt-6 bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22]" size="sm" data-testid="button-start-minting">
+                  Start Minting
+                </Button>
+              </Link>
             </div>
           )}
         </main>

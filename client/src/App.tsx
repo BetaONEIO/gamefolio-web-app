@@ -84,6 +84,7 @@ const LevelTrackerPage = React.lazy(() => import("./pages/LevelTrackerPage"));
 const CollectionPage = React.lazy(() => import("./pages/CollectionPage"));
 const DebugWalletPage = React.lazy(() => import("./pages/DebugWalletPage"));
 const TwoFactorVerifyPage = React.lazy(() => import("./pages/TwoFactorVerifyPage"));
+const MintNFTPage = React.lazy(() => import("./pages/MintNFTPage"));
 
 // Loading component for lazy-loaded routes
 function RouteLoader() {
@@ -305,6 +306,7 @@ function Router() {
           <Route path="/contact" component={ContactPage} />
           <Route path="/help" component={HelpPage} />
           <Route path="/store" component={StorePage} />
+          <Route path="/mint-nft" component={MintNFTPage} />
           <Route path="/wallet" component={WalletPage} />
           <Route path="/staking" component={StakingPage} />
           <Route path="/storage" component={StoragePage} />
