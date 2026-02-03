@@ -577,10 +577,15 @@ export default function StorePage() {
         {/* Mobile Header */}
         <div className="md:hidden sticky top-0 z-40 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800">
           <Collapsible open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-            <div className="p-4">
+            <div className="p-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">
                 STORE
               </h2>
+              <div className="flex items-center gap-2 bg-gray-800/80 rounded-xl px-3 py-2">
+                <img src={gfTokenLogo} alt="GF" className="w-5 h-5" />
+                <span className="text-sm font-bold text-white">{user?.gfTokenBalance || 0}</span>
+                <span className="text-xs text-gray-400">GF</span>
+              </div>
             </div>
 
             <CollapsibleContent className="border-t border-gray-800">
@@ -682,64 +687,57 @@ export default function StorePage() {
 
         {/* Main Content Area */}
         <main className="flex-1 p-4 md:p-6">
-          {/* Mobile Tab Navigation with Balance */}
-          <div className="md:hidden flex items-center justify-between gap-3 mb-4">
-            <div 
-              className="flex gap-2 overflow-x-auto flex-1 hide-scrollbar"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          {/* Mobile Tab Navigation */}
+          <div 
+            className="md:hidden flex gap-2 overflow-x-auto mb-4 hide-scrollbar"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
+            <button
+              onClick={() => setActiveTab("buy")}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
+                activeTab === "buy"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
+              }`}
+              data-testid="tab-buy-mobile"
             >
-              <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
+              <ShoppingCart className="h-4 w-4" />
+              Buy NFT
+            </button>
+            <button
+              onClick={() => setActiveTab("sell")}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
+                activeTab === "sell"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
+              }`}
+              data-testid="tab-sell-mobile"
+            >
+              <DollarSign className="h-4 w-4" />
+              Sell NFT
+            </button>
+            <button
+              onClick={() => setActiveTab("mint")}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
+                activeTab === "mint"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
+              }`}
+              data-testid="tab-mint-mobile"
+            >
+              <Sparkles className="h-4 w-4" />
+              Mint NFT
+            </button>
+            <Link href="/watchlist">
               <button
-                onClick={() => setActiveTab("buy")}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
-                  activeTab === "buy"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
-                }`}
-                data-testid="tab-buy-mobile"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors bg-gray-800/50 text-gray-400 hover:bg-gray-800"
+                data-testid="tab-watchlist-mobile"
               >
-                <ShoppingCart className="h-4 w-4" />
-                Buy NFT
+                <Heart className="h-4 w-4" />
+                Watchlist
               </button>
-              <button
-                onClick={() => setActiveTab("sell")}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
-                  activeTab === "sell"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
-                }`}
-                data-testid="tab-sell-mobile"
-              >
-                <DollarSign className="h-4 w-4" />
-                Sell NFT
-              </button>
-              <button
-                onClick={() => setActiveTab("mint")}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
-                  activeTab === "mint"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
-                }`}
-                data-testid="tab-mint-mobile"
-              >
-                <Sparkles className="h-4 w-4" />
-                Mint NFT
-              </button>
-              <Link href="/watchlist">
-                <button
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors bg-gray-800/50 text-gray-400 hover:bg-gray-800"
-                  data-testid="tab-watchlist-mobile"
-                >
-                  <Heart className="h-4 w-4" />
-                  Watchlist
-                </button>
-              </Link>
-            </div>
-            <div className="flex items-center gap-2 bg-gray-800/80 rounded-xl px-3 py-2 flex-shrink-0">
-              <img src={gfTokenLogo} alt="GF" className="w-5 h-5" />
-              <span className="text-sm font-bold text-white">{user?.gfTokenBalance || 0}</span>
-              <span className="text-xs text-gray-400">GF</span>
-            </div>
+            </Link>
           </div>
 
           {/* Header */}
