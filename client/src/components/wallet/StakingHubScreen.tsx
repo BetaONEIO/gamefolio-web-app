@@ -89,7 +89,7 @@ export default function StakingHubScreen({
         }}
       >
         {/* Top row */}
-        <div className="flex items-center justify-between w-full max-w-[430px] mx-auto">
+        <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto">
           <button
             onClick={onBack}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-slate-700"
@@ -111,7 +111,7 @@ export default function StakingHubScreen({
         </div>
 
         {/* Total Staked Amount */}
-        <div className="flex flex-col items-center gap-3 max-w-[430px] mx-auto w-full">
+        <div className="flex flex-col items-center gap-3 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full">
           <span
             className="text-sm font-medium uppercase"
             style={{ color: "#94a3b8", letterSpacing: "0.7px" }}
@@ -121,13 +121,13 @@ export default function StakingHubScreen({
 
           <div className="flex items-end gap-2">
             <span
-              className="text-4xl font-bold"
+              className="text-4xl md:text-5xl font-bold"
               style={{ color: "#fff" }}
             >
               {totalStaked.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
             <span
-              className="text-xl font-bold pb-1"
+              className="text-xl md:text-2xl font-bold pb-1"
               style={{ color: "#4ade80" }}
             >
               GFT
@@ -154,7 +154,7 @@ export default function StakingHubScreen({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col px-6 py-6 max-w-[430px] mx-auto w-full gap-6">
+      <div className="flex-1 flex flex-col px-6 py-6 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full gap-6">
         {/* Stats Cards */}
         <div className="flex gap-4">
           {/* Rewards Earned */}
@@ -285,7 +285,7 @@ export default function StakingHubScreen({
 
         {/* Stake Positions */}
         {activeTab === "positions" && (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col md:grid md:grid-cols-2 gap-3">
             {mockStakePositions.length > 0 ? (
               mockStakePositions.map((position) => (
                 <div
