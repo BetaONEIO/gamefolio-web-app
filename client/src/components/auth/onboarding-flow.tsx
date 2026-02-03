@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Progress } from "@/components/ui/progress";
-import { Check, Gamepad2, Upload, Share2, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Calendar, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet } from "lucide-react";
+import { Check, Gamepad2, Upload, Share2, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Calendar, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, Mail } from "lucide-react";
 import { Game } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -15,6 +15,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useWelcomePack } from "@/hooks/use-welcome-pack";
 import { useWallet } from "@/hooks/use-wallet";
 import { useAuth } from "@/hooks/use-auth";
+import { useSequenceEmailAuth } from "@/hooks/use-sequence-email-auth";
+import WalletOTPModal from "@/components/wallet/WalletOTPModal";
 
 // Component to display trending games in a grid
 interface TrendingGamesGridProps {
@@ -56,7 +58,7 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-      {trendingGames.map((game) => {
+      {trendingGames.map((game: TwitchGame) => {
         const isSelected = selectedGames.some(g => g.id === parseInt(game.id));
         
         return (
@@ -210,6 +212,19 @@ export default function OnboardingFlow({
   
   const { walletAddress: sequenceWalletAddress, isReady: isWalletReady, isConnecting: isCreatingWallet, connect: connectWallet } = useWallet();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  
+  // Sequence email auth for auto-wallet creation
+  const { 
+    initiateEmailAuth, 
+    verifyOTP, 
+    isInitiating: isInitiatingWallet, 
+    isVerifying: isVerifyingWallet, 
+    awaitingOTP, 
+    error: walletError,
+    walletAddress: emailWalletAddress 
+  } = useSequenceEmailAuth();
+  const [showOTPModal, setShowOTPModal] = useState(false);
+  const walletInitiatedRef = useRef(false);
 
   // Auto-skip username step for non-Google users
   useEffect(() => {
@@ -236,6 +251,47 @@ export default function OnboardingFlow({
       setWalletAddress(user.walletAddress);
     }
   }, [currentStep, walletAddress, user?.walletAddress]);
+
+  // Sync email wallet address when created
+  useEffect(() => {
+    if (emailWalletAddress && !walletAddress) {
+      setWalletAddress(emailWalletAddress);
+    }
+  }, [emailWalletAddress, walletAddress]);
+
+  // Auto-initiate wallet creation when reaching wallet step
+  useEffect(() => {
+    const autoCreateWallet = async () => {
+      if (
+        currentStep === OnboardingStep.Wallet && 
+        !walletAddress && 
+        !walletInitiatedRef.current &&
+        user?.email &&
+        user?.emailVerified
+      ) {
+        walletInitiatedRef.current = true;
+        await initiateEmailAuth(user.email);
+      }
+    };
+    autoCreateWallet();
+  }, [currentStep, walletAddress, user?.email, user?.emailVerified, initiateEmailAuth]);
+
+  // Show OTP modal when awaiting OTP
+  useEffect(() => {
+    if (awaitingOTP) {
+      setShowOTPModal(true);
+    }
+  }, [awaitingOTP]);
+
+  // Handle OTP verification
+  const handleOTPVerify = async (code: string): Promise<boolean> => {
+    const result = await verifyOTP(code);
+    if (result?.wallet) {
+      setShowOTPModal(false);
+      return true;
+    }
+    return false;
+  };
 
   // Connect wallet via Sequence
   const handleCreateWallet = () => {
@@ -1281,22 +1337,22 @@ export default function OnboardingFlow({
         );
 
       case OnboardingStep.Wallet:
+        const isCreatingAnyWallet = isInitiatingWallet || isCreatingWallet;
+        
         return (
           <>
             <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-2xl font-bold text-white">Crypto Wallet Setup</h2>
+              <h2 className="text-2xl font-bold text-white">Creating Your Wallet</h2>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Info className="h-5 w-5 text-gray-400 cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Connect a wallet to fund with crypto and purchase exclusive NFTs</p>
+                  <p>Your secure blockchain wallet for NFTs and rewards</p>
                 </TooltipContent>
               </Tooltip>
             </div>
-            <p className="text-gray-300 mb-6">
-              Connect a crypto wallet to unlock future NFT features and rewards. You can connect with Sequence or skip this step.
-            </p>
+            
             {walletAddress ? (
               <div className="mb-6">
                 <Card className="bg-primary/10 border-primary/50">
@@ -1306,8 +1362,8 @@ export default function OnboardingFlow({
                         <Check className="h-6 w-6" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-white mb-1">Wallet Connected!</h3>
-                        <p className="text-sm text-gray-300">You're ready for crypto and NFTs</p>
+                        <h3 className="font-semibold text-white mb-1">Wallet Created!</h3>
+                        <p className="text-sm text-gray-300">Your blockchain wallet is ready</p>
                       </div>
                     </div>
                     <div className="bg-gray-900/50 rounded-lg p-3">
@@ -1316,67 +1372,122 @@ export default function OnboardingFlow({
                     </div>
                   </CardContent>
                 </Card>
+                
+                <div className="flex gap-3 mt-6">
+                  <Button variant="outline" onClick={goToPrevStep}>
+                    Back
+                  </Button>
+                  <Button
+                    onClick={goToNextStep}
+                    className="flex-1"
+                    data-testid="button-next-from-wallet"
+                  >
+                    Next <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
               </div>
-            ) : (
-              <div className="mb-6 space-y-3">
-                <Button
-                  onClick={handleCreateWallet}
-                  disabled={isCreatingWallet}
-                  className="w-full h-auto py-4 px-6 bg-primary hover:bg-primary/90 text-white"
-                  data-testid="button-create-wallet"
-                >
-                  <div className="flex items-start gap-3 text-left w-full">
-                    <Plus className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <div className="font-semibold mb-1">
-                        {isCreatingWallet ? (
-                          <span className="flex items-center">
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Connecting wallet...
-                          </span>
-                        ) : (
-                          "Connect Sequence Wallet"
-                        )}
-                      </div>
-                      <div className="text-sm text-white/80 font-normal">
-                        Get a secure blockchain wallet for NFTs and rewards
-                      </div>
+            ) : isCreatingAnyWallet ? (
+              <div className="mb-6">
+                <Card className="bg-gray-800/50 border-gray-700">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col items-center text-center py-4">
+                      <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
+                      <h3 className="font-semibold text-white mb-2">Creating Your Wallet</h3>
+                      <p className="text-sm text-gray-400">
+                        We're setting up your secure blockchain wallet linked to {user?.email}
+                      </p>
                     </div>
-                  </div>
-                </Button>
-
+                  </CardContent>
+                </Card>
+              </div>
+            ) : awaitingOTP ? (
+              <div className="mb-6">
+                <Card className="bg-gray-800/50 border-primary/50">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col items-center text-center py-4">
+                      <div className="p-3 rounded-full bg-primary/20 text-primary mb-4">
+                        <Mail className="h-8 w-8" />
+                      </div>
+                      <h3 className="font-semibold text-white mb-2">Check Your Email</h3>
+                      <p className="text-sm text-gray-400 mb-4">
+                        We've sent a verification code to <span className="text-white font-medium">{user?.email}</span>
+                      </p>
+                      <Button
+                        onClick={() => setShowOTPModal(true)}
+                        className="bg-primary hover:bg-primary/90"
+                      >
+                        Enter Verification Code
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+                
                 <Button
                   onClick={goToNextStep}
                   variant="ghost"
-                  className="w-full h-auto py-4 px-6 text-gray-400 hover:text-white"
+                  className="w-full mt-4 text-gray-400 hover:text-white"
                   data-testid="button-skip-wallet"
                 >
-                  <div className="flex items-start gap-3 text-left w-full">
-                    <ArrowRight className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <div className="font-semibold mb-1">Skip for now</div>
-                      <div className="text-sm font-normal">
-                        You can set this up later from your profile
+                  Skip for now
+                </Button>
+              </div>
+            ) : (
+              <div className="mb-6 space-y-3">
+                <p className="text-gray-300 mb-4">
+                  {user?.emailVerified 
+                    ? "Setting up your wallet automatically..." 
+                    : "Verify your email first to get a wallet, or skip this step."}
+                </p>
+                
+                {!user?.emailVerified && (
+                  <>
+                    <Button
+                      onClick={handleCreateWallet}
+                      disabled={isCreatingAnyWallet}
+                      className="w-full h-auto py-4 px-6 bg-primary hover:bg-primary/90 text-white"
+                      data-testid="button-create-wallet"
+                    >
+                      <div className="flex items-start gap-3 text-left w-full">
+                        <Wallet className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="font-semibold mb-1">Connect Sequence Wallet</div>
+                          <div className="text-sm text-white/80 font-normal">
+                            Get a secure blockchain wallet for NFTs and rewards
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </Button>
+                    </Button>
+
+                    <Button
+                      onClick={goToNextStep}
+                      variant="ghost"
+                      className="w-full h-auto py-4 px-6 text-gray-400 hover:text-white"
+                      data-testid="button-skip-wallet"
+                    >
+                      <div className="flex items-start gap-3 text-left w-full">
+                        <ArrowRight className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="font-semibold mb-1">Skip for now</div>
+                          <div className="text-sm font-normal">
+                            You can set this up later from your profile
+                          </div>
+                        </div>
+                      </div>
+                    </Button>
+                  </>
+                )}
               </div>
             )}
-            {walletAddress && (
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={goToPrevStep}>
-                  Back
-                </Button>
-                <Button
-                  onClick={goToNextStep}
-                  className="flex-1"
-                  data-testid="button-next-from-wallet"
-                >
-                  Next <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </div>
-            )}
+            
+            {/* OTP Modal */}
+            <WalletOTPModal
+              open={showOTPModal}
+              onOpenChange={setShowOTPModal}
+              email={user?.email || ""}
+              onVerify={handleOTPVerify}
+              isVerifying={isVerifyingWallet}
+              error={walletError}
+            />
           </>
         );
 

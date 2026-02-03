@@ -1,13 +1,14 @@
 import { Link } from "wouter";
-import { ArrowLeft, Wallet, Loader2 } from "lucide-react";
+import { ArrowLeft, Wallet, Loader2, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useWallet } from "@/hooks/use-wallet";
 import { useAuth } from "@/hooks/use-auth";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTokenBalance } from "@/hooks/use-token";
 import { useStaking } from "@/hooks/use-staking";
 import { usePurchaseGFT } from "@/hooks/use-purchase-gft";
+import { useSequenceEmailAuth } from "@/hooks/use-sequence-email-auth";
 import BuyGFTokenDialog from "@/components/BuyGFTokenDialog";
 import WalletHomepage from "@/components/wallet/WalletHomepage";
 import BuyGFTScreen from "@/components/wallet/BuyGFTScreen";
@@ -16,6 +17,7 @@ import PaymentRedirectScreen from "@/components/wallet/PaymentRedirectScreen";
 import BuyGFTResultScreen from "@/components/wallet/BuyGFTResultScreen";
 import ActivityHistoryScreen from "@/components/wallet/ActivityHistoryScreen";
 import StakingHubScreen from "@/components/wallet/StakingHubScreen";
+import WalletOTPModal from "@/components/wallet/WalletOTPModal";
 import walletPromo from "@assets/Wallet promo new_1762876656607.png";
 
 export default function WalletPage() {
@@ -35,7 +37,20 @@ export default function WalletPage() {
   const { createOrder, completeOrder, orderId, isCreatingOrder, isCompletingOrder } = usePurchaseGFT();
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
 
-  const hasExistingWallet = !!(user?.walletAddress || (isReady && walletAddress));
+  // Sequence email auth for auto-wallet creation
+  const { 
+    initiateEmailAuth, 
+    verifyOTP, 
+    isInitiating: isInitiatingWallet, 
+    isVerifying: isVerifyingWallet, 
+    awaitingOTP, 
+    error: walletError,
+    walletAddress: emailWalletAddress 
+  } = useSequenceEmailAuth();
+  const [showOTPModal, setShowOTPModal] = useState(false);
+  const walletInitiatedRef = useRef(false);
+
+  const hasExistingWallet = !!(user?.walletAddress || (isReady && walletAddress) || emailWalletAddress);
   const [showWalletDetails, setShowWalletDetails] = useState(false);
 
   useEffect(() => {
@@ -44,8 +59,40 @@ export default function WalletPage() {
     }
   }, [hasExistingWallet]);
 
+  // Show OTP modal when awaiting OTP
+  useEffect(() => {
+    if (awaitingOTP) {
+      setShowOTPModal(true);
+    }
+  }, [awaitingOTP]);
+
+  // Handle OTP verification
+  const handleOTPVerify = async (code: string): Promise<boolean> => {
+    const result = await verifyOTP(code);
+    if (result?.wallet) {
+      setShowOTPModal(false);
+      setShowWalletDetails(true);
+      return true;
+    }
+    return false;
+  };
+
+  // Auto-initiate wallet creation for verified users without wallets
+  const handleAutoCreateWallet = async () => {
+    if (user?.email && user?.emailVerified && !walletInitiatedRef.current) {
+      walletInitiatedRef.current = true;
+      await initiateEmailAuth(user.email);
+    }
+  };
+
   const handleConnectWallet = () => {
-    connect();
+    // For verified users, use email auth for seamless wallet creation
+    if (user?.email && user?.emailVerified) {
+      handleAutoCreateWallet();
+    } else {
+      // Fallback to Sequence connect modal
+      connect();
+    }
   };
 
   if (!user) {
@@ -112,7 +159,8 @@ export default function WalletPage() {
   };
 
   const totalBalance = tokenBalance ? parseFloat(tokenBalance.balance) + (user?.gfTokenBalance || 0) : (user?.gfTokenBalance || 0);
-  const displayWalletAddress = walletAddress || user?.walletAddress || "";
+  const displayWalletAddress = walletAddress || emailWalletAddress || user?.walletAddress || "";
+  const isCreatingAnyWallet = isInitiatingWallet || isConnecting;
 
   return (
     <div className="min-h-screen bg-background">
@@ -213,29 +261,54 @@ export default function WalletPage() {
               </ul>
 
               <div className="space-y-4">
-                <Button 
-                  onClick={hasExistingWallet ? () => setShowWalletDetails(true) : handleConnectWallet} 
-                  disabled={isConnecting && !hasExistingWallet}
-                  className="w-auto px-6"
-                  data-testid={hasExistingWallet ? "button-access-wallet" : "button-connect-wallet"}
-                >
-                  {isConnecting && !hasExistingWallet ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Connecting...
-                    </>
-                  ) : hasExistingWallet ? (
-                    <>
-                      <Wallet className="w-4 h-4 mr-2" />
-                      Access Wallet
-                    </>
-                  ) : (
-                    <>
-                      <Wallet className="w-4 h-4 mr-2" />
-                      Connect Wallet
-                    </>
-                  )}
-                </Button>
+                {awaitingOTP ? (
+                  <div className="space-y-3">
+                    <Card className="bg-primary/10 border-primary/50">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <Mail className="w-8 h-8 text-primary" />
+                          <div>
+                            <p className="font-medium">Check your email</p>
+                            <p className="text-sm text-muted-foreground">
+                              We sent a verification code to {user?.email}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Button 
+                      onClick={() => setShowOTPModal(true)}
+                      className="w-auto px-6"
+                    >
+                      <Mail className="w-4 h-4 mr-2" />
+                      Enter Verification Code
+                    </Button>
+                  </div>
+                ) : (
+                  <Button 
+                    onClick={hasExistingWallet ? () => setShowWalletDetails(true) : handleConnectWallet} 
+                    disabled={isCreatingAnyWallet && !hasExistingWallet}
+                    className="w-auto px-6"
+                    data-testid={hasExistingWallet ? "button-access-wallet" : "button-connect-wallet"}
+                  >
+                    {isCreatingAnyWallet && !hasExistingWallet ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Creating Wallet...
+                      </>
+                    ) : hasExistingWallet ? (
+                      <>
+                        <Wallet className="w-4 h-4 mr-2" />
+                        Access Wallet
+                      </>
+                    ) : (
+                      <>
+                        <Wallet className="w-4 h-4 mr-2" />
+                        Create Wallet
+                      </>
+                    )}
+                  </Button>
+                )}
                 <div className="flex items-center justify-start">
                   <span className="text-sm text-muted-foreground">Powered by Sequence</span>
                 </div>
@@ -257,6 +330,16 @@ export default function WalletPage() {
       <BuyGFTokenDialog 
         open={showBuyDialog} 
         onOpenChange={setShowBuyDialog}
+      />
+
+      {/* OTP Modal for wallet creation */}
+      <WalletOTPModal
+        open={showOTPModal}
+        onOpenChange={setShowOTPModal}
+        email={user?.email || ""}
+        onVerify={handleOTPVerify}
+        isVerifying={isVerifyingWallet}
+        error={walletError}
       />
     </div>
   );
