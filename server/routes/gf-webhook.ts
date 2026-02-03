@@ -163,6 +163,21 @@ router.post('/api/stripe/webhook',
         }
       }
     }
+
+    if (event.type === 'payment_intent.succeeded') {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      
+      if (paymentIntent.metadata?.gfAmount) {
+        try {
+          await processGfOrderDelivery(
+            paymentIntent.id,
+            paymentIntent.id
+          );
+        } catch (error) {
+          console.error('[GF Webhook] Error processing PaymentIntent order delivery:', error);
+        }
+      }
+    }
   }
 );
 

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { db } from '../db';
 import { gfOrders, users } from '@shared/schema';
 import { eq, desc, and } from 'drizzle-orm';
-import { getUncachableStripeClient } from '../stripeClient';
+import { getUncachableStripeClient, getStripePublishableKey } from '../stripeClient';
 import { hybridAuth } from '../middleware/hybrid-auth';
 
 const SKALE_NEBULA_TESTNET_CHAIN_ID = 37084624;
@@ -187,6 +187,83 @@ router.get('/api/gf/orders/:id', hybridAuth, async (req: Request, res: Response)
   } catch (error: any) {
     console.error('Get order error:', error);
     return res.status(500).json({ error: 'Failed to get order' });
+  }
+});
+
+router.get('/api/stripe/config', async (_req: Request, res: Response) => {
+  try {
+    const publishableKey = await getStripePublishableKey();
+    return res.json({ publishableKey });
+  } catch (error: any) {
+    console.error('Failed to get Stripe config:', error);
+    return res.status(500).json({ error: 'Failed to load payment configuration' });
+  }
+});
+
+router.post('/api/gf/create-payment-intent', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const validation = checkoutSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ 
+        error: 'Invalid request', 
+        details: validation.error.errors 
+      });
+    }
+
+    const { gbpAmount } = validation.data;
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const walletAddress = user.walletAddress || null;
+    const gfAmount = gbpAmount / GF_PRICE_GBP;
+
+    const stripe = await getUncachableStripeClient();
+
+    const [order] = await db.insert(gfOrders).values({
+      userId,
+      walletAddress,
+      gbpAmount,
+      gfAmount,
+      priceUsed: GF_PRICE_GBP,
+      status: 'created',
+      stripeSessionId: '', // Will be updated after PaymentIntent creation
+    }).returning();
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(gbpAmount * 100),
+      currency: 'gbp',
+      metadata: {
+        userId: userId.toString(),
+        orderId: order.id,
+        gbpAmount: gbpAmount.toString(),
+        gfAmount: gfAmount.toString(),
+        priceUsed: GF_PRICE_GBP.toString(),
+        walletAddress: walletAddress || '',
+      },
+    });
+
+    await db.update(gfOrders)
+      .set({ stripeSessionId: paymentIntent.id })
+      .where(eq(gfOrders.id, order.id));
+
+    return res.json({
+      clientSecret: paymentIntent.client_secret,
+      orderId: order.id,
+    });
+  } catch (error: any) {
+    console.error('Create PaymentIntent error:', error);
+    return res.status(500).json({ 
+      error: 'Failed to create payment',
+      message: error.message 
+    });
   }
 });
 

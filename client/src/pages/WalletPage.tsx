@@ -13,7 +13,7 @@ import BuyGFTokenDialog from "@/components/BuyGFTokenDialog";
 import WalletHomepage from "@/components/wallet/WalletHomepage";
 import BuyGFTScreen from "@/components/wallet/BuyGFTScreen";
 import ReviewOrderScreen from "@/components/wallet/ReviewOrderScreen";
-import PaymentRedirectScreen from "@/components/wallet/PaymentRedirectScreen";
+import CardEntryScreen from "@/components/wallet/CardEntryScreen";
 import BuyGFTResultScreen from "@/components/wallet/BuyGFTResultScreen";
 import ActivityHistoryScreen from "@/components/wallet/ActivityHistoryScreen";
 import StakingHubScreen from "@/components/wallet/StakingHubScreen";
@@ -25,7 +25,7 @@ export default function WalletPage() {
   const [showBuyDialog, setShowBuyDialog] = useState(false);
   const [showBuyScreen, setShowBuyScreen] = useState(false);
   const [showReviewScreen, setShowReviewScreen] = useState(false);
-  const [showPaymentRedirect, setShowPaymentRedirect] = useState(false);
+  const [showCardEntry, setShowCardEntry] = useState(false);
   const [showResultScreen, setShowResultScreen] = useState(false);
   const [showActivityHistory, setShowActivityHistory] = useState(false);
   const [showStakingHub, setShowStakingHub] = useState(false);
@@ -145,14 +145,17 @@ export default function WalletPage() {
     );
   }
 
-  if (showPaymentRedirect) {
+  if (showCardEntry) {
     return (
-      <PaymentRedirectScreen
-        onBack={() => setShowPaymentRedirect(false)}
-        onReady={() => {
-          setShowPaymentRedirect(false);
+      <CardEntryScreen
+        onBack={() => setShowCardEntry(false)}
+        onSuccess={() => {
+          setShowCardEntry(false);
           setShowResultScreen(true);
+          refreshBalances();
         }}
+        amount={purchaseAmount}
+        gftAmount={gftAmount}
       />
     );
   }
@@ -164,8 +167,9 @@ export default function WalletPage() {
         amount={purchaseAmount}
         gftAmount={gftAmount}
         walletAddress={user.walletAddress || connectedWalletAddress || newWalletAddress || ''}
-        onProceed={async () => {
-          await createOrder(purchaseAmount);
+        onProceed={() => {
+          setShowReviewScreen(false);
+          setShowCardEntry(true);
         }}
       />
     );
