@@ -141,7 +141,7 @@ export const GF_TOKEN_ABI = [
   }
 ] as const;
 
-export const GF_STAKING_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
+export const GF_STAKING_ADDRESS = "0x9C4aC24C7Bb36AA3772ccd5aCbcB48A20A1704B7" as const;
 
 export const GF_STAKING_ABI = [
   {

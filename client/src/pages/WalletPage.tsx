@@ -2,25 +2,24 @@ import { Link } from "wouter";
 import { ArrowLeft, Wallet, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useCrossmint } from "@/hooks/use-crossmint";
+import { useWallet } from "@/hooks/use-wallet";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 import { useTokenBalance } from "@/hooks/use-token";
+import { useStaking } from "@/hooks/use-staking";
 import BuyGFTokenDialog from "@/components/BuyGFTokenDialog";
 import WalletHomepage from "@/components/wallet/WalletHomepage";
-import CreatingWallet from "@/components/wallet/CreatingWallet";
 import BuyGFTScreen from "@/components/wallet/BuyGFTScreen";
 import ReviewOrderScreen from "@/components/wallet/ReviewOrderScreen";
 import PaymentRedirectScreen from "@/components/wallet/PaymentRedirectScreen";
 import BuyGFTResultScreen from "@/components/wallet/BuyGFTResultScreen";
 import ActivityHistoryScreen from "@/components/wallet/ActivityHistoryScreen";
 import StakingHubScreen from "@/components/wallet/StakingHubScreen";
-import crossmintBadge from "@assets/badge-color-background_1762859702329.png";
 import walletPromo from "@assets/Wallet promo new_1762876656607.png";
 
 export default function WalletPage() {
   const { user } = useAuth();
-  const { wallet, isLoading, createWallet } = useCrossmint();
+  const { walletAddress, isReady, isConnecting, connect } = useWallet();
   const [showWalletDetails, setShowWalletDetails] = useState(false);
   const [showBuyDialog, setShowBuyDialog] = useState(false);
   const [showBuyScreen, setShowBuyScreen] = useState(false);
@@ -31,24 +30,17 @@ export default function WalletPage() {
   const [showStakingHub, setShowStakingHub] = useState(false);
   const [purchaseAmount, setPurchaseAmount] = useState(0);
   const [gftAmount, setGftAmount] = useState(0);
-  const [isCreating, setIsCreating] = useState(false);
   const { data: tokenBalance, isLoading: isLoadingBalance } = useTokenBalance();
+  const { stakedAmount, earnedRewards, estimatedApy, stake, unstake, claimRewards, isStaking } = useStaking();
 
   useEffect(() => {
-    if ((wallet || user?.walletAddress) && !isCreating) {
+    if ((isReady && walletAddress) || user?.walletAddress) {
       setShowWalletDetails(true);
     }
-  }, [wallet, user?.walletAddress, isCreating]);
+  }, [isReady, walletAddress, user?.walletAddress]);
 
-  const handleCreationComplete = () => {
-    setIsCreating(false);
-    setShowWalletDetails(true);
-  };
-
-  const handleCreateWallet = () => {
-    setIsCreating(true);
-    setShowWalletDetails(false);
-    createWallet();
+  const handleConnectWallet = () => {
+    connect();
   };
 
   if (!user) {
@@ -90,7 +82,6 @@ export default function WalletPage() {
 
   const handlePaymentReady = () => {
     setShowPaymentRedirect(false);
-    // Show result screen instead of dialog for demo purposes
     setShowResultScreen(true);
   };
 
@@ -100,21 +91,27 @@ export default function WalletPage() {
     setGftAmount(0);
   };
 
+  const handleStakeConfirm = async (amount: number) => {
+    const success = await stake(amount);
+    if (success) {
+      setShowStakingHub(false);
+    }
+  };
+
+  const totalBalance = tokenBalance ? parseFloat(tokenBalance.balance) + (user?.gfTokenBalance || 0) : (user?.gfTokenBalance || 0);
+  const displayWalletAddress = walletAddress || user?.walletAddress || "";
+
   return (
     <div className="min-h-screen bg-background">
-      {isCreating ? (
-        <CreatingWallet
-          onBack={() => {
-            setIsCreating(false);
-          }}
-          onRetry={handleCreateWallet}
-          onComplete={handleCreationComplete}
-          isError={false}
-        />
-      ) : showStakingHub ? (
+      {showStakingHub ? (
         <StakingHubScreen
           onBack={() => setShowStakingHub(false)}
-          availableGft={tokenBalance ? parseFloat(tokenBalance.balance) + (user?.gfTokenBalance || 0) : (user?.gfTokenBalance || 0)}
+          availableGft={totalBalance}
+          totalStaked={stakedAmount}
+          rewardsEarned={earnedRewards}
+          estimatedApy={estimatedApy}
+          onUnstake={() => unstake(stakedAmount)}
+          onClaimRewards={claimRewards}
         />
       ) : showActivityHistory ? (
         <ActivityHistoryScreen
@@ -137,7 +134,7 @@ export default function WalletPage() {
         <BuyGFTScreen
           onBack={() => setShowBuyScreen(false)}
           onContinue={handleBuyContinue}
-          currentBalance={tokenBalance ? parseFloat(tokenBalance.balance) + (user?.gfTokenBalance || 0) : (user?.gfTokenBalance || 0)}
+          currentBalance={totalBalance}
         />
       ) : showReviewScreen ? (
         <ReviewOrderScreen
@@ -148,14 +145,16 @@ export default function WalletPage() {
           onProceed={handleReviewProceed}
           amount={purchaseAmount}
           gftAmount={gftAmount}
-          walletAddress={wallet?.address || user?.walletAddress || ""}
+          walletAddress={displayWalletAddress}
         />
       ) : showWalletDetails ? (
         <WalletHomepage
-          gfBalance={tokenBalance ? parseFloat(tokenBalance.balance) + (user?.gfTokenBalance || 0) : (user?.gfTokenBalance || 0)}
+          gfBalance={totalBalance}
           onChainBalance={tokenBalance?.balance || "0"}
           offChainBalance={user?.gfTokenBalance || 0}
-          walletAddress={wallet?.address || ""}
+          walletAddress={displayWalletAddress}
+          stakedAmount={stakedAmount}
+          nftsOwned={0}
           onBuyClick={() => setShowBuyScreen(true)}
           onStakeClick={() => setShowStakingHub(true)}
           onProfileClick={() => setShowWalletDetails(false)}
@@ -180,7 +179,7 @@ export default function WalletPage() {
                   Welcome to your<br />Gamefolio Wallet
                 </h2>
                 <p className="text-lg pr-8 text-muted-foreground">
-                  Store Gamefolio Tokens (GF) and NFT avatar profile pictures!
+                  Store Gamefolio Tokens (GFT) and NFT avatar profile pictures!
                 </p>
               </div>
 
@@ -201,19 +200,19 @@ export default function WalletPage() {
 
               <div className="space-y-4">
                 <Button 
-                  onClick={(wallet || user?.walletAddress) ? () => setShowWalletDetails(true) : handleCreateWallet} 
-                  disabled={isLoading || isCreating}
+                  onClick={(isReady && walletAddress) || user?.walletAddress ? () => setShowWalletDetails(true) : handleConnectWallet} 
+                  disabled={isConnecting}
                   className="w-auto px-6"
-                  data-testid={(wallet || user?.walletAddress) ? "button-continue-wallet" : "button-create-wallet"}
+                  data-testid={(isReady && walletAddress) || user?.walletAddress ? "button-continue-wallet" : "button-connect-wallet"}
                 >
-                  {isLoading ? (
+                  {isConnecting ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      {(wallet || user?.walletAddress) ? "Loading..." : "Creating Wallet..."}
+                      Connecting...
                     </>
                   ) : (
                     <>
-                      {(wallet || user?.walletAddress) ? (
+                      {(isReady && walletAddress) || user?.walletAddress ? (
                         <>
                           <ArrowLeft className="w-4 h-4 mr-2 rotate-180" />
                           Continue to Wallet
@@ -221,18 +220,14 @@ export default function WalletPage() {
                       ) : (
                         <>
                           <Wallet className="w-4 h-4 mr-2" />
-                          Create Wallet
+                          Connect Wallet
                         </>
                       )}
                     </>
                   )}
                 </Button>
                 <div className="flex items-center justify-start">
-                  <img 
-                    src={crossmintBadge} 
-                    alt="Powered by Crossmint" 
-                    className="h-8"
-                  />
+                  <span className="text-sm text-muted-foreground">Powered by Sequence</span>
                 </div>
               </div>
             </div>
