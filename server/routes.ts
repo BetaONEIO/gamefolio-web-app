@@ -8179,10 +8179,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Note: Server-side redirects removed - frontend handles shareCode URLs directly now
 
   // ==========================================
-  // Crossmint Wallet Routes
+  // Wallet Routes (Server-side generation)
   // ==========================================
 
-  // Get or create wallet via Crossmint API (handles both new and existing wallets)
+  // Get or create wallet - generates wallet server-side for instant creation
   app.post("/api/wallet/create", authMiddleware, async (req, res) => {
     try {
       const userId = req.user!.id;
@@ -8202,87 +8202,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Get Crossmint API key from environment (server-side only, no VITE_ prefix)
-      const apiKey = process.env.CROSSMINT_API_KEY;
-      if (!apiKey) {
-        return res.status(500).json({ message: "Crossmint API key not configured" });
-      }
+      // Generate a new wallet using ethers.js
+      const { ethers } = await import('ethers');
+      const wallet = ethers.Wallet.createRandom();
+      const walletAddress = wallet.address.toLowerCase();
 
-      const userEmail = user.email || `${user.username}@gamefolio.app`;
-      // Crossmint requires the linkedUser to be prefixed with the type (e.g., 'email:')
-      const linkedUser = `email:${userEmail}`;
-
-      // Call Crossmint API to get or create wallet on SKALE Nebula Hub Testnet
-      // This is idempotent - it will retrieve existing wallet or create new one
-      const crossmintResponse = await fetch('https://www.crossmint.com/api/v1-alpha2/wallets', {
-        method: 'POST',
-        headers: {
-          'X-API-KEY': apiKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: 'evm-smart-wallet',
-          linkedUser: linkedUser,
-          chain: 'skale-nebula-testnet',
-          config: {
-            adminSigner: {
-              type: 'evm-fireblocks-custodial'
-            }
-          }
-        }),
-      });
-
-      if (!crossmintResponse.ok) {
-        const errorText = await crossmintResponse.text();
-        console.error("Crossmint API error:", errorText);
-        
-        // Check if error is because wallet already exists
-        if (errorText.includes('already exists') || errorText.includes('duplicate')) {
-          // Try to fetch the existing wallet
-          const getUserWalletResponse = await fetch(`https://www.crossmint.com/api/v1-alpha2/wallets?linkedUser=${encodeURIComponent(linkedUser)}`, {
-            method: 'GET',
-            headers: {
-              'X-API-KEY': apiKey,
-            },
-          });
-
-          if (getUserWalletResponse.ok) {
-            const walletsData = await getUserWalletResponse.json();
-            if (walletsData && walletsData.length > 0) {
-              const existingWallet = walletsData[0];
-              
-              // Save to database
-              await storage.updateUser(userId, {
-                walletAddress: existingWallet.address,
-                walletChain: existingWallet.chain || 'skale-nebula-testnet',
-                walletCreatedAt: new Date(),
-              });
-
-              return res.json({
-                address: existingWallet.address,
-                chain: existingWallet.chain || 'skale-nebula-testnet',
-                message: "Connected to existing Crossmint wallet",
-                isExisting: true
-              });
-            }
-          }
-        }
-        
-        return res.status(500).json({ message: `Crossmint API error: ${errorText}` });
-      }
-
-      const walletData = await crossmintResponse.json();
-
-      // Save wallet to database
+      // Save wallet to database (only storing the public address)
       await storage.updateUser(userId, {
-        walletAddress: walletData.address,
-        walletChain: walletData.chain || 'skale-nebula-testnet',
+        walletAddress: walletAddress,
+        walletChain: 'skale-nebula-testnet',
         walletCreatedAt: new Date(),
       });
 
+      console.log(`Wallet created for user ${userId}: ${walletAddress}`);
+
       res.json({
-        address: walletData.address,
-        chain: walletData.chain || 'skale-nebula-testnet',
+        address: walletAddress,
+        chain: 'skale-nebula-testnet',
         message: "Wallet created successfully",
         isExisting: false
       });
