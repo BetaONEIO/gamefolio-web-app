@@ -1,0 +1,641 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/MintProcessing.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,400&display=swap";
+@import "https://fonts.googleapis.com/css?family=JetBrains+Mono:0,400&display=swap";
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,400&display=swap";
+.MintProcessing_52_2 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_52_3 {
+  background: #020617;
+  flex: 1 0 0;
+  width: 100%;
+}
+.Container_52_4 {
+  width: 430px;
+  height: 805px;
+}
+.Container_52_5 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+  width: 280px;
+  display: flex;
+}
+.Container_52_6 {
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 1px 28.359px 1px 28.641px;
+  display: flex;
+}
+.MintingYourNft_52_7 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 223px;
+  height: 30px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_52_8 {
+  justify-content: center;
+  align-items: center;
+  height: 60px;
+  padding: 1px 0.047px 1px 0.953px;
+  display: flex;
+}
+.PleaseDonTCloseTheAppOrRefreshYourGuardianIsBeingForgedOnTheBlockchain_52_9 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 279px;
+  height: 58px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_52_10 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b80;
+  border-radius: 24px;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px;
+  width: 382px;
+  padding: 25px;
+  display: flex;
+}
+.Container_52_11 {
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+  width: 332px;
+  height: 60px;
+  padding-right: 104px;
+  display: flex;
+}
+.Container_52_12 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  height: 60px;
+  display: flex;
+}
+.Container_52_13 {
+  background: #4ade80;
+  border-radius: 33554400px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 24px;
+  padding: 4px;
+  display: flex;
+}
+.Container_52_14 {
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+}
+.Container_52_16 {
+  background: #4ade804d;
+  flex-shrink: 0;
+  width: 2px;
+  height: 32px;
+}
+.Container_52_17 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2px;
+  width: 188px;
+  height: 38px;
+  display: flex;
+}
+.Container_52_18 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 20px;
+  padding: 1px 70.5px 1px 0;
+  display: flex;
+}
+.ReservingSupply_52_19 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 119px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_52_20 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding-bottom: 1px;
+  display: flex;
+}
+.AllocationSecuredForYourWallet_52_21 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 190px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_52_22 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+  height: 60px;
+  padding-right: 109px;
+  display: flex;
+}
+.Container_52_23 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 60px;
+  display: flex;
+}
+.Container_52_24 {
+  background: #14532d;
+  border-radius: 33554400px;
+  width: 34px;
+  height: 34px;
+}
+.Container_52_25 {
+  background: #1e293b80;
+  width: 2px;
+  height: 32px;
+}
+.Container_52_26 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2px;
+  width: 183px;
+  height: 38px;
+  display: flex;
+}
+.Container_52_27 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 20px;
+  padding: 1px 101.5px 1px 0;
+  display: flex;
+}
+.MintingNft_52_28 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  width: 83px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_52_29 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding-bottom: 1px;
+  display: flex;
+}
+.WritingMetadataToTheNetwork_52_30 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 185px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_52_31 {
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+  width: 332px;
+  height: 38px;
+  padding-right: 121px;
+  display: flex;
+}
+.Container_52_32 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 24px;
+  display: flex;
+}
+.Container_52_33 {
+  background: #1e293b;
+  border-radius: 33554400px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  padding: 8px;
+  display: flex;
+}
+.Container_52_34 {
+  background: #94a3b8;
+  border-radius: 33554400px;
+  width: 8px;
+  height: 8px;
+}
+.Container_52_35 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2px;
+  height: 38px;
+  display: flex;
+}
+.Container_52_36 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 20px;
+  padding: 1px 105.5px 1px 0;
+  display: flex;
+}
+.Finalising_52_37 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 67px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_52_38 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding-bottom: 1px;
+  display: flex;
+}
+.ConfirmingTransactionBlocks_52_39 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 173px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_52_40 {
+  width: 192px;
+  height: 192px;
+}
+.Container_52_41 {
+  filter: blur(32px);
+  background: #4ade8033;
+  border-radius: 33554400px;
+  width: 192px;
+  height: 192px;
+}
+.Container_52_42 {
+  box-sizing: border-box;
+  border: 4px solid #1e293b80;
+  border-radius: 33554400px;
+  width: 192px;
+  height: 192px;
+}
+.Container_52_43 {
+  box-sizing: border-box;
+  border: 2px solid #1e293b80;
+  border-radius: 33554400px;
+  justify-content: center;
+  align-items: center;
+  width: 160px;
+  height: 160px;
+  padding: 2px;
+  display: flex;
+  overflow: hidden;
+}
+.Image_52_44 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  flex-shrink: 0;
+  width: 156px;
+  height: 156px;
+}
+.Container_52_45 {
+  border-radius: 33554400px;
+  width: 259px;
+  height: 259px;
+}
+.Container_52_46 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 33554400px;
+  justify-content: center;
+  align-items: center;
+  width: 184px;
+  height: 34px;
+  padding: 9px 17px;
+  display: flex;
+  box-shadow:
+    0 8px 10px -6px #0000001a,
+    0 20px 25px -5px #0000001a;
+}
+.Container_52_47 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6.5px;
+  width: 150px;
+  height: 16px;
+  display: flex;
+}
+.Container_52_48 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 16px;
+  display: flex;
+  overflow: hidden;
+}
+.OnChainProcessing_52_51 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 129px;
+  height: 16px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_52_52 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  width: 430px;
+  padding: 32px 130.609px 32px 131.391px;
+  display: flex;
+}
+.Container_52_53 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6.5px;
+  height: 15px;
+  display: flex;
+}
+.Container_52_54 {
+  width: 12px;
+  height: 12px;
+  overflow: hidden;
+}
+.SecureTransaction_52_56 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 135px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_52_57 {
+  background: #1e293b4d;
+  border-radius: 33554400px;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 7.20313px;
+  height: 32px;
+  padding: 8px 16.797px 8px 16px;
+  display: flex;
+}
+.Container_52_58 {
+  justify-content: center;
+  align-items: center;
+  width: 116px;
+  height: 16px;
+  display: flex;
+}
+.Tx_0x4f2A931_52_59 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 118px;
+  height: 16px;
+  font-family: JetBrains Mono;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_52_60 {
+  width: 12px;
+  height: 12px;
+  overflow: hidden;
+}
+.G_52_61 {
+  width: 9px;
+  height: 10px;
+}
+.Header_52_64 {
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+  background: #020617cc;
+  border-bottom: 1px solid #1e293b80;
+  justify-content: center;
+  align-items: center;
+  width: 430px;
+  height: 93px;
+  padding: 48px 144.734px 17px 145.266px;
+  display: flex;
+}
+.Container_52_65 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 140px;
+  height: 28px;
+  padding: 2px 0 3px;
+  display: flex;
+}
+.ProcessingMint_52_66 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 143px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+
+```
+
+---
+
+```src/components/MintProcessing.tsx
+import React from 'react';
+import styles from '../styles/MintProcessing.module.css';
+
+
+export default function MintProcessing() {
+  return (
+    <div className={styles.MintProcessing_52_2}>
+      <div className={styles.Container_52_3}>
+        <div className={styles.Container_52_4}>
+          <div className={styles.Container_52_5}>
+            <div className={styles.Container_52_6}><span className={styles.MintingYourNft_52_7}>Minting your NFT...</span></div>
+            <div className={styles.Container_52_8}><span className={styles.PleaseDonTCloseTheAppOrRefreshYourGuardianIsBeingForgedOnTheBlockchain_52_9}>Please don&#x27;t close the app or refresh. Your Guardian is being forged on the blockchain.</span></div>
+          </div>
+          <div className={styles.Container_52_10}>
+            <div className={styles.Container_52_11}>
+              <div className={styles.Container_52_12}>
+                <div className={styles.Container_52_13}>
+                  <div className={styles.Container_52_14}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M2.66699 8.6L4.76232 11L10.0003 5M13.3336 5.042L7.61899 11.042L7.33365 10.6667" stroke="#022C22" strokeWidth="0.999999" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                </div>
+                <div className={styles.Container_52_16}></div>
+              </div>
+              <div className={styles.Container_52_17}>
+                <div className={styles.Container_52_18}><span className={styles.ReservingSupply_52_19}>Reserving supply</span></div>
+                <div className={styles.Container_52_20}><span className={styles.AllocationSecuredForYourWallet_52_21}>Allocation secured for your wallet</span></div>
+              </div>
+            </div>
+            <div className={styles.Container_52_22}>
+              <div className={styles.Container_52_23}>
+                <div className={styles.Container_52_24}></div>
+                <div className={styles.Container_52_25}></div>
+              </div>
+              <div className={styles.Container_52_26}>
+                <div className={styles.Container_52_27}><span className={styles.MintingNft_52_28}>Minting NFT</span></div>
+                <div className={styles.Container_52_29}><span className={styles.WritingMetadataToTheNetwork_52_30}>Writing metadata to the network</span></div>
+              </div>
+            </div>
+            <div className={styles.Container_52_31}>
+              <div className={styles.Container_52_32}>
+                <div className={styles.Container_52_33}>
+                  <div className={styles.Container_52_34}></div>
+                </div>
+              </div>
+              <div className={styles.Container_52_35}>
+                <div className={styles.Container_52_36}><span className={styles.Finalising_52_37}>Finalising</span></div>
+                <div className={styles.Container_52_38}><span className={styles.ConfirmingTransactionBlocks_52_39}>Confirming transaction blocks</span></div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_52_40}>
+            <div className={styles.Container_52_41}></div>
+            <div className={styles.Container_52_42}>
+              <div className={styles.Container_52_43}>
+                <div className={styles.Image_52_44}></div>
+              </div>
+              <div className={styles.Container_52_45}></div>
+            </div>
+            <div className={styles.Container_52_46}>
+              <div className={styles.Container_52_47}>
+                <div className={styles.Container_52_48}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M1.33301 2.66669C1.33333 1.99625 1.83142 1.43032 2.49639 1.34486C3.16135 1.2594 3.78636 1.681 3.95619 2.32957C4.12602 2.97813 3.78785 3.65194 3.16634 3.90336V7.50003H7.49969V3.90336C6.90808 3.66404 6.569 3.03906 6.6909 2.41263C6.81281 1.7862 7.36151 1.33398 7.99969 1.33398C8.63787 1.33398 9.18657 1.7862 9.30847 2.41263C9.43038 3.03906 9.0913 3.66404 8.49969 3.90336V7.50003H10.6664C11.309 7.50003 11.741 7.4987 12.063 7.45603C12.3704 7.41403 12.5024 7.3427 12.589 7.25603C12.6757 7.16936 12.747 7.03736 12.789 6.72936C12.8317 6.40803 12.833 5.97603 12.833 5.33336V3.90336C12.2414 3.66404 11.9023 3.03906 12.0242 2.41263C12.1462 1.7862 12.6948 1.33398 13.333 1.33398C13.9712 1.33398 14.5199 1.7862 14.6418 2.41263C14.7637 3.03906 14.4246 3.66404 13.833 3.90336V5.36803C13.833 5.96669 13.833 6.46669 13.7797 6.86269C13.7237 7.28136 13.5997 7.65936 13.2957 7.9627C12.9924 8.2667 12.6144 8.3907 12.1957 8.4467C11.7997 8.50003 11.3004 8.50003 10.701 8.50003H8.49969V12.0967C9.0913 12.336 9.43038 12.961 9.30847 13.5874C9.18657 14.2139 8.63787 14.6661 7.99969 14.6661C7.36151 14.6661 6.81281 14.2139 6.6909 13.5874C6.569 12.961 6.90808 12.336 7.49969 12.0967V8.50003H3.16634V12.0967C3.75796 12.336 4.09703 12.961 3.97513 13.5874C3.85322 14.2139 3.30453 14.6661 2.66634 14.6661C2.02816 14.6661 1.47946 14.2139 1.35756 13.5874C1.23566 12.961 1.57473 12.336 2.16634 12.0967V3.90336C1.66246 3.69953 1.33275 3.21023 1.33301 2.66669Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M11.5 10C11.5 9.72386 11.7239 9.5 12 9.5H13.524C14.4407 9.5 15.1667 10.256 15.1667 11.1667C15.1696 11.8688 14.7321 12.4974 14.0727 12.7387L15.0927 14.4054C15.1861 14.5577 15.1911 14.7482 15.1058 14.9052C15.0206 15.0623 14.8581 15.1619 14.6795 15.1666C14.5009 15.1713 14.3334 15.0803 14.24 14.928L12.958 12.8334H12.5V14.6667C12.5 14.9428 12.2761 15.1667 12 15.1667C11.7239 15.1667 11.5 14.9428 11.5 14.6667L11.5 10ZM12.5 11.8333H13.524C13.8693 11.8333 14.1667 11.5447 14.1667 11.1667C14.1667 10.7887 13.8693 10.5 13.524 10.5H12.5V11.8333Z" fill="#4ADE80" />
+                  </svg>
+                </div><span className={styles.OnChainProcessing_52_51}>On-Chain Processing</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_52_52}>
+          <div className={styles.Container_52_53}>
+            <div className={styles.Container_52_54}><svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" clipRule="evenodd" d="M2.625 5.0275V4C2.625 2.13604 4.13604 0.625 6 0.625C7.86396 0.625 9.375 2.13604 9.375 4V5.0275C9.9325 5.069 10.295 5.174 10.5605 5.4395C11 5.8785 11 6.586 11 8C11 9.414 11 10.1215 10.5605 10.5605C10.1215 11 9.414 11 8 11H4C2.586 11 1.8785 11 1.4395 10.5605C1 10.1215 1 9.414 1 8C1 6.586 1 5.8785 1.4395 5.4395C1.7045 5.174 2.0675 5.069 2.625 5.0275ZM3.375 4C3.375 2.55025 4.55025 1.375 6 1.375C7.44975 1.375 8.625 2.55025 8.625 4V5.002C8.43367 5.00033 8.22533 4.99967 8 5H4C3.77433 4.99967 3.566 5.00033 3.375 5.002V4ZM4 8.5C4.27614 8.5 4.5 8.27614 4.5 8C4.5 7.72386 4.27614 7.5 4 7.5C3.72386 7.5 3.5 7.72386 3.5 8C3.5 8.27614 3.72386 8.5 4 8.5ZM6 8.5C6.27614 8.5 6.5 8.27614 6.5 8C6.5 7.72386 6.27614 7.5 6 7.5C5.72386 7.5 5.5 7.72386 5.5 8C5.5 8.27614 5.72386 8.5 6 8.5ZM8.5 8C8.5 8.27614 8.27614 8.5 8 8.5C7.72386 8.5 7.5 8.27614 7.5 8C7.5 7.72386 7.72386 7.5 8 7.5C8.27614 7.5 8.5 7.72386 8.5 8Z" fill="#94A3B8" />
+              </svg>
+            </div><span className={styles.SecureTransaction_52_56}>Secure Transaction</span>
+          </div>
+          <div className={styles.Container_52_57}>
+            <div className={styles.Container_52_58}><span className={styles.Tx_0x4f2A931_52_59}>Tx: 0x4f2...a931</span></div>
+            <div className={styles.Container_52_60}>
+              <div className={styles.G_52_61}><svg width="9" height="10" viewBox="0 0 9 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M1.5 4.5C1.5 3.086 1.5 2.3785 1.9395 1.9395C2.3785 1.5 3.086 1.5 4.5 1.5H6C7.414 1.5 8.1215 1.5 8.5605 1.9395C9 2.3785 9 3.086 9 4.5V7C9 8.414 9 9.1215 8.5605 9.5605C8.1215 10 7.414 10 6 10H4.5C3.086 10 2.3785 10 1.9395 9.5605C1.5 9.1215 1.5 8.414 1.5 7V4.5Z" stroke="#4ADE80" strokeWidth="0.75" />
+                  <path d="M1.5 8.5C0.671573 8.5 0 7.82843 0 7V4C0 2.1145 0 1.1715 0.586 0.586C1.172 0.000500023 2.1145 0 4 0H6C6.82843 0 7.5 0.671573 7.5 1.5" stroke="#4ADE80" strokeWidth="0.75" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Header_52_64}>
+          <div className={styles.Container_52_65}><span className={styles.ProcessingMint_52_66}>Processing Mint</span></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
