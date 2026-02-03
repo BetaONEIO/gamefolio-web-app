@@ -1377,14 +1377,14 @@ export default function OnboardingFlow({
                 <Button
                   onClick={handleCreateWalletClick}
                   disabled={isCreatingAnyWallet}
-                  className="w-full h-auto py-4 px-6 bg-primary hover:bg-primary/90 text-white"
+                  className="w-full h-auto py-4 px-6 bg-primary hover:bg-primary/90 text-gray-900"
                   data-testid="button-create-wallet"
                 >
                   <div className="flex items-start gap-3 text-left w-full">
-                    <Wallet className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                    <Wallet className="h-5 w-5 mt-0.5 flex-shrink-0 text-gray-900" />
                     <div>
-                      <div className="font-semibold mb-1">Create Wallet</div>
-                      <div className="text-sm text-white/80 font-normal">
+                      <div className="font-semibold mb-1 text-gray-900">Create Wallet</div>
+                      <div className="text-sm text-gray-800 font-normal">
                         Get a secure blockchain wallet for NFTs and rewards
                       </div>
                     </div>
