@@ -813,66 +813,86 @@ export default function StorePage() {
                 </div>
               </div>
 
-              {/* NFT Collection Grid */}
+              {/* NFT Collection Grid - Figma Design */}
               <h3 className="text-base font-semibold text-gray-300 mb-3">NFT Avatars</h3>
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 mb-8">
-                {gamefolioNFTs.map((nft) => (
-                  <Card
-                    key={nft.id}
-                    className="bg-gray-800/50 border-gray-700 overflow-hidden transition-all hover:shadow-lg hover:border-[#4ade80] hover:shadow-[#4ade80]/20 cursor-pointer"
-                    onClick={() => handleBuyNFT(nft)}
-                  >
-                    <div className="relative aspect-[3/4] overflow-hidden">
-                      <img
-                        src={nft.image}
-                        alt={nft.name}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                      />
-                      <Badge className={`absolute top-2 left-2 text-xs ${
-                        nft.rarity === "legendary" ? "bg-yellow-600" :
-                        nft.rarity === "epic" ? "bg-purple-600" :
-                        nft.rarity === "rare" ? "bg-blue-600" : "bg-gray-600"
-                      }`}>
-                        {nft.rarity}
-                      </Badge>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleWatchlistToggle(nft);
-                        }}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
-                      >
-                        <Heart 
-                          className={`h-4 w-4 ${watchlist?.some((w: any) => w.nftId === nft.id) ? 'fill-red-500 text-red-500' : 'text-white'}`}
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[8px] mb-8">
+                {gamefolioNFTs.map((nft) => {
+                  const rarityColors: Record<string, string> = {
+                    legendary: "#fe9a00",
+                    epic: "#9810fa",
+                    rare: "#155dfc",
+                    common: "#64748b",
+                  };
+                  const rarityColor = rarityColors[nft.rarity.toLowerCase()] || rarityColors.common;
+                  const isWatchlisted = watchlist?.some((w: any) => w.nftId === nft.id);
+                  
+                  return (
+                    <div
+                      key={nft.id}
+                      className="w-[191px] h-[367px] bg-[#0f172a] border border-[#1e293b80] rounded-[10px] overflow-hidden flex flex-col cursor-pointer hover:border-[#4ade80]/50 transition-colors"
+                      onClick={() => handleBuyNFT(nft)}
+                    >
+                      <div className="relative w-[189px] h-[237px] flex-shrink-0">
+                        <img
+                          src={nft.image}
+                          alt={nft.name}
+                          className="w-full h-full object-cover"
                         />
-                      </button>
-                    </div>
-                    
-                    <div className="p-3 space-y-2">
-                      <div>
-                        <h3 className="font-semibold text-sm line-clamp-1">{nft.name}</h3>
-                        <p className="text-xs text-gray-400">by {nft.owner}</p>
-                      </div>
-                      
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-700">
-                        <div>
-                          <p className="text-[10px] text-gray-500">Price</p>
-                          <div className="flex items-center gap-1">
-                            <img src={gfTokenLogo} alt="GF" className="w-4 h-4" />
-                            <span className="text-sm font-bold text-[#4ade80]">{nft.price}</span>
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          className="bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22] text-xs h-8"
+                        <div
+                          className="absolute top-3 left-3 px-3 py-1.5 rounded-xl backdrop-blur-md"
+                          style={{ backgroundColor: `${rarityColor}e6` }}
                         >
-                          <ShoppingCart className="h-3 w-3 mr-1" />
-                          Buy
-                        </Button>
+                          <span className="text-[10px] font-bold text-white uppercase tracking-[0.5px]">
+                            {nft.rarity}
+                          </span>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleWatchlist(nft);
+                          }}
+                          className="absolute top-3 right-3 w-8 h-8 rounded-full backdrop-blur-md flex items-center justify-center transition-colors"
+                          style={{ backgroundColor: isWatchlisted ? "#fff3" : "#0000004d" }}
+                        >
+                          <Heart
+                            className="w-5 h-5"
+                            fill={isWatchlisted ? "#fff" : "none"}
+                            stroke="#fff"
+                          />
+                        </button>
+                      </div>
+                      <div className="flex-1 p-3 flex flex-col">
+                        <h3 className="text-sm font-bold text-[#f8fafc] truncate leading-5">
+                          {nft.name}
+                        </h3>
+                        <p className="text-[11px] text-[#94a3b8] leading-[16.5px] mt-0.5">
+                          by {nft.owner}
+                        </p>
+                        <div className="mt-3 pt-3 border-t border-[#1e293b80] flex items-center justify-between">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-[#94a3b8] leading-[15px]">Price</span>
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <img src={gfTokenLogo} alt="GF" className="w-3 h-3" />
+                              <span className="text-sm font-bold text-[#4ade80] leading-5">
+                                {nft.price.toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleBuyNFT(nft);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-[#4ade80] hover:bg-[#22c55e] rounded-xl transition-colors"
+                          >
+                            <ShoppingCart className="w-4 h-4 text-[#022c22]" />
+                            <span className="text-xs font-bold text-[#022c22]">Buy</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </Card>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Store Items */}
