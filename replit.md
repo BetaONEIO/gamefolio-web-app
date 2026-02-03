@@ -39,7 +39,7 @@ Gamefolio is a comprehensive gaming portfolio and social platform for gamers to 
 - **Multi-game Support**: Integration with Twitch API for game data and automatic game creation.
 - **GF Token Economy**: In-app currency for NFT purchases, starting balance for new users, and on-chain/off-chain balance management.
 - **NFT Marketplace**: Store for purchasing NFT avatars with GF tokens, with balance checks and wallet requirements.
-- **Crossmint Wallet Integration**: Simplified onboarding for creating/connecting SKALE Nebula Hub Testnet wallets, with zero gas fees and `getOrCreateWallet()` pattern.
+- **Sequence Wallet Integration**: Email-based WaaS authentication with automatic wallet creation. Wallets are auto-created when users with verified emails visit the wallet page or complete onboarding. Uses OTP verification for security. Components: `useSequenceEmailAuth` hook, `WalletOTPModal`. Configuration requires adding allowed origins in Sequence Builder dashboard.
 - **Wallet Homepage (Desktop)**: Desktop-optimized wallet dashboard with 3-column layout, animated balance card, Portfolio/Staking tabs, quick stats sidebar, and transaction history. Components in `client/src/components/wallet/`.
 - **RevenueCat Integration**: Pro subscription management via `@revenuecat/purchases-js` SDK, syncing subscription status to the database.
 - **Video Ads System**: Google IMA SDK integration for monetization with 25% chance on clips, every 5 reels for non-Pro users. Pro subscribers are exempt from all ads.
@@ -54,7 +54,7 @@ Gamefolio is a comprehensive gaming portfolio and social platform for gamers to 
 ## External Dependencies
 - **Supabase**: PostgreSQL database, authentication, and storage services.
 - **Twitch API**: Game data retrieval.
-- **Crossmint**: Blockchain wallet infrastructure for Web3 features and NFT minting on SKALE Network, and Onramp for fiat-to-crypto purchases on Base Sepolia.
+- **Sequence WaaS**: Email-based blockchain wallet authentication on SKALE Nebula Testnet (chainId 37084624). Uses `@0xsequence/waas` SDK with OTP verification flow.
 - **bad-words (NPM package)**: Content filtering and profanity detection.
 - **TUS (protocol)**: Robust video upload and processing.
 - **connect-pg-simple**: PostgreSQL-backed session management.

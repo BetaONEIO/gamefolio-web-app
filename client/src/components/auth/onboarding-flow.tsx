@@ -216,12 +216,15 @@ export default function OnboardingFlow({
   // Sequence email auth for auto-wallet creation
   const { 
     initiateEmailAuth, 
-    verifyOTP, 
+    verifyOTP,
+    reset: resetEmailAuth,
+    retry: retryEmailAuth,
     isInitiating: isInitiatingWallet, 
     isVerifying: isVerifyingWallet, 
     awaitingOTP, 
     error: walletError,
-    walletAddress: emailWalletAddress 
+    walletAddress: emailWalletAddress,
+    canRetry
   } = useSequenceEmailAuth();
   const [showOTPModal, setShowOTPModal] = useState(false);
   const walletInitiatedRef = useRef(false);
@@ -266,6 +269,8 @@ export default function OnboardingFlow({
         currentStep === OnboardingStep.Wallet && 
         !walletAddress && 
         !walletInitiatedRef.current &&
+        !isInitiatingWallet &&
+        !awaitingOTP &&
         user?.email &&
         user?.emailVerified
       ) {
@@ -274,7 +279,7 @@ export default function OnboardingFlow({
       }
     };
     autoCreateWallet();
-  }, [currentStep, walletAddress, user?.email, user?.emailVerified, initiateEmailAuth]);
+  }, [currentStep, walletAddress, user?.email, user?.emailVerified, initiateEmailAuth, isInitiatingWallet, awaitingOTP]);
 
   // Show OTP modal when awaiting OTP
   useEffect(() => {
@@ -291,6 +296,21 @@ export default function OnboardingFlow({
       return true;
     }
     return false;
+  };
+
+  // Handle OTP modal close - reset state if cancelled
+  const handleOTPModalClose = (open: boolean) => {
+    setShowOTPModal(open);
+    if (!open && awaitingOTP) {
+      resetEmailAuth();
+      walletInitiatedRef.current = false;
+    }
+  };
+
+  // Retry wallet creation after error
+  const handleRetryWalletCreation = () => {
+    walletInitiatedRef.current = false;
+    retryEmailAuth();
   };
 
   // Connect wallet via Sequence
@@ -1386,6 +1406,39 @@ export default function OnboardingFlow({
                   </Button>
                 </div>
               </div>
+            ) : walletError ? (
+              <div className="mb-6">
+                <Card className="bg-red-900/20 border-red-500/50">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col items-center text-center py-4">
+                      <div className="p-3 rounded-full bg-red-500/20 text-red-400 mb-4">
+                        <span className="text-2xl">!</span>
+                      </div>
+                      <h3 className="font-semibold text-white mb-2">Wallet Creation Failed</h3>
+                      <p className="text-sm text-gray-400 mb-4">
+                        {walletError}
+                      </p>
+                      {canRetry && (
+                        <Button
+                          onClick={handleRetryWalletCreation}
+                          className="bg-primary hover:bg-primary/90"
+                        >
+                          Try Again
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Button
+                  onClick={goToNextStep}
+                  variant="ghost"
+                  className="w-full mt-4 text-gray-400 hover:text-white"
+                  data-testid="button-skip-wallet"
+                >
+                  Skip for now
+                </Button>
+              </div>
             ) : isCreatingAnyWallet ? (
               <div className="mb-6">
                 <Card className="bg-gray-800/50 border-gray-700">
@@ -1482,7 +1535,7 @@ export default function OnboardingFlow({
             {/* OTP Modal */}
             <WalletOTPModal
               open={showOTPModal}
-              onOpenChange={setShowOTPModal}
+              onOpenChange={handleOTPModalClose}
               email={user?.email || ""}
               onVerify={handleOTPVerify}
               isVerifying={isVerifyingWallet}

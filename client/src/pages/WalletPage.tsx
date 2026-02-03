@@ -40,15 +40,19 @@ export default function WalletPage() {
   // Sequence email auth for auto-wallet creation
   const { 
     initiateEmailAuth, 
-    verifyOTP, 
+    verifyOTP,
+    reset: resetEmailAuth,
+    retry: retryEmailAuth,
     isInitiating: isInitiatingWallet, 
     isVerifying: isVerifyingWallet, 
     awaitingOTP, 
     error: walletError,
-    walletAddress: emailWalletAddress 
+    walletAddress: emailWalletAddress,
+    canRetry
   } = useSequenceEmailAuth();
   const [showOTPModal, setShowOTPModal] = useState(false);
   const walletInitiatedRef = useRef(false);
+  const [autoInitiated, setAutoInitiated] = useState(false);
 
   const hasExistingWallet = !!(user?.walletAddress || (isReady && walletAddress) || emailWalletAddress);
   const [showWalletDetails, setShowWalletDetails] = useState(false);
@@ -66,6 +70,23 @@ export default function WalletPage() {
     }
   }, [awaitingOTP]);
 
+  // Auto-initiate wallet creation on page mount for verified users
+  useEffect(() => {
+    if (
+      user?.email && 
+      user?.emailVerified && 
+      !hasExistingWallet && 
+      !walletInitiatedRef.current &&
+      !autoInitiated &&
+      !isInitiatingWallet &&
+      !awaitingOTP
+    ) {
+      walletInitiatedRef.current = true;
+      setAutoInitiated(true);
+      initiateEmailAuth(user.email);
+    }
+  }, [user?.email, user?.emailVerified, hasExistingWallet, autoInitiated, isInitiatingWallet, awaitingOTP, initiateEmailAuth]);
+
   // Handle OTP verification
   const handleOTPVerify = async (code: string): Promise<boolean> => {
     const result = await verifyOTP(code);
@@ -77,18 +98,30 @@ export default function WalletPage() {
     return false;
   };
 
-  // Auto-initiate wallet creation for verified users without wallets
-  const handleAutoCreateWallet = async () => {
-    if (user?.email && user?.emailVerified && !walletInitiatedRef.current) {
-      walletInitiatedRef.current = true;
-      await initiateEmailAuth(user.email);
+  // Handle OTP modal close - reset state if cancelled
+  const handleOTPModalClose = (open: boolean) => {
+    setShowOTPModal(open);
+    if (!open && awaitingOTP) {
+      resetEmailAuth();
+      walletInitiatedRef.current = false;
+      setAutoInitiated(false);
     }
+  };
+
+  // Retry wallet creation after error
+  const handleRetryWalletCreation = () => {
+    walletInitiatedRef.current = false;
+    setAutoInitiated(false);
+    retryEmailAuth();
   };
 
   const handleConnectWallet = () => {
     // For verified users, use email auth for seamless wallet creation
     if (user?.email && user?.emailVerified) {
-      handleAutoCreateWallet();
+      if (!walletInitiatedRef.current) {
+        walletInitiatedRef.current = true;
+        initiateEmailAuth(user.email);
+      }
     } else {
       // Fallback to Sequence connect modal
       connect();
@@ -261,7 +294,34 @@ export default function WalletPage() {
               </ul>
 
               <div className="space-y-4">
-                {awaitingOTP ? (
+                {walletError ? (
+                  <div className="space-y-3">
+                    <Card className="bg-destructive/10 border-destructive/50">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-destructive/20 flex items-center justify-center">
+                            <span className="text-destructive">!</span>
+                          </div>
+                          <div>
+                            <p className="font-medium text-destructive">Wallet creation failed</p>
+                            <p className="text-sm text-muted-foreground">
+                              {walletError}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    {canRetry && (
+                      <Button 
+                        onClick={handleRetryWalletCreation}
+                        className="w-auto px-6"
+                      >
+                        <Wallet className="w-4 h-4 mr-2" />
+                        Try Again
+                      </Button>
+                    )}
+                  </div>
+                ) : awaitingOTP ? (
                   <div className="space-y-3">
                     <Card className="bg-primary/10 border-primary/50">
                       <CardContent className="p-4">
@@ -335,7 +395,7 @@ export default function WalletPage() {
       {/* OTP Modal for wallet creation */}
       <WalletOTPModal
         open={showOTPModal}
-        onOpenChange={setShowOTPModal}
+        onOpenChange={handleOTPModalClose}
         email={user?.email || ""}
         onVerify={handleOTPVerify}
         isVerifying={isVerifyingWallet}
