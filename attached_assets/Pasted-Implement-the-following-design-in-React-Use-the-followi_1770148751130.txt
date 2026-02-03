@@ -1,0 +1,1123 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/MultiMintSuccess.module.css
+@import url('https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,400;0,900&display=swap');
+
+@import url('https://fonts.googleapis.com/css?family=JetBrains+Mono:0,400&display=swap');
+
+@import url('https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,400;0,900&display=swap');
+
+.MultiMintSuccess_60_68 {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  background: #FFF;
+  overflow: hidden;
+  height: 100%;
+}
+.Container_60_69 {
+  height: 1172px;
+  background: #020617;
+  width: 100%;
+}
+.Container_60_70 {
+  width: 430px;
+  height: 1172px;
+}
+.Container_60_71 {
+  display: flex;
+  width: 300px;
+  height: 132px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+.Container_60_72 {
+  display: flex;
+  height: 60px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+}
+.Container_60_73 {
+  display: flex;
+  height: 20px;
+  padding: 1px 34.016px 1px 34.984px;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+.TransactionSuccessful_60_74 {
+  width: 231px;
+  height: 18px;
+  color: #4ADE80;
+  text-align: center;
+  font-feature-settings: 'dlig' on;
+  font-family: "Plus Jakarta Sans";
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px /* 142.857% */;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  display: inline-block;
+}
+.Container_60_75 {
+  display: flex;
+  height: 36px;
+  padding: 0 7.273px 0 7.727px;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+.GuardiansMinted_60_76 {
+  width: 285px;
+  height: 38px;
+  color: #F8FAFC;
+  text-align: center;
+  font-feature-settings: 'dlig' on;
+  font-family: "Plus Jakarta Sans";
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 36px /* 120% */;
+  letter-spacing: -0.75px;
+  display: inline-block;
+}
+.Container_60_77 {
+  display: flex;
+  height: 60px;
+  padding: 1px 5.719px 1px 6.281px;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+.YourBatchOf_10UniqueGuardiansHasBeenSuccessfullyForgedAndAddedToYourCollection_60_78 {
+  width: 288px;
+  height: 58px;
+  color: #94A3B8;
+  text-align: center;
+  font-feature-settings: 'dlig' on;
+  font-family: "Plus Jakarta Sans";
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px /* 142.857% */;
+  display: inline-block;
+}
+.Container_60_79 {
+  width: 382px;
+  height: 266px;
+  border-radius: 24px;
+  border: 1px solid rgba(30, 41, 59, 0.50);
+  background: rgba(15, 23, 42, 0.50);
+  box-sizing: border-box;
+}
+.Container_60_80 {
+  display: flex;
+  width: 340px;
+  height: 20px;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 75.3515625px;
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+.Container_60_81 {
+  display: flex;
+  height: 20px;
+  padding: 1px 0;
+  justify-content: center;
+  align-items: center;
+  flex: 1 0 0;
+}
+.MintedCollection_60_82 {
+  width: 163px;
+  height: 18px;
+  color: #94A3B8;
+  font-feature-settings: 'dlig' on;
+  font-family: "Plus Jakarta Sans";
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px /* 142.857% */;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  display: inline-block;
+}
+.Container_60_83 {
+  display: flex;
+  width: 105px;
+  height: 19px;
+  padding: 3px 6.5px;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  border-radius: 4px;
+  background: rgba(74, 222, 128, 0.10);
+}
+.RaritySummary_60_84 {
+  width: 92px;
+  height: 13px;
+  flex-shrink: 0;
+  color: #4ADE80;
+  font-feature-settings: 'dlig' on;
+  font-family: "Plus Jakarta Sans";
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px /* 150% */;
+  display: inline-block;
+}
+.Container_60_85 {
+  width: 340px;
+  height: 129px;
+}
+.Container_60_86 {
+  display: flex;
+  width: 59px;
+  height: 59px;
+  padding: 1px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 12px;
+  border: 1px solid #1E293B;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.Image_60_87 {
+  width: 57px;
+  height: 57px;
+  flex-shrink: 0;
+  aspect-ratio: 1/1;
+  background: url(<path-to-image>) lightgray 50% / cover no-repeat;
+}
+.Container_60_88 {
+  display: flex;
+  width: 59px;
+  height: 59px;
+  padding: 1px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 12px;
+  border: 1px solid #1E293B;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.Image_60_89 {
+  width: 57px;
+  height: 57px;
+  flex-shrink: 0;
+  aspect-ratio: 1/1;
+  background: url(<path-to-image>) lightgray 50% / cover no-repeat;
+}
+.Container_60_90 {
+  display: flex;
+  width: 59px;
+  height: 59px;
+  padding: 1px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 12px;
+  border: 1px solid #1E293B;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.Image_60_91 {
+  width: 57px;
+  height: 57px;
+  flex-shrink: 0;
+  aspect-ratio: 1/1;
+  background: url(<path-to-image>) lightgray 50% / cover no-repeat;
+}
+.Container_60_92 {
+  display: flex;
+  width: 59px;
+  height: 59px;
+  padding: 1px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 12px;
+  border: 1px solid #1E293B;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.Image_60_93 {
+  width: 57px;
+  height: 57px;
+  flex-shrink: 0;
+  aspect-ratio: 1/1;
+  background: url(<path-to-image>) lightgray 50% / cover no-repeat;
+}
+.Container_60_94 {
+  display: flex;
+  width: 59px;
+  height: 59px;
+  padding: 1px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 12px;
+  border: 1px solid #1E293B;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.Image_60_95 {
+  width: 57px;
+  height: 57px;
+  flex-shrink: 0;
+  aspect-ratio: 1/1;
+  background: url(<path-to-image>) lightgray 50% / cover no-repeat;
+}
+.Container_60_96 {
+  display: flex;
+  width: 59px;
+  height: 59px;
+  padding: 1px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 12px;
+  border: 1px solid #1E293B;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.Image_60_97 {
+  width: 57px;
+  height: 57px;
+  flex-shrink: 0;
+  aspect-ratio: 1/1;
+  background: url(<path-to-image>) lightgray 50% / cover no-repeat;
+}
+.Container_60_98 {
+  display: flex;
+  width: 59px;
+  height: 59px;
+  padding: 1px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 12px;
+  border: 1px solid #1E293B;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.Image_60_99 {
+  width: 57px;
+  height: 57px;
+  flex-shrink: 0;
+  aspect-ratio: 1/1;
+  background: url(<path-to-image>) lightgray 50% / cover no-repeat;
+}
+.Container_60_100 {
+  display: flex;
+  width: 59px;
+  height: 59px;
+  padding: 1px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 12px;
+  border: 1px solid #1E293B;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.Image_60_101 {
+  width: 57px;
+  height: 57px;
+  flex-shrink: 0;
+  aspect-ratio: 1/1;
+  background: url(<path-to-image>) lightgray 50% / cover no-repeat;
+}
+.Container_60_102 {
+  display: flex;
+  width: 59px;
+  height: 59px;
+  padding: 1px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 12px;
+  border: 1px solid #1E293B;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.Image_60_103 {
+  width: 57px;
+  height: 57px;
+  flex-shrink: 0;
+  aspect-ratio: 1/1;
+  background: url(<path-to-image>) lightgray 50% / cover no-repeat;
+}
+.Container_60_104 {
+  display: flex;
+  width: 59px;
+  height: 59px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 12px;
+  border: 1px solid #1E293B;
+  background: rgba(30, 41, 59, 0.50);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.Container_60_105 {
+  display: flex;
+  width: 13px;
+  height: 16px;
+  padding: 0.5px 0;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+.generated_1_60_106 {
+  width: 16px;
+  height: 15px;
+  flex-shrink: 0;
+  color: #94A3B8;
+  font-feature-settings: 'dlig' on;
+  font-family: "Plus Jakarta Sans";
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px /* 133.333% */;
+  display: inline-block;
+}
+.Container_60_107 {
+  display: flex;
+  width: 340px;
+  height: 35px;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+.Container_60_108 {
+  display: flex;
+  height: 35px;
+  padding-right: 61px;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1 0 0;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+}
+.Container_60_109 {
+  display: flex;
+  width: 32px;
+  height: 32px;
+  padding: 8px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 16777200px;
+  background: #1E293B;
+}
+.Container_60_110 {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.Container_60_112 {
+  display: flex;
+  height: 35px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  flex: 1 0 0;
+  flex-wrap: nowrap;
+  gap: 0px;
+}
+.Container_60_113 {
+  display: flex;
+  height: 15px;
+  padding: 1px 0;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+.AvgRarity_60_114 {
+  width: 62px;
+  height: 13px;
+  color: #94A3B8;
+  font-feature-settings: 'dlig' on;
+  font-family: "Plus Jakarta Sans";
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px /* 150% */;
+  text-transform: uppercase;
+  display: inline-block;
+}
+.Container_60_115 {
+  display: flex;
+  height: 20px;
+  padding: 1px 0;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+.Top_12_60_116 {
+  width: 60px;
+  height: 18px;
+  color: #F8FAFC;
+  font-feature-settings: 'dlig' on;
+  font-family: "Plus Jakarta Sans";
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px /* 142.857% */;
+  display: inline-block;
+}
+.Container_60_117 {
+  display: flex;
+  height: 35px;
+  padding-right: 16px;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1 0 0;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+}
+.Container_60_118 {
+  display: flex;
+  width: 32px;
+  height: 32px;
+  padding: 8px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 16777200px;
+  background: #1E293B;
+}
+.Container_60_119 {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.Container_60_121 {
+  display: flex;
+  height: 35px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  flex: 1 0 0;
+  flex-wrap: nowrap;
+  gap: 0px;
+}
+.Container_60_122 {
+  display: flex;
+  height: 15px;
+  padding: 1px 45.5px 1px 0;
+  align-items: center;
+  flex-shrink: 0;
+}
+.GasSaved_60_123 {
+  width: 60px;
+  height: 13px;
+  color: #94A3B8;
+  font-feature-settings: 'dlig' on;
+  font-family: "Plus Jakarta Sans";
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px /* 150% */;
+  text-transform: uppercase;
+  display: inline-block;
+}
+.Container_60_124 {
+  display: flex;
+  height: 20px;
+  padding: 1px 0;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+.Efficiency_60_125 {
+  width: 107px;
+  height: 18px;
+  color: #F8FAFC;
+  font-feature-settings: 'dlig' on;
+  font-family: "Plus Jakarta Sans";
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px /* 142.857% */;
+  display: inline-block;
+}
+.Container_60_126 {
+  display: flex;
+  width: 382px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: nowrap;
+  flex-grow: 1;
+}
+.Button_60_127 {
+  display: flex;
+  height: 56px;
+  padding: 16px 102.633px 16px 104.867px;
+  justify-content: center;
+  align-items: center;
+  gap: 6.5px;
+  border-radius: 16px;
+  background: #4ADE80;
+  box-shadow: 0 4px 6px -4px rgba(74, 222, 128, 0.20), 0 10px 15px -3px rgba(74, 222, 128, 0.20);
+  flex-direction: row;
+  flex-wrap: nowrap;
+  flex-grow: 1;
+}
+.Container_60_128 {
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.G_60_129 {
+  width: 17.291px;
+  height: 14.583px;
+}
+.ViewAllInMyNfTs_60_132 {
+  width: 148px;
+  height: 24px;
+  color: #022C22;
+  text-align: center;
+  font-feature-settings: 'dlig' on;
+  font-family: "Plus Jakarta Sans";
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 24px /* 150% */;
+  display: inline-block;
+}
+.Button_60_133 {
+  display: flex;
+  height: 58px;
+  padding: 17px 109.563px 17px 111.938px;
+  justify-content: center;
+  align-items: center;
+  gap: 6.5px;
+  border-radius: 16px;
+  border: 1px solid rgba(30, 41, 59, 0.50);
+  background: #1E293B;
+  box-sizing: border-box;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  flex-grow: 1;
+}
+.Container_60_134 {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0px;
+  flex-grow: 1;
+  overflow: hidden;
+}
+.ViewOnExplorer_60_138 {
+  width: 134px;
+  height: 24px;
+  color: #F8FAFC;
+  text-align: center;
+  font-feature-settings: 'dlig' on;
+  font-family: "Plus Jakarta Sans";
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 24px /* 150% */;
+  display: inline-block;
+}
+.Container_60_139 {
+  display: flex;
+  width: 382px;
+  padding: 32px 80.305px 32px 80.695px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: nowrap;
+  flex-grow: 1;
+}
+.Container_60_140 {
+  display: flex;
+  width: 152px;
+  height: 33px;
+  padding: 9px 17px;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: 16777200px;
+  border: 1px solid rgba(30, 41, 59, 0.30);
+  background: rgba(30, 41, 59, 0.30);
+  box-sizing: border-box;
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+.Container_60_141 {
+  display: flex;
+  width: 96px;
+  height: 15px;
+  padding: 1px 0;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+.Tx_0x8a1B2c4_60_142 {
+  width: 98px;
+  height: 13px;
+  flex-shrink: 0;
+  color: #94A3B8;
+  font-feature-settings: 'dlig' on;
+  font-family: "JetBrains Mono";
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 15px /* 150% */;
+  display: inline-block;
+}
+.Container_60_143 {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.G_60_144 {
+  width: 10.5px;
+  height: 11.667px;
+}
+.Container_60_147 {
+  display: flex;
+  height: 15px;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  flex-grow: 1;
+}
+.Container_60_148 {
+  width: 6px;
+  height: 6px;
+  border-radius: 16777200px;
+  background: #4ADE80;
+}
+.Container_60_149 {
+  display: flex;
+  height: 15px;
+  padding: 1px 0;
+  justify-content: center;
+  align-items: center;
+  flex: 1 0 0;
+}
+.NetworkEthereumMainnet_60_150 {
+  width: 210px;
+  height: 13px;
+  color: #94A3B8;
+  font-feature-settings: 'dlig' on;
+  font-family: "Plus Jakarta Sans";
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px /* 150% */;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  display: inline-block;
+}
+.Container_60_151 {
+  width: 280px;
+  height: 280px;
+}
+.Container_60_152 {
+  width: 280px;
+  height: 280px;
+  border-radius: 16777200px;
+  background: rgba(74, 222, 128, 0.10);
+  filter: blur(30px);
+}
+.Container_60_153 {
+  width: 308px;
+  height: 308px;
+  border-radius: 40px;
+  border: 1px solid rgba(30, 41, 59, 0.50);
+  background: #0F172A;
+  box-shadow: 0 8px 10px -6px rgba(0, 0, 0, 0.10), 0 20px 25px -5px rgba(0, 0, 0, 0.10);
+  box-sizing: border-box;
+}
+.Container_60_154 {
+  width: 295px;
+  height: 295px;
+  border-radius: 40px;
+  border: 1px solid rgba(30, 41, 59, 0.50);
+  background: #0F172A;
+  box-shadow: 0 8px 10px -6px rgba(0, 0, 0, 0.10), 0 20px 25px -5px rgba(0, 0, 0, 0.10);
+  box-sizing: border-box;
+}
+.Container_60_155 {
+  width: 280px;
+  height: 280px;
+  border-radius: 40px;
+  border: 2px solid rgba(74, 222, 128, 0.30);
+  background: rgba(255, 255, 255, 0.01);
+  box-shadow: 0 25px 50px -12px rgba(74, 222, 128, 0.20);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.Image_60_156 {
+  width: 276px;
+  height: 276px;
+  aspect-ratio: 1/1;
+  background: url(<path-to-image>) lightgray 50% / cover no-repeat;
+}
+.Container_60_157 {
+  width: 276px;
+  height: 276px;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.80) 0%, rgba(0, 0, 0, 0.00) 50%, rgba(0, 0, 0, 0.00) 100%);
+}
+.Container_60_158 {
+  display: flex;
+  height: 25px;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 100px;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  flex-grow: 1;
+}
+.Container_60_159 {
+  display: flex;
+  height: 25px;
+  padding: 6px 11.5px;
+  justify-content: center;
+  align-items: center;
+  flex: 1 0 0;
+  border-radius: 16777200px;
+  border: 1px solid rgba(74, 222, 128, 0.30);
+  background: rgba(74, 222, 128, 0.20);
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+}
+.BatchMint_60_160 {
+  width: 69px;
+  height: 13px;
+  color: #4ADE80;
+  font-feature-settings: 'dlig' on;
+  font-family: "Plus Jakarta Sans";
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px /* 150% */;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  display: inline-block;
+}
+.Container_60_161 {
+  width: 36px;
+  height: 24px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0px;
+  flex-grow: 1;
+}
+.Image_60_162 {
+  width: 24px;
+  height: 24px;
+  aspect-ratio: 1/1;
+  border-radius: 16777200px;
+  border: 2px solid #020617;
+  background: url(<path-to-image>) lightgray 50% / cover no-repeat;
+  box-sizing: border-box;
+}
+.Image_60_163 {
+  width: 24px;
+  height: 24px;
+  aspect-ratio: 1/1;
+  border-radius: 16777200px;
+  border: 2px solid #020617;
+  background: url(<path-to-image>) lightgray 50% / cover no-repeat;
+  box-sizing: border-box;
+}
+.Container_60_164 {
+  display: flex;
+  width: 64px;
+  padding: 16px 20.133px 16px 20.867px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  border-radius: 16777200px;
+  border: 4px solid #020617;
+  background: #4ADE80;
+  box-shadow: 0 4px 6px -4px rgba(74, 222, 128, 0.40), 0 10px 15px -3px rgba(74, 222, 128, 0.40);
+  box-sizing: border-box;
+  flex-wrap: nowrap;
+  gap: 0px;
+  flex-grow: 1;
+}
+.Container_60_165 {
+  display: flex;
+  height: 20px;
+  justify-content: center;
+  align-items: center;
+}
+.generated_10_60_166 {
+  width: 28px;
+  height: 26px;
+  color: #022C22;
+  font-feature-settings: 'dlig' on;
+  font-family: "Plus Jakarta Sans";
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 20px /* 100% */;
+  display: inline-block;
+}
+.Container_60_167 {
+  display: flex;
+  width: 21px;
+  height: 12px;
+  padding: 0.5px 0;
+  justify-content: center;
+  align-items: center;
+}
+.NfTs_60_168 {
+  width: 24px;
+  height: 11px;
+  flex-shrink: 0;
+  color: #022C22;
+  font-feature-settings: 'dlig' on;
+  font-family: "Plus Jakarta Sans";
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 12px /* 150% */;
+  text-transform: uppercase;
+  display: inline-block;
+}
+.Header_60_169 {
+  display: flex;
+  width: 430px;
+  padding: 48px 24.008px 17px 24px;
+  justify-content: center;
+  align-items: center;
+  gap: 85.984375px;
+  border-bottom: 1px solid rgba(30, 41, 59, 0.50);
+  background: rgba(2, 6, 23, 0.80);
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+.Container_60_170 {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+.Container_60_171 {
+  display: flex;
+  width: 131px;
+  height: 28px;
+  padding: 2.5px 0;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+.MintComplete_60_172 {
+  width: 134px;
+  height: 23px;
+  flex-shrink: 0;
+  color: #F8FAFC;
+  font-feature-settings: 'dlig' on;
+  font-family: "Plus Jakarta Sans";
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px /* 155.556% */;
+  display: inline-block;
+}
+.Button_60_173 {
+  display: flex;
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  border-radius: 16777200px;
+  background: rgba(30, 41, 59, 0.50);
+}
+.Container_60_174 {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+```
+
+---
+
+```src/components/MultiMintSuccess.tsx
+import React from 'react';
+import styles from '../styles/MultiMintSuccess.module.css';
+
+
+export default function MultiMintSuccess() {
+  return (
+    <div className={styles.MultiMintSuccess_60_68}>
+      <div className={styles.Container_60_69}>
+        <div className={styles.Container_60_70}>
+          <div className={styles.Container_60_71}>
+            <div className={styles.Container_60_72}>
+              <div className={styles.Container_60_73}><span className={styles.TransactionSuccessful_60_74}>Transaction Successful</span></div>
+              <div className={styles.Container_60_75}><span className={styles.GuardiansMinted_60_76}>10 Guardians Minted</span></div>
+            </div>
+            <div className={styles.Container_60_77}><span className={styles.YourBatchOf_10UniqueGuardiansHasBeenSuccessfullyForgedAndAddedToYourCollection_60_78}>Your batch of 10 unique Guardians has been successfully forged and added to your collection.</span></div>
+          </div>
+          <div className={styles.Container_60_79}>
+            <div className={styles.Container_60_80}>
+              <div className={styles.Container_60_81}><span className={styles.MintedCollection_60_82}>Minted Collection</span></div>
+              <div className={styles.Container_60_83}><span className={styles.RaritySummary_60_84}>RARITY SUMMARY</span></div>
+            </div>
+            <div className={styles.Container_60_85}>
+              <div className={styles.Container_60_86}>
+                <div className={styles.Image_60_87}></div>
+              </div>
+              <div className={styles.Container_60_88}>
+                <div className={styles.Image_60_89}></div>
+              </div>
+              <div className={styles.Container_60_90}>
+                <div className={styles.Image_60_91}></div>
+              </div>
+              <div className={styles.Container_60_92}>
+                <div className={styles.Image_60_93}></div>
+              </div>
+              <div className={styles.Container_60_94}>
+                <div className={styles.Image_60_95}></div>
+              </div>
+              <div className={styles.Container_60_96}>
+                <div className={styles.Image_60_97}></div>
+              </div>
+              <div className={styles.Container_60_98}>
+                <div className={styles.Image_60_99}></div>
+              </div>
+              <div className={styles.Container_60_100}>
+                <div className={styles.Image_60_101}></div>
+              </div>
+              <div className={styles.Container_60_102}>
+                <div className={styles.Image_60_103}></div>
+              </div>
+              <div className={styles.Container_60_104}>
+                <div className={styles.Container_60_105}><span className={styles.generated_1_60_106}>+1</span></div>
+              </div>
+            </div>
+            <div className={styles.Container_60_107}>
+              <div className={styles.Container_60_108}>
+                <div className={styles.Container_60_109}>
+                  <div className={styles.Container_60_110}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M6.09091 3.61833C6.94044 2.09494 7.36486 1.33325 7.99983 1.33325C8.6348 1.33325 9.05923 2.09494 9.90876 3.61833L10.1287 4.01259C10.3701 4.44573 10.4908 4.66231 10.6785 4.80512C10.8662 4.94794 11.1009 5.00091 11.5703 5.10685L11.9967 5.2034C13.6461 5.57687 14.4702 5.76327 14.6667 6.39422C14.8624 7.02449 14.3006 7.68226 13.1761 8.99712L12.8851 9.33706C12.566 9.71053 12.4057 9.8976 12.334 10.1283C12.2622 10.3596 12.2864 10.609 12.3346 11.1072L12.3789 11.5611C12.5485 13.3158 12.6337 14.1929 12.1201 14.5824C11.6065 14.972 10.8341 14.6166 9.29055 13.9059L8.89026 13.7222C8.45175 13.5197 8.2325 13.4191 7.99983 13.4191C7.76717 13.4191 7.54791 13.5197 7.1094 13.7222L6.70978 13.9059C5.16561 14.6166 4.39319 14.972 3.88025 14.5831C3.36598 14.1929 3.45113 13.3158 3.62077 11.5611L3.66502 11.1079C3.7133 10.609 3.73744 10.3596 3.66502 10.1289C3.59395 9.8976 3.4337 9.71053 3.11454 9.33773L2.82354 8.99712C1.6991 7.68293 1.13722 7.02516 1.33301 6.39422C1.5288 5.76327 2.35419 5.5762 4.00363 5.2034L4.43007 5.10685C4.89875 5.00091 5.13276 4.94794 5.32117 4.80512C5.50958 4.66231 5.6296 4.44573 5.87098 4.01259L6.09091 3.61833Z" fill="#4ADE80" />
+                    </svg>
+                  </div>
+                </div>
+                <div className={styles.Container_60_112}>
+                  <div className={styles.Container_60_113}><span className={styles.AvgRarity_60_114}>Avg Rarity</span></div>
+                  <div className={styles.Container_60_115}><span className={styles.Top_12_60_116}>Top 12%</span></div>
+                </div>
+              </div>
+              <div className={styles.Container_60_117}>
+                <div className={styles.Container_60_118}>
+                  <div className={styles.Container_60_119}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M8.55466 14.4517C10.6387 14.0344 13.3333 12.5351 13.3333 8.65839C13.3333 5.13106 10.7513 2.78173 8.89466 1.70239C8.482 1.46239 8 1.77773 8 2.25439V3.47306C8 4.43439 7.596 6.18906 6.47333 6.91906C5.9 7.29172 5.28 6.73372 5.21067 6.05372L5.15333 5.49506C5.08667 4.84572 4.42533 4.45172 3.90667 4.84772C2.974 5.55772 2 6.80439 2 8.65772C2 13.3984 5.526 14.5844 7.28866 14.5844C7.39178 14.5844 7.49933 14.5811 7.61133 14.5744C6.74066 14.5004 5.33333 13.9604 5.33333 12.2137C5.33333 10.8471 6.33 9.92372 7.08733 9.47372C7.29133 9.35372 7.52933 9.51039 7.52933 9.74706V10.1404C7.52933 10.4404 7.646 10.9104 7.92266 11.2317C8.236 11.5957 8.69533 11.2144 8.732 10.7357C8.744 10.5851 8.896 10.4891 9.02666 10.5651C9.454 10.8151 10 11.3484 10 12.2137C10 13.5791 9.24733 14.2071 8.55466 14.4517Z" fill="#4ADE80" />
+                    </svg>
+                  </div>
+                </div>
+                <div className={styles.Container_60_121}>
+                  <div className={styles.Container_60_122}><span className={styles.GasSaved_60_123}>Gas Saved</span></div>
+                  <div className={styles.Container_60_124}><span className={styles.Efficiency_60_125}>34% Efficiency</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_60_126}>
+            <div className={styles.Button_60_127}>
+              <div className={styles.Container_60_128}>
+                <div className={styles.G_60_129}><svg width="18" height="15" viewBox="0 0 18 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M15.9164 4.16984C15.8691 4.16706 15.8189 4.16595 15.7655 4.1665H13.6614C11.938 4.1665 10.4639 5.52317 10.4639 7.2915C10.4639 9.05984 11.9389 10.4165 13.6614 10.4165H15.7655C15.8189 10.4171 15.8694 10.4159 15.9172 10.4132C16.6498 10.369 17.2363 9.78864 17.288 9.0565C17.2914 9.0065 17.2914 8.95234 17.2914 8.90234V5.68067C17.2914 5.63067 17.2914 5.5765 17.288 5.5265C17.2363 4.79437 16.649 4.21401 15.9164 4.16984ZM13.4772 8.12484C13.9205 8.12484 14.2797 7.7515 14.2797 7.2915C14.2797 6.8315 13.9205 6.45817 13.4772 6.45817C13.033 6.45817 12.6739 6.8315 12.6739 7.2915C12.6739 7.7515 13.033 8.12484 13.4772 8.12484Z" fill="#022C22" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M15.765 11.6667C15.8234 11.6643 15.8795 11.69 15.9158 11.7357C15.9522 11.7815 15.9646 11.8419 15.9491 11.8983C15.7825 12.4916 15.5166 12.9983 15.0908 13.4233C14.4666 14.0483 13.6758 14.3241 12.6991 14.4558C11.7492 14.5833 10.5367 14.5833 9.00499 14.5833H7.24499C5.71333 14.5833 4.49999 14.5833 3.55083 14.4558C2.57416 14.3241 1.78333 14.0475 1.15917 13.4241C0.535833 12.8 0.259166 12.0092 0.1275 11.0325C0 10.0825 0 8.86999 0 7.33832V7.24499C0 5.71333 0 4.49999 0.1275 3.54999C0.259166 2.57333 0.535833 1.7825 1.15917 1.15833C1.78333 0.534999 2.57416 0.258333 3.55083 0.126666C4.50083 0 5.71333 0 7.24499 0H9.00499C10.5367 0 11.75 0 12.6991 0.1275C13.6758 0.259166 14.4666 0.535833 15.0908 1.15917C15.5166 1.58583 15.7825 2.09166 15.9491 2.685C15.9646 2.74139 15.9522 2.80179 15.9158 2.84756C15.8795 2.89334 15.8234 2.91901 15.765 2.91666H13.6616C11.2975 2.91666 9.21415 4.78333 9.21415 7.29166C9.21415 9.79999 11.2975 11.6667 13.6616 11.6667H15.765ZM3.125 3.33333C2.77982 3.33333 2.5 3.61315 2.5 3.95833C2.5 4.30351 2.77982 4.58333 3.125 4.58333H6.45832C6.8035 4.58333 7.08332 4.30351 7.08332 3.95833C7.08332 3.61315 6.8035 3.33333 6.45832 3.33333H3.125Z" fill="#022C22" />
+                  </svg>
+                </div>
+              </div><span className={styles.ViewAllInMyNfTs_60_132}>View All in My NFTs</span>
+            </div>
+            <div className={styles.Button_60_133}>
+              <div className={styles.Container_60_134}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M6.98893 4.23333C6.8594 4.02026 6.72037 3.81311 6.57227 3.6125C7.56793 2.88767 8.76821 2.49809 9.99976 2.5C11.0998 2.5 12.1289 2.80417 13.0064 3.33333C12.9942 3.40778 12.9759 3.49194 12.9514 3.58583C12.8751 3.87849 12.7593 4.1594 12.6073 4.42083C12.5664 4.485 12.3989 4.64833 12.0964 4.87417C11.9614 4.97416 11.8123 5.06667 11.6331 5.17417L11.5714 5.21C11.4156 5.30333 11.2364 5.41 11.0639 5.52833C10.6573 5.80666 10.2339 6.18333 9.94893 6.7925C9.77145 7.17194 9.73597 7.60245 9.84893 8.00583C9.8781 8.11833 9.89393 8.23083 9.89476 8.33083C9.89476 8.36166 9.88226 8.41083 9.81393 8.46833C9.73707 8.5314 9.64085 8.56612 9.54143 8.56666C8.64393 8.55666 7.9356 7.81333 7.8331 6.6275C7.75476 5.72583 7.38643 4.89083 6.98893 4.2325" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M13.8764 12.0908C14.0964 12.088 14.3034 12.0742 14.4973 12.0492C13.7566 12.9461 12.7647 13.6011 11.6489 13.93C11.6106 13.6125 11.6356 13.23 11.8231 12.8775C11.9831 12.5758 12.3881 12.35 12.9348 12.2158C13.2378 12.1428 13.5474 12.101 13.8589 12.0908H13.8764Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M4.16699 8.33339C4.16699 6.90006 4.68366 5.58839 5.54033 4.57339C5.62588 4.69283 5.70949 4.82061 5.79116 4.95672C6.12616 5.51006 6.38533 6.13672 6.43866 6.74839C6.58033 8.39006 7.67283 9.94589 9.52616 9.96672C10.327 9.97506 11.2978 9.37339 11.2953 8.32672C11.2953 8.08756 11.257 7.85422 11.202 7.64756C11.1746 7.56111 11.1803 7.46759 11.2178 7.38506C11.3595 7.08172 11.5695 6.87922 11.8562 6.68339C11.9895 6.59172 12.1278 6.50839 12.2878 6.41339L12.352 6.37506C12.532 6.26756 12.7362 6.14339 12.9337 5.99672C13.2212 5.78256 13.592 5.48172 13.7895 5.17172C13.9453 4.92672 14.0895 4.61256 14.2012 4.28589C15.25 5.37203 15.8355 6.82348 15.8337 8.33339C15.8326 8.77728 15.7848 9.20784 15.6903 9.62506C15.6349 9.80014 15.5495 9.96426 15.4378 10.1101C15.2403 10.3659 14.8445 10.6809 13.8628 10.6909H13.8328L13.7528 10.6934C13.3645 10.7091 12.9787 10.7635 12.6012 10.8559C11.9687 11.0109 11.042 11.3642 10.587 12.2217C10.2287 12.8976 10.187 13.5926 10.2687 14.1609C8.67682 14.2335 7.12453 13.652 5.97217 12.5514C4.81981 11.4508 4.16761 9.92688 4.16699 8.33339Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M14.996 1.09125C15.2264 0.834044 15.6217 0.812004 15.8793 1.04199C17.8406 2.79277 18.9609 5.29771 18.9585 7.92673C18.9585 12.7283 15.294 16.675 10.6093 17.1217V17.5809H11.6529C11.9988 17.5809 12.2791 17.8612 12.2791 18.2071C12.2791 18.5529 11.9988 18.8333 11.6529 18.8333H8.31327C7.96744 18.8333 7.68708 18.5529 7.68708 18.2071C7.68708 17.8612 7.96744 17.5809 8.31327 17.5809H9.35692V17.1559C6.85694 17.0595 4.50353 15.9511 2.83704 14.0851C2.68634 13.9186 2.63636 13.6841 2.70605 13.4706C2.77574 13.2571 2.95443 13.0973 3.17435 13.0517C3.39426 13.0062 3.62173 13.0819 3.77048 13.2502C5.28382 14.9455 7.44926 15.9137 9.72178 15.9111C14.1314 15.9111 17.7061 12.3364 17.7061 7.92673C17.7085 5.65408 16.74 3.48863 15.0444 1.97543C14.9204 1.86469 14.8455 1.70916 14.8362 1.54314C14.827 1.37712 14.8841 1.21424 14.9951 1.09042" fill="#F8FAFC" />
+                </svg>
+              </div><span className={styles.ViewOnExplorer_60_138}>View on Explorer</span>
+            </div>
+          </div>
+          <div className={styles.Container_60_139}>
+            <div className={styles.Container_60_140}>
+              <div className={styles.Container_60_141}><span className={styles.Tx_0x8a1B2c4_60_142}>Tx: 0x8a1...b2c4</span></div>
+              <div className={styles.Container_60_143}>
+                <div className={styles.G_60_144}><svg width="11" height="12" viewBox="0 0 11 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M1.75 5.25C1.75 3.60033 1.75 2.77492 2.26275 2.26275C2.77492 1.75 3.60033 1.75 5.25 1.75H7C8.64967 1.75 9.47508 1.75 9.98725 2.26275C10.5 2.77492 10.5 3.60033 10.5 5.25V8.16667C10.5 9.81633 10.5 10.6417 9.98725 11.1539C9.47508 11.6667 8.64967 11.6667 7 11.6667H5.25C3.60033 11.6667 2.77492 11.6667 2.26275 11.1539C1.75 10.6417 1.75 9.81633 1.75 8.16667V5.25Z" stroke="#4ADE80" strokeWidth="0.875" />
+                    <path d="M1.75 9.91667C0.783502 9.91667 0 9.13317 0 8.16667V4.66667C0 2.46692 0 1.36675 0.683667 0.683667C1.36733 0.000583291 2.46692 0 4.66667 0H7C7.9665 0 8.75 0.783502 8.75 1.75" stroke="#4ADE80" strokeWidth="0.875" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_60_147}>
+              <div className={styles.Container_60_148}></div>
+              <div className={styles.Container_60_149}><span className={styles.NetworkEthereumMainnet_60_150}>Network: Ethereum Mainnet</span></div>
+            </div>
+          </div>
+          <div className={styles.Container_60_151}>
+            <div className={styles.Container_60_152}></div>
+            <div className={styles.Container_60_153}></div>
+            <div className={styles.Container_60_154}></div>
+            <div className={styles.Container_60_155}>
+              <div className={styles.Image_60_156}></div>
+              <div className={styles.Container_60_157}></div>
+              <div className={styles.Container_60_158}>
+                <div className={styles.Container_60_159}><span className={styles.BatchMint_60_160}>Batch Mint</span></div>
+                <div className={styles.Container_60_161}>
+                  <div className={styles.Image_60_162}></div>
+                  <div className={styles.Image_60_163}></div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_60_164}>
+              <div className={styles.Container_60_165}><span className={styles.generated_10_60_166}>10</span></div>
+              <div className={styles.Container_60_167}><span className={styles.NfTs_60_168}>NFTs</span></div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Header_60_169}>
+          <div className={styles.Container_60_170}></div>
+          <div className={styles.Container_60_171}><span className={styles.MintComplete_60_172}>Mint Complete</span></div>
+          <div className={styles.Button_60_173}>
+            <div className={styles.Container_60_174}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" clipRule="evenodd" d="M11.5028 4.44413C11.5028 2.91079 12.7528 1.66663 14.2928 1.66663C15.0313 1.66463 15.7403 1.9562 16.2637 2.47713C16.7872 2.99806 17.0821 3.70565 17.0837 4.44413C17.0837 5.9783 15.8337 7.22247 14.2928 7.22247C13.5465 7.22301 12.831 6.9247 12.3062 6.39413L8.44367 9.02414C8.55104 9.55998 8.49829 10.1156 8.292 10.6216L12.527 13.405C13.026 12.9984 13.6501 12.7767 14.2937 12.7775C15.0321 12.7757 15.7411 13.0675 16.2643 13.5886C16.7876 14.1097 17.0824 14.8173 17.0837 15.5558C17.0837 17.0891 15.8337 18.3333 14.2928 18.3333C13.5545 18.3351 12.8457 18.0434 12.3225 17.5225C11.7992 17.0016 11.5044 16.2941 11.5028 15.5558C11.5022 15.1663 11.5843 14.7812 11.7437 14.4258L7.542 11.6666C7.03302 12.1088 6.38121 12.3518 5.707 12.3508C4.96852 12.3526 4.25961 12.0608 3.73634 11.5397C3.21306 11.0186 2.91832 10.3109 2.91699 9.57247C2.91854 8.83414 3.21338 8.12667 3.73663 7.60576C4.25988 7.08486 4.96866 6.7932 5.707 6.79497C6.59366 6.79497 7.382 7.2058 7.89283 7.8458L11.637 5.29663C11.5477 5.0213 11.5024 4.73359 11.5028 4.44413Z" fill="#F8FAFC" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+

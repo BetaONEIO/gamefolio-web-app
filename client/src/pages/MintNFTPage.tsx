@@ -5,6 +5,7 @@ import { useCrossmint } from "@/hooks/use-crossmint";
 import { ArrowLeft, Minus, Plus, Wallet, Sparkles, X, ExternalLink, Check, Shield, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import MultiMintSuccessScreen from "@/components/mint/MultiMintSuccessScreen";
 
 const MINT_VIDEO_URL = "https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/sign/gamefolio-assets/NFT%20mint.mp4?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hMzEyZGM4MC1lOGJlLTRjMDAtODFhNy1kOTI5MTgyYTJlYWEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJnYW1lZm9saW8tYXNzZXRzL05GVCBtaW50Lm1wNCIsImlhdCI6MTc3MDEzNzMzOSwiZXhwIjoyMDg1NDk3MzM5fQ.rdKpWSU4H8CdDO-mfEAbTc96_zdl35E6Y7Md38HS-uY";
 
@@ -271,6 +272,26 @@ export default function MintNFTPage() {
 
   if (mintState === "success") {
     const rarityScore = (Math.random() * 10 + 90).toFixed(1);
+    
+    // Show multi-mint success screen when quantity > 1
+    if (quantity > 1) {
+      const mintedNfts = Array.from({ length: quantity }, (_, i) => ({
+        id: mintedNftId + i,
+        imageUrl: `https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-assets/nft-placeholders/guardian-${(i % 3) + 1}.png`,
+        rarity: Math.floor(Math.random() * 30) + 70,
+      }));
+      
+      return (
+        <MultiMintSuccessScreen
+          quantity={quantity}
+          mintedNfts={mintedNfts}
+          txHash={txHash}
+          onViewCollection={() => navigate("/collection")}
+          onViewExplorer={() => window.open(`https://explorer.skale.space/tx/${txHash}`, "_blank")}
+          onBack={() => navigate("/store")}
+        />
+      );
+    }
     
     return (
       <div className="min-h-screen bg-[#020617] flex flex-col">
