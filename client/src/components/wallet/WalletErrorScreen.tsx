@@ -33,7 +33,7 @@ export default function WalletErrorScreen({
         }}
       >
         {/* Top row */}
-        <div className="flex items-center justify-between w-full max-w-[430px]">
+        <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto">
           <button
             onClick={onBack}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
@@ -54,13 +54,13 @@ export default function WalletErrorScreen({
           </button>
         </div>
 
-        <span className="text-sm text-center max-w-[270px]" style={{ color: "#94a3b8" }}>
+        <span className="text-sm text-center max-w-[270px] md:max-w-[400px]" style={{ color: "#94a3b8" }}>
           Something went wrong while processing your wallet request.
         </span>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col px-6 py-10 gap-8 max-w-[430px] mx-auto w-full">
+      <div className="flex-1 flex flex-col px-6 py-10 gap-8 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full">
         {/* Error Display */}
         <div className="flex flex-col items-center gap-6">
           {/* Error Text */}

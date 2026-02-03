@@ -29,29 +29,31 @@ export default function WalletSettingsScreen({
     >
       {/* Header with gradient */}
       <div
-        className="flex items-center justify-between px-6 pt-12 pb-6"
+        className="flex items-center justify-center px-6 pt-12 pb-6"
         style={{
           background: "linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #020617 100%)",
           borderBottom: "1px solid rgba(30, 41, 59, 0.3)",
         }}
       >
-        <button
-          onClick={onBack}
-          className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
-          style={{ background: "#1e293b", border: "1px solid #1e293b" }}
-        >
-          <ArrowLeft className="w-6 h-6" style={{ color: "#f8fafc" }} />
-        </button>
+        <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-[600px] lg:max-w-[800px]">
+          <button
+            onClick={onBack}
+            className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
+            style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+          >
+            <ArrowLeft className="w-6 h-6" style={{ color: "#f8fafc" }} />
+          </button>
 
-        <span className="text-lg font-bold" style={{ color: "#f8fafc" }}>
-          Wallet Settings
-        </span>
+          <span className="text-lg font-bold" style={{ color: "#f8fafc" }}>
+            Wallet Settings
+          </span>
 
-        <div className="w-10 h-10" />
+          <div className="w-10 h-10" />
+        </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col px-6 py-6 gap-8 max-w-[430px] mx-auto w-full">
+      <div className="flex-1 flex flex-col px-6 py-6 gap-8 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full">
         {/* Identity & Network Section */}
         <div className="flex flex-col gap-4">
           <span

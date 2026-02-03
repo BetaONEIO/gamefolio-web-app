@@ -65,20 +65,22 @@ export default function BuyGFTResultScreen({
     >
       {/* Header */}
       <div 
-        className="flex items-center justify-between px-6 pt-12 pb-6"
+        className="flex items-center justify-center px-6 pt-12 pb-6"
         style={{ borderBottom: '1px solid rgba(30, 41, 59, 0.3)' }}
       >
-        <div className="w-10 h-10" />
-        
-        <span className="text-xl font-bold" style={{ color: '#f8fafc' }}>
-          Transaction Status
-        </span>
-        
-        <div className="w-10 h-10" />
+        <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-[600px] lg:max-w-[800px]">
+          <div className="w-10 h-10" />
+          
+          <span className="text-xl font-bold" style={{ color: '#f8fafc' }}>
+            Transaction Status
+          </span>
+          
+          <div className="w-10 h-10" />
+        </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col px-6 py-8 max-w-[430px] mx-auto w-full">
+      <div className="flex-1 flex flex-col px-6 py-8 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full">
         {/* Success Animation Area */}
         <div className="flex flex-col items-center justify-center flex-1 gap-6">
           {/* Animated Success Icon */}

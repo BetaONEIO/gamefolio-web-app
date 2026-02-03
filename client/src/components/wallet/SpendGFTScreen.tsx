@@ -58,7 +58,7 @@ export default function SpendGFTScreen({
         }}
       >
         {/* Top row */}
-        <div className="flex items-center justify-between w-full max-w-[430px]">
+        <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto">
           <button
             onClick={onBack}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
@@ -104,7 +104,7 @@ export default function SpendGFTScreen({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col px-6 py-6 gap-6 max-w-[430px] mx-auto w-full overflow-y-auto">
+      <div className="flex-1 flex flex-col px-6 py-6 gap-6 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full overflow-y-auto">
         {/* Action Buttons */}
         <div className="flex flex-col gap-4">
           {/* Go to Store Button */}

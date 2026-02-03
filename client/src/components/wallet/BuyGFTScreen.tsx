@@ -52,28 +52,30 @@ export default function BuyGFTScreen({
     >
       {/* Header */}
       <div 
-        className="flex items-center justify-between px-6 pt-12 pb-6"
+        className="flex items-center justify-center px-6 pt-12 pb-6"
         style={{ borderBottom: '1px solid rgba(30, 41, 59, 0.3)' }}
       >
-        <button
-          onClick={onBack}
-          className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-slate-700"
-          style={{ background: '#1e293b', border: '1px solid #1e293b' }}
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-        
-        <span className="text-xl font-bold" style={{ color: '#f8fafc' }}>
-          Buy GFT
-        </span>
-        
-        <div className="w-10 h-10" />
+        <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-[600px] lg:max-w-[800px]">
+          <button
+            onClick={onBack}
+            className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-slate-700"
+            style={{ background: '#1e293b', border: '1px solid #1e293b' }}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          
+          <span className="text-xl font-bold" style={{ color: '#f8fafc' }}>
+            Buy GFT
+          </span>
+          
+          <div className="w-10 h-10" />
+        </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col px-6 py-6 max-w-[600px] mx-auto w-full">
+      <div className="flex-1 flex flex-col px-6 py-6 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full">
         {/* Purchase Amount Display */}
         <div className="flex flex-col items-center gap-4 mb-8">
           <span 

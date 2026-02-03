@@ -76,34 +76,36 @@ export default function ConfirmStakeScreen({
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between px-6 pt-12 pb-6"
+        className="flex items-center justify-center px-6 pt-12 pb-6"
         style={{ borderBottom: "1px solid rgba(30, 41, 59, 0.3)" }}
       >
-        <button
-          onClick={onBack}
-          className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
-          style={{ background: "#1e293b", border: "1px solid #1e293b" }}
-        >
-          <ArrowLeft className="w-6 h-6" style={{ color: "#f8fafc" }} />
-        </button>
+        <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-[600px] lg:max-w-[800px]">
+          <button
+            onClick={onBack}
+            className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
+            style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+          >
+            <ArrowLeft className="w-6 h-6" style={{ color: "#f8fafc" }} />
+          </button>
 
-        <span
-          className="text-xl font-bold"
-          style={{ color: "#f8fafc" }}
-        >
-          Confirm Stake
-        </span>
+          <span
+            className="text-xl font-bold"
+            style={{ color: "#f8fafc" }}
+          >
+            Confirm Stake
+          </span>
 
-        <button
-          className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
-          style={{ background: "#1e293b", border: "1px solid #1e293b" }}
-        >
-          <Info className="w-6 h-6" style={{ color: "#4ade80" }} />
-        </button>
+          <button
+            className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
+            style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+          >
+            <Info className="w-6 h-6" style={{ color: "#4ade80" }} />
+          </button>
+        </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex flex-col gap-8 px-6 py-8">
+      <div className="flex-1 flex flex-col gap-8 px-6 py-8 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full">
         {/* Stake Amount Section */}
         <div className="flex flex-col gap-4">
           {/* Label Row */}
