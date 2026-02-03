@@ -1,0 +1,1005 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/WalletSettings.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,undefined;0,400;0,500&display=swap";
+@import "https://fonts.googleapis.com/css?family=JetBrains+Mono:0,500&display=swap";
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,undefined;0,400;0,500&display=swap";
+.WalletSettings_4_1699 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_4_1700 {
+  flex-direction: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  display: flex;
+}
+.Container_4_1701 {
+  background: #020617;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  display: flex;
+}
+.Container_4_1702 {
+  box-sizing: border-box;
+  background: linear-gradient(#14532d33 0%, #020617 100%);
+  border-bottom: 1px solid #1e293b4d;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 84.7344px;
+  height: 113px;
+  padding: 48px 24px 25px;
+  display: flex;
+}
+.Button_4_1703 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 33554400px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_4_1704 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_4_1706 {
+  justify-content: center;
+  align-items: center;
+  width: 133px;
+  height: 28px;
+  padding: 2px 0 3px;
+  display: flex;
+}
+.WalletSettings_4_1707 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 136px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_4_1708 {
+  width: 40px;
+  height: 40px;
+}
+.Container_4_1709 {
+  flex-flow: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 31.75px;
+  height: 731px;
+  padding: 24px 24px 113.25px;
+  display: flex;
+}
+.Section_4_1710 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 382px;
+  height: 269px;
+  display: flex;
+}
+.Container_4_1711 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 16px;
+  padding: 0 226.5px 1px 2.5px;
+  display: flex;
+}
+.IdentityNetwork_4_1712 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  width: 153px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_4_1713 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 237px;
+  display: flex;
+}
+.Container_4_1714 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 105.188px;
+  display: flex;
+}
+.Container_4_1715 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  height: 43px;
+  display: flex;
+}
+.Container_4_1716 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 15px;
+  padding: 1px 21px 2px 0;
+  display: flex;
+}
+.CurrentNetwork_4_1717 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.25px;
+  text-transform: uppercase;
+  width: 105px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_4_1718 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  height: 24px;
+  display: flex;
+}
+.Container_4_1719 {
+  background: #4ade80;
+  border-radius: 33554400px;
+  width: 8px;
+  height: 8px;
+}
+.Container_4_1720 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 24px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.SkaleNebula_4_1721 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  width: 112px;
+  height: 21px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_4_1722 {
+  box-sizing: border-box;
+  background: #14532d33;
+  border: 1px solid #4ade804d;
+  border-radius: 33554400px;
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6px;
+  width: 110px;
+  height: 25px;
+  padding: 5px 13px;
+  display: flex;
+}
+.Container_4_1723 {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  overflow: hidden;
+}
+.Container_4_1725 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 64px;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Connected_4_1726 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 67px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_4_1727 {
+  box-sizing: border-box;
+  background: #02061780;
+  border: 1px solid #1e293b;
+  border-radius: 16px;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 127px;
+  padding: 17px;
+  display: flex;
+}
+.Container_4_1728 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2px;
+  width: 137px;
+  height: 37px;
+  display: flex;
+}
+.Container_4_1729 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 15px;
+  padding: 1px 26px 2px 0;
+  display: flex;
+}
+.YourPublicAddress_4_1730 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.25px;
+  text-transform: uppercase;
+  width: 112px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_4_1731 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.x12a8_3b89e4f2_4_1732 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.35px;
+  width: 139px;
+  height: 18px;
+  font-family: JetBrains Mono;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  display: inline-block;
+}
+.Button_4_1733 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b80;
+  border-radius: 12px;
+  justify-content: center;
+  align-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 11px;
+  display: flex;
+}
+.Container_4_1734 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_4_1737 {
+  width: 340px;
+  height: 36px;
+}
+.Section_4_1738 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  width: 382px;
+  height: 175px;
+  display: flex;
+}
+.Container_4_1739 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 16px;
+  padding: 0 210.5px 1px 2.5px;
+  display: flex;
+}
+.ActionsResources_4_1740 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  width: 169px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_4_1741 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  height: 147px;
+  padding: 1px;
+  display: flex;
+  overflow: hidden;
+}
+.Button_4_1742 {
+  box-sizing: border-box;
+  border-bottom: 1px solid #1e293b4d;
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 86px;
+  width: 380px;
+  height: 73px;
+  padding: 16px 20px 17px;
+  display: flex;
+}
+.Container_4_1743 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 234px;
+  height: 40px;
+  display: flex;
+}
+.Container_4_1744 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 16px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 10px;
+  display: flex;
+}
+.Container_4_1745 {
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.G_4_1746 {
+  width: 16.667px;
+  height: 16.667px;
+}
+.Container_4_1749 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 178px;
+  height: 37px;
+  display: flex;
+}
+.Container_4_1750 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 20px;
+  padding: 1px 64px 1px 0;
+  display: flex;
+}
+.ViewOnExplorer_4_1751 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 115px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1752 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 17px;
+  padding: 1px 0 3px;
+  display: flex;
+}
+.CheckTransactionsOnSkaleLabs_4_1753 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 180px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_4_1754 {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.Button_4_1756 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 137px;
+  width: 380px;
+  height: 72px;
+  padding: 16px 20px;
+  display: flex;
+}
+.Container_4_1757 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 183px;
+  height: 40px;
+  display: flex;
+}
+.Container_4_1758 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 16px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 10px;
+  display: flex;
+}
+.Container_4_1759 {
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_4_1761 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 127px;
+  height: 37px;
+  display: flex;
+}
+.Container_4_1762 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.CustomerSupport_4_1763 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 128px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1764 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 17px;
+  padding: 1px 0 3px;
+  display: flex;
+}
+.GetHelpWithYourWallet_4_1765 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 129px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_4_1766 {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_4_1768 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  width: 382px;
+  padding: 32px 97.766px 16px 98.234px;
+  display: flex;
+}
+.Container_4_1769 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6px;
+  width: 186px;
+  height: 15px;
+  display: flex;
+}
+.Container_4_1770 {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  overflow: hidden;
+}
+.Container_4_1772 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.SecuredByGftProtocol_4_1773 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 169px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_4_1774 {
+  justify-content: center;
+  align-items: center;
+  width: 115px;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Version_2_4_0Build_842_4_1775 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 117px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_4_1776 {
+  box-sizing: border-box;
+  background: #020617;
+  border-top: 1px solid #1e293b;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 63.4063px;
+  height: 88px;
+  padding: 13px 55.797px 32px 56.109px;
+  display: flex;
+}
+.Button_4_1777 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: 30px;
+  height: 43px;
+  display: flex;
+}
+.Container_4_1778 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.G_4_1779 {
+  width: 20px;
+  height: 20px;
+}
+.Container_4_1782 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Home_4_1783 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 32px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 15px;
+  display: inline-block;
+}
+.Button_4_1784 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: 31px;
+  height: 43px;
+  display: flex;
+}
+.Container_4_1785 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.G_4_1786 {
+  width: 20.75px;
+  height: 17.5px;
+}
+.Container_4_1789 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Wallet_4_1790 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 33px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 15px;
+  display: inline-block;
+}
+.Button_4_1791 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  width: 26px;
+  height: 43px;
+  display: flex;
+}
+.Container_4_1792 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.G_4_1793 {
+  width: 18px;
+  height: 20px;
+}
+.Container_4_1796 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Stats_4_1797 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 28px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 15px;
+  display: inline-block;
+}
+.Button_4_1798 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: 41px;
+  height: 43px;
+  display: flex;
+}
+.Container_4_1799 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.G_4_1800 {
+  width: 20px;
+  height: 20px;
+}
+.Container_4_1804 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Account_4_1805 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 43px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 15px;
+  display: inline-block;
+}
+
+```
+
+---
+
+```src/components/WalletSettings.tsx
+import React from 'react';
+import styles from '../styles/WalletSettings.module.css';
+
+
+export default function WalletSettings() {
+  return (
+    <div className={styles.WalletSettings_4_1699}>
+      <div className={styles.Container_4_1700}>
+        <div className={styles.Container_4_1701}>
+          <div className={styles.Container_4_1702}>
+            <div className={styles.Button_4_1703}>
+              <div className={styles.Container_4_1704}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_4_1706}><span className={styles.WalletSettings_4_1707}>Wallet Settings</span></div>
+            <div className={styles.Container_4_1708}></div>
+          </div>
+          <div className={styles.Container_4_1709}>
+            <div className={styles.Section_4_1710}>
+              <div className={styles.Container_4_1711}><span className={styles.IdentityNetwork_4_1712}>Identity &#x26; Network</span></div>
+              <div className={styles.Container_4_1713}>
+                <div className={styles.Container_4_1714}>
+                  <div className={styles.Container_4_1715}>
+                    <div className={styles.Container_4_1716}><span className={styles.CurrentNetwork_4_1717}>Current Network</span></div>
+                    <div className={styles.Container_4_1718}>
+                      <div className={styles.Container_4_1719}></div>
+                      <div className={styles.Container_4_1720}><span className={styles.SkaleNebula_4_1721}>SKALE Nebula</span></div>
+                    </div>
+                  </div>
+                  <div className={styles.Container_4_1722}>
+                    <div className={styles.Container_4_1723}><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M1.9705 2.9645C1.75 3.27834 1.75 4.21167 1.75 6.07658V6.99475C1.75 10.2836 4.22275 11.8802 5.77441 12.5574C6.195 12.7412 6.40558 12.8333 7 12.8333C7.59499 12.8333 7.805 12.7412 8.22558 12.5574C9.77724 11.8796 12.25 10.2842 12.25 6.99475V6.07658C12.25 4.21109 12.25 3.27834 12.0295 2.9645C11.8096 2.65125 10.9328 2.35084 9.17874 1.75059L8.84449 1.63625C7.93041 1.323 7.47366 1.16667 7 1.16667C6.52633 1.16667 6.06958 1.323 5.1555 1.63625L4.82125 1.75C3.06717 2.35084 2.19042 2.65125 1.9705 2.9645ZM8.78499 6.125C8.88909 6.00829 8.92302 5.84492 8.874 5.69641C8.82498 5.54791 8.70045 5.43684 8.54733 5.40504C8.39421 5.37324 8.23576 5.42554 8.13166 5.54225L6.37525 7.51042L5.86775 6.94225C5.70628 6.76383 5.43104 6.7493 5.25169 6.90972C5.07233 7.07015 5.0562 7.3453 5.21558 7.52558L6.04858 8.45892C6.13159 8.5519 6.25031 8.60506 6.37495 8.60506C6.4996 8.60506 6.61832 8.5519 6.70133 8.45892L8.78499 6.125Z" fill="#4ADE80" />
+                      </svg>
+                    </div>
+                    <div className={styles.Container_4_1725}><span className={styles.Connected_4_1726}>Connected</span></div>
+                  </div>
+                </div>
+                <div className={styles.Container_4_1727}>
+                  <div className={styles.Container_4_1728}>
+                    <div className={styles.Container_4_1729}><span className={styles.YourPublicAddress_4_1730}>Your Public Address</span></div>
+                    <div className={styles.Container_4_1731}><span className={styles.x12a8_3b89e4f2_4_1732}>0x12a8...3b89e4f2</span></div>
+                  </div>
+                  <div className={styles.Button_4_1733}>
+                    <div className={styles.Container_4_1734}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M12.7 1.66666H9.455C7.985 1.66666 6.82 1.66666 5.90917 1.78999C4.97083 1.91666 4.21167 2.18332 3.61333 2.78416C3.01417 3.38499 2.74833 4.14749 2.6225 5.08916C2.5 6.00416 2.5 7.17332 2.5 8.64916V13.5142C2.5 14.7708 3.26667 15.8475 4.35583 16.2992C4.3 15.5408 4.3 14.4783 4.3 13.5933V9.41832C4.3 8.35082 4.3 7.42999 4.39833 6.69332C4.50417 5.90332 4.7425 5.14666 5.35417 4.53249C5.96583 3.91832 6.72 3.67916 7.50667 3.57249C8.24 3.47416 9.15667 3.47416 10.2208 3.47416H12.7792C13.8425 3.47416 14.7575 3.47416 15.4917 3.57249C15.0416 2.42354 13.934 1.66735 12.7 1.66666Z" fill="#4ADE80" />
+                        <path fillRule="evenodd" clipRule="evenodd" d="M5.5 9.49751C5.5 7.22584 5.5 6.09001 6.20333 5.38418C6.90583 4.67834 8.03667 4.67834 10.3 4.67834H12.7C14.9625 4.67834 16.0942 4.67834 16.7975 5.38418C17.5008 6.09001 17.5 7.22584 17.5 9.49751V13.5142C17.5 15.7858 17.5 16.9217 16.7975 17.6275C16.0942 18.3333 14.9625 18.3333 12.7 18.3333H10.3C8.0375 18.3333 6.90583 18.3333 6.20333 17.6275C5.5 16.9217 5.5 15.7858 5.5 13.5142L5.5 9.49751Z" fill="#4ADE80" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.Container_4_1737}></div>
+              </div>
+            </div>
+            <div className={styles.Section_4_1738}>
+              <div className={styles.Container_4_1739}><span className={styles.ActionsResources_4_1740}>Actions &#x26; Resources</span></div>
+              <div className={styles.Container_4_1741}>
+                <div className={styles.Button_4_1742}>
+                  <div className={styles.Container_4_1743}>
+                    <div className={styles.Container_4_1744}>
+                      <div className={styles.Container_4_1745}>
+                        <div className={styles.G_4_1746}><svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path fillRule="evenodd" clipRule="evenodd" d="M0 7.91667C0 3.54441 3.54441 0 7.91667 0C12.2889 0 15.8333 3.54441 15.8333 7.91667C15.8333 12.2889 12.2889 15.8333 7.91667 15.8333C3.54441 15.8333 0 12.2889 0 7.91667Z" stroke="#4ADE80" strokeWidth="1.25" />
+                            <path d="M13.75 13.75L16.6667 16.6667" stroke="#4ADE80" strokeWidth="1.25" strokeLinecap="round" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                    <div className={styles.Container_4_1749}>
+                      <div className={styles.Container_4_1750}><span className={styles.ViewOnExplorer_4_1751}>View on Explorer</span></div>
+                      <div className={styles.Container_4_1752}><span className={styles.CheckTransactionsOnSkaleLabs_4_1753}>Check transactions on SKALELabs</span></div>
+                    </div>
+                  </div>
+                  <div className={styles.Container_4_1754}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3.33301 9.99999H16.6663M16.6663 9.99999L11.6663 5M16.6663 9.99999L11.6663 15" stroke="#94A3B8" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                </div>
+                <div className={styles.Button_4_1756}>
+                  <div className={styles.Container_4_1757}>
+                    <div className={styles.Container_4_1758}>
+                      <div className={styles.Container_4_1759}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <g clipPath="url(#clip0_4_1759)">
+                            <path fillRule="evenodd" clipRule="evenodd" d="M0 0H20V20H0V0Z" fill="#4ADE80" />
+                          </g>
+                          <defs>
+                            <clipPath id="clip0_4_1759">
+                              <rect width="20" height="20" fill="white" />
+                            </clipPath>
+                          </defs>
+                        </svg>
+                      </div>
+                    </div>
+                    <div className={styles.Container_4_1761}>
+                      <div className={styles.Container_4_1762}><span className={styles.CustomerSupport_4_1763}>Customer Support</span></div>
+                      <div className={styles.Container_4_1764}><span className={styles.GetHelpWithYourWallet_4_1765}>Get help with your wallet</span></div>
+                    </div>
+                  </div>
+                  <div className={styles.Container_4_1766}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3.33301 9.99999H16.6663M16.6663 9.99999L11.6663 5M16.6663 9.99999L11.6663 15" stroke="#94A3B8" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_4_1768}>
+              <div className={styles.Container_4_1769}>
+                <div className={styles.Container_4_1770}><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M1.9705 2.96451C1.75 3.27835 1.75 4.21168 1.75 6.07659V6.99475C1.75 10.2836 4.22274 11.8801 5.7744 12.5574C6.19498 12.7411 6.40557 12.8333 6.99998 12.8333C7.59498 12.8333 7.80498 12.7411 8.22556 12.5574C9.77722 11.8796 12.25 10.2842 12.25 6.99475V6.07659C12.25 4.21109 12.25 3.27835 12.0295 2.96451C11.8095 2.65127 10.9328 2.35085 9.17872 1.7506L8.84448 1.63627C7.9304 1.32302 7.47365 1.16669 6.99998 1.16669C6.52632 1.16669 6.06957 1.32302 5.15549 1.63627L4.82124 1.75002C3.06716 2.35085 2.19042 2.65127 1.9705 2.96451ZM7.87498 8.74999C7.87498 9.07216 7.61381 9.33333 7.29165 9.33333H6.70832C6.38615 9.33333 6.12498 9.07216 6.12498 8.74999V7.93275C5.4375 7.53754 5.10183 6.72934 5.30704 5.96337C5.51225 5.1974 6.207 4.66526 6.99998 4.66667C7.79241 4.66625 8.48623 5.19837 8.6913 5.96381C8.89636 6.72925 8.56149 7.53695 7.87498 7.93275V8.74999Z" fill="#F8FAFC" />
+                  </svg>
+                </div>
+                <div className={styles.Container_4_1772}><span className={styles.SecuredByGftProtocol_4_1773}>Secured by GFT Protocol</span></div>
+              </div>
+              <div className={styles.Container_4_1774}><span className={styles.Version_2_4_0Build_842_4_1775}>Version 2.4.0 (Build 842)</span></div>
+            </div>
+          </div>
+          <div className={styles.Container_4_1776}>
+            <div className={styles.Button_4_1777}>
+              <div className={styles.Container_4_1778}>
+                <div className={styles.G_4_1779}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M0 10.204C0 7.915 0 6.771 0.52 5.823C1.038 4.874 1.987 4.286 3.884 3.108L5.884 1.867C7.889 0.622 8.892 0 10 0C11.108 0 12.11 0.622 14.116 1.867L16.116 3.108C18.013 4.286 18.962 4.874 19.481 5.823C20 6.772 20 7.915 20 10.203V11.725C20 15.625 20 17.576 18.828 18.788C17.656 20 15.771 20 12 20H8C4.229 20 2.343 20 1.172 18.788C0.00100005 17.576 0 15.626 0 11.725V10.204Z" stroke="#94A3B8" strokeWidth="1.5" />
+                    <path d="M10 13V16" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Container_4_1782}><span className={styles.Home_4_1783}>Home</span></div>
+            </div>
+            <div className={styles.Button_4_1784}>
+              <div className={styles.Container_4_1785}>
+                <div className={styles.G_4_1786}><svg width="21" height="18" viewBox="0 0 21 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M19.0996 5.00382C19.043 5.00048 18.9826 4.99915 18.9186 4.99982H16.3936C14.3256 4.99982 12.5566 6.62782 12.5566 8.74981C12.5566 10.8718 14.3266 12.4998 16.3936 12.4998H18.9186C18.9826 12.5005 19.0433 12.4991 19.1006 12.4958C19.9798 12.4428 20.6835 11.7464 20.7456 10.8678C20.7496 10.8078 20.7496 10.7428 20.7496 10.6828V6.81682C20.7496 6.75682 20.7496 6.69182 20.7456 6.63182C20.6835 5.75325 19.9788 5.05683 19.0996 5.00382ZM16.1726 9.74981C16.7046 9.74981 17.1356 9.30181 17.1356 8.74981C17.1356 8.19781 16.7046 7.74981 16.1726 7.74981C15.6396 7.74981 15.2086 8.19781 15.2086 8.74981C15.2086 9.30181 15.6396 9.74981 16.1726 9.74981Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M18.918 14C18.9881 13.9972 19.0554 14.028 19.099 14.0829C19.1427 14.1379 19.1576 14.2103 19.139 14.278C18.939 14.99 18.62 15.598 18.109 16.108C17.36 16.858 16.411 17.189 15.239 17.347C14.099 17.5 12.644 17.5 10.806 17.5H8.694C6.856 17.5 5.4 17.5 4.261 17.347C3.089 17.189 2.14 16.857 1.391 16.109C0.643 15.36 0.311 14.411 0.153 13.239C0 12.099 0 10.644 0 8.806V8.694C0 6.856 0 5.4 0.153 4.26C0.311 3.088 0.643 2.139 1.391 1.39C2.14 0.642 3.089 0.31 4.261 0.152C5.401 0 6.856 0 8.694 0H10.806C12.644 0 14.1 0 15.239 0.153C16.411 0.311 17.36 0.643 18.109 1.391C18.62 1.903 18.939 2.51 19.139 3.222C19.1576 3.28968 19.1427 3.36215 19.099 3.41708C19.0554 3.47201 18.9881 3.50282 18.918 3.5H16.394C13.557 3.5 11.057 5.74 11.057 8.75C11.057 11.76 13.557 14 16.394 14H18.918ZM5 12.5C4.58579 12.5 4.25 12.1642 4.25 11.75V5.75C4.25 5.33579 4.58579 5 5 5C5.41421 5 5.75 5.33579 5.75 5.75V11.75C5.75 12.1642 5.41421 12.5 5 12.5Z" fill="#4ADE80" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Container_4_1789}><span className={styles.Wallet_4_1790}>Wallet</span></div>
+            </div>
+            <div className={styles.Button_4_1791}>
+              <div className={styles.Container_4_1792}>
+                <div className={styles.G_4_1793}><svg width="18" height="20" viewBox="0 0 18 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M0 20H18" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M0 9C0 8.057 0 7.586 0.293 7.293C0.586 7 1.057 7 2 7C2.943 7 3.414 7 3.707 7.293C4 7.586 4 8.057 4 9V15C4 15.943 4 16.414 3.707 16.707C3.414 17 2.943 17 2 17C1.057 17 0.586 17 0.293 16.707C0 16.414 0 15.943 0 15V9Z" stroke="#94A3B8" strokeWidth="1.5" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M7 5C7 4.057 7 3.586 7.293 3.293C7.586 3 8.057 3 9 3C9.943 3 10.414 3 10.707 3.293C11 3.586 11 4.057 11 5V15C11 15.943 11 16.414 10.707 16.707C10.414 17 9.943 17 9 17C8.057 17 7.586 17 7.293 16.707C7 16.414 7 15.943 7 15V5Z" stroke="#94A3B8" strokeWidth="1.5" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M14 2C14 1.057 14 0.586 14.293 0.293C14.586 0 15.057 0 16 0C16.943 0 17.414 0 17.707 0.293C18 0.586 18 1.057 18 2V15C18 15.943 18 16.414 17.707 16.707C17.414 17 16.943 17 16 17C15.057 17 14.586 17 14.293 16.707C14 16.414 14 15.943 14 15V2Z" stroke="#94A3B8" strokeWidth="1.5" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Container_4_1796}><span className={styles.Stats_4_1797}>Stats</span></div>
+            </div>
+            <div className={styles.Button_4_1798}>
+              <div className={styles.Container_4_1799}>
+                <div className={styles.G_4_1800}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M7 7C7 5.34315 8.34315 4 10 4C11.6569 4 13 5.34315 13 7C13 8.65685 11.6569 10 10 10C8.34315 10 7 8.65685 7 7Z" stroke="#94A3B8" strokeWidth="1.5" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M0 10C0 4.47715 4.47715 0 10 0C15.5228 0 20 4.47715 20 10C20 15.5228 15.5228 20 10 20C4.47715 20 0 15.5228 0 10Z" stroke="#94A3B8" strokeWidth="1.5" />
+                    <path d="M15.9703 18C15.8103 15.108 14.9253 13 10.0003 13C5.07527 13 4.19027 15.108 4.03027 18" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Container_4_1804}><span className={styles.Account_4_1805}>Account</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+

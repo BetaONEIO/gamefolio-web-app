@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, ShoppingBag } from "lucide-react";
+import SpendGFTScreen from "./SpendGFTScreen";
 
 interface BuyGFTResultScreenProps {
   onDone: () => void;
   gftAmount: number;
   transactionHash?: string;
   paymentMethod?: string;
+  availableBalance?: number;
 }
 
 export default function BuyGFTResultScreen({
@@ -13,10 +15,12 @@ export default function BuyGFTResultScreen({
   gftAmount,
   transactionHash = "0x7a2...3f4e",
   paymentMethod = "VISA •••• 4242",
+  availableBalance = 540.0,
 }: BuyGFTResultScreenProps) {
   const [copied, setCopied] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [showSpendScreen, setShowSpendScreen] = useState(false);
 
   useEffect(() => {
     const progressInterval = setInterval(() => {
@@ -44,6 +48,15 @@ export default function BuyGFTResultScreen({
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  if (showSpendScreen) {
+    return (
+      <SpendGFTScreen
+        onBack={() => setShowSpendScreen(false)}
+        availableBalance={availableBalance + gftAmount}
+      />
+    );
+  }
 
   return (
     <div 
@@ -165,18 +178,33 @@ export default function BuyGFTResultScreen({
             </div>
           </div>
 
-          {/* Done Button */}
-          <button
-            onClick={onDone}
-            className="w-full py-5 rounded-2xl font-bold text-lg transition-all hover:opacity-90 active:scale-[0.98]"
-            style={{ 
-              background: '#4ade80',
-              color: '#022c22',
-              boxShadow: '0 0 30px -10px #4ade80'
-            }}
-          >
-            Done
-          </button>
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-3 w-full">
+            <button
+              onClick={() => setShowSpendScreen(true)}
+              className="w-full py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all hover:opacity-90 active:scale-[0.98]"
+              style={{ 
+                background: '#4ade80',
+                color: '#022c22',
+                boxShadow: '0 0 30px -10px #4ade80'
+              }}
+            >
+              <ShoppingBag className="w-5 h-5" />
+              Spend Your GFT
+            </button>
+            
+            <button
+              onClick={onDone}
+              className="w-full py-5 rounded-2xl font-bold text-lg transition-all hover:bg-slate-700"
+              style={{ 
+                background: '#1e293b',
+                color: '#f8fafc',
+                border: '1px solid #1e293b'
+              }}
+            >
+              Back to Wallet
+            </button>
+          </div>
         </div>
 
         {/* Divider with text */}

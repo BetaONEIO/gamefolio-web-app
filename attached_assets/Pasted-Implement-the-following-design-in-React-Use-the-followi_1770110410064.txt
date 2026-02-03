@@ -1,0 +1,1365 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/SpendGft.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,500;0,400;0,undefined&display=swap";
+.SpendGft_4_1558 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_4_1559 {
+  flex-direction: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  display: flex;
+}
+.Container_4_1560 {
+  background: #020617;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  display: flex;
+}
+.Container_4_1561 {
+  box-sizing: border-box;
+  background: linear-gradient(#14532d33 0%, #020617 100%);
+  border-bottom: 1px solid #1e293b4d;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 24px;
+  width: 430px;
+  padding: 48px 24px 33px;
+  display: flex;
+}
+.Container_4_1562 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 97.9063px;
+  height: 40px;
+  display: flex;
+}
+.Container_4_1563 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 33554400px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_4_1564 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_4_1566 {
+  justify-content: center;
+  align-items: center;
+  width: 107px;
+  height: 28px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.SpendGft_4_1567 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 110px;
+  height: 25px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_4_1568 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 33554400px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_4_1569 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_4_1571 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: 217px;
+  display: flex;
+}
+.Container_4_1572 {
+  justify-content: center;
+  align-items: center;
+  width: 157px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.AvailableToSpend_4_1573 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 159px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1574 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 7.10938px;
+  height: 40px;
+  display: flex;
+}
+.Container_4_1575 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  display: flex;
+}
+._540_00_4_1576 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 174px;
+  height: 45px;
+  font-family: Plus Jakarta Sans;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 40px;
+  display: inline-block;
+}
+.Container_4_1577 {
+  justify-content: center;
+  align-items: center;
+  width: 39px;
+  height: 28px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Gft_4_1578 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 42px;
+  height: 25px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_4_1579 {
+  justify-content: center;
+  align-items: center;
+  width: 123px;
+  height: 28px;
+  padding: 2px 0 3px;
+  display: flex;
+}
+._24Gbp_4_1580 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 125px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_4_1581 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 24px;
+  width: 430px;
+  padding: 24px 24px 0;
+  display: flex;
+}
+.Container_4_1582 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 382px;
+  display: flex;
+}
+.Button_4_1583 {
+  background: #4ade80;
+  border-radius: 16px;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  height: 96px;
+  padding: 20px;
+  display: flex;
+  box-shadow: 0 0 25px -5px #4ade80;
+}
+.Container_4_1584 {
+  background: #022c221a;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 56px;
+  height: 56px;
+  padding: 12px;
+  display: flex;
+}
+.Container_4_1585 {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+}
+.Container_4_1587 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: -0.5px;
+  width: 230px;
+  height: 43px;
+  padding-bottom: 0.5px;
+  display: flex;
+}
+.Container_4_1588 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 23px;
+  padding-right: 127.5px;
+  display: flex;
+}
+.GoToStore_4_1589 {
+  color: #022c22;
+  font-feature-settings: "dlig" on;
+  width: 104px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 22.5px;
+  display: inline-block;
+}
+.Container_4_1590 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 20px;
+  padding: 1px 47px 1px 0;
+  display: flex;
+}
+.BuySkinsBoostersItems_4_1591 {
+  color: #022c22;
+  font-feature-settings: "dlig" on;
+  width: 184px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1592 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Button_4_1594 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  height: 98px;
+  padding: 21px;
+  display: flex;
+}
+.Container_4_1595 {
+  box-sizing: border-box;
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 56px;
+  height: 56px;
+  padding: 12px;
+  display: flex;
+}
+.Container_4_1596 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_4_1600 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: -0.5px;
+  width: 228px;
+  height: 43px;
+  padding-bottom: 0.5px;
+  display: flex;
+}
+.Container_4_1601 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 23px;
+  padding-right: 136.5px;
+  display: flex;
+}
+.ViewNfTs_4_1602 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 93px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 22.5px;
+  display: inline-block;
+}
+.Container_4_1603 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 20px;
+  padding: 1px 17px 1px 0;
+  display: flex;
+}
+.ManageYourDigitalCollectibles_4_1604 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 212px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1605 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_4_1607 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 382px;
+  display: flex;
+}
+.Container_4_1608 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 204.766px;
+  height: 28px;
+  display: flex;
+}
+.Container_4_1609 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 28px;
+  padding: 2px 0 3px;
+  display: flex;
+}
+.FeaturedDeals_4_1610 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  width: 135px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Button_4_1611 {
+  justify-content: center;
+  align-items: center;
+  width: 46px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.SeeAll_4_1612 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 48px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1613 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  height: 186px;
+  display: flex;
+}
+.Container_4_1614 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  height: 186px;
+  padding: 1px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_4_1615 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  width: 181px;
+  padding: 12px;
+  display: flex;
+}
+.Container_4_1616 {
+  align-items: center;
+  width: 157px;
+  height: 20px;
+  padding: 1px 47.5px 1px 0;
+  display: flex;
+  overflow: hidden;
+}
+.EliteBattlePass_4_1617 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 111px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1618 {
+  align-items: center;
+  width: 157px;
+  height: 24px;
+  padding-right: 91px;
+  display: flex;
+}
+.Container_4_1619 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 24px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Gft_4_1620 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  width: 69px;
+  height: 21px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_4_1621 {
+  background: #1e293b;
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 181px;
+  height: 112px;
+  display: flex;
+}
+.Image_4_1622 {
+  aspect-ratio: 160/99;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 181px;
+  height: 112px;
+}
+.Container_4_1623 {
+  background: #4ade80;
+  border-radius: 33554400px;
+  justify-content: center;
+  align-items: center;
+  width: 46px;
+  height: 19px;
+  padding: 3px 6.5px 4px;
+  display: flex;
+}
+.generated_20_4_1624 {
+  color: #022c22;
+  font-feature-settings: "dlig" on;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 33px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_4_1625 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  height: 186px;
+  padding: 1px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_4_1626 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  width: 181px;
+  padding: 12px;
+  display: flex;
+}
+.Container_4_1627 {
+  align-items: center;
+  width: 157px;
+  height: 20px;
+  padding: 1px 39.5px 1px 0;
+  display: flex;
+  overflow: hidden;
+}
+.NeonSwordSkin_4_1628 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 119px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1629 {
+  align-items: center;
+  width: 157px;
+  height: 24px;
+  padding-right: 78px;
+  display: flex;
+}
+.Container_4_1630 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 24px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+._200Gft_4_1631 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  width: 82px;
+  height: 21px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_4_1632 {
+  background: #1e293b;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 181px;
+  height: 112px;
+  display: flex;
+}
+.Image_4_1633 {
+  aspect-ratio: 160/99;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  flex-shrink: 0;
+  width: 181px;
+  height: 112px;
+}
+.Container_4_1634 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+  width: 382px;
+  padding-bottom: 96px;
+  display: flex;
+}
+.Container_4_1635 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 181.406px;
+  height: 28px;
+  display: flex;
+}
+.Container_4_1636 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 28px;
+  padding: 2px 0 3px;
+  display: flex;
+}
+.SpendingHistory_4_1637 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  width: 155px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Button_4_1638 {
+  justify-content: center;
+  align-items: center;
+  width: 49px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.History_4_1639 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 51px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1640 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  height: 48px;
+  display: flex;
+}
+.Container_4_1641 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 16px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 48px;
+  padding: 12px;
+  display: flex;
+}
+.Container_4_1642 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 2.62px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_4_1645 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 232px;
+  height: 40px;
+  display: flex;
+}
+.Container_4_1646 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 24px;
+  padding: 1px 96px 2px 0;
+  display: flex;
+}
+.InGameBooster_4_1647 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 137px;
+  height: 21px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_4_1648 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 16px;
+  padding: 0 104px 1px 0;
+  display: flex;
+}
+.MarketplacePurchase_4_1649 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 129px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_4_1650 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0;
+  width: 71px;
+  height: 39px;
+  display: flex;
+}
+.Container_4_1651 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 66px;
+  height: 24px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+._00_4_1652 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 69px;
+  height: 21px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_4_1653 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Today_2_45Pm_4_1654 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 73px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_4_1655 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  height: 48px;
+  display: flex;
+}
+.Container_4_1656 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 16px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 48px;
+  padding: 12px;
+  display: flex;
+}
+.Container_4_1657 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_4_1659 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 243px;
+  height: 40px;
+  display: flex;
+}
+.Container_4_1660 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 24px;
+  padding: 1px 106px 2px 0;
+  display: flex;
+}
+.TournamentEntry_4_1661 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 138px;
+  height: 21px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_4_1662 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 16px;
+  padding: 0 146px 1px 0;
+  display: flex;
+}
+.ApexProLeague_4_1663 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 98px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_4_1664 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0;
+  width: 60px;
+  height: 39px;
+  display: flex;
+}
+.Container_4_1665 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 24px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+._00_4_1666 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  width: 63px;
+  height: 21px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_4_1667 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 48px;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Yesterday_4_1668 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 50px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_4_1669 {
+  box-sizing: border-box;
+  background: #020617;
+  border-top: 1px solid #1e293b;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 63.4063px;
+  padding: 13px 55.797px 32px 56.109px;
+  display: flex;
+}
+.Button_4_1670 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: 30px;
+  height: 43px;
+  display: flex;
+}
+.Container_4_1671 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.G_4_1672 {
+  width: 20px;
+  height: 20px;
+}
+.Container_4_1675 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Home_4_1676 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 32px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 15px;
+  display: inline-block;
+}
+.Button_4_1677 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: 31px;
+  height: 43px;
+  display: flex;
+}
+.Container_4_1678 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.G_4_1679 {
+  width: 20.75px;
+  height: 17.5px;
+}
+.Container_4_1682 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Wallet_4_1683 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 33px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 15px;
+  display: inline-block;
+}
+.Button_4_1684 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  width: 26px;
+  height: 43px;
+  display: flex;
+}
+.Container_4_1685 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.G_4_1686 {
+  width: 18px;
+  height: 20px;
+}
+.Container_4_1689 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Stats_4_1690 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 28px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 15px;
+  display: inline-block;
+}
+.Button_4_1691 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: 41px;
+  height: 43px;
+  display: flex;
+}
+.Container_4_1692 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.G_4_1693 {
+  width: 20px;
+  height: 20px;
+}
+.Container_4_1697 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Account_4_1698 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 43px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 15px;
+  display: inline-block;
+}
+
+```
+
+---
+
+```src/components/SpendGft.tsx
+import React from 'react';
+import styles from '../styles/SpendGft.module.css';
+
+
+export default function SpendGft() {
+  return (
+    <div className={styles.SpendGft_4_1558}>
+      <div className={styles.Container_4_1559}>
+        <div className={styles.Container_4_1560}>
+          <div className={styles.Container_4_1561}>
+            <div className={styles.Container_4_1562}>
+              <div className={styles.Container_4_1563}>
+                <div className={styles.Container_4_1564}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Container_4_1566}><span className={styles.SpendGft_4_1567}>Spend GFT</span></div>
+              <div className={styles.Container_4_1568}>
+                <div className={styles.Container_4_1569}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M22 12C22 17.523 17.523 22 12 22C6.477 22 2 17.523 2 12C2 6.477 6.477 2 12 2C17.523 2 22 6.477 22 12ZM12 7.75C11.379 7.75 10.875 8.254 10.875 8.875C10.875 9.28921 10.5392 9.625 10.125 9.625C9.71079 9.625 9.375 9.28921 9.375 8.875C9.37504 7.69166 10.1668 6.65464 11.3083 6.34284C12.4499 6.03105 13.6589 6.52157 14.2605 7.54059C14.8621 8.55961 14.7075 9.85515 13.883 10.704C13.791 10.7987 13.703 10.8877 13.619 10.971C13.4165 11.165 13.2258 11.3711 13.048 11.588C12.828 11.87 12.75 12.077 12.75 12.25V13C12.75 13.4142 12.4142 13.75 12 13.75C11.5858 13.75 11.25 13.4142 11.25 13V12.25C11.25 11.595 11.555 11.064 11.864 10.667C12.093 10.373 12.38 10.087 12.614 9.853C12.6847 9.783 12.749 9.71833 12.807 9.659C13.1221 9.33475 13.2124 8.85339 13.0364 8.43696C12.8603 8.02052 12.4521 7.74993 12 7.75ZM12 17C12.5523 17 13 16.5523 13 16C13 15.4477 12.5523 15 12 15C11.4477 15 11 15.4477 11 16C11 16.5523 11.4477 17 12 17Z" fill="#F8FAFC" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_4_1571}>
+              <div className={styles.Container_4_1572}><span className={styles.AvailableToSpend_4_1573}>Available to Spend</span></div>
+              <div className={styles.Container_4_1574}>
+                <div className={styles.Container_4_1575}><span className={styles._540_00_4_1576}>2,540.00</span></div>
+                <div className={styles.Container_4_1577}><span className={styles.Gft_4_1578}>GFT</span></div>
+              </div>
+              <div className={styles.Container_4_1579}><span className={styles._24Gbp_4_1580}>&#x2248; &#xA3;142.24 GBP</span></div>
+            </div>
+          </div>
+          <div className={styles.Container_4_1581}>
+            <div className={styles.Container_4_1582}>
+              <div className={styles.Button_4_1583}>
+                <div className={styles.Container_4_1584}>
+                  <div className={styles.Container_4_1585}><svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M4.95228 4.87332C4.71095 5.35332 4.59228 5.94799 4.35495 7.13466L3.55762 11.1213C3.24973 12.6023 3.7865 14.1321 4.95225 15.0961C6.11801 16.06 7.72139 16.2998 9.1182 15.7193C10.515 15.1387 11.476 13.8329 11.6149 12.3267L11.7083 11.4067C11.5705 13.0024 12.3474 14.5388 13.7143 15.3736C15.0812 16.2085 16.8028 16.1981 18.1596 15.3469C19.5163 14.4956 20.2746 12.95 20.1176 11.356L20.2149 12.3267C20.3539 13.8329 21.3149 15.1387 22.7117 15.7193C24.1085 16.2998 25.7119 16.06 26.8776 15.0961C28.0434 14.1321 28.5802 12.6023 28.2723 11.1213L27.4749 7.13466C27.2376 5.94799 27.1189 5.35466 26.8776 4.87332C26.3691 3.85955 25.4541 3.10932 24.3603 2.80932C23.8403 2.66666 23.2349 2.66666 22.0243 2.66666H9.80562C8.59495 2.66666 7.98962 2.66666 7.46962 2.80932C6.37584 3.10932 5.46083 3.85955 4.95228 4.87332Z" fill="#022C22" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M24.2736 18C25.3154 18.0026 26.3401 17.7358 27.2483 17.2253V18.6667C27.2483 23.6947 27.2483 26.2093 25.6856 27.7707C24.4283 29.0293 22.5549 29.2733 19.2483 29.3213V24.6667C19.2483 23.42 19.2483 22.7973 18.9803 22.3333C18.8048 22.0293 18.5523 21.7768 18.2483 21.6013C17.7843 21.3333 17.1616 21.3333 15.9149 21.3333C14.6683 21.3333 14.0456 21.3333 13.5816 21.6013C13.2776 21.7768 13.0251 22.0293 12.8496 22.3333C12.5816 22.7973 12.5816 23.42 12.5816 24.6667V29.3213C9.27495 29.2733 7.40162 29.028 6.14428 27.7707C4.58162 26.2093 4.58162 23.6947 4.58162 18.6667V17.2253C5.49017 17.736 6.5154 18.0029 7.55762 18C9.09847 18.001 10.582 17.4156 11.7069 16.3627C12.8532 17.4191 14.3561 18.0038 15.9149 18C17.4738 18.0038 18.9767 17.4191 20.1229 16.3627C21.2479 17.4156 22.7328 18.001 24.2736 18Z" fill="#022C22" />
+                    </svg>
+                  </div>
+                </div>
+                <div className={styles.Container_4_1587}>
+                  <div className={styles.Container_4_1588}><span className={styles.GoToStore_4_1589}>Go to Store</span></div>
+                  <div className={styles.Container_4_1590}><span className={styles.BuySkinsBoostersItems_4_1591}>Buy skins, boosters &#x26; items</span></div>
+                </div>
+                <div className={styles.Container_4_1592}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 5L15 12L9 19" stroke="#022C22" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Button_4_1594}>
+                <div className={styles.Container_4_1595}>
+                  <div className={styles.Container_4_1596}><svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M24.6823 13.436C24.6823 14.4213 23.8489 15.22 22.8209 15.22C21.7929 15.22 20.9609 14.42 20.9609 13.436C20.9609 12.452 21.7943 11.6533 22.8209 11.6533C23.8476 11.6533 24.6823 12.4507 24.6823 13.436Z" fill="#4ADE80" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M24.0483 7.376C22.635 7.19467 20.8297 7.19467 18.551 7.19467H13.4497C11.1697 7.19467 9.36432 7.19467 7.95232 7.376C6.49899 7.564 5.32032 7.95867 4.39233 8.848C3.46433 9.73867 3.05233 10.8667 2.85633 12.2613C2.66699 13.6133 2.66699 15.344 2.66699 17.5293V17.6627C2.66699 19.848 2.66699 21.5787 2.85633 22.9333C3.05233 24.3267 3.46433 25.4547 4.39233 26.344C5.32032 27.2347 6.49899 27.6293 7.95232 27.816C9.36566 28 11.171 28 13.4497 28H18.551C20.831 28 22.6363 28 24.0483 27.8173C25.5017 27.6307 26.6803 27.236 27.6083 26.3453C28.5363 25.456 28.9483 24.328 29.1443 22.9347C29.3337 21.58 29.3337 19.8493 29.3337 17.664V17.5307C29.3337 15.344 29.3337 13.6147 29.1443 12.26C28.9483 10.8667 28.5363 9.73867 27.6083 8.848C26.6803 7.95867 25.5017 7.564 24.0483 7.376ZM8.20032 9.144C6.95232 9.304 6.23366 9.60667 5.70699 10.1093C5.18299 10.6133 4.86832 11.3013 4.70033 12.4973C4.56699 13.4573 4.53633 14.6573 4.52966 16.2253L5.15632 15.6987C6.65632 14.4413 8.91499 14.5133 10.323 15.8627L15.643 20.9627C16.186 21.4747 17.0109 21.5433 17.631 21.128L18.0017 20.8787C19.7882 19.6839 22.1507 19.82 23.7883 21.212L26.9977 23.9827C27.1283 23.6307 27.2283 23.2093 27.3003 22.696C27.471 21.4747 27.4737 19.864 27.4737 17.5973C27.4737 15.3307 27.471 13.72 27.3003 12.4973C27.1323 11.3013 26.8177 10.6133 26.2923 10.1107C25.7683 9.60667 25.0483 9.30534 23.8003 9.144C22.5257 8.98 20.8457 8.97734 18.4803 8.97734H13.5203C11.155 8.97734 9.47499 8.98 8.20032 9.144Z" fill="#4ADE80" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M22.7811 3.48001C21.6345 3.33334 20.1758 3.33334 18.3558 3.33334H14.2358C12.4171 3.33334 10.9571 3.33334 9.81046 3.48001C8.62379 3.63334 7.63446 3.95734 6.84912 4.70668C6.4157 5.1227 6.08519 5.634 5.88379 6.20001C6.55579 5.89334 7.31579 5.71201 8.16912 5.60001C9.61446 5.41334 11.4625 5.41334 13.7958 5.41334H19.0145C21.3478 5.41334 23.1945 5.41334 24.6411 5.60001C25.3851 5.69734 26.0598 5.84801 26.6665 6.08801C26.4624 5.56664 26.1476 5.09579 25.7438 4.70801C24.9585 3.95734 23.9691 3.63201 22.7811 3.48001Z" fill="#4ADE80" />
+                    </svg>
+                  </div>
+                </div>
+                <div className={styles.Container_4_1600}>
+                  <div className={styles.Container_4_1601}><span className={styles.ViewNfTs_4_1602}>View NFTs</span></div>
+                  <div className={styles.Container_4_1603}><span className={styles.ManageYourDigitalCollectibles_4_1604}>Manage your digital collectibles</span></div>
+                </div>
+                <div className={styles.Container_4_1605}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 5L15 12L9 19" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_4_1607}>
+              <div className={styles.Container_4_1608}>
+                <div className={styles.Container_4_1609}><span className={styles.FeaturedDeals_4_1610}>Featured Deals</span></div>
+                <div className={styles.Button_4_1611}><span className={styles.SeeAll_4_1612}>See All</span></div>
+              </div>
+              <div className={styles.Container_4_1613}>
+                <div className={styles.Container_4_1614}>
+                  <div className={styles.Container_4_1615}>
+                    <div className={styles.Container_4_1616}><span className={styles.EliteBattlePass_4_1617}>Elite Battle Pass</span></div>
+                    <div className={styles.Container_4_1618}>
+                      <div className={styles.Container_4_1619}><span className={styles.Gft_4_1620}>450 GFT</span></div>
+                    </div>
+                  </div>
+                  <div className={styles.Container_4_1621}>
+                    <div className={styles.Image_4_1622}></div>
+                    <div className={styles.Container_4_1623}><span className={styles.generated_20_4_1624}>-20%</span></div>
+                  </div>
+                </div>
+                <div className={styles.Container_4_1625}>
+                  <div className={styles.Container_4_1626}>
+                    <div className={styles.Container_4_1627}><span className={styles.NeonSwordSkin_4_1628}>Neon Sword Skin</span></div>
+                    <div className={styles.Container_4_1629}>
+                      <div className={styles.Container_4_1630}><span className={styles._200Gft_4_1631}>1,200 GFT</span></div>
+                    </div>
+                  </div>
+                  <div className={styles.Container_4_1632}>
+                    <div className={styles.Image_4_1633}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_4_1634}>
+              <div className={styles.Container_4_1635}>
+                <div className={styles.Container_4_1636}><span className={styles.SpendingHistory_4_1637}>Spending History</span></div>
+                <div className={styles.Button_4_1638}><span className={styles.History_4_1639}>History</span></div>
+              </div>
+              <div className={styles.Container_4_1640}>
+                <div className={styles.Container_4_1641}>
+                  <div className={styles.Container_4_1642}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M3.00061 2.24963C2.60833 2.11195 2.1787 2.31834 2.04102 2.71062C1.90333 3.1029 2.10972 3.53253 2.502 3.67022L2.76385 3.76151C3.43401 3.99727 3.87443 4.15278 4.19848 4.31229C4.50246 4.46177 4.63589 4.58316 4.72417 4.71158C4.81447 4.84401 4.88469 5.0266 4.92482 5.39077C4.96495 5.772 4.96696 6.2686 4.96696 7.011V9.62142C4.96696 12.5729 5.03016 13.5461 5.89997 14.463C6.76877 15.38 8.16728 15.38 10.9663 15.38H16.2855C17.8515 15.38 18.6351 15.38 19.1878 14.9285C19.7416 14.4771 19.9001 13.7106 20.2162 12.1777L20.7178 9.74482C21.0659 7.99919 21.2395 7.12737 20.794 6.54851C20.3486 5.96964 18.8277 5.96964 17.1372 5.96964H6.46379C6.45955 5.72236 6.44516 5.47535 6.42065 5.22925C6.36647 4.73064 6.2501 4.27617 5.96719 3.86284C5.68227 3.44549 5.30304 3.17863 4.86061 2.96093C4.44728 2.75828 3.92158 2.57368 3.30359 2.35598L3.00061 2.24963ZM15.518 8.43459C15.819 8.72152 15.831 9.19705 15.5441 9.49802L12.6778 12.5077C12.5358 12.6568 12.339 12.7411 12.1331 12.7411C11.9272 12.7411 11.7303 12.6568 11.5883 12.5077L10.4416 11.3039C10.2482 11.1107 10.1747 10.8278 10.2497 10.565C10.3246 10.3021 10.5363 10.1005 10.8025 10.0385C11.0688 9.97653 11.3477 10.0638 11.5311 10.2665L12.1331 10.8985L14.4546 8.46068C14.7411 8.15995 15.2171 8.14827 15.518 8.43459Z" fill="#4ADE80" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M7.5 18C8.32843 18 9 18.6716 9 19.5C9 20.3284 8.32843 21 7.5 21C6.67157 21 6 20.3284 6 19.5C6 18.6716 6.67157 18 7.5 18Z" fill="#4ADE80" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M16.5 18C17.3284 18 18 18.6716 18 19.5C18 20.3284 17.3284 21 16.5 21C15.6716 21 15 20.3284 15 19.5C15 18.6716 15.6716 18 16.5 18Z" fill="#4ADE80" />
+                    </svg>
+                  </div>
+                </div>
+                <div className={styles.Container_4_1645}>
+                  <div className={styles.Container_4_1646}><span className={styles.InGameBooster_4_1647}>In-Game Booster</span></div>
+                  <div className={styles.Container_4_1648}><span className={styles.MarketplacePurchase_4_1649}>Marketplace Purchase</span></div>
+                </div>
+                <div className={styles.Container_4_1650}>
+                  <div className={styles.Container_4_1651}><span className={styles._00_4_1652}>-120.00</span></div>
+                  <div className={styles.Container_4_1653}><span className={styles.Today_2_45Pm_4_1654}>Today, 2:45 PM</span></div>
+                </div>
+              </div>
+              <div className={styles.Container_4_1655}>
+                <div className={styles.Container_4_1656}>
+                  <div className={styles.Container_4_1657}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M13.998 19.003L14.004 17C14.004 16.4463 14.4529 15.9975 15.0065 15.9975C15.5602 15.9975 16.009 16.4463 16.009 17V18.977C16.009 19.458 16.009 19.699 16.163 19.847C16.318 19.994 16.553 19.984 17.026 19.964C18.889 19.885 20.034 19.634 20.84 18.828C21.65 18.022 21.901 16.877 21.98 15.011C21.995 14.641 22.003 14.455 21.934 14.332C21.864 14.209 21.589 14.055 21.037 13.746C20.4039 13.393 20.0114 12.7249 20.0114 12C20.0114 11.2751 20.4039 10.607 21.037 10.254C21.589 9.946 21.865 9.791 21.934 9.668C22.003 9.545 21.995 9.36 21.979 8.989C21.901 7.123 21.649 5.979 20.84 5.172C19.963 4.296 18.685 4.075 16.518 4.019C16.384 4.01549 16.2542 4.0663 16.1582 4.15989C16.0621 4.25348 16.008 4.3819 16.008 4.516V7C16.008 7.55367 15.5592 8.0025 15.0055 8.0025C14.4519 8.0025 14.003 7.55367 14.003 7L13.996 4.499C13.9955 4.22325 13.7718 4 13.496 4L9.98402 4C6.20402 4 4.31402 4 3.13902 5.172C2.32902 5.978 2.07802 7.123 1.99902 8.989C1.98402 9.359 1.97602 9.545 2.04502 9.668C2.11502 9.791 2.39002 9.946 2.94202 10.254C3.57519 10.607 3.96764 11.2751 3.96764 12C3.96764 12.7249 3.57519 13.393 2.94202 13.746C2.39002 14.055 2.11402 14.209 2.04502 14.332C1.97602 14.455 1.98402 14.64 2.00002 15.01C2.07802 16.877 2.33002 18.022 3.13902 18.828C4.31402 20 6.20402 20 9.98502 20H12.995C13.467 20 13.702 20 13.849 19.854C13.996 19.708 13.997 19.474 13.998 19.003ZM16.008 13V11C16.008 10.4463 15.5592 9.9975 15.0055 9.9975C14.4519 9.9975 14.003 10.4463 14.003 11V13C14.003 13.5539 14.4521 14.003 15.006 14.003C15.56 14.003 16.009 13.5539 16.009 13" fill="#4ADE80" />
+                    </svg>
+                  </div>
+                </div>
+                <div className={styles.Container_4_1659}>
+                  <div className={styles.Container_4_1660}><span className={styles.TournamentEntry_4_1661}>Tournament Entry</span></div>
+                  <div className={styles.Container_4_1662}><span className={styles.ApexProLeague_4_1663}>Apex Pro League</span></div>
+                </div>
+                <div className={styles.Container_4_1664}>
+                  <div className={styles.Container_4_1665}><span className={styles._00_4_1666}>-50.00</span></div>
+                  <div className={styles.Container_4_1667}><span className={styles.Yesterday_4_1668}>Yesterday</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_4_1669}>
+            <div className={styles.Button_4_1670}>
+              <div className={styles.Container_4_1671}>
+                <div className={styles.G_4_1672}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M0 10.204C0 7.915 0 6.771 0.52 5.823C1.038 4.874 1.987 4.286 3.884 3.108L5.884 1.867C7.889 0.622 8.892 0 10 0C11.108 0 12.11 0.622 14.116 1.867L16.116 3.108C18.013 4.286 18.962 4.874 19.481 5.823C20 6.772 20 7.915 20 10.203V11.725C20 15.625 20 17.576 18.828 18.788C17.656 20 15.771 20 12 20H8C4.229 20 2.343 20 1.172 18.788C0.00100005 17.576 0 15.626 0 11.725V10.204Z" stroke="#94A3B8" strokeWidth="1.5" />
+                    <path d="M10 13V16" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Container_4_1675}><span className={styles.Home_4_1676}>Home</span></div>
+            </div>
+            <div className={styles.Button_4_1677}>
+              <div className={styles.Container_4_1678}>
+                <div className={styles.G_4_1679}><svg width="21" height="18" viewBox="0 0 21 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M19.0996 5.00382C19.043 5.00048 18.9826 4.99915 18.9186 4.99982H16.3936C14.3256 4.99982 12.5566 6.62782 12.5566 8.74981C12.5566 10.8718 14.3266 12.4998 16.3936 12.4998H18.9186C18.9826 12.5005 19.0433 12.4991 19.1006 12.4958C19.9798 12.4428 20.6835 11.7464 20.7456 10.8678C20.7496 10.8078 20.7496 10.7428 20.7496 10.6828V6.81682C20.7496 6.75682 20.7496 6.69182 20.7456 6.63182C20.6835 5.75325 19.9788 5.05683 19.0996 5.00382ZM16.1726 9.74981C16.7046 9.74981 17.1356 9.30181 17.1356 8.74981C17.1356 8.19781 16.7046 7.74981 16.1726 7.74981C15.6396 7.74981 15.2086 8.19781 15.2086 8.74981C15.2086 9.30181 15.6396 9.74981 16.1726 9.74981Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M18.918 14C18.9881 13.9972 19.0554 14.028 19.099 14.0829C19.1427 14.1379 19.1576 14.2103 19.139 14.278C18.939 14.99 18.62 15.598 18.109 16.108C17.36 16.858 16.411 17.189 15.239 17.347C14.099 17.5 12.644 17.5 10.806 17.5H8.694C6.856 17.5 5.4 17.5 4.261 17.347C3.089 17.189 2.14 16.857 1.391 16.109C0.643 15.36 0.311 14.411 0.153 13.239C0 12.099 0 10.644 0 8.806V8.694C0 6.856 0 5.4 0.153 4.26C0.311 3.088 0.643 2.139 1.391 1.39C2.14 0.642 3.089 0.31 4.261 0.152C5.401 0 6.856 0 8.694 0H10.806C12.644 0 14.1 0 15.239 0.153C16.411 0.311 17.36 0.643 18.109 1.391C18.62 1.903 18.939 2.51 19.139 3.222C19.1576 3.28968 19.1427 3.36215 19.099 3.41708C19.0554 3.47201 18.9881 3.50282 18.918 3.5H16.394C13.557 3.5 11.057 5.74 11.057 8.75C11.057 11.76 13.557 14 16.394 14H18.918ZM5 12.5C4.58579 12.5 4.25 12.1642 4.25 11.75V5.75C4.25 5.33579 4.58579 5 5 5C5.41421 5 5.75 5.33579 5.75 5.75V11.75C5.75 12.1642 5.41421 12.5 5 12.5Z" fill="#4ADE80" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Container_4_1682}><span className={styles.Wallet_4_1683}>Wallet</span></div>
+            </div>
+            <div className={styles.Button_4_1684}>
+              <div className={styles.Container_4_1685}>
+                <div className={styles.G_4_1686}><svg width="18" height="20" viewBox="0 0 18 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M0 20H18" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M0 9C0 8.057 0 7.586 0.293 7.293C0.586 7 1.057 7 2 7C2.943 7 3.414 7 3.707 7.293C4 7.586 4 8.057 4 9V15C4 15.943 4 16.414 3.707 16.707C3.414 17 2.943 17 2 17C1.057 17 0.586 17 0.293 16.707C0 16.414 0 15.943 0 15V9Z" stroke="#94A3B8" strokeWidth="1.5" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M7 5C7 4.057 7 3.586 7.293 3.293C7.586 3 8.057 3 9 3C9.943 3 10.414 3 10.707 3.293C11 3.586 11 4.057 11 5V15C11 15.943 11 16.414 10.707 16.707C10.414 17 9.943 17 9 17C8.057 17 7.586 17 7.293 16.707C7 16.414 7 15.943 7 15V5Z" stroke="#94A3B8" strokeWidth="1.5" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M14 2C14 1.057 14 0.586 14.293 0.293C14.586 0 15.057 0 16 0C16.943 0 17.414 0 17.707 0.293C18 0.586 18 1.057 18 2V15C18 15.943 18 16.414 17.707 16.707C17.414 17 16.943 17 16 17C15.057 17 14.586 17 14.293 16.707C14 16.414 14 15.943 14 15V2Z" stroke="#94A3B8" strokeWidth="1.5" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Container_4_1689}><span className={styles.Stats_4_1690}>Stats</span></div>
+            </div>
+            <div className={styles.Button_4_1691}>
+              <div className={styles.Container_4_1692}>
+                <div className={styles.G_4_1693}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M7 7C7 5.34315 8.34315 4 10 4C11.6569 4 13 5.34315 13 7C13 8.65685 11.6569 10 10 10C8.34315 10 7 8.65685 7 7Z" stroke="#94A3B8" strokeWidth="1.5" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M0 10C0 4.47715 4.47715 0 10 0C15.5228 0 20 4.47715 20 10C20 15.5228 15.5228 20 10 20C4.47715 20 0 15.5228 0 10Z" stroke="#94A3B8" strokeWidth="1.5" />
+                    <path d="M15.9703 18C15.8103 15.108 14.9253 13 10.0003 13C5.07527 13 4.19027 15.108 4.03027 18" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Container_4_1697}><span className={styles.Account_4_1698}>Account</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
