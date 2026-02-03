@@ -8,7 +8,7 @@ import { ArrowLeft, Check, ExternalLink, CheckCircle, Wallet } from "lucide-reac
 import { useAuth } from "@/hooks/use-auth";
 import { useCrossmint } from "@/hooks/use-crossmint";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 
@@ -44,6 +44,26 @@ export function NFTPurchaseDialog({
   const queryClient = useQueryClient();
   const [step, setStep] = useState<'details' | 'checkout' | 'success'>('details');
   const [transactionHash, setTransactionHash] = useState<string>('');
+  
+  // Fetch level progress for success screen
+  const { data: levelProgress } = useQuery<{
+    level: number;
+    currentXP: number;
+    currentPoints: number;
+    pointsForCurrentLevel: number;
+    pointsForNextLevel: number;
+    pointsRemaining: number;
+    progressPercent: number;
+  }>({
+    queryKey: ["/api/user", user?.id, "level-progress"],
+    queryFn: async () => {
+      if (!user?.id) throw new Error("No user");
+      const response = await fetch(`/api/user/${user.id}/level-progress`);
+      if (!response.ok) throw new Error("Failed to fetch level progress");
+      return response.json();
+    },
+    enabled: !!user?.id && step === 'success',
+  });
 
   const purchaseMutation = useMutation({
     mutationFn: async (data: { nftId: number }) => {
@@ -291,13 +311,13 @@ export function NFTPurchaseDialog({
       onPurchaseComplete?.();
     };
 
-    // Mock level data - in real app would come from user profile
-    const currentLevel = 8;
-    const nextLevel = 9;
-    const currentXP = 357;
-    const xpToNextLevel = 3000;
-    const totalXP = 8357;
-    const progressPercent = (currentXP / xpToNextLevel) * 100;
+    // Use real level data from user profile
+    const currentLevel = levelProgress?.level || user?.level || 1;
+    const nextLevel = currentLevel + 1;
+    const currentXP = levelProgress?.pointsRemaining ? (levelProgress.pointsForNextLevel - levelProgress.pointsRemaining) : 0;
+    const xpToNextLevel = levelProgress?.pointsForNextLevel || 3000;
+    const totalXP = Math.round(levelProgress?.currentPoints || 0);
+    const progressPercent = levelProgress?.progressPercent || 0;
     
     // Calculate stroke dashoffset for circular progress
     const circumference = 2 * Math.PI * 100; // radius = 100
