@@ -483,7 +483,7 @@ export default function MintNFTPage() {
 
             <Button
               onClick={handleMint}
-              disabled={!canMint || mintState !== "idle"}
+              disabled={mintState !== "idle"}
               className="w-full h-[68px] rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] disabled:bg-[#4ade80]/50 text-[#022c22] text-xl font-bold shadow-[0_8px_10px_-6px_rgba(74,222,128,0.2),0_20px_25px_-5px_rgba(74,222,128,0.2)] flex items-center justify-center gap-2.5"
             >
               <Sparkles className="h-6 w-6" />
