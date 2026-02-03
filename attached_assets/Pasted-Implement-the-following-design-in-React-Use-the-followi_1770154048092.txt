@@ -1,0 +1,922 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/BuyNftConfirmation.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,400;0,undefined&display=swap";
+@import "https://fonts.googleapis.com/css?family=JetBrains+Mono:0,400&display=swap";
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,400;0,undefined&display=swap";
+.BuyNftConfirmation_65_611 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_65_612 {
+  background: #020617;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 100%;
+  display: flex;
+}
+.Container_65_613 {
+  flex-flow: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+  height: 639px;
+  padding: 16px 24px 28px;
+  display: flex;
+}
+.Container_65_614 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 382px;
+  display: flex;
+}
+.Container_65_615 {
+  align-items: center;
+  height: 16px;
+  padding: 0.5px 287.5px 0.5px 0;
+  display: flex;
+}
+.ItemDetails_65_616 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  width: 96px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_65_617 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 16px;
+  height: 130px;
+  padding: 17px 95px 17px 17px;
+  display: flex;
+}
+.Container_65_618 {
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 96px;
+  height: 96px;
+  display: flex;
+  overflow: hidden;
+}
+.Image_65_619 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  flex-shrink: 0;
+  width: 96px;
+  height: 96px;
+}
+.Container_65_620 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 158px;
+  height: 75px;
+  display: flex;
+}
+.Container_65_621 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 5.94531px;
+  padding-right: 37.055px;
+  display: flex;
+}
+.Container_65_622 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0;
+  display: flex;
+}
+.CyberGuardians_65_623 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  width: 106px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_65_624 {
+  width: 12px;
+  height: 12px;
+  overflow: hidden;
+}
+.Container_65_626 {
+  justify-content: center;
+  align-items: center;
+  width: 158px;
+  height: 28px;
+  padding: 1px 0;
+  display: flex;
+}
+.Guardian_4412_65_627 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 161px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_65_628 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 7.82031px;
+  padding-right: 39.18px;
+  display: flex;
+}
+.Container_65_629 {
+  justify-content: center;
+  align-items: center;
+  width: 54px;
+  height: 16px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.UnitPrice_65_630 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 56px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_65_631 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.Gft_65_632 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 60px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_65_633 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 382px;
+  height: 215px;
+  display: flex;
+}
+.Container_65_634 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 16px;
+  padding: 0.5px 230.5px 0.5px 0;
+  display: flex;
+}
+.PurchaseSummary_65_635 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  width: 153px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_65_636 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  height: 183px;
+  padding: 1px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_65_637 {
+  box-sizing: border-box;
+  border-bottom: 1px solid #1e293b4d;
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 199.477px;
+  width: 380px;
+  height: 53px;
+  padding: 16px 15.523px 17px 16px;
+  display: flex;
+}
+.Container_65_638 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 67px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.ItemPrice_65_639 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 69px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_65_640 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 82px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+._00Gft_65_641 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 85px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_65_642 {
+  box-sizing: border-box;
+  border-bottom: 1px solid #1e293b4d;
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 203.977px;
+  width: 380px;
+  height: 53px;
+  padding: 16px 15.023px 17px 16px;
+  display: flex;
+}
+.Container_65_643 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 85px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.NetworkFee_65_644 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 87px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_65_645 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 60px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+._50Gft_65_646 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 63px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_65_647 {
+  background: #14532d1a;
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 154.367px;
+  height: 75px;
+  padding: 16px 15.633px 16px 16px;
+  display: flex;
+}
+.Container_65_648 {
+  justify-content: center;
+  align-items: center;
+  width: 96px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.TotalPayment_65_649 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 99px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_65_650 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0;
+  width: 98px;
+  height: 43px;
+  display: flex;
+}
+.Container_65_651 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 28px;
+  padding: 2.5px 0;
+  display: flex;
+}
+._50Gft_65_652 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  width: 101px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_65_653 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 78px;
+  height: 15px;
+  padding: 1px 0;
+  display: flex;
+}
+._426_80Usd_65_654 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 80px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_65_655 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 382px;
+  height: 154px;
+  display: flex;
+}
+.Container_65_656 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 16px;
+  padding: 0.5px 256.5px 0.5px 0;
+  display: flex;
+}
+.WalletBalance_65_657 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  width: 127px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_65_658 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  height: 122px;
+  padding: 17px;
+  display: flex;
+}
+.Container_65_659 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 111.742px;
+  height: 40px;
+  display: flex;
+}
+.Container_65_660 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  display: flex;
+}
+.Container_65_661 {
+  background: #1e293b;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 10px;
+  display: flex;
+}
+.Container_65_662 {
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.G_65_663 {
+  width: 17.291px;
+  height: 14.583px;
+}
+.Container_65_666 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 105px;
+  height: 35px;
+  display: flex;
+}
+.Container_65_667 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.PersonalWallet_65_668 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 108px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_65_669 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 15px;
+  padding: 1px 26px 1px 0;
+  display: flex;
+}
+.x892aF4e1_65_670 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 80px;
+  height: 13px;
+  font-family: JetBrains Mono;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_65_671 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0;
+  width: 80px;
+  height: 35px;
+  display: flex;
+}
+.Container_65_672 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+._20Gft_65_673 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 83px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_65_674 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 43px;
+  height: 15px;
+  padding: 1px 0;
+  display: flex;
+}
+.Available_65_675 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 45px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_65_676 {
+  background: #4ade801a;
+  border-radius: 16px;
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 8px;
+  width: 348px;
+  height: 32px;
+  padding: 8px 96px 8px 12px;
+  display: flex;
+}
+.Container_65_677 {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+}
+.Container_65_679 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 216px;
+  height: 16px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.SufficientBalanceForThisTransaction_65_680 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 218px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_65_681 {
+  box-sizing: border-box;
+  background: #020617;
+  border-top: 1px solid #1e293b80;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 33px 24px 32px;
+  display: flex;
+}
+.Button_65_682 {
+  background: #4ade80;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 382px;
+  height: 60px;
+  padding: 18.5px 111.164px 18.5px 111.836px;
+  display: flex;
+  box-shadow:
+    0 4px 6px -4px #4ade8033,
+    0 10px 15px -3px #4ade8033;
+}
+.ConfirmPurchase_65_683 {
+  color: #022c22;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 159px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Button_65_684 {
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 382px;
+  height: 52px;
+  padding: 17px 124.094px 17px 124.906px;
+  display: flex;
+}
+.CancelTransaction_65_685 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 133px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Header_65_686 {
+  backdrop-filter: blur(6px);
+  background: #020617cc;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 192px;
+  height: 104px;
+  padding: 48px 16px 16px;
+  display: flex;
+}
+.Container_65_687 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  width: 166px;
+  height: 40px;
+  display: flex;
+}
+.Button_65_688 {
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_65_689 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_65_691 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 110px;
+  height: 28px;
+  padding: 1px 0;
+  display: flex;
+}
+.Checkout_65_692 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.5px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 113px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_65_693 {
+  width: 40px;
+  height: 40px;
+}
+
+```
+
+---
+
+```src/components/BuyNftConfirmation.tsx
+import React from 'react';
+import styles from '../styles/BuyNftConfirmation.module.css';
+
+
+export default function BuyNftConfirmation() {
+  return (
+    <div className={styles.BuyNftConfirmation_65_611}>
+      <div className={styles.Container_65_612}>
+        <div className={styles.Container_65_613}>
+          <div className={styles.Container_65_614}>
+            <div className={styles.Container_65_615}><span className={styles.ItemDetails_65_616}>Item details</span></div>
+            <div className={styles.Container_65_617}>
+              <div className={styles.Container_65_618}>
+                <div className={styles.Image_65_619}></div>
+              </div>
+              <div className={styles.Container_65_620}>
+                <div className={styles.Container_65_621}>
+                  <div className={styles.Container_65_622}><span className={styles.CyberGuardians_65_623}>Cyber Guardians</span></div>
+                  <div className={styles.Container_65_624}><svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <g clipPath="url(#clip0_65_624)">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M4.76313 1.47997C4.68207 1.55272 4.59721 1.62113 4.5089 1.6849C4.35585 1.78762 4.18379 1.85849 4.00301 1.89444C3.92443 1.90985 3.84225 1.91653 3.67841 1.92937C3.26702 1.96224 3.06107 1.97867 2.88953 2.03928C2.49214 2.17935 2.17959 2.49189 2.03952 2.88928C1.97892 3.06083 1.96248 3.26678 1.92961 3.67817C1.92371 3.78691 1.91206 3.89526 1.89469 4.00276C1.85874 4.18355 1.78786 4.35561 1.68514 4.50866C1.64046 4.57543 1.58704 4.63809 1.48021 4.76289C1.21263 5.07721 1.07858 5.23437 1 5.39872C0.8187 5.77879 0.8187 6.22048 1 6.60054C1.07858 6.76489 1.21263 6.92206 1.48021 7.23638C1.58704 7.36118 1.64046 7.42384 1.68514 7.49061C1.78786 7.64366 1.85874 7.81572 1.89469 7.9965C1.9101 8.07508 1.91677 8.15726 1.92961 8.3211C1.96248 8.73249 1.97892 8.93844 2.03952 9.10998C2.17959 9.50737 2.49214 9.81992 2.88953 9.95999C3.06107 10.0206 3.26702 10.037 3.67841 10.0699C3.84225 10.0827 3.92443 10.0894 4.00301 10.1048C4.18379 10.1408 4.35585 10.2122 4.5089 10.3144C4.57567 10.3591 4.63833 10.4125 4.76313 10.5193C5.07746 10.7869 5.23462 10.9209 5.39897 10.9995C5.77903 11.1808 6.22072 11.1808 6.60079 10.9995C6.76514 10.9209 6.9223 10.7869 7.23662 10.5193C7.36143 10.4125 7.42409 10.3591 7.49085 10.3144C7.64391 10.2117 7.81596 10.1408 7.99675 10.1048C8.07533 10.0894 8.1575 10.0827 8.32134 10.0699C8.73273 10.037 8.93869 10.0206 9.11023 9.95999C9.50762 9.81992 9.82016 9.50737 9.96023 9.10998C10.0208 8.93844 10.0373 8.73249 10.0701 8.3211C10.083 8.15726 10.0897 8.07508 10.1051 7.9965C10.141 7.81572 10.2124 7.64366 10.3146 7.49061C10.3593 7.42384 10.4127 7.36118 10.5195 7.23638C10.7871 6.92206 10.9212 6.76489 10.9998 6.60054C11.1811 6.22048 11.1811 5.77879 10.9998 5.39872C10.9212 5.23437 10.7871 5.07721 10.5195 4.76289C10.4468 4.68183 10.3784 4.59696 10.3146 4.50866C10.2118 4.35563 10.1406 4.18365 10.1051 4.00276C10.0877 3.89526 10.076 3.78691 10.0701 3.67817C10.0373 3.26678 10.0208 3.06083 9.96023 2.88928C9.82016 2.49189 9.50762 2.17935 9.11023 2.03928C8.93869 1.97867 8.73273 1.96224 8.32134 1.92937C8.2126 1.92347 8.10425 1.91181 7.99675 1.89444C7.81586 1.85891 7.64388 1.78768 7.49085 1.6849C7.40255 1.62113 7.31768 1.55272 7.23662 1.47997C6.9223 1.21239 6.76514 1.07834 6.60079 0.999756C6.22082 0.817889 5.77893 0.817889 5.39897 0.999756C5.23462 1.07834 5.07746 1.21239 4.76313 1.47997ZM8.24584 4.90207C8.39664 4.73703 8.3909 4.48255 8.23282 4.32446C8.07473 4.16638 7.82025 4.16064 7.6552 4.31144L5.16425 6.80239L4.34455 5.9832C4.1795 5.8324 3.92502 5.83814 3.76694 5.99622C3.60885 6.15431 3.60311 6.40879 3.75391 6.57384L4.86842 7.68834C5.03162 7.85121 5.29586 7.85121 5.45906 7.68834L8.24584 4.90207Z" fill="#4ADE80" />
+                      </g>
+                      <defs>
+                        <clipPath id="clip0_65_624">
+                          <rect width="12" height="12" fill="white" />
+                        </clipPath>
+                      </defs>
+                    </svg>
+                  </div>
+                </div>
+                <div className={styles.Container_65_626}><span className={styles.Guardian_4412_65_627}>Guardian #4412</span></div>
+                <div className={styles.Container_65_628}>
+                  <div className={styles.Container_65_629}><span className={styles.UnitPrice_65_630}>Unit Price</span></div>
+                  <div className={styles.Container_65_631}><span className={styles.Gft_65_632}>320 GFT</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_65_633}>
+            <div className={styles.Container_65_634}><span className={styles.PurchaseSummary_65_635}>Purchase Summary</span></div>
+            <div className={styles.Container_65_636}>
+              <div className={styles.Container_65_637}>
+                <div className={styles.Container_65_638}><span className={styles.ItemPrice_65_639}>Item Price</span></div>
+                <div className={styles.Container_65_640}><span className={styles._00Gft_65_641}>320.00 GFT</span></div>
+              </div>
+              <div className={styles.Container_65_642}>
+                <div className={styles.Container_65_643}><span className={styles.NetworkFee_65_644}>Network Fee</span></div>
+                <div className={styles.Container_65_645}><span className={styles._50Gft_65_646}>1.50 GFT</span></div>
+              </div>
+              <div className={styles.Container_65_647}>
+                <div className={styles.Container_65_648}><span className={styles.TotalPayment_65_649}>Total Payment</span></div>
+                <div className={styles.Container_65_650}>
+                  <div className={styles.Container_65_651}><span className={styles._50Gft_65_652}>321.50 GFT</span></div>
+                  <div className={styles.Container_65_653}><span className={styles._426_80Usd_65_654}>&#x2248; $1,426.80 USD</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_65_655}>
+            <div className={styles.Container_65_656}><span className={styles.WalletBalance_65_657}>Wallet Balance</span></div>
+            <div className={styles.Container_65_658}>
+              <div className={styles.Container_65_659}>
+                <div className={styles.Container_65_660}>
+                  <div className={styles.Container_65_661}>
+                    <div className={styles.Container_65_662}>
+                      <div className={styles.G_65_663}><svg width="18" height="15" viewBox="0 0 18 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path fillRule="evenodd" clipRule="evenodd" d="M15.9164 4.16984C15.8691 4.16706 15.8189 4.16595 15.7655 4.1665H13.6614C11.938 4.1665 10.4639 5.52317 10.4639 7.2915C10.4639 9.05984 11.9389 10.4165 13.6614 10.4165H15.7655C15.8189 10.4171 15.8694 10.4159 15.9172 10.4132C16.6498 10.369 17.2363 9.78864 17.288 9.0565C17.2914 9.0065 17.2914 8.95234 17.2914 8.90234V5.68067C17.2914 5.63067 17.2914 5.5765 17.288 5.5265C17.2363 4.79437 16.649 4.21401 15.9164 4.16984ZM13.4772 8.12484C13.9205 8.12484 14.2797 7.7515 14.2797 7.2915C14.2797 6.8315 13.9205 6.45817 13.4772 6.45817C13.033 6.45817 12.6739 6.8315 12.6739 7.2915C12.6739 7.7515 13.033 8.12484 13.4772 8.12484Z" fill="#4ADE80" />
+                          <path fillRule="evenodd" clipRule="evenodd" d="M15.765 11.6667C15.8234 11.6643 15.8795 11.69 15.9158 11.7357C15.9522 11.7815 15.9646 11.8419 15.9491 11.8983C15.7825 12.4916 15.5166 12.9983 15.0908 13.4233C14.4666 14.0483 13.6758 14.3241 12.6991 14.4558C11.7492 14.5833 10.5367 14.5833 9.00499 14.5833H7.24499C5.71333 14.5833 4.49999 14.5833 3.55083 14.4558C2.57416 14.3241 1.78333 14.0475 1.15917 13.4241C0.535833 12.8 0.259166 12.0092 0.1275 11.0325C0 10.0825 0 8.86999 0 7.33832V7.24499C0 5.71333 0 4.49999 0.1275 3.54999C0.259166 2.57333 0.535833 1.7825 1.15917 1.15833C1.78333 0.534999 2.57416 0.258333 3.55083 0.126666C4.50083 0 5.71333 0 7.24499 0H9.00499C10.5367 0 11.75 0 12.6991 0.1275C13.6758 0.259166 14.4666 0.535833 15.0908 1.15917C15.5166 1.58583 15.7825 2.09166 15.9491 2.685C15.9646 2.74139 15.9522 2.80179 15.9158 2.84756C15.8795 2.89334 15.8234 2.91901 15.765 2.91666H13.6616C11.2975 2.91666 9.21415 4.78333 9.21415 7.29166C9.21415 9.79999 11.2975 11.6667 13.6616 11.6667H15.765ZM4.16666 10.4167C3.82148 10.4167 3.54166 10.1368 3.54166 9.79165V4.79166C3.54166 4.44648 3.82148 4.16666 4.16666 4.16666C4.51184 4.16666 4.79166 4.44648 4.79166 4.79166V9.79165C4.79166 10.1368 4.51184 10.4167 4.16666 10.4167Z" fill="#4ADE80" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.Container_65_666}>
+                    <div className={styles.Container_65_667}><span className={styles.PersonalWallet_65_668}>Personal Wallet</span></div>
+                    <div className={styles.Container_65_669}><span className={styles.x892aF4e1_65_670}>0x892a...f4e1</span></div>
+                  </div>
+                </div>
+                <div className={styles.Container_65_671}>
+                  <div className={styles.Container_65_672}><span className={styles._20Gft_65_673}>542.20 GFT</span></div>
+                  <div className={styles.Container_65_674}><span className={styles.Available_65_675}>Available</span></div>
+                </div>
+              </div>
+              <div className={styles.Container_65_676}>
+                <div className={styles.Container_65_677}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M14.6663 7.99992C14.6663 11.6819 11.6817 14.6666 7.99967 14.6666C4.31767 14.6666 1.33301 11.6819 1.33301 7.99992C1.33301 4.31792 4.31767 1.33325 7.99967 1.33325C11.6817 1.33325 14.6663 4.31792 14.6663 7.99992ZM10.6863 5.97992C10.8813 6.17513 10.8813 6.49137 10.6863 6.68658L7.35301 10.0199C7.1578 10.2149 6.84155 10.2149 6.64634 10.0199L5.31301 8.68658C5.17924 8.56194 5.12417 8.37421 5.16942 8.19706C5.21466 8.0199 5.35299 7.88157 5.53015 7.83633C5.7073 7.79109 5.89503 7.84615 6.01967 7.97992L6.99967 8.95992L8.48967 7.46992L9.97967 5.97992C10.1749 5.78495 10.4911 5.78495 10.6863 5.97992Z" fill="#4ADE80" />
+                  </svg>
+                </div>
+                <div className={styles.Container_65_679}><span className={styles.SufficientBalanceForThisTransaction_65_680}>Sufficient balance for this transaction</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_65_681}>
+          <div className={styles.Button_65_682}><span className={styles.ConfirmPurchase_65_683}>Confirm Purchase</span></div>
+          <div className={styles.Button_65_684}><span className={styles.CancelTransaction_65_685}>Cancel Transaction</span></div>
+        </div>
+        <div className={styles.Header_65_686}>
+          <div className={styles.Container_65_687}>
+            <div className={styles.Button_65_688}>
+              <div className={styles.Container_65_689}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_65_691}><span className={styles.Checkout_65_692}>Checkout</span></div>
+          </div>
+          <div className={styles.Container_65_693}></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+

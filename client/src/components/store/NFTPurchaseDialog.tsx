@@ -110,6 +110,28 @@ export function NFTPurchaseDialog({
   const tokenId = nft.id.toString().padStart(4, '0');
   const walletAddress = wallet?.address ? `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}` : "0x892a...f4e1";
 
+  // Verified badge SVG from Figma
+  const VerifiedBadge = () => (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path fillRule="evenodd" clipRule="evenodd" d="M4.76313 1.47997C4.68207 1.55272 4.59721 1.62113 4.5089 1.6849C4.35585 1.78762 4.18379 1.85849 4.00301 1.89444C3.92443 1.90985 3.84225 1.91653 3.67841 1.92937C3.26702 1.96224 3.06107 1.97867 2.88953 2.03928C2.49214 2.17935 2.17959 2.49189 2.03952 2.88928C1.97892 3.06083 1.96248 3.26678 1.92961 3.67817C1.92371 3.78691 1.91206 3.89526 1.89469 4.00276C1.85874 4.18355 1.78786 4.35561 1.68514 4.50866C1.64046 4.57543 1.58704 4.63809 1.48021 4.76289C1.21263 5.07721 1.07858 5.23437 1 5.39872C0.8187 5.77879 0.8187 6.22048 1 6.60054C1.07858 6.76489 1.21263 6.92206 1.48021 7.23638C1.58704 7.36118 1.64046 7.42384 1.68514 7.49061C1.78786 7.64366 1.85874 7.81572 1.89469 7.9965C1.9101 8.07508 1.91677 8.15726 1.92961 8.3211C1.96248 8.73249 1.97892 8.93844 2.03952 9.10998C2.17959 9.50737 2.49214 9.81992 2.88953 9.95999C3.06107 10.0206 3.26702 10.037 3.67841 10.0699C3.84225 10.0827 3.92443 10.0894 4.00301 10.1048C4.18379 10.1408 4.35585 10.2122 4.5089 10.3144C4.57567 10.3591 4.63833 10.4125 4.76313 10.5193C5.07746 10.7869 5.23462 10.9209 5.39897 10.9995C5.77903 11.1808 6.22072 11.1808 6.60079 10.9995C6.76514 10.9209 6.9223 10.7869 7.23662 10.5193C7.36143 10.4125 7.42409 10.3591 7.49085 10.3144C7.64391 10.2117 7.81596 10.1408 7.99675 10.1048C8.07533 10.0894 8.1575 10.0827 8.32134 10.0699C8.73273 10.037 8.93869 10.0206 9.11023 9.95999C9.50762 9.81992 9.82016 9.50737 9.96023 9.10998C10.0208 8.93844 10.0373 8.73249 10.0701 8.3211C10.083 8.15726 10.0897 8.07508 10.1051 7.9965C10.141 7.81572 10.2124 7.64366 10.3146 7.49061C10.3593 7.42384 10.4127 7.36118 10.5195 7.23638C10.7871 6.92206 10.9212 6.76489 10.9998 6.60054C11.1811 6.22048 11.1811 5.77879 10.9998 5.39872C10.9212 5.23437 10.7871 5.07721 10.5195 4.76289C10.4468 4.68183 10.3784 4.59696 10.3146 4.50866C10.2118 4.35563 10.1406 4.18365 10.1051 4.00276C10.0877 3.89526 10.076 3.78691 10.0701 3.67817C10.0373 3.26678 10.0208 3.06083 9.96023 2.88928C9.82016 2.49189 9.50762 2.17935 9.11023 2.03928C8.93869 1.97867 8.73273 1.96224 8.32134 1.92937C8.1575 1.91653 8.07533 1.90985 7.99675 1.89444C7.81596 1.85849 7.64391 1.78762 7.49085 1.6849C7.42409 1.62113 7.36143 1.55272 7.23662 1.47997C6.9223 1.21263 6.76514 1.07858 6.60079 1C6.22072 0.8187 5.77903 0.8187 5.39897 1C5.23462 1.07858 5.07746 1.21263 4.76313 1.47997ZM8.35355 5.35355C8.54882 5.15829 8.54882 4.84171 8.35355 4.64645C8.15829 4.45118 7.84171 4.45118 7.64645 4.64645L5.5 6.79289L4.35355 5.64645C4.15829 5.45118 3.84171 5.45118 3.64645 5.64645C3.45118 5.84171 3.45118 6.15829 3.64645 6.35355L5.14645 7.85355C5.34171 8.04882 5.65829 8.04882 5.85355 7.85355L8.35355 5.35355Z" fill="#4ADE80"/>
+    </svg>
+  );
+
+  // Wallet icon SVG from Figma
+  const WalletIcon = () => (
+    <svg width="18" height="15" viewBox="0 0 18 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path fillRule="evenodd" clipRule="evenodd" d="M15.9164 4.16984C15.8691 4.16706 15.8189 4.16595 15.7655 4.1665H13.6614C11.938 4.1665 10.4639 5.52317 10.4639 7.2915C10.4639 9.05984 11.9389 10.4165 13.6614 10.4165H15.7655C15.8189 10.4171 15.8694 10.4159 15.9172 10.4132C16.6498 10.369 17.2363 9.78864 17.288 9.0565C17.2914 9.0065 17.2914 8.95234 17.2914 8.90234V5.68067C17.2914 5.63067 17.2914 5.5765 17.288 5.5265C17.2363 4.79437 16.649 4.21401 15.9164 4.16984ZM13.4772 8.12484C13.9205 8.12484 14.2797 7.7515 14.2797 7.2915C14.2797 6.8315 13.9205 6.45817 13.4772 6.45817C13.033 6.45817 12.6739 6.8315 12.6739 7.2915C12.6739 7.7515 13.033 8.12484 13.4772 8.12484Z" fill="#4ADE80" />
+      <path fillRule="evenodd" clipRule="evenodd" d="M15.765 11.6667C15.8234 11.6643 15.8795 11.69 15.9158 11.7357C15.9522 11.7815 15.9646 11.8419 15.9491 11.8983C15.7825 12.4916 15.5166 12.9983 15.0908 13.4233C14.4666 14.0483 13.6758 14.3241 12.6991 14.4558C11.7492 14.5833 10.5367 14.5833 9.00499 14.5833H7.24499C5.71333 14.5833 4.49999 14.5833 3.55083 14.4558C2.57416 14.3241 1.78333 14.0475 1.15917 13.4241C0.535833 12.8 0.259166 12.0092 0.1275 11.0325C0 10.0825 0 8.86999 0 7.33832V7.24499C0 5.71333 0 4.49999 0.1275 3.54999C0.259166 2.57333 0.535833 1.7825 1.15917 1.15833C1.78333 0.534999 2.57416 0.258333 3.55083 0.126666C4.50083 0 5.71333 0 7.24499 0H9.00499C10.5367 0 11.75 0 12.6991 0.1275C13.6758 0.259166 14.4666 0.535833 15.0908 1.15917C15.5166 1.58583 15.7825 2.09166 15.9491 2.685C15.9646 2.74139 15.9522 2.80179 15.9158 2.84756C15.8795 2.89334 15.8234 2.91901 15.765 2.91666H13.6616C11.2975 2.91666 9.21415 4.78333 9.21415 7.29166C9.21415 9.79999 11.2975 11.6667 13.6616 11.6667H15.765ZM4.16666 10.4167C3.82148 10.4167 3.54166 10.1368 3.54166 9.79165V4.79166C3.54166 4.44648 3.82148 4.16666 4.16666 4.16666C4.51184 4.16666 4.79166 4.44648 4.79166 4.79166V9.79165C4.79166 10.1368 4.51184 10.4167 4.16666 10.4167Z" fill="#4ADE80" />
+    </svg>
+  );
+
+  // Checkmark circle SVG from Figma
+  const CheckmarkCircle = () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path fillRule="evenodd" clipRule="evenodd" d="M14.6663 7.99992C14.6663 11.6819 11.6817 14.6666 7.99967 14.6666C4.31767 14.6666 1.33301 11.6819 1.33301 7.99992C1.33301 4.31792 4.31767 1.33325 7.99967 1.33325C11.6817 1.33325 14.6663 4.31792 14.6663 7.99992ZM10.6863 5.97992C10.8813 6.17513 10.8813 6.49137 10.6863 6.68658L7.35301 10.0199C7.1578 10.2149 6.84155 10.2149 6.64634 10.0199L5.31301 8.68658C5.17924 8.56194 5.12417 8.37421 5.16942 8.19706C5.21466 8.0199 5.35299 7.88157 5.53015 7.83633C5.7073 7.79109 5.89503 7.84615 6.01967 7.97992L6.99967 8.95992L8.48967 7.46992L9.97967 5.97992C10.1749 5.78495 10.4911 5.78495 10.6863 5.97992Z" fill="#4ADE80" />
+    </svg>
+  );
+
   // Checkout Screen
   if (step === 'checkout') {
     return (
@@ -118,32 +140,38 @@ export function NFTPurchaseDialog({
           className="bg-[#020617] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
           data-testid="dialog-nft-checkout"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-4 pt-12 bg-[#020617]/80 backdrop-blur-md border-b border-[#1e293b]/50">
-            <button
-              onClick={() => setStep('details')}
-              className="w-10 h-10 rounded-full hover:bg-[#1e293b]/50 flex items-center justify-center transition-colors"
-            >
-              <ArrowLeft className="h-6 w-6 text-white/50" />
-            </button>
-            <span className="text-xl font-bold text-[#f8fafc] uppercase tracking-tight">Checkout</span>
-            <div className="w-10 h-10" />
+          {/* Header - matches Figma: 104px height, centered content */}
+          <div className="flex items-center justify-center px-4 pt-12 pb-4 bg-[#020617]/80 backdrop-blur-md">
+            <div className="flex items-center gap-4 w-full max-w-[166px]">
+              <button
+                onClick={() => setStep('details')}
+                className="w-10 h-10 rounded-full hover:bg-[#1e293b]/50 flex items-center justify-center transition-colors"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              <span className="text-xl font-bold text-[#f8fafc] uppercase tracking-tight" style={{ letterSpacing: '-0.5px' }}>
+                Checkout
+              </span>
+            </div>
           </div>
 
-          {/* Scrollable Content */}
+          {/* Scrollable Content - gap: 32px between sections */}
           <div 
             className="flex-1 overflow-y-auto"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
-            <div className="hide-scrollbar flex flex-col gap-8 px-6 py-4">
+            <div className="hide-scrollbar flex flex-col gap-8 px-6 py-4 pb-7">
               
-              {/* Item Details */}
+              {/* Item Details - matches Container_65_614 */}
               <div className="flex flex-col gap-4">
-                <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">
-                  Item Details
+                <span className="text-xs font-bold text-[#94a3b8] uppercase" style={{ letterSpacing: '1.2px' }}>
+                  Item details
                 </span>
-                <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex items-center gap-4">
+                <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-[17px] flex items-center gap-4 h-[130px]">
+                  {/* 96x96 image */}
                   <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0">
                     <img
                       src={nft.image}
@@ -151,14 +179,15 @@ export function NFTPurchaseDialog({
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-bold text-[#4ade80] uppercase tracking-wider">
+                  {/* Info column */}
+                  <div className="flex flex-col justify-center">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-[10px] font-bold text-[#4ade80] uppercase" style={{ letterSpacing: '0.5px' }}>
                         Cyber Guardians
                       </span>
-                      <Check className="w-3 h-3 text-[#4ade80]" />
+                      <VerifiedBadge />
                     </div>
-                    <span className="text-xl font-bold text-[#f8fafc]">
+                    <span className="text-xl font-bold text-[#f8fafc] leading-7">
                       {nft.name.replace(/^.*#/, 'Guardian #')}
                     </span>
                     <div className="flex items-center gap-2 mt-1">
@@ -169,59 +198,64 @@ export function NFTPurchaseDialog({
                 </div>
               </div>
 
-              {/* Purchase Summary */}
+              {/* Purchase Summary - matches Container_65_633 */}
               <div className="flex flex-col gap-4">
-                <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">
+                <span className="text-xs font-bold text-[#94a3b8] uppercase" style={{ letterSpacing: '1.2px' }}>
                   Purchase Summary
                 </span>
                 <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-4 border-b border-[#1e293b]/30">
+                  {/* Item Price row - 53px height */}
+                  <div className="flex items-center justify-between px-4 h-[53px] border-b border-[#1e293b]/30">
                     <span className="text-sm text-[#94a3b8]">Item Price</span>
                     <span className="text-sm font-bold text-[#f8fafc]">{nft.price.toFixed(2)} GFT</span>
                   </div>
-                  <div className="flex items-center justify-between px-4 py-4 border-b border-[#1e293b]/30">
+                  {/* Network Fee row - 53px height */}
+                  <div className="flex items-center justify-between px-4 h-[53px] border-b border-[#1e293b]/30">
                     <span className="text-sm text-[#94a3b8]">Network Fee</span>
                     <span className="text-sm font-bold text-[#f8fafc]">{networkFee.toFixed(2)} GFT</span>
                   </div>
-                  <div className="flex items-center justify-between px-4 py-5 bg-[#14532d]/10">
+                  {/* Total Payment row - 75px height, green tinted bg */}
+                  <div className="flex items-center justify-between px-4 h-[75px] bg-[#14532d]/10">
                     <span className="text-sm font-bold text-[#f8fafc]">Total Payment</span>
                     <div className="flex flex-col items-end">
-                      <span className="text-lg font-bold text-[#4ade80]">{totalAmount.toFixed(2)} GFT</span>
+                      <span className="text-lg font-bold text-[#4ade80] leading-7">{totalAmount.toFixed(2)} GFT</span>
                       <span className="text-[10px] text-[#94a3b8]">≈ ${(totalAmount * 4.44).toFixed(2)} USD</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Wallet Balance */}
+              {/* Wallet Balance - matches Container_65_655 */}
               <div className="flex flex-col gap-4">
-                <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">
+                <span className="text-xs font-bold text-[#94a3b8] uppercase" style={{ letterSpacing: '1.2px' }}>
                   Wallet Balance
                 </span>
-                <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
+                <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-[17px] flex flex-col gap-4">
+                  {/* Wallet row */}
+                  <div className="flex items-center justify-between h-10">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-[#1e293b] flex items-center justify-center">
-                        <Wallet className="w-5 h-5 text-[#4ade80]" />
+                        <WalletIcon />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-[#f8fafc]">Personal Wallet</span>
-                        <span className="text-[10px] font-mono text-[#94a3b8]">{walletAddress}</span>
+                        <span className="text-sm font-bold text-[#f8fafc] leading-5">Personal Wallet</span>
+                        <span className="text-[10px] font-mono text-[#94a3b8] leading-[15px]">{walletAddress}</span>
                       </div>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className="text-sm font-bold text-[#f8fafc]">{userBalance.toFixed(2)} GFT</span>
-                      <span className="text-[10px] text-[#94a3b8]">Available</span>
+                      <span className="text-sm font-bold text-[#f8fafc] leading-5">{userBalance.toFixed(2)} GFT</span>
+                      <span className="text-[10px] text-[#94a3b8] leading-[15px]">Available</span>
                     </div>
                   </div>
                   
+                  {/* Balance status indicator */}
                   {hasEnoughBalance ? (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-[#4ade80]/10 rounded-2xl">
-                      <CheckCircle className="w-4 h-4 text-[#4ade80]" />
+                    <div className="flex items-center gap-2 px-3 py-2 bg-[#4ade80]/10 rounded-2xl h-8">
+                      <CheckmarkCircle />
                       <span className="text-xs text-[#4ade80]">Sufficient balance for this transaction</span>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-red-500/10 rounded-2xl">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-red-500/10 rounded-2xl h-8">
                       <span className="text-xs text-red-400">
                         Insufficient balance. You need {(totalAmount - userBalance).toFixed(2)} more GFT.
                       </span>
@@ -233,8 +267,8 @@ export function NFTPurchaseDialog({
             </div>
           </div>
 
-          {/* Footer Actions */}
-          <div className="border-t border-[#1e293b]/50 px-6 py-6 flex flex-col gap-3 bg-[#020617]">
+          {/* Footer Actions - matches Container_65_681 */}
+          <div className="border-t border-[#1e293b]/50 px-6 py-8 flex flex-col gap-3 bg-[#020617]">
             <Button
               onClick={handleConfirmPurchase}
               disabled={!hasEnoughBalance || purchaseMutation.isPending}
