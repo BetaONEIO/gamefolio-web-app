@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "wouter";
 
 interface Transaction {
   id: string;
@@ -8,6 +9,15 @@ interface Transaction {
   subtitle: string;
   amount: number;
   time: string;
+}
+
+interface OwnedNFT {
+  id: number;
+  name: string;
+  image: string | null;
+  rarity: string | null;
+  purchaseId: string;
+  purchasedAt: string;
 }
 
 interface WalletHomepageProps {
@@ -19,12 +29,14 @@ interface WalletHomepageProps {
   portfolioValue?: number;
   stakedAmount?: number;
   nftsOwned?: number;
+  ownedNFTs?: OwnedNFT[];
   onBuyClick?: () => void;
   onStakeClick?: () => void;
   onSettingsClick?: () => void;
   onProfileClick?: () => void;
   onActivityClick?: () => void;
   onNFTsClick?: () => void;
+  onNFTClick?: (nftId: number) => void;
   isLoadingBalance?: boolean;
 }
 
@@ -36,12 +48,14 @@ export default function WalletHomepage({
   portfolioValue,
   stakedAmount = 0,
   nftsOwned = 0,
+  ownedNFTs = [],
   onBuyClick,
   onStakeClick,
   onSettingsClick,
   onProfileClick,
   onActivityClick,
   onNFTsClick,
+  onNFTClick,
 }: WalletHomepageProps) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
@@ -195,19 +209,53 @@ export default function WalletHomepage({
               
               {/* NFT Empty/Content Area */}
               <div 
-                className="flex-1 flex flex-col items-center justify-center py-8 rounded-xl min-h-[200px]"
+                className="flex-1 rounded-xl min-h-[200px] overflow-hidden"
                 style={{ background: 'rgba(2, 6, 23, 0.5)', border: '1px solid #1e293b' }}
               >
-                {nftsOwned > 0 ? (
-                  <span style={{ color: '#f8fafc', fontSize: '16px' }}>{nftsOwned} NFTs</span>
+                {ownedNFTs.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2 p-2">
+                    {ownedNFTs.slice(0, 4).map((nft) => (
+                      <button
+                        key={nft.id}
+                        onClick={() => onNFTClick?.(nft.id)}
+                        className="relative aspect-square rounded-xl overflow-hidden hover:ring-2 hover:ring-[#4ade80] transition-all group"
+                      >
+                        {nft.image ? (
+                          <img
+                            src={nft.image}
+                            alt={nft.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">{nft.name.slice(0, 2)}</span>
+                          </div>
+                        )}
+                        {nft.rarity && (
+                          <div className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase"
+                            style={{
+                              background: nft.rarity === 'Legendary' ? '#a855f7' : 
+                                         nft.rarity === 'Epic' ? '#ec4899' : 
+                                         nft.rarity === 'Rare' ? '#3b82f6' : '#4ade80',
+                              color: '#fff'
+                            }}
+                          >
+                            {nft.rarity}
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 ) : (
-                  <>
+                  <div className="flex flex-col items-center justify-center py-8 h-full">
                     <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path fillRule="evenodd" clipRule="evenodd" d="M24 44C35.0457 44 44 35.0457 44 24C44 12.9543 35.0457 4 24 4C12.9543 4 4 12.9543 4 24C4 35.0457 12.9543 44 24 44ZM24 18C24.5523 18 25 18.4477 25 19V23H29C29.5523 23 30 23.4477 30 24C30 24.5523 29.5523 25 29 25H25V29C25 29.5523 24.5523 30 24 30C23.4477 30 23 29.5523 23 29V25H19C18.4477 25 18 24.5523 18 24C18 23.4477 18.4477 23 19 23H23V19C23 18.4477 23.4477 18 24 18Z" fill="#1e293b" />
                     </svg>
                     <span className="mt-3" style={{ color: '#94a3b8', fontSize: '14px' }}>No NFTs yet</span>
-                    <span style={{ color: '#64748b', fontSize: '12px' }}>Purchase NFT avatars from the store</span>
-                  </>
+                    <Link href="/store">
+                      <span className="hover:underline" style={{ color: '#4ade80', fontSize: '12px' }}>Browse the store</span>
+                    </Link>
+                  </div>
                 )}
               </div>
             </div>

@@ -1,10 +1,11 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { ArrowLeft, Wallet, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useWallet } from "@/hooks/use-wallet";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useTokenBalance } from "@/hooks/use-token";
 import { useStaking } from "@/hooks/use-staking";
 import { usePurchaseGFT } from "@/hooks/use-purchase-gft";
@@ -19,8 +20,18 @@ import ActivityHistoryScreen from "@/components/wallet/ActivityHistoryScreen";
 import StakingHubScreen from "@/components/wallet/StakingHubScreen";
 import walletPromo from "@assets/Wallet promo new_1762876656607.png";
 
+interface OwnedNFT {
+  id: number;
+  name: string;
+  image: string | null;
+  rarity: string | null;
+  purchaseId: string;
+  purchasedAt: string;
+}
+
 export default function WalletPage() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const { walletAddress: connectedWalletAddress, isReady, isConnecting, connect } = useWallet();
   const [showBuyDialog, setShowBuyDialog] = useState(false);
   const [showBuyScreen, setShowBuyScreen] = useState(false);
@@ -36,6 +47,11 @@ export default function WalletPage() {
   const { createOrder, isCreatingOrder, checkOrderStatus, refreshBalances } = usePurchaseGFT();
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
+
+  const { data: ownedNFTs = [] } = useQuery<OwnedNFT[]>({
+    queryKey: ['/api/store/owned'],
+    enabled: !!user,
+  });
 
   const { 
     createWallet, 
@@ -198,9 +214,13 @@ export default function WalletPage() {
         offChainBalance={tokenBalance?.balance || 0}
         fiatValue={tokenBalance?.gbpValue || 0}
         stakedAmount={stakedAmount}
+        nftsOwned={ownedNFTs.length}
+        ownedNFTs={ownedNFTs}
         onBuyClick={() => setShowBuyScreen(true)}
         onActivityClick={() => setShowActivityHistory(true)}
         onStakeClick={() => setShowStakingHub(true)}
+        onNFTsClick={() => setLocation('/collection')}
+        onNFTClick={(nftId) => setLocation(`/nft/${nftId}`)}
         isLoadingBalance={isLoadingBalance}
       />
     );
