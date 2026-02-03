@@ -1,0 +1,816 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/CardEntry.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,400;0,undefined;0,500&display=swap";
+.CardEntry_36_2 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_36_3 {
+  background: #020617;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 100%;
+  display: flex;
+}
+.Container_36_4 {
+  box-sizing: border-box;
+  border-bottom: 1px solid #1e293b4d;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 91.7188px;
+  height: 113px;
+  padding: 48px 24px 25px;
+  display: flex;
+}
+.Button_36_5 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 33554400px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_36_6 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_36_8 {
+  justify-content: center;
+  align-items: center;
+  width: 119px;
+  height: 28px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.CardDetails_36_9 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 122px;
+  height: 25px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_36_10 {
+  width: 40px;
+  height: 40px;
+}
+.Container_36_11 {
+  flex-flow: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+  height: 618px;
+  padding: 32px 24px 86px;
+  display: flex;
+}
+.Container_36_12 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 382px;
+  height: 80px;
+  display: flex;
+}
+.Container_36_13 {
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 8px;
+  width: 382px;
+  height: 16px;
+  padding-right: 262px;
+  display: flex;
+}
+.Container_36_14 {
+  flex: 1 0 0;
+  height: 16px;
+  overflow: hidden;
+}
+.Container_36_16 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 96px;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.SecurePayment_36_17 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 99px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_36_18 {
+  align-items: center;
+  height: 32px;
+  padding: 1px 62.5px 1px 0;
+  display: inline-flex;
+}
+.EnterYourCardInformation_36_19 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  width: 321px;
+  height: 30px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_36_20 {
+  align-items: center;
+  height: 20px;
+  padding: 1px 67px 1px 0;
+  display: inline-flex;
+}
+.TransactionIsEncryptedAndSecuredViaStripe_36_21 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 316px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_36_22 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px;
+  width: 382px;
+  display: flex;
+}
+.Container_36_23 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 82px;
+  display: flex;
+}
+.Container_36_24 {
+  justify-content: center;
+  align-items: center;
+  width: 177px;
+  height: 12px;
+  display: flex;
+}
+.CardholderNameOptional_36_25 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 180px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_36_26 {
+  justify-content: center;
+  align-items: center;
+  width: 382px;
+  height: 58px;
+  display: flex;
+}
+.Container_36_27 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  padding: 17px 16px;
+  display: flex;
+}
+.JohnDoe_36_28 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  width: 350px;
+  height: 24px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_36_29 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 82px;
+  display: flex;
+}
+.Container_36_30 {
+  justify-content: center;
+  align-items: center;
+  width: 80px;
+  height: 12px;
+  display: flex;
+}
+.CardNumber_36_31 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 83px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_36_32 {
+  width: 382px;
+  height: 58px;
+}
+.Container_36_33 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  justify-content: flex-end;
+  align-items: center;
+  height: 58px;
+  padding: 17px 16px 17px 48px;
+  display: inline-flex;
+}
+._0000_0000_0000_36_34 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  width: 318px;
+  height: 24px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_36_35 {
+  justify-content: center;
+  align-items: center;
+  width: 20px;
+  height: 20px;
+  display: flex;
+}
+.Container_36_36 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 20px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_36_40 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  width: 36px;
+  display: flex;
+}
+.Container_36_41 {
+  flex-shrink: 0;
+  width: 16px;
+  height: 12px;
+  overflow: hidden;
+}
+.Container_36_42 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 16px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_36_47 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  height: 82px;
+  display: flex;
+}
+.Container_36_48 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 82px;
+  display: flex;
+}
+.Container_36_49 {
+  justify-content: center;
+  align-items: center;
+  width: 68px;
+  height: 12px;
+  display: flex;
+}
+.ExpiryDate_36_50 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 71px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_36_51 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 183px;
+  height: 58px;
+  padding: 17px 16px;
+  display: flex;
+}
+.MmYy_36_52 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 151px;
+  height: 24px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_36_53 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 82px;
+  display: flex;
+}
+.Container_36_54 {
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 12px;
+  display: flex;
+}
+.Cvc_36_55 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 27px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_36_56 {
+  width: 183px;
+  height: 58px;
+}
+.Container_36_57 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 183px;
+  height: 58px;
+  padding: 17px 16px;
+  display: flex;
+}
+.generated_123_36_58 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 151px;
+  height: 24px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_36_59 {
+  justify-content: center;
+  align-items: center;
+  width: 20px;
+  height: 20px;
+  display: flex;
+}
+.Container_36_60 {
+  flex: 1 0 0;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_36_62 {
+  box-sizing: border-box;
+  background: #1e293b4d;
+  border: 1px solid #1e293b4d;
+  border-radius: 16px;
+  flex-flow: row;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  height: 70px;
+  padding: 17px;
+  display: flex;
+}
+.Container_36_63 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 288px;
+  height: 36px;
+  display: flex;
+}
+.Container_36_64 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 20px;
+  padding: 1px 84px 1px 0;
+  display: flex;
+}
+.SaveCardForFuturePayments_36_65 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  width: 205px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_36_66 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 16px;
+  padding: 0 66px 1px 0;
+  display: flex;
+}
+.CheckoutFasterNextTimeYouBuyGft_36_67 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 223px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_36_68 {
+  background: #4ade80;
+  border-radius: 33554400px;
+  justify-content: flex-end;
+  align-items: center;
+  width: 48px;
+  height: 24px;
+  padding: 4px 4px 4px 28px;
+  display: flex;
+}
+.Container_36_69 {
+  background: #022c22;
+  border-radius: 33554400px;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+.Container_36_70 {
+  box-sizing: border-box;
+  background: #020617;
+  border-top: 1px solid #1e293b4d;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 25px 24px 40px;
+  display: flex;
+}
+.Container_36_71 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 164.922px;
+  height: 44px;
+  padding: 0 3.078px 0 4px;
+  display: flex;
+}
+.Container_36_72 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6px;
+  height: 44px;
+  padding-bottom: 3px;
+  display: flex;
+}
+.Container_36_73 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 20px;
+  padding: 1px 22px 1px 0;
+  display: flex;
+}
+.TotalToPay_36_74 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 78px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_36_75 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  display: flex;
+}
+.IncludesAllTaxes_36_76 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  width: 102px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_36_77 {
+  justify-content: center;
+  align-items: center;
+  width: 111px;
+  height: 36px;
+  display: flex;
+}
+._00_36_78 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 114px;
+  height: 38px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 36px;
+  display: inline-block;
+}
+.Button_36_79 {
+  background: #4ade80;
+  border-radius: 16px;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 7.51563px;
+  height: 68px;
+  padding: 20px 115.25px 20px 115.234px;
+  display: flex;
+  box-shadow: 0 0 30px -10px #4ade80;
+}
+.Container_36_80 {
+  justify-content: center;
+  align-items: center;
+  width: 124px;
+  height: 28px;
+  padding: 2px 0 3px;
+  display: flex;
+}
+.ConfirmPay_36_81 {
+  color: #022c22;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 127px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_36_82 {
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+
+```
+
+---
+
+```src/components/CardEntry.tsx
+import React from 'react';
+import styles from '../styles/CardEntry.module.css';
+
+
+export default function CardEntry() {
+  return (
+    <div className={styles.CardEntry_36_2}>
+      <div className={styles.Container_36_3}>
+        <div className={styles.Container_36_4}>
+          <div className={styles.Button_36_5}>
+            <div className={styles.Container_36_6}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
+          <div className={styles.Container_36_8}><span className={styles.CardDetails_36_9}>Card Details</span></div>
+          <div className={styles.Container_36_10}></div>
+        </div>
+        <div className={styles.Container_36_11}>
+          <div className={styles.Container_36_12}>
+            <div className={styles.Container_36_13}>
+              <div className={styles.Container_36_14}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M3.50016 6.70337V5.33337C3.50016 2.84809 5.51488 0.833374 8.00016 0.833374C10.4854 0.833374 12.5002 2.84809 12.5002 5.33337V6.70337C13.2435 6.75871 13.7268 6.89871 14.0808 7.25271C14.6668 7.83804 14.6668 8.78137 14.6668 10.6667C14.6668 12.552 14.6668 13.4954 14.0808 14.0807C13.4955 14.6667 12.5522 14.6667 10.6668 14.6667H5.3335C3.44816 14.6667 2.50483 14.6667 1.9195 14.0807C1.3335 13.4954 1.3335 12.552 1.3335 10.6667C1.3335 8.78137 1.3335 7.83804 1.9195 7.25271C2.27283 6.89871 2.75683 6.75871 3.50016 6.70337ZM4.50016 5.33337C4.50016 3.40038 6.06717 1.83337 8.00016 1.83337C9.93316 1.83337 11.5002 3.40038 11.5002 5.33337V6.66937C11.2451 6.66715 10.9673 6.66626 10.6668 6.66671H5.3335C5.03261 6.66626 4.75483 6.66715 4.50016 6.66937V5.33337ZM5.3335 11.3334C5.70169 11.3334 6.00016 11.0349 6.00016 10.6667C6.00016 10.2985 5.70169 10 5.3335 10C4.96531 10 4.66683 10.2985 4.66683 10.6667C4.66683 11.0349 4.96531 11.3334 5.3335 11.3334ZM8.00016 11.3334C8.36835 11.3334 8.66683 11.0349 8.66683 10.6667C8.66683 10.2985 8.36835 10 8.00016 10C7.63197 10 7.3335 10.2985 7.3335 10.6667C7.3335 11.0349 7.63197 11.3334 8.00016 11.3334ZM11.3335 10.6667C11.3335 11.0349 11.035 11.3334 10.6668 11.3334C10.2986 11.3334 10.0002 11.0349 10.0002 10.6667C10.0002 10.2985 10.2986 10 10.6668 10C11.035 10 11.3335 10.2985 11.3335 10.6667Z" fill="#4ADE80" />
+                </svg>
+              </div>
+              <div className={styles.Container_36_16}><span className={styles.SecurePayment_36_17}>Secure Payment</span></div>
+            </div>
+            <div className={styles.Container_36_18}><span className={styles.EnterYourCardInformation_36_19}>Enter your card information</span></div>
+            <div className={styles.Container_36_20}><span className={styles.TransactionIsEncryptedAndSecuredViaStripe_36_21}>Transaction is encrypted and secured via Stripe.</span></div>
+          </div>
+          <div className={styles.Container_36_22}>
+            <div className={styles.Container_36_23}>
+              <div className={styles.Container_36_24}><span className={styles.CardholderNameOptional_36_25}>Cardholder Name (Optional)</span></div>
+              <div className={styles.Container_36_26}>
+                <div className={styles.Container_36_27}><span className={styles.JohnDoe_36_28}>John Doe</span></div>
+              </div>
+            </div>
+            <div className={styles.Container_36_29}>
+              <div className={styles.Container_36_30}><span className={styles.CardNumber_36_31}>Card Number</span></div>
+              <div className={styles.Container_36_32}>
+                <div className={styles.Container_36_33}><span className={styles._0000_0000_0000_36_34}>0000 0000 0000 0000</span></div>
+                <div className={styles.Container_36_35}>
+                  <div className={styles.Container_36_36}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M11.6668 3.33337H8.33348C5.19098 3.33337 3.61931 3.33337 2.64348 4.31004C1.94014 5.01254 1.74348 6.02421 1.68848 7.70837H18.3118C18.2568 6.02421 18.0601 5.01254 17.3568 4.31004C16.381 3.33337 14.8093 3.33337 11.6668 3.33337Z" fill="#94A3B8" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M11.6665 16.6667H8.33315C5.19066 16.6667 3.619 16.6667 2.64317 15.69C1.66734 14.7134 1.6665 13.1425 1.6665 10C1.6665 9.63226 1.66706 9.28504 1.66817 8.95837H18.3315C18.3326 9.28504 18.3331 9.63226 18.3331 10C18.3331 13.1425 18.3331 14.7142 17.3565 15.69C16.3798 16.6659 14.809 16.6667 11.6665 16.6667ZM13.3706 10.2084C13.7315 10.2084 14.0623 10.2084 14.3306 10.2442C14.6273 10.2842 14.9398 10.3775 15.1973 10.6359C15.4548 10.8942 15.549 11.2059 15.589 11.5025C15.6248 11.7717 15.6248 12.1025 15.6248 12.4625V12.5375C15.6248 12.8984 15.6248 13.2292 15.589 13.4975C15.549 13.7942 15.4556 14.1067 15.1973 14.3642C14.939 14.6217 14.6273 14.7159 14.3306 14.7559C14.0615 14.7917 13.7306 14.7917 13.3706 14.7917H13.2956C12.9348 14.7917 12.604 14.7917 12.3356 14.7559C12.039 14.7159 11.7265 14.6225 11.469 14.3642C11.2115 14.1059 11.1173 13.7942 11.0773 13.4975C11.0415 13.2284 11.0415 12.8975 11.0415 12.5375V12.4625C11.0415 12.1017 11.0415 11.7709 11.0773 11.5025C11.1173 11.2059 11.2106 10.8934 11.469 10.6359C11.7273 10.3784 12.039 10.2842 12.3356 10.2442C12.6048 10.2084 12.9356 10.2084 13.2956 10.2084H13.3706ZM4.37483 11.25C4.37483 10.9049 4.65465 10.625 4.99983 10.625H6.66649C7.01167 10.625 7.29149 10.9049 7.29149 11.25C7.29149 11.5952 7.01167 11.875 6.66649 11.875H4.99983C4.65465 11.875 4.37483 11.5952 4.37483 11.25ZM4.37483 13.75C4.37483 13.4049 4.65465 13.125 4.99983 13.125H8.33315C8.67833 13.125 8.95815 13.4049 8.95815 13.75C8.95815 14.0952 8.67833 14.375 8.33315 14.375H4.99983C4.65465 14.375 4.37483 14.0952 4.37483 13.75Z" fill="#94A3B8" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M12.3523 11.5192L12.3548 11.5184L12.3632 11.5142C12.4081 11.4983 12.4549 11.4879 12.5023 11.4834C12.6773 11.46 12.9223 11.4584 13.3332 11.4584C13.744 11.4584 13.989 11.46 14.164 11.4834C14.2145 11.4886 14.264 11.5003 14.3115 11.5184L14.314 11.5192L14.3148 11.5217L14.319 11.53C14.3265 11.5484 14.339 11.5884 14.3498 11.6692C14.3732 11.8442 14.3748 12.0892 14.3748 12.5C14.3748 12.9109 14.3732 13.1559 14.3498 13.3309C14.3446 13.3813 14.3329 13.4309 14.3148 13.4784L14.314 13.4809L14.3115 13.4817L14.3032 13.4859C14.2582 13.5018 14.2115 13.5121 14.164 13.5167C13.989 13.54 13.744 13.5417 13.3332 13.5417C12.9223 13.5417 12.6773 13.54 12.5023 13.5167C12.4519 13.5115 12.4023 13.4997 12.3548 13.4817L12.3523 13.4809L12.3515 13.4784L12.3473 13.47C12.3314 13.4251 12.3211 13.3783 12.3165 13.3309C12.2932 13.1559 12.2915 12.9109 12.2915 12.5C12.2915 12.0892 12.2932 11.8442 12.3165 11.6692C12.3217 11.6187 12.3335 11.5691 12.3515 11.5217L12.3523 11.5192Z" fill="#94A3B8" />
+                    </svg>
+                  </div>
+                </div>
+                <div className={styles.Container_36_40}>
+                  <div className={styles.Container_36_41}></div>
+                  <div className={styles.Container_36_42}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M2.90882 14.1569V13.3337C2.90882 13.0181 2.71669 12.8124 2.38738 12.8124C2.22276 12.8124 2.04438 12.8672 1.92088 13.0456C1.82488 12.8947 1.68769 12.8124 1.48188 12.8124C1.34463 12.8124 1.20751 12.8535 1.0977 13.0044V12.8398H0.80957V14.1569H1.0977V13.4297C1.0977 13.1965 1.2212 13.0867 1.41332 13.0867C1.60532 13.0867 1.70144 13.2102 1.70144 13.4297V14.1569H1.98957V13.4297C1.98957 13.1965 2.12669 13.0867 2.30507 13.0867C2.49719 13.0867 2.59319 13.2102 2.59319 13.4297V14.1569H2.90882Z" fill="black" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M7.17575 12.8398H6.70932V12.4419H6.42119V12.8398H6.1605V13.1004H6.42113V13.7042C6.42113 14.006 6.54463 14.1844 6.87394 14.1844C6.99744 14.1844 7.13457 14.1432 7.23069 14.0884L7.14832 13.8414C7.066 13.8962 6.97 13.91 6.90138 13.91C6.76419 13.91 6.70932 13.8277 6.70932 13.6904V13.1004H7.17575V12.8398Z" fill="black" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M9.618 12.8123C9.45338 12.8123 9.34363 12.8947 9.275 13.0044V12.8398H8.98688V14.1569H9.275V13.416C9.275 13.1965 9.371 13.073 9.54938 13.073C9.60425 13.073 9.67288 13.0868 9.72775 13.1005L9.81006 12.8261C9.75519 12.8124 9.67288 12.8124 9.618 12.8124" fill="black" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M5.92725 12.9496C5.79 12.8535 5.59794 12.8124 5.39213 12.8124C5.06288 12.8124 4.84338 12.977 4.84338 13.2377C4.84338 13.4573 5.008 13.5807 5.29613 13.6219L5.43332 13.6357C5.58425 13.663 5.66657 13.7042 5.66657 13.7729C5.66657 13.8689 5.55682 13.9375 5.36469 13.9375C5.17257 13.9375 5.02169 13.8689 4.92563 13.8003L4.78844 14.0198C4.93938 14.1295 5.14519 14.1844 5.35094 14.1844C5.73513 14.1844 5.95469 14.0061 5.95469 13.7591C5.95469 13.5259 5.77632 13.4024 5.50188 13.3612L5.36469 13.3475C5.24119 13.3337 5.14519 13.3064 5.14519 13.224C5.14519 13.128 5.24119 13.0731 5.39213 13.0731C5.55682 13.0731 5.72144 13.1417 5.80375 13.1829L5.92725 12.9496Z" fill="black" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M13.5832 12.8124C13.4185 12.8124 13.3087 12.8947 13.2401 13.0045V12.8399H12.952V14.157H13.2401V13.4161C13.2401 13.1966 13.3362 13.0731 13.5145 13.0731C13.5694 13.0731 13.6381 13.0869 13.6929 13.1005L13.7752 12.8262C13.7204 12.8124 13.6381 12.8124 13.5832 12.8124Z" fill="black" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M9.90613 13.4984C9.90613 13.8963 10.1805 14.1844 10.6059 14.1844C10.7979 14.1844 10.9351 14.1433 11.0723 14.0335L10.9351 13.8003C10.8254 13.8826 10.7156 13.9237 10.5921 13.9237C10.3589 13.9237 10.1943 13.7591 10.1943 13.4984C10.1943 13.2515 10.3589 13.0868 10.5921 13.0731C10.7156 13.0731 10.8254 13.1142 10.9351 13.1966L11.0723 12.9634C10.9351 12.8535 10.7979 12.8124 10.6059 12.8124C10.1805 12.8124 9.90613 13.1005 9.90613 13.4984Z" fill="black" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M12.5679 13.4984V12.8399H12.2797V13.0045C12.1837 12.881 12.0465 12.8124 11.8681 12.8124C11.4977 12.8124 11.2096 13.1005 11.2096 13.4984C11.2096 13.8963 11.4977 14.1844 11.8681 14.1844C12.0602 14.1844 12.1974 14.1159 12.2797 13.9924V14.157H12.5679V13.4984Z" fill="black" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M11.5114 13.4984C11.5114 13.2652 11.6623 13.0731 11.9093 13.0731C12.1425 13.0731 12.3072 13.2515 12.3072 13.4984C12.3072 13.7317 12.1425 13.9237 11.9093 13.9237C11.6623 13.91 11.5114 13.7317 11.5114 13.4984Z" fill="black" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M8.06763 12.8124C7.68344 12.8124 7.409 13.0868 7.409 13.4984C7.409 13.91 7.68338 14.1844 8.08132 14.1844C8.27338 14.1844 8.4655 14.1295 8.61644 14.0061L8.47919 13.8003C8.36944 13.8826 8.23225 13.9375 8.09507 13.9375C7.91669 13.9375 7.73832 13.8552 7.69713 13.6219H8.67132V13.5122C8.68507 13.0868 8.43813 12.8124 8.06763 12.8124Z" fill="black" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M8.06757 13.0594C8.24588 13.0594 8.36944 13.1692 8.39682 13.375H7.71082C7.73825 13.1966 7.86175 13.0594 8.06757 13.0594Z" fill="black" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M15.2158 13.4984V12.3185H14.9277V13.0045C14.8316 12.881 14.6944 12.8124 14.5161 12.8124C14.1456 12.8124 13.8575 13.1005 13.8575 13.4984C13.8575 13.8963 14.1456 14.1844 14.5161 14.1844C14.7082 14.1844 14.8454 14.1159 14.9277 13.9924V14.157H15.2158V13.4984Z" fill="black" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M14.1594 13.4984C14.1594 13.2652 14.3102 13.0731 14.5572 13.0731C14.7905 13.0731 14.9551 13.2515 14.9551 13.4984C14.9551 13.7317 14.7905 13.9237 14.5572 13.9237C14.3102 13.91 14.1594 13.7317 14.1594 13.4984Z" fill="black" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M4.52769 13.4984V12.8399H4.23957V13.0045C4.14351 12.881 4.00632 12.8124 3.82794 12.8124C3.45751 12.8124 3.16938 13.1005 3.16938 13.4984C3.16938 13.8963 3.45751 14.1844 3.82794 14.1844C4.02007 14.1844 4.15726 14.1159 4.23957 13.9924V14.157H4.52769V13.4984Z" fill="black" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M3.45751 13.4984C3.45751 13.2652 3.60844 13.0731 3.85538 13.0731C4.08863 13.0731 4.25332 13.2515 4.25332 13.4984C4.25332 13.7317 4.08863 13.9237 3.85538 13.9237C3.60844 13.91 3.45751 13.7317 3.45751 13.4984Z" fill="black" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M5.83105 2.83765H10.1529V10.6033H5.83105V2.83765Z" fill="#FF5F00" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M6.10557 6.72057C6.10557 5.14275 6.84644 3.74325 7.98519 2.83769C7.14832 2.17913 6.09188 1.78125 4.93938 1.78125C2.20894 1.78125 0 3.99019 0 6.72057C0 9.45094 2.20894 11.6599 4.93932 11.6599C6.09182 11.6599 7.14825 11.262 7.98519 10.6034C6.84644 9.71157 6.10557 8.29838 6.10557 6.72057Z" fill="#EB001B" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M15.9842 6.72057C15.9842 9.45088 13.7753 11.6599 11.0449 11.6599C9.8924 11.6599 8.83596 11.262 7.99902 10.6034C9.15152 9.69788 9.87871 8.29838 9.87871 6.72057C9.87871 5.14275 9.13777 3.74325 7.99902 2.83769C8.8359 2.17913 9.8924 1.78125 11.0449 1.78125C13.7753 1.78125 15.9843 4.00394 15.9843 6.72057" fill="#F79E1B" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_36_47}>
+              <div className={styles.Container_36_48}>
+                <div className={styles.Container_36_49}><span className={styles.ExpiryDate_36_50}>Expiry Date</span></div>
+                <div className={styles.Container_36_51}><span className={styles.MmYy_36_52}>MM / YY</span></div>
+              </div>
+              <div className={styles.Container_36_53}>
+                <div className={styles.Container_36_54}><span className={styles.Cvc_36_55}>CVC</span></div>
+                <div className={styles.Container_36_56}>
+                  <div className={styles.Container_36_57}><span className={styles.generated_123_36_58}>123</span></div>
+                  <div className={styles.Container_36_59}>
+                    <div className={styles.Container_36_60}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M18.3331 10.0001C18.3331 14.6026 14.6023 18.3334 9.99982 18.3334C5.39733 18.3334 1.6665 14.6026 1.6665 10.0001C1.6665 5.39757 5.39733 1.66675 9.99982 1.66675C14.6023 1.66675 18.3331 5.39757 18.3331 10.0001ZM9.99982 6.4584C9.48232 6.4584 9.06232 6.8784 9.06232 7.3959C9.06232 7.74108 8.7825 8.0209 8.43732 8.0209C8.09214 8.0209 7.81232 7.74108 7.81232 7.3959C7.81235 6.40978 8.47217 5.5456 9.42344 5.28577C10.3747 5.02595 11.3822 5.43472 11.8835 6.28389C12.3849 7.13307 12.256 8.21269 11.569 8.92006C11.4923 8.99895 11.419 9.07312 11.349 9.14256C11.1802 9.30426 11.0213 9.47596 10.8731 9.65673C10.6898 9.89173 10.6248 10.0642 10.6248 10.2084V10.8334C10.6248 11.1786 10.345 11.4584 9.99982 11.4584C9.65464 11.4584 9.37482 11.1786 9.37482 10.8334V10.2084C9.37482 9.66256 9.62898 9.22006 9.88648 8.88923C10.0773 8.64423 10.3165 8.4059 10.5115 8.2109C10.5704 8.15257 10.624 8.09868 10.6723 8.04923C10.9349 7.77903 11.0102 7.37789 10.8635 7.03087C10.7168 6.68384 10.3766 6.45835 9.99982 6.4584ZM9.99982 14.1667C10.4601 14.1667 10.8331 13.7936 10.8331 13.3334C10.8331 12.8732 10.4601 12.5001 9.99982 12.5001C9.53958 12.5001 9.16649 12.8732 9.16649 13.3334C9.16649 13.7936 9.53958 14.1667 9.99982 14.1667Z" fill="#94A3B8" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_36_62}>
+              <div className={styles.Container_36_63}>
+                <div className={styles.Container_36_64}><span className={styles.SaveCardForFuturePayments_36_65}>Save card for future payments</span></div>
+                <div className={styles.Container_36_66}><span className={styles.CheckoutFasterNextTimeYouBuyGft_36_67}>Checkout faster next time you buy GFT.</span></div>
+              </div>
+              <div className={styles.Container_36_68}>
+                <div className={styles.Container_36_69}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_36_70}>
+          <div className={styles.Container_36_71}>
+            <div className={styles.Container_36_72}>
+              <div className={styles.Container_36_73}><span className={styles.TotalToPay_36_74}>Total to Pay</span></div>
+              <div className={styles.Container_36_75}><span className={styles.IncludesAllTaxes_36_76}>Includes all taxes</span></div>
+            </div>
+            <div className={styles.Container_36_77}><span className={styles._00_36_78}>&#xA3;25.00</span></div>
+          </div>
+          <div className={styles.Button_36_79}>
+            <div className={styles.Container_36_80}><span className={styles.ConfirmPay_36_81}>Confirm &#x26; Pay</span></div>
+            <div className={styles.Container_36_82}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3.3335 9.99999H16.6668M16.6668 9.99999L11.6668 5M16.6668 9.99999L11.6668 15" stroke="#022C22" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
