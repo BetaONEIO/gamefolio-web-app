@@ -49,13 +49,8 @@ export function NFTPurchaseDialog({
 
   const purchaseMutation = useMutation({
     mutationFn: async (data: { nftId: number }) => {
-      return await apiRequest("/api/nft/purchase", {
-        method: "POST",
-        body: JSON.stringify(data),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await apiRequest("POST", "/api/nft/purchase", data);
+      return response.json();
     },
     onSuccess: (data) => {
       toast({
