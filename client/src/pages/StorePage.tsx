@@ -579,9 +579,7 @@ export default function StorePage() {
           <Collapsible open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <div className="p-4">
               <h2 className="text-xl font-bold text-white">
-                {activeTab === "buy" && "BUY NFT"}
-                {activeTab === "sell" && "SELL NFT"}
-                {activeTab === "mint" && "MINT NFT"}
+                STORE
               </h2>
             </div>
 
