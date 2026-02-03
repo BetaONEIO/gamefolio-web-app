@@ -1577,6 +1577,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           level: userWithoutPassword.level || 1,
           totalXP: userWithoutPassword.totalXP || 0,
           isPro: userWithoutPassword.isPro || false,
+          walletAddress: userWithoutPassword.walletAddress || null,
+          walletChain: userWithoutPassword.walletChain || null,
+          gfTokenBalance: userWithoutPassword.gfTokenBalance || 0,
         });
       }
     } catch (error) {
@@ -1609,6 +1612,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       level: userWithoutPassword.level || 1,
       totalXP: userWithoutPassword.totalXP || 0,
       isPro: userWithoutPassword.isPro || false,
+      walletAddress: userWithoutPassword.walletAddress || null,
+      walletChain: userWithoutPassword.walletChain || null,
+      gfTokenBalance: userWithoutPassword.gfTokenBalance || 0,
     });
   });
 
