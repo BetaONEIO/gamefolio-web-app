@@ -675,10 +675,12 @@ export default function OnboardingFlow({
               />
             </div>
 
-            <h2 className="text-2xl font-bold text-white mb-4">Welcome to Gamefolio!</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">Upload your best gaming clips and build your Gamefolio.</h2>
+            <p className="text-gray-300 mb-2">
+              Your personal gaming portfolio, all in one place.
+            </p>
             <p className="text-gray-300 mb-6">
-              Upload your BEST gaming clips here and showcase them to your friends. 
-              You can also upload any clips too if you want a place to store and showcase.
+              Earn XP, showcase your achievements, and let your gameplay speak for itself.
             </p>
             
             <div className="mb-8">
@@ -708,52 +710,6 @@ export default function OnboardingFlow({
                 </div>
               </div>
               
-              <Card className="bg-secondary/50 border-border mb-4">
-                <CardContent className="p-4 flex items-center gap-3">
-                  <Search className="h-5 w-5 text-primary flex-shrink-0" />
-                  <p className="text-sm text-gray-300">
-                    Not sure what to upload? Check out our{" "}
-                    <a 
-                      href="https://gamefolio.com/games" 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="text-primary font-medium hover:underline"
-                    >
-                      Explore
-                    </a>{" "}
-                    page to see what others are uploading
-                  </p>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-secondary/50 border-border mb-4">
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className="h-5 w-5 flex-shrink-0 flex items-center justify-center">
-                    <span className="text-primary text-lg">👋</span>
-                  </div>
-                  <div className="text-sm text-gray-300">
-                    <p className="mb-2">Want to keep in touch with us? Check us out on Socials and read our Blog!</p>
-                    <div className="flex gap-4">
-                      <a 
-                        href="https://www.gamefolio.com/contact" 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="text-primary font-medium hover:underline"
-                      >
-                        Socials
-                      </a>
-                      <a 
-                        href="https://www.gamefolio.com/blog" 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="text-primary font-medium hover:underline"
-                      >
-                        Blog
-                      </a>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
             
             <Button onClick={goToNextStep} className="w-full bg-primary hover:bg-primary/90 text-white">
