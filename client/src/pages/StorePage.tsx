@@ -684,6 +684,46 @@ export default function StorePage() {
 
         {/* Main Content Area */}
         <main className="flex-1 p-4 md:p-6">
+          {/* Mobile Tab Navigation */}
+          <div className="md:hidden flex gap-2 mb-4 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <button
+              onClick={() => setActiveTab("buy")}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
+                activeTab === "buy"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
+              }`}
+              data-testid="tab-buy-mobile"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              Buy NFT
+            </button>
+            <button
+              onClick={() => setActiveTab("sell")}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
+                activeTab === "sell"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
+              }`}
+              data-testid="tab-sell-mobile"
+            >
+              <DollarSign className="h-4 w-4" />
+              Sell NFT
+            </button>
+            <button
+              onClick={() => setActiveTab("mint")}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
+                activeTab === "mint"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
+              }`}
+              data-testid="tab-mint-mobile"
+            >
+              <Sparkles className="h-4 w-4" />
+              Mint NFT
+            </button>
+          </div>
+
           {/* Header */}
           <div className="mb-4 md:mb-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
