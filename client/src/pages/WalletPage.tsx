@@ -21,7 +21,7 @@ import walletPromo from "@assets/Wallet promo new_1762876656607.png";
 export default function WalletPage() {
   const { user } = useAuth();
   const { walletAddress, isReady, isConnecting, connect } = useWallet();
-  const [showWalletDetails, setShowWalletDetails] = useState(false);
+  const [showWalletDetails, setShowWalletDetails] = useState(() => !!user?.walletAddress);
   const [showBuyDialog, setShowBuyDialog] = useState(false);
   const [showBuyScreen, setShowBuyScreen] = useState(false);
   const [showReviewScreen, setShowReviewScreen] = useState(false);
