@@ -578,3 +578,14 @@ video:focus {
 .lootbox-dialog-content * {
   background-color: inherit;
 }
+
+.lootbox-dialog-content video {
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  border: none !important;
+  outline: none !important;
+}
+
+.lootbox-dialog-content video::-webkit-media-controls {
+  display: none !important;
+}
