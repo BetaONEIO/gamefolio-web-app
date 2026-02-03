@@ -1,0 +1,440 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/LevelProgress.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,500;0,900&display=swap";
+.LevelProgress_71_958 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_71_959 {
+  background: #020617;
+  flex: 1 0 0;
+  width: 100%;
+}
+.Container_71_960 {
+  width: 430px;
+  height: 932px;
+}
+.Image_71_961 {
+  aspect-ratio: 215/466;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 430px;
+  height: 932px;
+}
+.Container_71_962 {
+  background: #02061799;
+  width: 430px;
+  height: 932px;
+}
+.Container_71_963 {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 430px;
+  height: 824px;
+  padding: 156px 24px;
+  display: flex;
+}
+.Container_71_964 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 24px;
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 382px;
+  height: 512px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px #00000040;
+}
+.Container_71_965 {
+  justify-content: center;
+  align-items: center;
+  width: 170px;
+  height: 32px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.LevelProgress_71_966 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 173px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_71_967 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+  width: 231px;
+  display: flex;
+}
+.Container_71_968 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3.40625px;
+  height: 28px;
+  padding: 1px 0.492px 1px 0;
+  display: flex;
+}
+.Container_71_969 {
+  justify-content: center;
+  align-items: center;
+  width: 36px;
+  height: 26px;
+  display: flex;
+}
+.generated_257_71_970 {
+  color: #ef4444;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 39px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_71_971 {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 10px;
+  height: 26px;
+  display: flex;
+}
+.generated__71_972 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 12px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_71_973 {
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 178px;
+  height: 26px;
+  display: flex;
+}
+.XpToLevel_71_974 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 168px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_71_975 {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 13px;
+  height: 26px;
+  display: flex;
+}
+.generated_9_71_976 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 16px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_71_977 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 20px;
+  display: flex;
+}
+.TotalXp_71_978 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 62px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_71_979 {
+  justify-content: center;
+  align-items: center;
+  width: 34px;
+  height: 18px;
+  display: flex;
+}
+.generated_8257_71_980 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 37px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_71_981 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  width: 316px;
+  height: 6px;
+  display: flex;
+}
+.Container_71_982,
+.Container_71_983,
+.Container_71_984,
+.Container_71_985 {
+  background: #4ade80;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  height: 6px;
+}
+.Container_71_986 {
+  background: #1e293b;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  height: 6px;
+}
+.Button_71_987 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 16777200px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_71_988 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_71_990 {
+  width: 224px;
+  height: 224px;
+}
+.Container_71_991 {
+  width: 42px;
+  height: 128px;
+}
+.Container_71_992 {
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+}
+.Container_71_995 {
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  width: 38px;
+  display: flex;
+}
+.generated_8_71_996 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 43px;
+  height: 76px;
+  font-family: Plus Jakarta Sans;
+  font-size: 60px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 60px;
+  display: inline-block;
+}
+.Container_71_997 {
+  justify-content: center;
+  align-items: center;
+  width: 42px;
+  height: 16px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.Level_71_998 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 45px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_71_999 {
+  width: 224px;
+  height: 224px;
+  overflow: hidden;
+}
+.Container_71_1002 {
+  justify-content: center;
+  align-items: center;
+  width: 430px;
+  height: 108px;
+  padding: 24px;
+  display: flex;
+}
+.Button_71_1003 {
+  background: #4ade80;
+  border-radius: 16px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 382px;
+  height: 60px;
+  padding: 18.5px 0;
+  display: flex;
+  box-shadow:
+    0 4px 6px -4px #0000001a,
+    0 10px 15px -3px #0000001a;
+}
+.Continue_71_1004 {
+  color: #022c22;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 84px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+
+```
+
+---
+
+```src/components/LevelProgress.tsx
+import React from 'react';
+import styles from '../styles/LevelProgress.module.css';
+
+
+export default function LevelProgress() {
+  return (
+    <div className={styles.LevelProgress_71_958}>
+      <div className={styles.Container_71_959}>
+        <div className={styles.Container_71_960}>
+          <div className={styles.Image_71_961}></div>
+          <div className={styles.Container_71_962}></div>
+        </div>
+        <div className={styles.Container_71_963}>
+          <div className={styles.Container_71_964}>
+            <div className={styles.Container_71_965}><span className={styles.LevelProgress_71_966}>Level Progress</span></div>
+            <div className={styles.Container_71_967}>
+              <div className={styles.Container_71_968}>
+                <div className={styles.Container_71_969}><span className={styles.generated_257_71_970}>257</span></div>
+                <div className={styles.Container_71_971}><span className={styles.generated__71_972}>/</span></div>
+                <div className={styles.Container_71_973}><span className={styles.XpToLevel_71_974}>3000 XP to Level</span>
+                  <div className={styles.Container_71_975}><span className={styles.generated_9_71_976}>9</span></div>
+                </div>
+              </div>
+              <div className={styles.Container_71_977}><span className={styles.TotalXp_71_978}>Total XP:</span>
+                <div className={styles.Container_71_979}><span className={styles.generated_8257_71_980}>8257</span></div>
+              </div>
+            </div>
+            <div className={styles.Container_71_981}>
+              <div className={styles.Container_71_982}></div>
+              <div className={styles.Container_71_983}></div>
+              <div className={styles.Container_71_984}></div>
+              <div className={styles.Container_71_985}></div>
+              <div className={styles.Container_71_986}></div>
+            </div>
+            <div className={styles.Button_71_987}>
+              <div className={styles.Container_71_988}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M22 12C22 17.523 17.523 22 12 22C6.477 22 2 17.523 2 12C2 6.477 6.477 2 12 2C17.523 2 22 6.477 22 12ZM8.97 8.97C9.26282 8.67755 9.73718 8.67755 10.03 8.97L12 10.94L13.97 8.97C14.2655 8.69464 14.726 8.70277 15.0116 8.98838C15.2972 9.27399 15.3054 9.73449 15.03 10.03L13.06 12L15.03 13.97C15.3054 14.2655 15.2972 14.726 15.0116 15.0116C14.726 15.2972 14.2655 15.3054 13.97 15.03L12 13.06L10.03 15.03C9.73449 15.3054 9.27399 15.2972 8.98838 15.0116C8.70277 14.726 8.69464 14.2655 8.97 13.97L10.94 12L8.97 10.03C8.67755 9.73718 8.67755 9.26282 8.97 8.97Z" fill="#F8FAFC" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_71_990}>
+              <div className={styles.Container_71_991}>
+                <div className={styles.Container_71_992}><svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M36.6663 13.6034V13.725C36.6663 15.1584 36.6663 15.8767 36.3213 16.4634C35.9763 17.05 35.348 17.3984 34.0946 18.0967L32.773 18.83C33.683 15.75 33.988 12.44 34.0996 9.61003L34.1163 9.2417L34.1196 9.15503C35.2046 9.5317 35.8146 9.81336 36.1946 10.34C36.6663 10.995 36.6663 11.865 36.6663 13.6034Z" fill="#EF4444" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M3.33301 13.6034V13.725C3.33301 15.1584 3.33301 15.8767 3.67801 16.4634C4.02301 17.05 4.65134 17.3984 5.90467 18.0967L7.228 18.83C6.31634 15.75 6.01134 12.44 5.89967 9.61003L5.883 9.2417L5.88134 9.15503C4.79467 9.5317 4.18467 9.81336 3.80467 10.34C3.33301 10.995 3.33301 11.8667 3.33301 13.6034Z" fill="#EF4444" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M19.9566 3.33301C22.9299 3.33301 25.3783 3.59468 27.2517 3.91135C29.15 4.23135 30.0983 4.39135 30.8917 5.36803C31.685 6.34471 31.6417 7.39972 31.5584 9.50974C31.2717 16.7582 29.7083 25.8099 21.2066 26.6099V32.5H23.5899C24.3841 32.5005 25.0676 33.0612 25.2233 33.84L25.54 35.4167H29.9567C30.647 35.4167 31.2067 35.9763 31.2067 36.6667C31.2067 37.3571 30.647 37.9167 29.9567 37.9167H9.95646C9.2661 37.9167 8.70645 37.3571 8.70645 36.6667C8.70645 35.9763 9.2661 35.4167 9.95646 35.4167H14.3732L14.6898 33.84C14.8455 33.0612 15.529 32.5005 16.3232 32.5H18.7066V26.6099C10.2065 25.8099 8.64312 16.7565 8.35645 9.50974C8.27144 7.39972 8.22978 6.34304 9.02312 5.36803C9.81479 4.39135 10.7631 4.23135 12.6615 3.91135C15.0729 3.51634 17.513 3.32289 19.9566 3.33301ZM21.5433 10.3314L21.3799 10.0381C20.7466 8.89973 20.4299 8.33306 19.9566 8.33306C19.4832 8.33306 19.1666 8.89973 18.5332 10.0381L18.3699 10.3314C18.1899 10.6548 18.0999 10.8148 17.9599 10.9214C17.8182 11.0281 17.6432 11.0681 17.2932 11.1464L16.9765 11.2198C15.7465 11.4981 15.1315 11.6364 14.9849 12.1064C14.8382 12.5764 15.2582 13.0681 16.0965 14.0481L16.3132 14.3015C16.5515 14.5798 16.6715 14.7181 16.7249 14.8915C16.7782 15.0648 16.7599 15.2498 16.7249 15.6215L16.6915 15.9598C16.5649 17.2682 16.5015 17.9232 16.8832 18.2132C17.2665 18.5032 17.8432 18.2382 18.9949 17.7082L19.2916 17.5715C19.6199 17.4215 19.7832 17.3465 19.9566 17.3465C20.1299 17.3465 20.2932 17.4215 20.6216 17.5715L20.9182 17.7082C22.0699 18.2398 22.6466 18.5032 23.0299 18.2132C23.4133 17.9232 23.3483 17.2682 23.2216 15.9598L23.1883 15.6215C23.1533 15.2498 23.1349 15.0648 23.1883 14.8915C23.2416 14.7181 23.3616 14.5798 23.5999 14.3015L23.8166 14.0481C24.655 13.0681 25.075 12.5781 24.9283 12.1064C24.7816 11.6364 24.1666 11.4981 22.9366 11.2198L22.6199 11.1464C22.2699 11.0681 22.0949 11.0298 21.9533 10.9214C21.8133 10.8148 21.7233 10.6548 21.5433 10.3314Z" fill="#EF4444" />
+                  </svg>
+                </div>
+                <div className={styles.Container_71_995}><span className={styles.generated_8_71_996}>8</span></div>
+                <div className={styles.Container_71_997}><span className={styles.Level_71_998}>Level</span></div>
+              </div>
+              <div className={styles.Container_71_999}><svg width="224" height="224" viewBox="0 0 224 224" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M22 112C22 62.2944 62.2944 22 112 22C161.706 22 202 62.2944 202 112C202 161.706 161.706 202 112 202C62.2944 202 22 161.706 22 112Z" stroke="#1E293B" strokeWidth="12" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M22 112C22 62.2944 62.2944 22 112 22C161.706 22 202 62.2944 202 112C202 161.706 161.706 202 112 202C62.2944 202 22 161.706 22 112Z" stroke="#4ADE80" strokeWidth="12" strokeLinecap="round" strokeDasharray="565.48" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_71_1002}>
+          <div className={styles.Button_71_1003}><span className={styles.Continue_71_1004}>Continue</span></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
