@@ -845,7 +845,7 @@ export default function StorePage() {
                       <div>
                         <h3 className="font-semibold text-xs line-clamp-1">{nft.name}</h3>
                         <p className="text-[10px] text-gray-400">by {nft.owner}</p>
-                        <Badge className={`mt-1 text-[10px] px-1.5 py-0.5 ${
+                        <Badge className={`mt-1 text-[10px] px-1.5 py-0.5 text-white capitalize ${
                           nft.rarity === "legendary" ? "bg-gradient-to-r from-yellow-500 to-amber-600" :
                           nft.rarity === "epic" ? "bg-gradient-to-r from-purple-500 to-pink-600" :
                           nft.rarity === "rare" ? "bg-gradient-to-r from-blue-500 to-cyan-600" : "bg-gray-600"
@@ -864,7 +864,7 @@ export default function StorePage() {
                         </div>
                         <Button
                           size="sm"
-                          className="bg-gradient-to-r from-[#4ade80] to-[#22c55e] hover:from-[#22c55e] hover:to-[#16a34a] text-[#022c22] text-[10px] h-6 px-2"
+                          className="bg-gradient-to-r from-[#4ade80] to-[#22c55e] hover:from-[#22c55e] hover:to-[#16a34a] text-white text-[10px] h-6 px-2"
                         >
                           <ShoppingCart className="h-2.5 w-2.5 mr-0.5" />
                           Buy
@@ -923,7 +923,7 @@ export default function StorePage() {
                           {item.description}
                         </p>
                         {item.rarity && (
-                          <Badge className={`mt-1 text-[10px] px-1.5 py-0.5 ${
+                          <Badge className={`mt-1 text-[10px] px-1.5 py-0.5 text-white capitalize ${
                             item.rarity === "legendary" ? "bg-gradient-to-r from-yellow-500 to-amber-600" :
                             item.rarity === "epic" ? "bg-gradient-to-r from-purple-500 to-pink-600" :
                             item.rarity === "rare" ? "bg-gradient-to-r from-blue-500 to-cyan-600" : "bg-gray-600"
