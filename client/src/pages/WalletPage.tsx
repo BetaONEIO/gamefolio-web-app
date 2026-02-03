@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 import { useTokenBalance } from "@/hooks/use-token";
 import { useStaking } from "@/hooks/use-staking";
+import { usePurchaseGFT } from "@/hooks/use-purchase-gft";
 import BuyGFTokenDialog from "@/components/BuyGFTokenDialog";
 import WalletHomepage from "@/components/wallet/WalletHomepage";
 import BuyGFTScreen from "@/components/wallet/BuyGFTScreen";
@@ -32,6 +33,8 @@ export default function WalletPage() {
   const [gftAmount, setGftAmount] = useState(0);
   const { data: tokenBalance, isLoading: isLoadingBalance } = useTokenBalance();
   const { stakedAmount, earnedRewards, estimatedApy, stake, unstake, claimRewards, isStaking } = useStaking();
+  const { createOrder, completeOrder, orderId, isCreatingOrder, isCompletingOrder } = usePurchaseGFT();
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     if ((isReady && walletAddress) || user?.walletAddress) {
@@ -75,12 +78,19 @@ export default function WalletPage() {
     setShowReviewScreen(true);
   };
 
-  const handleReviewProceed = () => {
-    setShowReviewScreen(false);
-    setShowPaymentRedirect(true);
+  const handleReviewProceed = async () => {
+    const order = await createOrder(purchaseAmount);
+    if (order) {
+      setCurrentOrderId(order.orderId);
+      setShowReviewScreen(false);
+      setShowPaymentRedirect(true);
+    }
   };
 
-  const handlePaymentReady = () => {
+  const handlePaymentReady = async () => {
+    if (currentOrderId) {
+      await completeOrder(currentOrderId);
+    }
     setShowPaymentRedirect(false);
     setShowResultScreen(true);
   };
@@ -89,6 +99,7 @@ export default function WalletPage() {
     setShowResultScreen(false);
     setPurchaseAmount(0);
     setGftAmount(0);
+    setCurrentOrderId(null);
   };
 
   const handleStakeConfirm = async (amount: number) => {
@@ -110,7 +121,8 @@ export default function WalletPage() {
           totalStaked={stakedAmount}
           rewardsEarned={earnedRewards}
           estimatedApy={estimatedApy}
-          onUnstake={() => unstake(stakedAmount)}
+          onStake={stake}
+          onUnstake={unstake}
           onClaimRewards={claimRewards}
         />
       ) : showActivityHistory ? (

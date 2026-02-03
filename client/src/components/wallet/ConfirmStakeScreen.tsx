@@ -5,7 +5,7 @@ import StakeSuccessScreen from "./StakeSuccessScreen";
 
 interface ConfirmStakeScreenProps {
   onBack: () => void;
-  onConfirm: (amount: number) => void;
+  onConfirm: (amount: number) => Promise<boolean>;
   availableBalance?: number;
   currentStake?: number;
   apy?: number;
@@ -13,7 +13,7 @@ interface ConfirmStakeScreenProps {
 
 const GFT_TO_GBP = 0.056;
 
-type StakeFlowStep = "confirm" | "processing" | "success";
+type StakeFlowStep = "confirm" | "processing" | "success" | "error";
 
 export default function ConfirmStakeScreen({
   onBack,
@@ -25,6 +25,7 @@ export default function ConfirmStakeScreen({
   const [amount, setAmount] = useState<string>("");
   const [flowStep, setFlowStep] = useState<StakeFlowStep>("confirm");
   const [stakedAmount, setStakedAmount] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const numericAmount = parseFloat(amount) || 0;
   const newTotalBalance = currentStake + numericAmount;
@@ -34,10 +35,20 @@ export default function ConfirmStakeScreen({
     setAmount(availableBalance.toString());
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (numericAmount <= 0 || numericAmount > availableBalance) return;
     setStakedAmount(numericAmount);
     setFlowStep("processing");
+    setIsProcessing(true);
+    
+    const success = await onConfirm(numericAmount);
+    setIsProcessing(false);
+    
+    if (success) {
+      setFlowStep("success");
+    } else {
+      setFlowStep("confirm");
+    }
   };
 
   const isValidAmount = numericAmount > 0 && numericAmount <= availableBalance;
@@ -46,7 +57,7 @@ export default function ConfirmStakeScreen({
     return (
       <StakeProcessingScreen
         onBack={() => setFlowStep("confirm")}
-        onComplete={() => setFlowStep("success")}
+        onComplete={() => {}}
         stakeAmount={stakedAmount}
       />
     );
@@ -56,7 +67,7 @@ export default function ConfirmStakeScreen({
     return (
       <StakeSuccessScreen
         onBack={onBack}
-        onDone={() => onConfirm(stakedAmount)}
+        onDone={onBack}
         onStakeMore={() => {
           setAmount("");
           setStakedAmount(0);

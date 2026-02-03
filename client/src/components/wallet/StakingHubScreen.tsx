@@ -18,9 +18,9 @@ interface StakingHubScreenProps {
   rewardsEarned?: number;
   availableGft?: number;
   estimatedApy?: number;
-  onStakeNew?: () => void;
-  onUnstake?: () => void;
-  onClaimRewards?: () => void;
+  onStake?: (amount: number) => Promise<boolean>;
+  onUnstake?: (amount: number) => Promise<boolean>;
+  onClaimRewards?: () => Promise<boolean>;
 }
 
 const mockStakePositions: StakePosition[] = [
@@ -50,21 +50,133 @@ export default function StakingHubScreen({
   rewardsEarned = 8.84,
   availableGft = 790,
   estimatedApy = 12.5,
-  onStakeNew,
+  onStake,
   onUnstake,
   onClaimRewards,
 }: StakingHubScreenProps) {
   const [activeTab, setActiveTab] = useState<"positions" | "history">("positions");
   const [showConfirmStake, setShowConfirmStake] = useState(false);
+  const [showUnstakeDialog, setShowUnstakeDialog] = useState(false);
+  const [unstakeAmount, setUnstakeAmount] = useState("");
+  const [isUnstaking, setIsUnstaking] = useState(false);
+  const [isStaking, setIsStaking] = useState(false);
+
+  const handleStakeConfirm = async (amount: number) => {
+    if (!onStake || amount <= 0) return;
+    
+    setIsStaking(true);
+    const success = await onStake(amount);
+    setIsStaking(false);
+    
+    if (success) {
+      setShowConfirmStake(false);
+    }
+  };
+
+  const handleUnstakeConfirm = async () => {
+    const amount = parseFloat(unstakeAmount);
+    if (!amount || amount <= 0 || amount > totalStaked || !onUnstake) return;
+    
+    setIsUnstaking(true);
+    const success = await onUnstake(amount);
+    setIsUnstaking(false);
+    
+    if (success) {
+      setShowUnstakeDialog(false);
+      setUnstakeAmount("");
+    }
+  };
+
+  if (showUnstakeDialog) {
+    const numericAmount = parseFloat(unstakeAmount) || 0;
+    const isValidAmount = numericAmount > 0 && numericAmount <= totalStaked;
+    
+    return (
+      <div
+        className="flex flex-col min-h-screen w-full"
+        style={{ background: "#020617", fontFamily: "Plus Jakarta Sans, sans-serif" }}
+      >
+        <div
+          className="flex flex-col items-center gap-6 px-6 pt-12 pb-8"
+          style={{
+            background: "linear-gradient(180deg, rgba(239, 68, 68, 0.1) 0%, #020617 100%)",
+            borderBottom: "1px solid rgba(30, 41, 59, 0.3)",
+          }}
+        >
+          <div className="flex items-center justify-between w-full max-w-[430px] mx-auto">
+            <button
+              onClick={() => setShowUnstakeDialog(false)}
+              className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-slate-700"
+              style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+            >
+              <ArrowLeft className="w-6 h-6" style={{ color: "#f8fafc" }} />
+            </button>
+            <span className="text-xl font-bold" style={{ color: "#fff" }}>Unstake GFT</span>
+            <div className="w-10 h-10" />
+          </div>
+        </div>
+
+        <div className="flex-1 flex flex-col gap-6 px-6 py-8 max-w-[430px] mx-auto w-full">
+          <div
+            className="flex flex-col gap-4 p-5 rounded-2xl"
+            style={{ background: "#0f172a", border: "1px solid rgba(30, 41, 59, 0.5)" }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-sm" style={{ color: "#94a3b8" }}>Currently Staked</span>
+              <span className="text-base font-bold" style={{ color: "#fff" }}>
+                {totalStaked.toFixed(2)} GFT
+              </span>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium" style={{ color: "#94a3b8" }}>
+                Amount to Unstake
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={unstakeAmount}
+                  onChange={(e) => setUnstakeAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full h-14 px-4 rounded-xl text-lg font-bold outline-none"
+                  style={{
+                    background: "#1e293b",
+                    border: "1px solid rgba(30, 41, 59, 0.5)",
+                    color: "#fff",
+                  }}
+                />
+                <button
+                  onClick={() => setUnstakeAmount(totalStaked.toString())}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg text-xs font-bold"
+                  style={{ background: "rgba(74, 222, 128, 0.1)", color: "#4ade80" }}
+                >
+                  MAX
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleUnstakeConfirm}
+            disabled={!isValidAmount || isUnstaking}
+            className="w-full h-14 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+            style={{
+              background: isValidAmount ? "#ef4444" : "#1e293b",
+              color: isValidAmount ? "#fff" : "#94a3b8",
+            }}
+          >
+            {isUnstaking ? "Processing..." : "Confirm Unstake"}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (showConfirmStake) {
     return (
       <ConfirmStakeScreen
         onBack={() => setShowConfirmStake(false)}
-        onConfirm={(amount) => {
-          console.log("Staked amount:", amount);
-          setShowConfirmStake(false);
-        }}
+        onConfirm={handleStakeConfirm}
         availableBalance={availableGft}
         currentStake={totalStaked}
         apy={estimatedApy}
@@ -231,7 +343,7 @@ export default function StakingHubScreen({
         {/* Secondary Buttons */}
         <div className="flex gap-3">
           <button
-            onClick={onUnstake}
+            onClick={() => setShowUnstakeDialog(true)}
             className="flex-1 h-14 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all hover:bg-slate-700"
             style={{
               background: "#1e293b",
