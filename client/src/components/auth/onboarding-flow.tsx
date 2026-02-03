@@ -13,6 +13,8 @@ import TwitchGameSearch, { TwitchGame } from "@/components/games/TwitchGameSearc
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWelcomePack } from "@/hooks/use-welcome-pack";
+import { useWallet } from "@/hooks/use-wallet";
+import { useAuth } from "@/hooks/use-auth";
 
 // Component to display trending games in a grid
 interface TrendingGamesGridProps {
@@ -188,6 +190,7 @@ export default function OnboardingFlow({
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { openWelcomePack, canClaimWelcomePack } = useWelcomePack();
+  const { user } = useAuth();
 
   // Form state
   const [formUsername, setFormUsername] = useState(username.startsWith('temp_') ? '' : username);
@@ -204,8 +207,9 @@ export default function OnboardingFlow({
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [ageRange, setAgeRange] = useState<"13-17" | "18-24" | "25-34" | "35-44" | "45-54" | "55+" | null>(null);
+  
+  const { walletAddress: sequenceWalletAddress, isReady: isWalletReady, isConnecting: isCreatingWallet, connect: connectWallet } = useWallet();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [isCreatingWallet, setIsCreatingWallet] = useState(false);
 
   // Auto-skip username step for non-Google users
   useEffect(() => {
@@ -214,71 +218,28 @@ export default function OnboardingFlow({
     }
   }, [currentStep, isGoogleUser]);
 
-  // Load existing wallet when reaching wallet step
+  // Sync Sequence wallet address to local state with success toast
   useEffect(() => {
-    const loadExistingWallet = async () => {
-      if (currentStep === OnboardingStep.Wallet && !walletAddress) {
-        try {
-          const response = await fetch('/api/wallet/info', {
-            credentials: 'include',
-          });
-          
-          if (response.ok) {
-            const walletData = await response.json();
-            setWalletAddress(walletData.address);
-          }
-        } catch (error) {
-          console.log('No existing wallet found');
-        }
-      }
-    };
-    
-    loadExistingWallet();
-  }, [currentStep, walletAddress]);
-
-  // Get or create wallet via Crossmint API
-  const handleCreateWallet = async () => {
-    setIsCreatingWallet(true);
-    
-    try {
-      const response = await fetch('/api/wallet/create', {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to connect wallet');
-      }
-
-      const walletData = await response.json();
-
-      if (walletData.address) {
-        setWalletAddress(walletData.address);
-        
-        // Use the isExisting flag from the API response
-        const isExisting = walletData.isExisting || false;
-        
-        toast({
-          title: isExisting ? "Wallet connected!" : "Wallet created!",
-          description: isExisting 
-            ? "Connected to your existing Crossmint wallet" 
-            : "Your new Crossmint wallet has been created successfully",
-          variant: "gamefolioSuccess",
-        });
-      } else {
-        throw new Error('No wallet address received');
-      }
-    } catch (error: any) {
-      console.error('Failed to create wallet:', error);
+    if (isWalletReady && sequenceWalletAddress && !walletAddress) {
+      setWalletAddress(sequenceWalletAddress);
       toast({
-        title: "Failed to connect wallet",
-        description: error.message || "Please try again later",
-        variant: "gamefolioError",
+        title: "Wallet connected!",
+        description: "Your Sequence wallet has been connected successfully",
+        variant: "gamefolioSuccess",
       });
-    } finally {
-      setIsCreatingWallet(false);
     }
+  }, [isWalletReady, sequenceWalletAddress, walletAddress, toast]);
+
+  // Load existing wallet from user profile when reaching wallet step
+  useEffect(() => {
+    if (currentStep === OnboardingStep.Wallet && !walletAddress && user?.walletAddress) {
+      setWalletAddress(user.walletAddress);
+    }
+  }, [currentStep, walletAddress, user?.walletAddress]);
+
+  // Connect wallet via Sequence
+  const handleCreateWallet = () => {
+    connectWallet();
   };
 
 
@@ -1334,7 +1295,7 @@ export default function OnboardingFlow({
               </Tooltip>
             </div>
             <p className="text-gray-300 mb-6">
-              Connect a crypto wallet to unlock future NFT features and rewards. You can create one now via Crossmint or skip this step.
+              Connect a crypto wallet to unlock future NFT features and rewards. You can connect with Sequence or skip this step.
             </p>
             {walletAddress ? (
               <div className="mb-6">
@@ -1371,10 +1332,10 @@ export default function OnboardingFlow({
                         {isCreatingWallet ? (
                           <span className="flex items-center">
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Creating wallet...
+                            Connecting wallet...
                           </span>
                         ) : (
-                          "Create Crossmint Wallet"
+                          "Connect Sequence Wallet"
                         )}
                       </div>
                       <div className="text-sm text-white/80 font-normal">
