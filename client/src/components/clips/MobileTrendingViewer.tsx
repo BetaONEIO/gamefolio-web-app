@@ -13,6 +13,7 @@ import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { cn } from "@/lib/utils";
 import { ReportDialog } from "@/components/content/ReportDialog";
+import { LazyImage } from "@/components/ui/lazy-image";
 
 interface ScreenshotWithUser {
   id: number;
@@ -183,9 +184,9 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
         </div>
       );
     } else {
-      // Render screenshot content
+      // Render screenshot content with signed URL support
       return (
-        <img
+        <LazyImage
           src={currentItem.imageUrl}
           alt={currentItem.title}
           className="w-full h-full object-cover"

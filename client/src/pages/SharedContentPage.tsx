@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LazyImage, LazyAvatar } from "@/components/ui/lazy-image";
 
 interface SharedContent {
   id: number;
@@ -112,10 +113,12 @@ export default function SharedContentPage() {
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 {content.user.avatarUrl && (
-                  <img
+                  <LazyAvatar
                     src={content.user.avatarUrl}
                     alt={content.user.displayName}
-                    className="w-10 h-10 rounded-full"
+                    size="md"
+                    fallbackText={content.user.displayName.charAt(0)}
+                    className="w-10 h-10"
                   />
                 )}
                 <div>
@@ -132,15 +135,15 @@ export default function SharedContentPage() {
 
               <div className="relative">
                 {content.contentType === 'screenshot' ? (
-                  <img
-                    src={content.imageUrl || content.thumbnailUrl}
+                  <LazyImage
+                    src={content.imageUrl || content.thumbnailUrl || ''}
                     alt={content.title}
                     className="w-full rounded-lg"
                   />
                 ) : (
                   <div className="relative">
-                    <img
-                      src={content.thumbnailUrl}
+                    <LazyImage
+                      src={content.thumbnailUrl || ''}
                       alt={content.title}
                       className="w-full rounded-lg"
                     />
