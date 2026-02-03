@@ -574,43 +574,15 @@ export default function StorePage() {
           <SidebarContent />
         </aside>
 
-        {/* Mobile Header with Dropdown Menu */}
+        {/* Mobile Header */}
         <div className="md:hidden sticky top-0 z-40 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800">
           <Collapsible open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <div className="p-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-white">
-                  Store
-                </h2>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8" data-testid="avatar-user-mobile">
-                      <AvatarImage src={user?.avatarUrl || undefined} />
-                      <AvatarFallback className="bg-gray-800">
-                        {user?.username?.[0]?.toUpperCase() || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm text-gray-300" data-testid="text-username-mobile">
-                      {user?.username || "Guest"}
-                    </span>
-                  </div>
-                  <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
-                      <Menu className="h-6 w-6" />
-                    </Button>
-                  </CollapsibleTrigger>
-                </div>
-              </div>
-              
-              {/* Mobile Tab Indicator */}
-              <div className="mt-3 flex items-center gap-2 text-sm text-gray-400">
-                <span>Current:</span>
-                <span className="text-blue-400 font-semibold">
-                  {activeTab === "buy" && "Buy NFT"}
-                  {activeTab === "sell" && "Sell NFT"}
-                  {activeTab === "mint" && "Mint NFT"}
-                </span>
-              </div>
+              <h2 className="text-xl font-bold text-white">
+                {activeTab === "buy" && "BUY NFT"}
+                {activeTab === "sell" && "SELL NFT"}
+                {activeTab === "mint" && "MINT NFT"}
+              </h2>
             </div>
 
             <CollapsibleContent className="border-t border-gray-800">
@@ -741,10 +713,6 @@ export default function StorePage() {
           {activeTab === "buy" && (
             <div>
               <div className="mb-4 md:mb-6">
-                <h2 className="text-lg md:text-xl font-semibold mb-4" data-testid="heading-collection">
-                  Gamefolio Collection
-                </h2>
-
                 {/* Category Filters */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                   <div>
