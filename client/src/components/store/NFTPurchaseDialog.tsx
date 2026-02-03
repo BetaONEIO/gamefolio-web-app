@@ -140,21 +140,19 @@ export function NFTPurchaseDialog({
           className="bg-[#020617] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
           data-testid="dialog-nft-checkout"
         >
-          {/* Header - matches Figma: 104px height, centered content */}
-          <div className="flex items-center justify-center px-4 pt-12 pb-4 bg-[#020617]/80 backdrop-blur-md">
-            <div className="flex items-center gap-4 w-full max-w-[166px]">
-              <button
-                onClick={() => setStep('details')}
-                className="w-10 h-10 rounded-full hover:bg-[#1e293b]/50 flex items-center justify-center transition-colors"
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              <span className="text-xl font-bold text-[#f8fafc] uppercase tracking-tight" style={{ letterSpacing: '-0.5px' }}>
-                Checkout
-              </span>
-            </div>
+          {/* Header - left aligned */}
+          <div className="flex items-center gap-4 px-4 pt-12 pb-4 bg-[#020617]/80 backdrop-blur-md">
+            <button
+              onClick={() => setStep('details')}
+              className="w-10 h-10 rounded-full hover:bg-[#1e293b]/50 flex items-center justify-center transition-colors"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <span className="text-xl font-bold text-[#f8fafc] uppercase tracking-tight" style={{ letterSpacing: '-0.5px' }}>
+              Checkout
+            </span>
           </div>
 
           {/* Scrollable Content - gap: 32px between sections */}
@@ -264,25 +262,25 @@ export function NFTPurchaseDialog({
                 </div>
               </div>
 
-            </div>
-          </div>
+              {/* Action Buttons - inside scrollable content */}
+              <div className="flex flex-col gap-3 pt-4">
+                <Button
+                  onClick={handleConfirmPurchase}
+                  disabled={!hasEnoughBalance || purchaseMutation.isPending}
+                  className="w-full h-[60px] rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22] text-lg font-bold shadow-[0_4px_6px_-4px_rgba(74,222,128,0.2),0_10px_15px_-3px_rgba(74,222,128,0.2)]"
+                  data-testid="button-confirm-purchase"
+                >
+                  {purchaseMutation.isPending ? "Processing..." : "Confirm Purchase"}
+                </Button>
+                <button
+                  onClick={() => setStep('details')}
+                  className="w-full h-[52px] text-sm font-bold text-[#94a3b8] hover:text-[#f8fafc] transition-colors"
+                >
+                  Cancel Transaction
+                </button>
+              </div>
 
-          {/* Footer Actions - matches Container_65_681 */}
-          <div className="border-t border-[#1e293b]/50 px-6 py-8 flex flex-col gap-3 bg-[#020617]">
-            <Button
-              onClick={handleConfirmPurchase}
-              disabled={!hasEnoughBalance || purchaseMutation.isPending}
-              className="w-full h-[60px] rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22] text-lg font-bold shadow-[0_4px_6px_-4px_rgba(74,222,128,0.2),0_10px_15px_-3px_rgba(74,222,128,0.2)]"
-              data-testid="button-confirm-purchase"
-            >
-              {purchaseMutation.isPending ? "Processing..." : "Confirm Purchase"}
-            </Button>
-            <button
-              onClick={() => setStep('details')}
-              className="w-full h-[52px] text-sm font-bold text-[#94a3b8] hover:text-[#f8fafc] transition-colors"
-            >
-              Cancel Transaction
-            </button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
