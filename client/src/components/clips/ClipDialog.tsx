@@ -107,6 +107,11 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   // Only fetch if dialog is open and we have a clipId (MUST be before useEffects that use clip)
   const { data: clip, isLoading } = useQuery<ClipWithUser>({
     queryKey: [`/api/clips/${clipId}`],
+    queryFn: async () => {
+      const res = await fetch(`/api/clips/${clipId}`);
+      if (!res.ok) throw new Error("Failed to fetch clip");
+      return res.json();
+    },
     enabled: isOpen && clipId !== null,
   });
 
@@ -117,6 +122,11 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   // Fetch comments for mobile overlay
   const { data: comments } = useQuery<CommentWithUser[]>({
     queryKey: [`/api/clips/${clipId}/comments`],
+    queryFn: async () => {
+      const res = await fetch(`/api/clips/${clipId}/comments`);
+      if (!res.ok) throw new Error("Failed to fetch comments");
+      return res.json();
+    },
     enabled: isOpen && clipId !== null,
   });
 
@@ -262,6 +272,13 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   // Check if current user is following the clip author
   const { data: followStatus } = useQuery({
     queryKey: [`/api/users/${clip?.user?.username}/follow-status`],
+    queryFn: async () => {
+      const res = await fetch(`/api/users/${clip?.user?.username}/follow-status`, {
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error("Failed to fetch follow status");
+      return res.json();
+    },
     enabled: !isOwnClip && !!user && !!clip?.user?.username,
     refetchOnWindowFocus: false,
   });

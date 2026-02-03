@@ -33,6 +33,11 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
   // Get current clip to check if it's a reel
   const { data: currentClip } = useQuery<ClipWithUser>({
     queryKey: [`/api/clips/${clipId}`],
+    queryFn: async () => {
+      const res = await fetch(`/api/clips/${clipId}`);
+      if (!res.ok) throw new Error("Failed to fetch clip");
+      return res.json();
+    },
     enabled: !!clipId && isOpen,
   });
 
