@@ -2,18 +2,14 @@ import { useState } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Wallet, Check, AlertCircle } from "lucide-react";
+import { ArrowLeft, Check, ExternalLink } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useCrossmint } from "@/hooks/use-crossmint";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Link } from "wouter";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 
 interface NFT {
@@ -52,15 +48,12 @@ export function NFTPurchaseDialog({
       const response = await apiRequest("POST", "/api/nft/purchase", data);
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast({
         title: "Purchase Successful!",
         description: `You've purchased ${nft?.name} for ${nft?.price} GF tokens.`,
       });
-
-      // Invalidate and refetch user data to update balance
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      
       onOpenChange(false);
       onPurchaseComplete?.();
     },
@@ -78,8 +71,6 @@ export function NFTPurchaseDialog({
 
   const userBalance = user?.gfTokenBalance || 0;
   const hasEnoughBalance = userBalance >= nft.price;
-  const serviceFee = 0;
-  const totalAmount = nft.price + serviceFee;
 
   const handlePurchase = async () => {
     if (!hasEnoughBalance) {
@@ -100,142 +91,186 @@ export function NFTPurchaseDialog({
       return;
     }
 
-    purchaseMutation.mutate({
-      nftId: nft.id,
-    });
+    purchaseMutation.mutate({ nftId: nft.id });
   };
+
+  const contractAddress = "0x892a...F4e1";
+  const tokenId = nft.id.toString().padStart(4, '0');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md" data-testid="dialog-nft-purchase">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold" data-testid="text-dialog-title">
-            Place a bid
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent 
+        className="bg-[#020617] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
+        data-testid="dialog-nft-purchase"
+      >
+        <div 
+          className="flex-1 overflow-y-auto"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
+          <div className="hide-scrollbar flex flex-col">
+            
+            {/* Header with back button */}
+            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-[#020617]/80 backdrop-blur-md">
+              <button
+                onClick={() => onOpenChange(false)}
+                className="w-10 h-10 rounded-full hover:bg-[#1e293b]/50 flex items-center justify-center transition-colors"
+              >
+                <ArrowLeft className="h-6 w-6 text-white/50" />
+              </button>
+              <span className="text-lg font-bold text-[#f8fafc]">NFT Details</span>
+              <div className="w-10 h-10" />
+            </div>
 
-        <div className="space-y-4">
-          {/* NFT Image */}
-          <div className="relative aspect-video rounded-lg overflow-hidden">
-            <img
-              src={nft.image}
-              alt={nft.name}
-              className="w-full h-full object-cover"
-              data-testid="img-nft-preview"
-            />
-          </div>
-
-          {/* NFT Info */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-base" data-testid="text-nft-name">
-                    {nft.name}
-                  </h3>
-                  <Badge className="bg-blue-600 text-xs">✓</Badge>
+            {/* NFT Image Section */}
+            <div className="flex justify-center items-center px-4 py-2">
+              <div className="relative w-[398px] h-[398px] rounded-3xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(74,222,128,0.05)]">
+                <img
+                  src={nft.image}
+                  alt={nft.name}
+                  className="w-full h-full object-cover"
+                  data-testid="img-nft-preview"
+                />
+                {/* Verified Asset Badge */}
+                <div className="absolute top-4 left-4 backdrop-blur-md bg-black/40 rounded-2xl px-3 py-1.5 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[#4ade80]" />
+                  <span className="text-[10px] font-bold text-white uppercase tracking-wider">
+                    Verified Asset
+                  </span>
                 </div>
-                <p className="text-sm text-gray-400" data-testid="text-nft-owner">
-                  Owned by {nft.owner}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-400">Current Bid</p>
-                <div className="flex items-center gap-1">
-                  <img src={gfTokenLogo} alt="GF Token" className="w-4 h-4" />
-                  <p className="text-blue-400 font-semibold" data-testid="text-current-bid">
-                    {nft.currentBid} GF
-                  </p>
-                </div>
-                <p className="text-xs text-gray-500" data-testid="text-current-bid-usd">
-                  ${(nft.currentBid * 0.05).toFixed(2)}
-                </p>
               </div>
             </div>
-          </div>
 
-          {/* Wallet Connection - Only show if wallet not connected */}
-          {!wallet?.address && (
-            <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
-              <h4 className="text-sm font-medium mb-2">Connect Wallet</h4>
-              <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+            {/* Content Section */}
+            <div className="flex flex-col gap-6 px-6 py-6">
+              
+              {/* Collection & NFT Info */}
+              <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                    <Wallet className="w-4 h-4 text-white" />
+                  <span className="text-sm text-[#4ade80]">Cyber Guardians</span>
+                  <Check className="w-4 h-4 text-[#4ade80]" />
+                </div>
+                <h1 className="text-3xl font-bold text-[#f8fafc]" data-testid="text-nft-name">
+                  {nft.name.replace(/^.*#/, 'Guardian #')}
+                </h1>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 border-2 border-[#020617]" />
+                  <span className="text-sm text-[#94a3b8]">Owned by</span>
+                  <span className="text-sm text-[#f8fafc]">{nft.owner}</span>
+                </div>
+              </div>
+
+              {/* Price Card */}
+              <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-5 flex flex-col gap-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">
+                      Current Price
+                    </span>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-bold text-[#f8fafc]">{nft.price} GFT</span>
+                    </div>
+                    <span className="text-sm text-[#94a3b8]">${nft.priceUSD.toFixed(2)}</span>
                   </div>
-                  <span className="font-medium text-sm">Crossmint</span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">
+                      Ending In
+                    </span>
+                    <span className="text-sm font-bold text-[#4ade80]">2h 45m 02s</span>
+                  </div>
                 </div>
-                <Link href="/wallet">
-                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700" data-testid="button-connect-wallet">
-                    Connect
+
+                {/* Action Buttons */}
+                <div className="flex flex-col gap-3">
+                  <Button
+                    onClick={handlePurchase}
+                    disabled={!hasEnoughBalance || !wallet?.address || purchaseMutation.isPending}
+                    className="w-full h-[60px] rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22] text-lg font-bold shadow-[0_4px_6px_-4px_rgba(74,222,128,0.2),0_10px_15px_-3px_rgba(74,222,128,0.2)]"
+                    data-testid="button-buy-nft"
+                  >
+                    {purchaseMutation.isPending ? "Processing..." : "Buy NFT Now"}
                   </Button>
-                </Link>
-              </div>
-            </div>
-          )}
+                  <Button
+                    variant="outline"
+                    className="w-full h-[58px] rounded-2xl bg-[#1e293b] hover:bg-[#334155] border border-[#1e293b]/50 text-[#f8fafc] text-base font-bold flex items-center justify-center gap-2"
+                  >
+                    <img src={gfTokenLogo} alt="GF" className="w-5 h-5" />
+                    Sell To Gamefolio
+                  </Button>
+                </div>
 
-          {/* Bid Amount */}
-          <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Bid Amount</span>
-              <div className="text-right">
-                <span className="text-sm text-gray-400">Your Balance: </span>
-                <span className="font-medium" data-testid="text-user-balance">
-                  {userBalance.toLocaleString()} GF
+                {/* Balance Warning */}
+                {!hasEnoughBalance && (
+                  <div className="text-center text-sm text-red-400">
+                    Insufficient balance. You need {(nft.price - userBalance).toLocaleString()} more GF tokens.
+                  </div>
+                )}
+              </div>
+
+              {/* Properties Section */}
+              <div className="flex flex-col gap-4">
+                <span className="text-sm font-bold text-[#94a3b8] uppercase tracking-wider">
+                  Properties
                 </span>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: "Background", value: "Neon Void", percent: "8% have this" },
+                    { label: "Armor", value: "Quantum Plating", percent: "5% have this" },
+                    { label: "Eyes", value: "Laser Sight", percent: "5% have this" },
+                    { label: "Special", value: "Aura Glow", percent: "5% have this" },
+                  ].map((prop) => (
+                    <div
+                      key={prop.label}
+                      className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-3 flex flex-col gap-1"
+                    >
+                      <span className="text-[10px] font-bold text-[#94a3b8] uppercase">
+                        {prop.label}
+                      </span>
+                      <span className="text-sm text-[#f8fafc]">{prop.value}</span>
+                      <span className="text-[10px] text-[#4ade80]">{prop.percent}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-              <div className="flex items-center gap-2">
-                <img src={gfTokenLogo} alt="GF Token" className="w-6 h-6" />
-                <span className="text-sm font-medium">GF Token</span>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-bold" data-testid="text-bid-amount">
-                  {nft.price}
-                </p>
-              </div>
-            </div>
-
-            {!hasEnoughBalance && (
-              <div className="flex items-center gap-2 p-2 bg-red-500/10 border border-red-500/20 rounded-lg">
-                <AlertCircle className="w-4 h-4 text-red-400" />
-                <span className="text-xs text-red-400" data-testid="text-insufficient-balance">
-                  Insufficient balance. You need {(nft.price - userBalance).toLocaleString()} more GF tokens.
+              {/* Details Section */}
+              <div className="flex flex-col gap-4">
+                <span className="text-sm font-bold text-[#94a3b8] uppercase tracking-wider">
+                  Details
                 </span>
+                <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl overflow-hidden">
+                  {[
+                    { label: "Contract Address", value: contractAddress, mono: true, link: true },
+                    { label: "Token ID", value: tokenId, mono: true },
+                    { label: "Blockchain", value: "SKALE Nebula" },
+                    { label: "Token Standard", value: "ERC-721" },
+                  ].map((detail, idx) => (
+                    <div
+                      key={detail.label}
+                      className={`flex items-center justify-between px-4 py-4 ${
+                        idx < 3 ? "border-b border-[#1e293b]/30" : ""
+                      }`}
+                    >
+                      <span className="text-sm text-[#94a3b8]">{detail.label}</span>
+                      <div className="flex items-center gap-1">
+                        <span
+                          className={`text-sm ${
+                            detail.link ? "text-[#4ade80]" : "text-[#f8fafc]"
+                          } ${detail.mono ? "font-mono" : ""}`}
+                        >
+                          {detail.value}
+                        </span>
+                        {detail.link && (
+                          <ExternalLink className="w-3 h-3 text-[#4ade80]" />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* Service Fee */}
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-400">Service fee</span>
-            <div className="flex items-center gap-1">
-              <img src={gfTokenLogo} alt="GF Token" className="w-4 h-4" />
-              <span data-testid="text-service-fee">{serviceFee} GF</span>
             </div>
           </div>
-
-          {/* Total Amount */}
-          <div className="flex items-center justify-between text-base font-semibold pt-2 border-t border-gray-700">
-            <span>Total Amount</span>
-            <div className="flex items-center gap-1">
-              <img src={gfTokenLogo} alt="GF Token" className="w-5 h-5" />
-              <span data-testid="text-total-amount">{totalAmount} GF</span>
-            </div>
-          </div>
-
-          {/* Purchase Button */}
-          <Button
-            className="w-full bg-blue-600 hover:bg-blue-700 font-semibold"
-            size="lg"
-            onClick={handlePurchase}
-            disabled={!hasEnoughBalance || !wallet?.address || purchaseMutation.isPending}
-            data-testid="button-place-bid"
-          >
-            {purchaseMutation.isPending ? "Processing..." : "Place a bid"}
-          </Button>
         </div>
       </DialogContent>
     </Dialog>
