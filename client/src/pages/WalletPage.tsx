@@ -33,8 +33,9 @@ export default function WalletPage() {
   const [gftAmount, setGftAmount] = useState(0);
   const { data: tokenBalance, isLoading: isLoadingBalance } = useTokenBalance();
   const { stakedAmount, earnedRewards, estimatedApy, stake, unstake, claimRewards, isStaking } = useStaking();
-  const { createOrder, completeOrder, orderId, isCreatingOrder, isCompletingOrder } = usePurchaseGFT();
+  const { createOrder, isCreatingOrder, checkOrderStatus, refreshBalances } = usePurchaseGFT();
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
+  const [purchaseSuccess, setPurchaseSuccess] = useState(false);
 
   const { 
     createWallet, 
@@ -111,7 +112,6 @@ export default function WalletPage() {
     return (
       <ActivityHistoryScreen 
         onBack={() => setShowActivityHistory(false)}
-        walletAddress={user.walletAddress || connectedWalletAddress || newWalletAddress || ''}
       />
     );
   }
@@ -120,14 +120,13 @@ export default function WalletPage() {
     return (
       <StakingHubScreen
         onBack={() => setShowStakingHub(false)}
-        stakedAmount={stakedAmount}
-        earnedRewards={earnedRewards}
+        totalStaked={stakedAmount}
+        rewardsEarned={earnedRewards}
         estimatedApy={estimatedApy}
+        availableGft={tokenBalance?.balance || 0}
         onStake={stake}
         onUnstake={unstake}
         onClaimRewards={claimRewards}
-        isStaking={isStaking}
-        availableBalance={tokenBalance?.balance || 0}
       />
     );
   }
@@ -135,12 +134,13 @@ export default function WalletPage() {
   if (showResultScreen) {
     return (
       <BuyGFTResultScreen
-        onBack={() => {
+        onDone={() => {
           setShowResultScreen(false);
           setCurrentOrderId(null);
+          refreshBalances();
         }}
-        success={true}
         gftAmount={gftAmount}
+        availableBalance={tokenBalance?.balance || 0}
       />
     );
   }
@@ -149,17 +149,10 @@ export default function WalletPage() {
     return (
       <PaymentRedirectScreen
         onBack={() => setShowPaymentRedirect(false)}
-        orderId={currentOrderId || ''}
-        onPaymentComplete={async () => {
-          if (currentOrderId) {
-            const result = await completeOrder(currentOrderId);
-            if (result) {
-              setShowPaymentRedirect(false);
-              setShowResultScreen(true);
-            }
-          }
+        onReady={() => {
+          setShowPaymentRedirect(false);
+          setShowResultScreen(true);
         }}
-        isProcessing={isCompletingOrder}
       />
     );
   }
@@ -168,17 +161,12 @@ export default function WalletPage() {
     return (
       <ReviewOrderScreen
         onBack={() => setShowReviewScreen(false)}
-        gbpAmount={purchaseAmount}
+        amount={purchaseAmount}
         gftAmount={gftAmount}
-        onConfirm={async () => {
-          const order = await createOrder(purchaseAmount);
-          if (order?.orderId) {
-            setCurrentOrderId(order.orderId);
-            setShowReviewScreen(false);
-            setShowPaymentRedirect(true);
-          }
+        walletAddress={user.walletAddress || connectedWalletAddress || newWalletAddress || ''}
+        onProceed={async () => {
+          await createOrder(purchaseAmount);
         }}
-        isProcessing={isCreatingOrder}
       />
     );
   }
@@ -203,15 +191,12 @@ export default function WalletPage() {
     return (
       <WalletHomepage
         walletAddress={displayWalletAddress}
-        balance={tokenBalance?.balance || 0}
-        balanceUsd={tokenBalance?.usdValue || 0}
-        balanceGbp={tokenBalance?.gbpValue || 0}
+        offChainBalance={tokenBalance?.balance || 0}
+        fiatValue={tokenBalance?.gbpValue || 0}
         stakedAmount={stakedAmount}
-        earnedRewards={earnedRewards}
-        estimatedApy={estimatedApy}
-        onBuyGFT={() => setShowBuyScreen(true)}
-        onShowActivity={() => setShowActivityHistory(true)}
-        onShowStaking={() => setShowStakingHub(true)}
+        onBuyClick={() => setShowBuyScreen(true)}
+        onActivityClick={() => setShowActivityHistory(true)}
+        onStakeClick={() => setShowStakingHub(true)}
         isLoadingBalance={isLoadingBalance}
       />
     );
