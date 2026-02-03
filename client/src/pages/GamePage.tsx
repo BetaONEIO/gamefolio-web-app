@@ -125,7 +125,7 @@ export default function GamePage() {
   if (isLoadingGame) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="max-w-7xl mx-auto px-0 py-0">
           <div className="flex items-center gap-4 mb-8">
             <Skeleton className="h-10 w-10 rounded-full" />
             <div className="space-y-2">
@@ -167,7 +167,7 @@ export default function GamePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-0 py-0">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Link href="/explore">

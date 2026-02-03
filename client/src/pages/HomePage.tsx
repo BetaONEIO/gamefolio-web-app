@@ -347,7 +347,7 @@ const HomePage = () => {
       </section>
       
       {/* Latest Clips Section */}
-      <section className="px-4 md:px-6">
+      <section className="px-0">
         <Tabs value={activeContentTab} onValueChange={(value) => setActiveContentTab(value as 'clips' | 'reels' | 'screenshots')} className="w-full">
           <div className="flex justify-between items-center mb-8">
             <TabsList className="grid w-fit grid-cols-3">
@@ -647,7 +647,7 @@ const HomePage = () => {
       {user && <RecommendedForYou userId={user.id} />}
       
       {/* Featured Gamers Section */}
-      <section className="mt-16 px-4 md:px-6">
+      <section className="mt-16 px-0">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-medium text-foreground">Featured Gamers</h2>
           <Link 
@@ -662,7 +662,7 @@ const HomePage = () => {
       </section>
 
       {/* Trending Games Section */}
-      <section className="mt-16 px-4 md:px-6">
+      <section className="mt-16 px-0">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-medium text-foreground">Trending Games</h2>
           <Link 
@@ -700,7 +700,7 @@ const HomePage = () => {
       </section>
       
       {/* Latest Clips Section */}
-      <section className="mt-16 px-4 md:px-6">
+      <section className="mt-16 px-0">
         <div className="flex justify-between items-center mb-8">
           <div className="flex flex-col">
             <h2 className="text-3xl font-bold text-foreground border-b-4 border-primary pb-2 inline-block mb-3">Latest Clips</h2>
@@ -772,7 +772,7 @@ const HomePage = () => {
       </section>
       
       {/* Top-Rated Clips Section (Most Liked) */}
-      <section className="mt-16 px-4 md:px-6">
+      <section className="mt-16 px-0">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-3xl font-bold text-foreground border-b-4 border-primary pb-2 inline-block">Top-Rated Clips</h2>
           <a href="/explore?sort=popular" className="text-primary text-sm font-medium hover:underline flex items-center">

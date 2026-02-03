@@ -711,7 +711,7 @@ export default function StorePage() {
         </div>
 
         {/* Main Content Area */}
-        <main className="flex-1 p-4 md:p-8">
+        <main className="flex-1">
           {/* Header */}
           <div className="mb-6 md:mb-8">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">

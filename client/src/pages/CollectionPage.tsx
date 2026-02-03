@@ -178,7 +178,7 @@ export default function CollectionPage() {
     <div className="min-h-screen bg-gradient-to-b from-[#0a0a1a] via-[#1a1a2e] to-[#0a0a1a]">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-[#0a0a1a]/95 backdrop-blur-sm border-b border-gray-800">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-0 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/">
               <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
@@ -205,7 +205,7 @@ export default function CollectionPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-4xl mx-auto px-0 py-6 space-y-6">
         {/* Stats Overview */}
         <section>
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Stats Overview</h2>

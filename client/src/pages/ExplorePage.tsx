@@ -188,7 +188,7 @@ const ExplorePage = () => {
 
   if (queryParams.q || queryParams.hashtag) {
     return (
-      <div className="py-6 max-w-full w-full">
+      <div className="py-0 max-w-full w-full">
         <form onSubmit={handleSearch} className="mb-8 max-w-4xl mx-auto">
           <div className="flex gap-2">
             <Input
@@ -213,7 +213,7 @@ const ExplorePage = () => {
   }
 
   return (
-    <div className="py-3 max-w-full w-full">
+    <div className="py-0 max-w-full w-full">
       <div className="mb-4 max-w-4xl mx-auto">
         <div className="flex gap-2">
           {/* Game Search Component */}

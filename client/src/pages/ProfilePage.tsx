@@ -957,7 +957,7 @@ const ProfilePage = () => {
   // Handle loading state
   if (isLoadingProfile || isLoadingFollowStatus) {
     return (
-      <div className="container mx-auto py-8 space-y-8">
+      <div className="container mx-auto py-0 space-y-8">
         <div className="flex items-center space-x-4">
           <Skeleton className="h-24 w-24 rounded-full" />
           <div className="space-y-2">
