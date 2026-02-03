@@ -21,7 +21,6 @@ import walletPromo from "@assets/Wallet promo new_1762876656607.png";
 export default function WalletPage() {
   const { user } = useAuth();
   const { walletAddress, isReady, isConnecting, connect } = useWallet();
-  const [showWalletDetails, setShowWalletDetails] = useState(() => !!user?.walletAddress);
   const [showBuyDialog, setShowBuyDialog] = useState(false);
   const [showBuyScreen, setShowBuyScreen] = useState(false);
   const [showReviewScreen, setShowReviewScreen] = useState(false);
@@ -36,11 +35,14 @@ export default function WalletPage() {
   const { createOrder, completeOrder, orderId, isCreatingOrder, isCompletingOrder } = usePurchaseGFT();
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
 
+  const hasExistingWallet = !!(user?.walletAddress || (isReady && walletAddress));
+  const [showWalletDetails, setShowWalletDetails] = useState(false);
+
   useEffect(() => {
-    if ((isReady && walletAddress) || user?.walletAddress) {
+    if (hasExistingWallet) {
       setShowWalletDetails(true);
     }
-  }, [isReady, walletAddress, user?.walletAddress]);
+  }, [hasExistingWallet]);
 
   const handleConnectWallet = () => {
     connect();
@@ -211,36 +213,29 @@ export default function WalletPage() {
               </ul>
 
               <div className="space-y-4">
-                {(() => {
-                  const hasExistingWallet = !!user?.walletAddress || (isReady && walletAddress);
-                  const showConnectingState = isConnecting && !user?.walletAddress;
-                  
-                  return (
-                    <Button 
-                      onClick={hasExistingWallet ? () => setShowWalletDetails(true) : handleConnectWallet} 
-                      disabled={showConnectingState}
-                      className="w-auto px-6"
-                      data-testid={hasExistingWallet ? "button-access-wallet" : "button-connect-wallet"}
-                    >
-                      {showConnectingState ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Connecting...
-                        </>
-                      ) : hasExistingWallet ? (
-                        <>
-                          <Wallet className="w-4 h-4 mr-2" />
-                          Access Wallet
-                        </>
-                      ) : (
-                        <>
-                          <Wallet className="w-4 h-4 mr-2" />
-                          Connect Wallet
-                        </>
-                      )}
-                    </Button>
-                  );
-                })()}
+                <Button 
+                  onClick={hasExistingWallet ? () => setShowWalletDetails(true) : handleConnectWallet} 
+                  disabled={isConnecting && !hasExistingWallet}
+                  className="w-auto px-6"
+                  data-testid={hasExistingWallet ? "button-access-wallet" : "button-connect-wallet"}
+                >
+                  {isConnecting && !hasExistingWallet ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : hasExistingWallet ? (
+                    <>
+                      <Wallet className="w-4 h-4 mr-2" />
+                      Access Wallet
+                    </>
+                  ) : (
+                    <>
+                      <Wallet className="w-4 h-4 mr-2" />
+                      Connect Wallet
+                    </>
+                  )}
+                </Button>
                 <div className="flex items-center justify-start">
                   <span className="text-sm text-muted-foreground">Powered by Sequence</span>
                 </div>
