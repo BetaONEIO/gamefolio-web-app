@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ArrowLeft, Info, TrendingUp, Gift, Clock, ChevronRight } from "lucide-react";
+import ConfirmStakeScreen from "./ConfirmStakeScreen";
 
 interface StakePosition {
   id: string;
@@ -47,13 +48,29 @@ export default function StakingHubScreen({
   onBack,
   totalStaked = 250,
   rewardsEarned = 8.84,
-  availableGft = 0,
-  estimatedApy = 5,
+  availableGft = 790,
+  estimatedApy = 12.5,
   onStakeNew,
   onUnstake,
   onClaimRewards,
 }: StakingHubScreenProps) {
   const [activeTab, setActiveTab] = useState<"positions" | "history">("positions");
+  const [showConfirmStake, setShowConfirmStake] = useState(false);
+
+  if (showConfirmStake) {
+    return (
+      <ConfirmStakeScreen
+        onBack={() => setShowConfirmStake(false)}
+        onConfirm={(amount) => {
+          console.log("Staked amount:", amount);
+          setShowConfirmStake(false);
+        }}
+        availableBalance={availableGft}
+        currentStake={totalStaked}
+        apy={estimatedApy}
+      />
+    );
+  }
 
   const fiatValueStaked = (totalStaked * 0.056).toFixed(2);
   const fiatValueRewards = (rewardsEarned * 0.056).toFixed(2);
@@ -199,7 +216,7 @@ export default function StakingHubScreen({
 
         {/* Stake New GFT Button */}
         <button
-          onClick={onStakeNew}
+          onClick={() => setShowConfirmStake(true)}
           className="w-full py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all hover:opacity-90 active:scale-[0.98]"
           style={{
             background: '#4ade80',

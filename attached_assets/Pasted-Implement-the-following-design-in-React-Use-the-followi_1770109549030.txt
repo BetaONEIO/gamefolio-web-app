@@ -1,0 +1,792 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/StakeEnterAmount.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,500;0,400&display=swap";
+.StakeEnterAmount_4_1326 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_4_1327 {
+  flex-direction: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  display: flex;
+}
+.Container_4_1328 {
+  background: #020617;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  display: flex;
+}
+.Container_4_1329 {
+  box-sizing: border-box;
+  background: #020617;
+  border-bottom: 1px solid #1e293b4d;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 81.75px;
+  height: 113px;
+  padding: 48px 24px 25px;
+  display: flex;
+}
+.Button_4_1330 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 33554400px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_4_1331 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_4_1333 {
+  justify-content: center;
+  align-items: center;
+  width: 139px;
+  height: 28px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.ConfirmStake_4_1334 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 142px;
+  height: 25px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_4_1335 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 33554400px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_4_1336 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_4_1338 {
+  flex-flow: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+  height: 686px;
+  padding: 32px 24px 107px;
+  display: flex;
+}
+.Container_4_1339 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 382px;
+  display: flex;
+}
+.Container_4_1340 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 137.75px;
+  height: 20px;
+  display: flex;
+}
+.Container_4_1341 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.StakeAmount_4_1342 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  width: 121px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1343 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 127px;
+  height: 16px;
+  display: flex;
+}
+.Available_4_1344 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 60px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_4_1345 {
+  justify-content: center;
+  align-items: center;
+  width: 69px;
+  height: 15px;
+  display: flex;
+}
+._00Gft_4_1346 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 71px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_4_1347 {
+  height: 16px;
+}
+.Container_4_1348 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 108px;
+  display: flex;
+}
+.Container_4_1349 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 2px solid #1e293b;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 382px;
+  height: 108px;
+  padding: 34px 96.5px;
+  display: flex;
+}
+._00_4_1350 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 189px;
+  height: 40px;
+  font-family: Plus Jakarta Sans;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 40px;
+  display: inline-block;
+}
+.Container_4_1351 {
+  justify-content: center;
+  align-items: center;
+  width: 70px;
+  height: 40px;
+  display: flex;
+}
+.Container_4_1352 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 70px;
+  display: flex;
+}
+.Gft_4_1353 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 73px;
+  height: 45px;
+  font-family: Plus Jakarta Sans;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 40px;
+  display: inline-block;
+}
+.Button_4_1354 {
+  background: #4ade801a;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 64px;
+  height: 36px;
+  padding: 9px 14.5px;
+  display: flex;
+}
+.Max_4_1355 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 35px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1356 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 382px;
+  height: 210px;
+  display: flex;
+}
+.Container_4_1357 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 20px;
+  padding: 1px 233.5px 1px 0;
+  display: flex;
+}
+.StakingSummary_4_1358 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  width: 150px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1359 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  height: 174px;
+  padding: 21px;
+  display: flex;
+}
+.Container_4_1360 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 155.766px;
+  width: 340px;
+  height: 20px;
+  display: flex;
+}
+.Container_4_1361 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.CurrentStake_4_1362 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 94px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1363 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+._250_00Gft_4_1364 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 96px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1365 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 143.453px;
+  width: 340px;
+  height: 20px;
+  display: flex;
+}
+.Container_4_1366 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.StakingRewardApy_4_1367 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 134px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1368 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  display: flex;
+}
+.Container_4_1369 {
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+}
+.Container_4_1371 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+._5_4_1372 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  width: 46px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1373 {
+  background: #1e293b80;
+  flex-shrink: 0;
+  width: 340px;
+  height: 1px;
+}
+.Container_4_1374 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 83.2344px;
+  height: 43px;
+  display: flex;
+}
+.Container_4_1375 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2px;
+  width: 125px;
+  height: 37px;
+  display: flex;
+}
+.Container_4_1376 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.NewTotalBalance_4_1377 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  width: 128px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1378 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 15px;
+  padding: 1px 38px 2px 0;
+  display: flex;
+}
+.AfterConfirmation_4_1379 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 88px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_4_1380 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0;
+  height: 43px;
+  display: flex;
+}
+.Container_4_1381 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 28px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+._250_00Gft_4_1382 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  width: 135px;
+  height: 25px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_4_1383 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 68px;
+  height: 15px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+._00Gbp_4_1384 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 70px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_4_1385 {
+  box-sizing: border-box;
+  background: #14532d1a;
+  border: 1px solid #4ade8033;
+  border-radius: 16px;
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 382px;
+  height: 97px;
+  padding: 17px;
+  display: flex;
+}
+.Container_4_1386 {
+  background: #4ade8033;
+  border-radius: 16px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_4_1387 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_4_1389 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  width: 292px;
+  height: 63px;
+  display: flex;
+}
+.Container_4_1390 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 20px;
+  padding: 1px 193.5px 1px 0;
+  display: flex;
+}
+.LiquidStaking_4_1391 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  width: 100px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4_1392 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 39px;
+  padding: 2px 5px 2px 0;
+  display: flex;
+}
+.YourGftRemainsLiquidThereIsNoLockUpPeriodAndYouCanUnstakeOrClaimRewardsAtAnyTime_4_1393 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 288px;
+  height: 35px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 19.5px;
+  display: inline-block;
+}
+.Container_4_1394 {
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+  background: #020617cc;
+  border-top: 1px solid #1e293b4d;
+  justify-content: center;
+  align-items: center;
+  height: 133px;
+  padding: 25px 24px 40px;
+  display: flex;
+}
+.Button_4_1395 {
+  background: #4ade80;
+  border-radius: 16px;
+  flex-flow: row;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  width: 382px;
+  height: 68px;
+  padding: 20px 110.344px 20px 110.656px;
+  display: flex;
+  box-shadow: 0 0 20px -5px #4ade80;
+}
+.Container_4_1396 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_4_1398 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 125px;
+  height: 28px;
+  padding: 2px 0 3px;
+  display: flex;
+}
+.ConfirmStake_4_1399 {
+  color: #022c22;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 128px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+
+```
+
+---
+
+```src/components/StakeEnterAmount.tsx
+import React from 'react';
+import styles from '../styles/StakeEnterAmount.module.css';
+
+
+export default function StakeEnterAmount() {
+  return (
+    <div className={styles.StakeEnterAmount_4_1326}>
+      <div className={styles.Container_4_1327}>
+        <div className={styles.Container_4_1328}>
+          <div className={styles.Container_4_1329}>
+            <div className={styles.Button_4_1330}>
+              <div className={styles.Container_4_1331}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_4_1333}><span className={styles.ConfirmStake_4_1334}>Confirm Stake</span></div>
+            <div className={styles.Container_4_1335}>
+              <div className={styles.Container_4_1336}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M22 12C22 17.523 17.523 22 12 22C6.477 22 2 17.523 2 12C2 6.477 6.477 2 12 2C17.523 2 22 6.477 22 12ZM12 17.75C12.4142 17.75 12.75 17.4142 12.75 17V11C12.75 10.5858 12.4142 10.25 12 10.25C11.5858 10.25 11.25 10.5858 11.25 11V17C11.25 17.414 11.586 17.75 12 17.75ZM12 7C12.5523 7 13 7.44772 13 8C13 8.55228 12.5523 9 12 9C11.4477 9 11 8.55228 11 8C11 7.44772 11.4477 7 12 7Z" fill="#4ADE80" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_4_1338}>
+            <div className={styles.Container_4_1339}>
+              <div className={styles.Container_4_1340}>
+                <div className={styles.Container_4_1341}><span className={styles.StakeAmount_4_1342}>Stake Amount</span></div>
+                <div className={styles.Container_4_1343}><span className={styles.Available_4_1344}>Available:</span>
+                  <div className={styles.Container_4_1345}><span className={styles._00Gft_4_1346}>790.00 GFT</span></div>
+                </div>
+              </div>
+              <div className={styles.Container_4_1347}></div>
+              <div className={styles.Container_4_1348}>
+                <div className={styles.Container_4_1349}><span className={styles._00_4_1350}>0.00</span></div>
+                <div className={styles.Container_4_1351}>
+                  <div className={styles.Container_4_1352}><span className={styles.Gft_4_1353}>GFT</span></div>
+                </div>
+                <div className={styles.Button_4_1354}><span className={styles.Max_4_1355}>MAX</span></div>
+              </div>
+            </div>
+            <div className={styles.Container_4_1356}>
+              <div className={styles.Container_4_1357}><span className={styles.StakingSummary_4_1358}>Staking Summary</span></div>
+              <div className={styles.Container_4_1359}>
+                <div className={styles.Container_4_1360}>
+                  <div className={styles.Container_4_1361}><span className={styles.CurrentStake_4_1362}>Current Stake</span></div>
+                  <div className={styles.Container_4_1363}><span className={styles._250_00Gft_4_1364}>1,250.00 GFT</span></div>
+                </div>
+                <div className={styles.Container_4_1365}>
+                  <div className={styles.Container_4_1366}><span className={styles.StakingRewardApy_4_1367}>Staking Reward APY</span></div>
+                  <div className={styles.Container_4_1368}>
+                    <div className={styles.Container_4_1369}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M2.30949 2.30934C1.3335 3.28667 1.3335 4.85734 1.3335 8C1.3335 11.1427 1.3335 12.714 2.30949 13.69C3.28683 14.6667 4.85749 14.6667 8.00015 14.6667C11.1428 14.6667 12.7141 14.6667 13.6901 13.69C14.6668 12.7147 14.6668 11.1427 14.6668 8C14.6668 4.85734 14.6668 3.28601 13.6901 2.30934C12.7148 1.33334 11.1428 1.33334 8.00015 1.33334C4.85749 1.33334 3.28616 1.33334 2.30949 2.30934ZM9.16682 6.66667C9.16682 6.94267 9.39082 7.16667 9.66682 7.16667H10.1268L8.78482 8.50867C8.75355 8.54001 8.71109 8.55763 8.66682 8.55763C8.62254 8.55763 8.58009 8.54001 8.54882 8.50867L7.49149 7.45133C7.03594 6.99611 6.2977 6.99611 5.84216 7.45133L4.31349 8.98C4.17972 9.10465 4.12466 9.29237 4.1699 9.46952C4.21514 9.64668 4.35348 9.78501 4.53063 9.83025C4.70779 9.8755 4.89551 9.82043 5.02016 9.68666L6.54882 8.158C6.58009 8.12665 6.62255 8.10904 6.66682 8.10904C6.7111 8.10904 6.75355 8.12665 6.78482 8.158L7.84215 9.21533C8.2977 9.67055 9.03594 9.67055 9.49148 9.21533L10.8335 7.874V8.33333C10.8335 8.60948 11.0573 8.83333 11.3335 8.83333C11.6096 8.83333 11.8335 8.60948 11.8335 8.33333V6.66667C11.8335 6.39053 11.6096 6.16667 11.3335 6.16667H9.66682C9.39067 6.16667 9.16682 6.39053 9.16682 6.66667Z" fill="#4ADE80" />
+                      </svg>
+                    </div>
+                    <div className={styles.Container_4_1371}><span className={styles._5_4_1372}>12.5%</span></div>
+                  </div>
+                </div>
+                <div className={styles.Container_4_1373}></div>
+                <div className={styles.Container_4_1374}>
+                  <div className={styles.Container_4_1375}>
+                    <div className={styles.Container_4_1376}><span className={styles.NewTotalBalance_4_1377}>New Total Balance</span></div>
+                    <div className={styles.Container_4_1378}><span className={styles.AfterConfirmation_4_1379}>After confirmation</span></div>
+                  </div>
+                  <div className={styles.Container_4_1380}>
+                    <div className={styles.Container_4_1381}><span className={styles._250_00Gft_4_1382}>1,250.00 GFT</span></div>
+                    <div className={styles.Container_4_1383}><span className={styles._00Gbp_4_1384}>&#x2248; &#xA3;70.00 GBP</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_4_1385}>
+              <div className={styles.Container_4_1386}>
+                <div className={styles.Container_4_1387}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M5.25 10.055V8C5.25 4.27208 8.27208 1.25 12 1.25C15.7279 1.25 18.75 4.27208 18.75 8V10.055C19.865 10.138 20.59 10.348 21.121 10.879C22 11.757 22 13.172 22 16C22 18.828 22 20.243 21.121 21.121C20.243 22 18.828 22 16 22H8C5.172 22 3.757 22 2.879 21.121C2 20.243 2 18.828 2 16C2 13.172 2 11.757 2.879 10.879C3.409 10.348 4.135 10.138 5.25 10.055ZM6.75 8C6.75 5.10051 9.1005 2.75 12 2.75C14.8995 2.75 17.25 5.10051 17.25 8V10.004C16.8673 10.0007 16.4507 9.99933 16 10H8C7.54867 9.99933 7.132 10.0007 6.75 10.004V8Z" fill="#4ADE80" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Container_4_1389}>
+                <div className={styles.Container_4_1390}><span className={styles.LiquidStaking_4_1391}>Liquid Staking</span></div>
+                <div className={styles.Container_4_1392}><span className={styles.YourGftRemainsLiquidThereIsNoLockUpPeriodAndYouCanUnstakeOrClaimRewardsAtAnyTime_4_1393}>Your GFT remains liquid. There is no lock-up period, and you can unstake or claim rewards at any time.</span></div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_4_1394}>
+            <div className={styles.Button_4_1395}>
+              <div className={styles.Container_4_1396}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M22 12C22 17.523 17.523 22 12 22C6.477 22 2 17.523 2 12C2 6.477 6.477 2 12 2C17.523 2 22 6.477 22 12ZM16.03 8.97C16.3225 9.26282 16.3225 9.73718 16.03 10.03L11.03 15.03C10.7372 15.3225 10.2628 15.3225 9.97 15.03L7.97 13.03C7.76935 12.843 7.68675 12.5614 7.75461 12.2957C7.82248 12.03 8.02998 11.8225 8.29571 11.7546C8.56144 11.6868 8.84303 11.7693 9.03 11.97L10.5 13.44L12.735 11.205L14.97 8.97C15.2628 8.67755 15.7372 8.67755 16.03 8.97Z" fill="#022C22" />
+                </svg>
+              </div>
+              <div className={styles.Container_4_1398}><span className={styles.ConfirmStake_4_1399}>Confirm Stake</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
