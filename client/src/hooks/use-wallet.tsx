@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, ReactNode, useCallback, useRef } from 'react';
+import { createContext, useContext, useEffect, ReactNode, useCallback, useRef, useState } from 'react';
 import { useAccount, useDisconnect, useWalletClient, useChainId } from 'wagmi';
 import { useOpenConnectModal } from '@0xsequence/connect';
 import { createPublicClient, http, type PublicClient, type Address } from 'viem';
@@ -47,8 +47,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const { user, refreshUser } = useAuth();
   const { toast } = useToast();
   const lastSavedAddress = useRef<string | null>(null);
+  const [userInitiatedConnect, setUserInitiatedConnect] = useState(false);
 
-  const { address, isConnected, isConnecting } = useAccount();
+  const { address, isConnected, isConnecting: wagmiIsConnecting } = useAccount();
   const { disconnect: wagmiDisconnect } = useDisconnect();
   const { data: walletClient } = useWalletClient();
   const chainId = useChainId();
@@ -57,6 +58,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const walletAddress = (address as Address) || null;
   const isReady = isConnected && !!address;
   const isEmbeddedWallet = isConnected && !!walletClient;
+  
+  const isConnecting = userInitiatedConnect && wagmiIsConnecting;
+
+  useEffect(() => {
+    if (isReady && userInitiatedConnect) {
+      setUserInitiatedConnect(false);
+    }
+  }, [isReady, userInitiatedConnect]);
 
   useEffect(() => {
     if (isReady && walletAddress && user && walletAddress !== lastSavedAddress.current) {
@@ -76,11 +85,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       });
       return;
     }
+    setUserInitiatedConnect(true);
     setOpenConnectModal(true);
   }, [user, setOpenConnectModal, toast]);
 
   const disconnect = useCallback(() => {
     wagmiDisconnect();
+    setUserInitiatedConnect(false);
     toast({
       title: 'Wallet disconnected',
       description: 'Your wallet has been disconnected',
