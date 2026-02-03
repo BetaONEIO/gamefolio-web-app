@@ -841,32 +841,32 @@ export default function StorePage() {
                       </button>
                     </div>
                     
-                    <div className="p-3 space-y-2">
+                    <div className="p-2 space-y-1.5">
                       <div>
-                        <h3 className="font-semibold text-sm line-clamp-1">{nft.name}</h3>
-                        <p className="text-xs text-gray-400">by {nft.owner}</p>
-                        <Badge className={`mt-1 text-xs ${
-                          nft.rarity === "legendary" ? "bg-yellow-600" :
-                          nft.rarity === "epic" ? "bg-purple-600" :
-                          nft.rarity === "rare" ? "bg-blue-600" : "bg-gray-600"
+                        <h3 className="font-semibold text-xs line-clamp-1">{nft.name}</h3>
+                        <p className="text-[10px] text-gray-400">by {nft.owner}</p>
+                        <Badge className={`mt-1 text-[10px] px-1.5 py-0.5 ${
+                          nft.rarity === "legendary" ? "bg-gradient-to-r from-yellow-500 to-amber-600" :
+                          nft.rarity === "epic" ? "bg-gradient-to-r from-purple-500 to-pink-600" :
+                          nft.rarity === "rare" ? "bg-gradient-to-r from-blue-500 to-cyan-600" : "bg-gray-600"
                         }`}>
                           {nft.rarity}
                         </Badge>
                       </div>
                       
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-700">
+                      <div className="flex items-center justify-between pt-1.5 border-t border-gray-700">
                         <div>
-                          <p className="text-[10px] text-gray-500">Price</p>
-                          <div className="flex items-center gap-1">
-                            <img src={gfTokenLogo} alt="GF" className="w-4 h-4" />
-                            <span className="text-sm font-bold text-[#4ade80]">{nft.price}</span>
+                          <p className="text-[9px] text-gray-500">Price</p>
+                          <div className="flex items-center gap-0.5">
+                            <img src={gfTokenLogo} alt="GF" className="w-3 h-3" />
+                            <span className="text-xs font-bold text-[#4ade80]">{nft.price}</span>
                           </div>
                         </div>
                         <Button
                           size="sm"
-                          className="bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22] text-xs h-8"
+                          className="bg-gradient-to-r from-[#4ade80] to-[#22c55e] hover:from-[#22c55e] hover:to-[#16a34a] text-[#022c22] text-[10px] h-6 px-2"
                         >
-                          <ShoppingCart className="h-3 w-3 mr-1" />
+                          <ShoppingCart className="h-2.5 w-2.5 mr-0.5" />
                           Buy
                         </Button>
                       </div>
@@ -914,31 +914,31 @@ export default function StorePage() {
                       )}
                     </div>
                     
-                    <div className="p-3 space-y-2">
+                    <div className="p-2 space-y-1.5">
                       <div>
-                        <h3 className="font-semibold text-sm md:text-base mb-1 line-clamp-1" data-testid={`text-item-name-${item.id}`}>
+                        <h3 className="font-semibold text-xs mb-0.5 line-clamp-1" data-testid={`text-item-name-${item.id}`}>
                           {item.name}
                         </h3>
-                        <p className="text-xs text-gray-400 line-clamp-2" data-testid={`text-item-description-${item.id}`}>
+                        <p className="text-[10px] text-gray-400 line-clamp-2" data-testid={`text-item-description-${item.id}`}>
                           {item.description}
                         </p>
                         {item.rarity && (
-                          <Badge className={`mt-1 text-xs ${
-                            item.rarity === "legendary" ? "bg-yellow-600" :
-                            item.rarity === "epic" ? "bg-purple-600" :
-                            item.rarity === "rare" ? "bg-blue-600" : "bg-gray-600"
+                          <Badge className={`mt-1 text-[10px] px-1.5 py-0.5 ${
+                            item.rarity === "legendary" ? "bg-gradient-to-r from-yellow-500 to-amber-600" :
+                            item.rarity === "epic" ? "bg-gradient-to-r from-purple-500 to-pink-600" :
+                            item.rarity === "rare" ? "bg-gradient-to-r from-blue-500 to-cyan-600" : "bg-gray-600"
                           }`}>
                             {item.rarity}
                           </Badge>
                         )}
                       </div>
                       
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-700">
+                      <div className="flex items-center justify-between pt-1.5 border-t border-gray-700">
                         <div>
-                          <p className="text-xs text-gray-400">Price</p>
-                          <div className="flex items-center gap-1">
-                            <img src={gfTokenLogo} alt="GF Token" className="w-4 h-4" />
-                            <p className="text-sm md:text-base font-bold text-blue-400" data-testid={`text-item-price-${item.id}`}>
+                          <p className="text-[9px] text-gray-500">Price</p>
+                          <div className="flex items-center gap-0.5">
+                            <img src={gfTokenLogo} alt="GF Token" className="w-3 h-3" />
+                            <p className="text-xs font-bold text-blue-400" data-testid={`text-item-price-${item.id}`}>
                               {item.gfCost} GF
                             </p>
                           </div>
@@ -947,28 +947,28 @@ export default function StorePage() {
                         {isOwned ? (
                           <Button
                             size="sm"
-                            className="bg-green-600 hover:bg-green-600 text-xs cursor-default"
+                            className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-[10px] h-6 px-2 cursor-default"
                             disabled
                           >
-                            <CheckCircle className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                            <CheckCircle className="h-2.5 w-2.5 mr-0.5" />
                             Owned
                           </Button>
                         ) : (
                           <Button
                             size="sm"
-                            className="bg-blue-600 hover:bg-blue-700 text-xs"
+                            className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white text-[10px] h-6 px-2"
                             onClick={() => handlePurchaseWithGF(item)}
                             disabled={isPurchasing}
                             data-testid={`button-buy-item-${item.id}`}
                           >
                             {isPurchasing ? (
                               <>
-                                <Loader2 className="h-3 w-3 md:h-4 md:w-4 mr-1 animate-spin" />
+                                <Loader2 className="h-2.5 w-2.5 mr-0.5 animate-spin" />
                                 Buying...
                               </>
                             ) : (
                               <>
-                                <ShoppingCart className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                                <ShoppingCart className="h-2.5 w-2.5 mr-0.5" />
                                 Buy
                               </>
                             )}
