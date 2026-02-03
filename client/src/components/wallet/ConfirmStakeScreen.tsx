@@ -57,6 +57,11 @@ export default function ConfirmStakeScreen({
       <StakeSuccessScreen
         onBack={onBack}
         onDone={() => onConfirm(stakedAmount)}
+        onStakeMore={() => {
+          setAmount("");
+          setStakedAmount(0);
+          setFlowStep("confirm");
+        }}
         amount={stakedAmount}
         newTotalStaked={currentStake + stakedAmount}
         apy={apy}
