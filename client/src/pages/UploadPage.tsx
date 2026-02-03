@@ -790,7 +790,7 @@ const UploadPage = () => {
   };
 
   return (
-    <div className="py-6">
+    <div className="p-6">
       <div className="flex items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Upload Content</h1>
       </div>
