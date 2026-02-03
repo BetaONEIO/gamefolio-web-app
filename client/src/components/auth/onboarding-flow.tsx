@@ -563,6 +563,12 @@ export default function OnboardingFlow({
         return;
       }
       
+      // Show immediate preview using local blob URL
+      const localPreviewUrl = URL.createObjectURL(file);
+      setAvatarUrl(localPreviewUrl);
+      setAvatarFile(file);
+      
+      // Upload to server in background
       handleAvatarUpload(file);
     }
   };
