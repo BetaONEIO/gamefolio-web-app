@@ -72,31 +72,61 @@ const LeaderboardPage = () => {
   // Fetch all-time leaderboard data from API
   const { data: allTimeData, isLoading: allTimeLoading } = useQuery<PointsLeaderboardEntry[]>({
     queryKey: ["/api/leaderboard"],
+    queryFn: async () => {
+      const res = await fetch("/api/leaderboard");
+      if (!res.ok) throw new Error("Failed to fetch leaderboard");
+      return res.json();
+    },
   });
 
   // Fetch weekly leaderboard
   const { data: weeklyData, isLoading: weeklyLoading } = useQuery<PointsLeaderboardEntry[]>({
     queryKey: ["/api/leaderboard/weekly/current"],
+    queryFn: async () => {
+      const res = await fetch("/api/leaderboard/weekly/current");
+      if (!res.ok) throw new Error("Failed to fetch weekly leaderboard");
+      return res.json();
+    },
   });
 
   // Fetch monthly leaderboard
   const { data: monthlyData, isLoading: monthlyLoading } = useQuery<PointsLeaderboardEntry[]>({
     queryKey: ["/api/leaderboard/monthly/current"],
+    queryFn: async () => {
+      const res = await fetch("/api/leaderboard/monthly/current");
+      if (!res.ok) throw new Error("Failed to fetch monthly leaderboard");
+      return res.json();
+    },
   });
 
   // Fetch historic monthly winners
   const { data: historicMonthlyData, isLoading: historicMonthlyLoading } = useQuery<TopContributor[]>({
     queryKey: ["/api/leaderboard/top-contributors/monthly"],
+    queryFn: async () => {
+      const res = await fetch("/api/leaderboard/top-contributors/monthly");
+      if (!res.ok) throw new Error("Failed to fetch historic monthly winners");
+      return res.json();
+    },
   });
 
   // Fetch historic weekly winners
   const { data: historicWeeklyData, isLoading: historicWeeklyLoading } = useQuery<TopContributor[]>({
     queryKey: ["/api/leaderboard/top-contributors/weekly"],
+    queryFn: async () => {
+      const res = await fetch("/api/leaderboard/top-contributors/weekly");
+      if (!res.ok) throw new Error("Failed to fetch historic weekly winners");
+      return res.json();
+    },
   });
 
   // Fetch XP leaderboard
   const { data: xpData, isLoading: xpLoading } = useQuery<XPLeaderboardEntry[]>({
     queryKey: ["/api/xp/leaderboard"],
+    queryFn: async () => {
+      const res = await fetch("/api/xp/leaderboard");
+      if (!res.ok) throw new Error("Failed to fetch XP leaderboard");
+      return res.json();
+    },
   });
 
   const getRankBadgeColor = (rank: number) => {
