@@ -1493,14 +1493,44 @@ const ProfilePage = () => {
               }}
             />
             
-            {/* Top horizontal line - fades to right */}
+            {/* Top horizontal line - fades to right with Collection button */}
             <div 
-              className="absolute top-0 -left-1 h-[2px]"
+              className="absolute top-0 -left-1 h-[2px] flex items-center"
               style={{
                 width: 'calc(100% + 4px)',
                 background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, transparent 100%)`,
               }}
-            />
+            >
+              {/* Collection button at the end of top line */}
+              <button 
+                onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
+                className="px-3 py-1 text-xs font-semibold rounded-full hover:opacity-90 hover:scale-105 transition-all"
+                style={{ 
+                  position: 'absolute',
+                  top: '-12px',
+                  right: '0px',
+                  background: profileSectionTab === 'collection'
+                    ? '#1a1a2e'
+                    : 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
+                  color: profileSectionTab === 'collection' ? '#ffffff' : '#1f2937',
+                  border: '2px solid transparent',
+                  backgroundClip: 'padding-box',
+                }}
+              >
+                <span 
+                  className="absolute inset-0 rounded-full pointer-events-none"
+                  style={{
+                    background: 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
+                    padding: '2px',
+                    mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                    maskComposite: 'xor',
+                    WebkitMaskComposite: 'xor',
+                    opacity: profileSectionTab === 'collection' ? 1 : 0,
+                  }}
+                />
+                Collection
+              </button>
+            </div>
             
             {/* Left vertical line - fades downward */}
             <div 
@@ -1513,43 +1543,49 @@ const ProfilePage = () => {
 
             {/* Content */}
             <div className="pl-0 pt-4 pb-4 pr-4">
-              {/* Stats - Horizontal row with uppercase labels */}
-              <div className="flex gap-6 mb-3 items-start">
-                <div className="flex flex-col">
-                  <span className="font-bold text-lg">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                  <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>UPLOADS</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-bold text-lg">{Number(profile._count?.followers || 0)}</span>
-                  <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>FOLLOWERS</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-bold text-lg">{Number(profile._count?.following || 0)}</span>
-                  <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>FOLLOWING</span>
-                </div>
-              </div>
+              {profileSectionTab === 'stats' ? (
+                <>
+                  {/* Stats - Horizontal row with uppercase labels */}
+                  <div className="flex gap-6 mb-3 items-start">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-lg">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                      <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>UPLOADS</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-lg">{Number(profile._count?.followers || 0)}</span>
+                      <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>FOLLOWERS</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-lg">{Number(profile._count?.following || 0)}</span>
+                      <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>FOLLOWING</span>
+                    </div>
+                  </div>
 
-              {/* Member since date - uppercase */}
-              {profile.createdAt && (
-                <div className="mb-2">
-                  <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>
-                    MEMBER SINCE {new Date(profile.createdAt).toLocaleDateString('en-US', { 
-                      year: 'numeric', 
-                      month: 'long' 
-                    }).toUpperCase()}
-                  </span>
-                </div>
-              )}
+                  {/* Member since date - uppercase */}
+                  {profile.createdAt && (
+                    <div className="mb-2">
+                      <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>
+                        MEMBER SINCE {new Date(profile.createdAt).toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'long' 
+                        }).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
 
-              {/* Bio/description - left aligned */}
-              {profile.bio && (
-                <p className="text-sm text-foreground/90 mb-3 pr-4">{profile.bio}</p>
+                  {/* Bio/description - left aligned */}
+                  {profile.bio && (
+                    <p className="text-sm text-foreground/90 mb-3 pr-4">{profile.bio}</p>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-foreground/70 mt-4">Coming soon</p>
               )}
             </div>
           </div>
 
-          {/* Platform tags and Social Links */}
-          <div className="flex flex-wrap gap-1.5 mb-4 pl-2 pr-8">
+          {/* Platform tags and Social Links - hidden when collection tab is active */}
+          {profileSectionTab === 'stats' && <div className="flex flex-wrap gap-1.5 mb-4 pl-2 pr-8">
             {profile.steamUsername && (
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(27, 40, 56, 0.8)', color: '#FFFFFF' }}>
                 <SiSteam className="w-2.5 h-2.5" />
@@ -1634,7 +1670,7 @@ const ProfilePage = () => {
                 <span>{profile.facebookUsername}</span>
               </a>
             )}
-          </div>
+          </div>}
         </div>
 
         {/* Desktop Layout - Vertical stacked on left */}
