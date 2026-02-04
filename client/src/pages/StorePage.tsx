@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useCrossmint } from "@/hooks/use-crossmint";
 import { Link } from "wouter";
-import { ShoppingCart, DollarSign, Sparkles, Wallet, Menu, Filter, Heart, Loader2, CheckCircle } from "lucide-react";
+import { ShoppingCart, DollarSign, Sparkles, Wallet, Menu, Filter, Heart, Loader2, CheckCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -44,7 +44,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-type TabType = "buy" | "sell" | "mint";
+type TabType = "buy" | "sell" | "mint" | "watchlist";
 
 interface StoreItem {
   id: number;
@@ -527,21 +527,27 @@ export default function StorePage() {
 
       <div className="my-4 border-t border-gray-700" />
 
-      <Link href="/watchlist">
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-3 hover:bg-gray-800"
-          data-testid="button-watchlist"
-        >
-          <Heart className="h-5 w-5" />
-          My Watchlist
-          {watchlist.length > 0 && (
-            <Badge variant="secondary" className="ml-auto">
-              {watchlist.length}
-            </Badge>
-          )}
-        </Button>
-      </Link>
+      <Button
+        variant={activeTab === "watchlist" ? "default" : "ghost"}
+        className={`w-full justify-start gap-3 ${
+          activeTab === "watchlist" 
+            ? "bg-red-600 hover:bg-red-700" 
+            : "hover:bg-gray-800"
+        }`}
+        onClick={() => {
+          setActiveTab("watchlist");
+          setMobileMenuOpen(false);
+        }}
+        data-testid="button-watchlist"
+      >
+        <Heart className="h-5 w-5" />
+        My Watchlist
+        {watchlist.length > 0 && (
+          <Badge variant="secondary" className="ml-auto">
+            {watchlist.length}
+          </Badge>
+        )}
+      </Button>
 
       <div className="mt-8 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
         <div className="flex items-center gap-2 mb-2">
@@ -643,22 +649,27 @@ export default function StorePage() {
 
                 <div className="my-4 border-t border-gray-700" />
 
-                <Link href="/watchlist">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start gap-3 hover:bg-gray-800"
-                    onClick={() => setMobileMenuOpen(false)}
-                    data-testid="button-watchlist-mobile"
-                  >
-                    <Heart className="h-5 w-5" />
-                    My Watchlist
-                    {watchlist.length > 0 && (
-                      <Badge variant="secondary" className="ml-auto">
-                        {watchlist.length}
-                      </Badge>
-                    )}
-                  </Button>
-                </Link>
+                <Button
+                  variant={activeTab === "watchlist" ? "default" : "ghost"}
+                  className={`w-full justify-start gap-3 ${
+                    activeTab === "watchlist" 
+                      ? "bg-red-600 hover:bg-red-700" 
+                      : "hover:bg-gray-800"
+                  }`}
+                  onClick={() => {
+                    setActiveTab("watchlist");
+                    setMobileMenuOpen(false);
+                  }}
+                  data-testid="button-watchlist-mobile"
+                >
+                  <Heart className="h-5 w-5" />
+                  My Watchlist
+                  {watchlist.length > 0 && (
+                    <Badge variant="secondary" className="ml-auto">
+                      {watchlist.length}
+                    </Badge>
+                  )}
+                </Button>
 
                 <div className="mt-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
                   <div className="flex items-center gap-2 mb-2">
@@ -729,15 +740,18 @@ export default function StorePage() {
               <Sparkles className="h-4 w-4" />
               Mint NFT
             </button>
-            <Link href="/watchlist">
-              <button
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors bg-gray-800/50 text-gray-400 hover:bg-gray-800"
-                data-testid="tab-watchlist-mobile"
-              >
-                <Heart className="h-4 w-4" />
-                Watchlist
-              </button>
-            </Link>
+            <button
+              onClick={() => setActiveTab("watchlist")}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
+                activeTab === "watchlist"
+                  ? "bg-red-600 text-white"
+                  : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
+              }`}
+              data-testid="tab-watchlist-mobile"
+            >
+              <Heart className="h-4 w-4" />
+              Watchlist
+            </button>
           </div>
 
           {/* Header */}
@@ -748,6 +762,7 @@ export default function StorePage() {
                   {activeTab === "buy" && "Browse and purchase exclusive Gamefolio NFT avatars for your profile"}
                   {activeTab === "sell" && "List your NFTs for sale in the Gamefolio marketplace"}
                   {activeTab === "mint" && "Create and mint your own custom NFT avatars"}
+                  {activeTab === "watchlist" && "Your saved NFTs - track prices and never miss out on favorites"}
                 </p>
               </div>
               
@@ -1038,6 +1053,123 @@ export default function StorePage() {
                   Start Minting
                 </Button>
               </Link>
+            </div>
+          )}
+
+          {/* Watchlist Section */}
+          {activeTab === "watchlist" && (
+            <div>
+              {!user ? (
+                <div className="flex flex-col items-center justify-center min-h-[50vh] md:min-h-[60vh] px-4">
+                  <Heart className="h-16 w-16 md:h-20 md:w-20 text-gray-600 mb-4" />
+                  <h3 className="text-xl md:text-2xl font-semibold mb-2 text-center">
+                    Login Required
+                  </h3>
+                  <p className="text-sm md:text-base text-gray-400 text-center max-w-md">
+                    Please login to view your NFT watchlist
+                  </p>
+                  <Link href="/auth">
+                    <Button className="mt-6" data-testid="button-login-watchlist">
+                      Login
+                    </Button>
+                  </Link>
+                </div>
+              ) : watchlist.length === 0 ? (
+                <div className="flex flex-col items-center justify-center min-h-[50vh] md:min-h-[60vh] px-4">
+                  <Heart className="h-16 w-16 md:h-20 md:w-20 text-gray-600 mb-4" />
+                  <h3 className="text-xl md:text-2xl font-semibold mb-2 text-center" data-testid="heading-empty-watchlist">
+                    Your Watchlist is Empty
+                  </h3>
+                  <p className="text-sm md:text-base text-gray-400 text-center max-w-md" data-testid="text-empty-description">
+                    Start adding NFTs to your watchlist to track price changes and never miss out on your favorite items.
+                  </p>
+                  <Button 
+                    className="mt-6 bg-blue-600 hover:bg-blue-700" 
+                    onClick={() => setActiveTab("buy")}
+                    data-testid="button-browse-nfts"
+                  >
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    Browse NFTs
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+                  {watchlist.map((item: any) => (
+                    <Card
+                      key={item.id}
+                      className="bg-gray-800/50 border-gray-700 overflow-hidden hover:border-red-500 transition-all hover:shadow-lg hover:shadow-red-500/20"
+                      data-testid={`card-watchlist-${item.nftId}`}
+                    >
+                      <div className="relative aspect-square overflow-hidden">
+                        <img
+                          src={item.nftImage}
+                          alt={item.nftName}
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                        />
+                        <button
+                          onClick={() => removeFromWatchlistMutation.mutate(item.nftId)}
+                          className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+                          data-testid={`button-remove-${item.nftId}`}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </button>
+                        <Badge className="absolute top-2 left-2 bg-red-600 text-xs flex items-center gap-1">
+                          <Heart className="h-3 w-3 fill-white" />
+                          Saved
+                        </Badge>
+                      </div>
+
+                      <div className="p-2 space-y-1.5">
+                        <div>
+                          <h3 className="font-semibold text-xs line-clamp-1" data-testid={`text-nft-name-${item.nftId}`}>
+                            {item.nftName}
+                          </h3>
+                          <p className="text-[10px] text-gray-400">
+                            Added {new Date(item.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1.5 border-t border-gray-700">
+                          <div>
+                            <p className="text-[9px] text-gray-500">Price</p>
+                            <div className="flex items-center gap-0.5">
+                              <img src={gfTokenLogo} alt="GF Token" className="w-3 h-3" />
+                              <p className="text-xs font-bold text-blue-400" data-testid={`text-price-${item.nftId}`}>
+                                {item.nftPrice} GF
+                              </p>
+                            </div>
+                          </div>
+
+                          <Button
+                            size="sm"
+                            className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white text-[10px] h-6 px-2"
+                            onClick={() => {
+                              const nft: NFT = {
+                                id: item.nftId,
+                                name: item.nftName,
+                                image: item.nftImage,
+                                price: item.nftPrice,
+                                priceUSD: item.nftPrice * 0.05,
+                                description: "",
+                                forSale: true,
+                                rarity: "Epic",
+                                currentBid: item.nftPrice,
+                                owner: "Gamefolio",
+                              };
+                              setSelectedNFT(nft);
+                              setPurchaseDialogOpen(true);
+                            }}
+                            data-testid={`button-buy-${item.nftId}`}
+                          >
+                            <ShoppingCart className="h-2.5 w-2.5 mr-0.5" />
+                            Buy
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </main>
