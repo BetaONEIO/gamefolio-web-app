@@ -315,7 +315,7 @@ function CardForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenProps
 
         {/* Footer */}
         <div
-          className="px-6 pb-10 pt-6"
+          className="px-6 pb-24 pt-6"
           style={{
             background: "#020617",
             borderTop: "1px solid rgba(30, 41, 59, 0.3)",
