@@ -202,17 +202,11 @@ export default function StorePage() {
   // Add to watchlist mutation
   const addToWatchlistMutation = useMutation({
     mutationFn: async (nft: NFT) => {
-      return await apiRequest("/api/nft/watchlist", {
-        method: "POST",
-        body: JSON.stringify({
-          nftId: nft.id,
-          nftName: nft.name,
-          nftImage: nft.image,
-          nftPrice: nft.price,
-        }),
-        headers: {
-          "Content-Type": "application/json",
-        },
+      return await apiRequest("POST", "/api/nft/watchlist", {
+        nftId: nft.id,
+        nftName: nft.name,
+        nftImage: nft.image,
+        nftPrice: nft.price,
       });
     },
     onSuccess: () => {
@@ -234,9 +228,7 @@ export default function StorePage() {
   // Remove from watchlist mutation
   const removeFromWatchlistMutation = useMutation({
     mutationFn: async (nftId: number) => {
-      return await apiRequest(`/api/nft/watchlist/${nftId}`, {
-        method: "DELETE",
-      });
+      return await apiRequest("DELETE", `/api/nft/watchlist/${nftId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/nft/watchlist"] });
