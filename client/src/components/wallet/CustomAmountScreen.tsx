@@ -252,11 +252,10 @@ export default function CustomAmountScreen({
                 />
               </svg>
             </div>
-            <div className="flex flex-wrap text-xs" style={{ color: "#94a3b8" }}>
-              <span>The minimum purchase amount is </span>
-              <span className="font-bold text-white">£5.00</span>
-              <span>. Transaction fees are calculated at the next step.</span>
-            </div>
+            <p className="text-xs leading-5" style={{ color: "#94a3b8" }}>
+              The minimum purchase amount is{" "}
+              <span className="font-bold text-white">£5.00</span>. Transaction fees are calculated at the next step.
+            </p>
           </div>
 
           {/* Apply Button */}
