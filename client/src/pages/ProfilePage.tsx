@@ -1481,19 +1481,38 @@ const ProfilePage = () => {
             )}
           </div>
 
-          {/* Curved fading border container for profile info */}
-          <div 
-            className="relative my-4 mx-4 p-[1px] rounded-2xl"
-            style={{
-              background: `linear-gradient(90deg, transparent 0%, ${accentColor || 'hsl(var(--primary))'} 20%, ${accentColor || 'hsl(var(--primary))'} 80%, transparent 100%)`,
-            }}
-          >
+          {/* L-shaped fading border container for profile info */}
+          <div className="relative my-4 mx-4">
+            {/* Curved corner piece */}
             <div 
-              className="rounded-[15px] px-4 py-4"
-              style={{ 
-                backgroundColor: backgroundColor || '#0B2232',
+              className="absolute top-0 left-0 w-3 h-3 pointer-events-none"
+              style={{
+                borderLeft: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
+                borderTop: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
+                borderTopLeftRadius: '10px',
               }}
-            >
+            />
+            
+            {/* Top horizontal line - fades to right */}
+            <div 
+              className="absolute top-0 left-3 h-[2px]"
+              style={{
+                width: 'calc(100% - 12px)',
+                background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, transparent 100%)`,
+              }}
+            />
+            
+            {/* Left vertical line - fades downward */}
+            <div 
+              className="absolute top-3 left-0 w-[2px]"
+              style={{
+                height: 'calc(100% - 12px)',
+                background: `linear-gradient(180deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, transparent 100%)`,
+              }}
+            />
+
+            {/* Content */}
+            <div className="pl-5 pt-4 pb-4 pr-4">
               {/* Stats - Horizontal row with uppercase labels */}
               <div className="flex gap-6 mb-3 items-start">
                 <div className="flex flex-col">
