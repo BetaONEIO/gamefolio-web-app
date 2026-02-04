@@ -2171,7 +2171,7 @@ const ProfilePage = () => {
           </TabsList>
 
           {/* Clips Tab */}
-          <TabsContent value="clips" className="pt-4">
+          <TabsContent value="clips" className="pt-4 px-4">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
@@ -2311,7 +2311,7 @@ const ProfilePage = () => {
           </TabsContent>
 
           {/* Reels Tab */}
-          <TabsContent value="reels" className="pt-4">
+          <TabsContent value="reels" className="pt-4 px-4">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
@@ -2451,7 +2451,7 @@ const ProfilePage = () => {
           </TabsContent>
 
           {/* Screenshots Tab */}
-          <TabsContent value="screenshots" className="pt-4">
+          <TabsContent value="screenshots" className="pt-4 px-4">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
@@ -2590,7 +2590,7 @@ const ProfilePage = () => {
           </TabsContent>
 
           {/* Favorite Games Tab */}
-          <TabsContent value="favorites" className="pt-6">
+          <TabsContent value="favorites" className="pt-6 px-4">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
