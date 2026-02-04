@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 
 interface BuyGFTScreenProps {
@@ -19,6 +19,10 @@ export default function BuyGFTScreen({
   const [selectedAmount, setSelectedAmount] = useState(25);
   const [customAmount, setCustomAmount] = useState<number | null>(null);
   const [isCustom, setIsCustom] = useState(false);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const displayAmount = isCustom && customAmount !== null ? customAmount : selectedAmount;
   const gftReceived = displayAmount / GFT_RATE;

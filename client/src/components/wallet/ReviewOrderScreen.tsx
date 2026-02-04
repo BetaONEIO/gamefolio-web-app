@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useCrossmint } from "@/hooks/use-crossmint";
 
 interface ReviewOrderScreenProps {
@@ -21,6 +22,10 @@ export default function ReviewOrderScreen({
 }: ReviewOrderScreenProps) {
   const { wallet } = useCrossmint();
   const displayAddress = walletAddress || wallet?.address || "";
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   
   const truncateAddress = (address: string) => {
     if (!address) return "";
