@@ -1482,7 +1482,7 @@ const ProfilePage = () => {
           </div>
 
           {/* L-shaped fading border container for profile info */}
-          <div className="relative my-4 ml-2 mr-4">
+          <div className="relative my-4 mx-4">
             {/* Curved corner piece */}
             <div 
               className="absolute top-0 left-0 w-3 h-3 pointer-events-none"
@@ -1512,7 +1512,7 @@ const ProfilePage = () => {
             />
 
             {/* Content */}
-            <div className="pl-2 pt-4 pb-4 pr-4">
+            <div className="pl-0 pt-4 pb-4 pr-4 -ml-2">
               {/* Stats - Horizontal row with uppercase labels */}
               <div className="flex gap-6 mb-3 items-start">
                 <div className="flex flex-col">
