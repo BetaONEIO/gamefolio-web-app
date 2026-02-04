@@ -430,8 +430,8 @@ export default function WalletHomepage({
                 border: '1px solid rgba(30, 41, 59, 0.5)'
               }}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-0.5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                   <span 
                     className="text-xs uppercase"
                     style={{ color: '#94a3b8', fontSize: '10px' }}
@@ -439,7 +439,7 @@ export default function WalletHomepage({
                     Wallet Address
                   </span>
                   <span 
-                    className="font-mono text-sm font-medium"
+                    className="font-mono text-sm font-medium truncate"
                     style={{ color: '#f8fafc', fontFamily: 'JetBrains Mono, monospace', fontSize: '14px' }}
                   >
                     {shortenAddress(walletAddress)}
@@ -447,7 +447,7 @@ export default function WalletHomepage({
                 </div>
                 <button
                   onClick={handleCopyAddress}
-                  className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-white/5 transition-colors"
+                  className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-white/5 transition-colors flex-shrink-0"
                 >
                   {copied ? (
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
