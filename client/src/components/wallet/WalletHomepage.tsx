@@ -135,15 +135,15 @@ export default function WalletHomepage({
             >
               Total Balance
             </span>
-            <div className="flex items-baseline justify-center gap-2">
+            <div className="flex items-baseline justify-center gap-3">
               <span 
-                className="text-3xl md:text-4xl font-bold"
+                className="text-5xl md:text-6xl font-bold"
                 style={{ color: '#fff' }}
               >
                 {totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
               <span 
-                className="text-lg md:text-xl font-bold"
+                className="text-2xl md:text-3xl font-bold"
                 style={{ color: '#4ade80' }}
               >
                 GFT
