@@ -2135,12 +2135,12 @@ const ProfilePage = () => {
           className="w-full"
         >
           <TabsList 
-            className="w-full justify-center rounded-full h-12 md:h-14 p-1.5 relative flex gap-1 bg-[hsl(220,20%,14%)] border border-[hsl(220,15%,20%)]"
+            className="w-full justify-center rounded-full h-12 md:h-14 p-1.5 relative flex gap-1 !bg-[hsl(220,20%,14%)] border border-[hsl(220,15%,20%)]"
           >
             <TabsTrigger 
               ref={clipsTabRef}
               value="clips" 
-              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-4 md:px-6 text-sm font-medium ${activeTab === 'clips' ? 'text-white bg-[hsl(220,15%,22%)]' : 'text-gray-400 hover:text-gray-200 bg-transparent'}`}
+              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-4 md:px-6 text-sm font-medium !shadow-none ${activeTab === 'clips' ? 'text-white !bg-[hsl(220,15%,22%)]' : 'text-gray-400 hover:text-gray-200 !bg-transparent'}`}
             >
               Clips
             </TabsTrigger>
@@ -2148,7 +2148,7 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={reelsTabRef}
               value="reels" 
-              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-4 md:px-6 text-sm font-medium ${activeTab === 'reels' ? 'text-white bg-[hsl(220,15%,22%)]' : 'text-gray-400 hover:text-gray-200 bg-transparent'}`}
+              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-4 md:px-6 text-sm font-medium !shadow-none ${activeTab === 'reels' ? 'text-white !bg-[hsl(220,15%,22%)]' : 'text-gray-400 hover:text-gray-200 !bg-transparent'}`}
             >
               Reels
             </TabsTrigger>
@@ -2156,7 +2156,7 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={screenshotsTabRef}
               value="screenshots" 
-              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-3 md:px-6 text-xs md:text-sm font-medium ${activeTab === 'screenshots' ? 'text-white bg-[hsl(220,15%,22%)]' : 'text-gray-400 hover:text-gray-200 bg-transparent'}`}
+              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-3 md:px-6 text-xs md:text-sm font-medium !shadow-none ${activeTab === 'screenshots' ? 'text-white !bg-[hsl(220,15%,22%)]' : 'text-gray-400 hover:text-gray-200 !bg-transparent'}`}
             >
               Screenshots
             </TabsTrigger>
@@ -2164,7 +2164,7 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={favoritesTabRef}
               value="favorites" 
-              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-4 md:px-6 text-sm font-medium ${activeTab === 'favorites' ? 'text-white bg-[hsl(220,15%,22%)]' : 'text-gray-400 hover:text-gray-200 bg-transparent'}`}
+              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-4 md:px-6 text-sm font-medium !shadow-none ${activeTab === 'favorites' ? 'text-white !bg-[hsl(220,15%,22%)]' : 'text-gray-400 hover:text-gray-200 !bg-transparent'}`}
             >
               Favorites
             </TabsTrigger>
