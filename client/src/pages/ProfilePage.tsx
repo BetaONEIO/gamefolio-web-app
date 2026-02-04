@@ -1512,7 +1512,7 @@ const ProfilePage = () => {
             />
 
             {/* Content */}
-            <div className="pl-5 pt-4 pb-4 pr-4">
+            <div className="pl-2 pt-4 pb-4 pr-4">
               {/* Stats - Horizontal row with uppercase labels */}
               <div className="flex gap-6 mb-3 items-start">
                 <div className="flex flex-col">
