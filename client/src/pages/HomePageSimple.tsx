@@ -347,7 +347,7 @@ const HomePage = () => {
       <RecommendedForYou userId={userId} />
       
       {/* Latest Clips Section */}
-      <section className="px-2 sm:px-4 md:px-6">
+      <section className="px-4 sm:px-6 md:px-8">
         <div className="flex justify-between items-center mb-2">
           <h2 className="text-xl sm:text-2xl font-bold">Latest Clips</h2>
           <Link href="/latest-clips" className="text-primary text-sm font-medium hover:underline flex items-center">
@@ -379,7 +379,7 @@ const HomePage = () => {
       </section>
 
       {/* Latest Reels Section (9:16 aspect ratio) */}
-      <section className="px-2 sm:px-4 md:px-6 pt-6 sm:pt-8">
+      <section className="px-4 sm:px-6 md:px-8 pt-6 sm:pt-8">
         <div className="flex justify-between items-center mb-2">
           <h2 className="text-xl sm:text-2xl font-bold">Latest Reels</h2>
           <Link href="/latest-reels" className="text-primary text-sm font-medium hover:underline flex items-center">
