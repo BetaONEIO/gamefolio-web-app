@@ -867,7 +867,7 @@ export default function StorePage() {
                         className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
                       >
                         <Heart 
-                          className={`h-4 w-4 ${watchlist?.some((w: any) => w.nftId === nft.id) ? 'fill-red-500 text-red-500' : 'text-white'}`}
+                          className={`h-4 w-4 ${watchlist?.some((w: any) => w.nftId === nft.id) ? 'fill-green-400 text-green-400' : 'text-white'}`}
                         />
                       </button>
                     </div>
