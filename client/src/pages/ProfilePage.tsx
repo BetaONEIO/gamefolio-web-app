@@ -2135,7 +2135,7 @@ const ProfilePage = () => {
           className="w-full"
         >
           <TabsList 
-            className="w-full justify-center rounded-full h-12 md:h-14 p-1.5 relative flex gap-1 !bg-[hsl(220,20%,14%)] border border-[hsl(220,15%,20%)]"
+            className="w-[calc(100%-2rem)] mx-4 justify-center rounded-full h-12 md:h-14 p-1.5 relative flex gap-1 !bg-[hsl(220,20%,14%)] border border-[hsl(220,15%,20%)]"
           >
             <TabsTrigger 
               ref={clipsTabRef}
