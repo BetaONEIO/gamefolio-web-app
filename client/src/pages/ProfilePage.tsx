@@ -1481,14 +1481,19 @@ const ProfilePage = () => {
             )}
           </div>
 
-          {/* Curved border container for profile info */}
+          {/* Curved fading border container for profile info */}
           <div 
-            className="relative my-4 mx-4 rounded-2xl border-2 px-4 py-4"
+            className="relative my-4 mx-4 p-[1px] rounded-2xl"
             style={{
-              borderColor: accentColor || 'hsl(var(--primary))',
-              backgroundColor: `color-mix(in srgb, ${accentColor || 'hsl(var(--primary))'} 15%, ${backgroundColor || '#0B2232'})`,
+              background: `linear-gradient(90deg, transparent 0%, ${accentColor || 'hsl(var(--primary))'} 20%, ${accentColor || 'hsl(var(--primary))'} 80%, transparent 100%)`,
             }}
           >
+            <div 
+              className="rounded-[15px] px-4 py-4"
+              style={{ 
+                backgroundColor: backgroundColor || '#0B2232',
+              }}
+            >
               {/* Stats - Horizontal row with uppercase labels */}
               <div className="flex gap-6 mb-3 items-start">
                 <div className="flex flex-col">
@@ -1521,6 +1526,7 @@ const ProfilePage = () => {
               {profile.bio && (
                 <p className="text-sm text-foreground/90 mb-3 pr-4">{profile.bio}</p>
               )}
+            </div>
           </div>
 
           {/* Platform tags and Social Links */}
