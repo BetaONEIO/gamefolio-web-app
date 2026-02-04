@@ -2228,13 +2228,13 @@ const ProfilePage = () => {
                 </div>
               </div>
             ) : isLoadingClips ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <Skeleton key={i} className="aspect-video w-full rounded-xl" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <Skeleton key={i} className="aspect-video w-full rounded-lg" />
                 ))}
               </div>
             ) : clips && clips.filter(clip => clip.videoType !== 'reel').length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                 {clips
                   .filter(clip => clip.videoType !== 'reel')
                   .sort((a, b) => {
@@ -2368,13 +2368,13 @@ const ProfilePage = () => {
                 </div>
               </div>
             ) : isLoadingClips ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <Skeleton key={i} className="aspect-[9/16] w-full rounded-xl" />
+                  <Skeleton key={i} className="aspect-[9/16] w-full rounded-lg" />
                 ))}
               </div>
             ) : clips && clips.filter(clip => clip.videoType === 'reel').length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                 {clips
                   .filter(clip => clip.videoType === 'reel')
                   .sort((a, b) => {
@@ -2508,13 +2508,13 @@ const ProfilePage = () => {
                 </div>
               </div>
             ) : isLoadingScreenshots ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <Skeleton key={i} className="aspect-video w-full rounded-xl" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <Skeleton key={i} className="aspect-video w-full rounded-lg" />
                 ))}
               </div>
             ) : screenshots && screenshots.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 {[...screenshots]
                   .sort((a, b) => {
                     if (a.pinnedAt && !b.pinnedAt) return -1;
