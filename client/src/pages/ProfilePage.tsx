@@ -1546,7 +1546,7 @@ const ProfilePage = () => {
               {profileSectionTab === 'stats' ? (
                 <>
                   {/* Stats - Horizontal row with uppercase labels */}
-                  <div className="flex gap-4 mb-2 items-start">
+                  <div className="flex gap-4 mb-2 mt-2 items-start">
                     <div className="flex flex-col">
                       <span className="font-bold text-sm">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
                       <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>UPLOADS</span>
