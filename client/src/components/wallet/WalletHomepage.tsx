@@ -119,37 +119,13 @@ export default function WalletHomepage({
         }}
       >
         <div className="flex flex-col items-center gap-6 px-4 md:px-6 pt-8 md:pt-12 pb-6 md:pb-8 max-w-[1200px] mx-auto">
-          {/* Top Row: Profile - Title - Settings */}
-          <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-full">
-            <button
-              onClick={onProfileClick}
-              className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ background: '#1e293b', border: '1px solid #1e293b' }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path fillRule="evenodd" clipRule="evenodd" d="M8 6C8 3.79086 9.79086 2 12 2C14.2091 2 16 3.79086 16 6C16 8.20914 14.2091 10 12 10C9.79086 10 8 8.20914 8 6Z" fill="#4ADE80" />
-                <path fillRule="evenodd" clipRule="evenodd" d="M20 17.5C20 19.985 20 22 12 22C4 22 4 19.985 4 17.5C4 15.015 7.582 13 12 13C16.418 13 20 15.015 20 17.5Z" fill="#4ADE80" />
-              </svg>
-            </button>
-            
-            <span 
-              className="text-xl font-bold"
-              style={{ color: '#f8fafc' }}
-            >
-              Wallet Hub
-            </span>
-            
-            <button
-              onClick={onSettingsClick}
-              className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ background: '#1e293b', border: '1px solid #1e293b' }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path fillRule="evenodd" clipRule="evenodd" d="M12 8.5C10.067 8.5 8.5 10.067 8.5 12C8.5 13.933 10.067 15.5 12 15.5C13.933 15.5 15.5 13.933 15.5 12C15.5 10.067 13.933 8.5 12 8.5Z" fill="#4ADE80" />
-                <path fillRule="evenodd" clipRule="evenodd" d="M12 2C11.0426 2 10.2626 2.69665 10.1368 3.6052C10.035 4.33795 9.49963 4.94098 8.79189 5.12908C8.55932 5.19097 8.33085 5.26426 8.10747 5.34852C7.42386 5.60618 6.6472 5.46836 6.11127 4.95152C5.40894 4.27455 4.28014 4.2946 3.60258 4.99626L2.89258 5.73488C2.23728 6.41302 2.24694 7.49227 2.91462 8.15878C3.42754 8.67044 3.55893 9.43618 3.30023 10.1091C3.21649 10.3314 3.14367 10.5586 3.08217 10.7899C2.8964 11.4952 2.29603 12.0286 1.56601 12.1292C0.66052 12.254 0 13.0306 0 13.9487V14.9796C0 15.8977 0.66052 16.6743 1.566 16.7991C2.29585 16.8997 2.89612 17.4329 3.08194 18.1379C3.14351 18.3698 3.21646 18.5977 3.30035 18.8206C3.55913 19.494 3.42769 20.2603 2.91462 20.7724C2.24694 21.439 2.23728 22.5182 2.89258 23.1964L3.60258 23.935C4.28014 24.6367 5.40894 24.6567 6.11127 23.9797C6.64762 23.4625 7.42497 23.3248 8.10903 23.5829C8.33174 23.667 8.55949 23.7401 8.79133 23.8019C9.49937 23.99 10.035 24.5933 10.1368 25.3264C10.2626 26.2349 11.0426 26.9316 12 26.9316C12.9574 26.9316 13.7374 26.2349 13.8632 25.3264C13.965 24.5933 14.5006 23.99 15.2087 23.8019C15.4405 23.7401 15.6683 23.667 15.891 23.5829C16.575 23.3248 17.3524 23.4625 17.8887 23.9797C18.5911 24.6567 19.7199 24.6367 20.3974 23.935L21.1074 23.1964C21.7627 22.5182 21.7531 21.439 21.0854 20.7724C20.5723 20.2603 20.4409 19.494 20.6997 18.8206C20.7836 18.5977 20.8565 18.3698 20.9181 18.1379C21.1039 17.4329 21.7042 16.8997 22.434 16.7991C23.3395 16.6743 24 15.8977 24 14.9796V13.9487C24 13.0306 23.3395 12.254 22.434 12.1292C21.704 12.0286 21.1036 11.4952 20.9178 10.7899C20.8563 10.5586 20.7835 10.3314 20.6998 10.1091C20.4411 9.43618 20.5725 8.67044 21.0854 8.15878C21.7531 7.49227 21.7627 6.41302 21.1074 5.73488L20.3974 4.99626C19.7199 4.2946 18.5911 4.27455 17.8887 4.95152C17.3528 5.46836 16.5761 5.60618 15.8925 5.34852C15.6692 5.26426 15.4407 5.19097 15.2081 5.12908C14.5004 4.94098 13.965 4.33795 13.8632 3.6052C13.7374 2.69665 12.9574 2 12 2Z" fill="#4ADE80" />
-              </svg>
-            </button>
-          </div>
+          {/* Title */}
+          <span 
+            className="text-xl font-bold"
+            style={{ color: '#f8fafc' }}
+          >
+            Wallet Hub
+          </span>
 
           {/* Balance Section */}
           <div className="flex flex-col items-center gap-1 w-full">
@@ -187,8 +163,8 @@ export default function WalletHomepage({
       <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* Left Column - NFTs Card */}
-          <div className="lg:col-span-1 flex flex-col gap-6">
+          {/* Left Column - NFTs Card (order-3 on mobile to appear above wallet status) */}
+          <div className="lg:col-span-1 flex flex-col gap-6 order-3 lg:order-1">
             <div 
               className="rounded-2xl p-5 flex flex-col gap-4 h-full"
               style={{ 
@@ -261,8 +237,8 @@ export default function WalletHomepage({
             </div>
           </div>
 
-          {/* Center Column - Action Buttons & Quick Stats */}
-          <div className="lg:col-span-1 flex flex-col gap-6">
+          {/* Center Column - Action Buttons & Quick Stats (order-1 on mobile - appears first) */}
+          <div className="lg:col-span-1 flex flex-col gap-6 order-1 lg:order-2">
             {/* Action Buttons */}
             <div className="flex gap-4">
               <button
@@ -324,8 +300,8 @@ export default function WalletHomepage({
             </div>
           </div>
 
-          {/* Right Column - Recent Activity & Wallet Status */}
-          <div className="lg:col-span-1 flex flex-col gap-6">
+          {/* Right Column - Recent Activity & Wallet Status (order-2 and order-4 on mobile) */}
+          <div className="lg:col-span-1 flex flex-col gap-6 order-2 lg:order-3">
             {/* Recent Activity Card */}
             <div 
               className="rounded-2xl p-5 flex flex-col gap-4"
@@ -396,8 +372,10 @@ export default function WalletHomepage({
                 ))}
               </div>
             </div>
+          </div>
 
-            {/* Wallet Status Card */}
+          {/* Wallet Status Section (order-4 on mobile to appear after NFTs) */}
+          <div className="flex flex-col gap-6 order-4 lg:order-3">
             <div 
               className="rounded-2xl p-5 flex flex-col gap-4"
               style={{ 
