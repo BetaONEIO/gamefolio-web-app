@@ -116,7 +116,7 @@ export function LevelTrackerModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="bg-[#0f172a] border border-[#1e293b] text-white p-0 max-w-[382px] w-full rounded-3xl overflow-hidden [&>button]:hidden"
+        className="bg-[#0f172a]/95 backdrop-blur-sm border border-[#1e293b] text-white p-0 max-w-[340px] w-[calc(100%-48px)] mx-6 rounded-3xl overflow-hidden [&>button]:hidden"
         data-testid="dialog-level-progress"
       >
         <div className="flex flex-col">
@@ -234,22 +234,7 @@ export function LevelTrackerModal({
             </div>
           </div>
 
-          <div className="flex items-center justify-center gap-4 px-6 pb-4 border-t border-[#1e293b]">
-            <div className="flex items-center gap-2 px-4 py-3">
-              <span className="text-lg font-bold text-[#f8fafc]">0</span>
-              <span className="text-sm font-medium text-[#a855f7]">Legendary</span>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-3">
-              <span className="text-lg font-bold text-[#f8fafc]">0</span>
-              <span className="text-sm font-medium text-[#ec4899]">Epic</span>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-3">
-              <span className="text-lg font-bold text-[#f8fafc]">0</span>
-              <span className="text-sm font-medium text-[#4ade80]">Rare</span>
-            </div>
-          </div>
-
-          <div className="p-6 pt-0">
+          <div className="p-6 pt-4">
             <Button
               onClick={handleClose}
               className="w-full h-[60px] rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22] text-lg font-bold shadow-[0_4px_6px_-4px_rgba(0,0,0,0.1),0_10px_15px_-3px_rgba(0,0,0,0.1)]"
