@@ -1485,7 +1485,7 @@ const ProfilePage = () => {
           <div className="relative my-4 mx-4">
             {/* Curved corner piece */}
             <div 
-              className="absolute top-0 -left-2 w-3 h-3 pointer-events-none"
+              className="absolute top-0 -left-4 w-3 h-3 pointer-events-none"
               style={{
                 borderLeft: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
                 borderTop: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
@@ -1495,16 +1495,16 @@ const ProfilePage = () => {
             
             {/* Top horizontal line - fades to right */}
             <div 
-              className="absolute top-0 left-1 h-[2px]"
+              className="absolute top-0 -left-1 h-[2px]"
               style={{
-                width: 'calc(100% - 4px)',
+                width: 'calc(100% + 4px)',
                 background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, transparent 100%)`,
               }}
             />
             
             {/* Left vertical line - fades downward */}
             <div 
-              className="absolute top-3 -left-2 w-[2px]"
+              className="absolute top-3 -left-4 w-[2px]"
               style={{
                 height: 'calc(100% - 12px)',
                 background: `linear-gradient(180deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, transparent 100%)`,
