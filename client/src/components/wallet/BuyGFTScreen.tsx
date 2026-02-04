@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import CustomAmountScreen from "./CustomAmountScreen";
 
 interface BuyGFTScreenProps {
   onBack: () => void;
@@ -19,6 +20,7 @@ export default function BuyGFTScreen({
   const [selectedAmount, setSelectedAmount] = useState(25);
   const [customAmount, setCustomAmount] = useState<number | null>(null);
   const [isCustom, setIsCustom] = useState(false);
+  const [showCustomScreen, setShowCustomScreen] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -35,19 +37,27 @@ export default function BuyGFTScreen({
   };
 
   const handleCustomClick = () => {
-    setIsCustom(true);
-    const input = prompt("Enter custom amount (£):");
-    if (input) {
-      const amount = parseFloat(input);
-      if (!isNaN(amount) && amount > 0) {
-        setCustomAmount(amount);
-      } else {
-        setIsCustom(false);
-      }
-    } else {
-      setIsCustom(false);
-    }
+    setShowCustomScreen(true);
   };
+
+  const handleCustomApply = (amount: number) => {
+    setCustomAmount(amount);
+    setIsCustom(true);
+    setShowCustomScreen(false);
+  };
+
+  const handleCustomBack = () => {
+    setShowCustomScreen(false);
+  };
+
+  if (showCustomScreen) {
+    return (
+      <CustomAmountScreen
+        onBack={handleCustomBack}
+        onApply={handleCustomApply}
+      />
+    );
+  }
 
   return (
     <div 

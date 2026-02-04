@@ -1,0 +1,741 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/BuyGftCustomAmount.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,500;0,400&display=swap";
+.BuyGftCustomAmount_76_2 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_76_3 {
+  backdrop-filter: blur(4px);
+  background: #020617f2;
+  flex-direction: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  display: flex;
+}
+.Container_76_4 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  display: flex;
+}
+.Container_76_5 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: center;
+  gap: 71.7266px;
+  width: 430px;
+  padding: 0 24.008px 0 24px;
+  display: flex;
+}
+.Container_76_6 {
+  flex: 1 0 0;
+  height: 40px;
+}
+.Container_76_7 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 159px;
+  height: 28px;
+  padding: 1px 0;
+  display: flex;
+}
+.CustomAmount_76_8 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 162px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Button_76_9 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_76_10 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.G_76_11 {
+  width: 20px;
+  height: 20px;
+}
+.Container_76_14 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 48px;
+  padding: 1.5px 24px 33.5px;
+  display: flex;
+}
+.Container_76_15 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 382px;
+  height: 162px;
+  display: flex;
+}
+.Container_76_16 {
+  justify-content: center;
+  align-items: center;
+  width: 382px;
+  height: 20px;
+  padding: 1px 47.906px 1px 48.094px;
+  display: flex;
+}
+.HowMuchWouldYouLikeToBuy_76_17 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 286px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_76_18 {
+  width: 382px;
+  height: 72px;
+}
+.Container_76_19 {
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  width: 24px;
+  display: flex;
+}
+.generated__76_20 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 27px;
+  height: 46px;
+  font-family: Plus Jakarta Sans;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 40px;
+  display: inline-block;
+}
+.Container_76_21 {
+  justify-content: center;
+  align-items: center;
+  width: 92px;
+  display: flex;
+}
+.generated_45_76_22 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 96px;
+  height: 91px;
+  font-family: Plus Jakarta Sans;
+  font-size: 72px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 72px;
+  display: inline-block;
+}
+.Container_76_23 {
+  background: #4ade80;
+  border-radius: 16777200px;
+  width: 6px;
+  height: 48px;
+}
+.Container_76_24 {
+  box-sizing: border-box;
+  background: #14532d33;
+  border: 1px solid #4ade804d;
+  border-radius: 16777200px;
+  flex-flow: row;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  width: 204px;
+  padding: 9px 17px;
+  display: flex;
+}
+.Container_76_25 {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+}
+.Container_76_27 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 146px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.Receive_803_57Gft_76_28 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 149px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_76_29 {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 320px;
+  height: 328px;
+  display: flex;
+}
+.Container_76_30 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  display: flex;
+}
+.Button_76_31 {
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 91px;
+  height: 64px;
+  padding: 14px 29.172px 14px 28.828px;
+  display: flex;
+}
+.generated_1_76_32 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 33px;
+  height: 36px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 36px;
+  display: inline-block;
+}
+.Button_76_33 {
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 91px;
+  height: 64px;
+  padding: 14px 29.172px 14px 28.828px;
+  display: flex;
+}
+.generated_2_76_34 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 33px;
+  height: 36px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 36px;
+  display: inline-block;
+}
+.Button_76_35 {
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 91px;
+  height: 64px;
+  padding: 14px 29.172px 14px 28.828px;
+  display: flex;
+}
+.generated_0_76_36 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 33px;
+  height: 36px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 36px;
+  display: inline-block;
+}
+.Button_76_37 {
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 91px;
+  height: 64px;
+  padding: 16px 29.672px 16px 29.328px;
+  display: flex;
+}
+.Container_76_38 {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+}
+.Button_76_40 {
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 91px;
+  height: 64px;
+  padding: 14px 29.172px 14px 28.828px;
+  display: flex;
+}
+.generated_3_76_41 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 33px;
+  height: 36px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 36px;
+  display: inline-block;
+}
+.Button_76_42 {
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 91px;
+  height: 64px;
+  padding: 14px 29.172px 14px 28.828px;
+  display: flex;
+}
+.generated_4_76_43 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 33px;
+  height: 36px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 36px;
+  display: inline-block;
+}
+.Button_76_44 {
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 91px;
+  height: 64px;
+  padding: 14px 29.172px 14px 28.828px;
+  display: flex;
+}
+.generated_5_76_45 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 33px;
+  height: 36px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 36px;
+  display: inline-block;
+}
+.Button_76_46 {
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 91px;
+  height: 64px;
+  padding: 14px 29.172px 14px 28.828px;
+  display: flex;
+}
+.generated_6_76_47 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 33px;
+  height: 36px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 36px;
+  display: inline-block;
+}
+.Button_76_48 {
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 91px;
+  height: 64px;
+  padding: 14px 29.172px 14px 28.828px;
+  display: flex;
+}
+.generated_7_76_49 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 33px;
+  height: 36px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 36px;
+  display: inline-block;
+}
+.Button_76_50 {
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 91px;
+  height: 64px;
+  padding: 14px 29.172px 14px 28.828px;
+  display: flex;
+}
+.generated_8_76_51 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 33px;
+  height: 36px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 36px;
+  display: inline-block;
+}
+.Button_76_52 {
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 91px;
+  height: 64px;
+  padding: 14px 29.172px 14px 28.828px;
+  display: flex;
+}
+.generated_9_76_53 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 33px;
+  height: 36px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 36px;
+  display: inline-block;
+}
+.Button_76_54 {
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 91px;
+  height: 64px;
+  padding: 14px 29.172px 14px 28.828px;
+  display: flex;
+}
+.generated__76_55 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 33px;
+  height: 36px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 36px;
+  display: inline-block;
+}
+.Container_76_56 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border-top: 1px solid #1e293b4d;
+  border-radius: 40px 40px 0 0;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 24px;
+  width: 430px;
+  padding: 25px 24px 48px;
+  display: flex;
+}
+.Container_76_57 {
+  box-sizing: border-box;
+  background: #1e293b4d;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 382px;
+  height: 74px;
+  padding: 17px;
+  display: flex;
+}
+.Container_76_58 {
+  background: #4ade801a;
+  border-radius: 16777200px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+  display: flex;
+}
+.Container_76_59 {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_76_61 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 292px;
+  height: 39px;
+  display: flex;
+}
+.TheMinimumPurchaseAmountIs_76_62 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 191px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 19.5px;
+  display: inline-block;
+}
+.Container_76_63 {
+  justify-content: center;
+  align-items: center;
+  width: 37px;
+  height: 15px;
+  display: flex;
+}
+._00_76_64 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 40px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 19.5px;
+  display: inline-block;
+}
+.TransactionFeesAreCalculatedAtTheNextStep_76_65 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 270px;
+  height: 35px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 19.5px;
+  display: inline-block;
+}
+.Button_76_66 {
+  background: #4ade80;
+  border-radius: 16px;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 7.21094px;
+  height: 68px;
+  padding: 20px 112.398px 20px 112.391px;
+  display: flex;
+  box-shadow: 0 0 30px -10px #4ade80;
+}
+.Container_76_67 {
+  justify-content: center;
+  align-items: center;
+  width: 126px;
+  height: 28px;
+  padding: 2.5px 0;
+  display: flex;
+}
+.ApplyAmount_76_68 {
+  color: #022c22;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 129px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_76_69 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+
+```
+
+---
+
+```src/components/BuyGftCustomAmount.tsx
+import React from 'react';
+import styles from '../styles/BuyGftCustomAmount.module.css';
+
+
+export default function BuyGftCustomAmount() {
+  return (
+    <div className={styles.BuyGftCustomAmount_76_2}>
+      <div className={styles.Container_76_3}>
+        <div className={styles.Container_76_4}>
+          <div className={styles.Container_76_5}>
+            <div className={styles.Container_76_6}></div>
+            <div className={styles.Container_76_7}><span className={styles.CustomAmount_76_8}>Custom Amount</span></div>
+            <div className={styles.Button_76_9}>
+              <div className={styles.Container_76_10}>
+                <div className={styles.G_76_11}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M0 10C0 4.47715 4.47715 0 10 0C15.5228 0 20 4.47715 20 10C20 15.5228 15.5228 20 10 20C4.47715 20 0 15.5228 0 10Z" stroke="#F8FAFC" strokeWidth="1.5" />
+                    <path d="M12.5 7.5L7.5 12.5M7.5 7.5L12.5 12.5" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_76_14}>
+            <div className={styles.Container_76_15}>
+              <div className={styles.Container_76_16}><span className={styles.HowMuchWouldYouLikeToBuy_76_17}>How much would you like to buy?</span></div>
+              <div className={styles.Container_76_18}>
+                <div className={styles.Container_76_19}><span className={styles.generated__76_20}>&#xA3;</span></div>
+                <div className={styles.Container_76_21}><span className={styles.generated_45_76_22}>45</span></div>
+                <div className={styles.Container_76_23}></div>
+              </div>
+              <div className={styles.Container_76_24}>
+                <div className={styles.Container_76_25}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M1.48227 1.49756C1.31168 1.43821 1.12236 1.47526 0.986724 1.59452C0.851086 1.71378 0.790121 1.89681 0.827148 2.07358C0.864176 2.25036 0.993468 2.39353 1.16557 2.44834L1.34263 2.5078C1.7943 2.65814 2.09363 2.75903 2.31345 2.86125C2.52191 2.95814 2.61211 3.03631 2.66957 3.11649C2.72703 3.19667 2.77314 3.30624 2.79919 3.53475C2.82659 3.77595 2.82726 4.09132 2.82726 4.56771V6.35301C2.82726 7.26637 2.82726 8.00334 2.90543 8.58263C2.98561 9.18397 3.15933 9.69043 3.56155 10.0927C3.96311 10.4949 4.47024 10.6673 5.07158 10.7481C5.65019 10.8263 6.38717 10.8263 7.30053 10.8263H12.0143C12.2911 10.8263 12.5154 10.6019 12.5154 10.3252C12.5154 10.0484 12.2911 9.82406 12.0143 9.82406H7.33728C6.37848 9.82406 5.70966 9.82272 5.20454 9.75524C4.71478 9.68909 4.45487 9.56815 4.26979 9.38374C4.11278 9.22673 4.00253 9.01559 3.93171 8.65479H10.6934C11.3342 8.65479 11.6542 8.65479 11.9054 8.48909C12.1566 8.32339 12.2829 8.0294 12.5355 7.44009L12.8215 6.77194C13.3627 5.50914 13.6333 4.8784 13.3359 4.42807C13.0386 3.97774 12.3524 3.97774 10.9787 3.97774H3.82614C3.82428 3.79183 3.81381 3.6061 3.79474 3.42117C3.75799 3.09711 3.67714 2.79978 3.48271 2.53052C3.28828 2.26059 3.03171 2.08954 2.73639 1.95257C2.45777 1.82295 2.10432 1.70535 1.68605 1.56504L1.48227 1.49756Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M4.99875 11.9955C5.55226 11.9955 6.00097 12.4443 6.00097 12.9978C6.00097 13.5513 5.55226 14 4.99875 14C4.44523 14 3.99652 13.5513 3.99652 12.9978C3.99652 12.4443 4.44523 11.9955 4.99875 11.9955Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M11.0121 11.9955C11.5656 11.9955 12.0143 12.4443 12.0143 12.9978C12.0143 13.5513 11.5656 14 11.0121 14C10.4586 14 10.0099 13.5513 10.0099 12.9978C10.0099 12.4443 10.4586 11.9955 11.0121 11.9955Z" fill="#4ADE80" />
+                  </svg>
+                </div>
+                <div className={styles.Container_76_27}><span className={styles.Receive_803_57Gft_76_28}>Receive &#x2248; 803.57 GFT</span></div>
+              </div>
+            </div>
+            <div className={styles.Container_76_29}>
+              <div className={styles.Container_76_30}>
+                <div className={styles.Button_76_31}><span className={styles.generated_1_76_32}>1</span></div>
+                <div className={styles.Button_76_33}><span className={styles.generated_2_76_34}>2</span></div>
+                <div className={styles.Button_76_35}><span className={styles.generated_0_76_36}>0</span></div>
+                <div className={styles.Button_76_37}>
+                  <div className={styles.Container_76_38}><svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M9.16166 25.9986C10.4017 26.6666 11.887 26.6666 14.8563 26.6666H18.3723C23.539 26.6666 26.123 26.6666 27.7283 25.1039C29.3337 23.5413 29.3337 21.0279 29.3337 15.9999C29.3337 10.9719 29.3337 8.45725 27.7283 6.89592C26.123 5.33459 23.539 5.33325 18.3737 5.33325H14.8577C11.8883 5.33325 10.403 5.33325 9.16433 6.00125C7.92433 6.67059 7.13766 7.89459 5.56299 10.3466L4.65366 11.7599C3.32966 13.8213 2.66699 14.8533 2.66699 15.9999C2.66699 17.1466 3.32966 18.1786 4.65366 20.2399L5.56033 21.6533C7.135 24.1039 7.92166 25.3293 9.16166 25.9986ZM14.7083 11.9586C14.3177 11.5679 13.6843 11.5679 13.2937 11.9586C12.903 12.3492 12.903 12.9826 13.2937 13.3733L15.9203 15.9999L13.2937 18.6266C13.0261 18.8759 12.916 19.2513 13.0065 19.6056C13.097 19.96 13.3736 20.2366 13.7279 20.3271C14.0823 20.4176 14.4577 20.3075 14.707 20.0399L17.3337 17.4133L19.9603 20.0399C20.3544 20.4071 20.9684 20.3962 21.3492 20.0154C21.73 19.6346 21.7408 19.0206 21.3737 18.6266L18.747 15.9999L21.3737 13.3733C21.7408 12.9792 21.73 12.3652 21.3492 11.9844C20.9684 11.6036 20.3544 11.5928 19.9603 11.9599L17.3337 14.5866L14.7083 11.9586Z" fill="white" />
+                    </svg>
+                  </div>
+                </div>
+                <div className={styles.Button_76_40}><span className={styles.generated_3_76_41}>3</span></div>
+                <div className={styles.Button_76_42}><span className={styles.generated_4_76_43}>4</span></div>
+                <div className={styles.Button_76_44}><span className={styles.generated_5_76_45}>5</span></div>
+                <div className={styles.Button_76_46}><span className={styles.generated_6_76_47}>6</span></div>
+                <div className={styles.Button_76_48}><span className={styles.generated_7_76_49}>7</span></div>
+                <div className={styles.Button_76_50}><span className={styles.generated_8_76_51}>8</span></div>
+                <div className={styles.Button_76_52}><span className={styles.generated_9_76_53}>9</span></div>
+                <div className={styles.Button_76_54}><span className={styles.generated__76_55}>.</span></div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_76_56}>
+            <div className={styles.Container_76_57}>
+              <div className={styles.Container_76_58}>
+                <div className={styles.Container_76_59}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M18.3336 10.0001C18.3336 14.6026 14.6028 18.3334 10.0003 18.3334C5.39782 18.3334 1.66699 14.6026 1.66699 10.0001C1.66699 5.39757 5.39782 1.66675 10.0003 1.66675C14.6028 1.66675 18.3336 5.39757 18.3336 10.0001ZM10.0003 14.7917C10.3455 14.7917 10.6253 14.5119 10.6253 14.1667V9.16673C10.6253 8.82155 10.3455 8.54173 10.0003 8.54173C9.65513 8.54173 9.37531 8.82155 9.37531 9.16673V14.1667C9.37531 14.5117 9.65531 14.7917 10.0003 14.7917ZM10.0003 5.8334C10.4605 5.8334 10.8336 6.2065 10.8336 6.66674C10.8336 7.12697 10.4605 7.50007 10.0003 7.50007C9.54007 7.50007 9.16697 7.12697 9.16697 6.66674C9.16697 6.2065 9.54007 5.8334 10.0003 5.8334Z" fill="#4ADE80" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Container_76_61}><span className={styles.TheMinimumPurchaseAmountIs_76_62}>The minimum purchase amount is</span>
+                <div className={styles.Container_76_63}><span className={styles._00_76_64}>&#xA3;5.00</span></div><span className={styles.TransactionFeesAreCalculatedAtTheNextStep_76_65}>. Transaction fees are calculated at the next step.</span>
+              </div>
+            </div>
+            <div className={styles.Button_76_66}>
+              <div className={styles.Container_76_67}><span className={styles.ApplyAmount_76_68}>Apply Amount</span></div>
+              <div className={styles.Container_76_69}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M4 12.9L7.143 16.5L15 7.5M20 7.563L11.428 16.563L11 16" stroke="#022C22" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
