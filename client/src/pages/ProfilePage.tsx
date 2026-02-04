@@ -2135,12 +2135,12 @@ const ProfilePage = () => {
           className="w-full"
         >
           <TabsList 
-            className="w-[calc(100%-2rem)] mx-4 justify-center rounded-full h-12 md:h-14 p-1.5 relative flex gap-1 !bg-[hsl(220,20%,14%)] border border-[hsl(220,15%,20%)]"
+            className="w-full max-w-lg mx-auto justify-center rounded-full h-11 md:h-12 p-1 relative flex gap-0.5 bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg"
           >
             <TabsTrigger 
               ref={clipsTabRef}
               value="clips" 
-              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-4 md:px-6 text-sm font-medium !shadow-none ${activeTab === 'clips' ? 'text-white !bg-[hsl(220,15%,22%)]' : 'text-gray-400 hover:text-gray-200 !bg-transparent'}`}
+              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${activeTab === 'clips' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
             >
               Clips
             </TabsTrigger>
@@ -2148,7 +2148,7 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={reelsTabRef}
               value="reels" 
-              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-4 md:px-6 text-sm font-medium !shadow-none ${activeTab === 'reels' ? 'text-white !bg-[hsl(220,15%,22%)]' : 'text-gray-400 hover:text-gray-200 !bg-transparent'}`}
+              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${activeTab === 'reels' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
             >
               Reels
             </TabsTrigger>
@@ -2156,7 +2156,7 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={screenshotsTabRef}
               value="screenshots" 
-              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-3 md:px-6 text-xs md:text-sm font-medium !shadow-none ${activeTab === 'screenshots' ? 'text-white !bg-[hsl(220,15%,22%)]' : 'text-gray-400 hover:text-gray-200 !bg-transparent'}`}
+              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-2 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${activeTab === 'screenshots' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
             >
               Screenshots
             </TabsTrigger>
@@ -2164,7 +2164,7 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={favoritesTabRef}
               value="favorites" 
-              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-4 md:px-6 text-sm font-medium !shadow-none ${activeTab === 'favorites' ? 'text-white !bg-[hsl(220,15%,22%)]' : 'text-gray-400 hover:text-gray-200 !bg-transparent'}`}
+              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${activeTab === 'favorites' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
             >
               Favorites
             </TabsTrigger>
@@ -2228,13 +2228,13 @@ const ProfilePage = () => {
                 </div>
               </div>
             ) : isLoadingClips ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <Skeleton key={i} className="aspect-video w-full rounded-lg" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="aspect-video w-full rounded-xl" />
                 ))}
               </div>
             ) : clips && clips.filter(clip => clip.videoType !== 'reel').length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {clips
                   .filter(clip => clip.videoType !== 'reel')
                   .sort((a, b) => {
@@ -2368,13 +2368,13 @@ const ProfilePage = () => {
                 </div>
               </div>
             ) : isLoadingClips ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <Skeleton key={i} className="aspect-[9/16] w-full rounded-lg" />
+                  <Skeleton key={i} className="aspect-[9/16] w-full rounded-xl" />
                 ))}
               </div>
             ) : clips && clips.filter(clip => clip.videoType === 'reel').length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {clips
                   .filter(clip => clip.videoType === 'reel')
                   .sort((a, b) => {
@@ -2508,13 +2508,13 @@ const ProfilePage = () => {
                 </div>
               </div>
             ) : isLoadingScreenshots ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <Skeleton key={i} className="aspect-video w-full rounded-lg" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="aspect-video w-full rounded-xl" />
                 ))}
               </div>
             ) : screenshots && screenshots.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[...screenshots]
                   .sort((a, b) => {
                     if (a.pinnedAt && !b.pinnedAt) return -1;
