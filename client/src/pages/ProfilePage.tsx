@@ -1548,16 +1548,16 @@ const ProfilePage = () => {
                   {/* Stats - Horizontal row with uppercase labels */}
                   <div className="flex gap-4 mb-2 items-start">
                     <div className="flex flex-col">
-                      <span className="font-bold text-[11px]">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                      <span className="text-[7px] uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>UPLOADS</span>
+                      <span className="font-bold text-sm">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                      <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>UPLOADS</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-bold text-[11px]">{Number(profile._count?.followers || 0)}</span>
-                      <span className="text-[7px] uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>FOLLOWERS</span>
+                      <span className="font-bold text-sm">{Number(profile._count?.followers || 0)}</span>
+                      <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>FOLLOWERS</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-bold text-[11px]">{Number(profile._count?.following || 0)}</span>
-                      <span className="text-[7px] uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>FOLLOWING</span>
+                      <span className="font-bold text-sm">{Number(profile._count?.following || 0)}</span>
+                      <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>FOLLOWING</span>
                     </div>
                   </div>
 
