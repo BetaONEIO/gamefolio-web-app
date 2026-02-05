@@ -866,9 +866,19 @@ export default function StorePage() {
                         }}
                         className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
                       >
-                        <Heart 
-                          className={`h-4 w-4 ${watchlist?.some((w: any) => w.nftId === nft.id) ? 'fill-green-400 text-green-400' : 'text-white'}`}
-                        />
+                        {watchlist?.some((w: any) => w.nftId === nft.id) ? (
+                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="url(#heartGradient)" stroke="none">
+                            <defs>
+                              <linearGradient id="heartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#4ade80" />
+                                <stop offset="100%" stopColor="#22c55e" />
+                              </linearGradient>
+                            </defs>
+                            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                          </svg>
+                        ) : (
+                          <Heart className="h-4 w-4 text-white" />
+                        )}
                       </button>
                     </div>
                     
