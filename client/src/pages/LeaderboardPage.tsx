@@ -395,7 +395,7 @@ const LeaderboardPage = () => {
         </div>
 
         {/* Leaderboard List */}
-        <div className="space-y-5 mb-8">
+        <div className="space-y-6 mb-8">
           {isLoading ? (
             <LoadingSkeleton />
           ) : !currentData || currentData.length === 0 ? (
