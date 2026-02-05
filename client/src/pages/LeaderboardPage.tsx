@@ -1,10 +1,11 @@
-import { Trophy, Upload, Heart, MessageCircle, Filter } from "lucide-react";
+import { Trophy, Upload, Heart, MessageCircle, Flame } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 interface PointsLeaderboardEntry {
   userId: number;
@@ -22,11 +23,11 @@ interface PointsLeaderboardEntry {
   };
 }
 
-type TabType = "global" | "weekly" | "monthly";
+type TabType = "weekly" | "monthly" | "alltime";
 
 const LeaderboardPage = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabType>("global");
+  const [activeTab, setActiveTab] = useState<TabType>("weekly");
 
   // Fetch all-time leaderboard data from API
   const { data: allTimeData, isLoading: allTimeLoading } = useQuery<PointsLeaderboardEntry[]>({
@@ -60,16 +61,27 @@ const LeaderboardPage = () => {
 
   const getCurrentData = () => {
     switch (activeTab) {
-      case "weekly":
-        return { data: weeklyData, isLoading: weeklyLoading };
       case "monthly":
         return { data: monthlyData, isLoading: monthlyLoading };
-      default:
+      case "alltime":
         return { data: allTimeData, isLoading: allTimeLoading };
+      default:
+        return { data: weeklyData, isLoading: weeklyLoading };
     }
   };
 
   const { data: currentData, isLoading } = getCurrentData();
+
+  const getSectionTitle = () => {
+    switch (activeTab) {
+      case "monthly":
+        return "This Month's Top Contributors";
+      case "alltime":
+        return "All-Time Top Contributors";
+      default:
+        return "This Week's Top Contributors";
+    }
+  };
 
   const getRankStyles = (rank: number) => {
     if (rank === 1) {
@@ -107,7 +119,7 @@ const LeaderboardPage = () => {
       cardBorder: "border-[#1e293b]/50",
       avatarBorder: "border-[#1e293b]/50",
       scoreBg: "bg-[#1e293b]",
-      scoreText: "text-white",
+      scoreText: "text-slate-400",
       scoreShadow: "",
     };
   };
@@ -139,7 +151,7 @@ const LeaderboardPage = () => {
       );
     }
     return (
-      <span className="text-sm font-semibold text-slate-400">#{rank}</span>
+      <span className="text-sm font-medium text-slate-400">#{rank}</span>
     );
   };
 
@@ -193,9 +205,7 @@ const LeaderboardPage = () => {
                 <span className="text-[10px] font-bold text-[#00d492]">{entry.commentsCount}</span>
               </div>
               <div className="flex items-center gap-1">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M6.41458 10.8356C7.97713 10.5227 9.99755 9.39853 9.99755 6.49186C9.99755 3.84713 8.06161 2.08563 6.66951 1.27637C6.3601 1.09642 5.9987 1.33285 5.9987 1.69025V2.60398C5.9987 3.32478 5.69579 4.6404 4.85403 5.18774C4.42416 5.46716 3.95929 5.04878 3.90731 4.53893L3.86432 4.12005C3.81433 3.63319 3.31848 3.33777 2.92959 3.63469C2.23029 4.16703 1.5 5.10177 1.5 6.49136C1.5 10.0458 4.14374 10.9351 5.46536 10.9351C5.54267 10.9351 5.62331 10.9326 5.70729 10.9276C5.05448 10.8721 3.99928 10.4672 3.99928 9.1576C3.99928 8.13289 4.74656 7.44059 5.3144 7.10319C5.46736 7.01321 5.64581 7.13068 5.64581 7.30813V7.60304C5.64581 7.82798 5.73328 8.18038 5.94072 8.42131C6.17565 8.69423 6.52005 8.40831 6.54755 8.04942C6.55654 7.93645 6.67051 7.86447 6.76848 7.92145C7.08889 8.1089 7.49827 8.50878 7.49827 9.1576C7.49827 10.1813 6.93393 10.6522 6.41458 10.8356Z" fill="#FF6900" />
-                </svg>
+                <Flame className="w-3 h-3 text-[#ff6900] fill-[#ff6900]" />
                 <span className="text-[10px] font-bold text-[#ff6900]">{entry.firesGivenCount}</span>
               </div>
             </div>
@@ -213,8 +223,8 @@ const LeaderboardPage = () => {
   };
 
   const LoadingSkeleton = () => (
-    <div className="space-y-4">
-      {Array.from({ length: 5 }).map((_, i) => (
+    <div className="space-y-3">
+      {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="flex items-center gap-4 p-4 rounded-2xl border border-[#1e293b]/50 bg-[#0f172a]">
           <Skeleton className="w-8 h-6 bg-slate-700" />
           <Skeleton className="w-12 h-12 rounded-2xl bg-slate-700" />
@@ -235,57 +245,77 @@ const LeaderboardPage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#020617]">
-      <div className="max-w-md mx-auto px-6 py-12">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-[30px] font-bold text-slate-50 leading-9">
-            Leaderboard
+    <div className="min-h-screen bg-[#020617] overflow-y-auto">
+      <div className="max-w-md mx-auto px-6 py-12 pb-32">
+        {/* Hero Section */}
+        <div className="flex flex-col items-center text-center mb-8">
+          {/* Trophy Icon */}
+          <div className="w-20 h-20 rounded-full bg-[#f0b100] flex items-center justify-center mb-4 shadow-[0_4px_6px_-4px_#f0b1004d,0_10px_15px_-3px_#f0b1004d]">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path fillRule="evenodd" clipRule="evenodd" d="M36.6663 13.6034V13.725C36.6663 15.1584 36.6663 15.8767 36.3213 16.4634C35.9763 17.05 35.348 17.3984 34.0947 18.0967L32.773 18.83C33.683 15.75 33.988 12.44 34.0997 9.61003L34.1163 9.2417L34.1197 9.15503C35.2047 9.5317 35.8147 9.81336 36.1947 10.34C36.6663 10.995 36.6663 11.865 36.6663 13.6034Z" fill="white" />
+              <path fillRule="evenodd" clipRule="evenodd" d="M3.33301 13.6034V13.725C3.33301 15.1584 3.33301 15.8767 3.67801 16.4634C4.02301 17.05 4.65134 17.3984 5.90467 18.0967L7.22801 18.83C6.31634 15.75 6.01134 12.44 5.89967 9.61003L5.88301 9.2417L5.88134 9.15503C4.79467 9.5317 4.18467 9.81336 3.80467 10.34C3.33301 10.995 3.33301 11.8667 3.33301 13.6034Z" fill="white" />
+              <path fillRule="evenodd" clipRule="evenodd" d="M27.2523 3.91135C24.8409 3.51634 22.4008 3.32289 19.9573 3.33301C16.9856 3.33301 14.5355 3.59468 12.6622 3.91135C10.7638 4.23135 9.81548 4.39135 9.02214 5.36803C8.23047 6.34471 8.27213 7.39972 8.35547 9.50974C8.64381 16.7565 10.2072 25.8099 18.7073 26.6099V32.5H16.3239C15.5297 32.5005 14.8462 33.0612 14.6905 33.84L14.3739 35.4167H9.95715C9.26679 35.4167 8.70714 35.9763 8.70714 36.6667C8.70714 37.3571 9.26679 37.9167 9.95715 37.9167H29.9574C30.6477 37.9167 31.2074 37.3571 31.2074 36.6667C31.2074 35.9763 30.6477 35.4167 29.9574 35.4167H25.5407L25.224 33.84C25.0683 33.0612 24.3848 32.5005 23.5906 32.5H21.2073V26.6099C29.7074 25.8099 31.2724 16.7582 31.5591 9.50974C31.6424 7.39972 31.6857 6.34304 30.8924 5.36803C30.099 4.39135 29.1507 4.23135 27.2523 3.91135Z" fill="white" />
+            </svg>
+          </div>
+          
+          <h1 className="text-[30px] font-bold text-slate-50 leading-9 mb-2">
+            Community Leaderboard
           </h1>
-          <button className="w-10 h-10 rounded-full bg-[#0f172a] border border-[#1e293b] flex items-center justify-center">
-            <Filter className="w-5 h-5 text-slate-400" />
-          </button>
+          <p className="text-slate-400 text-sm leading-5 max-w-[342px]">
+            Top gamers ranked by community engagement and content contribution!
+          </p>
         </div>
 
         {/* Tab Pills */}
-        <div className="flex gap-4 mb-6">
-          <button
-            onClick={() => setActiveTab("global")}
-            className={`px-5 py-2 rounded-full text-sm font-bold transition-colors ${
-              activeTab === "global"
-                ? "bg-[#4ade80] text-[#022c22]"
-                : "bg-[#1e293b] text-slate-50"
-            }`}
-            data-testid="tab-global"
-          >
-            Global
-          </button>
+        <div className="bg-[#0f172a] border border-[#1e293b] rounded-full p-1.5 flex gap-2 mb-8">
           <button
             onClick={() => setActiveTab("weekly")}
-            className={`px-5 py-2 rounded-full text-sm font-bold transition-colors ${
+            className={`flex-1 px-4 py-2.5 rounded-full text-sm font-bold transition-colors ${
               activeTab === "weekly"
                 ? "bg-[#4ade80] text-[#022c22]"
-                : "bg-[#1e293b] text-slate-50"
+                : "text-slate-400 hover:text-slate-50"
             }`}
             data-testid="tab-weekly"
           >
-            Weekly
+            This Week
           </button>
           <button
             onClick={() => setActiveTab("monthly")}
-            className={`px-5 py-2 rounded-full text-sm font-bold transition-colors ${
+            className={`flex-1 px-4 py-2.5 rounded-full text-sm font-bold transition-colors ${
               activeTab === "monthly"
                 ? "bg-[#4ade80] text-[#022c22]"
-                : "bg-[#1e293b] text-slate-50"
+                : "text-slate-400 hover:text-slate-50"
             }`}
             data-testid="tab-monthly"
           >
-            Monthly
+            This Month
+          </button>
+          <button
+            onClick={() => setActiveTab("alltime")}
+            className={`flex-1 px-4 py-2.5 rounded-full text-sm font-bold transition-colors ${
+              activeTab === "alltime"
+                ? "bg-[#4ade80] text-[#022c22]"
+                : "text-slate-400 hover:text-slate-50"
+            }`}
+            data-testid="tab-alltime"
+          >
+            All Time
           </button>
         </div>
 
+        {/* Section Header */}
+        <div className="mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Flame className="w-5 h-5 text-[#4ade80]" />
+            <h2 className="text-xl font-bold text-slate-50">{getSectionTitle()}</h2>
+          </div>
+          <p className="text-slate-400 text-xs leading-4">
+            Best {activeTab === "alltime" ? "all-time" : activeTab === "monthly" ? "monthly" : "weekly"} content and highest engagement, sorted by the leaderboard table
+          </p>
+        </div>
+
         {/* Leaderboard List */}
-        <div className="space-y-4">
+        <div className="space-y-3 mb-8">
           {isLoading ? (
             <LoadingSkeleton />
           ) : !currentData || currentData.length === 0 ? (
@@ -301,6 +331,39 @@ const LeaderboardPage = () => {
               <LeaderboardCard key={entry.userId} entry={entry} />
             ))
           )}
+        </div>
+
+        {/* Call to Action Section */}
+        <div className="bg-gradient-to-b from-[#4ade80]/10 to-[#4ade80]/5 border border-[#4ade80]/20 rounded-2xl p-6">
+          <div className="flex flex-col items-center text-center">
+            {/* Icon */}
+            <div className="w-16 h-16 rounded-full bg-[#4ade80]/20 flex items-center justify-center mb-4">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" clipRule="evenodd" d="M17.1093 28.9034C21.2773 28.0686 26.6666 25.0699 26.6666 17.3166C26.6666 10.262 22.1027 6.3633 18.5893 4.20467C17.764 3.72467 16.9999 4.35533 16.9999 5.30867V7.746C16.9999 9.66867 16.3919 12.778 14.5466 13.8379C13.3999 14.5833 12.3599 13.4673 12.2213 12.1073L12.1066 10.9899C11.9733 9.69131 10.8506 8.90331 9.81323 9.69531C8.34789 10.8153 6.66656 13.6086 6.66656 17.3153C6.66656 26.7966 13.452 28.7686 17.0573 28.7686C17.264 28.7686 17.4786 28.7619 17.7026 28.7486C16.2813 28.6006 13.0666 27.5206 13.0666 24.4273C13.0666 21.6939 14.8599 20.0473 16.3746 19.3473C16.7826 19.1073 17.2586 19.4206 17.2586 19.8939V20.6806C17.2586 21.2806 17.4919 22.2206 18.0453 22.8633C18.672 23.5913 19.5906 22.8286 19.6639 21.8713C19.6879 21.5699 19.992 21.378 20.2533 21.5299C21.108 22.03 22.3999 22.9366 22.3999 24.4273C22.3999 27.158 21.0946 28.4139 19.7093 28.9034H17.1093Z" fill="#4ADE80" />
+              </svg>
+            </div>
+            
+            <h3 className="text-xl font-bold text-slate-50 mb-2">
+              Ready to Climb the Rankings?
+            </h3>
+            <p className="text-slate-400 text-sm leading-5 mb-6 max-w-[319px]">
+              Start uploading your best gaming moments and engaging with the community to earn points and climb the leaderboard!
+            </p>
+            
+            {/* Buttons */}
+            <div className="w-full space-y-3">
+              <Link href="/upload" className="block">
+                <Button className="w-full h-11 rounded-full bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22] font-bold text-sm">
+                  Upload Your Clip
+                </Button>
+              </Link>
+              <Link href="/explore" className="block">
+                <Button variant="outline" className="w-full h-12 rounded-full bg-[#0f172a] hover:bg-[#1e293b] border-[#1e293b] text-slate-50 font-bold text-sm">
+                  Explore Content
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>
