@@ -200,7 +200,7 @@ const LeaderboardPage = () => {
     return (
       <Link href={`/profile/${entry.user.username}`}>
         <div
-          className={`flex items-center gap-4 p-4 rounded-2xl border ${styles.cardBg} ${styles.cardBorder} transition-all hover:scale-[1.02] cursor-pointer`}
+          className={`flex items-center gap-4 px-4 py-5 rounded-2xl border ${styles.cardBg} ${styles.cardBorder} transition-all hover:scale-[1.02] cursor-pointer`}
           data-testid={`leaderboard-entry-${entry.userId}`}
         >
           {/* Rank Icon */}
@@ -267,7 +267,7 @@ const LeaderboardPage = () => {
       : `Week ${contributor.period}, ${contributor.year}`;
     
     return (
-      <div className="flex items-center gap-4 p-4 rounded-2xl border border-[#f0b100]/20 bg-[#f0b100]/5">
+      <div className="flex items-center gap-4 px-4 py-5 rounded-2xl border border-[#f0b100]/20 bg-[#f0b100]/5">
         <div className="w-6 flex items-center justify-center">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path fillRule="evenodd" clipRule="evenodd" d="M20.0858 14.3219L20.2787 12.4285C20.3817 11.4178 20.4487 10.751 20.3957 10.3301H20.4157C21.2864 10.3301 21.9932 9.58431 21.9932 8.66458C21.9932 7.74485 21.2864 6.99806 20.4147 6.99806C19.5429 6.99806 18.8361 7.74385 18.8361 8.66458C18.8361 9.08046 18.9811 9.46135 19.22 9.75326C18.8771 9.9762 18.4283 10.4481 17.7525 11.1579C17.2326 11.7047 16.9727 11.9776 16.6828 12.0206C16.5217 12.0436 16.3574 12.0193 16.2099 11.9506C15.942 11.8267 15.763 11.4888 15.4061 10.812L13.5227 7.24799C13.3027 6.83111 13.1178 6.48221 12.9508 6.20129C13.6336 5.8334 14.1005 5.08462 14.1005 4.22187C14.1005 2.99322 13.1588 1.99951 11.9961 1.99951C10.8335 1.99951 9.89173 2.99422 9.89173 4.22087C9.89173 5.08462 10.3586 5.8334 11.0414 6.20029C10.8744 6.48221 10.6905 6.83111 10.4696 7.24799L8.58711 10.813C8.22922 11.4888 8.05027 11.8267 7.78235 11.9516C7.63483 12.0203 7.47056 12.0446 7.30948 12.0216C7.01957 11.9786 6.75964 11.7047 6.23979 11.1579C5.56399 10.4481 5.11512 9.9762 4.77222 9.75326C5.01215 9.46135 5.15611 9.08046 5.15611 8.66358C5.15611 7.74485 4.44831 6.99806 3.57657 6.99806C2.70682 6.99806 1.99902 7.74385 1.99902 8.66458C1.99902 9.58431 2.70582 10.3301 3.57757 10.3301H3.59656C3.54258 10.75 3.61056 11.4178 3.71353 12.4285L3.90647 14.3219C4.01344 15.3726 4.10241 16.3723 4.21238 17.2731H19.7799C19.8898 16.3733 19.9788 15.3726 20.0858 14.3219Z" fill="#F0B100" />
@@ -305,7 +305,7 @@ const LeaderboardPage = () => {
   const LoadingSkeleton = () => (
     <div className="space-y-3">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 p-4 rounded-2xl border border-[#1e293b]/50 bg-[#0f172a]">
+        <div key={i} className="flex items-center gap-4 px-4 py-5 rounded-2xl border border-[#1e293b]/50 bg-[#0f172a]">
           <Skeleton className="w-8 h-6 bg-slate-700" />
           <Skeleton className="w-12 h-12 rounded-2xl bg-slate-700" />
           <div className="flex-1 space-y-2">
