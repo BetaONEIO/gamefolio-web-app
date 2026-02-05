@@ -1142,10 +1142,17 @@ export default function StorePage() {
                         >
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </button>
-                        <Badge className="absolute top-2 left-2 bg-red-600 text-xs flex items-center gap-1">
-                          <Heart className="h-3 w-3 fill-white" />
-                          Saved
-                        </Badge>
+                        <div className="absolute top-2 left-2 p-1.5 rounded-full bg-black/50">
+                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="url(#heartGradientWatchlist)" stroke="none">
+                            <defs>
+                              <linearGradient id="heartGradientWatchlist" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#4ade80" />
+                                <stop offset="100%" stopColor="#22c55e" />
+                              </linearGradient>
+                            </defs>
+                            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                          </svg>
+                        </div>
                       </div>
 
                       <div className="p-2 space-y-1.5">
