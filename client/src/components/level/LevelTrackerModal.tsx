@@ -116,7 +116,7 @@ export function LevelTrackerModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="bg-[#0f172a]/95 backdrop-blur-sm border border-[#1e293b] text-white p-0 max-w-[200px] w-[calc(100%-80px)] mx-10 rounded-2xl overflow-hidden [&>button]:hidden"
+        className="bg-[#0f172a]/95 backdrop-blur-sm border border-[#1e293b] text-white p-0 max-w-[220px] w-[220px] rounded-2xl overflow-hidden [&>button]:hidden fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
         data-testid="dialog-level-progress"
       >
         <div className="flex flex-col">
