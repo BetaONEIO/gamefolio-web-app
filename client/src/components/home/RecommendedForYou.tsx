@@ -19,6 +19,9 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
   const [contentType, setContentType] = useState<'clips' | 'reels'>('clips');
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState(0);
+  const [scrollStart, setScrollStart] = useState(0);
 
   // Fetch recommended clips based on user's favorite games
   const { data: recommendedClips, isLoading } = useQuery<ClipWithUser[]>({
@@ -71,14 +74,56 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
     if (!containerRef.current) return;
     
     const container = containerRef.current;
-    const itemWidth = contentType === 'reels' ? 180 : 420; // Width based on content type
-    const scrollAmount = itemWidth * 2; // Scroll by 2 items
+    const itemWidth = contentType === 'reels' 
+      ? (window.innerWidth < 640 ? 144 : 180) 
+      : (window.innerWidth < 640 ? 280 : 420);
+    const scrollAmount = itemWidth * (window.innerWidth < 640 ? 1 : 2);
     
     if (direction === 'left') {
       container.scrollLeft -= scrollAmount;
     } else {
       container.scrollLeft += scrollAmount;
     }
+  };
+
+  // Handle mouse wheel horizontal scrolling
+  const handleWheel = (e: React.WheelEvent) => {
+    if (!containerRef.current) return;
+    
+    if (Math.abs(e.deltaX) > 0) {
+      return;
+    }
+    
+    if (Math.abs(e.deltaY) > 0 && e.deltaX === 0) {
+      e.preventDefault();
+      containerRef.current.scrollLeft += e.deltaY;
+    }
+  };
+
+  // Handle drag-to-scroll functionality
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!containerRef.current) return;
+    
+    setIsDragging(true);
+    setDragStart(e.clientX);
+    setScrollStart(containerRef.current.scrollLeft);
+    e.preventDefault();
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !containerRef.current) return;
+    
+    e.preventDefault();
+    const dragDistance = e.clientX - dragStart;
+    containerRef.current.scrollLeft = scrollStart - dragDistance;
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
   };
 
   // Don't render if loading or no clips
@@ -232,8 +277,15 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
           {/* Carousel Container */}
           <div 
             ref={containerRef}
-            className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide pb-4 px-2 sm:px-8"
-            style={{ scrollBehavior: 'smooth' }}
+            className={`flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide pb-4 px-2 sm:px-8 select-none ${
+              isDragging ? 'cursor-grabbing' : 'cursor-grab'
+            }`}
+            style={{ scrollBehavior: isDragging ? 'auto' : 'smooth' }}
+            onWheel={handleWheel}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
           >
             {filteredContent.map((clip) => (
               <div 
