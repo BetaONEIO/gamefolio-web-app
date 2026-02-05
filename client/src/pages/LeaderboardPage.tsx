@@ -1,4 +1,4 @@
-import { Trophy, Upload, Heart, MessageCircle, Flame } from "lucide-react";
+import { Trophy, Upload, Heart, MessageCircle, Flame, Calendar, Clock } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,6 +15,25 @@ interface PointsLeaderboardEntry {
   firesGivenCount: number;
   totalPoints: number;
   rank: number;
+  user: {
+    id: number;
+    username: string;
+    displayName: string;
+    avatarUrl?: string | null;
+  };
+}
+
+interface TopContributor {
+  userId: number;
+  periodType: string;
+  period: string;
+  year: number;
+  totalPoints: number;
+  uploadsCount: number;
+  likesGivenCount: number;
+  commentsCount: number;
+  firesGivenCount: number;
+  achievedAt: string;
   user: {
     id: number;
     username: string;
@@ -55,6 +74,26 @@ const LeaderboardPage = () => {
     queryFn: async () => {
       const res = await fetch("/api/leaderboard/monthly/current");
       if (!res.ok) throw new Error("Failed to fetch monthly leaderboard");
+      return res.json();
+    },
+  });
+
+  // Fetch historic monthly winners
+  const { data: historicMonthlyData } = useQuery<TopContributor[]>({
+    queryKey: ["/api/leaderboard/top-contributors/monthly"],
+    queryFn: async () => {
+      const res = await fetch("/api/leaderboard/top-contributors/monthly");
+      if (!res.ok) throw new Error("Failed to fetch historic monthly winners");
+      return res.json();
+    },
+  });
+
+  // Fetch historic weekly winners
+  const { data: historicWeeklyData } = useQuery<TopContributor[]>({
+    queryKey: ["/api/leaderboard/top-contributors/weekly"],
+    queryFn: async () => {
+      const res = await fetch("/api/leaderboard/top-contributors/weekly");
+      if (!res.ok) throw new Error("Failed to fetch historic weekly winners");
       return res.json();
     },
   });
@@ -118,8 +157,8 @@ const LeaderboardPage = () => {
       cardBg: "bg-[#0f172a]",
       cardBorder: "border-[#1e293b]/50",
       avatarBorder: "border-[#1e293b]/50",
-      scoreBg: "bg-[#1e293b]",
-      scoreText: "text-slate-400",
+      scoreBg: "bg-gradient-to-b from-[#615fff] to-[#9810fa]",
+      scoreText: "text-white",
       scoreShadow: "",
     };
   };
@@ -219,6 +258,47 @@ const LeaderboardPage = () => {
           </div>
         </div>
       </Link>
+    );
+  };
+
+  const HistoricWinnerCard = ({ contributor, type }: { contributor: TopContributor; type: "monthly" | "weekly" }) => {
+    const periodLabel = type === "monthly" 
+      ? `${contributor.period} ${contributor.year}` 
+      : `Week ${contributor.period}, ${contributor.year}`;
+    
+    return (
+      <div className="flex items-center gap-4 p-4 rounded-2xl border border-[#f0b100]/20 bg-[#f0b100]/5">
+        <div className="w-6 flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fillRule="evenodd" clipRule="evenodd" d="M20.0858 14.3219L20.2787 12.4285C20.3817 11.4178 20.4487 10.751 20.3957 10.3301H20.4157C21.2864 10.3301 21.9932 9.58431 21.9932 8.66458C21.9932 7.74485 21.2864 6.99806 20.4147 6.99806C19.5429 6.99806 18.8361 7.74385 18.8361 8.66458C18.8361 9.08046 18.9811 9.46135 19.22 9.75326C18.8771 9.9762 18.4283 10.4481 17.7525 11.1579C17.2326 11.7047 16.9727 11.9776 16.6828 12.0206C16.5217 12.0436 16.3574 12.0193 16.2099 11.9506C15.942 11.8267 15.763 11.4888 15.4061 10.812L13.5227 7.24799C13.3027 6.83111 13.1178 6.48221 12.9508 6.20129C13.6336 5.8334 14.1005 5.08462 14.1005 4.22187C14.1005 2.99322 13.1588 1.99951 11.9961 1.99951C10.8335 1.99951 9.89173 2.99422 9.89173 4.22087C9.89173 5.08462 10.3586 5.8334 11.0414 6.20029C10.8744 6.48221 10.6905 6.83111 10.4696 7.24799L8.58711 10.813C8.22922 11.4888 8.05027 11.8267 7.78235 11.9516C7.63483 12.0203 7.47056 12.0446 7.30948 12.0216C7.01957 11.9786 6.75964 11.7047 6.23979 11.1579C5.56399 10.4481 5.11512 9.9762 4.77222 9.75326C5.01215 9.46135 5.15611 9.08046 5.15611 8.66358C5.15611 7.74485 4.44831 6.99806 3.57657 6.99806C2.70682 6.99806 1.99902 7.74385 1.99902 8.66458C1.99902 9.58431 2.70582 10.3301 3.57757 10.3301H3.59656C3.54258 10.75 3.61056 11.4178 3.71353 12.4285L3.90647 14.3219C4.01344 15.3726 4.10241 16.3723 4.21238 17.2731H19.7799C19.8898 16.3733 19.9788 15.3726 20.0858 14.3219Z" fill="#F0B100" />
+            <path fillRule="evenodd" clipRule="evenodd" d="M10.8515 21.9937H13.1408C16.1249 21.9937 17.6175 21.9937 18.6132 21.054C19.0471 20.6421 19.323 19.9023 19.5209 18.9386H4.47131C4.66925 19.9023 4.94417 20.6421 5.37904 21.053C6.37475 21.9937 7.86732 21.9937 10.8515 21.9937Z" fill="#F0B100" />
+          </svg>
+        </div>
+        
+        <div className="w-10 h-10 rounded-xl border border-[#f0b100]/30 bg-[#0f172a] overflow-hidden flex-shrink-0">
+          <Avatar className="w-full h-full rounded-none">
+            <AvatarImage src={contributor.user.avatarUrl || undefined} className="object-cover" />
+            <AvatarFallback className="bg-[#0f172a] text-slate-400 rounded-none text-xs">
+              {contributor.user.displayName.charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="font-bold text-slate-50 text-sm truncate">
+            {contributor.user.displayName}
+          </div>
+          <div className="text-slate-400 text-[10px]">
+            {periodLabel} · {contributor.totalPoints} points
+          </div>
+        </div>
+        
+        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-b from-[#fdc700] to-[#d08700] shadow-[0_4px_6px_-4px_#f0b10033,0_10px_15px_-3px_#f0b10033]">
+          <span className="text-xs font-medium text-black">
+            {contributor.totalPoints}
+          </span>
+        </div>
+      </div>
     );
   };
 
@@ -333,14 +413,103 @@ const LeaderboardPage = () => {
           )}
         </div>
 
+        {/* Historic Winners Section */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-2">
+            <Trophy className="w-5 h-5 text-[#f0b100]" />
+            <h2 className="text-xl font-bold text-slate-50">Historic Winners</h2>
+          </div>
+          <p className="text-slate-400 text-xs leading-4 mb-4">
+            Hall of fame for past top performers
+          </p>
+
+          {/* Top Monthly Contributors */}
+          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Calendar className="w-4 h-4 text-slate-50" />
+              <h3 className="text-sm font-bold text-slate-50">Top Monthly Contributors</h3>
+            </div>
+            <p className="text-slate-400 text-xs mb-3">Best monthly content and highest engagement</p>
+            
+            {historicMonthlyData && historicMonthlyData.length > 0 ? (
+              <HistoricWinnerCard contributor={historicMonthlyData[0]} type="monthly" />
+            ) : (
+              <div className="text-center py-4 text-slate-400 text-sm">No historic monthly winners yet</div>
+            )}
+          </div>
+
+          {/* Top Weekly Contributors */}
+          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="w-4 h-4 text-slate-50" />
+              <h3 className="text-sm font-bold text-slate-50">Top Weekly Contributors</h3>
+            </div>
+            <p className="text-slate-400 text-xs mb-3">Best weekly content and highest engagement</p>
+            
+            {historicWeeklyData && historicWeeklyData.length > 0 ? (
+              <HistoricWinnerCard contributor={historicWeeklyData[0]} type="weekly" />
+            ) : (
+              <div className="text-center py-4 text-slate-400 text-sm">No historic weekly winners yet</div>
+            )}
+          </div>
+        </div>
+
+        {/* How Rankings Work Section */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Trophy className="w-5 h-5 text-slate-50" />
+            <h2 className="text-xl font-bold text-slate-50">How Rankings Work</h2>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {/* Clips Uploaded */}
+            <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-[#00a6f4]/10 flex items-center justify-center mb-3">
+                <Upload className="w-6 h-6 text-[#00bcff]" />
+              </div>
+              <span className="text-2xl font-bold text-[#00bcff] mb-1">+10 Points</span>
+              <span className="text-slate-400 text-xs mb-1">Clips Uploaded</span>
+              <span className="text-slate-400 text-[10px]">Share your gaming moments</span>
+            </div>
+
+            {/* Likes Given */}
+            <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-[#ff2056]/10 flex items-center justify-center mb-3">
+                <Heart className="w-6 h-6 text-[#ff2056]" />
+              </div>
+              <span className="text-2xl font-bold text-[#ff2056] mb-1">+2 Points</span>
+              <span className="text-slate-400 text-xs mb-1">Likes Given</span>
+              <span className="text-slate-400 text-[10px]">Appreciate others' content</span>
+            </div>
+
+            {/* Comments Made */}
+            <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-[#00bc7d]/10 flex items-center justify-center mb-3">
+                <MessageCircle className="w-6 h-6 text-[#00d492]" />
+              </div>
+              <span className="text-2xl font-bold text-[#00d492] mb-1">+5 Points</span>
+              <span className="text-slate-400 text-xs mb-1">Comments Made</span>
+              <span className="text-slate-400 text-[10px]">Engage with the community</span>
+            </div>
+
+            {/* Fire Reactions */}
+            <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-[#ff6900]/10 flex items-center justify-center mb-3">
+                <Flame className="w-6 h-6 text-[#ff6900]" />
+              </div>
+              <span className="text-2xl font-bold text-[#ff6900] mb-1">+3 Points</span>
+              <span className="text-slate-400 text-xs mb-1">Fire Reactions</span>
+              <span className="text-slate-400 text-[10px]">Give epic reactions to content</span>
+            </div>
+          </div>
+        </div>
+
         {/* Call to Action Section */}
         <div className="bg-gradient-to-b from-[#4ade80]/10 to-[#4ade80]/5 border border-[#4ade80]/20 rounded-2xl p-6">
           <div className="flex flex-col items-center text-center">
             {/* Icon */}
             <div className="w-16 h-16 rounded-full bg-[#4ade80]/20 flex items-center justify-center mb-4">
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path fillRule="evenodd" clipRule="evenodd" d="M17.1093 28.9034C21.2773 28.0686 26.6666 25.0699 26.6666 17.3166C26.6666 10.262 22.1027 6.3633 18.5893 4.20467C17.764 3.72467 16.9999 4.35533 16.9999 5.30867V7.746C16.9999 9.66867 16.3919 12.778 14.5466 13.8379C13.3999 14.5833 12.3599 13.4673 12.2213 12.1073L12.1066 10.9899C11.9733 9.69131 10.8506 8.90331 9.81323 9.69531C8.34789 10.8153 6.66656 13.6086 6.66656 17.3153C6.66656 26.7966 13.452 28.7686 17.0573 28.7686C17.264 28.7686 17.4786 28.7619 17.7026 28.7486C16.2813 28.6006 13.0666 27.5206 13.0666 24.4273C13.0666 21.6939 14.8599 20.0473 16.3746 19.3473C16.7826 19.1073 17.2586 19.4206 17.2586 19.8939V20.6806C17.2586 21.2806 17.4919 22.2206 18.0453 22.8633C18.672 23.5913 19.5906 22.8286 19.6639 21.8713C19.6879 21.5699 19.992 21.378 20.2533 21.5299C21.108 22.03 22.3999 22.9366 22.3999 24.4273C22.3999 27.158 21.0946 28.4139 19.7093 28.9034H17.1093Z" fill="#4ADE80" />
-              </svg>
+              <Flame className="w-8 h-8 text-[#4ade80]" />
             </div>
             
             <h3 className="text-xl font-bold text-slate-50 mb-2">
