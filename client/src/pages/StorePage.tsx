@@ -874,7 +874,24 @@ export default function StorePage() {
               {/* NFT Collection Grid */}
               <h3 className="text-base font-semibold text-gray-300 mb-3">NFT Avatars</h3>
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 mb-8">
-                {gamefolioNFTs.map((nft) => (
+                {gamefolioNFTs
+                  .filter((nft) => {
+                    if (rarityFilter !== "all" && nft.rarity.toLowerCase() !== rarityFilter.toLowerCase()) {
+                      return false;
+                    }
+                    if (priceFilter !== "all") {
+                      if (priceFilter === "low" && nft.price > 300) return false;
+                      if (priceFilter === "medium" && (nft.price < 300 || nft.price > 500)) return false;
+                      if (priceFilter === "high" && nft.price < 500) return false;
+                    }
+                    if (mintFilter !== "all") {
+                      if (mintFilter === "1-100" && nft.id > 100) return false;
+                      if (mintFilter === "101-500" && (nft.id < 101 || nft.id > 500)) return false;
+                      if (mintFilter === "500+" && nft.id < 500) return false;
+                    }
+                    return true;
+                  })
+                  .map((nft) => (
                   <Card
                     key={nft.id}
                     className="bg-gray-800/50 border-gray-700 overflow-hidden transition-all hover:shadow-lg hover:border-[#4ade80] hover:shadow-[#4ade80]/20 cursor-pointer"
