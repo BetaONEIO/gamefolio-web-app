@@ -102,10 +102,28 @@ export default function StorePage() {
 
   const { data: storeItems = [], isLoading: isLoadingItems } = useQuery<StoreItem[]>({
     queryKey: ["/api/store/items"],
+    queryFn: async () => {
+      const response = await fetch('/api/store/items', {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch store items');
+      }
+      return response.json();
+    },
   });
 
   const { data: ownedItems = [], refetch: refetchOwned } = useQuery<OwnedItem[]>({
     queryKey: ["/api/store/owned"],
+    queryFn: async () => {
+      const response = await fetch('/api/store/owned', {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch owned items');
+      }
+      return response.json();
+    },
     enabled: !!user,
   });
 
@@ -196,6 +214,15 @@ export default function StorePage() {
   // Fetch user's watchlist
   const { data: watchlist = [] } = useQuery<any[]>({
     queryKey: ["/api/nft/watchlist"],
+    queryFn: async () => {
+      const response = await fetch('/api/nft/watchlist', {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch watchlist');
+      }
+      return response.json();
+    },
     enabled: !!user,
   });
 
