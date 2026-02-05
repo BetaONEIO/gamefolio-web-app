@@ -326,7 +326,7 @@ const LeaderboardPage = () => {
 
   return (
     <div className="min-h-screen bg-[#020617] overflow-y-auto">
-      <div className="max-w-md mx-auto px-6 py-12 pb-32">
+      <div className="max-w-md lg:max-w-4xl xl:max-w-5xl mx-auto px-6 py-12 pb-32">
         {/* Hero Section */}
         <div className="flex flex-col items-center text-center mb-8">
           {/* Trophy Icon */}
@@ -347,7 +347,7 @@ const LeaderboardPage = () => {
         </div>
 
         {/* Tab Pills */}
-        <div className="bg-[#0f172a] border border-[#1e293b] rounded-full p-1.5 flex gap-2 mb-8">
+        <div className="bg-[#0f172a] border border-[#1e293b] rounded-full p-1.5 flex gap-2 mb-8 lg:max-w-lg lg:mx-auto">
           <button
             onClick={() => setActiveTab("weekly")}
             className={`flex-1 px-4 py-2.5 rounded-full text-sm font-bold transition-colors ${
@@ -395,7 +395,7 @@ const LeaderboardPage = () => {
         </div>
 
         {/* Leaderboard List */}
-        <div className="space-y-8 mb-8">
+        <div className="space-y-8 lg:space-y-4 mb-8">
           {isLoading ? (
             <LoadingSkeleton />
           ) : !currentData || currentData.length === 0 ? (
@@ -423,34 +423,36 @@ const LeaderboardPage = () => {
             Hall of fame for past top performers
           </p>
 
-          {/* Top Monthly Contributors */}
-          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 mb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Calendar className="w-4 h-4 text-slate-50" />
-              <h3 className="text-sm font-bold text-slate-50">Top Monthly Contributors</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Top Monthly Contributors */}
+            <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Calendar className="w-4 h-4 text-slate-50" />
+                <h3 className="text-sm font-bold text-slate-50">Top Monthly Contributors</h3>
+              </div>
+              <p className="text-slate-400 text-xs mb-3">Best monthly content and highest engagement</p>
+              
+              {historicMonthlyData && historicMonthlyData.length > 0 ? (
+                <HistoricWinnerCard contributor={historicMonthlyData[0]} type="monthly" />
+              ) : (
+                <div className="text-center py-4 text-slate-400 text-sm">No historic monthly winners yet</div>
+              )}
             </div>
-            <p className="text-slate-400 text-xs mb-3">Best monthly content and highest engagement</p>
-            
-            {historicMonthlyData && historicMonthlyData.length > 0 ? (
-              <HistoricWinnerCard contributor={historicMonthlyData[0]} type="monthly" />
-            ) : (
-              <div className="text-center py-4 text-slate-400 text-sm">No historic monthly winners yet</div>
-            )}
-          </div>
 
-          {/* Top Weekly Contributors */}
-          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-4 h-4 text-slate-50" />
-              <h3 className="text-sm font-bold text-slate-50">Top Weekly Contributors</h3>
+            {/* Top Weekly Contributors */}
+            <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="w-4 h-4 text-slate-50" />
+                <h3 className="text-sm font-bold text-slate-50">Top Weekly Contributors</h3>
+              </div>
+              <p className="text-slate-400 text-xs mb-3">Best weekly content and highest engagement</p>
+              
+              {historicWeeklyData && historicWeeklyData.length > 0 ? (
+                <HistoricWinnerCard contributor={historicWeeklyData[0]} type="weekly" />
+              ) : (
+                <div className="text-center py-4 text-slate-400 text-sm">No historic weekly winners yet</div>
+              )}
             </div>
-            <p className="text-slate-400 text-xs mb-3">Best weekly content and highest engagement</p>
-            
-            {historicWeeklyData && historicWeeklyData.length > 0 ? (
-              <HistoricWinnerCard contributor={historicWeeklyData[0]} type="weekly" />
-            ) : (
-              <div className="text-center py-4 text-slate-400 text-sm">No historic weekly winners yet</div>
-            )}
           </div>
         </div>
 
@@ -461,7 +463,7 @@ const LeaderboardPage = () => {
             <h2 className="text-xl font-bold text-slate-50">How Rankings Work</h2>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
             {/* Clips Uploaded */}
             <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
               <div className="w-12 h-12 rounded-full bg-[#00a6f4]/10 flex items-center justify-center mb-3">
@@ -520,14 +522,14 @@ const LeaderboardPage = () => {
             </p>
             
             {/* Buttons */}
-            <div className="w-full space-y-3">
-              <Link href="/upload" className="block">
-                <Button className="w-full h-11 rounded-full bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22] font-bold text-sm">
+            <div className="w-full flex flex-col lg:flex-row gap-3 lg:justify-center">
+              <Link href="/upload" className="block lg:w-auto">
+                <Button className="w-full lg:w-48 h-11 rounded-full bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22] font-bold text-sm">
                   Upload Your Clip
                 </Button>
               </Link>
-              <Link href="/explore" className="block">
-                <Button variant="outline" className="w-full h-12 rounded-full bg-[#0f172a] hover:bg-[#1e293b] border-[#1e293b] text-slate-50 font-bold text-sm">
+              <Link href="/explore" className="block lg:w-auto">
+                <Button variant="outline" className="w-full lg:w-48 h-12 rounded-full bg-[#0f172a] hover:bg-[#1e293b] border-[#1e293b] text-slate-50 font-bold text-sm">
                   Explore Content
                 </Button>
               </Link>
