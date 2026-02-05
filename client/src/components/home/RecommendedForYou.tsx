@@ -75,7 +75,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
   // Don't render if loading or no clips
   if (isLoading) {
     return (
-      <section className="px-2 sm:px-4 md:px-6 mb-6 sm:mb-8">
+      <section className="px-4 sm:px-6 md:px-8 mb-6 sm:mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-2">
           <div className="flex items-center gap-2">
             <Star className="h-5 w-5 text-primary flex-shrink-0" />
@@ -130,11 +130,33 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
   }
 
   if (!recommendedClips || recommendedClips.length === 0) {
-    return null;
+    return (
+      <section className="px-4 sm:px-6 md:px-8 mb-6 sm:mb-8" data-testid="recommended-for-you-section">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-2">
+          <div className="flex items-center gap-2">
+            <Star className="h-5 w-5 text-primary flex-shrink-0" />
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold">Recommended for You</h2>
+          </div>
+        </div>
+        <div className="border-b border-border/50 mb-4 sm:mb-6 md:mb-8" />
+        <div className="text-center py-8 sm:py-12 bg-card/50 rounded-xl border border-border/50">
+          <Star className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+          <h3 className="text-base sm:text-lg font-semibold mb-2">
+            No recommendations yet
+          </h3>
+          <p className="text-sm sm:text-base text-muted-foreground mb-4 px-4">
+            Add some favorite games to your profile to get personalized recommendations!
+          </p>
+          <Link href="/profile" className="text-primary text-sm font-medium hover:underline">
+            Manage favorite games
+          </Link>
+        </div>
+      </section>
+    );
   }
 
   return (
-    <section className="px-2 sm:px-4 md:px-6 mb-6 sm:mb-8" data-testid="recommended-for-you-section">
+    <section className="px-4 sm:px-6 md:px-8 mb-6 sm:mb-8" data-testid="recommended-for-you-section">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-2">
         <div className="flex items-center gap-2">
           <Star className="h-5 w-5 text-primary flex-shrink-0" />
