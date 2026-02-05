@@ -22,7 +22,16 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
 
   // Fetch recommended clips based on user's favorite games
   const { data: recommendedClips, isLoading } = useQuery<ClipWithUser[]>({
-    queryKey: [`/api/recommended-clips`],
+    queryKey: ['/api/recommended-clips'],
+    queryFn: async () => {
+      const response = await fetch('/api/recommended-clips', {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch recommended clips');
+      }
+      return response.json();
+    },
     enabled: !!actualUserId,
   });
 
