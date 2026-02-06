@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 import { TrendingSection } from "@/components/trending/TrendingSection";
@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { ChevronRight, Video, Plus, ChevronLeft } from "lucide-react";
 import BannerImage from "@assets/Untitled (1920 x 1080 px).png";
 import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
+import LootboxBanner from "@assets/lootbox-banner-1_1770362095039.png";
 import { useLocation, Link } from "wouter";
 import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
 import { LatestReelsCarousel } from "@/components/clips/LatestReelsCarousel";
@@ -161,6 +162,141 @@ const POPULAR_GAMES = [
   { id: 'minecraft', name: 'Minecraft' },
 ];
 
+const HERO_SLIDES = [
+  {
+    type: 'overlay' as const,
+    backgroundImage: ForzaGif,
+    overlay: 'linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8))',
+    showContent: true,
+  },
+  {
+    type: 'image' as const,
+    backgroundImage: LootboxBanner,
+    overlay: '',
+    showContent: false,
+  },
+  {
+    type: 'overlay' as const,
+    backgroundImage: BannerImage,
+    overlay: 'linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7))',
+    showContent: true,
+  },
+];
+
+const SLIDE_INTERVAL = 5000;
+
+interface HeroBannerSlideshowProps {
+  heroText: { title: string; subtitle: string; buttonText?: string; buttonUrl?: string } | null;
+  user: any;
+  userHasContent: boolean | undefined;
+  setLocation: (path: string) => void;
+}
+
+const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation }: HeroBannerSlideshowProps) => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+    }, SLIDE_INTERVAL);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <section className="relative overflow-hidden -mx-2 md:-mx-6 -mt-2 md:-mt-4">
+      <div className="relative h-[300px] sm:h-[350px] md:h-[500px]">
+        {HERO_SLIDES.map((slide, index) => (
+          <div
+            key={index}
+            className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
+            style={{
+              backgroundImage: slide.overlay
+                ? `${slide.overlay}, url(${slide.backgroundImage})`
+                : `url(${slide.backgroundImage})`,
+              opacity: currentSlide === index ? 1 : 0,
+              zIndex: currentSlide === index ? 1 : 0,
+            }}
+          >
+            {slide.showContent && (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center text-white px-4 sm:px-6 max-w-4xl">
+                  {heroText ? (
+                    <>
+                      <h1 className="text-2xl sm:text-3xl md:text-6xl font-bold mb-3 sm:mb-4 leading-tight">
+                        {heroText.title.split('\n').map((line, idx) => (
+                          <span key={idx}>
+                            {idx > 0 && <span className="block text-primary">{line}</span>}
+                            {idx === 0 && line}
+                          </span>
+                        ))}
+                      </h1>
+                      <p className="text-sm sm:text-base md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-2">
+                        {heroText.subtitle}
+                      </p>
+                      {heroText.buttonText && heroText.buttonUrl ? (
+                        <Button 
+                          className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                          onClick={() => {
+                            if (heroText.buttonUrl?.startsWith('http')) {
+                              window.open(heroText.buttonUrl, '_blank');
+                            } else {
+                              setLocation(heroText.buttonUrl || '/');
+                            }
+                          }}
+                          data-testid="button-custom-hero"
+                        >
+                          {heroText.buttonText}
+                        </Button>
+                      ) : !user ? (
+                        <Button 
+                          className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                          onClick={() => setLocation('/auth')}
+                          data-testid="button-join-community"
+                        >
+                          Join Community
+                        </Button>
+                      ) : !userHasContent && (
+                        <Button 
+                          className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                          onClick={() => setLocation('/upload')}
+                          data-testid="button-start-building"
+                        >
+                          Start Building Now
+                        </Button>
+                      )}
+                    </>
+                  ) : (
+                    <div className="space-y-4">
+                      <Skeleton className="h-12 sm:h-16 md:h-24 w-full max-w-2xl mx-auto bg-white/10" />
+                      <Skeleton className="h-6 sm:h-8 w-3/4 max-w-xl mx-auto bg-white/10" />
+                      <Skeleton className="h-12 w-40 mx-auto bg-white/10" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* Slide Indicators */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+          {HERO_SLIDES.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                currentSlide === index
+                  ? 'w-6 bg-primary'
+                  : 'w-2 bg-white/40 hover:bg-white/60'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const HomePage = () => {
   const [feedPeriod, setFeedPeriod] = useState<'day' | 'week' | 'month'>('day');
   const [selectedGameFilter, setSelectedGameFilter] = useState<string | null>(null);
@@ -274,74 +410,13 @@ const HomePage = () => {
         </div>
       )}
       
-      {/* Hero Section */}
-      <section className="relative overflow-hidden -mx-2 md:-mx-6 -mt-2 md:-mt-4">
-        <div className="relative">
-          <div 
-            className="h-[300px] sm:h-[350px] md:h-[500px] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center bg-cover bg-center"
-            style={{
-              backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8)), url(${ForzaGif})`,
-            }}
-          >
-            <div className="text-center text-white px-4 sm:px-6 max-w-4xl">
-              {heroText ? (
-                <>
-                  <h1 className="text-2xl sm:text-3xl md:text-6xl font-bold mb-3 sm:mb-4 leading-tight">
-                    {heroText.title.split('\n').map((line, index) => (
-                      <span key={index}>
-                        {index > 0 && <span className="block text-primary">{line}</span>}
-                        {index === 0 && line}
-                      </span>
-                    ))}
-                  </h1>
-                  <p className="text-sm sm:text-base md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-2">
-                    {heroText.subtitle}
-                  </p>
-                  {/* Show custom button if provided, otherwise show default buttons */}
-                  {heroText.buttonText && heroText.buttonUrl ? (
-                    <Button 
-                      className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
-                      onClick={() => {
-                        if (heroText.buttonUrl?.startsWith('http')) {
-                          window.open(heroText.buttonUrl, '_blank');
-                        } else {
-                          setLocation(heroText.buttonUrl || '/');
-                        }
-                      }}
-                      data-testid="button-custom-hero"
-                    >
-                      {heroText.buttonText}
-                    </Button>
-                  ) : !user ? (
-                    <Button 
-                      className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
-                      onClick={() => setLocation('/auth')}
-                      data-testid="button-join-community"
-                    >
-                      Join Community
-                    </Button>
-                  ) : !userHasContent && (
-                    <Button 
-                      className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
-                      onClick={() => setLocation('/upload')}
-                      data-testid="button-start-building"
-                    >
-                      Start Building Now
-                    </Button>
-                  )}
-                </>
-              ) : (
-                /* Loading state to prevent text swap */
-                <div className="space-y-4">
-                  <Skeleton className="h-12 sm:h-16 md:h-24 w-full max-w-2xl mx-auto bg-white/10" />
-                  <Skeleton className="h-6 sm:h-8 w-3/4 max-w-xl mx-auto bg-white/10" />
-                  <Skeleton className="h-12 w-40 mx-auto bg-white/10" />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Hero Slideshow Section */}
+      <HeroBannerSlideshow 
+        heroText={heroText}
+        user={user}
+        userHasContent={userHasContent}
+        setLocation={setLocation}
+      />
       
       {/* Recommended for You Section */}
       <RecommendedForYou userId={userId} />
