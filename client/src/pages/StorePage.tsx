@@ -959,7 +959,13 @@ export default function StorePage() {
               </div>
 
               {/* NFT Collection Grid */}
-              <h3 className="text-base font-semibold text-gray-300 mb-3">NFT Avatars</h3>
+              <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-[#4ade80]" />
+                NFT Avatars
+                <Badge className="bg-gray-600 text-[10px] px-1.5 py-0.5 text-gray-200 ml-1">
+                  All Users
+                </Badge>
+              </h3>
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 mb-8">
                 {gamefolioNFTs
                   .filter((nft) => {
@@ -1048,7 +1054,13 @@ export default function StorePage() {
               </div>
 
               {/* Store Items */}
-              <h3 className="text-base font-semibold text-gray-300 mb-3">Digital Items</h3>
+              <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                <ShoppingCart className="h-4 w-4 text-blue-400" />
+                Digital Items
+                <Badge className="bg-gray-600 text-[10px] px-1.5 py-0.5 text-gray-200 ml-1">
+                  All Users
+                </Badge>
+              </h3>
               {isLoadingItems ? (
                 <div className="col-span-full flex justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
@@ -1171,9 +1183,12 @@ export default function StorePage() {
               <h3 className="text-base font-semibold text-gray-300 mb-3 mt-8 flex items-center gap-2">
                 <Tag className="h-4 w-4 text-purple-400" />
                 Name Tags
+                <Badge className="bg-gray-600 text-[10px] px-1.5 py-0.5 text-gray-200 ml-1">
+                  All Users
+                </Badge>
               </h3>
               <p className="text-xs text-gray-500 mb-3">
-                Customize your profile with unique name tags. Purchase with GF tokens or win from daily lootboxes!
+                Customize your profile with unique name tags. Purchase with GF tokens or win from daily lootboxes! Pro members get 20% off.
               </p>
               {isLoadingNameTags ? (
                 <div className="flex justify-center py-12">
