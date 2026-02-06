@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useCrossmint } from "@/hooks/use-crossmint";
 import { Link } from "wouter";
-import { ShoppingCart, DollarSign, Sparkles, Wallet, Menu, Filter, Heart, Loader2, CheckCircle, Trash2 } from "lucide-react";
+import { ShoppingCart, DollarSign, Sparkles, Wallet, Menu, Filter, Heart, Loader2, CheckCircle, Trash2, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -128,6 +128,48 @@ export default function StorePage() {
   });
 
   const ownedItemIds = new Set(ownedItems.map(item => item.id));
+
+  interface StoreNameTag {
+    id: number;
+    name: string;
+    imageUrl: string;
+    rarity: string;
+    gfCost: number | null;
+    owned: boolean;
+  }
+
+  const { data: storeNameTags = [], isLoading: isLoadingNameTags } = useQuery<StoreNameTag[]>({
+    queryKey: ["/api/store/name-tags"],
+    queryFn: async () => {
+      const response = await fetch('/api/store/name-tags', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch store name tags');
+      return response.json();
+    },
+  });
+
+  const [purchasingNameTagId, setPurchasingNameTagId] = useState<number | null>(null);
+
+  const purchaseNameTagMutation = useMutation({
+    mutationFn: async (nameTagId: number) => {
+      const response = await apiRequest("POST", "/api/store/purchase-name-tag", { nameTagId });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to purchase name tag");
+      }
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "Name Tag Purchased!", description: data.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/store/name-tags"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/name-tags"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      setPurchasingNameTagId(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Purchase Failed", description: error.message, variant: "destructive" });
+      setPurchasingNameTagId(null);
+    },
+  });
 
   const handlePurchaseWithGF = async (item: StoreItem) => {
     if (!user) {
@@ -1054,6 +1096,120 @@ export default function StorePage() {
                             ) : (
                               <>
                                 <ShoppingCart className="h-2.5 w-2.5 mr-0.5" />
+                                Buy
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                );})}
+              </div>
+              )}
+
+              {/* Name Tags Section */}
+              <h3 className="text-base font-semibold text-gray-300 mb-3 mt-8 flex items-center gap-2">
+                <Tag className="h-4 w-4 text-purple-400" />
+                Name Tags
+              </h3>
+              <p className="text-xs text-gray-500 mb-3">
+                Customize your profile with unique name tags. Purchase with GF tokens or win from daily lootboxes!
+              </p>
+              {isLoadingNameTags ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
+              ) : storeNameTags.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 text-sm">
+                  No name tags available in the store yet.
+                </div>
+              ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+                {storeNameTags
+                  .filter((tag) => rarityFilter === "all" || tag.rarity === rarityFilter)
+                  .map((tag) => {
+                  const isPurchasing = purchasingNameTagId === tag.id;
+                  const cost = tag.gfCost || 0;
+                  
+                  return (
+                  <Card
+                    key={tag.id}
+                    className={`bg-gray-800/50 border-gray-700 overflow-hidden transition-all hover:shadow-lg ${
+                      tag.owned 
+                        ? "border-green-500/50 hover:border-green-400 hover:shadow-green-500/20" 
+                        : tag.rarity === 'legendary' ? "hover:border-amber-500 hover:shadow-amber-500/20"
+                        : tag.rarity === 'epic' ? "hover:border-purple-500 hover:shadow-purple-500/20"
+                        : tag.rarity === 'rare' ? "hover:border-blue-500 hover:shadow-blue-500/20"
+                        : "hover:border-gray-500 hover:shadow-gray-500/20"
+                    }`}
+                  >
+                    <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-3">
+                      <img
+                        src={tag.imageUrl}
+                        alt={tag.name}
+                        className="max-w-full max-h-full object-contain drop-shadow-lg"
+                      />
+                      {tag.owned && (
+                        <Badge className="absolute top-1.5 right-1.5 bg-green-600 text-[10px] px-1.5 py-0.5">
+                          <CheckCircle className="w-2.5 h-2.5 mr-0.5" />
+                          Owned
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <div className="p-2 space-y-1.5">
+                      <div>
+                        <h3 className="font-semibold text-xs line-clamp-1">{tag.name}</h3>
+                        <Badge className={`mt-1 text-[10px] px-1.5 py-0.5 text-white capitalize ${
+                          tag.rarity === "legendary" ? "bg-gradient-to-r from-yellow-500 to-amber-600" :
+                          tag.rarity === "epic" ? "bg-gradient-to-r from-purple-500 to-pink-600" :
+                          tag.rarity === "rare" ? "bg-gradient-to-r from-blue-500 to-cyan-600" : "bg-gray-600"
+                        }`}>
+                          {tag.rarity}
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex items-center justify-between pt-1.5 border-t border-gray-700">
+                        <div>
+                          <p className="text-[9px] text-gray-500">Price</p>
+                          <div className="flex items-center gap-0.5">
+                            <img src={gfTokenLogo} alt="GF" className="w-3 h-3" />
+                            <span className="text-xs font-bold text-purple-400">{cost} GF</span>
+                          </div>
+                        </div>
+                        
+                        {tag.owned ? (
+                          <Button
+                            size="sm"
+                            className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-[10px] h-6 px-2 cursor-default"
+                            disabled
+                          >
+                            <CheckCircle className="h-2.5 w-2.5 mr-0.5" />
+                            Owned
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white text-[10px] h-6 px-2"
+                            onClick={() => {
+                              if (!user) {
+                                toast({ title: "Login required", description: "Please log in to purchase name tags", variant: "destructive" });
+                                return;
+                              }
+                              setPurchasingNameTagId(tag.id);
+                              purchaseNameTagMutation.mutate(tag.id);
+                            }}
+                            disabled={isPurchasing}
+                          >
+                            {isPurchasing ? (
+                              <>
+                                <Loader2 className="h-2.5 w-2.5 mr-0.5 animate-spin" />
+                                Buying...
+                              </>
+                            ) : (
+                              <>
+                                <Tag className="h-2.5 w-2.5 mr-0.5" />
                                 Buy
                               </>
                             )}

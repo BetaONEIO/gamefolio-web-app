@@ -18,7 +18,7 @@ import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "./db";
 import { users } from "@shared/schema";
 

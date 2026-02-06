@@ -347,7 +347,9 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                   className="text-center"
                 >
                   <h3 className="text-2xl font-bold text-white">{reward.name}</h3>
-                  <p className="text-sm text-gray-400 capitalize">{reward.assetType.replace("_", " ")}</p>
+                  <p className="text-sm text-gray-400 capitalize">
+                    {reward.assetType === 'name_tag' ? 'Name Tag' : reward.assetType.replace("_", " ")}
+                  </p>
                 </motion.div>
 
                 {isDuplicate && (
