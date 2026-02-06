@@ -69,6 +69,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
   const [showCheckout, setShowCheckout] = useState(false);
   const [checkoutLoaded, setCheckoutLoaded] = useState(false);
+  const [paywallReady, setPaywallReady] = useState(false);
   const checkoutContainerRef = useRef<HTMLDivElement>(null);
 
   const packages = getCurrentOffering();
@@ -79,6 +80,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
       setBillingPeriod("yearly");
       setShowCheckout(false);
       setCheckoutLoaded(false);
+      setPaywallReady(false);
     }
   }, [open]);
 
@@ -99,14 +101,19 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
     if (showCheckout && checkoutContainerRef.current && !checkoutLoaded && isInitialized) {
       setCheckoutLoaded(true);
       console.log("Presenting RevenueCat paywall...");
-      presentPaywall(checkoutContainerRef.current).then((success) => {
-        console.log("RevenueCat paywall result:", success);
-        if (success) {
-          onOpenChange(false);
+      setTimeout(() => {
+        if (checkoutContainerRef.current) {
+          setPaywallReady(true);
+          presentPaywall(checkoutContainerRef.current).then((success) => {
+            console.log("RevenueCat paywall result:", success);
+            if (success) {
+              onOpenChange(false);
+            }
+          }).catch((err) => {
+            console.error("RevenueCat paywall error:", err);
+          });
         }
-      }).catch((err) => {
-        console.error("RevenueCat paywall error:", err);
-      });
+      }, 100);
     }
   }, [showCheckout, checkoutLoaded, isInitialized, presentPaywall, onOpenChange]);
 
@@ -118,6 +125,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   const handleBackToPlans = () => {
     setShowCheckout(false);
     setCheckoutLoaded(false);
+    setPaywallReady(false);
   };
 
   const formatPrice = (pkg: Package) => {
@@ -337,19 +345,18 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
                 </button>
               </div>
 
+              {!paywallReady && (
+                <div className="flex flex-col items-center justify-center h-[500px] bg-[#020617] gap-3 mx-2 mb-2 rounded-xl">
+                  <Loader2 className="w-8 h-8 animate-spin text-[#4ade80]" />
+                  <span className="text-[#94a3b8] text-sm">Loading subscription options...</span>
+                </div>
+              )}
               <div
                 ref={checkoutContainerRef}
                 className="flex-1 overflow-y-auto rounded-xl mx-2 mb-2"
-                style={{ minHeight: '500px', scrollbarWidth: 'none' }}
+                style={{ minHeight: paywallReady ? '500px' : '0px', scrollbarWidth: 'none', overflow: paywallReady ? 'auto' : 'hidden' }}
                 data-testid="checkout-container"
-              >
-                {(isLoading || !checkoutLoaded) && (
-                  <div className="flex flex-col items-center justify-center h-[500px] bg-[#020617] gap-3">
-                    <Loader2 className="w-8 h-8 animate-spin text-[#4ade80]" />
-                    <span className="text-[#94a3b8] text-sm">Loading subscription options...</span>
-                  </div>
-                )}
-              </div>
+              />
             </motion.div>
           ) : (
             <motion.div
