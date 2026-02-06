@@ -116,17 +116,17 @@ export function LevelTrackerModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="bg-[#0f172a]/95 backdrop-blur-sm border border-[#1e293b] text-white p-0 max-w-[220px] w-[220px] rounded-2xl overflow-hidden [&>button]:hidden fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+        className="bg-[#0f172a]/95 backdrop-blur-sm border border-[#1e293b] text-white p-0 max-w-[220px] w-[220px] lg:max-w-[385px] lg:w-[385px] rounded-2xl overflow-hidden [&>button]:hidden fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
         data-testid="dialog-level-progress"
       >
         <div className="flex flex-col">
-          <div className="flex items-center justify-between px-3 pt-3 pb-2">
-            <span className="text-sm font-bold text-[#f8fafc]">Level Progress</span>
+          <div className="flex items-center justify-between px-3 pt-3 pb-2 lg:px-6 lg:pt-5 lg:pb-3">
+            <span className="text-sm lg:text-xl font-bold text-[#f8fafc]">Level Progress</span>
             <button
               onClick={handleClose}
-              className="w-6 h-6 rounded-full bg-[#1e293b] border border-[#1e293b] flex items-center justify-center hover:bg-[#334155] transition-colors"
+              className="w-6 h-6 lg:w-8 lg:h-8 rounded-full bg-[#1e293b] border border-[#1e293b] flex items-center justify-center hover:bg-[#334155] transition-colors"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg className="w-3.5 h-3.5 lg:w-5 lg:h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path fillRule="evenodd" clipRule="evenodd" d="M22 12C22 17.523 17.523 22 12 22C6.477 22 2 17.523 2 12C2 6.477 6.477 2 12 2C17.523 2 22 6.477 22 12ZM8.97 8.97C9.26282 8.67755 9.73718 8.67755 10.03 8.97L12 10.94L13.97 8.97C14.2655 8.69464 14.726 8.70277 15.0116 8.98838C15.2972 9.27399 15.3054 9.73449 15.03 10.03L13.06 12L15.03 13.97C15.3054 14.2655 15.2972 14.726 15.0116 15.0116C14.726 15.2972 14.2655 15.3054 13.97 15.03L12 13.06L10.03 15.03C9.73449 15.3054 9.27399 15.2972 8.98838 15.0116C8.70277 14.726 8.69464 14.2655 8.97 13.97L10.94 12L8.97 10.03C8.67755 9.73718 8.67755 9.26282 8.97 8.97Z" fill="#94A3B8" />
               </svg>
             </button>
@@ -138,19 +138,19 @@ export function LevelTrackerModal({
                 initial={{ opacity: 0, y: -10, scale: 0.8 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -5 }}
-                className="flex justify-center -mt-1 mb-1"
+                className="flex justify-center -mt-1 mb-1 lg:mb-2"
               >
-                <div className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-[#4ade80]/20 to-[#22d3ee]/20 border border-[#4ade80]/30 rounded-full">
-                  <Sparkles className="w-3 h-3 text-[#4ade80] animate-pulse" />
-                  <span className="text-[#4ade80] font-bold text-xs">+{xpDelta} XP</span>
-                  <Sparkles className="w-3 h-3 text-[#4ade80] animate-pulse" />
+                <div className="flex items-center gap-1 lg:gap-2 px-2 py-1 lg:px-4 lg:py-1.5 bg-gradient-to-r from-[#4ade80]/20 to-[#22d3ee]/20 border border-[#4ade80]/30 rounded-full">
+                  <Sparkles className="w-3 h-3 lg:w-4 lg:h-4 text-[#4ade80] animate-pulse" />
+                  <span className="text-[#4ade80] font-bold text-xs lg:text-base">+{xpDelta} XP</span>
+                  <Sparkles className="w-3 h-3 lg:w-4 lg:h-4 text-[#4ade80] animate-pulse" />
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          <div className="flex flex-col items-center justify-center py-3">
-            <div className="relative w-24 h-24 flex items-center justify-center">
+          <div className="flex flex-col items-center justify-center py-3 lg:py-6">
+            <div className="relative w-24 h-24 lg:w-40 lg:h-40 flex items-center justify-center">
               <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
                 <circle
                   cx="50"
@@ -176,13 +176,13 @@ export function LevelTrackerModal({
               </svg>
               
               <div className="flex flex-col items-center justify-center z-10">
-                <svg width="16" height="16" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg className="w-4 h-4 lg:w-7 lg:h-7" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path fillRule="evenodd" clipRule="evenodd" d="M36.6663 13.6034V13.725C36.6663 15.1584 36.6663 15.8767 36.3213 16.4634C35.9763 17.05 35.348 17.3984 34.0946 18.0967L32.773 18.83C33.683 15.75 33.988 12.44 34.0996 9.61003L34.1163 9.2417L34.1196 9.15503C35.2046 9.5317 35.8146 9.81336 36.1946 10.34C36.6663 10.995 36.6663 11.865 36.6663 13.6034Z" fill="#EF4444" />
                   <path fillRule="evenodd" clipRule="evenodd" d="M3.33301 13.6034V13.725C3.33301 15.1584 3.33301 15.8767 3.67801 16.4634C4.02301 17.05 4.65134 17.3984 5.90467 18.0967L7.228 18.83C6.31634 15.75 6.01134 12.44 5.89967 9.61003L5.883 9.2417L5.88134 9.15503C4.79467 9.5317 4.18467 9.81336 3.80467 10.34C3.33301 10.995 3.33301 11.8667 3.33301 13.6034Z" fill="#EF4444" />
                   <path fillRule="evenodd" clipRule="evenodd" d="M19.9566 3.33301C22.9299 3.33301 25.3783 3.59468 27.2517 3.91135C29.15 4.23135 30.0983 4.39135 30.8917 5.36803C31.685 6.34471 31.6417 7.39972 31.5584 9.50974C31.2717 16.7582 29.7083 25.8099 21.2066 26.6099V32.5H23.5899C24.3841 32.5005 25.0676 33.0612 25.2233 33.84L25.54 35.4167H29.9567C30.647 35.4167 31.2067 35.9763 31.2067 36.6667C31.2067 37.3571 30.647 37.9167 29.9567 37.9167H9.95646C9.2661 37.9167 8.70645 37.357 8.70645 36.6667C8.70645 35.9763 9.2661 35.4167 9.95646 35.4167H14.3732L14.6899 33.84C14.8455 33.0612 15.5291 32.5005 16.3232 32.5H18.7066V26.6099C10.2049 25.8099 8.64156 16.7582 8.35489 9.50974C8.27156 7.39972 8.22823 6.34471 9.02156 5.36803C9.8149 4.39135 10.7632 4.23135 12.6616 3.91135C14.5349 3.59468 16.9832 3.33301 19.9566 3.33301Z" fill="#EF4444" />
                 </svg>
                 <motion.span 
-                  className="text-2xl font-black text-[#f8fafc] leading-tight"
+                  className="text-2xl lg:text-5xl font-black text-[#f8fafc] leading-tight"
                   key={actualLevel}
                   initial={{ scale: 1 }}
                   animate={{ scale: [1, 1.1, 1] }}
@@ -190,40 +190,40 @@ export function LevelTrackerModal({
                 >
                   {actualLevel}
                 </motion.span>
-                <span className="text-[8px] font-bold text-[#94a3b8] uppercase tracking-wider">
+                <span className="text-[8px] lg:text-sm font-bold text-[#94a3b8] uppercase tracking-wider">
                   Level
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-1 px-3 pb-3">
-            <div className="flex items-center gap-0.5 flex-wrap justify-center">
+          <div className="flex flex-col items-center gap-1 lg:gap-2 px-3 pb-3 lg:px-6 lg:pb-4">
+            <div className="flex items-center gap-0.5 lg:gap-1 flex-wrap justify-center">
               <motion.span 
-                className="text-xs font-bold text-[#ef4444]"
+                className="text-xs lg:text-lg font-bold text-[#ef4444]"
                 key={Math.round(xpProgress)}
               >
                 {Math.round(xpProgress)}
               </motion.span>
-              <span className="text-xs font-medium text-[#94a3b8]">/</span>
-              <span className="text-xs font-medium text-[#f8fafc]">{xpNeeded} XP to Lvl</span>
-              <span className="text-xs font-bold text-[#f8fafc]">{actualLevel + 1}</span>
+              <span className="text-xs lg:text-lg font-medium text-[#94a3b8]">/</span>
+              <span className="text-xs lg:text-lg font-medium text-[#f8fafc]">{xpNeeded} XP to Lvl</span>
+              <span className="text-xs lg:text-lg font-bold text-[#f8fafc]">{actualLevel + 1}</span>
             </div>
-            <div className="flex items-center gap-0.5">
-              <span className="text-[10px] font-medium text-[#94a3b8]">Total:</span>
+            <div className="flex items-center gap-0.5 lg:gap-1">
+              <span className="text-[10px] lg:text-sm font-medium text-[#94a3b8]">Total:</span>
               <motion.span 
-                className="text-[10px] font-bold text-[#f8fafc]"
+                className="text-[10px] lg:text-sm font-bold text-[#f8fafc]"
                 key={Math.round(displayXP)}
               >
                 {Math.round(displayXP)} XP
               </motion.span>
             </div>
 
-            <div className="flex items-center gap-0.5 w-full mt-2">
+            <div className="flex items-center gap-0.5 lg:gap-1 w-full mt-2 lg:mt-3">
               {[1, 2, 3, 4, 5].map((segment) => (
                 <motion.div
                   key={segment}
-                  className={`flex-1 h-1 rounded-full ${
+                  className={`flex-1 h-1 lg:h-2 rounded-full ${
                     segment <= filledSegments ? 'bg-[#4ade80]' : 'bg-[#1e293b]'
                   }`}
                   initial={{ scaleX: 0 }}
@@ -234,10 +234,10 @@ export function LevelTrackerModal({
             </div>
           </div>
 
-          <div className="px-3 pb-3">
+          <div className="px-3 pb-3 lg:px-6 lg:pb-5">
             <Button
               onClick={handleClose}
-              className="w-full h-9 rounded-xl bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22] text-sm font-bold shadow-[0_4px_6px_-4px_rgba(0,0,0,0.1),0_10px_15px_-3px_rgba(0,0,0,0.1)]"
+              className="w-full h-9 lg:h-12 rounded-xl bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22] text-sm lg:text-base font-bold shadow-[0_4px_6px_-4px_rgba(0,0,0,0.1),0_10px_15px_-3px_rgba(0,0,0,0.1)]"
             >
               Continue
             </Button>
