@@ -45,6 +45,45 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 
+const rarityGradients: Record<string, string> = {
+  legendary: "from-amber-500 via-yellow-400 to-amber-600",
+  epic: "from-purple-500 via-fuchsia-400 to-purple-600",
+  rare: "from-blue-500 via-cyan-400 to-blue-600",
+  common: "from-gray-500 via-gray-400 to-gray-500",
+};
+
+const rarityBorderColors: Record<string, string> = {
+  legendary: "border-amber-400",
+  epic: "border-purple-400",
+  rare: "border-blue-400",
+  common: "border-gray-400",
+};
+
+function NameTagFallback({ name, rarity }: { name: string; rarity: string }) {
+  const gradient = rarityGradients[rarity] || rarityGradients.common;
+  return (
+    <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${gradient} rounded-lg px-2`}>
+      <span className="text-white font-bold text-sm tracking-wide drop-shadow-md text-center leading-tight" style={{ textShadow: "0 2px 4px rgba(0,0,0,0.5)" }}>
+        {name}
+      </span>
+    </div>
+  );
+}
+
+function BorderFallback({ name, rarity }: { name: string; rarity: string }) {
+  const borderColor = rarityBorderColors[rarity] || rarityBorderColors.common;
+  const gradient = rarityGradients[rarity] || rarityGradients.common;
+  return (
+    <div className="w-full h-full flex items-center justify-center">
+      <div className={`w-20 h-20 rounded-full border-4 ${borderColor} bg-gradient-to-br ${gradient} flex items-center justify-center opacity-80`}>
+        <div className="w-14 h-14 rounded-full bg-gray-900/80 flex items-center justify-center">
+          <Circle className="w-6 h-6 text-gray-400" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type TabType = "buy" | "sell" | "mint" | "watchlist";
 
 interface StoreItem {
@@ -173,6 +212,8 @@ export default function StorePage() {
   });
 
   const [purchasingNameTagId, setPurchasingNameTagId] = useState<number | null>(null);
+  const [brokenNameTagImages, setBrokenNameTagImages] = useState<Set<number>>(new Set());
+  const [brokenBorderImages, setBrokenBorderImages] = useState<Set<number>>(new Set());
 
   const purchaseNameTagMutation = useMutation({
     mutationFn: async (nameTagId: number) => {
@@ -1267,11 +1308,16 @@ export default function StorePage() {
                     }`}
                   >
                     <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-3">
-                      <img
-                        src={tag.imageUrl}
-                        alt={tag.name}
-                        className="max-w-full max-h-full object-contain drop-shadow-lg"
-                      />
+                      {brokenNameTagImages.has(tag.id) ? (
+                        <NameTagFallback name={tag.name} rarity={tag.rarity} />
+                      ) : (
+                        <img
+                          src={tag.imageUrl}
+                          alt={tag.name}
+                          className="max-w-full max-h-full object-contain drop-shadow-lg"
+                          onError={() => setBrokenNameTagImages(prev => new Set(prev).add(tag.id))}
+                        />
+                      )}
                       {tag.owned && (
                         <Badge className="absolute top-1.5 right-1.5 bg-green-600 text-[10px] px-1.5 py-0.5">
                           <CheckCircle className="w-2.5 h-2.5 mr-0.5" />
@@ -1404,11 +1450,16 @@ export default function StorePage() {
                     onClick={!isUserPro ? () => setProUpgradeOpen(true) : undefined}
                   >
                     <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-3">
-                      <img
-                        src={border.imageUrl}
-                        alt={border.name}
-                        className={`max-w-full max-h-full object-contain drop-shadow-lg ${!isUserPro ? "grayscale-[30%]" : ""}`}
-                      />
+                      {brokenBorderImages.has(border.id) ? (
+                        <BorderFallback name={border.name} rarity={border.rarity} />
+                      ) : (
+                        <img
+                          src={border.imageUrl}
+                          alt={border.name}
+                          className={`max-w-full max-h-full object-contain drop-shadow-lg ${!isUserPro ? "grayscale-[30%]" : ""}`}
+                          onError={() => setBrokenBorderImages(prev => new Set(prev).add(border.id))}
+                        />
+                      )}
                       {border.owned && (
                         <Badge className="absolute top-1.5 right-1.5 bg-green-600 text-[10px] px-1.5 py-0.5">
                           <CheckCircle className="w-2.5 h-2.5 mr-0.5" />
