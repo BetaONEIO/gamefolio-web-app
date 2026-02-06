@@ -33,7 +33,23 @@ router.get('/api/store/items', async (req: Request, res: Response) => {
       .where(eq(storeItems.available, true))
       .orderBy(desc(storeItems.createdAt));
 
-    return res.json(items);
+    const userId = (req as any).user?.id || (req as any).session?.userId;
+    let isPro = false;
+    if (userId) {
+      const userResult = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      if (userResult.length > 0) {
+        isPro = !!userResult[0].isPro;
+      }
+    }
+
+    const itemsWithDiscount = items.map(item => ({
+      ...item,
+      originalPrice: item.gfCost,
+      gfCost: isPro ? Math.floor(item.gfCost * 0.8) : item.gfCost,
+      proDiscount: isPro,
+    }));
+
+    return res.json(itemsWithDiscount);
   } catch (error: any) {
     console.error('Get store items error:', error);
     return res.status(500).json({ error: 'Failed to fetch store items' });
@@ -112,11 +128,15 @@ router.post('/api/store/purchase-intent', async (req: Request, res: Response) =>
       return res.status(400).json({ error: 'You already own this item' });
     }
 
+    const isPro = !!user[0].isPro;
+    const baseCost = item[0].gfCost;
+    const finalCost = isPro ? Math.floor(baseCost * 0.8) : baseCost;
+
     const [purchase] = await db.insert(storePurchases).values({
       userId,
       itemId,
       walletAddress: user[0].walletAddress,
-      gfAmount: item[0].gfCost,
+      gfAmount: finalCost,
       status: 'pending',
     }).returning();
 
@@ -126,7 +146,9 @@ router.post('/api/store/purchase-intent', async (req: Request, res: Response) =>
       purchaseId: purchase.id,
       itemId: item[0].id,
       itemName: item[0].name,
-      gfCost: item[0].gfCost,
+      gfCost: finalCost,
+      originalPrice: baseCost,
+      discountApplied: isPro,
       treasuryAddress,
     });
   } catch (error: any) {

@@ -6303,15 +6303,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const unlockedTags = await storage.getUserUnlockedNameTags(req.user.id);
         const unlockedIds = new Set(unlockedTags.map(t => t.id));
         const user = await storage.getUserById(req.user.id);
+        const isPro = !!user?.isPro;
         
-        const tagsWithStatus = storeTags.map(tag => ({
-          ...tag,
-          owned: unlockedIds.has(tag.id) || !!user?.isPro,
-        }));
+        const tagsWithStatus = storeTags.map(tag => {
+          const baseCost = tag.gfCost || 0;
+          const discountedCost = isPro ? Math.floor(baseCost * 0.8) : baseCost;
+          return {
+            ...tag,
+            owned: unlockedIds.has(tag.id) || isPro,
+            originalPrice: baseCost,
+            gfCost: discountedCost,
+            proDiscount: isPro,
+          };
+        });
         return res.json(tagsWithStatus);
       }
       
-      res.json(storeTags.map(tag => ({ ...tag, owned: false })));
+      res.json(storeTags.map(tag => ({ ...tag, owned: false, originalPrice: tag.gfCost, proDiscount: false })));
     } catch (err) {
       console.error("Error fetching store name tags:", err);
       return res.status(500).json({ message: "Error fetching store name tags" });
@@ -6343,8 +6351,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "This name tag is free for everyone" });
       }
 
-      const cost = nameTag.gfCost || 0;
-      if (cost <= 0) {
+      const baseCost = nameTag.gfCost || 0;
+      if (baseCost <= 0) {
         return res.status(400).json({ message: "This name tag has no price set" });
       }
 
@@ -6360,6 +6368,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
+      const cost = user.isPro ? Math.floor(baseCost * 0.8) : baseCost;
+
       const balance = user.gfTokenBalance || 0;
       if (balance < cost) {
         return res.status(400).json({ message: `Insufficient GF tokens. Need ${cost} GF, you have ${balance} GF` });
@@ -6374,9 +6384,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ 
         success: true, 
-        message: `Successfully purchased "${nameTag.name}"!`,
+        message: `Successfully purchased "${nameTag.name}"!` + (user.isPro ? ` (20% Pro discount applied!)` : ''),
         nameTag,
         newBalance: balance - cost,
+        discountApplied: user.isPro,
+        originalPrice: baseCost,
+        finalPrice: cost,
       });
     } catch (err) {
       console.error("Error purchasing name tag:", err);
@@ -6605,6 +6618,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Error syncing borders from bucket:", err);
       return res.status(500).json({ message: "Error syncing borders from bucket" });
+    }
+  });
+
+  // ==========================================
+  // Admin Store Management Routes
+  // ==========================================
+
+  app.get("/api/admin/store/items", adminMiddleware, async (req, res) => {
+    try {
+      const allNameTags = await storage.getAllNameTags();
+      const allBorders = await storage.getAllProfileBordersFromTable();
+
+      const items: any[] = [];
+
+      for (const tag of allNameTags) {
+        items.push({
+          id: tag.id,
+          name: tag.name,
+          imageUrl: tag.imageUrl,
+          type: "name_tag",
+          rarity: tag.rarity,
+          gfCost: tag.gfCost || 0,
+          proOnly: false,
+          isActive: tag.isActive,
+          availableInStore: tag.availableInStore,
+          availableInLootbox: tag.availableInLootbox,
+          isDefault: tag.isDefault,
+          proDiscount: true,
+        });
+      }
+
+      for (const border of allBorders) {
+        items.push({
+          id: border.id,
+          name: border.name,
+          imageUrl: border.imageUrl,
+          type: "profile_border",
+          rarity: border.rarity,
+          gfCost: border.gfCost || 0,
+          proOnly: border.proOnly,
+          isActive: border.isActive,
+          availableInStore: border.availableInStore,
+          availableInLootbox: border.availableInLootbox,
+          isDefault: border.isDefault,
+          proDiscount: false,
+        });
+      }
+
+      const storeItemsData = await db.select().from(storeItems);
+      for (const item of storeItemsData) {
+        items.push({
+          id: item.id,
+          name: item.name,
+          imageUrl: item.image,
+          type: "nft_avatar",
+          rarity: item.rarity || "common",
+          gfCost: item.gfCost || 0,
+          proOnly: false,
+          isActive: item.available,
+          availableInStore: item.available,
+          availableInLootbox: false,
+          isDefault: false,
+          proDiscount: true,
+        });
+      }
+
+      res.json(items);
+    } catch (err) {
+      console.error("Error fetching admin store items:", err);
+      return res.status(500).json({ message: "Error fetching admin store items" });
+    }
+  });
+
+  app.patch("/api/admin/store/items/:type/:id", adminMiddleware, async (req, res) => {
+    try {
+      const { type, id } = req.params;
+      const itemId = parseInt(id);
+      const updates = req.body;
+
+      if (type === "name_tag") {
+        const result = await storage.updateNameTag(itemId, updates);
+        if (!result) return res.status(404).json({ message: "Name tag not found" });
+        return res.json(result);
+      } else if (type === "profile_border") {
+        const result = await storage.updateProfileBorder(itemId, updates);
+        if (!result) return res.status(404).json({ message: "Border not found" });
+        return res.json(result);
+      } else if (type === "nft_avatar") {
+        const [result] = await db.update(storeItems)
+          .set({
+            available: updates.isActive ?? undefined,
+            gfCost: updates.gfCost ?? undefined,
+            rarity: updates.rarity ?? undefined,
+          })
+          .where(eq(storeItems.id, itemId))
+          .returning();
+        if (!result) return res.status(404).json({ message: "Store item not found" });
+        return res.json(result);
+      }
+
+      return res.status(400).json({ message: "Invalid item type" });
+    } catch (err) {
+      console.error("Error updating store item:", err);
+      return res.status(500).json({ message: "Error updating store item" });
     }
   });
 

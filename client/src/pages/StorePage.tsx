@@ -1110,10 +1110,24 @@ export default function StorePage() {
                           <p className="text-[9px] text-gray-500">Price</p>
                           <div className="flex items-center gap-0.5">
                             <img src={gfTokenLogo} alt="GF Token" className="w-3 h-3" />
-                            <p className="text-xs font-bold text-blue-400" data-testid={`text-item-price-${item.id}`}>
-                              {item.gfCost} GF
-                            </p>
+                            {(item as any).proDiscount && (item as any).originalPrice !== item.gfCost ? (
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] text-gray-500 line-through">{(item as any).originalPrice} GF</span>
+                                <p className="text-xs font-bold text-green-400" data-testid={`text-item-price-${item.id}`}>
+                                  {item.gfCost} GF
+                                </p>
+                              </div>
+                            ) : (
+                              <p className="text-xs font-bold text-blue-400" data-testid={`text-item-price-${item.id}`}>
+                                {item.gfCost} GF
+                              </p>
+                            )}
                           </div>
+                          {(item as any).proDiscount && (
+                            <span className="text-[8px] text-green-400 flex items-center gap-0.5">
+                              <Crown className="h-2 w-2" /> 20% Pro Discount
+                            </span>
+                          )}
                         </div>
                         
                         {isOwned ? (
@@ -1220,8 +1234,20 @@ export default function StorePage() {
                           <p className="text-[9px] text-gray-500">Price</p>
                           <div className="flex items-center gap-0.5">
                             <img src={gfTokenLogo} alt="GF" className="w-3 h-3" />
-                            <span className="text-xs font-bold text-purple-400">{cost} GF</span>
+                            {(tag as any).proDiscount && (tag as any).originalPrice !== cost ? (
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] text-gray-500 line-through">{(tag as any).originalPrice} GF</span>
+                                <span className="text-xs font-bold text-green-400">{cost} GF</span>
+                              </div>
+                            ) : (
+                              <span className="text-xs font-bold text-purple-400">{cost} GF</span>
+                            )}
                           </div>
+                          {(tag as any).proDiscount && (
+                            <span className="text-[8px] text-green-400 flex items-center gap-0.5">
+                              <Crown className="h-2 w-2" /> 20% Pro Discount
+                            </span>
+                          )}
                         </div>
                         
                         {tag.owned ? (

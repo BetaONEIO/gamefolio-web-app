@@ -373,6 +373,271 @@ function BannerManagement() {
   );
 }
 
+// Store Management Component
+interface AdminStoreItem {
+  id: number;
+  name: string;
+  imageUrl: string | null;
+  type: "name_tag" | "profile_border" | "nft_avatar";
+  rarity: string;
+  gfCost: number;
+  proOnly: boolean;
+  isActive: boolean;
+  availableInStore: boolean;
+  availableInLootbox: boolean;
+  isDefault: boolean;
+  proDiscount: boolean;
+}
+
+function StoreManagement() {
+  const { toast } = useToast();
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const { data: storeItemsList = [], isLoading, refetch } = useQuery<AdminStoreItem[]>({
+    queryKey: ['/api/admin/store/items'],
+  });
+
+  const typeLabels: Record<string, string> = {
+    name_tag: "Name Tag",
+    profile_border: "Profile Border",
+    nft_avatar: "NFT Avatar",
+  };
+
+  const rarityColors: Record<string, string> = {
+    common: "bg-gray-600",
+    rare: "bg-blue-600",
+    epic: "bg-purple-600",
+    legendary: "bg-amber-600",
+  };
+
+  const filteredItems = storeItemsList.filter(item => {
+    if (typeFilter !== "all" && item.type !== typeFilter) return false;
+    if (statusFilter === "pro" && !item.proOnly) return false;
+    if (statusFilter === "free" && item.proOnly) return false;
+    if (statusFilter === "active" && !item.isActive) return false;
+    if (statusFilter === "inactive" && item.isActive) return false;
+    if (searchQuery && !item.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    return true;
+  });
+
+  const totalItems = storeItemsList.length;
+  const proItems = storeItemsList.filter(i => i.proOnly).length;
+  const freeItems = storeItemsList.filter(i => !i.proOnly).length;
+  const activeItems = storeItemsList.filter(i => i.isActive).length;
+
+  const handleToggleActive = async (item: AdminStoreItem) => {
+    try {
+      await apiRequest("PATCH", `/api/admin/store/items/${item.type}/${item.id}`, {
+        isActive: !item.isActive,
+      });
+      toast({ title: "Updated", description: `${item.name} is now ${item.isActive ? "inactive" : "active"}` });
+      refetch();
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to update item", variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Items</CardTitle>
+            <Store className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalItems}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pro Items</CardTitle>
+            <Crown className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-amber-500">{proItems}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Free User Items</CardTitle>
+            <Users className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-500">{freeItems}</div>
+            <p className="text-xs text-muted-foreground">Pro users get 20% discount</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Items</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeItems}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Store className="h-5 w-5" />
+            Store Items Management
+          </CardTitle>
+          <CardDescription>
+            View and manage all store items across Name Tags, Profile Borders, and NFT Avatars. Pro users get a 20% discount on free user items.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-3">
+            <Input
+              placeholder="Search items..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-48"
+            />
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Item Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="name_tag">Name Tags</SelectItem>
+                <SelectItem value="profile_border">Profile Borders</SelectItem>
+                <SelectItem value="nft_avatar">NFT Avatars</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pro">Pro Only</SelectItem>
+                <SelectItem value="free">Free Users</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Refresh
+            </Button>
+          </div>
+
+          {isLoading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading store items...</div>
+          ) : filteredItems.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No items match the current filters.</div>
+          ) : (
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">Image</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Rarity</TableHead>
+                    <TableHead>Price (GF)</TableHead>
+                    <TableHead>Pro Discounted</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Access</TableHead>
+                    <TableHead>Store</TableHead>
+                    <TableHead>Lootbox</TableHead>
+                    <TableHead className="w-20">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredItems.map((item) => (
+                    <TableRow key={`${item.type}-${item.id}`}>
+                      <TableCell>
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt={item.name} className="w-8 h-8 rounded object-cover" />
+                        ) : (
+                          <div className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center">
+                            <ShoppingBag className="h-4 w-4 text-gray-400" />
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium text-sm">{item.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs capitalize">
+                          {typeLabels[item.type] || item.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`text-xs text-white capitalize ${rarityColors[item.rarity] || "bg-gray-600"}`}>
+                          {item.rarity}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">{item.gfCost}</TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {item.proDiscount ? (
+                          <span className="text-green-500 font-semibold">{Math.floor(item.gfCost * 0.8)} GF</span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {item.isActive ? (
+                          <Badge className="bg-green-600 text-white text-xs">Active</Badge>
+                        ) : (
+                          <Badge className="bg-red-600 text-white text-xs">Inactive</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {item.proOnly ? (
+                          <Badge className="bg-amber-600 text-white text-xs flex items-center gap-1 w-fit">
+                            <Crown className="h-3 w-3" />
+                            Pro Only
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-green-600 text-white text-xs">Free Users</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {item.availableInStore ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-500" />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {item.availableInLootbox ? (
+                          <Gift className="h-4 w-4 text-purple-500" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-500" />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleActive(item)}
+                          className="h-7 px-2"
+                        >
+                          {item.isActive ? (
+                            <XCircle className="h-3.5 w-3.5 text-red-500" />
+                          ) : (
+                            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                          )}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // Pro Subscribers Management Component
 interface ProSubscriber {
   id: number;
@@ -1440,6 +1705,7 @@ const AdminPage = () => {
           <TabsTrigger value="hero-text" className="text-xs px-3 py-1.5">Hero</TabsTrigger>
           <TabsTrigger value="asset-rewards" className="text-xs px-3 py-1.5">Rewards</TabsTrigger>
           <TabsTrigger value="lootbox" className="text-xs px-3 py-1.5">Lootbox</TabsTrigger>
+          <TabsTrigger value="store-management" className="text-xs px-3 py-1.5">Store</TabsTrigger>
           <TabsTrigger value="pro-subscribers" className="text-xs px-3 py-1.5">Pro</TabsTrigger>
           <TabsTrigger value="settings" className="text-xs px-3 py-1.5">Settings</TabsTrigger>
         </TabsList>
@@ -4176,6 +4442,11 @@ const AdminPage = () => {
         {/* Lootbox Tab */}
         <TabsContent value="lootbox" className="space-y-4">
           <LootboxManagement />
+        </TabsContent>
+
+        {/* Store Management Tab */}
+        <TabsContent value="store-management" className="space-y-4">
+          <StoreManagement />
         </TabsContent>
 
         {/* Pro Subscribers Tab */}
