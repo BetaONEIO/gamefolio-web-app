@@ -6299,13 +6299,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allTags = await storage.getAllNameTags();
       const storeTags = allTags.filter(t => t.availableInStore && t.isActive && !t.isDefault);
       
+      const tagsWithSignedUrls = await Promise.all(
+        storeTags.map(async (tag) => {
+          let imageUrl = tag.imageUrl;
+          if (imageUrl && imageUrl.includes('supabase.co/storage')) {
+            const signed = await supabaseStorage.convertToSignedUrl(imageUrl, 3600);
+            if (signed) imageUrl = signed;
+          }
+          return { ...tag, imageUrl };
+        })
+      );
+
       if (req.isAuthenticated()) {
         const unlockedTags = await storage.getUserUnlockedNameTags(req.user.id);
         const unlockedIds = new Set(unlockedTags.map(t => t.id));
         const user = await storage.getUserById(req.user.id);
         const isPro = !!user?.isPro;
         
-        const tagsWithStatus = storeTags.map(tag => {
+        const tagsWithStatus = tagsWithSignedUrls.map(tag => {
           const baseCost = tag.gfCost || 0;
           const discountedCost = isPro ? Math.floor(baseCost * 0.8) : baseCost;
           return {
@@ -6319,7 +6330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(tagsWithStatus);
       }
       
-      res.json(storeTags.map(tag => ({ ...tag, owned: false, originalPrice: tag.gfCost, proDiscount: false })));
+      res.json(tagsWithSignedUrls.map(tag => ({ ...tag, owned: false, originalPrice: tag.gfCost, proDiscount: false })));
     } catch (err) {
       console.error("Error fetching store name tags:", err);
       return res.status(500).json({ message: "Error fetching store name tags" });
@@ -6471,12 +6482,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allBorders = await storage.getAllProfileBordersFromTable();
       const storeBorders = allBorders.filter(b => b.availableInStore && b.isActive && !b.isDefault);
 
+      const bordersWithSignedUrls = await Promise.all(
+        storeBorders.map(async (border) => {
+          let imageUrl = border.imageUrl;
+          if (imageUrl && imageUrl.includes('supabase.co/storage')) {
+            const signed = await supabaseStorage.convertToSignedUrl(imageUrl, 3600);
+            if (signed) imageUrl = signed;
+          }
+          return { ...border, imageUrl };
+        })
+      );
+
       if (req.isAuthenticated()) {
         const unlockedBorders = await storage.getUserUnlockedBorders2(req.user.id);
         const unlockedIds = new Set(unlockedBorders.map(b => b.id));
         const user = await storage.getUserById(req.user.id);
 
-        const bordersWithStatus = storeBorders.map(border => ({
+        const bordersWithStatus = bordersWithSignedUrls.map(border => ({
           ...border,
           owned: unlockedIds.has(border.id),
           isPro: user?.isPro || false,
@@ -6484,7 +6506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(bordersWithStatus);
       }
 
-      res.json(storeBorders.map(border => ({ ...border, owned: false, isPro: false })));
+      res.json(bordersWithSignedUrls.map(border => ({ ...border, owned: false, isPro: false })));
     } catch (err) {
       console.error("Error fetching store borders:", err);
       return res.status(500).json({ message: "Error fetching store borders" });
@@ -6635,11 +6657,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const items: any[] = [];
 
+      const resolveSignedUrl = async (url: string | null | undefined): Promise<string | null | undefined> => {
+        if (url && url.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(url, 3600);
+          if (signed) return signed;
+        }
+        return url;
+      };
+
       for (const tag of allNameTags) {
         items.push({
           id: tag.id,
           name: tag.name,
-          imageUrl: tag.imageUrl,
+          imageUrl: await resolveSignedUrl(tag.imageUrl),
           type: "name_tag",
           rarity: tag.rarity,
           gfCost: tag.gfCost || 0,
@@ -6656,7 +6686,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         items.push({
           id: border.id,
           name: border.name,
-          imageUrl: border.imageUrl,
+          imageUrl: await resolveSignedUrl(border.imageUrl),
           type: "profile_border",
           rarity: border.rarity,
           gfCost: border.gfCost || 0,
@@ -6675,7 +6705,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         items.push({
           id: item.id,
           name: item.name,
-          imageUrl: item.image,
+          imageUrl: await resolveSignedUrl(item.image),
           type: "nft_avatar",
           rarity: item.rarity || "common",
           gfCost: item.gfCost || 0,
