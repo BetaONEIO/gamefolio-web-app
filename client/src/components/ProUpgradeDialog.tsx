@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Crown, Loader2, ArrowLeft, X } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -70,7 +70,8 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   const [showCheckout, setShowCheckout] = useState(false);
   const [checkoutLoaded, setCheckoutLoaded] = useState(false);
   const [paywallReady, setPaywallReady] = useState(false);
-  const checkoutContainerRef = useRef<HTMLDivElement>(null);
+  const checkoutContainerRef = useRef<HTMLDivElement | null>(null);
+  const paywallLaunchedRef = useRef(false);
 
   const packages = getCurrentOffering();
 
@@ -81,6 +82,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
       setShowCheckout(false);
       setCheckoutLoaded(false);
       setPaywallReady(false);
+      paywallLaunchedRef.current = false;
     }
   }, [open]);
 
@@ -97,25 +99,32 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
     }
   }, [packages, billingPeriod]);
 
-  useEffect(() => {
-    if (showCheckout && checkoutContainerRef.current && !checkoutLoaded && isInitialized) {
-      setCheckoutLoaded(true);
-      console.log("Presenting RevenueCat paywall...");
+  const launchPaywall = useCallback((container: HTMLDivElement) => {
+    if (paywallLaunchedRef.current) return;
+    paywallLaunchedRef.current = true;
+    console.log("Presenting RevenueCat paywall into container...");
+    setPaywallReady(true);
+    presentPaywall(container).then((success) => {
+      console.log("RevenueCat paywall result:", success);
+      if (success) {
+        onOpenChange(false);
+      }
+    }).catch((err) => {
+      console.error("RevenueCat paywall error:", err);
+      paywallLaunchedRef.current = false;
+    });
+  }, [presentPaywall, onOpenChange]);
+
+  const checkoutRefCallback = useCallback((node: HTMLDivElement | null) => {
+    checkoutContainerRef.current = node;
+    if (node && showCheckout && isInitialized && !paywallLaunchedRef.current) {
       setTimeout(() => {
         if (checkoutContainerRef.current) {
-          setPaywallReady(true);
-          presentPaywall(checkoutContainerRef.current).then((success) => {
-            console.log("RevenueCat paywall result:", success);
-            if (success) {
-              onOpenChange(false);
-            }
-          }).catch((err) => {
-            console.error("RevenueCat paywall error:", err);
-          });
+          launchPaywall(checkoutContainerRef.current);
         }
-      }, 100);
+      }, 200);
     }
-  }, [showCheckout, checkoutLoaded, isInitialized, presentPaywall, onOpenChange]);
+  }, [showCheckout, isInitialized, launchPaywall]);
 
   const handleProceedToCheckout = () => {
     setShowCheckout(true);
@@ -126,6 +135,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
     setShowCheckout(false);
     setCheckoutLoaded(false);
     setPaywallReady(false);
+    paywallLaunchedRef.current = false;
   };
 
   const formatPrice = (pkg: Package) => {
@@ -352,7 +362,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
                 </div>
               )}
               <div
-                ref={checkoutContainerRef}
+                ref={checkoutRefCallback}
                 className="flex-1 overflow-y-auto rounded-xl mx-2 mb-2"
                 style={{ minHeight: paywallReady ? '500px' : '0px', scrollbarWidth: 'none', overflow: paywallReady ? 'auto' : 'hidden' }}
                 data-testid="checkout-container"
