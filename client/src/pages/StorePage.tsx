@@ -91,6 +91,7 @@ export default function StorePage() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [priceFilter, setPriceFilter] = useState<string>("all");
   const [mintFilter, setMintFilter] = useState<string>("all");
+  const [accessFilter, setAccessFilter] = useState<string>("all");
   const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null);
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
   const [purchasingItemId, setPurchasingItemId] = useState<number | null>(null);
@@ -891,7 +892,21 @@ export default function StorePage() {
             <div>
               <div className="mb-4 md:mb-6">
                 {/* Category Filters */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Access</label>
+                    <Select value={accessFilter} onValueChange={setAccessFilter}>
+                      <SelectTrigger className="bg-gray-800 border-gray-700" data-testid="select-access">
+                        <SelectValue placeholder="All Items" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-gray-700">
+                        <SelectItem value="all">All Items</SelectItem>
+                        <SelectItem value="free">Free User Items</SelectItem>
+                        <SelectItem value="pro">Pro Items Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div>
                     <label className="text-xs text-gray-400 mb-1 block">Rarity</label>
                     <Select value={rarityFilter} onValueChange={setRarityFilter}>
@@ -959,6 +974,8 @@ export default function StorePage() {
               </div>
 
               {/* NFT Collection Grid */}
+              {accessFilter !== "pro" && (
+              <>
               <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-[#4ade80]" />
                 NFT Avatars
@@ -1052,8 +1069,12 @@ export default function StorePage() {
                   </Card>
                 ))}
               </div>
+              </>
+              )}
 
               {/* Store Items */}
+              {accessFilter !== "pro" && (
+              <>
               <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
                 <ShoppingCart className="h-4 w-4 text-blue-400" />
                 Digital Items
@@ -1178,8 +1199,12 @@ export default function StorePage() {
                 );})}
               </div>
               )}
+              </>
+              )}
 
               {/* Name Tags Section */}
+              {accessFilter !== "pro" && (
+              <>
               <h3 className="text-base font-semibold text-gray-300 mb-3 mt-8 flex items-center gap-2">
                 <Tag className="h-4 w-4 text-purple-400" />
                 Name Tags
@@ -1307,8 +1332,12 @@ export default function StorePage() {
                 );})}
               </div>
               )}
+              </>
+              )}
 
               {/* Profile Borders Section - Pro Only */}
+              {accessFilter !== "free" && (
+              <>
               <h3 className="text-base font-semibold text-gray-300 mb-3 mt-8 flex items-center gap-2">
                 <Circle className="h-4 w-4 text-amber-400" />
                 Profile Picture Borders
@@ -1450,6 +1479,8 @@ export default function StorePage() {
                   </Card>
                 );})}
               </div>
+              )}
+              </>
               )}
             </div>
           )}
