@@ -20,7 +20,7 @@ import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
 import { eq, sql } from "drizzle-orm";
 import { db } from "./db";
-import { users } from "@shared/schema";
+import { users, nameTags, profileBorders, storeItems } from "@shared/schema";
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -6627,8 +6627,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/store/items", adminMiddleware, async (req, res) => {
     try {
-      const allNameTags = await storage.getAllNameTags();
-      const allBorders = await storage.getAllProfileBordersFromTable();
+      console.log("📦 Admin store items endpoint called");
+      const allNameTags = await db.select().from(nameTags).orderBy(nameTags.name);
+      console.log(`📦 Found ${allNameTags.length} name tags (including inactive)`);
+      const allBorders = await db.select().from(profileBorders).orderBy(profileBorders.name);
+      console.log(`📦 Found ${allBorders.length} profile borders (including inactive)`);
 
       const items: any[] = [];
 
@@ -6667,6 +6670,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const storeItemsData = await db.select().from(storeItems);
+      console.log(`📦 Found ${storeItemsData.length} store items (NFT avatars)`);
       for (const item of storeItemsData) {
         items.push({
           id: item.id,
@@ -9355,15 +9359,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // 2. Random store item (get a random asset reward)
       const allRewards = await storage.getAllAssetRewards();
-      const storeItems = allRewards.filter(r => 
+      const filteredStoreItems = allRewards.filter(r => 
         r.isActive && 
         r.assetType !== "avatar_border" && 
         r.assetType !== "xp_reward" && 
         r.assetType !== "gf_tokens"
       );
       
-      if (storeItems.length > 0) {
-        const randomStoreItem = storeItems[Math.floor(Math.random() * storeItems.length)];
+      if (filteredStoreItems.length > 0) {
+        const randomStoreItem = filteredStoreItems[Math.floor(Math.random() * filteredStoreItems.length)];
         // Claim this reward for the user
         await storage.createAssetRewardClaim({
           rewardId: randomStoreItem.id,

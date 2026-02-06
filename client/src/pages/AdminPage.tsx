@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { getQueryFn } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
 import AdminContentFilter from "./AdminContentFilter";
@@ -397,6 +398,12 @@ function StoreManagement() {
 
   const { data: storeItemsList = [], isLoading, refetch } = useQuery<AdminStoreItem[]>({
     queryKey: ['/api/admin/store/items'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/store/items', { credentials: 'include' });
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+      return res.json();
+    },
+    staleTime: 0,
   });
 
   const typeLabels: Record<string, string> = {
