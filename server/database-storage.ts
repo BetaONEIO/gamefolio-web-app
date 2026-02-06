@@ -4580,7 +4580,7 @@ export class DatabaseStorage implements IStorage {
       .from(nameTags)
       .where(and(eq(nameTags.isActive, true), eq(nameTags.availableInLootbox, true)));
 
-    if (lootboxNameTags.length > 0 && Math.random() < 0.2) {
+    if (lootboxNameTags.length > 0 && Math.random() < 0.03) {
       const randomNameTag = lootboxNameTags[Math.floor(Math.random() * lootboxNameTags.length)];
       const alreadyHas = await this.userHasUnlockedNameTag(userId, randomNameTag.id);
 
