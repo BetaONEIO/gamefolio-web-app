@@ -533,27 +533,27 @@ function StoreManagement() {
           ) : filteredItems.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No items match the current filters.</div>
           ) : (
-            <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">Image</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Rarity</TableHead>
-                    <TableHead>Price (GF)</TableHead>
-                    <TableHead>Pro Discounted</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Access</TableHead>
-                    <TableHead>Store</TableHead>
-                    <TableHead>Lootbox</TableHead>
-                    <TableHead className="w-20">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredItems.map((item) => (
-                    <TableRow key={`${item.type}-${item.id}`}>
-                      <TableCell>
+            <div className="border rounded-lg overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b bg-muted/50">
+                  <tr>
+                    <th className="p-2 text-left w-12">Image</th>
+                    <th className="p-2 text-left">Name</th>
+                    <th className="p-2 text-left">Type</th>
+                    <th className="p-2 text-left">Rarity</th>
+                    <th className="p-2 text-left">Price (GF)</th>
+                    <th className="p-2 text-left">Pro Discounted</th>
+                    <th className="p-2 text-left">Status</th>
+                    <th className="p-2 text-left">Access</th>
+                    <th className="p-2 text-left">Store</th>
+                    <th className="p-2 text-left">Lootbox</th>
+                    <th className="p-2 text-left w-20">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredItems.map((item: AdminStoreItem) => (
+                    <tr key={`${item.type}-${item.id}`} className="border-b hover:bg-muted/30">
+                      <td className="p-2">
                         {item.imageUrl ? (
                           <img src={item.imageUrl} alt={item.name} className="w-8 h-8 rounded object-cover" />
                         ) : (
@@ -561,34 +561,34 @@ function StoreManagement() {
                             <ShoppingBag className="h-4 w-4 text-gray-400" />
                           </div>
                         )}
-                      </TableCell>
-                      <TableCell className="font-medium text-sm">{item.name}</TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="p-2 font-medium">{item.name}</td>
+                      <td className="p-2">
                         <Badge variant="outline" className="text-xs capitalize">
                           {typeLabels[item.type] || item.type}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="p-2">
                         <Badge className={`text-xs text-white capitalize ${rarityColors[item.rarity] || "bg-gray-600"}`}>
                           {item.rarity}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">{item.gfCost}</TableCell>
-                      <TableCell className="font-mono text-sm">
+                      </td>
+                      <td className="p-2 font-mono">{item.gfCost}</td>
+                      <td className="p-2 font-mono">
                         {item.proDiscount ? (
                           <span className="text-green-500 font-semibold">{Math.floor(item.gfCost * 0.8)} GF</span>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="p-2">
                         {item.isActive ? (
                           <Badge className="bg-green-600 text-white text-xs">Active</Badge>
                         ) : (
                           <Badge className="bg-red-600 text-white text-xs">Inactive</Badge>
                         )}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="p-2">
                         {item.proOnly ? (
                           <Badge className="bg-amber-600 text-white text-xs flex items-center gap-1 w-fit">
                             <Crown className="h-3 w-3" />
@@ -597,22 +597,22 @@ function StoreManagement() {
                         ) : (
                           <Badge className="bg-green-600 text-white text-xs">Free Users</Badge>
                         )}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="p-2">
                         {item.availableInStore ? (
                           <CheckCircle className="h-4 w-4 text-green-500" />
                         ) : (
                           <XCircle className="h-4 w-4 text-red-500" />
                         )}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="p-2">
                         {item.availableInLootbox ? (
                           <Gift className="h-4 w-4 text-purple-500" />
                         ) : (
                           <XCircle className="h-4 w-4 text-red-500" />
                         )}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="p-2">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -625,11 +625,11 @@ function StoreManagement() {
                             <CheckCircle className="h-3.5 w-3.5 text-green-500" />
                           )}
                         </Button>
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>
