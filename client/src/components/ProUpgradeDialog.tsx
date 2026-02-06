@@ -219,14 +219,10 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
         </div>
 
         <div className="text-center md:text-left mb-2">
-          <h2 className="text-4xl font-bold leading-tight">
+          <h2 className="text-2xl font-bold leading-tight whitespace-nowrap">
             <span className="text-white">Unlock </span>
-            <span className="text-[#4ade80]">Gamefolio</span>
+            <span className="text-[#4ade80]">Gamefolio Pro</span>
           </h2>
-          <div className="flex items-center gap-3 justify-center md:justify-start">
-            <h2 className="text-4xl font-bold leading-tight text-[#4ade80]">Pro</h2>
-            <span className="bg-[#1e293b] text-[#f8fafc] text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded">PRO</span>
-          </div>
         </div>
 
         <p className="text-[#94a3b8] text-base text-center md:text-left leading-relaxed hidden md:block max-w-[325px]">
