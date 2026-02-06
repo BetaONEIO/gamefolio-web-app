@@ -6559,10 +6559,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/borders/sync-bucket", adminMiddleware, async (req, res) => {
     try {
-      const files = await supabaseStorage.listBucketFiles('gamefolio-borders', '');
+      const files = await supabaseStorage.listBucketFiles('gamefolio-profile-borders', '');
 
       if (!files || files.length === 0) {
-        return res.json({ synced: 0, message: "No files found in gamefolio-borders bucket" });
+        return res.json({ synced: 0, message: "No files found in gamefolio-profile-borders bucket" });
       }
 
       const existingBorders = await storage.getAllProfileBordersFromTable();
@@ -9688,7 +9688,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Process all private Supabase bucket URLs
-      if (!url.includes('gamefolio-media') && !url.includes('gamefolio-assets') && !url.includes('gamefolio-name-tags') && !url.includes('gamefolio-borders')) {
+      if (!url.includes('gamefolio-media') && !url.includes('gamefolio-assets') && !url.includes('gamefolio-name-tags') && !url.includes('gamefolio-profile-borders')) {
         return res.json({ signedUrl: url }); // Return original URL for non-Supabase URLs
       }
 
@@ -9725,7 +9725,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       for (const url of urls) {
         if (typeof url === 'string') {
-          if (url.includes('gamefolio-media') || url.includes('gamefolio-assets') || url.includes('gamefolio-name-tags') || url.includes('gamefolio-borders')) {
+          if (url.includes('gamefolio-media') || url.includes('gamefolio-assets') || url.includes('gamefolio-name-tags') || url.includes('gamefolio-profile-borders')) {
             supabaseUrls.push(url);
           } else {
             otherUrls.push(url);

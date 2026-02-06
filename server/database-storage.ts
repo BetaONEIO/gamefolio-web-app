@@ -4660,7 +4660,7 @@ export class DatabaseStorage implements IStorage {
         redeemable: false,
         rewardCategory: 'lootbox',
         storePrice: null,
-        sourceBucket: 'gamefolio-borders',
+        sourceBucket: 'gamefolio-profile-borders',
         sourcePath: null,
         createdBy: null,
         createdAt: randomBorder.createdAt,
