@@ -170,10 +170,10 @@ const HERO_SLIDES = [
     showContent: true,
   },
   {
-    type: 'image' as const,
+    type: 'lootbox' as const,
     backgroundImage: LootboxBanner,
-    overlay: '',
-    showContent: false,
+    overlay: 'linear-gradient(to right, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%)',
+    showContent: true,
   },
   {
     type: 'overlay' as const,
@@ -217,7 +217,22 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation }: He
               zIndex: currentSlide === index ? 1 : 0,
             }}
           >
-            {slide.showContent && (
+            {slide.type === 'lootbox' && (
+              <div className="flex items-start justify-start h-full">
+                <div className="text-left text-white px-6 sm:px-10 md:px-16 flex flex-col justify-center h-full max-w-lg">
+                  <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-4 sm:mb-6 leading-tight drop-shadow-lg">
+                    Claim your<br />Daily Lootbox
+                  </h2>
+                  <Button 
+                    className="w-fit px-8 py-3 sm:py-4 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
+                    onClick={() => setLocation('/lootbox')}
+                  >
+                    Claim
+                  </Button>
+                </div>
+              </div>
+            )}
+            {slide.showContent && slide.type !== 'lootbox' && (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center text-white px-4 sm:px-6 max-w-4xl">
                   {heroText ? (
