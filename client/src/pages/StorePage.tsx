@@ -1299,11 +1299,11 @@ export default function StorePage() {
                 Profile Picture Borders
                 <Badge className="bg-gradient-to-r from-amber-500 to-yellow-600 text-[10px] px-1.5 py-0.5 text-white ml-1">
                   <Crown className="w-2.5 h-2.5 mr-0.5" />
-                  PRO
+                  PRO EXCLUSIVE
                 </Badge>
               </h3>
               <p className="text-xs text-gray-500 mb-3">
-                Add stunning borders around your profile picture. Pro members exclusive!
+                Add stunning borders around your profile picture. Requires an active Pro subscription to purchase and use.
               </p>
               {isLoadingBorders ? (
                 <div className="flex justify-center py-12">
@@ -1326,7 +1326,7 @@ export default function StorePage() {
                   <Card
                     key={border.id}
                     className={`bg-gray-800/50 border-gray-700 overflow-hidden transition-all ${
-                      !isUserPro ? "opacity-60 grayscale-[40%]" :
+                      !isUserPro ? "opacity-70 cursor-pointer hover:opacity-80" :
                       border.owned 
                         ? "border-green-500/50 hover:border-green-400 hover:shadow-green-500/20 hover:shadow-lg" 
                         : border.rarity === 'legendary' ? "hover:border-amber-500 hover:shadow-amber-500/20 hover:shadow-lg"
@@ -1334,12 +1334,13 @@ export default function StorePage() {
                         : border.rarity === 'rare' ? "hover:border-blue-500 hover:shadow-blue-500/20 hover:shadow-lg"
                         : "hover:border-gray-500 hover:shadow-gray-500/20 hover:shadow-lg"
                     }`}
+                    onClick={!isUserPro ? () => setProUpgradeOpen(true) : undefined}
                   >
                     <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-3">
                       <img
                         src={border.imageUrl}
                         alt={border.name}
-                        className="max-w-full max-h-full object-contain drop-shadow-lg"
+                        className={`max-w-full max-h-full object-contain drop-shadow-lg ${!isUserPro ? "grayscale-[30%]" : ""}`}
                       />
                       {border.owned && (
                         <Badge className="absolute top-1.5 right-1.5 bg-green-600 text-[10px] px-1.5 py-0.5">
@@ -1347,10 +1348,15 @@ export default function StorePage() {
                           Owned
                         </Badge>
                       )}
+                      <Badge className="absolute top-1.5 left-1.5 bg-gradient-to-r from-amber-500 to-yellow-600 text-[10px] px-1.5 py-0.5 text-white">
+                        <Crown className="w-2.5 h-2.5 mr-0.5" />
+                        PRO
+                      </Badge>
                       {!isUserPro && (
                         <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                          <div className="bg-black/70 rounded-full p-2">
+                          <div className="bg-black/70 rounded-lg px-3 py-2 flex flex-col items-center gap-1">
                             <Lock className="w-5 h-5 text-amber-400" />
+                            <span className="text-[10px] text-amber-300 font-medium">Pro Only</span>
                           </div>
                         </div>
                       )}
@@ -1392,10 +1398,10 @@ export default function StorePage() {
                           <Button
                             size="sm"
                             className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white text-[10px] h-6 px-2"
-                            onClick={() => setProUpgradeOpen(true)}
+                            onClick={(e) => { e.stopPropagation(); setProUpgradeOpen(true); }}
                           >
                             <Crown className="h-2.5 w-2.5 mr-0.5" />
-                            Pro Only
+                            Get Pro
                           </Button>
                         ) : (
                           <Button
