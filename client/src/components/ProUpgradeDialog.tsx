@@ -98,19 +98,21 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   useEffect(() => {
     if (showCheckout && checkoutContainerRef.current && !checkoutLoaded && isInitialized) {
       setCheckoutLoaded(true);
+      console.log("Presenting RevenueCat paywall...");
       presentPaywall(checkoutContainerRef.current).then((success) => {
+        console.log("RevenueCat paywall result:", success);
         if (success) {
           onOpenChange(false);
-        } else {
-          setShowCheckout(false);
-          setCheckoutLoaded(false);
         }
+      }).catch((err) => {
+        console.error("RevenueCat paywall error:", err);
       });
     }
   }, [showCheckout, checkoutLoaded, isInitialized, presentPaywall, onOpenChange]);
 
   const handleProceedToCheckout = () => {
     setShowCheckout(true);
+    setCheckoutLoaded(false);
   };
 
   const handleBackToPlans = () => {
@@ -317,33 +319,34 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="relative flex flex-col"
+              className="relative flex flex-col max-h-[90vh]"
             >
-              <div className="px-6 pt-6 pb-4">
+              <div className="px-4 pt-4 pb-2 flex items-center justify-between">
                 <button
                   onClick={handleBackToPlans}
                   className="flex items-center gap-2 text-[#94a3b8] hover:text-white transition-colors text-sm"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  Back to plans
+                  Back
                 </button>
-              </div>
-
-              <div className="px-6 pb-4 text-center">
-                <h2 className="text-xl font-bold text-white mb-1">Complete Your Purchase</h2>
-                <p className="text-[#94a3b8] text-sm">
-                  {billingPeriod === "yearly" ? "Yearly" : "Monthly"} subscription - {selectedPackage ? formatPrice(selectedPackage) : ""}
-                </p>
+                <button
+                  onClick={() => onOpenChange(false)}
+                  className="w-8 h-8 rounded-full bg-[#1e293b] flex items-center justify-center hover:bg-[#334155] transition-colors"
+                >
+                  <X className="w-4 h-4 text-white" />
+                </button>
               </div>
 
               <div
                 ref={checkoutContainerRef}
-                className="mx-4 mb-4 rounded-xl overflow-hidden bg-white min-h-[400px]"
+                className="flex-1 overflow-y-auto rounded-xl mx-2 mb-2"
+                style={{ minHeight: '500px', scrollbarWidth: 'none' }}
                 data-testid="checkout-container"
               >
                 {(isLoading || !checkoutLoaded) && (
-                  <div className="flex items-center justify-center h-[400px] bg-[#020617]">
+                  <div className="flex flex-col items-center justify-center h-[500px] bg-[#020617] gap-3">
                     <Loader2 className="w-8 h-8 animate-spin text-[#4ade80]" />
+                    <span className="text-[#94a3b8] text-sm">Loading subscription options...</span>
                   </div>
                 )}
               </div>
