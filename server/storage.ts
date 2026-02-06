@@ -2,7 +2,7 @@ import {
   users, games, clips, likes, comments, userGameFavorites, follows, messages, profileBanners,
   monthlyLeaderboard, weeklyLeaderboard, topContributors, userPointsHistory, userXPHistory, notifications, userBadges, contentFilterSettings, bannedWords,
   heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions, nftWatchlist, assetRewards, assetRewardClaims,
-  userDailyUploads, proLootboxGrants, nameTags, userUnlockedNameTags, userDailyFires,
+  userDailyUploads, proLootboxGrants, nameTags, userUnlockedNameTags, userDailyFires, profileBorders, userUnlockedBorders,
   type User, type InsertUser,
   type Game, type InsertGame,
   type Clip, type InsertClip,
@@ -39,6 +39,8 @@ import {
   type FireLimits,
   type NameTag, type InsertNameTag,
   type UserUnlockedNameTag, type InsertUserUnlockedNameTag,
+  type ProfileBorder, type InsertProfileBorder,
+  type UserUnlockedBorder, type InsertUserUnlockedBorder,
   type ClipWithUser,
   type CommentWithUser,
   type UserWithStats,
@@ -444,6 +446,17 @@ export interface IStorage {
   unlockNameTagForUser(userId: number, nameTagId: number): Promise<UserUnlockedNameTag>;
   userHasUnlockedNameTag(userId: number, nameTagId: number): Promise<boolean>;
   updateUserNameTag(userId: number, nameTagId: number | null): Promise<void>;
+
+  // Profile border operations
+  getAllProfileBordersFromTable(): Promise<ProfileBorder[]>;
+  getProfileBorder(id: number): Promise<ProfileBorder | null>;
+  createProfileBorder(border: InsertProfileBorder): Promise<ProfileBorder>;
+  updateProfileBorder(id: number, updates: Partial<ProfileBorder>): Promise<ProfileBorder | null>;
+  deleteProfileBorder(id: number): Promise<boolean>;
+  getUserUnlockedBorders2(userId: number): Promise<ProfileBorder[]>;
+  unlockBorderForUser(userId: number, borderId: number): Promise<UserUnlockedBorder>;
+  userHasUnlockedBorder(userId: number, borderId: number): Promise<boolean>;
+  updateUserBorder(userId: number, borderId: number | null): Promise<void>;
 
   // Daily fire limit operations (1/day for regular users, 3/day for Pro users)
   getUserDailyFires(userId: number, date: string): Promise<UserDailyFires | null>;

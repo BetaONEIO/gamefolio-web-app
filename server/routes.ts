@@ -6450,6 +6450,165 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==========================================
+  // Profile Borders Store Routes
+  // ==========================================
+
+  app.get("/api/store/borders", async (req, res) => {
+    try {
+      const allBorders = await storage.getAllProfileBordersFromTable();
+      const storeBorders = allBorders.filter(b => b.availableInStore && b.isActive && !b.isDefault);
+
+      if (req.isAuthenticated()) {
+        const unlockedBorders = await storage.getUserUnlockedBorders2(req.user.id);
+        const unlockedIds = new Set(unlockedBorders.map(b => b.id));
+        const user = await storage.getUserById(req.user.id);
+
+        const bordersWithStatus = storeBorders.map(border => ({
+          ...border,
+          owned: unlockedIds.has(border.id),
+          isPro: user?.isPro || false,
+        }));
+        return res.json(bordersWithStatus);
+      }
+
+      res.json(storeBorders.map(border => ({ ...border, owned: false, isPro: false })));
+    } catch (err) {
+      console.error("Error fetching store borders:", err);
+      return res.status(500).json({ message: "Error fetching store borders" });
+    }
+  });
+
+  app.post("/api/store/purchase-border", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const { borderId } = req.body;
+      if (!borderId) {
+        return res.status(400).json({ message: "borderId is required" });
+      }
+
+      const user = await storage.getUserById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (!user.isPro) {
+        return res.status(403).json({ message: "Profile borders are a Pro-only feature. Upgrade to Pro to use borders!" });
+      }
+
+      const border = await storage.getProfileBorder(borderId);
+      if (!border) {
+        return res.status(404).json({ message: "Border not found" });
+      }
+
+      if (!border.availableInStore || !border.isActive) {
+        return res.status(400).json({ message: "This border is not available for purchase" });
+      }
+
+      if (border.isDefault) {
+        return res.status(400).json({ message: "This border is free for everyone" });
+      }
+
+      const cost = border.gfCost || 0;
+      if (cost <= 0) {
+        return res.status(400).json({ message: "This border has no price set" });
+      }
+
+      const hasUnlocked = await storage.userHasUnlockedBorder(req.user.id, borderId);
+      if (hasUnlocked) {
+        return res.status(400).json({ message: "You already own this border" });
+      }
+
+      const balance = user.gfTokenBalance || 0;
+      if (balance < cost) {
+        return res.status(400).json({ message: `Insufficient GF tokens. Need ${cost} GF, you have ${balance} GF` });
+      }
+
+      await db.update(users)
+        .set({ gfTokenBalance: sql`COALESCE(${users.gfTokenBalance}, 0) - ${cost}` })
+        .where(eq(users.id, req.user.id));
+
+      await storage.unlockBorderForUser(req.user.id, borderId);
+
+      res.json({
+        success: true,
+        message: `Successfully purchased "${border.name}"!`,
+        border,
+        newBalance: balance - cost,
+      });
+    } catch (err) {
+      console.error("Error purchasing border:", err);
+      return res.status(500).json({ message: "Error purchasing border" });
+    }
+  });
+
+  app.post("/api/admin/borders/sync-bucket", adminMiddleware, async (req, res) => {
+    try {
+      const files = await supabaseStorage.listBucketFiles('gamefolio-borders', '');
+
+      if (!files || files.length === 0) {
+        return res.json({ synced: 0, message: "No files found in gamefolio-borders bucket" });
+      }
+
+      const existingBorders = await storage.getAllProfileBordersFromTable();
+      const existingNames = new Set(existingBorders.map(b => b.name.toLowerCase()));
+
+      let synced = 0;
+      const rarities = ['common', 'rare', 'epic', 'legendary'];
+      const rarityPrices: Record<string, number> = {
+        common: 50,
+        rare: 150,
+        epic: 350,
+        legendary: 750,
+      };
+
+      for (const file of files) {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        if (!ext || !['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) continue;
+
+        const nameBase = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+        const displayName = nameBase.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+
+        if (existingNames.has(displayName.toLowerCase())) {
+          const existing = existingBorders.find(b => b.name.toLowerCase() === displayName.toLowerCase());
+          if (existing) {
+            await storage.updateProfileBorder(existing.id, {
+              imageUrl: file.publicUrl,
+              availableInStore: true,
+              availableInLootbox: true,
+              gfCost: rarityPrices[existing.rarity] || 50,
+            });
+            synced++;
+          }
+          continue;
+        }
+
+        const rarity = rarities[Math.floor(Math.random() * rarities.length)];
+
+        await storage.createProfileBorder({
+          name: displayName,
+          imageUrl: file.publicUrl,
+          rarity,
+          gfCost: rarityPrices[rarity],
+          isDefault: false,
+          isActive: true,
+          availableInStore: true,
+          availableInLootbox: true,
+          proOnly: true,
+        });
+        synced++;
+      }
+
+      res.json({ synced, total: files.length, message: `Synced ${synced} borders from bucket` });
+    } catch (err) {
+      console.error("Error syncing borders from bucket:", err);
+      return res.status(500).json({ message: "Error syncing borders from bucket" });
+    }
+  });
+
+  // ==========================================
   // Screenshot Upload Routes
   // ==========================================
 
@@ -9412,7 +9571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Process all private Supabase bucket URLs
-      if (!url.includes('gamefolio-media') && !url.includes('gamefolio-assets') && !url.includes('gamefolio-name-tags')) {
+      if (!url.includes('gamefolio-media') && !url.includes('gamefolio-assets') && !url.includes('gamefolio-name-tags') && !url.includes('gamefolio-borders')) {
         return res.json({ signedUrl: url }); // Return original URL for non-Supabase URLs
       }
 
@@ -9449,7 +9608,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       for (const url of urls) {
         if (typeof url === 'string') {
-          if (url.includes('gamefolio-media') || url.includes('gamefolio-assets') || url.includes('gamefolio-name-tags')) {
+          if (url.includes('gamefolio-media') || url.includes('gamefolio-assets') || url.includes('gamefolio-name-tags') || url.includes('gamefolio-borders')) {
             supabaseUrls.push(url);
           } else {
             otherUrls.push(url);

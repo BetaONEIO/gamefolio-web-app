@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gift, Sparkles, Timer, Star, Crown, Gem, Package, Zap, Coins, X, RotateCcw, TrendingUp } from "lucide-react";
+import { Gift, Sparkles, Timer, Star, Crown, Gem, Package, Zap, Coins, X, RotateCcw, TrendingUp, Lock } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { AssetReward } from "@shared/schema";
 import { useLevelTracker } from "@/hooks/use-level-tracker";
 import { useAuth } from "@/hooks/use-auth";
+import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 
 interface LootboxStatus {
   canOpen: boolean;
@@ -50,6 +51,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
   const [reward, setReward] = useState<AssetReward | null>(null);
   const [isDuplicate, setIsDuplicate] = useState(false);
   const [previousXP, setPreviousXP] = useState<number | null>(null);
+  const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
   const { showLevelTracker } = useLevelTracker();
   const { user } = useAuth();
 
@@ -348,7 +350,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                 >
                   <h3 className="text-2xl font-bold text-white">{reward.name}</h3>
                   <p className="text-sm text-gray-400 capitalize">
-                    {reward.assetType === 'name_tag' ? 'Name Tag' : reward.assetType.replace("_", " ")}
+                    {reward.assetType === 'name_tag' ? 'Name Tag' : reward.assetType === 'profile_border' ? 'Profile Border' : reward.assetType.replace("_", " ")}
                   </p>
                 </motion.div>
 
@@ -361,6 +363,33 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                   >
                     You already have this reward!
                   </motion.p>
+                )}
+
+                {reward.assetType === 'profile_border' && reward.proOnly && !user?.isPro && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="flex flex-col items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3"
+                  >
+                    <div className="flex items-center gap-2 text-amber-400">
+                      <Lock className="w-4 h-4" />
+                      <span className="text-sm font-semibold">Pro Feature</span>
+                    </div>
+                    <p className="text-xs text-gray-400 text-center">
+                      This border has been added to your collection, but you need Pro to use it on your profile.
+                    </p>
+                    <Button
+                      size="sm"
+                      className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white text-xs"
+                      onClick={() => {
+                        setProUpgradeOpen(true);
+                      }}
+                    >
+                      <Crown className="w-3 h-3 mr-1" />
+                      Upgrade to Pro
+                    </Button>
+                  </motion.div>
                 )}
 
                 <motion.div
@@ -397,6 +426,10 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
         </div>
         </DialogPrimitive.Content>
       </DialogPortal>
+      <ProUpgradeDialog
+        open={proUpgradeOpen}
+        onOpenChange={setProUpgradeOpen}
+      />
     </Dialog>
   );
 }

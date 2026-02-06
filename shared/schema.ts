@@ -69,6 +69,8 @@ export const users = pgTable("users", {
   selectedAvatarBorderId: integer("selected_avatar_border_id"), // References asset_rewards table
   // Selected Name Tag
   selectedNameTagId: integer("selected_name_tag_id"), // References name_tags table
+  // Selected Profile Border
+  selectedBorderId: integer("selected_border_id"), // References profile_borders table
   // Welcome Pack
   welcomePackClaimed: boolean("welcome_pack_claimed").default(false).notNull(), // Whether the user has claimed their welcome pack
   // Two-Factor Authentication
@@ -277,6 +279,45 @@ export type NameTag = typeof nameTags.$inferSelect;
 export type InsertNameTag = z.infer<typeof insertNameTagSchema>;
 export type UserUnlockedNameTag = typeof userUnlockedNameTags.$inferSelect;
 export type InsertUserUnlockedNameTag = z.infer<typeof insertUserUnlockedNameTagSchema>;
+
+// Profile borders for profile customization
+export const profileBorders = pgTable("profile_borders", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  imageUrl: text("image_url").notNull(),
+  rarity: text("rarity").notNull().default("common"), // common, rare, epic, legendary
+  gfCost: integer("gf_cost").default(0), // GF token cost to purchase in store (0 = not for sale)
+  unlockCondition: text("unlock_condition"), // Description of how to unlock
+  isDefault: boolean("is_default").default(false).notNull(), // If true, all users have this unlocked
+  isActive: boolean("is_active").default(true).notNull(),
+  availableInStore: boolean("available_in_store").default(false).notNull(), // If true, can be purchased in store
+  availableInLootbox: boolean("available_in_lootbox").default(false).notNull(), // If true, can be won from lootbox
+  proOnly: boolean("pro_only").default(true).notNull(), // Borders are Pro-only
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Track which profile borders users have unlocked
+export const userUnlockedBorders = pgTable("user_unlocked_borders", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  borderId: integer("border_id").notNull().references(() => profileBorders.id, { onDelete: "cascade" }),
+  unlockedAt: timestamp("unlocked_at").defaultNow().notNull(),
+});
+
+export const insertProfileBorderSchema = createInsertSchema(profileBorders).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserUnlockedBorderSchema = createInsertSchema(userUnlockedBorders).omit({
+  id: true,
+  unlockedAt: true,
+});
+
+export type ProfileBorder = typeof profileBorders.$inferSelect;
+export type InsertProfileBorder = z.infer<typeof insertProfileBorderSchema>;
+export type UserUnlockedBorder = typeof userUnlockedBorders.$inferSelect;
+export type InsertUserUnlockedBorder = z.infer<typeof insertUserUnlockedBorderSchema>;
 
 // Notifications table
 export const notifications = pgTable("notifications", {

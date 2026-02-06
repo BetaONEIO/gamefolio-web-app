@@ -42,6 +42,8 @@ import {
   UploadLimits,
   NameTag, InsertNameTag,
   UserUnlockedNameTag, InsertUserUnlockedNameTag,
+  ProfileBorder, InsertProfileBorder,
+  UserUnlockedBorder, InsertUserUnlockedBorder,
   ClipWithUser,
   CommentWithUser,
   ScreenshotCommentWithUser,
@@ -87,6 +89,8 @@ import {
   commentMentions,
   nameTags,
   userUnlockedNameTags,
+  profileBorders,
+  userUnlockedBorders,
   screenshotCommentMentions,
   assetRewards,
   assetRewardClaims,
@@ -4624,6 +4628,55 @@ export class DatabaseStorage implements IStorage {
       return { reward: nameTagReward, isDuplicate: alreadyHas, consumed: false };
     }
 
+    // 3% chance to win a profile border from the lootbox
+    const lootboxBorders = await db
+      .select()
+      .from(profileBorders)
+      .where(and(eq(profileBorders.isActive, true), eq(profileBorders.availableInLootbox, true)));
+
+    if (lootboxBorders.length > 0 && Math.random() < 0.03) {
+      const randomBorder = lootboxBorders[Math.floor(Math.random() * lootboxBorders.length)];
+      const alreadyHasBorder = await this.userHasUnlockedBorder(userId, randomBorder.id);
+
+      if (!alreadyHasBorder) {
+        await this.unlockBorderForUser(userId, randomBorder.id);
+      }
+
+      const borderReward: AssetReward = {
+        id: -10000 - randomBorder.id,
+        name: randomBorder.name,
+        imageUrl: randomBorder.imageUrl,
+        assetType: 'profile_border',
+        category: 'static',
+        rarity: randomBorder.rarity,
+        unlockChance: 10,
+        rewardValue: null,
+        timesRewarded: 0,
+        isActive: true,
+        availableInLootbox: true,
+        availableInStore: false,
+        proOnly: true,
+        freeItem: false,
+        redeemable: false,
+        rewardCategory: 'lootbox',
+        storePrice: null,
+        sourceBucket: 'gamefolio-borders',
+        sourcePath: null,
+        createdBy: null,
+        createdAt: randomBorder.createdAt,
+        updatedAt: randomBorder.createdAt,
+      };
+
+      await db.insert(userDailyLootbox).values({
+        userId,
+        lastOpenedAt: new Date(),
+        rewardId: null,
+        openCount: 1,
+      });
+
+      return { reward: borderReward, isDuplicate: alreadyHasBorder, consumed: false };
+    }
+
     // Get all active rewards
     const rewards = await this.getActiveRewardsForLootbox();
     if (rewards.length === 0) {
@@ -5215,6 +5268,113 @@ export class DatabaseStorage implements IStorage {
       .set({ 
         selectedNameTagId: nameTagId,
         updatedAt: new Date() 
+      })
+      .where(eq(users.id, userId));
+  }
+
+  // Profile border operations
+  async getAllProfileBordersFromTable(): Promise<ProfileBorder[]> {
+    return await db
+      .select()
+      .from(profileBorders)
+      .where(eq(profileBorders.isActive, true))
+      .orderBy(profileBorders.name);
+  }
+
+  async getProfileBorder(id: number): Promise<ProfileBorder | null> {
+    const [border] = await db
+      .select()
+      .from(profileBorders)
+      .where(eq(profileBorders.id, id));
+    return border || null;
+  }
+
+  async createProfileBorder(border: InsertProfileBorder): Promise<ProfileBorder> {
+    const [created] = await db.insert(profileBorders).values(border).returning();
+    return created;
+  }
+
+  async updateProfileBorder(id: number, updates: Partial<ProfileBorder>): Promise<ProfileBorder | null> {
+    const [updated] = await db
+      .update(profileBorders)
+      .set(updates)
+      .where(eq(profileBorders.id, id))
+      .returning();
+    return updated || null;
+  }
+
+  async deleteProfileBorder(id: number): Promise<boolean> {
+    await db.delete(profileBorders).where(eq(profileBorders.id, id));
+    return true;
+  }
+
+  async getUserUnlockedBorders2(userId: number): Promise<ProfileBorder[]> {
+    const unlocked = await db
+      .select({ border: profileBorders })
+      .from(userUnlockedBorders)
+      .innerJoin(profileBorders, eq(userUnlockedBorders.borderId, profileBorders.id))
+      .where(
+        and(
+          eq(userUnlockedBorders.userId, userId),
+          eq(profileBorders.isActive, true)
+        )
+      );
+
+    const defaultBorders = await db
+      .select()
+      .from(profileBorders)
+      .where(
+        and(
+          eq(profileBorders.isDefault, true),
+          eq(profileBorders.isActive, true)
+        )
+      );
+
+    const unlockedBorders = unlocked.map((u) => u.border);
+    const allBorders = [...unlockedBorders, ...defaultBorders];
+    const uniqueBorders = allBorders.filter(
+      (border, index, self) => index === self.findIndex((b) => b.id === border.id)
+    );
+
+    return uniqueBorders;
+  }
+
+  async unlockBorderForUser(userId: number, borderId: number): Promise<UserUnlockedBorder> {
+    const [unlock] = await db
+      .insert(userUnlockedBorders)
+      .values({ userId, borderId })
+      .returning();
+    return unlock;
+  }
+
+  async userHasUnlockedBorder(userId: number, borderId: number): Promise<boolean> {
+    const [border] = await db
+      .select()
+      .from(profileBorders)
+      .where(eq(profileBorders.id, borderId));
+
+    if (border?.isDefault) {
+      return true;
+    }
+
+    const [unlock] = await db
+      .select()
+      .from(userUnlockedBorders)
+      .where(
+        and(
+          eq(userUnlockedBorders.userId, userId),
+          eq(userUnlockedBorders.borderId, borderId)
+        )
+      );
+    return !!unlock;
+  }
+
+  async updateUserBorder(userId: number, borderId: number | null): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        selectedBorderId: borderId,
+        updatedAt: new Date()
       })
       .where(eq(users.id, userId));
   }

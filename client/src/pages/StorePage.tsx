@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useCrossmint } from "@/hooks/use-crossmint";
 import { Link } from "wouter";
-import { ShoppingCart, DollarSign, Sparkles, Wallet, Menu, Filter, Heart, Loader2, CheckCircle, Trash2, Tag } from "lucide-react";
+import { ShoppingCart, DollarSign, Sparkles, Wallet, Menu, Filter, Heart, Loader2, CheckCircle, Trash2, Tag, Crown, Lock, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -43,6 +43,7 @@ import nft15 from "@assets/15_1762777399666.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 
 type TabType = "buy" | "sell" | "mint" | "watchlist";
 
@@ -168,6 +169,50 @@ export default function StorePage() {
     onError: (error: Error) => {
       toast({ title: "Purchase Failed", description: error.message, variant: "destructive" });
       setPurchasingNameTagId(null);
+    },
+  });
+
+  interface StoreBorder {
+    id: number;
+    name: string;
+    imageUrl: string;
+    rarity: string;
+    gfCost: number | null;
+    owned: boolean;
+    isPro: boolean;
+    proOnly: boolean;
+  }
+
+  const { data: storeBorders = [], isLoading: isLoadingBorders } = useQuery<StoreBorder[]>({
+    queryKey: ["/api/store/borders"],
+    queryFn: async () => {
+      const response = await fetch('/api/store/borders', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch store borders');
+      return response.json();
+    },
+  });
+
+  const [purchasingBorderId, setPurchasingBorderId] = useState<number | null>(null);
+  const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
+
+  const purchaseBorderMutation = useMutation({
+    mutationFn: async (borderId: number) => {
+      const response = await apiRequest("POST", "/api/store/purchase-border", { borderId });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to purchase border");
+      }
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "Border Purchased!", description: data.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/store/borders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      setPurchasingBorderId(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Purchase Failed", description: error.message, variant: "destructive" });
+      setPurchasingBorderId(null);
     },
   });
 
@@ -1221,6 +1266,144 @@ export default function StorePage() {
                 );})}
               </div>
               )}
+
+              {/* Profile Borders Section - Pro Only */}
+              <h3 className="text-base font-semibold text-gray-300 mb-3 mt-8 flex items-center gap-2">
+                <Circle className="h-4 w-4 text-amber-400" />
+                Profile Picture Borders
+                <Badge className="bg-gradient-to-r from-amber-500 to-yellow-600 text-[10px] px-1.5 py-0.5 text-white ml-1">
+                  <Crown className="w-2.5 h-2.5 mr-0.5" />
+                  PRO
+                </Badge>
+              </h3>
+              <p className="text-xs text-gray-500 mb-3">
+                Add stunning borders around your profile picture. Pro members exclusive!
+              </p>
+              {isLoadingBorders ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
+              ) : storeBorders.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 text-sm">
+                  No profile borders available in the store yet.
+                </div>
+              ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+                {storeBorders
+                  .filter((border) => rarityFilter === "all" || border.rarity === rarityFilter)
+                  .map((border) => {
+                  const isPurchasing = purchasingBorderId === border.id;
+                  const cost = border.gfCost || 0;
+                  const isUserPro = user?.isPro === true;
+                  
+                  return (
+                  <Card
+                    key={border.id}
+                    className={`bg-gray-800/50 border-gray-700 overflow-hidden transition-all ${
+                      !isUserPro ? "opacity-60 grayscale-[40%]" :
+                      border.owned 
+                        ? "border-green-500/50 hover:border-green-400 hover:shadow-green-500/20 hover:shadow-lg" 
+                        : border.rarity === 'legendary' ? "hover:border-amber-500 hover:shadow-amber-500/20 hover:shadow-lg"
+                        : border.rarity === 'epic' ? "hover:border-purple-500 hover:shadow-purple-500/20 hover:shadow-lg"
+                        : border.rarity === 'rare' ? "hover:border-blue-500 hover:shadow-blue-500/20 hover:shadow-lg"
+                        : "hover:border-gray-500 hover:shadow-gray-500/20 hover:shadow-lg"
+                    }`}
+                  >
+                    <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-3">
+                      <img
+                        src={border.imageUrl}
+                        alt={border.name}
+                        className="max-w-full max-h-full object-contain drop-shadow-lg"
+                      />
+                      {border.owned && (
+                        <Badge className="absolute top-1.5 right-1.5 bg-green-600 text-[10px] px-1.5 py-0.5">
+                          <CheckCircle className="w-2.5 h-2.5 mr-0.5" />
+                          Owned
+                        </Badge>
+                      )}
+                      {!isUserPro && (
+                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                          <div className="bg-black/70 rounded-full p-2">
+                            <Lock className="w-5 h-5 text-amber-400" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="p-2 space-y-1.5">
+                      <div>
+                        <h3 className="font-semibold text-xs line-clamp-1">{border.name}</h3>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Badge className={`text-[10px] px-1.5 py-0.5 text-white capitalize ${
+                            border.rarity === "legendary" ? "bg-gradient-to-r from-yellow-500 to-amber-600" :
+                            border.rarity === "epic" ? "bg-gradient-to-r from-purple-500 to-pink-600" :
+                            border.rarity === "rare" ? "bg-gradient-to-r from-blue-500 to-cyan-600" : "bg-gray-600"
+                          }`}>
+                            {border.rarity}
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between pt-1.5 border-t border-gray-700">
+                        <div>
+                          <p className="text-[9px] text-gray-500">Price</p>
+                          <div className="flex items-center gap-0.5">
+                            <img src={gfTokenLogo} alt="GF" className="w-3 h-3" />
+                            <span className="text-xs font-bold text-purple-400">{cost} GF</span>
+                          </div>
+                        </div>
+                        
+                        {border.owned ? (
+                          <Button
+                            size="sm"
+                            className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-[10px] h-6 px-2 cursor-default"
+                            disabled
+                          >
+                            <CheckCircle className="h-2.5 w-2.5 mr-0.5" />
+                            Owned
+                          </Button>
+                        ) : !isUserPro ? (
+                          <Button
+                            size="sm"
+                            className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white text-[10px] h-6 px-2"
+                            onClick={() => setProUpgradeOpen(true)}
+                          >
+                            <Crown className="h-2.5 w-2.5 mr-0.5" />
+                            Pro Only
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white text-[10px] h-6 px-2"
+                            onClick={() => {
+                              if (!user) {
+                                toast({ title: "Login required", description: "Please log in to purchase borders", variant: "destructive" });
+                                return;
+                              }
+                              setPurchasingBorderId(border.id);
+                              purchaseBorderMutation.mutate(border.id);
+                            }}
+                            disabled={isPurchasing}
+                          >
+                            {isPurchasing ? (
+                              <>
+                                <Loader2 className="h-2.5 w-2.5 mr-0.5 animate-spin" />
+                                Buying...
+                              </>
+                            ) : (
+                              <>
+                                <Circle className="h-2.5 w-2.5 mr-0.5" />
+                                Buy
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                );})}
+              </div>
+              )}
             </div>
           )}
 
@@ -1392,6 +1575,12 @@ export default function StorePage() {
         onPurchaseComplete={() => {
           // Refresh user data or show success message
         }}
+      />
+
+      {/* Pro Upgrade Dialog for borders */}
+      <ProUpgradeDialog
+        open={proUpgradeOpen}
+        onOpenChange={setProUpgradeOpen}
       />
     </div>
   );
