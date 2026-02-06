@@ -4,7 +4,7 @@ import { Crown, Loader2, ArrowLeft, X } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { Package } from "@revenuecat/purchases-js";
-import proHeroImage from "@assets/pro-hero.jpg";
+import proHeroImage from "@assets/gamefolio_pro_banner_1770379359049.png";
 
 interface ProUpgradeDialogProps {
   open: boolean;
