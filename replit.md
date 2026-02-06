@@ -45,6 +45,7 @@ Gamefolio is a comprehensive gaming portfolio and social platform for gamers to 
 - **RevenueCat Integration**: Pro subscription management via `@revenuecat/purchases-js` SDK, syncing subscription status to the database.
 - **Video Ads System**: Google IMA SDK integration for monetization with 25% chance on clips, every 5 reels for non-Pro users. Pro subscribers are exempt from all ads.
 - **Animated GIF Avatars**: Pro users can upload animated GIF profile pictures that preserve animation. Non-Pro users' GIFs are automatically converted to static JPEG images with appropriate messaging.
+- **Name Tags Store & Lootbox Integration**: Name tags stored in `gamefolio-name-tags` Supabase bucket. Purchasable in store with GF tokens (common: 50, rare: 150, epic: 350, legendary: 750 GF). 20% chance to win from daily lootbox. APIs: `/api/store/name-tags` (list), `/api/store/purchase-name-tag` (buy with off-chain GF balance), `/api/admin/name-tags/sync-bucket` (admin sync from bucket). Frontend: Name Tags section in StorePage.tsx Buy tab.
 
 ### System Design Choices
 - **Cloud-first Architecture**: Emphasizes scalability and leverages Supabase for core services.
