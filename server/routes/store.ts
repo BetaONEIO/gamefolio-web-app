@@ -33,7 +33,7 @@ router.get('/api/store/items', async (req: Request, res: Response) => {
       .where(eq(storeItems.available, true))
       .orderBy(desc(storeItems.createdAt));
 
-    const userId = (req as any).user?.id || (req as any).session?.userId;
+    const userId = (req as any).user?.id;
     let isPro = false;
     if (userId) {
       const userResult = await db.select().from(users).where(eq(users.id, userId)).limit(1);
@@ -58,7 +58,7 @@ router.get('/api/store/items', async (req: Request, res: Response) => {
 
 router.get('/api/store/owned', async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).session?.userId;
+    const userId = (req as any).user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
     }
@@ -90,7 +90,7 @@ router.get('/api/store/owned', async (req: Request, res: Response) => {
 
 router.post('/api/store/purchase-intent', async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).session?.userId;
+    const userId = (req as any).user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
     }
@@ -159,7 +159,7 @@ router.post('/api/store/purchase-intent', async (req: Request, res: Response) =>
 
 router.post('/api/store/verify-purchase', async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).session?.userId;
+    const userId = (req as any).user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
     }

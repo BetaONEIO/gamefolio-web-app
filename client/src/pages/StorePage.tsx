@@ -80,6 +80,29 @@ interface NFT {
 const GF_DECIMALS = 18;
 const SKALE_CHAIN_ID = SKALE_NEBULA_TESTNET.id;
 
+const nftImageMap: Record<string, string> = {
+  "/assets/nft1.png": nft1,
+  "/assets/nft2.png": nft2,
+  "/assets/nft3.png": nft3,
+  "/assets/nft4.png": nft4,
+  "/assets/nft5.png": nft5,
+  "/assets/nft6.png": nft6,
+  "/assets/nft7.png": nft7,
+  "/assets/nft8.png": nft8,
+  "/assets/nft9.png": nft9,
+  "/assets/nft10.png": nft10,
+  "/assets/nft11.png": nft11,
+  "/assets/nft12.png": nft12,
+  "/assets/nft13.png": nft13,
+  "/assets/nft14.png": nft14,
+  "/assets/nft15.png": nft15,
+};
+
+function resolveStoreImage(imagePath: string | null): string {
+  if (!imagePath) return gfTokenLogo;
+  return nftImageMap[imagePath] || imagePath;
+}
+
 export default function StorePage() {
   const { user } = useAuth();
   const { wallet } = useCrossmint();
@@ -1103,7 +1126,7 @@ export default function StorePage() {
                       data-testid={`img-item-${item.id}`}
                     >
                       <img
-                        src={item.image || gfTokenLogo}
+                        src={resolveStoreImage(item.image)}
                         alt={item.name}
                         className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
                       />
