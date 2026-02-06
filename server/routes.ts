@@ -6290,6 +6290,166 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==========================================
+  // Name Tag Store Routes
+  // ==========================================
+
+  // Get name tags available for purchase in the store
+  app.get("/api/store/name-tags", async (req, res) => {
+    try {
+      const allTags = await storage.getAllNameTags();
+      const storeTags = allTags.filter(t => t.availableInStore && t.isActive && !t.isDefault);
+      
+      if (req.isAuthenticated()) {
+        const unlockedTags = await storage.getUserUnlockedNameTags(req.user.id);
+        const unlockedIds = new Set(unlockedTags.map(t => t.id));
+        const user = await storage.getUserById(req.user.id);
+        
+        const tagsWithStatus = storeTags.map(tag => ({
+          ...tag,
+          owned: unlockedIds.has(tag.id) || !!user?.isPro,
+        }));
+        return res.json(tagsWithStatus);
+      }
+      
+      res.json(storeTags.map(tag => ({ ...tag, owned: false })));
+    } catch (err) {
+      console.error("Error fetching store name tags:", err);
+      return res.status(500).json({ message: "Error fetching store name tags" });
+    }
+  });
+
+  // Purchase a name tag with GF tokens (off-chain balance)
+  app.post("/api/store/purchase-name-tag", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const { nameTagId } = req.body;
+      if (!nameTagId) {
+        return res.status(400).json({ message: "nameTagId is required" });
+      }
+
+      const nameTag = await storage.getNameTag(nameTagId);
+      if (!nameTag) {
+        return res.status(404).json({ message: "Name tag not found" });
+      }
+
+      if (!nameTag.availableInStore || !nameTag.isActive) {
+        return res.status(400).json({ message: "This name tag is not available for purchase" });
+      }
+
+      if (nameTag.isDefault) {
+        return res.status(400).json({ message: "This name tag is free for everyone" });
+      }
+
+      const cost = nameTag.gfCost || 0;
+      if (cost <= 0) {
+        return res.status(400).json({ message: "This name tag has no price set" });
+      }
+
+      // Check if user already owns it
+      const hasUnlocked = await storage.userHasUnlockedNameTag(req.user.id, nameTagId);
+      if (hasUnlocked) {
+        return res.status(400).json({ message: "You already own this name tag" });
+      }
+
+      // Check user's GF token balance
+      const user = await storage.getUserById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const balance = user.gfTokenBalance || 0;
+      if (balance < cost) {
+        return res.status(400).json({ message: `Insufficient GF tokens. Need ${cost} GF, you have ${balance} GF` });
+      }
+
+      // Deduct GF tokens and unlock the name tag
+      await db.update(users)
+        .set({ gfTokenBalance: sql`COALESCE(${users.gfTokenBalance}, 0) - ${cost}` })
+        .where(eq(users.id, req.user.id));
+
+      await storage.unlockNameTagForUser(req.user.id, nameTagId);
+
+      res.json({ 
+        success: true, 
+        message: `Successfully purchased "${nameTag.name}"!`,
+        nameTag,
+        newBalance: balance - cost,
+      });
+    } catch (err) {
+      console.error("Error purchasing name tag:", err);
+      return res.status(500).json({ message: "Error purchasing name tag" });
+    }
+  });
+
+  // Sync name tags from the gamefolio-name-tags Supabase bucket
+  app.post("/api/admin/name-tags/sync-bucket", adminMiddleware, async (req, res) => {
+    try {
+      const files = await supabaseStorage.listBucketFiles('gamefolio-name-tags', '');
+      
+      if (!files || files.length === 0) {
+        return res.json({ synced: 0, message: "No files found in gamefolio-name-tags bucket" });
+      }
+
+      const existingTags = await storage.getAllNameTags();
+      const existingNames = new Set(existingTags.map(t => t.name.toLowerCase()));
+
+      let synced = 0;
+      const rarities = ['common', 'rare', 'epic', 'legendary'];
+      const rarityPrices: Record<string, number> = {
+        common: 50,
+        rare: 150,
+        epic: 350,
+        legendary: 750,
+      };
+
+      for (const file of files) {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        if (!ext || !['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) continue;
+
+        const nameBase = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+        const displayName = nameBase.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+
+        if (existingNames.has(displayName.toLowerCase())) {
+          // Update the existing tag's image URL to use the correct bucket
+          const existing = existingTags.find(t => t.name.toLowerCase() === displayName.toLowerCase());
+          if (existing) {
+            await storage.updateNameTag(existing.id, {
+              imageUrl: file.publicUrl,
+              availableInStore: true,
+              availableInLootbox: true,
+              gfCost: rarityPrices[existing.rarity] || 50,
+            });
+            synced++;
+          }
+          continue;
+        }
+
+        const rarity = rarities[Math.floor(Math.random() * rarities.length)];
+        
+        await storage.createNameTag({
+          name: displayName,
+          imageUrl: file.publicUrl,
+          rarity,
+          gfCost: rarityPrices[rarity],
+          isDefault: false,
+          isActive: true,
+          availableInStore: true,
+          availableInLootbox: true,
+        });
+        synced++;
+      }
+
+      res.json({ synced, total: files.length, message: `Synced ${synced} name tags from bucket` });
+    } catch (err) {
+      console.error("Error syncing name tags from bucket:", err);
+      return res.status(500).json({ message: "Error syncing name tags from bucket" });
+    }
+  });
+
+  // ==========================================
   // Screenshot Upload Routes
   // ==========================================
 

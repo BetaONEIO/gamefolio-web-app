@@ -4574,6 +4574,56 @@ export class DatabaseStorage implements IStorage {
       return null;
     }
 
+    // 20% chance to win a name tag from the lootbox
+    const lootboxNameTags = await db
+      .select()
+      .from(nameTags)
+      .where(and(eq(nameTags.isActive, true), eq(nameTags.availableInLootbox, true)));
+
+    if (lootboxNameTags.length > 0 && Math.random() < 0.2) {
+      const randomNameTag = lootboxNameTags[Math.floor(Math.random() * lootboxNameTags.length)];
+      const alreadyHas = await this.userHasUnlockedNameTag(userId, randomNameTag.id);
+
+      if (!alreadyHas) {
+        await this.unlockNameTagForUser(userId, randomNameTag.id);
+      }
+
+      // Create a virtual AssetReward object for the name tag
+      const nameTagReward: AssetReward = {
+        id: -randomNameTag.id,
+        name: randomNameTag.name,
+        imageUrl: randomNameTag.imageUrl,
+        assetType: 'name_tag',
+        category: 'static',
+        rarity: randomNameTag.rarity,
+        unlockChance: 10,
+        rewardValue: null,
+        timesRewarded: 0,
+        isActive: true,
+        availableInLootbox: true,
+        availableInStore: false,
+        proOnly: false,
+        freeItem: false,
+        redeemable: false,
+        rewardCategory: 'lootbox',
+        storePrice: null,
+        sourceBucket: 'gamefolio-name-tags',
+        sourcePath: null,
+        createdBy: null,
+        createdAt: randomNameTag.createdAt,
+        updatedAt: randomNameTag.createdAt,
+      };
+
+      await db.insert(userDailyLootbox).values({
+        userId,
+        lastOpenedAt: new Date(),
+        rewardId: null,
+        openCount: 1,
+      });
+
+      return { reward: nameTagReward, isDuplicate: alreadyHas, consumed: false };
+    }
+
     // Get all active rewards
     const rewards = await this.getActiveRewardsForLootbox();
     if (rewards.length === 0) {

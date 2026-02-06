@@ -246,9 +246,12 @@ export const nameTags = pgTable("name_tags", {
   name: text("name").notNull(),
   imageUrl: text("image_url").notNull(),
   rarity: text("rarity").notNull().default("common"), // common, rare, epic, legendary
+  gfCost: integer("gf_cost").default(0), // GF token cost to purchase in store (0 = not for sale)
   unlockCondition: text("unlock_condition"), // Description of how to unlock (e.g., "Reach level 10", "Complete 50 uploads")
   isDefault: boolean("is_default").default(false).notNull(), // If true, all users have this unlocked
   isActive: boolean("is_active").default(true).notNull(),
+  availableInStore: boolean("available_in_store").default(false).notNull(), // If true, can be purchased in store
+  availableInLootbox: boolean("available_in_lootbox").default(false).notNull(), // If true, can be won from lootbox
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
