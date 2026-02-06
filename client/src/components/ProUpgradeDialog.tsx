@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Crown, Loader2, X } from "lucide-react";
+import { Crown, Loader2, X, Check } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { Package } from "@revenuecat/purchases-js";
@@ -63,42 +63,78 @@ const premiumBenefits = [
   },
 ];
 
+function isYearlyPackage(pkg: Package): boolean {
+  const id = pkg.identifier.toLowerCase();
+  return id.includes("annual") || id.includes("yearly") || id.includes("year");
+}
+
+function isMonthlyPackage(pkg: Package): boolean {
+  const id = pkg.identifier.toLowerCase();
+  return id.includes("monthly") || id.includes("month");
+}
+
+function formatPrice(pkg: Package): string {
+  return pkg.rcBillingProduct?.currentPrice?.formattedPrice || "";
+}
+
+function getPriceAmount(pkg: Package): number {
+  return (pkg.rcBillingProduct?.currentPrice?.amountMicros || 0) / 1000000;
+}
+
+function getCurrency(pkg: Package): string {
+  return pkg.rcBillingProduct?.currentPrice?.currency || "USD";
+}
+
+function formatCurrency(amount: number, currency: string): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+}
+
 export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialogProps) {
   const { isInitialized, isLoading, isPro, getCurrentOffering, purchasePackage } = useRevenueCat();
-  const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
   const [purchasing, setPurchasing] = useState(false);
 
   const packages = getCurrentOffering();
 
+  const { monthlyPkg, yearlyPkg } = useMemo(() => {
+    if (!packages) return { monthlyPkg: null, yearlyPkg: null };
+    return {
+      monthlyPkg: packages.find(isMonthlyPackage) || null,
+      yearlyPkg: packages.find(isYearlyPackage) || null,
+    };
+  }, [packages]);
+
+  const hasMultiplePlans = !!monthlyPkg && !!yearlyPkg;
+
+  const selectedPackage = useMemo(() => {
+    if (billingPeriod === "yearly" && yearlyPkg) return yearlyPkg;
+    if (billingPeriod === "monthly" && monthlyPkg) return monthlyPkg;
+    return yearlyPkg || monthlyPkg || (packages?.[0] ?? null);
+  }, [billingPeriod, monthlyPkg, yearlyPkg, packages]);
+
+  const savings = useMemo(() => {
+    if (!monthlyPkg || !yearlyPkg) return 0;
+    const monthlyPrice = getPriceAmount(monthlyPkg);
+    const yearlyMonthly = getPriceAmount(yearlyPkg) / 12;
+    if (monthlyPrice > 0) {
+      const s = Math.round((1 - yearlyMonthly / monthlyPrice) * 100);
+      return s > 0 ? s : 0;
+    }
+    return 0;
+  }, [monthlyPkg, yearlyPkg]);
+
   useEffect(() => {
     if (!open) {
-      setSelectedPackage(null);
       setBillingPeriod("yearly");
       setPurchasing(false);
     }
   }, [open]);
 
-  useEffect(() => {
-    if (packages && packages.length > 0) {
-      const targetPkg = packages.find(p => {
-        const id = p.identifier.toLowerCase();
-        if (billingPeriod === "yearly") {
-          return id.includes("annual") || id.includes("yearly") || id.includes("year");
-        }
-        return id.includes("monthly") || id.includes("month");
-      });
-      setSelectedPackage(targetPkg || packages[0]);
-    }
-  }, [packages, billingPeriod]);
-
   const handleJoinPro = async () => {
     if (!selectedPackage || purchasing) return;
     setPurchasing(true);
     try {
-      console.log("Starting purchase for package:", selectedPackage.identifier);
       const success = await purchasePackage(selectedPackage);
-      console.log("Purchase result:", success);
       if (success) {
         onOpenChange(false);
       }
@@ -107,40 +143,6 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
     } finally {
       setPurchasing(false);
     }
-  };
-
-  const getMonthlyEquivalent = () => {
-    const yearly = packages?.find(p => {
-      const id = p.identifier.toLowerCase();
-      return id.includes("annual") || id.includes("yearly") || id.includes("year");
-    });
-    if (yearly) {
-      const price = (yearly.rcBillingProduct?.currentPrice?.amountMicros || 0) / 1000000;
-      const monthly = price / 12;
-      const currency = yearly.rcBillingProduct?.currentPrice?.currency || "USD";
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(monthly);
-    }
-    return "$4.99";
-  };
-
-  const calculateSavings = () => {
-    const monthly = packages?.find(p => {
-      const id = p.identifier.toLowerCase();
-      return id.includes("monthly") || id.includes("month");
-    });
-    const yearly = packages?.find(p => {
-      const id = p.identifier.toLowerCase();
-      return id.includes("annual") || id.includes("yearly") || id.includes("year");
-    });
-    if (!monthly || !yearly) return 50;
-    const monthlyPrice = (monthly.rcBillingProduct?.currentPrice?.amountMicros || 0) / 1000000;
-    const yearlyPrice = (yearly.rcBillingProduct?.currentPrice?.amountMicros || 0) / 1000000;
-    const yearlyMonthly = yearlyPrice / 12;
-    if (monthlyPrice > 0) {
-      const savings = Math.round((1 - yearlyMonthly / monthlyPrice) * 100);
-      return savings > 0 ? savings : 50;
-    }
-    return 50;
   };
 
   if (isPro) {
@@ -167,8 +169,104 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
     );
   }
 
-  const savings = calculateSavings();
   const buttonDisabled = !isInitialized || isLoading || purchasing || !selectedPackage;
+
+  const planSelector = (compact: boolean = false) => {
+    const yearlyPerMonth = yearlyPkg ? formatCurrency(getPriceAmount(yearlyPkg) / 12, getCurrency(yearlyPkg)) : null;
+    const yearlyTotal = yearlyPkg ? formatPrice(yearlyPkg) : null;
+    const monthlyPrice = monthlyPkg ? formatPrice(monthlyPkg) : null;
+
+    return (
+      <div className="flex flex-col gap-3">
+        {yearlyPkg && (
+          <button
+            type="button"
+            onClick={() => setBillingPeriod("yearly")}
+            className={`relative w-full rounded-2xl border-2 transition-all p-4 text-left ${
+              billingPeriod === "yearly"
+                ? "border-[#4ade80] bg-[#4ade800d]"
+                : "border-[#1e293b] bg-[#0f172a] hover:border-[#334155]"
+            }`}
+          >
+            {savings > 0 && (
+              <div className="absolute -top-2.5 right-4 bg-[#4ade80] text-[#022c22] text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full">
+                Save {savings}%
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  billingPeriod === "yearly" ? "border-[#4ade80] bg-[#4ade80]" : "border-[#475569]"
+                }`}>
+                  {billingPeriod === "yearly" && <Check className="w-3 h-3 text-[#022c22]" strokeWidth={3} />}
+                </div>
+                <div>
+                  <div className="text-white font-semibold text-[15px]">Yearly</div>
+                  <div className="text-[#94a3b8] text-xs mt-0.5">
+                    {yearlyTotal} billed annually
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-white font-bold text-lg">{yearlyPerMonth}</div>
+                <div className="text-[#94a3b8] text-xs">/month</div>
+              </div>
+            </div>
+          </button>
+        )}
+
+        {monthlyPkg && (
+          <button
+            type="button"
+            onClick={() => setBillingPeriod("monthly")}
+            className={`w-full rounded-2xl border-2 transition-all p-4 text-left ${
+              billingPeriod === "monthly"
+                ? "border-[#4ade80] bg-[#4ade800d]"
+                : "border-[#1e293b] bg-[#0f172a] hover:border-[#334155]"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  billingPeriod === "monthly" ? "border-[#4ade80] bg-[#4ade80]" : "border-[#475569]"
+                }`}>
+                  {billingPeriod === "monthly" && <Check className="w-3 h-3 text-[#022c22]" strokeWidth={3} />}
+                </div>
+                <div>
+                  <div className="text-white font-semibold text-[15px]">Monthly</div>
+                  <div className="text-[#94a3b8] text-xs mt-0.5">
+                    Billed monthly, cancel anytime
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-white font-bold text-lg">{monthlyPrice}</div>
+                <div className="text-[#94a3b8] text-xs">/month</div>
+              </div>
+            </div>
+          </button>
+        )}
+
+        {!monthlyPkg && !yearlyPkg && packages && packages.length > 0 && (
+          <div className="w-full rounded-2xl border-2 border-[#4ade80] bg-[#4ade800d] p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full border-2 border-[#4ade80] bg-[#4ade80] flex items-center justify-center flex-shrink-0">
+                  <Check className="w-3 h-3 text-[#022c22]" strokeWidth={3} />
+                </div>
+                <div>
+                  <div className="text-white font-semibold text-[15px]">{packages[0].rcBillingProduct?.displayName || "Pro"}</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-white font-bold text-lg">{formatPrice(packages[0])}</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const leftPanel = (
     <div className="relative w-full h-full min-h-[500px] md:min-h-0 flex flex-col bg-[#020617]">
@@ -216,7 +314,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
 
   const rightPanel = (
     <div className="flex flex-col justify-between h-full px-6 py-8 bg-[#020617]">
-      <div className="flex flex-col gap-6 mb-8">
+      <div className="flex flex-col gap-6 mb-6">
         {premiumBenefits.map((benefit, index) => (
           <motion.div
             key={benefit.title}
@@ -241,29 +339,18 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
       </div>
 
       <div className="flex flex-col gap-4 mt-auto">
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[#94a3b8] text-xs font-bold uppercase tracking-[1.2px]">
-              Annual Plan
-            </span>
-            <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-white text-2xl font-bold">
-                {getMonthlyEquivalent()}
-              </span>
-              <span className="text-[#94a3b8] text-base">/mo</span>
-            </div>
-          </div>
-          <div className="bg-[#4ade801a] border border-[#4ade8033] rounded-xl px-3 py-2">
-            <span className="text-[#4ade80] text-xs font-bold">
-              Save {savings}%
-            </span>
-          </div>
+        <div className="mb-1">
+          <span className="text-[#94a3b8] text-xs font-bold uppercase tracking-[1.2px]">
+            Choose your plan
+          </span>
         </div>
+
+        {planSelector()}
 
         <button
           onClick={handleJoinPro}
           disabled={buttonDisabled}
-          className="w-full py-4 bg-[#4ade80] hover:bg-[#3bce71] rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full py-4 bg-[#4ade80] hover:bg-[#3bce71] rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed mt-1"
           style={{ boxShadow: '0 0 30px -5px #4ade80' }}
           data-testid="button-upgrade-pro"
         >
@@ -336,7 +423,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
                   Elevate your gaming identity with premium features designed for elite creators
                 </p>
 
-                <div className="flex flex-col gap-4 mb-6">
+                <div className="flex flex-col gap-4 mb-5">
                   {premiumBenefits.map((benefit, index) => (
                     <motion.div
                       key={benefit.title}
@@ -360,29 +447,18 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
                   ))}
                 </div>
 
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex flex-col">
-                    <span className="text-[#94a3b8] text-[10px] font-bold uppercase tracking-[1px]">
-                      Annual Plan
-                    </span>
-                    <div className="flex items-baseline gap-1 mt-0.5">
-                      <span className="text-white text-xl font-bold">
-                        {getMonthlyEquivalent()}
-                      </span>
-                      <span className="text-[#94a3b8] text-sm">/mo</span>
-                    </div>
-                  </div>
-                  <div className="bg-[#4ade801a] border border-[#4ade8033] rounded-lg px-2.5 py-1.5">
-                    <span className="text-[#4ade80] text-[11px] font-bold">
-                      Save {savings}%
-                    </span>
-                  </div>
+                <div className="mb-3">
+                  <span className="text-[#94a3b8] text-[10px] font-bold uppercase tracking-[1px]">
+                    Choose your plan
+                  </span>
                 </div>
+
+                {planSelector(true)}
 
                 <button
                   onClick={handleJoinPro}
                   disabled={buttonDisabled}
-                  className="w-full py-3.5 bg-[#4ade80] hover:bg-[#3bce71] rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full py-3.5 bg-[#4ade80] hover:bg-[#3bce71] rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed mt-4"
                   style={{ boxShadow: '0 0 30px -5px #4ade80' }}
                   data-testid="button-upgrade-pro-mobile"
                 >
