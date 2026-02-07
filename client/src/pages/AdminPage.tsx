@@ -109,6 +109,7 @@ function BannerManagement() {
   // Fetch current banner settings
   const { data: bannerSettings, isLoading: isLoadingBanner, refetch: refetchBanner } = useQuery<BannerSettings>({
     queryKey: ['/api/admin/banner-settings'],
+    queryFn: getQueryFn({ on401: "throw" }),
     staleTime: 1000 * 60 * 5,
   });
 
@@ -661,6 +662,7 @@ interface ProSubscriber {
 function ProSubscribersManagement() {
   const { data, isLoading, refetch } = useQuery<{ subscribers: ProSubscriber[]; total: number }>({
     queryKey: ['/api/admin/pro-subscribers'],
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   const formatDate = (dateString: string | null) => {
@@ -815,6 +817,7 @@ function LootboxManagement() {
 
   const { data: lootboxOpens, isLoading, refetch } = useQuery<LootboxOpen[]>({
     queryKey: ['/api/admin/lootbox/opens'],
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   const handleResetLootbox = async (userId: number, username: string) => {
@@ -1072,6 +1075,7 @@ import {
   Ticket,
   HelpCircle,
   Package,
+  ChevronDown,
 } from "lucide-react";
 
 const AdminPage = () => {
@@ -1146,8 +1150,6 @@ const AdminPage = () => {
   const [loadingBucket, setLoadingBucket] = useState(false);
   
   // Assets management state
-  const [assetsBucket, setAssetsBucket] = useState<string>("gamefolio-backgrounds");
-  const [assetsBucketFolder, setAssetsBucketFolder] = useState<string>("");
   const [assetsSelectedFile, setAssetsSelectedFile] = useState<BucketFile | null>(null);
   const [assetsAssignDialogOpen, setAssetsAssignDialogOpen] = useState(false);
   const [assetsAssignTo, setAssetsAssignTo] = useState<string>("lootbox");
@@ -1269,18 +1271,21 @@ const AdminPage = () => {
   // Fetch admin stats
   const { data: stats, isLoading: statsLoading } = useQuery<AdminStats>({
     queryKey: ["/api/admin/stats"],
+    queryFn: getQueryFn({ on401: "throw" }),
     refetchInterval: 60000, // Refresh every minute
   });
 
   // Fetch users with pagination
   const { data: usersData, isLoading: usersLoading } = useQuery<UsersData>({
     queryKey: ["/api/admin/users", { page: userPage, search: userSearch }],
+    queryFn: getQueryFn({ on401: "throw" }),
     placeholderData: keepPreviousData,
   });
 
   // Fetch users for badge assignment search
   const { data: badgeUsersData, isLoading: badgeUsersLoading } = useQuery<UsersData>({
     queryKey: ["/api/admin/users", { page: 1, search: badgeUserSearch, limit: 10 }],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: badgeUserSearch.length >= 2,
     placeholderData: keepPreviousData,
   });
@@ -1288,39 +1293,80 @@ const AdminPage = () => {
   // Fetch clips with pagination
   const { data: clipsData, isLoading: clipsLoading } = useQuery<ClipsData>({
     queryKey: ["/api/admin/clips", { page: clipPage }],
+    queryFn: getQueryFn({ on401: "throw" }),
     placeholderData: keepPreviousData,
   });
 
   // Fetch current hero text settings
   const { data: currentHeroText, isLoading: heroTextLoading } = useQuery<HeroTextData>({
     queryKey: ["/api/hero-text/experienced"],
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   // Badge management queries
   const { data: badgesData, isLoading: badgesLoading, refetch: refetchBadges } = useQuery<BadgeType[]>({
     queryKey: ["/api/admin/badges"],
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   // Asset rewards queries
   const { data: assetRewardsData, isLoading: rewardsLoading, refetch: refetchRewards } = useQuery<AssetReward[]>({
     queryKey: ["/api/admin/asset-rewards"],
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   // Bucket contents query - uses default fetcher with query parameters
   const bucketFilesUrl = `/api/admin/storage/buckets/${selectedBucket}/files`;
   const { data: bucketData, isLoading: bucketLoading, refetch: refetchBucket } = useQuery<BucketContents>({
     queryKey: [bucketFilesUrl, currentBucketFolder ? { folder: currentBucketFolder } : undefined],
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
-  // Assets tab bucket query
-  const assetsBucketUrl = `/api/admin/storage/buckets/${assetsBucket}/files`;
-  const { data: assetsBucketData, isLoading: assetsBucketLoading, refetch: refetchAssetsBucket } = useQuery<BucketContents>({
-    queryKey: [assetsBucketUrl, assetsBucketFolder ? { folder: assetsBucketFolder } : undefined],
+  // Assets tab - per-bucket folder state
+  const [bucketFolders, setBucketFolders] = useState<Record<string, string>>({
+    "gamefolio-backgrounds": "",
+    "gamefolio-profile-borders": "",
+    "gamefolio-name-tags": "",
+    "gamefolio-assets": "",
   });
+  const [bucketExpanded, setBucketExpanded] = useState<Record<string, boolean>>({
+    "gamefolio-backgrounds": true,
+    "gamefolio-profile-borders": true,
+    "gamefolio-name-tags": true,
+    "gamefolio-assets": true,
+  });
+  const [assetsSelectedBucketName, setAssetsSelectedBucketName] = useState<string>("");
+
+  const assetBucketNames = ["gamefolio-backgrounds", "gamefolio-profile-borders", "gamefolio-name-tags", "gamefolio-assets"] as const;
+
+  const { data: bgBucketData, isLoading: bgBucketLoading, refetch: refetchBgBucket } = useQuery<BucketContents>({
+    queryKey: [`/api/admin/storage/buckets/gamefolio-backgrounds/files`, bucketFolders["gamefolio-backgrounds"] ? { folder: bucketFolders["gamefolio-backgrounds"] } : undefined],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+  const { data: bordersBucketData, isLoading: bordersBucketLoading, refetch: refetchBordersBucket } = useQuery<BucketContents>({
+    queryKey: [`/api/admin/storage/buckets/gamefolio-profile-borders/files`, bucketFolders["gamefolio-profile-borders"] ? { folder: bucketFolders["gamefolio-profile-borders"] } : undefined],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+  const { data: tagsBucketData, isLoading: tagsBucketLoading, refetch: refetchTagsBucket } = useQuery<BucketContents>({
+    queryKey: [`/api/admin/storage/buckets/gamefolio-name-tags/files`, bucketFolders["gamefolio-name-tags"] ? { folder: bucketFolders["gamefolio-name-tags"] } : undefined],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+  const { data: assetsBucketData, isLoading: assetsGenBucketLoading, refetch: refetchAssetsBucket } = useQuery<BucketContents>({
+    queryKey: [`/api/admin/storage/buckets/gamefolio-assets/files`, bucketFolders["gamefolio-assets"] ? { folder: bucketFolders["gamefolio-assets"] } : undefined],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+
+  const allBucketData: Record<string, { data: BucketContents | undefined; isLoading: boolean; refetch: () => void }> = {
+    "gamefolio-backgrounds": { data: bgBucketData, isLoading: bgBucketLoading, refetch: refetchBgBucket },
+    "gamefolio-profile-borders": { data: bordersBucketData, isLoading: bordersBucketLoading, refetch: refetchBordersBucket },
+    "gamefolio-name-tags": { data: tagsBucketData, isLoading: tagsBucketLoading, refetch: refetchTagsBucket },
+    "gamefolio-assets": { data: assetsBucketData, isLoading: assetsGenBucketLoading, refetch: refetchAssetsBucket },
+  };
 
   // Asset assignments query
   const { data: assetAssignments, isLoading: assignmentsLoading, refetch: refetchAssignments } = useQuery<Record<string, any>>({
     queryKey: ["/api/admin/assets/assignments"],
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   // Function to select a file from bucket and use it as reward image
@@ -1341,7 +1387,7 @@ const AdminPage = () => {
       await apiRequest('POST', '/api/admin/assets/assign', {
         imageUrl: assetsSelectedFile.publicUrl,
         name: assetsAssignName || assetsSelectedFile.name.replace(/\.[^/.]+$/, ""),
-        bucket: assetsBucket,
+        bucket: assetsSelectedBucketName,
         path: assetsSelectedFile.path,
         assignTo: assetsAssignTo,
         rarity: assetsRarity,
@@ -1387,8 +1433,9 @@ const AdminPage = () => {
     }
   };
 
-  const openAssignDialog = (file: BucketFile) => {
+  const openAssignDialog = (file: BucketFile, bucketName?: string) => {
     setAssetsSelectedFile(file);
+    if (bucketName) setAssetsSelectedBucketName(bucketName);
     setAssetsAssignName(file.name.replace(/\.[^/.]+$/, ""));
     const existing = assetAssignments?.[file.publicUrl];
     if (existing) {
@@ -4616,166 +4663,179 @@ const AdminPage = () => {
         </TabsContent>
 
         <TabsContent value="assets" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Asset Management
-              </CardTitle>
-              <CardDescription>
-                Browse and manage assets from Supabase storage buckets. Assign assets to Lootbox rewards or Store items.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex gap-4 items-end flex-wrap">
-                  <div className="space-y-2 flex-1 min-w-[200px]">
-                    <Label>Storage Bucket</Label>
-                    <Select value={assetsBucket} onValueChange={(v) => { setAssetsBucket(v); setAssetsBucketFolder(""); }}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a bucket" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="gamefolio-backgrounds">gamefolio-backgrounds</SelectItem>
-                        <SelectItem value="gamefolio-profile-borders">gamefolio-profile-borders</SelectItem>
-                        <SelectItem value="gamefolio-name-tags">gamefolio-name-tags</SelectItem>
-                        <SelectItem value="gamefolio-assets">gamefolio-assets</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {assetsBucketFolder && (
-                    <Button variant="outline" size="sm" onClick={() => setAssetsBucketFolder("")}>
-                      <ArrowLeft className="h-4 w-4 mr-1" /> Back to Root
-                    </Button>
-                  )}
-                  <Button variant="outline" size="sm" onClick={() => { refetchAssetsBucket(); refetchAssignments(); }} disabled={assetsBucketLoading}>
-                    <RefreshCw className={`h-4 w-4 mr-1 ${assetsBucketLoading ? 'animate-spin' : ''}`} /> Refresh
-                  </Button>
-                </div>
-                
-                {assetsBucketFolder && (
-                  <div className="text-sm text-muted-foreground">
-                    Current folder: <span className="font-mono bg-muted px-2 py-1 rounded">{assetsBucketFolder}</span>
-                  </div>
-                )}
-
-                {assetsBucketLoading ? (
-                  <div className="text-center py-8 text-muted-foreground">Loading assets...</div>
-                ) : (
-                  <div className="space-y-4">
-                    {assetsBucketData?.folders && assetsBucketData.folders.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">Folders</h4>
-                        <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
-                          {assetsBucketData.folders.map((folder) => (
-                            <button
-                              key={folder}
-                              onClick={() => setAssetsBucketFolder(assetsBucketFolder ? `${assetsBucketFolder}/${folder}` : folder)}
-                              className="flex flex-col items-center p-2 rounded border hover:bg-muted transition-colors"
-                            >
-                              <FolderOpen className="h-8 w-8 text-yellow-500" />
-                              <span className="text-xs truncate w-full text-center mt-1">{folder}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {assetsBucketData?.files && assetsBucketData.files.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">Assets ({assetsBucketData.files.length})</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                          {assetsBucketData.files.map((file) => {
-                            const assignment = assetAssignments?.[file.publicUrl];
-                            return (
-                              <div
-                                key={file.id}
-                                className={`relative rounded-lg border p-3 transition-colors ${
-                                  assignment ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
-                                }`}
-                              >
-                                <div className="flex items-center gap-3 mb-2">
-                                  <img 
-                                    src={file.publicUrl} 
-                                    alt={file.name}
-                                    className="w-14 h-14 object-contain rounded border bg-muted/30"
-                                    onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
-                                  />
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium truncate">{file.name}</p>
-                                    <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
-                                  </div>
-                                </div>
-
-                                {assignment ? (
-                                  <div className="space-y-1.5 mb-2">
-                                    <div className="flex flex-wrap gap-1">
-                                      {assignment.availableInLootbox && (
-                                        <span className="inline-flex items-center gap-1 text-xs bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full">
-                                          <Gift className="h-3 w-3" /> Lootbox ({assignment.unlockChance ?? 'N/A'}%)
-                                        </span>
-                                      )}
-                                      {assignment.availableInStore && (
-                                        <span className="inline-flex items-center gap-1 text-xs bg-blue-500/20 text-blue-500 px-2 py-0.5 rounded-full">
-                                          <ShoppingBag className="h-3 w-3" /> Store {assignment.storePrice ? `(${assignment.storePrice} GF)` : ''}
-                                        </span>
-                                      )}
-                                      {assignment.proOnly && (
-                                        <span className="inline-flex items-center gap-1 text-xs bg-purple-500/20 text-purple-500 px-2 py-0.5 rounded-full">
-                                          <Crown className="h-3 w-3" /> Pro
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                      <span className={`w-2 h-2 rounded-full ${
-                                        assignment.rarity === 'legendary' ? 'bg-yellow-500' :
-                                        assignment.rarity === 'epic' ? 'bg-purple-500' :
-                                        assignment.rarity === 'rare' ? 'bg-blue-500' : 'bg-gray-400'
-                                      }`}></span>
-                                      {assignment.rarity} · {assignment.type.replace('_', ' ')} · {assignment.name}
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="mb-2">
-                                    <span className="text-xs text-muted-foreground italic">Not assigned</span>
-                                  </div>
-                                )}
-
-                                <div className="flex gap-1.5">
-                                  <Button
-                                    size="sm"
-                                    variant={assignment ? "outline" : "default"}
-                                    className="flex-1 h-7 text-xs"
-                                    onClick={() => openAssignDialog(file)}
-                                  >
-                                    {assignment ? 'Edit Assignment' : 'Assign'}
-                                  </Button>
-                                  {assignment && (
-                                    <Button
-                                      size="sm"
-                                      variant="destructive"
-                                      className="h-7 text-xs px-2"
-                                      onClick={() => handleAssetUnassign(file.publicUrl)}
-                                    >
-                                      Unassign
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {assetsBucketData?.files?.length === 0 && assetsBucketData?.folders?.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">No files or folders in this location</div>
-                    )}
-                  </div>
-                )}
+          <div className="mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Asset Management
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Browse and manage assets from all storage buckets. Assign assets to Lootbox rewards or Store items.
+                </p>
               </div>
-            </CardContent>
-          </Card>
+              <Button variant="outline" size="sm" onClick={() => { Object.values(allBucketData).forEach(b => b.refetch()); refetchAssignments(); }}>
+                <RefreshCw className="h-4 w-4 mr-1" /> Refresh All
+              </Button>
+            </div>
+          </div>
+
+          {assetBucketNames.map((bucketName) => {
+            const bucket = allBucketData[bucketName];
+            const folderPath = bucketFolders[bucketName] || "";
+            const isExpanded = bucketExpanded[bucketName] !== false;
+
+            return (
+              <Card key={bucketName}>
+                <CardHeader className="cursor-pointer py-3 px-4" onClick={() => setBucketExpanded(prev => ({ ...prev, [bucketName]: !isExpanded }))}>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
+                      <FolderOpen className="h-4 w-4 text-yellow-500" />
+                      {bucketName}
+                      {bucket.data?.files && (
+                        <span className="text-xs text-muted-foreground font-normal">({bucket.data.files.length} files)</span>
+                      )}
+                    </CardTitle>
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      {folderPath && (
+                        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setBucketFolders(prev => ({ ...prev, [bucketName]: "" }))}>
+                          <ArrowLeft className="h-3 w-3 mr-1" /> Root
+                        </Button>
+                      )}
+                      <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { bucket.refetch(); refetchAssignments(); }} disabled={bucket.isLoading}>
+                        <RefreshCw className={`h-3 w-3 mr-1 ${bucket.isLoading ? 'animate-spin' : ''}`} /> Refresh
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                {isExpanded && (
+                  <CardContent className="pt-0 px-4 pb-4">
+                    {folderPath && (
+                      <div className="text-xs text-muted-foreground mb-3">
+                        Folder: <span className="font-mono bg-muted px-2 py-0.5 rounded">{folderPath}</span>
+                      </div>
+                    )}
+
+                    {bucket.isLoading ? (
+                      <div className="text-center py-6 text-muted-foreground text-sm">Loading...</div>
+                    ) : (
+                      <div className="space-y-3">
+                        {bucket.data?.folders && bucket.data.folders.length > 0 && (
+                          <div>
+                            <h4 className="text-xs font-medium mb-1.5 text-muted-foreground">Folders</h4>
+                            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+                              {bucket.data.folders.map((folder) => (
+                                <button
+                                  key={folder}
+                                  onClick={() => setBucketFolders(prev => ({ ...prev, [bucketName]: folderPath ? `${folderPath}/${folder}` : folder }))}
+                                  className="flex flex-col items-center p-2 rounded border hover:bg-muted transition-colors"
+                                >
+                                  <FolderOpen className="h-6 w-6 text-yellow-500" />
+                                  <span className="text-xs truncate w-full text-center mt-1">{folder}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {bucket.data?.files && bucket.data.files.length > 0 && (
+                          <div>
+                            <h4 className="text-xs font-medium mb-1.5 text-muted-foreground">Assets ({bucket.data.files.length})</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                              {bucket.data.files.map((file) => {
+                                const assignment = assetAssignments?.[file.publicUrl];
+                                return (
+                                  <div
+                                    key={file.id}
+                                    className={`relative rounded-lg border p-3 transition-colors ${
+                                      assignment ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3 mb-2">
+                                      <img 
+                                        src={file.publicUrl} 
+                                        alt={file.name}
+                                        className="w-14 h-14 object-contain rounded border bg-muted/30"
+                                        onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium truncate">{file.name}</p>
+                                        <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
+                                      </div>
+                                    </div>
+
+                                    {assignment ? (
+                                      <div className="space-y-1.5 mb-2">
+                                        <div className="flex flex-wrap gap-1">
+                                          {assignment.availableInLootbox && (
+                                            <span className="inline-flex items-center gap-1 text-xs bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full">
+                                              <Gift className="h-3 w-3" /> Lootbox ({assignment.unlockChance ?? 'N/A'}%)
+                                            </span>
+                                          )}
+                                          {assignment.availableInStore && (
+                                            <span className="inline-flex items-center gap-1 text-xs bg-blue-500/20 text-blue-500 px-2 py-0.5 rounded-full">
+                                              <ShoppingBag className="h-3 w-3" /> Store {assignment.storePrice ? `(${assignment.storePrice} GF)` : ''}
+                                            </span>
+                                          )}
+                                          {assignment.proOnly && (
+                                            <span className="inline-flex items-center gap-1 text-xs bg-purple-500/20 text-purple-500 px-2 py-0.5 rounded-full">
+                                              <Crown className="h-3 w-3" /> Pro
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                          <span className={`w-2 h-2 rounded-full ${
+                                            assignment.rarity === 'legendary' ? 'bg-yellow-500' :
+                                            assignment.rarity === 'epic' ? 'bg-purple-500' :
+                                            assignment.rarity === 'rare' ? 'bg-blue-500' : 'bg-gray-400'
+                                          }`}></span>
+                                          {assignment.rarity} · {assignment.type.replace('_', ' ')} · {assignment.name}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="mb-2">
+                                        <span className="text-xs text-muted-foreground italic">Not assigned</span>
+                                      </div>
+                                    )}
+
+                                    <div className="flex gap-1.5">
+                                      <Button
+                                        size="sm"
+                                        variant={assignment ? "outline" : "default"}
+                                        className="flex-1 h-7 text-xs"
+                                        onClick={() => openAssignDialog(file, bucketName)}
+                                      >
+                                        {assignment ? 'Edit Assignment' : 'Assign'}
+                                      </Button>
+                                      {assignment && (
+                                        <Button
+                                          size="sm"
+                                          variant="destructive"
+                                          className="h-7 text-xs px-2"
+                                          onClick={() => handleAssetUnassign(file.publicUrl)}
+                                        >
+                                          Unassign
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {bucket.data?.files?.length === 0 && bucket.data?.folders?.length === 0 && (
+                          <div className="text-center py-4 text-muted-foreground text-sm">No files or folders in this location</div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                )}
+              </Card>
+            );
+          })}
 
           <Dialog open={assetsAssignDialogOpen} onOpenChange={setAssetsAssignDialogOpen}>
             <DialogContent className="sm:max-w-lg">
@@ -4796,7 +4856,7 @@ const AdminPage = () => {
                     />
                     <div>
                       <p className="font-medium">{assetsSelectedFile.name}</p>
-                      <p className="text-xs text-muted-foreground">{assetsBucket}</p>
+                      <p className="text-xs text-muted-foreground">{assetsSelectedBucketName}</p>
                     </div>
                   </div>
 
