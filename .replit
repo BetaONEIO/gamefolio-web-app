@@ -38,3 +38,9 @@ externalPort = 80
 
 [agent]
 integrations = ["stripe:2.0.0"]
+
+[userenv]
+
+[userenv.shared]
+STRIPE_PRO_MONTHLY_PRICE_ID = "price_1Sy9xoDVcn8w8LmscNqJUGjn"
+STRIPE_PRO_YEARLY_PRICE_ID = "price_1Sy9ysDVcn8w8LmsHzCQUjbs"
