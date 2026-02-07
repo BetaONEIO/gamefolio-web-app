@@ -1,0 +1,781 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/PaymentDetails.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,900;0,400;0,500&display=swap";
+.PaymentDetails_110_673 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_110_674 {
+  background: #020617;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 100%;
+  height: 971px;
+  padding-bottom: 39px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_110_675 {
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 32px 24px 0;
+  display: flex;
+}
+.Container_110_676 {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 382px;
+  height: 794px;
+  display: flex;
+}
+.Container_110_677 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 32px;
+  display: flex;
+}
+.Container_110_678 {
+  justify-content: center;
+  align-items: center;
+  height: 187px;
+  display: flex;
+}
+.Container_110_679 {
+  backdrop-filter: blur(12px);
+  box-sizing: border-box;
+  background: #0f172a66;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  display: flex;
+}
+.Container_110_680 {
+  align-items: center;
+  height: 28px;
+  padding: 2.5px 13.5px 2.5px 0;
+  display: inline-flex;
+}
+.SubscribeToYearlyProSubscription_110_681 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 320px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_110_682 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-end;
+  gap: 7.70313px;
+  padding-right: 156.297px;
+  display: flex;
+}
+.Container_110_683 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 36px;
+  display: flex;
+}
+._00_110_684 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 119px;
+  height: 38px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 36px;
+  display: inline-block;
+}
+.Container_110_685 {
+  justify-content: center;
+  align-items: center;
+  width: 54px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.PerYear_110_686 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 56px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_110_687 {
+  box-sizing: border-box;
+  border-top: 1px solid #1e293b80;
+  justify-content: center;
+  align-items: center;
+  width: 332px;
+  padding-top: 17px;
+  display: flex;
+}
+.Container_110_688 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 138.039px;
+  width: 332px;
+  display: flex;
+}
+.Container_110_689 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 103px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.TotalDueToday_110_690 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 105px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_110_691 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 0.5px 0;
+  display: flex;
+}
+._00_110_692 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  width: 96px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_110_693 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px;
+  height: 575px;
+  display: flex;
+}
+.Container_110_694 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 3px;
+  height: 80px;
+  padding-top: 6px;
+  display: flex;
+}
+.Container_110_695 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 118px;
+  height: 15px;
+  padding: 0 6.5px;
+  display: flex;
+}
+.CardNumber_110_696 {
+  color: #94a3b8cc;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 105px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_110_697 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 56px;
+  display: flex;
+}
+.Container_110_698 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 16px 16px 0 56px;
+  display: inline-flex;
+}
+._1234_1234_1234_110_699 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 310px;
+  height: 54px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_110_700 {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 16px;
+  height: 20px;
+  display: flex;
+}
+.Container_110_701 {
+  flex: 1 0 0;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_110_702 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  height: 80px;
+  display: flex;
+}
+.Container_110_703 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 3px;
+  height: 80px;
+  padding-top: 6px;
+  display: flex;
+}
+.Container_110_704 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 164px;
+  height: 15px;
+  padding: 0 6.5px;
+  display: flex;
+}
+.ExpirationMmYy_110_705 {
+  color: #94a3b8cc;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 151px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_110_706 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 56px;
+  padding: 16px 16px 0;
+  display: flex;
+}
+.MmYy_110_707 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 151px;
+  height: 54px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_110_708 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 3px;
+  height: 80px;
+  padding-top: 6px;
+  display: flex;
+}
+.Container_110_709 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 129px;
+  height: 15px;
+  padding: 0 6.5px;
+  display: flex;
+}
+.SecurityCode_110_710 {
+  color: #94a3b8cc;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 116px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_110_711 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 56px;
+  display: flex;
+}
+.Container_110_712 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 16px 16px 0 48px;
+  display: inline-flex;
+}
+.generated_123_110_713 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 119px;
+  height: 54px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_110_714 {
+  justify-content: center;
+  align-items: center;
+  width: 20px;
+  height: 20px;
+  display: flex;
+}
+.Container_110_715 {
+  flex: 1 0 0;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_110_717 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 3px;
+  height: 80px;
+  padding-top: 6px;
+  display: flex;
+}
+.Container_110_718 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 84px;
+  height: 15px;
+  padding: 0 6.5px;
+  display: flex;
+}
+.Country_110_719 {
+  color: #94a3b8cc;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 71px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_110_720 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 56px;
+  display: flex;
+}
+.Container_110_721 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  align-items: center;
+  width: 382px;
+  height: 56px;
+  padding: 0 406px 652px 0;
+  display: flex;
+}
+.Container_110_722 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 0;
+  height: 0;
+  display: flex;
+}
+.UnitedKingdom_110_723 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 2px;
+  height: 0;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_110_724 {
+  justify-content: center;
+  align-items: center;
+  width: 20px;
+  height: 20px;
+  display: flex;
+}
+.Container_110_725 {
+  flex: 1 0 0;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_110_727 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 3px;
+  height: 80px;
+  padding-top: 6px;
+  display: flex;
+}
+.Container_110_728 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 115px;
+  height: 15px;
+  padding: 0 6.5px;
+  display: flex;
+}
+.PostalCode_110_729 {
+  color: #94a3b8cc;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 102px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_110_730 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 56px;
+  padding: 16px 16px 0;
+  display: flex;
+}
+.Ws11_1Db_110_731 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 350px;
+  height: 54px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 24px;
+  display: inline-block;
+}
+.Button_110_732 {
+  background: #4ade80;
+  border-radius: 16px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 60px;
+  padding: 18.5px 0;
+  display: flex;
+  box-shadow: 0 12px 40px -10px #4ade8080;
+}
+.PayNow_110_733 {
+  color: #022c22;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 80px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_110_734 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 75px;
+  padding-top: 16px;
+  display: flex;
+}
+.Container_110_735 {
+  justify-content: center;
+  align-items: center;
+  width: 382px;
+  padding: 2px 9.461px 3px 9.539px;
+  display: flex;
+}
+.BySubscribingYouAgreeToAllowGamefolioToChargeYouAccordingToTheirTermsUntilYouCancelSubscriptionRenewsAutomaticallyCancelAnytimeSecureCheckoutByRevenueCat_110_736 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 363px;
+  height: 54px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 19.5px;
+  display: inline-block;
+}
+.Container_110_737 {
+  box-sizing: border-box;
+  border-bottom: 1px solid #1e293b80;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 104.883px;
+  height: 113px;
+  padding: 48px 24.008px 25px 24px;
+  display: flex;
+}
+.Button_110_738 {
+  background: #1e293b;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+  display: flex;
+}
+.Container_110_739 {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_110_741 {
+  justify-content: center;
+  align-items: center;
+  width: 93px;
+  height: 28px;
+  padding: 2.5px 0;
+  display: flex;
+}
+.Gamefolio_110_742 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 96px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_110_743 {
+  width: 40px;
+  height: 40px;
+}
+
+```
+
+---
+
+```src/components/PaymentDetails.tsx
+import React from 'react';
+import styles from '../styles/PaymentDetails.module.css';
+
+
+export default function PaymentDetails() {
+  return (
+    <div className={styles.PaymentDetails_110_673}>
+      <div className={styles.Container_110_674}>
+        <div className={styles.Container_110_675}>
+          <div className={styles.Container_110_676}>
+            <div className={styles.Container_110_677}>
+              <div className={styles.Container_110_678}>
+                <div className={styles.Container_110_679}>
+                  <div className={styles.Container_110_680}><span className={styles.SubscribeToYearlyProSubscription_110_681}>Subscribe to Yearly Pro Subscription</span></div>
+                  <div className={styles.Container_110_682}>
+                    <div className={styles.Container_110_683}><span className={styles._00_110_684}>&#xA3;30.00</span></div>
+                    <div className={styles.Container_110_685}><span className={styles.PerYear_110_686}>per year</span></div>
+                  </div>
+                  <div className={styles.Container_110_687}>
+                    <div className={styles.Container_110_688}>
+                      <div className={styles.Container_110_689}><span className={styles.TotalDueToday_110_690}>Total due today</span></div>
+                      <div className={styles.Container_110_691}><span className={styles._00_110_692}>&#xA3;30.00</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.Container_110_693}>
+                <div className={styles.Container_110_694}>
+                  <div className={styles.Container_110_695}><span className={styles.CardNumber_110_696}>Card number</span></div>
+                  <div className={styles.Container_110_697}>
+                    <div className={styles.Container_110_698}><span className={styles._1234_1234_1234_110_699}>1234 1234 1234 1234</span></div>
+                    <div className={styles.Container_110_700}>
+                      <div className={styles.Container_110_701}></div>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.Container_110_702}>
+                  <div className={styles.Container_110_703}>
+                    <div className={styles.Container_110_704}><span className={styles.ExpirationMmYy_110_705}>Expiration (MM/YY)</span></div>
+                    <div className={styles.Container_110_706}><span className={styles.MmYy_110_707}>MM/YY</span></div>
+                  </div>
+                  <div className={styles.Container_110_708}>
+                    <div className={styles.Container_110_709}><span className={styles.SecurityCode_110_710}>Security code</span></div>
+                    <div className={styles.Container_110_711}>
+                      <div className={styles.Container_110_712}><span className={styles.generated_123_110_713}>123</span></div>
+                      <div className={styles.Container_110_714}>
+                        <div className={styles.Container_110_715}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path fillRule="evenodd" clipRule="evenodd" d="M4.37435 8.37924V6.66674C4.37435 3.56014 6.89274 1.04175 9.99934 1.04175C13.1059 1.04175 15.6243 3.56014 15.6243 6.66674V8.37924C16.5535 8.44841 17.1577 8.62341 17.6002 9.06591C18.3327 9.79758 18.3327 10.9767 18.3327 13.3334C18.3327 15.6901 18.3327 16.8692 17.6002 17.6009C16.8685 18.3334 15.6893 18.3334 13.3327 18.3334H6.66601C4.30935 18.3334 3.13018 18.3334 2.39852 17.6009C1.66602 16.8692 1.66602 15.6901 1.66602 13.3334C1.66602 10.9767 1.66602 9.79758 2.39852 9.06591C2.84018 8.62341 3.44518 8.44841 4.37435 8.37924ZM5.62435 6.66674C5.62435 4.2505 7.5831 2.29175 9.99934 2.29175C12.4156 2.29175 14.3743 4.2505 14.3743 6.66674V8.33674C14.0555 8.33397 13.7082 8.33285 13.3327 8.33341H6.66601C6.2899 8.33285 5.94268 8.33397 5.62435 8.33674V6.66674ZM6.66601 14.1667C7.12625 14.1667 7.49935 13.7936 7.49935 13.3334C7.49935 12.8732 7.12625 12.5001 6.66601 12.5001C6.20578 12.5001 5.83268 12.8732 5.83268 13.3334C5.83268 13.7936 6.20578 14.1667 6.66601 14.1667ZM9.99934 14.1667C10.4596 14.1667 10.8327 13.7936 10.8327 13.3334C10.8327 12.8732 10.4596 12.5001 9.99934 12.5001C9.53911 12.5001 9.16601 12.8732 9.16601 13.3334C9.16601 13.7936 9.53911 14.1667 9.99934 14.1667ZM14.166 13.3334C14.166 13.7936 13.7929 14.1667 13.3327 14.1667C12.8724 14.1667 12.4993 13.7936 12.4993 13.3334C12.4993 12.8732 12.8724 12.5001 13.3327 12.5001C13.7929 12.5001 14.166 12.8732 14.166 13.3334Z" fill="#94A3B8" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.Container_110_717}>
+                  <div className={styles.Container_110_718}><span className={styles.Country_110_719}>Country</span></div>
+                  <div className={styles.Container_110_720}>
+                    <div className={styles.Container_110_721}>
+                      <div className={styles.Container_110_722}><span className={styles.UnitedKingdom_110_723}>United Kingdom</span></div>
+                    </div>
+                    <div className={styles.Container_110_724}>
+                      <div className={styles.Container_110_725}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path fillRule="evenodd" clipRule="evenodd" d="M10.2668 13.3334L15.738 7.69206C16.0792 7.33894 15.8724 6.66675 15.4231 6.66675H4.48084C4.03158 6.66675 3.82481 7.33894 4.16602 7.69206L9.63716 13.3334C9.8184 13.5206 10.0856 13.5206 10.2668 13.3334Z" fill="#94A3B8" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.Container_110_727}>
+                  <div className={styles.Container_110_728}><span className={styles.PostalCode_110_729}>Postal code</span></div>
+                  <div className={styles.Container_110_730}><span className={styles.Ws11_1Db_110_731}>WS11 1DB</span></div>
+                </div>
+                <div className={styles.Button_110_732}><span className={styles.PayNow_110_733}>Pay now</span></div>
+                <div className={styles.Container_110_734}>
+                  <div className={styles.Container_110_735}><span className={styles.BySubscribingYouAgreeToAllowGamefolioToChargeYouAccordingToTheirTermsUntilYouCancelSubscriptionRenewsAutomaticallyCancelAnytimeSecureCheckoutByRevenueCat_110_736}>By subscribing, you agree to allow Gamefolio to charge you according to their terms until you cancel. Subscription renews automatically. Cancel anytime. Secure checkout by RevenueCat</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_110_737}>
+          <div className={styles.Button_110_738}>
+            <div className={styles.Container_110_739}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16.6673 10H3.33398M3.33398 10L8.33398 5M3.33398 10L8.33398 15" stroke="#F8FAFC" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
+          <div className={styles.Container_110_741}><span className={styles.Gamefolio_110_742}>Gamefolio</span></div>
+          <div className={styles.Container_110_743}></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
