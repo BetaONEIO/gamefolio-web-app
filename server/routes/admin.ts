@@ -1497,12 +1497,7 @@ adminRouter.get("/storage/buckets/:bucketName/files", async (req: Request, res: 
 
 adminRouter.get("/assets/assignments", async (req: Request, res: Response) => {
   try {
-    const { storage } = await import('../storage');
-    const db = (storage as any).db;
-    
-    if (!db) {
-      return res.status(500).json({ message: "Database not available" });
-    }
+    const { db } = await import('../db');
     
     const assignments: Record<string, any> = {};
     
@@ -1577,12 +1572,7 @@ adminRouter.get("/assets/assignments", async (req: Request, res: Response) => {
 
 adminRouter.post("/assets/assign", async (req: Request, res: Response) => {
   try {
-    const { storage } = await import('../storage');
-    const db = (storage as any).db;
-    
-    if (!db) {
-      return res.status(500).json({ message: "Database not available" });
-    }
+    const { db } = await import('../db');
     
     const { imageUrl, name, bucket, path, assignTo, rarity, unlockChance, availableInStore, storePrice, assetType } = req.body;
     
@@ -1644,12 +1634,7 @@ adminRouter.post("/assets/assign", async (req: Request, res: Response) => {
 
 adminRouter.post("/assets/unassign", async (req: Request, res: Response) => {
   try {
-    const { storage } = await import('../storage');
-    const db = (storage as any).db;
-    
-    if (!db) {
-      return res.status(500).json({ message: "Database not available" });
-    }
+    const { db } = await import('../db');
     
     const { imageUrl } = req.body;
     

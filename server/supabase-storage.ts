@@ -8,6 +8,7 @@ const readFile = promisify(fs.readFile);
 
 export class SupabaseStorage {
   private supabase;
+  private supabaseAdmin;
   private bucketName: string;
   private allowedBuckets: string[];
   private disallowedBuckets: string[];
@@ -29,6 +30,23 @@ export class SupabaseStorage {
         }
       }
     );
+
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      this.supabaseAdmin = createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY,
+        {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false
+          }
+        }
+      );
+      console.log('🔑 Supabase admin client initialized with service role key');
+    } else {
+      this.supabaseAdmin = this.supabase;
+      console.warn('⚠️  No SUPABASE_SERVICE_ROLE_KEY found - admin operations will use anon key');
+    }
 
     // Enforce strict Supabase-only storage rules
     this.bucketName = 'gamefolio-media';
@@ -551,7 +569,8 @@ export class SupabaseStorage {
       // Validate folder path to prevent path traversal attacks
       const sanitizedPath = this.sanitizeFolderPath(folderPath);
 
-      const { data, error } = await this.supabase.storage
+      const client = this.supabaseAdmin;
+      const { data, error } = await client.storage
         .from(bucketName)
         .list(sanitizedPath, {
           limit: 1000,
@@ -571,7 +590,7 @@ export class SupabaseStorage {
         actualFiles.map(async (item) => {
           const fullPath = sanitizedPath ? `${sanitizedPath}/${item.name}` : item.name;
           
-          const { data: signedData, error: signError } = await this.supabase.storage
+          const { data: signedData, error: signError } = await client.storage
             .from(bucketName)
             .createSignedUrl(fullPath, 3600);
           
@@ -579,7 +598,7 @@ export class SupabaseStorage {
           if (signedData?.signedUrl) {
             url = signedData.signedUrl;
           } else {
-            const { data: urlData } = this.supabase.storage
+            const { data: urlData } = client.storage
               .from(bucketName)
               .getPublicUrl(fullPath);
             url = urlData.publicUrl;
@@ -622,7 +641,7 @@ export class SupabaseStorage {
       // Validate folder path to prevent path traversal attacks
       const sanitizedPath = this.sanitizeFolderPath(folderPath);
 
-      const { data, error } = await this.supabase.storage
+      const { data, error } = await this.supabaseAdmin.storage
         .from(bucketName)
         .list(sanitizedPath, { limit: 1000 });
 
