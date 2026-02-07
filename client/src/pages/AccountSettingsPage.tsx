@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useQuery } from '@tanstack/react-query';
 import { Redirect } from 'wouter';
-import { Loader2, Trash2, AlertTriangle } from 'lucide-react';
+import { Loader2, Trash2, AlertTriangle, Shield } from 'lucide-react';
 import { validatePassword, isPasswordValid } from '@/lib/password-validation';
 import { PasswordRequirementsDisplay } from '@/components/ui/password-requirements';
 
@@ -58,24 +58,11 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { HexColorPicker } from "react-colorful";
-import { FaSteam, FaXbox, FaPlaystation, FaYoutube, FaDiscord } from 'react-icons/fa';
-import { FaXTwitter } from 'react-icons/fa6';
-import { SiEpicgames, SiNintendo } from 'react-icons/si';
+import { BlockedUsersSection } from '@/components/settings/blocked-users-section';
 import { TwoFactorSettings } from '@/components/TwoFactorSettings';
 
 // Form validation schemas
 
-
-const platformsFormSchema = z.object({
-  steamUsername: z.string().optional().or(z.literal('')),
-  xboxUsername: z.string().optional().or(z.literal('')),
-  playstationUsername: z.string().optional().or(z.literal('')),
-  discordUsername: z.string().optional().or(z.literal('')),
-  epicUsername: z.string().optional().or(z.literal('')),
-  nintendoUsername: z.string().optional().or(z.literal('')),
-  twitterUsername: z.string().optional().or(z.literal('')),
-  youtubeUsername: z.string().optional().or(z.literal('')),
-});
 
 const securityFormSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
@@ -100,7 +87,6 @@ const appearanceFormSchema = z.object({
   bannerUrl: z.string().optional().or(z.literal('')),
 });
 
-type PlatformFormValues = z.infer<typeof platformsFormSchema>;
 type SecurityFormValues = z.infer<typeof securityFormSchema>;
 type AppearanceFormValues = z.infer<typeof appearanceFormSchema>;
 
@@ -135,21 +121,6 @@ const AccountSettingsPage: React.FC = () => {
   
 
   
-  // Platforms form setup
-  const platformsForm = useForm<PlatformFormValues>({
-    resolver: zodResolver(platformsFormSchema),
-    defaultValues: {
-      steamUsername: user?.steamUsername || '',
-      xboxUsername: user?.xboxUsername || '',
-      playstationUsername: user?.playstationUsername || '',
-      discordUsername: user?.discordUsername || '',
-      epicUsername: user?.epicUsername || '',
-      nintendoUsername: user?.nintendoUsername || '',
-      twitterUsername: user?.twitterUsername || '',
-      youtubeUsername: user?.youtubeUsername || '',
-    }
-  });
-  
   // Security form setup
   const securityForm = useForm<SecurityFormValues>({
     resolver: zodResolver(securityFormSchema),
@@ -172,39 +143,6 @@ const AccountSettingsPage: React.FC = () => {
   });
   
 
-  
-  // Handle platforms form submission
-  const onPlatformsSubmit = async (values: PlatformFormValues) => {
-    if (!user) return;
-    
-    try {
-      await updateProfile.mutateAsync({
-        userId: user.id,
-        userData: {
-          steamUsername: values.steamUsername || null,
-          xboxUsername: values.xboxUsername || null,
-          playstationUsername: values.playstationUsername || null,
-          discordUsername: values.discordUsername || null,
-          epicUsername: values.epicUsername || null,
-          nintendoUsername: values.nintendoUsername || null,
-          twitterUsername: values.twitterUsername || null,
-          youtubeUsername: values.youtubeUsername || null,
-        }
-      });
-      
-      toast({
-        title: "Platform connections updated",
-        description: "Your platform connections have been updated successfully.",
-        duration: 3000,
-      });
-    } catch (error) {
-      toast({
-        title: "Update failed",
-        description: "Failed to update platform connections. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
   
   // Handle appearance form submission
   const onAppearanceSubmit = async (values: AppearanceFormValues) => {
@@ -362,245 +300,19 @@ const AccountSettingsPage: React.FC = () => {
     <div className="container max-w-5xl mx-auto px-4 py-8 pb-24 md:pb-8">
       <h1 className="text-3xl font-bold mb-8">Account Settings</h1>
       
-      <Tabs defaultValue="platforms" className="w-full">
+      <Tabs defaultValue="privacy" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-8">
-          <TabsTrigger value="platforms">Platforms</TabsTrigger>
+          <TabsTrigger value="privacy">
+            <Shield className="h-4 w-4 mr-2" />
+            Privacy & Safety
+          </TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
 
         
-        {/* Platform Connections */}
-        <TabsContent value="platforms">
-          <Card>
-            <CardHeader>
-              <CardTitle>Platform Connections</CardTitle>
-              <CardDescription>
-                Connect your gaming accounts and social media profiles.
-              </CardDescription>
-            </CardHeader>
-            
-            <CardContent className="space-y-6">
-              <Form {...platformsForm}>
-                <form id="platforms-form" onSubmit={platformsForm.handleSubmit(onPlatformsSubmit)} className="space-y-6">
-                  <div className="grid gap-4">
-                    <h3 className="text-lg font-medium">Gaming Platforms</h3>
-                    
-                    <FormField
-                      control={platformsForm.control}
-                      name="steamUsername"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
-                          <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
-                            <FaSteam className="w-6 h-6 text-[#1B2838] dark:text-[#66c0f4]" />
-                          </div>
-                          <div className="flex-grow space-y-1">
-                            <FormLabel>Steam</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Enter your Steam username" 
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Your Steam profile username
-                            </FormDescription>
-                            <FormMessage />
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={platformsForm.control}
-                      name="xboxUsername"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
-                          <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
-                            <FaXbox className="w-6 h-6 text-[#107C10]" />
-                          </div>
-                          <div className="flex-grow space-y-1">
-                            <FormLabel>Xbox</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Enter your Xbox gamertag" 
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Your Xbox Live gamertag
-                            </FormDescription>
-                            <FormMessage />
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={platformsForm.control}
-                      name="playstationUsername"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
-                          <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
-                            <FaPlaystation className="w-6 h-6 text-[#003791]" />
-                          </div>
-                          <div className="flex-grow space-y-1">
-                            <FormLabel>PlayStation</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Enter your PlayStation ID" 
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Your PlayStation Network ID
-                            </FormDescription>
-                            <FormMessage />
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={platformsForm.control}
-                      name="discordUsername"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
-                          <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
-                            <FaDiscord className="w-6 h-6 text-[#7289DA]" />
-                          </div>
-                          <div className="flex-grow space-y-1">
-                            <FormLabel>Discord</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Enter your Discord username" 
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Your Discord username (with or without #)
-                            </FormDescription>
-                            <FormMessage />
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={platformsForm.control}
-                      name="epicUsername"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
-                          <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
-                            <SiEpicgames className="w-6 h-6 text-[#313131]" />
-                          </div>
-                          <div className="flex-grow space-y-1">
-                            <FormLabel>Epic Games</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Enter your Epic Games username" 
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Your Epic Games Store username
-                            </FormDescription>
-                            <FormMessage />
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={platformsForm.control}
-                      name="nintendoUsername"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
-                          <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
-                            <SiNintendo className="w-6 h-6 text-[#E60012]" />
-                          </div>
-                          <div className="flex-grow space-y-1">
-                            <FormLabel>Nintendo</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Enter your Nintendo username" 
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Your Nintendo Switch username
-                            </FormDescription>
-                            <FormMessage />
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <h3 className="text-lg font-medium mt-4">Social Media</h3>
-                    
-                    <FormField
-                      control={platformsForm.control}
-                      name="twitterUsername"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
-                          <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
-                            <FaXTwitter className="w-6 h-6 text-[#000000] dark:text-[#FFFFFF]" />
-                          </div>
-                          <div className="flex-grow space-y-1">
-                            <FormLabel>X (formerly Twitter)</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Enter your X username" 
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Your X username (without @)
-                            </FormDescription>
-                            <FormMessage />
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={platformsForm.control}
-                      name="youtubeUsername"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
-                          <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
-                            <FaYoutube className="w-6 h-6 text-[#FF0000]" />
-                          </div>
-                          <div className="flex-grow space-y-1">
-                            <FormLabel>YouTube</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Enter your YouTube username" 
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Your YouTube channel username (without @)
-                            </FormDescription>
-                            <FormMessage />
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </form>
-              </Form>
-            </CardContent>
-            
-            <CardFooter>
-              <Button 
-                type="submit" 
-                form="platforms-form"
-                disabled={updateProfile.isPending || !platformsForm.formState.isDirty}
-              >
-                {updateProfile.isPending ? 'Saving...' : 'Save Platform Connections'}
-              </Button>
-            </CardFooter>
-          </Card>
+        {/* Privacy & Safety */}
+        <TabsContent value="privacy">
+          <BlockedUsersSection />
         </TabsContent>
         
         {/* Security Settings */}
