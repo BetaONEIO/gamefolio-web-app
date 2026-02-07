@@ -270,6 +270,21 @@ export default function SettingsPage() {
     }
   });
 
+  useEffect(() => {
+    if (user) {
+      platformsForm.reset({
+        steamUsername: user.steamUsername || '',
+        xboxUsername: user.xboxUsername || '',
+        playstationUsername: user.playstationUsername || '',
+        discordUsername: user.discordUsername || '',
+        epicUsername: user.epicUsername || '',
+        nintendoUsername: user.nintendoUsername || '',
+        twitterUsername: user.twitterUsername || '',
+        youtubeUsername: user.youtubeUsername || '',
+      });
+    }
+  }, [user]);
+
   const onPlatformsSubmit = async (values: PlatformFormValues) => {
     if (!user) return;
     
