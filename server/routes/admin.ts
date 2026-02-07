@@ -1480,8 +1480,13 @@ adminRouter.get("/storage/buckets/:bucketName/files", async (req: Request, res: 
     }
 
     const { supabaseStorage } = await import('../supabase-storage');
+    console.log(`[Admin Assets] Fetching files from bucket: ${bucketName}, folder: ${folder || '(root)'}`);
     const files = await supabaseStorage.listBucketFiles(bucketName, folder as string || '');
     const folders = await supabaseStorage.listBucketFolders(bucketName, folder as string || '');
+    console.log(`[Admin Assets] Found ${files.length} files and ${folders.length} folders in ${bucketName}`);
+    if (files.length > 0) {
+      console.log(`[Admin Assets] Sample file URL: ${files[0].publicUrl?.substring(0, 100)}...`);
+    }
     
     res.json({ files, folders, bucket: bucketName, currentFolder: folder || '' });
   } catch (err) {

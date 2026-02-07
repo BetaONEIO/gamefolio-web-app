@@ -565,24 +565,39 @@ export class SupabaseStorage {
 
       if (!data) return [];
 
-      // Filter out folders (they have no id) and map to usable format
-      const files = data
-        .filter(item => item.id) // Only include actual files
-        .map(item => {
-          const fullPath = folderPath ? `${folderPath}/${item.name}` : item.name;
-          const { data: urlData } = this.supabase.storage
+      const actualFiles = data.filter(item => item.id);
+      
+      const files = await Promise.all(
+        actualFiles.map(async (item) => {
+          const fullPath = sanitizedPath ? `${sanitizedPath}/${item.name}` : item.name;
+          
+          const { data: signedData, error: signError } = await this.supabase.storage
             .from(bucketName)
-            .getPublicUrl(fullPath);
+            .createSignedUrl(fullPath, 3600);
+          
+          let url = '';
+          if (signedData?.signedUrl) {
+            url = signedData.signedUrl;
+          } else {
+            const { data: urlData } = this.supabase.storage
+              .from(bucketName)
+              .getPublicUrl(fullPath);
+            url = urlData.publicUrl;
+            if (signError) {
+              console.warn(`Signed URL failed for ${fullPath}, falling back to public URL:`, signError.message);
+            }
+          }
           
           return {
             name: item.name,
             id: item.id!,
             size: item.metadata?.size || 0,
             createdAt: item.created_at || new Date().toISOString(),
-            publicUrl: urlData.publicUrl,
+            publicUrl: url,
             path: fullPath
           };
-        });
+        })
+      );
 
       return files;
     } catch (error) {
