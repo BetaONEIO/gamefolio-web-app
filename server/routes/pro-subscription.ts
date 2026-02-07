@@ -109,48 +109,24 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
     }
 
     const priceId = await getOrCreatePriceId(stripe, plan);
+    const amount = plan === 'monthly' ? 299 : 3000;
 
-    const subscription = await stripe.subscriptions.create({
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount,
+      currency: 'gbp',
       customer: customerId,
-      items: [{ price: priceId }],
-      payment_behavior: 'default_incomplete',
-      payment_settings: { save_default_payment_method: 'on_subscription' },
-      expand: ['latest_invoice.payment_intent'],
-      metadata: { userId: String(userId), plan },
+      setup_future_usage: 'off_session',
+      metadata: {
+        userId: String(userId),
+        plan,
+        priceId,
+        type: 'pro_subscription',
+      },
     });
 
-    const latestInvoice = subscription.latest_invoice as any;
-    if (!latestInvoice) {
-      console.error('No latest_invoice on subscription:', subscription.id);
-      return res.status(500).json({ error: 'Subscription created but no invoice generated' });
-    }
-
-    let clientSecret: string | null = null;
-
-    if (latestInvoice.payment_intent?.client_secret) {
-      clientSecret = latestInvoice.payment_intent.client_secret;
-    } else if (typeof latestInvoice.payment_intent === 'string') {
-      const pi = await stripe.paymentIntents.retrieve(latestInvoice.payment_intent);
-      clientSecret = pi.client_secret;
-    } else if (typeof latestInvoice === 'string') {
-      const invoice = await stripe.invoices.retrieve(latestInvoice, {
-        expand: ['payment_intent'],
-      });
-      clientSecret = (invoice as any).payment_intent?.client_secret || null;
-      if (!clientSecret && typeof (invoice as any).payment_intent === 'string') {
-        const pi = await stripe.paymentIntents.retrieve((invoice as any).payment_intent);
-        clientSecret = pi.client_secret;
-      }
-    }
-
-    if (!clientSecret) {
-      console.error('Could not extract client_secret. Invoice:', JSON.stringify(latestInvoice, null, 2));
-      return res.status(500).json({ error: 'Failed to get payment details from subscription' });
-    }
-
     return res.json({
-      subscriptionId: subscription.id,
-      clientSecret,
+      paymentIntentId: paymentIntent.id,
+      clientSecret: paymentIntent.client_secret,
     });
   } catch (error: any) {
     console.error('Create pro subscription error:', error);
@@ -168,22 +144,39 @@ router.post('/api/stripe/confirm-pro-subscription', hybridAuth, async (req: Requ
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { subscriptionId, plan } = req.body;
-    if (!subscriptionId || !plan || !['monthly', 'yearly'].includes(plan)) {
-      return res.status(400).json({ error: 'Invalid request. Requires subscriptionId and plan ("monthly" or "yearly").' });
+    const { paymentIntentId, plan } = req.body;
+    if (!paymentIntentId || !plan || !['monthly', 'yearly'].includes(plan)) {
+      return res.status(400).json({ error: 'Invalid request. Requires paymentIntentId and plan ("monthly" or "yearly").' });
     }
 
     const stripe = await getUncachableStripeClient();
 
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
-    if (!['active', 'trialing'].includes(subscription.status)) {
-      return res.status(400).json({ error: 'Subscription is not active', status: subscription.status });
+    if (paymentIntent.status !== 'succeeded') {
+      return res.status(400).json({ error: 'Payment has not been completed', status: paymentIntent.status });
     }
 
-    if (subscription.metadata.userId !== String(userId)) {
-      return res.status(403).json({ error: 'Subscription does not belong to this user' });
+    if (paymentIntent.metadata.userId !== String(userId)) {
+      return res.status(403).json({ error: 'Payment does not belong to this user' });
     }
+
+    const customerId = paymentIntent.customer as string;
+    const paymentMethodId = paymentIntent.payment_method as string;
+    const priceId = paymentIntent.metadata.priceId;
+
+    await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId }).catch(() => {});
+
+    await stripe.customers.update(customerId, {
+      invoice_settings: { default_payment_method: paymentMethodId },
+    });
+
+    const subscription = await stripe.subscriptions.create({
+      customer: customerId,
+      items: [{ price: priceId }],
+      default_payment_method: paymentMethodId,
+      metadata: { userId: String(userId), plan },
+    });
 
     await db.update(users).set({
       isPro: true,
@@ -195,7 +188,7 @@ router.post('/api/stripe/confirm-pro-subscription', hybridAuth, async (req: Requ
       updatedAt: new Date(),
     }).where(eq(users.id, userId));
 
-    return res.json({ success: true, isPro: true });
+    return res.json({ success: true, isPro: true, subscriptionId: subscription.id });
   } catch (error: any) {
     console.error('Confirm pro subscription error:', error);
     return res.status(500).json({

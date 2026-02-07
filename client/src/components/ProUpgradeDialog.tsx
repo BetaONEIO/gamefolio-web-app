@@ -157,13 +157,13 @@ function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, onBack, on
   const [country, setCountry] = useState("GB");
   const [postalCode, setPostalCode] = useState("");
   const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadingSubscription, setLoadingSubscription] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    const createSubscription = async () => {
+    const createPaymentIntent = async () => {
       setLoadingSubscription(true);
       setError(null);
       try {
@@ -171,11 +171,11 @@ function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, onBack, on
         const data = await res.json();
         if (!cancelled) {
           setClientSecret(data.clientSecret);
-          setSubscriptionId(data.subscriptionId);
+          setPaymentIntentId(data.paymentIntentId);
         }
       } catch (err: any) {
         if (!cancelled) {
-          const msg = err?.message || "Failed to create subscription";
+          const msg = err?.message || "Failed to create payment";
           setError(msg);
           toast({ title: "Error", description: msg, variant: "destructive" });
         }
@@ -183,12 +183,12 @@ function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, onBack, on
         if (!cancelled) setLoadingSubscription(false);
       }
     };
-    createSubscription();
+    createPaymentIntent();
     return () => { cancelled = true; };
   }, [plan]);
 
   const handlePay = async () => {
-    if (!stripe || !elements || !clientSecret || !subscriptionId || processing) return;
+    if (!stripe || !elements || !clientSecret || !paymentIntentId || processing) return;
 
     const cardNumber = elements.getElement(CardNumberElement);
     if (!cardNumber) return;
@@ -211,7 +211,7 @@ function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, onBack, on
         toast({ title: "Payment failed", description: result.error.message || "Please try again.", variant: "destructive" });
       } else if (result.paymentIntent?.status === "succeeded") {
         try {
-          await apiRequest("POST", "/api/stripe/confirm-pro-subscription", { subscriptionId, plan });
+          await apiRequest("POST", "/api/stripe/confirm-pro-subscription", { paymentIntentId, plan });
         } catch {
           // non-critical
         }
