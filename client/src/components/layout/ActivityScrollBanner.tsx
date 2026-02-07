@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { getQueryFn } from "@/lib/queryClient";
 import { useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { Upload } from "lucide-react";
@@ -15,6 +16,7 @@ export function ActivityScrollBanner() {
 
   const { data: recentUploads = [] } = useQuery<RecentUpload[]>({
     queryKey: ["/api/recent-uploads"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
     staleTime: 1000 * 30,
     refetchInterval: 1000 * 30,
   });

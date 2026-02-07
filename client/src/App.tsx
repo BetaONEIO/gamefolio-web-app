@@ -1,5 +1,5 @@
 import { Switch, Route, useLocation, useParams } from "wouter";
-import { queryClient } from "./lib/queryClient";
+import { queryClient, getQueryFn } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -127,6 +127,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   // Fetch banner settings from API
   const { data: bannerSettings, isLoading: isLoadingBanner } = useQuery<BannerSettings>({
     queryKey: ['/api/banner-settings'],
+    queryFn: getQueryFn({ on401: "returnNull" }),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
   
