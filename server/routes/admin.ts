@@ -1456,8 +1456,10 @@ adminRouter.get("/pro-subscribers", async (req: Request, res: Response) => {
 adminRouter.get("/storage/buckets", async (req: Request, res: Response) => {
   try {
     const buckets = [
+      { name: 'gamefolio-backgrounds', description: 'Profile background images' },
+      { name: 'gamefolio-profile-borders', description: 'Profile picture border overlays' },
       { name: 'gamefolio-name-tags', description: 'Name tag assets' },
-      { name: 'gamefolio-assets', description: 'General assets (borders, backgrounds, etc.)' }
+      { name: 'gamefolio-assets', description: 'General assets' }
     ];
     res.json(buckets);
   } catch (err) {
@@ -1472,7 +1474,7 @@ adminRouter.get("/storage/buckets/:bucketName/files", async (req: Request, res: 
     const { bucketName } = req.params;
     const { folder } = req.query;
     
-    const allowedBuckets = ['gamefolio-name-tags', 'gamefolio-assets'];
+    const allowedBuckets = ['gamefolio-backgrounds', 'gamefolio-profile-borders', 'gamefolio-name-tags', 'gamefolio-assets'];
     if (!allowedBuckets.includes(bucketName)) {
       return res.status(400).json({ message: "Invalid bucket name" });
     }
@@ -1485,6 +1487,193 @@ adminRouter.get("/storage/buckets/:bucketName/files", async (req: Request, res: 
   } catch (err) {
     console.error("Error listing bucket files:", err);
     res.status(500).json({ message: "Error listing bucket files" });
+  }
+});
+
+adminRouter.get("/assets/assignments", async (req: Request, res: Response) => {
+  try {
+    const { storage } = await import('../storage');
+    const db = (storage as any).db;
+    
+    if (!db) {
+      return res.status(500).json({ message: "Database not available" });
+    }
+    
+    const assignments: Record<string, any> = {};
+    
+    const { assetRewards, nameTags, profileBorders } = await import('../../shared/schema');
+    
+    const rewards = await db.select().from(assetRewards);
+    for (const reward of rewards) {
+      if (reward.imageUrl) {
+        assignments[reward.imageUrl] = {
+          type: 'asset_reward',
+          table: 'asset_rewards',
+          id: reward.id,
+          name: reward.name,
+          availableInLootbox: reward.availableInLootbox,
+          unlockChance: reward.unlockChance,
+          availableInStore: reward.availableInStore,
+          storePrice: reward.storePrice,
+          rarity: reward.rarity,
+          assetType: reward.assetType,
+          isActive: reward.isActive,
+          proOnly: reward.proOnly,
+        };
+      }
+    }
+    
+    const tags = await db.select().from(nameTags);
+    for (const tag of tags) {
+      if (tag.imageUrl) {
+        assignments[tag.imageUrl] = {
+          type: 'name_tag',
+          table: 'name_tags',
+          id: tag.id,
+          name: tag.name,
+          availableInLootbox: tag.availableInLootbox,
+          unlockChance: null,
+          availableInStore: tag.availableInStore,
+          storePrice: tag.gfCost,
+          rarity: tag.rarity,
+          assetType: 'name_tag',
+          isActive: tag.isActive,
+          proOnly: false,
+        };
+      }
+    }
+    
+    const borders = await db.select().from(profileBorders);
+    for (const border of borders) {
+      if (border.imageUrl) {
+        assignments[border.imageUrl] = {
+          type: 'profile_border',
+          table: 'profile_borders',
+          id: border.id,
+          name: border.name,
+          availableInLootbox: border.availableInLootbox,
+          unlockChance: null,
+          availableInStore: border.availableInStore,
+          storePrice: border.gfCost,
+          rarity: border.rarity,
+          assetType: 'profile_border',
+          isActive: border.isActive,
+          proOnly: border.proOnly,
+        };
+      }
+    }
+    
+    res.json(assignments);
+  } catch (err) {
+    console.error("Error fetching asset assignments:", err);
+    res.status(500).json({ message: "Error fetching asset assignments" });
+  }
+});
+
+adminRouter.post("/assets/assign", async (req: Request, res: Response) => {
+  try {
+    const { storage } = await import('../storage');
+    const db = (storage as any).db;
+    
+    if (!db) {
+      return res.status(500).json({ message: "Database not available" });
+    }
+    
+    const { imageUrl, name, bucket, path, assignTo, rarity, unlockChance, availableInStore, storePrice, assetType } = req.body;
+    
+    if (!imageUrl || !name) {
+      return res.status(400).json({ message: "imageUrl and name are required" });
+    }
+    
+    const { assetRewards } = await import('../../shared/schema');
+    const { eq } = await import('drizzle-orm');
+    
+    const inLootbox = assignTo === 'lootbox' || assignTo === 'both';
+    const inStore = assignTo === 'store' || assignTo === 'both';
+    
+    const existing = await db.select().from(assetRewards).where(eq(assetRewards.imageUrl, imageUrl));
+    
+    if (existing.length > 0) {
+      const updated = await db.update(assetRewards)
+        .set({
+          name,
+          rarity: rarity || 'common',
+          unlockChance: unlockChance ?? 10,
+          availableInLootbox: inLootbox,
+          availableInStore: inStore,
+          storePrice: storePrice || null,
+          assetType: assetType || 'other',
+          isActive: true,
+          sourceBucket: bucket || null,
+          sourcePath: path || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(assetRewards.id, existing[0].id))
+        .returning();
+      
+      res.json({ message: "Asset assignment updated", reward: updated[0] });
+    } else {
+      const created = await db.insert(assetRewards)
+        .values({
+          name,
+          imageUrl,
+          rarity: rarity || 'common',
+          unlockChance: unlockChance ?? 10,
+          availableInLootbox: inLootbox,
+          availableInStore: inStore,
+          storePrice: storePrice || null,
+          assetType: assetType || 'other',
+          isActive: true,
+          sourceBucket: bucket || null,
+          sourcePath: path || null,
+        })
+        .returning();
+      
+      res.json({ message: "Asset assigned successfully", reward: created[0] });
+    }
+  } catch (err) {
+    console.error("Error assigning asset:", err);
+    res.status(500).json({ message: "Error assigning asset" });
+  }
+});
+
+adminRouter.post("/assets/unassign", async (req: Request, res: Response) => {
+  try {
+    const { storage } = await import('../storage');
+    const db = (storage as any).db;
+    
+    if (!db) {
+      return res.status(500).json({ message: "Database not available" });
+    }
+    
+    const { imageUrl } = req.body;
+    
+    if (!imageUrl) {
+      return res.status(400).json({ message: "imageUrl is required" });
+    }
+    
+    const { assetRewards } = await import('../../shared/schema');
+    const { eq } = await import('drizzle-orm');
+    
+    const existing = await db.select().from(assetRewards).where(eq(assetRewards.imageUrl, imageUrl));
+    
+    if (existing.length > 0) {
+      await db.update(assetRewards)
+        .set({
+          availableInLootbox: false,
+          availableInStore: false,
+          isActive: false,
+          updatedAt: new Date(),
+        })
+        .where(eq(assetRewards.id, existing[0].id));
+      
+      res.json({ message: "Asset unassigned successfully" });
+    } else {
+      res.status(404).json({ message: "Asset not found in rewards" });
+    }
+  } catch (err) {
+    console.error("Error unassigning asset:", err);
+    res.status(500).json({ message: "Error unassigning asset" });
   }
 });
 

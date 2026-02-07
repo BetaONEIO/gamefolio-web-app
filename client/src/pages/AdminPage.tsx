@@ -1071,6 +1071,7 @@ import {
   ArrowLeft,
   Ticket,
   HelpCircle,
+  Package,
 } from "lucide-react";
 
 const AdminPage = () => {
@@ -1143,6 +1144,19 @@ const AdminPage = () => {
   const [currentBucketFolder, setCurrentBucketFolder] = useState<string>("");
   const [bucketContents, setBucketContents] = useState<BucketContents | null>(null);
   const [loadingBucket, setLoadingBucket] = useState(false);
+  
+  // Assets management state
+  const [assetsBucket, setAssetsBucket] = useState<string>("gamefolio-backgrounds");
+  const [assetsBucketFolder, setAssetsBucketFolder] = useState<string>("");
+  const [assetsSelectedFile, setAssetsSelectedFile] = useState<BucketFile | null>(null);
+  const [assetsAssignDialogOpen, setAssetsAssignDialogOpen] = useState(false);
+  const [assetsAssignTo, setAssetsAssignTo] = useState<string>("lootbox");
+  const [assetsRarity, setAssetsRarity] = useState<string>("common");
+  const [assetsUnlockChance, setAssetsUnlockChance] = useState<number>(10);
+  const [assetsStorePrice, setAssetsStorePrice] = useState<string>("");
+  const [assetsAssetType, setAssetsAssetType] = useState<string>("other");
+  const [assetsAssignName, setAssetsAssignName] = useState<string>("");
+  const [assetsAssigning, setAssetsAssigning] = useState(false);
   
   // Reward category options
   const rewardCategoryOptions = [
@@ -1298,6 +1312,17 @@ const AdminPage = () => {
     queryKey: [bucketFilesUrl, currentBucketFolder ? { folder: currentBucketFolder } : undefined],
   });
 
+  // Assets tab bucket query
+  const assetsBucketUrl = `/api/admin/storage/buckets/${assetsBucket}/files`;
+  const { data: assetsBucketData, isLoading: assetsBucketLoading } = useQuery<BucketContents>({
+    queryKey: [assetsBucketUrl, assetsBucketFolder ? { folder: assetsBucketFolder } : undefined],
+  });
+
+  // Asset assignments query
+  const { data: assetAssignments, isLoading: assignmentsLoading, refetch: refetchAssignments } = useQuery<Record<string, any>>({
+    queryKey: ["/api/admin/assets/assignments"],
+  });
+
   // Function to select a file from bucket and use it as reward image
   const selectBucketFileAsReward = (file: BucketFile) => {
     setNewRewardImageUrl(file.publicUrl);
@@ -1307,6 +1332,84 @@ const AdminPage = () => {
       description: `Selected "${file.name}" from ${selectedBucket}`,
       variant: "gamefolioSuccess",
     });
+  };
+
+  const handleAssetAssign = async () => {
+    if (!assetsSelectedFile) return;
+    setAssetsAssigning(true);
+    try {
+      await apiRequest('POST', '/api/admin/assets/assign', {
+        imageUrl: assetsSelectedFile.publicUrl,
+        name: assetsAssignName || assetsSelectedFile.name.replace(/\.[^/.]+$/, ""),
+        bucket: assetsBucket,
+        path: assetsSelectedFile.path,
+        assignTo: assetsAssignTo,
+        rarity: assetsRarity,
+        unlockChance: assetsUnlockChance,
+        availableInStore: assetsAssignTo === 'store' || assetsAssignTo === 'both',
+        storePrice: assetsStorePrice ? parseInt(assetsStorePrice) : null,
+        assetType: assetsAssetType,
+      });
+      toast({
+        title: "Asset Assigned",
+        description: `"${assetsAssignName || assetsSelectedFile.name}" has been assigned successfully.`,
+        variant: "gamefolioSuccess",
+      });
+      refetchAssignments();
+      setAssetsAssignDialogOpen(false);
+      setAssetsSelectedFile(null);
+    } catch (error: any) {
+      toast({
+        title: "Assignment Failed",
+        description: error.message || "Failed to assign asset",
+        variant: "gamefolioError",
+      });
+    } finally {
+      setAssetsAssigning(false);
+    }
+  };
+
+  const handleAssetUnassign = async (imageUrl: string) => {
+    try {
+      await apiRequest('POST', '/api/admin/assets/unassign', { imageUrl });
+      toast({
+        title: "Asset Unassigned",
+        description: "Asset has been removed from all assignments.",
+        variant: "gamefolioSuccess",
+      });
+      refetchAssignments();
+    } catch (error: any) {
+      toast({
+        title: "Unassign Failed",
+        description: error.message || "Failed to unassign asset",
+        variant: "gamefolioError",
+      });
+    }
+  };
+
+  const openAssignDialog = (file: BucketFile) => {
+    setAssetsSelectedFile(file);
+    setAssetsAssignName(file.name.replace(/\.[^/.]+$/, ""));
+    const existing = assetAssignments?.[file.publicUrl];
+    if (existing) {
+      setAssetsRarity(existing.rarity || 'common');
+      setAssetsUnlockChance(existing.unlockChance ?? 10);
+      setAssetsAssignTo(
+        existing.availableInLootbox && existing.availableInStore ? 'both' :
+        existing.availableInLootbox ? 'lootbox' :
+        existing.availableInStore ? 'store' : 'lootbox'
+      );
+      setAssetsStorePrice(existing.storePrice?.toString() || '');
+      setAssetsAssetType(existing.assetType || 'other');
+      setAssetsAssignName(existing.name || file.name.replace(/\.[^/.]+$/, ""));
+    } else {
+      setAssetsRarity('common');
+      setAssetsUnlockChance(60);
+      setAssetsAssignTo('lootbox');
+      setAssetsStorePrice('');
+      setAssetsAssetType('other');
+    }
+    setAssetsAssignDialogOpen(true);
   };
 
   // Update form fields when data loads
@@ -1713,6 +1816,7 @@ const AdminPage = () => {
           <TabsTrigger value="asset-rewards" className="text-xs px-3 py-1.5">Rewards</TabsTrigger>
           <TabsTrigger value="lootbox" className="text-xs px-3 py-1.5">Lootbox</TabsTrigger>
           <TabsTrigger value="store-management" className="text-xs px-3 py-1.5">Store</TabsTrigger>
+          <TabsTrigger value="assets" className="text-xs px-3 py-1.5">Assets</TabsTrigger>
           <TabsTrigger value="pro-subscribers" className="text-xs px-3 py-1.5">Pro</TabsTrigger>
           <TabsTrigger value="settings" className="text-xs px-3 py-1.5">Settings</TabsTrigger>
         </TabsList>
@@ -4509,6 +4613,307 @@ const AdminPage = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="assets" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Asset Management
+              </CardTitle>
+              <CardDescription>
+                Browse and manage assets from Supabase storage buckets. Assign assets to Lootbox rewards or Store items.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex gap-4 items-end flex-wrap">
+                  <div className="space-y-2 flex-1 min-w-[200px]">
+                    <Label>Storage Bucket</Label>
+                    <Select value={assetsBucket} onValueChange={(v) => { setAssetsBucket(v); setAssetsBucketFolder(""); }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a bucket" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="gamefolio-backgrounds">gamefolio-backgrounds</SelectItem>
+                        <SelectItem value="gamefolio-profile-borders">gamefolio-profile-borders</SelectItem>
+                        <SelectItem value="gamefolio-name-tags">gamefolio-name-tags</SelectItem>
+                        <SelectItem value="gamefolio-assets">gamefolio-assets</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {assetsBucketFolder && (
+                    <Button variant="outline" size="sm" onClick={() => setAssetsBucketFolder("")}>
+                      <ArrowLeft className="h-4 w-4 mr-1" /> Back to Root
+                    </Button>
+                  )}
+                </div>
+                
+                {assetsBucketFolder && (
+                  <div className="text-sm text-muted-foreground">
+                    Current folder: <span className="font-mono bg-muted px-2 py-1 rounded">{assetsBucketFolder}</span>
+                  </div>
+                )}
+
+                {assetsBucketLoading ? (
+                  <div className="text-center py-8 text-muted-foreground">Loading assets...</div>
+                ) : (
+                  <div className="space-y-4">
+                    {assetsBucketData?.folders && assetsBucketData.folders.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Folders</h4>
+                        <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+                          {assetsBucketData.folders.map((folder) => (
+                            <button
+                              key={folder}
+                              onClick={() => setAssetsBucketFolder(assetsBucketFolder ? `${assetsBucketFolder}/${folder}` : folder)}
+                              className="flex flex-col items-center p-2 rounded border hover:bg-muted transition-colors"
+                            >
+                              <FolderOpen className="h-8 w-8 text-yellow-500" />
+                              <span className="text-xs truncate w-full text-center mt-1">{folder}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {assetsBucketData?.files && assetsBucketData.files.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Assets ({assetsBucketData.files.length})</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                          {assetsBucketData.files.map((file) => {
+                            const assignment = assetAssignments?.[file.publicUrl];
+                            return (
+                              <div
+                                key={file.id}
+                                className={`relative rounded-lg border p-3 transition-colors ${
+                                  assignment ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3 mb-2">
+                                  <img 
+                                    src={file.publicUrl} 
+                                    alt={file.name}
+                                    className="w-14 h-14 object-contain rounded border bg-muted/30"
+                                    onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium truncate">{file.name}</p>
+                                    <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
+                                  </div>
+                                </div>
+
+                                {assignment ? (
+                                  <div className="space-y-1.5 mb-2">
+                                    <div className="flex flex-wrap gap-1">
+                                      {assignment.availableInLootbox && (
+                                        <span className="inline-flex items-center gap-1 text-xs bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full">
+                                          <Gift className="h-3 w-3" /> Lootbox ({assignment.unlockChance ?? 'N/A'}%)
+                                        </span>
+                                      )}
+                                      {assignment.availableInStore && (
+                                        <span className="inline-flex items-center gap-1 text-xs bg-blue-500/20 text-blue-500 px-2 py-0.5 rounded-full">
+                                          <ShoppingBag className="h-3 w-3" /> Store {assignment.storePrice ? `(${assignment.storePrice} GF)` : ''}
+                                        </span>
+                                      )}
+                                      {assignment.proOnly && (
+                                        <span className="inline-flex items-center gap-1 text-xs bg-purple-500/20 text-purple-500 px-2 py-0.5 rounded-full">
+                                          <Crown className="h-3 w-3" /> Pro
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                      <span className={`w-2 h-2 rounded-full ${
+                                        assignment.rarity === 'legendary' ? 'bg-yellow-500' :
+                                        assignment.rarity === 'epic' ? 'bg-purple-500' :
+                                        assignment.rarity === 'rare' ? 'bg-blue-500' : 'bg-gray-400'
+                                      }`}></span>
+                                      {assignment.rarity} · {assignment.type.replace('_', ' ')} · {assignment.name}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="mb-2">
+                                    <span className="text-xs text-muted-foreground italic">Not assigned</span>
+                                  </div>
+                                )}
+
+                                <div className="flex gap-1.5">
+                                  <Button
+                                    size="sm"
+                                    variant={assignment ? "outline" : "default"}
+                                    className="flex-1 h-7 text-xs"
+                                    onClick={() => openAssignDialog(file)}
+                                  >
+                                    {assignment ? 'Edit Assignment' : 'Assign'}
+                                  </Button>
+                                  {assignment && (
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      className="h-7 text-xs px-2"
+                                      onClick={() => handleAssetUnassign(file.publicUrl)}
+                                    >
+                                      Unassign
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {assetsBucketData?.files?.length === 0 && assetsBucketData?.folders?.length === 0 && (
+                      <div className="text-center py-8 text-muted-foreground">No files or folders in this location</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Dialog open={assetsAssignDialogOpen} onOpenChange={setAssetsAssignDialogOpen}>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Assign Asset</DialogTitle>
+                <DialogDescription>
+                  Configure how this asset should be made available to users.
+                </DialogDescription>
+              </DialogHeader>
+              
+              {assetsSelectedFile && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                    <img 
+                      src={assetsSelectedFile.publicUrl} 
+                      alt={assetsSelectedFile.name}
+                      className="w-16 h-16 object-contain rounded border"
+                    />
+                    <div>
+                      <p className="font-medium">{assetsSelectedFile.name}</p>
+                      <p className="text-xs text-muted-foreground">{assetsBucket}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Display Name</Label>
+                    <Input
+                      value={assetsAssignName}
+                      onChange={(e) => setAssetsAssignName(e.target.value)}
+                      placeholder="Asset display name"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Assign To</Label>
+                    <Select value={assetsAssignTo} onValueChange={setAssetsAssignTo}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="lootbox">
+                          <span className="flex items-center gap-2"><Gift className="h-4 w-4 text-yellow-500" /> Lootbox Only</span>
+                        </SelectItem>
+                        <SelectItem value="store">
+                          <span className="flex items-center gap-2"><ShoppingBag className="h-4 w-4 text-blue-500" /> Store Only</span>
+                        </SelectItem>
+                        <SelectItem value="both">
+                          <span className="flex items-center gap-2"><Gift className="h-4 w-4 text-green-500" /> Both Lootbox & Store</span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Asset Type</Label>
+                    <Select value={assetsAssetType} onValueChange={setAssetsAssetType}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="avatar_border">Avatar Border</SelectItem>
+                        <SelectItem value="profile_banner">Profile Picture Border</SelectItem>
+                        <SelectItem value="profile_background">Profile Background</SelectItem>
+                        <SelectItem value="badge">Badge</SelectItem>
+                        <SelectItem value="emoji">Emoji</SelectItem>
+                        <SelectItem value="sound_effect">Sound Effect</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Rarity</Label>
+                    <Select value={assetsRarity} onValueChange={(v) => {
+                      setAssetsRarity(v);
+                      const chanceMap: Record<string, number> = { common: 60, rare: 25, epic: 12, legendary: 3 };
+                      setAssetsUnlockChance(chanceMap[v] || 10);
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="common">
+                          <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-gray-400"></span> Common</span>
+                        </SelectItem>
+                        <SelectItem value="rare">
+                          <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-blue-500"></span> Rare</span>
+                        </SelectItem>
+                        <SelectItem value="epic">
+                          <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-purple-500"></span> Epic</span>
+                        </SelectItem>
+                        <SelectItem value="legendary">
+                          <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-yellow-500"></span> Legendary</span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {(assetsAssignTo === 'lootbox' || assetsAssignTo === 'both') && (
+                    <div className="space-y-2">
+                      <Label>Lootbox Win Probability: {assetsUnlockChance}%</Label>
+                      <input
+                        type="range"
+                        min={1}
+                        max={100}
+                        value={assetsUnlockChance}
+                        onChange={(e) => setAssetsUnlockChance(parseInt(e.target.value))}
+                        className="w-full accent-primary"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>1% (Very Rare)</span>
+                        <span>50%</span>
+                        <span>100% (Guaranteed)</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {(assetsAssignTo === 'store' || assetsAssignTo === 'both') && (
+                    <div className="space-y-2">
+                      <Label>Store Price (GF Tokens)</Label>
+                      <Input
+                        type="number"
+                        value={assetsStorePrice}
+                        onChange={(e) => setAssetsStorePrice(e.target.value)}
+                        placeholder="e.g., 150"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAssetsAssignDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAssetAssign} disabled={assetsAssigning}>
+                  {assetsAssigning ? 'Assigning...' : 'Save Assignment'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
 

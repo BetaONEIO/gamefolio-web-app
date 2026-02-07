@@ -32,7 +32,7 @@ export class SupabaseStorage {
 
     // Enforce strict Supabase-only storage rules
     this.bucketName = 'gamefolio-media';
-    this.allowedBuckets = ['gamefolio-media', 'gamefolio-assets', 'gamefolio-name-tags', 'gamefolio-profile-borders'];
+    this.allowedBuckets = ['gamefolio-media', 'gamefolio-assets', 'gamefolio-name-tags', 'gamefolio-profile-borders', 'gamefolio-backgrounds'];
     this.disallowedBuckets = ['gamefoliowebappmediacontent', 'gamefolio-media-v2'];
     this.strictMode = true;
     this.preventLocalStorageFallback = true;
