@@ -1314,7 +1314,7 @@ const AdminPage = () => {
 
   // Assets tab bucket query
   const assetsBucketUrl = `/api/admin/storage/buckets/${assetsBucket}/files`;
-  const { data: assetsBucketData, isLoading: assetsBucketLoading } = useQuery<BucketContents>({
+  const { data: assetsBucketData, isLoading: assetsBucketLoading, refetch: refetchAssetsBucket } = useQuery<BucketContents>({
     queryKey: [assetsBucketUrl, assetsBucketFolder ? { folder: assetsBucketFolder } : undefined],
   });
 
@@ -4648,6 +4648,9 @@ const AdminPage = () => {
                       <ArrowLeft className="h-4 w-4 mr-1" /> Back to Root
                     </Button>
                   )}
+                  <Button variant="outline" size="sm" onClick={() => { refetchAssetsBucket(); refetchAssignments(); }} disabled={assetsBucketLoading}>
+                    <RefreshCw className={`h-4 w-4 mr-1 ${assetsBucketLoading ? 'animate-spin' : ''}`} /> Refresh
+                  </Button>
                 </div>
                 
                 {assetsBucketFolder && (
