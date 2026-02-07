@@ -7,6 +7,71 @@ import { hybridAuth } from '../middleware/hybrid-auth';
 
 const router = Router();
 
+const cachedPriceIds: { monthly: string | null; yearly: string | null } = {
+  monthly: null,
+  yearly: null,
+};
+
+async function getOrCreatePriceId(stripe: any, plan: 'monthly' | 'yearly'): Promise<string> {
+  if (plan === 'monthly' && cachedPriceIds.monthly) return cachedPriceIds.monthly;
+  if (plan === 'yearly' && cachedPriceIds.yearly) return cachedPriceIds.yearly;
+
+  const envPriceId = plan === 'monthly'
+    ? process.env.STRIPE_PRO_MONTHLY_PRICE_ID
+    : process.env.STRIPE_PRO_YEARLY_PRICE_ID;
+
+  if (envPriceId) {
+    try {
+      await stripe.prices.retrieve(envPriceId);
+      if (plan === 'monthly') cachedPriceIds.monthly = envPriceId;
+      else cachedPriceIds.yearly = envPriceId;
+      return envPriceId;
+    } catch (e: any) {
+      console.warn(`Configured price ID ${envPriceId} not found in connected Stripe account. Auto-provisioning...`);
+    }
+  }
+
+  const existingProducts = await stripe.products.list({ limit: 100 });
+  let product = existingProducts.data.find((p: any) => p.name === 'Gamefolio Pro' && p.active);
+
+  if (!product) {
+    product = await stripe.products.create({
+      name: 'Gamefolio Pro',
+      description: 'Premium subscription for Gamefolio - unlock all Pro features',
+      metadata: { app: 'gamefolio' },
+    });
+    console.log(`✅ Created Stripe product: ${product.id}`);
+  }
+
+  const existingPrices = await stripe.prices.list({ product: product.id, active: true, limit: 100 });
+
+  const targetAmount = plan === 'monthly' ? 299 : 3000;
+  const targetInterval = plan === 'monthly' ? 'month' : 'year';
+
+  let price = existingPrices.data.find((p: any) =>
+    p.unit_amount === targetAmount &&
+    p.currency === 'gbp' &&
+    p.recurring?.interval === targetInterval
+  );
+
+  if (!price) {
+    price = await stripe.prices.create({
+      product: product.id,
+      unit_amount: targetAmount,
+      currency: 'gbp',
+      recurring: { interval: targetInterval },
+      metadata: { plan, app: 'gamefolio' },
+    });
+    console.log(`✅ Created Stripe price for ${plan}: ${price.id} (£${targetAmount / 100}/${targetInterval})`);
+  }
+
+  if (plan === 'monthly') cachedPriceIds.monthly = price.id;
+  else cachedPriceIds.yearly = price.id;
+
+  console.log(`📌 Using Stripe price for ${plan}: ${price.id}`);
+  return price.id;
+}
+
 router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.id;
@@ -43,13 +108,7 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
       customerId = newCustomer.id;
     }
 
-    const priceId = plan === 'monthly'
-      ? process.env.STRIPE_PRO_MONTHLY_PRICE_ID
-      : process.env.STRIPE_PRO_YEARLY_PRICE_ID;
-
-    if (!priceId) {
-      return res.status(500).json({ error: `Stripe price ID not configured for ${plan} plan` });
-    }
+    const priceId = await getOrCreatePriceId(stripe, plan);
 
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
