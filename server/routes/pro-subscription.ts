@@ -119,7 +119,34 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
       metadata: { userId: String(userId), plan },
     });
 
-    const clientSecret = (subscription.latest_invoice as any).payment_intent.client_secret;
+    const latestInvoice = subscription.latest_invoice as any;
+    if (!latestInvoice) {
+      console.error('No latest_invoice on subscription:', subscription.id);
+      return res.status(500).json({ error: 'Subscription created but no invoice generated' });
+    }
+
+    let clientSecret: string | null = null;
+
+    if (latestInvoice.payment_intent?.client_secret) {
+      clientSecret = latestInvoice.payment_intent.client_secret;
+    } else if (typeof latestInvoice.payment_intent === 'string') {
+      const pi = await stripe.paymentIntents.retrieve(latestInvoice.payment_intent);
+      clientSecret = pi.client_secret;
+    } else if (typeof latestInvoice === 'string') {
+      const invoice = await stripe.invoices.retrieve(latestInvoice, {
+        expand: ['payment_intent'],
+      });
+      clientSecret = (invoice as any).payment_intent?.client_secret || null;
+      if (!clientSecret && typeof (invoice as any).payment_intent === 'string') {
+        const pi = await stripe.paymentIntents.retrieve((invoice as any).payment_intent);
+        clientSecret = pi.client_secret;
+      }
+    }
+
+    if (!clientSecret) {
+      console.error('Could not extract client_secret. Invoice:', JSON.stringify(latestInvoice, null, 2));
+      return res.status(500).json({ error: 'Failed to get payment details from subscription' });
+    }
 
     return res.json({
       subscriptionId: subscription.id,
