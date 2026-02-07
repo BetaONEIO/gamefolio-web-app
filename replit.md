@@ -35,7 +35,7 @@ Gamefolio is a comprehensive gaming portfolio and social platform for gamers to 
 - **Leveling System**: Progressive levels based on total points with profile display.
 - **Leaderboard System**: Weekly and monthly leaderboards tracking various engagement metrics.
 - **Streak System**: Tracks continuous app usage with milestone bonuses.
-- **Admin Panel**: Comprehensive tools for user management, content moderation, and system synchronization.
+- **Admin Panel**: Comprehensive tools for user management, content moderation, and system synchronization. Includes an "Assets" tab for managing assets across 4 Supabase storage buckets (`gamefolio-backgrounds`, `gamefolio-profile-borders`, `gamefolio-name-tags`, `gamefolio-assets`). Assets can be assigned to Lootbox rewards or Store items with configurable rarity, win probability, and pricing. APIs: `/api/admin/assets/assignments` (view assignments), `/api/admin/assets/assign` (assign/update), `/api/admin/assets/unassign` (remove).
 - **Multi-game Support**: Integration with Twitch API for game data and automatic game creation.
 - **GF Token Economy**: In-app currency for NFT purchases, starting balance for new users, and on-chain/off-chain balance management.
 - **NFT Marketplace**: Store for purchasing NFT avatars with GF tokens, with balance checks and wallet requirements.
