@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -234,6 +234,29 @@ const ProfileSettingsPage: React.FC = () => {
       nintendoUsername: user?.nintendoUsername || '',
     },
   });
+
+  useEffect(() => {
+    if (user) {
+      profileForm.reset({
+        username: user.username || '',
+        displayName: user.displayName || '',
+        bio: user.bio || '',
+        avatarUrl: user.avatarUrl || '',
+        accentColor: user.accentColor || '#4ADE80',
+        primaryColor: user.primaryColor || '#02172C',
+        avatarBorderColor: user.avatarBorderColor || '#4ADE80',
+        bannerUrl: user.bannerUrl || '',
+        userType: user.userType || '',
+        showUserType: user.showUserType !== false,
+        steamUsername: user.steamUsername || '',
+        xboxUsername: user.xboxUsername || '',
+        playstationUsername: user.playstationUsername || '',
+        discordUsername: user.discordUsername || '',
+        epicUsername: user.epicUsername || '',
+        nintendoUsername: user.nintendoUsername || '',
+      });
+    }
+  }, [user]);
 
   // Helper function to normalize values for comparison (treats null, undefined, and empty strings as equivalent)
   const normalizeValue = (value: string | null | undefined): string => {
