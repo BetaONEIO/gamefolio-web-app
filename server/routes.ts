@@ -9604,9 +9604,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
+      let isCancelled = false;
+      if (user.isPro && user.proSubscriptionEndDate) {
+        try {
+          const { getUncachableStripeClient } = await import('./stripeClient');
+          const stripe = await getUncachableStripeClient();
+          if (user.email) {
+            const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+            if (customers.data.length > 0) {
+              const subs = await stripe.subscriptions.list({
+                customer: customers.data[0].id,
+                status: 'active',
+                limit: 10,
+              });
+              const matchingSub = subs.data.find((s: any) => 
+                s.metadata?.userId === String(user.id) || s.metadata?.plan
+              ) || subs.data[0];
+              if (matchingSub?.cancel_at_period_end) {
+                isCancelled = true;
+              }
+            }
+          }
+        } catch (e) {}
+      }
+
       res.json({ 
         isPro: user.isPro || false,
-        userId: user.id
+        userId: user.id,
+        isCancelled,
+        proSubscriptionEndDate: user.proSubscriptionEndDate,
+        proSubscriptionType: user.proSubscriptionType,
       });
     } catch (error) {
       console.error("Error getting subscription status:", error);
@@ -9644,36 +9671,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
               limit: 10,
             });
 
-            let cancelled = false;
+            let cancelledSub: any = null;
             for (const sub of subscriptions.data) {
               if (sub.metadata?.userId === String(userId) || sub.metadata?.plan) {
                 await stripe.subscriptions.update(sub.id, {
                   cancel_at_period_end: true,
                 });
                 console.log(`❌ Pro subscription ${sub.id} set to cancel at period end for user ${userId}`);
-                cancelled = true;
+                cancelledSub = sub;
                 break;
               }
             }
 
-            if (!cancelled && subscriptions.data.length > 0) {
+            if (!cancelledSub && subscriptions.data.length > 0) {
               await stripe.subscriptions.update(subscriptions.data[0].id, {
                 cancel_at_period_end: true,
               });
               console.log(`❌ Pro subscription ${subscriptions.data[0].id} set to cancel at period end for user ${userId}`);
-              cancelled = true;
+              cancelledSub = subscriptions.data[0];
             }
 
-            if (cancelled) {
+            if (cancelledSub) {
+              const periodEnd = new Date(cancelledSub.current_period_end * 1000);
+
               await db.update(users).set({
-                isPro: false,
-                proSubscriptionEndDate: new Date(),
+                isPro: true,
+                proSubscriptionEndDate: periodEnd,
                 updatedAt: new Date(),
               }).where(eq(users.id, userId));
 
+              const { EmailService } = await import('./email-service');
+              if (user.email) {
+                EmailService.sendProCancelledEmail(
+                  user.email,
+                  user.username || user.displayName || 'Gamer',
+                  periodEnd
+                ).catch(err => console.error('Failed to send Pro cancelled email:', err));
+              }
+
+              const formattedEnd = periodEnd.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
               return res.json({
                 success: true,
-                message: "Your Pro subscription has been cancelled. You'll retain access until the end of your billing period.",
+                message: `Your Pro subscription has been cancelled. You'll retain access until ${formattedEnd}.`,
+                endDate: periodEnd.toISOString(),
               });
             }
           }
@@ -9723,16 +9763,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
               );
 
               if (cancelResponse.ok) {
+                const endDate = user.proSubscriptionEndDate ? new Date(user.proSubscriptionEndDate) : new Date();
                 await db.update(users).set({
-                  isPro: false,
-                  proSubscriptionEndDate: new Date(),
+                  isPro: true,
+                  proSubscriptionEndDate: endDate,
                   updatedAt: new Date(),
                 }).where(eq(users.id, userId));
+
+                const { EmailService } = await import('./email-service');
+                if (user.email) {
+                  EmailService.sendProCancelledEmail(
+                    user.email,
+                    user.username || user.displayName || 'Gamer',
+                    endDate
+                  ).catch(err => console.error('Failed to send Pro cancelled email:', err));
+                }
 
                 console.log(`❌ Pro subscription cancelled via RevenueCat for user ${userId}`);
                 return res.json({
                   success: true,
                   message: "Your Pro subscription has been cancelled.",
+                  endDate: endDate.toISOString(),
                 });
               }
             }
@@ -9743,16 +9794,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Final fallback: cancel in database directly
+      const endDate = user.proSubscriptionEndDate ? new Date(user.proSubscriptionEndDate) : new Date();
       await db.update(users).set({
         isPro: false,
-        proSubscriptionEndDate: new Date(),
+        proSubscriptionEndDate: endDate,
         updatedAt: new Date(),
       }).where(eq(users.id, userId));
+
+      const { EmailService } = await import('./email-service');
+      if (user.email) {
+        EmailService.sendProCancelledEmail(
+          user.email,
+          user.username || user.displayName || 'Gamer',
+          endDate
+        ).catch(err => console.error('Failed to send Pro cancelled email:', err));
+      }
 
       console.log(`❌ Pro subscription cancelled (database only) for user ${userId}`);
       return res.json({
         success: true,
         message: "Your Pro subscription has been cancelled.",
+        endDate: endDate.toISOString(),
       });
     } catch (error) {
       console.error("Error cancelling subscription:", error);

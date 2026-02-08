@@ -24,7 +24,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Crown, Check, Calendar, CreditCard, ExternalLink, AlertTriangle, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Crown, Check, Calendar, CreditCard, ExternalLink, AlertTriangle, Loader2, Clock } from "lucide-react";
 
 interface ManageProDialogProps {
   open: boolean;
@@ -37,6 +38,18 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
   const { toast } = useToast();
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+
+  const { data: subscriptionStatus } = useQuery<{
+    isPro: boolean;
+    isCancelled: boolean;
+    proSubscriptionEndDate: string | null;
+    proSubscriptionType: string | null;
+  }>({
+    queryKey: ["/api/subscription/status"],
+    enabled: open && !!user?.isPro,
+  });
+
+  const isCancelled = subscriptionStatus?.isCancelled || false;
 
   const proEntitlement = customerInfo?.entitlements?.active?.["pro"];
   const subscriptionType = user?.proSubscriptionType || "Pro";
@@ -79,6 +92,7 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
       if (data.success) {
         await refreshCustomerInfo();
         await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        await queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
         
         toast({
           title: "Subscription cancelled",
@@ -86,7 +100,6 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
           variant: "gamefolioSuccess",
         });
         setShowCancelConfirm(false);
-        onOpenChange(false);
       } else if (data.useManagementUrl && managementUrl) {
         window.open(managementUrl, '_blank');
         toast({
@@ -150,13 +163,23 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
                       <span>Member since: {startDate}</span>
                     </div>
                   )}
-                  {expirationDate && (
+                  {isCancelled && expirationDate ? (
+                    <div className="flex items-center gap-2 text-yellow-500">
+                      <Clock className="h-4 w-4" />
+                      <span>Pro access ends: {expirationDate}</span>
+                    </div>
+                  ) : expirationDate ? (
                     <div className="flex items-center gap-2">
                       <CreditCard className="h-4 w-4" />
                       <span>Next billing: {expirationDate}</span>
                     </div>
-                  )}
+                  ) : null}
                 </div>
+                {isCancelled && (
+                  <div className="mt-3 p-2 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-xs text-center">
+                    Your subscription has been cancelled. You'll retain Pro access until the date above.
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -191,13 +214,15 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
                 Billing Portal
               </Button>
             )}
-            <Button
-              variant="ghost"
-              className="w-full text-red-500 hover:text-red-600 hover:bg-red-500/10"
-              onClick={() => setShowCancelConfirm(true)}
-            >
-              Cancel Subscription
-            </Button>
+            {!isCancelled && (
+              <Button
+                variant="ghost"
+                className="w-full text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                onClick={() => setShowCancelConfirm(true)}
+              >
+                Cancel Subscription
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

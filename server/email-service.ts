@@ -294,6 +294,56 @@ export class EmailService {
     });
   }
 
+  static async sendProWelcomeEmail(email: string, username: string, plan: 'monthly' | 'yearly'): Promise<boolean> {
+    const planName = plan === 'monthly' ? 'Monthly' : 'Yearly';
+    const renewalDate = plan === 'yearly'
+      ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    try {
+      const html = await loadTemplate('pro-welcome', {
+        username,
+        planName,
+        renewalDate,
+        siteUrl: IMAGE_BASE_URL,
+      });
+
+      return await sendEmail({
+        to: email,
+        subject: 'Welcome to Gamefolio Pro - Your Premium Features Are Live!',
+        html,
+      });
+    } catch (error) {
+      console.error('Failed to send Pro welcome email:', error);
+      return false;
+    }
+  }
+
+  static async sendProCancelledEmail(email: string, username: string, endDate: Date): Promise<boolean> {
+    const formattedEndDate = endDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    try {
+      const html = await loadTemplate('pro-cancelled', {
+        username,
+        endDate: formattedEndDate,
+        siteUrl: IMAGE_BASE_URL,
+      });
+
+      return await sendEmail({
+        to: email,
+        subject: 'Your Gamefolio Pro Subscription Has Been Cancelled',
+        html,
+      });
+    } catch (error) {
+      console.error('Failed to send Pro cancelled email:', error);
+      return false;
+    }
+  }
+
   static async sendNewUserNotification(userData: {
     username: string;
     email: string;

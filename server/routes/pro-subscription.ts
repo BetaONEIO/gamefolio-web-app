@@ -4,6 +4,7 @@ import { db } from '../db';
 import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { hybridAuth } from '../middleware/hybrid-auth';
+import { EmailService } from '../email-service';
 
 const router = Router();
 
@@ -190,6 +191,15 @@ router.post('/api/stripe/confirm-pro-subscription', hybridAuth, async (req: Requ
         : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       updatedAt: new Date(),
     }).where(eq(users.id, userId));
+
+    const [updatedUser] = await db.select().from(users).where(eq(users.id, userId));
+    if (updatedUser?.email) {
+      EmailService.sendProWelcomeEmail(
+        updatedUser.email,
+        updatedUser.username || updatedUser.displayName || 'Gamer',
+        plan as 'monthly' | 'yearly'
+      ).catch(err => console.error('Failed to send Pro welcome email:', err));
+    }
 
     return res.json({ success: true, isPro: true, subscriptionId: subscription.id });
   } catch (error: any) {
