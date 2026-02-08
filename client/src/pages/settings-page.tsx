@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2 } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2 } from "lucide-react";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -233,18 +233,18 @@ const darkenColor = (hex: string, percent: number) => {
   return `rgb(${r}, ${g}, ${b})`;
 };
 
-const platformsFormSchema = z.object({
-  steamUsername: z.string().optional().or(z.literal('')),
-  xboxUsername: z.string().optional().or(z.literal('')),
-  playstationUsername: z.string().optional().or(z.literal('')),
-  discordUsername: z.string().optional().or(z.literal('')),
-  epicUsername: z.string().optional().or(z.literal('')),
-  nintendoUsername: z.string().optional().or(z.literal('')),
-  twitterUsername: z.string().optional().or(z.literal('')),
-  youtubeUsername: z.string().optional().or(z.literal('')),
-});
+const PLATFORM_DEFINITIONS = [
+  { key: "steamUsername" as const, label: "Steam", placeholder: "Enter your Steam username", icon: "steam", category: "gaming" },
+  { key: "xboxUsername" as const, label: "Xbox", placeholder: "Enter your Xbox gamertag", icon: "xbox", category: "gaming" },
+  { key: "playstationUsername" as const, label: "PlayStation", placeholder: "Enter your PlayStation ID", icon: "playstation", category: "gaming" },
+  { key: "discordUsername" as const, label: "Discord", placeholder: "Enter your Discord username", icon: "discord", category: "gaming" },
+  { key: "epicUsername" as const, label: "Epic Games", placeholder: "Enter your Epic Games username", icon: "epic", category: "gaming" },
+  { key: "nintendoUsername" as const, label: "Nintendo", placeholder: "Enter your Nintendo username", icon: "nintendo", category: "gaming" },
+  { key: "twitterUsername" as const, label: "X (Twitter)", placeholder: "Enter your X username", icon: "twitter", category: "social" },
+  { key: "youtubeUsername" as const, label: "YouTube", placeholder: "Enter your YouTube username", icon: "youtube", category: "social" },
+] as const;
 
-type PlatformFormValues = z.infer<typeof platformsFormSchema>;
+type PlatformKey = typeof PLATFORM_DEFINITIONS[number]["key"];
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -256,64 +256,61 @@ export default function SettingsPage() {
   
   const updateProfile = useUpdateProfile();
   
-  const platformsForm = useForm<PlatformFormValues>({
-    resolver: zodResolver(platformsFormSchema),
-    defaultValues: {
-      steamUsername: user?.steamUsername || '',
-      xboxUsername: user?.xboxUsername || '',
-      playstationUsername: user?.playstationUsername || '',
-      discordUsername: user?.discordUsername || '',
-      epicUsername: user?.epicUsername || '',
-      nintendoUsername: user?.nintendoUsername || '',
-      twitterUsername: user?.twitterUsername || '',
-      youtubeUsername: user?.youtubeUsername || '',
-    }
-  });
+  const [showAddPlatform, setShowAddPlatform] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState<PlatformKey | null>(null);
+  const [platformHandle, setPlatformHandle] = useState('');
+  const [savingPlatform, setSavingPlatform] = useState(false);
+  const [removingPlatform, setRemovingPlatform] = useState<PlatformKey | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      platformsForm.reset({
-        steamUsername: user.steamUsername || '',
-        xboxUsername: user.xboxUsername || '',
-        playstationUsername: user.playstationUsername || '',
-        discordUsername: user.discordUsername || '',
-        epicUsername: user.epicUsername || '',
-        nintendoUsername: user.nintendoUsername || '',
-        twitterUsername: user.twitterUsername || '',
-        youtubeUsername: user.youtubeUsername || '',
-      });
+  const getPlatformIcon = (iconKey: string) => {
+    switch (iconKey) {
+      case 'steam': return <FaSteam className="w-5 h-5 text-[#66c0f4]" />;
+      case 'xbox': return <FaXbox className="w-5 h-5 text-[#107C10]" />;
+      case 'playstation': return <FaPlaystation className="w-5 h-5 text-[#003791]" />;
+      case 'discord': return <FaDiscord className="w-5 h-5 text-[#7289DA]" />;
+      case 'epic': return <SiEpicgames className="w-5 h-5 text-slate-300" />;
+      case 'nintendo': return <SiNintendo className="w-5 h-5 text-[#E60012]" />;
+      case 'twitter': return <FaXTwitter className="w-5 h-5 text-white" />;
+      case 'youtube': return <FaYoutube className="w-5 h-5 text-[#FF0000]" />;
+      default: return <Gamepad2 className="w-5 h-5" />;
     }
-  }, [user]);
+  };
 
-  const onPlatformsSubmit = async (values: PlatformFormValues) => {
-    if (!user) return;
-    
+  const connectedPlatforms = PLATFORM_DEFINITIONS.filter(p => user?.[p.key]);
+  const availablePlatforms = PLATFORM_DEFINITIONS.filter(p => !user?.[p.key]);
+
+  const handleAddPlatform = async () => {
+    if (!user || !selectedPlatform || !platformHandle.trim()) return;
+    setSavingPlatform(true);
     try {
       await updateProfile.mutateAsync({
         userId: user.id,
-        userData: {
-          steamUsername: values.steamUsername || null,
-          xboxUsername: values.xboxUsername || null,
-          playstationUsername: values.playstationUsername || null,
-          discordUsername: values.discordUsername || null,
-          epicUsername: values.epicUsername || null,
-          nintendoUsername: values.nintendoUsername || null,
-          twitterUsername: values.twitterUsername || null,
-          youtubeUsername: values.youtubeUsername || null,
-        }
+        userData: { [selectedPlatform]: platformHandle.trim() }
       });
-      
-      toast({
-        title: "Platform connections updated",
-        description: "Your platform connections have been updated successfully.",
-        duration: 3000,
-      });
+      toast({ title: "Platform added", description: "Your platform connection has been saved.", duration: 3000 });
+      setShowAddPlatform(false);
+      setSelectedPlatform(null);
+      setPlatformHandle('');
     } catch (error) {
-      toast({
-        title: "Update failed",
-        description: "Failed to update platform connections. Please try again.",
-        variant: "destructive",
+      toast({ title: "Failed to add platform", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setSavingPlatform(false);
+    }
+  };
+
+  const handleRemovePlatform = async (key: PlatformKey) => {
+    if (!user) return;
+    setRemovingPlatform(key);
+    try {
+      await updateProfile.mutateAsync({
+        userId: user.id,
+        userData: { [key]: null }
       });
+      toast({ title: "Platform removed", description: "Your platform connection has been removed.", duration: 3000 });
+    } catch (error) {
+      toast({ title: "Failed to remove platform", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setRemovingPlatform(null);
     }
   };
 
@@ -1583,117 +1580,142 @@ export default function SettingsPage() {
           <TabsContent value="platforms">
             <Card>
               <CardHeader>
-                <CardTitle>Platform Connections</CardTitle>
-                <CardDescription>
-                  Connect your gaming accounts and social media profiles.
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Platform Connections</CardTitle>
+                    <CardDescription className="mt-1">
+                      Connect your gaming accounts and social media profiles.
+                    </CardDescription>
+                  </div>
+                  {availablePlatforms.length > 0 && (
+                    <Button
+                      size="sm"
+                      onClick={() => { setShowAddPlatform(true); setSelectedPlatform(null); setPlatformHandle(''); }}
+                      className="gap-1.5"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Connection
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               
-              <CardContent className="space-y-6">
-                <Form {...platformsForm}>
-                  <form id="platforms-form" onSubmit={platformsForm.handleSubmit(onPlatformsSubmit)} className="space-y-6">
-                    <div className="grid gap-4">
-                      <h3 className="text-lg font-medium">Gaming Platforms</h3>
-                      
-                      {([
-                        { name: "steamUsername" as const, label: "Steam", placeholder: "Enter your Steam username", description: "Your Steam profile username", icon: <FaSteam className="w-6 h-6 text-[#1B2838] dark:text-[#66c0f4]" />, saved: user?.steamUsername },
-                        { name: "xboxUsername" as const, label: "Xbox", placeholder: "Enter your Xbox gamertag", description: "Your Xbox Live gamertag", icon: <FaXbox className="w-6 h-6 text-[#107C10]" />, saved: user?.xboxUsername },
-                        { name: "playstationUsername" as const, label: "PlayStation", placeholder: "Enter your PlayStation ID", description: "Your PlayStation Network ID", icon: <FaPlaystation className="w-6 h-6 text-[#003791]" />, saved: user?.playstationUsername },
-                        { name: "discordUsername" as const, label: "Discord", placeholder: "Enter your Discord username", description: "Your Discord username (with or without #)", icon: <FaDiscord className="w-6 h-6 text-[#7289DA]" />, saved: user?.discordUsername },
-                        { name: "epicUsername" as const, label: "Epic Games", placeholder: "Enter your Epic Games username", description: "Your Epic Games Store username", icon: <SiEpicgames className="w-6 h-6 text-[#313131]" />, saved: user?.epicUsername },
-                        { name: "nintendoUsername" as const, label: "Nintendo", placeholder: "Enter your Nintendo username", description: "Your Nintendo Switch username", icon: <SiNintendo className="w-6 h-6 text-[#E60012]" />, saved: user?.nintendoUsername },
-                      ]).map((platform) => (
-                        <FormField
-                          key={platform.name}
-                          control={platformsForm.control}
-                          name={platform.name}
-                          render={({ field }) => (
-                            <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
-                              <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
-                                {platform.icon}
-                              </div>
-                              <div className="flex-grow space-y-1">
-                                <FormLabel className="flex items-center gap-2">
-                                  {platform.label}
-                                  {platform.saved && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                      <Check className="w-3 h-3" />
-                                      Connected
-                                    </span>
-                                  )}
-                                </FormLabel>
-                                <FormControl>
-                                  <Input
-                                    placeholder={platform.placeholder}
-                                    {...field}
-                                    className={platform.saved ? 'border-emerald-500/30' : ''}
-                                  />
-                                </FormControl>
-                                <FormDescription>
-                                  {platform.description}
-                                </FormDescription>
-                                <FormMessage />
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-                      ))}
-                      
-                      <h3 className="text-lg font-medium mt-4">Social Media</h3>
-                      
-                      {([
-                        { name: "twitterUsername" as const, label: "X (formerly Twitter)", placeholder: "Enter your X username", description: "Your X username (without @)", icon: <FaXTwitter className="w-6 h-6 text-[#000000] dark:text-[#FFFFFF]" />, saved: user?.twitterUsername },
-                        { name: "youtubeUsername" as const, label: "YouTube", placeholder: "Enter your YouTube username", description: "Your YouTube channel username (without @)", icon: <FaYoutube className="w-6 h-6 text-[#FF0000]" />, saved: user?.youtubeUsername },
-                      ]).map((platform) => (
-                        <FormField
-                          key={platform.name}
-                          control={platformsForm.control}
-                          name={platform.name}
-                          render={({ field }) => (
-                            <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
-                              <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
-                                {platform.icon}
-                              </div>
-                              <div className="flex-grow space-y-1">
-                                <FormLabel className="flex items-center gap-2">
-                                  {platform.label}
-                                  {platform.saved && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                      <Check className="w-3 h-3" />
-                                      Connected
-                                    </span>
-                                  )}
-                                </FormLabel>
-                                <FormControl>
-                                  <Input
-                                    placeholder={platform.placeholder}
-                                    {...field}
-                                    className={platform.saved ? 'border-emerald-500/30' : ''}
-                                  />
-                                </FormControl>
-                                <FormDescription>
-                                  {platform.description}
-                                </FormDescription>
-                                <FormMessage />
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-                      ))}
+              <CardContent className="space-y-4">
+                {/* Add Platform Flow */}
+                {showAddPlatform && (
+                  <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-medium text-slate-200">Add a new connection</h3>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setShowAddPlatform(false)}>
+                        <X className="w-4 h-4" />
+                      </Button>
                     </div>
-                  </form>
-                </Form>
+
+                    {!selectedPlatform ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {availablePlatforms.map((p) => (
+                          <button
+                            key={p.key}
+                            onClick={() => setSelectedPlatform(p.key)}
+                            className="flex flex-col items-center gap-2 p-3 rounded-lg border border-slate-700 bg-slate-900/50 hover:border-slate-500 hover:bg-slate-800 transition-colors"
+                          >
+                            {getPlatformIcon(p.icon)}
+                            <span className="text-xs text-slate-300">{p.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          {getPlatformIcon(PLATFORM_DEFINITIONS.find(p => p.key === selectedPlatform)?.icon || '')}
+                          <span className="text-sm font-medium text-slate-200">
+                            {PLATFORM_DEFINITIONS.find(p => p.key === selectedPlatform)?.label}
+                          </span>
+                          <button onClick={() => setSelectedPlatform(null)} className="ml-auto text-xs text-slate-400 hover:text-slate-200">
+                            Change
+                          </button>
+                        </div>
+                        <Input
+                          placeholder={PLATFORM_DEFINITIONS.find(p => p.key === selectedPlatform)?.placeholder || 'Enter your username'}
+                          value={platformHandle}
+                          onChange={(e) => setPlatformHandle(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPlatform(); } }}
+                          autoFocus
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <Button variant="outline" size="sm" onClick={() => setShowAddPlatform(false)}>
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={handleAddPlatform}
+                            disabled={!platformHandle.trim() || savingPlatform}
+                          >
+                            {savingPlatform ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Check className="w-4 h-4 mr-1" />}
+                            Save
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Connected Platforms List */}
+                {connectedPlatforms.length > 0 ? (
+                  <div className="space-y-2">
+                    {connectedPlatforms.map((platform) => (
+                      <div
+                        key={platform.key}
+                        className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-700/50 bg-slate-800/30"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
+                          {getPlatformIcon(platform.icon)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-slate-200">{platform.label}</div>
+                          <div className="text-xs text-slate-400 truncate">{user?.[platform.key]}</div>
+                        </div>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          <Check className="w-3 h-3" />
+                          Connected
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-slate-500 hover:text-red-400"
+                          onClick={() => handleRemovePlatform(platform.key)}
+                          disabled={removingPlatform === platform.key}
+                        >
+                          {removingPlatform === platform.key ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : !showAddPlatform ? (
+                  <div className="text-center py-8 space-y-3">
+                    <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center mx-auto">
+                      <Gamepad2 className="w-6 h-6 text-slate-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-400">No platform connections yet</p>
+                      <p className="text-xs text-slate-500 mt-1">Add your gaming and social accounts to display on your profile</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setShowAddPlatform(true); setSelectedPlatform(null); setPlatformHandle(''); }}
+                      className="gap-1.5"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Connection
+                    </Button>
+                  </div>
+                ) : null}
               </CardContent>
-              
-              <CardFooter>
-                <Button 
-                  type="submit" 
-                  form="platforms-form"
-                  disabled={updateProfile.isPending || !platformsForm.formState.isDirty}
-                >
-                  {updateProfile.isPending ? 'Saving...' : 'Save Platform Connections'}
-                </Button>
-              </CardFooter>
             </Card>
           </TabsContent>
         </Tabs>
