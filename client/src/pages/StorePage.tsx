@@ -143,6 +143,28 @@ function resolveStoreImage(imagePath: string | null): string {
 }
 
 export default function StorePage() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: '#020617' }}>
+      <div className="flex flex-col items-center gap-4 p-8 rounded-2xl" style={{ background: '#0f172a', border: '1px solid rgba(30, 41, 59, 0.5)' }}>
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 15V17M6 21H18C19.1046 21 20 20.1046 20 19V13C20 11.8954 19.1046 11 18 11H6C4.89543 11 4 11.8954 4 13V19C4 20.1046 4.89543 21 6 21ZM16 11V7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7V11H16Z" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        <h1 className="text-2xl font-bold" style={{ color: '#f8fafc' }}>Coming Soon</h1>
+        <p className="text-sm text-center max-w-xs" style={{ color: '#94a3b8' }}>
+          The store is currently under development. Check back soon for NFTs, name tags, and more.
+        </p>
+        <Link href="/">
+          <button
+            className="mt-2 px-6 py-2 rounded-xl font-semibold transition-all hover:opacity-90"
+            style={{ background: '#4ade80', color: '#022c22' }}
+          >
+            Back to Home
+          </button>
+        </Link>
+      </div>
+    </div>
+  );
+
   const { user } = useAuth();
   const { wallet } = useCrossmint();
   const { toast } = useToast();
