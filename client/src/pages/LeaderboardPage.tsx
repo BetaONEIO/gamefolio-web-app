@@ -78,21 +78,19 @@ const LeaderboardPage = () => {
     },
   });
 
-  // Fetch historic monthly winners
   const { data: historicMonthlyData } = useQuery<TopContributor[]>({
     queryKey: ["/api/leaderboard/top-contributors/monthly"],
     queryFn: async () => {
-      const res = await fetch("/api/leaderboard/top-contributors/monthly");
+      const res = await fetch("/api/leaderboard/top-contributors/monthly?limit=50");
       if (!res.ok) throw new Error("Failed to fetch historic monthly winners");
       return res.json();
     },
   });
 
-  // Fetch historic weekly winners
   const { data: historicWeeklyData } = useQuery<TopContributor[]>({
     queryKey: ["/api/leaderboard/top-contributors/weekly"],
     queryFn: async () => {
-      const res = await fetch("/api/leaderboard/top-contributors/weekly");
+      const res = await fetch("/api/leaderboard/top-contributors/weekly?limit=50");
       if (!res.ok) throw new Error("Failed to fetch historic weekly winners");
       return res.json();
     },
@@ -262,9 +260,18 @@ const LeaderboardPage = () => {
   };
 
   const HistoricWinnerCard = ({ contributor, type }: { contributor: TopContributor; type: "monthly" | "weekly" }) => {
-    const periodLabel = type === "monthly" 
-      ? `${contributor.period} ${contributor.year}` 
-      : `Week ${contributor.period}, ${contributor.year}`;
+    const formatPeriodLabel = () => {
+      if (type === "monthly") {
+        const [year, month] = contributor.period.split("-");
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const monthIndex = parseInt(month) - 1;
+        return `${monthNames[monthIndex] || month} ${year}`;
+      }
+      const weekMatch = contributor.period.match(/W(\d+)/);
+      const weekNum = weekMatch ? weekMatch[1] : contributor.period;
+      return `Week ${weekNum}, ${contributor.year}`;
+    };
+    const periodLabel = formatPeriodLabel();
     
     return (
       <div className="flex items-center gap-4 px-4 py-5 rounded-2xl border border-[#f0b100]/20 bg-[#f0b100]/5">
@@ -433,7 +440,11 @@ const LeaderboardPage = () => {
               <p className="text-slate-400 text-xs mb-3">Best monthly content and highest engagement</p>
               
               {historicMonthlyData && historicMonthlyData.length > 0 ? (
-                <HistoricWinnerCard contributor={historicMonthlyData[0]} type="monthly" />
+                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                  {historicMonthlyData.map((contributor) => (
+                    <HistoricWinnerCard key={contributor.id} contributor={contributor} type="monthly" />
+                  ))}
+                </div>
               ) : (
                 <div className="text-center py-4 text-slate-400 text-sm">No historic monthly winners yet</div>
               )}
@@ -448,7 +459,11 @@ const LeaderboardPage = () => {
               <p className="text-slate-400 text-xs mb-3">Best weekly content and highest engagement</p>
               
               {historicWeeklyData && historicWeeklyData.length > 0 ? (
-                <HistoricWinnerCard contributor={historicWeeklyData[0]} type="weekly" />
+                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                  {historicWeeklyData.map((contributor) => (
+                    <HistoricWinnerCard key={contributor.id} contributor={contributor} type="weekly" />
+                  ))}
+                </div>
               ) : (
                 <div className="text-center py-4 text-slate-400 text-sm">No historic weekly winners yet</div>
               )}
