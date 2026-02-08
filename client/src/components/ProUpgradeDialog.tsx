@@ -231,6 +231,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
   const [purchasing, setPurchasing] = useState(false);
   const [step, setStep] = useState<"plans" | "checkout" | "success">("plans");
+  const [purchaseInProgress, setPurchaseInProgress] = useState(false);
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
   const [checkoutPaymentIntentId, setCheckoutPaymentIntentId] = useState<string | null>(null);
@@ -284,6 +285,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
       setStep("plans");
       setBillingPeriod("yearly");
       setPurchasing(false);
+      setPurchaseInProgress(false);
       setCheckoutClientSecret(null);
       setCheckoutPaymentIntentId(null);
       setCheckoutError(null);
@@ -302,6 +304,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
     setCheckoutError(null);
     setCheckoutClientSecret(null);
     setCheckoutPaymentIntentId(null);
+    setPurchaseInProgress(true);
     try {
       await loadStripeInstance();
       const res = await apiRequest("POST", "/api/stripe/create-pro-subscription", { plan: billingPeriod });
@@ -320,7 +323,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   const checkoutPriceFormatted = selectedPackage ? formatPrice(selectedPackage) : "";
   const checkoutPeriodLabel = billingPeriod === "yearly" ? "per year" : "per month";
 
-  if (isPro && step !== "success") {
+  if (isPro && step !== "success" && !purchaseInProgress) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-[430px] w-full bg-[#020617] border-none p-0 overflow-hidden [&>button]:hidden">
