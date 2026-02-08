@@ -16,6 +16,7 @@ import gfStakingRoutes from './routes/gf-staking';
 import storeRoutes from './routes/store';
 import { createOGMetaMiddleware } from './og-meta';
 import { storage } from './storage';
+import { LeaderboardService } from './leaderboard-service';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -256,6 +257,15 @@ app.use((req, res, next) => {
       reusePort: true,
     }, () => {
       log(`serving on port ${port}`);
+
+      LeaderboardService.processPeriodicLeaderboardClosures()
+        .then(() => log('Leaderboard periodic closures check completed'))
+        .catch((err) => console.error('Leaderboard closures check failed:', err));
+
+      setInterval(() => {
+        LeaderboardService.processPeriodicLeaderboardClosures()
+          .catch((err) => console.error('Leaderboard closures check failed:', err));
+      }, 6 * 60 * 60 * 1000);
     });
   } catch (error) {
     console.error("Fatal server error:", error);
