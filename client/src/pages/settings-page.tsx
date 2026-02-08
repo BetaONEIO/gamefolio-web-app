@@ -888,21 +888,13 @@ export default function SettingsPage() {
           <TabsContent value="profile">
             {/* Pro Subscription Banner */}
             {user?.isPro && (
-              <div className="mb-6 flex items-center justify-between px-4 py-3 rounded-lg bg-green-500/20 border border-green-500/40">
+              <div className="mb-6 flex items-center px-4 py-3 rounded-lg bg-green-500/20 border border-green-500/40">
                 <div className="flex items-center gap-2">
                   <Crown className="h-4 w-4 text-green-400" />
                   <span className="font-medium text-green-400">Pro</span>
                   <span className="text-green-400">-</span>
                   <span className="text-green-400">Active</span>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-muted-foreground hover:text-red-400"
-                  onClick={() => setShowCancelConfirm(true)}
-                >
-                  Manage
-                </Button>
               </div>
             )}
 
