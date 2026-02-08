@@ -1172,6 +1172,28 @@ const AdminPage = () => {
     { value: "other", label: "Other (TBD)", icon: "help-circle" },
   ];
   
+  const extractAssetFilePath = (url: string): string => {
+    try {
+      const patterns = [
+        /\/storage\/v1\/object\/(?:public|sign)\/(.+?)(?:\?.*)?$/,
+        /\/storage\/v1\/object\/(.+?)(?:\?.*)?$/,
+      ];
+      for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match) return match[1];
+      }
+      return url;
+    } catch {
+      return url;
+    }
+  };
+
+  const getAssignment = (fileUrl: string) => {
+    if (!assetAssignments) return undefined;
+    const key = extractAssetFilePath(fileUrl);
+    return assetAssignments[key];
+  };
+
   // Asset type display names
   const assetTypeDisplayNames: Record<string, string> = {
     avatar_border: "Avatar Border",
@@ -1423,7 +1445,7 @@ const AdminPage = () => {
     setAssetsSelectedFile(file);
     if (bucketName) setAssetsSelectedBucketName(bucketName);
     setAssetsAssignName(file.name.replace(/\.[^/.]+$/, ""));
-    const existing = assetAssignments?.[file.publicUrl];
+    const existing = getAssignment(file.publicUrl);
     if (existing) {
       setAssetsRarity(existing.rarity || 'common');
       setAssetsUnlockChance(existing.unlockChance ?? 10);
@@ -4729,7 +4751,7 @@ const AdminPage = () => {
                   <h4 className="text-xs font-medium mb-2 text-muted-foreground">Assets ({assetsActiveBucketData.files.length})</h4>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {assetsActiveBucketData.files.map((file) => {
-                      const assignment = assetAssignments?.[file.publicUrl];
+                      const assignment = getAssignment(file.publicUrl);
                       return (
                         <div
                           key={file.id}

@@ -1494,14 +1494,32 @@ adminRouter.get("/assets/assignments", async (req: Request, res: Response) => {
     
     const { assetRewards, nameTags, profileBorders } = await import('../../shared/schema');
     
+    const extractFilePath = (url: string): string => {
+      try {
+        const patterns = [
+          /\/storage\/v1\/object\/(?:public|sign)\/(.+?)(?:\?.*)?$/,
+          /\/storage\/v1\/object\/(.+?)(?:\?.*)?$/,
+        ];
+        for (const pattern of patterns) {
+          const match = url.match(pattern);
+          if (match) return match[1];
+        }
+        return url;
+      } catch {
+        return url;
+      }
+    };
+
     const rewards = await db.select().from(assetRewards);
     for (const reward of rewards) {
       if (reward.imageUrl) {
-        assignments[reward.imageUrl] = {
+        const key = extractFilePath(reward.imageUrl);
+        assignments[key] = {
           type: 'asset_reward',
           table: 'asset_rewards',
           id: reward.id,
           name: reward.name,
+          imageUrl: reward.imageUrl,
           availableInLootbox: reward.availableInLootbox,
           unlockChance: reward.unlockChance,
           availableInStore: reward.availableInStore,
@@ -1517,11 +1535,13 @@ adminRouter.get("/assets/assignments", async (req: Request, res: Response) => {
     const tags = await db.select().from(nameTags);
     for (const tag of tags) {
       if (tag.imageUrl) {
-        assignments[tag.imageUrl] = {
+        const key = extractFilePath(tag.imageUrl);
+        assignments[key] = {
           type: 'name_tag',
           table: 'name_tags',
           id: tag.id,
           name: tag.name,
+          imageUrl: tag.imageUrl,
           availableInLootbox: tag.availableInLootbox,
           unlockChance: null,
           availableInStore: tag.availableInStore,
@@ -1537,11 +1557,13 @@ adminRouter.get("/assets/assignments", async (req: Request, res: Response) => {
     const borders = await db.select().from(profileBorders);
     for (const border of borders) {
       if (border.imageUrl) {
-        assignments[border.imageUrl] = {
+        const key = extractFilePath(border.imageUrl);
+        assignments[key] = {
           type: 'profile_border',
           table: 'profile_borders',
           id: border.id,
           name: border.name,
+          imageUrl: border.imageUrl,
           availableInLootbox: border.availableInLootbox,
           unlockChance: null,
           availableInStore: border.availableInStore,
