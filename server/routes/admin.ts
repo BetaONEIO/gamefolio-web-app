@@ -1574,7 +1574,7 @@ adminRouter.post("/assets/assign", async (req: Request, res: Response) => {
   try {
     const { db } = await import('../db');
     
-    const { imageUrl, name, bucket, path, assignTo, rarity, unlockChance, availableInStore, storePrice, assetType } = req.body;
+    const { imageUrl, name, bucket, path, availableInLootbox, availableInStore, proOnly, rarity, unlockChance, storePrice, assetType } = req.body;
     
     if (!imageUrl || !name) {
       return res.status(400).json({ message: "imageUrl and name are required" });
@@ -1582,9 +1582,6 @@ adminRouter.post("/assets/assign", async (req: Request, res: Response) => {
     
     const { assetRewards } = await import('../../shared/schema');
     const { eq } = await import('drizzle-orm');
-    
-    const inLootbox = assignTo === 'lootbox' || assignTo === 'both';
-    const inStore = assignTo === 'store' || assignTo === 'both';
     
     const existing = await db.select().from(assetRewards).where(eq(assetRewards.imageUrl, imageUrl));
     
@@ -1594,8 +1591,9 @@ adminRouter.post("/assets/assign", async (req: Request, res: Response) => {
           name,
           rarity: rarity || 'common',
           unlockChance: unlockChance ?? 10,
-          availableInLootbox: inLootbox,
-          availableInStore: inStore,
+          availableInLootbox: availableInLootbox ?? false,
+          availableInStore: availableInStore ?? false,
+          proOnly: proOnly ?? false,
           storePrice: storePrice || null,
           assetType: assetType || 'other',
           isActive: true,
@@ -1614,8 +1612,9 @@ adminRouter.post("/assets/assign", async (req: Request, res: Response) => {
           imageUrl,
           rarity: rarity || 'common',
           unlockChance: unlockChance ?? 10,
-          availableInLootbox: inLootbox,
-          availableInStore: inStore,
+          availableInLootbox: availableInLootbox ?? false,
+          availableInStore: availableInStore ?? false,
+          proOnly: proOnly ?? false,
           storePrice: storePrice || null,
           assetType: assetType || 'other',
           isActive: true,
