@@ -4704,16 +4704,14 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Check if this is a consumable reward (XP, GF tokens)
-    const isConsumable = selectedReward.assetType === 'xp_reward' || selectedReward.assetType === 'gf_tokens';
+    const isConsumable = selectedReward.assetType === 'xp_reward';
     let alreadyHas = false;
     let consumed = false;
 
     if (isConsumable) {
-      // Consumable rewards are always granted (never duplicates)
       const rewardValue = selectedReward.rewardValue || 0;
       
       if (selectedReward.assetType === 'xp_reward' && rewardValue > 0) {
-        // Grant XP to user and recalculate level
         const currentUser = await this.getUser(userId);
         const newXP = (currentUser?.totalXP || 0) + rewardValue;
         const newLevel = calculateLevel(newXP);
@@ -4721,7 +4719,6 @@ export class DatabaseStorage implements IStorage {
           .set({ totalXP: newXP, level: newLevel })
           .where(eq(users.id, userId));
         
-        // Record XP history
         await db.insert(userXPHistory).values({
           userId,
           xpAmount: rewardValue,
@@ -4729,12 +4726,6 @@ export class DatabaseStorage implements IStorage {
           description: `Earned ${rewardValue} XP from Daily Lootbox (${selectedReward.rarity} reward)`,
         });
         
-        consumed = true;
-      } else if (selectedReward.assetType === 'gf_tokens' && rewardValue > 0) {
-        // Grant GF tokens to user
-        await db.update(users)
-          .set({ gfTokenBalance: sql`COALESCE(${users.gfTokenBalance}, 0) + ${rewardValue}` })
-          .where(eq(users.id, userId));
         consumed = true;
       }
       

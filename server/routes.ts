@@ -9281,8 +9281,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const value = result.reward.rewardValue || 0;
         if (result.reward.assetType === 'xp_reward') {
           message = `You earned ${value} XP!`;
-        } else if (result.reward.assetType === 'gf_tokens') {
-          message = `You earned ${value} GF Tokens!`;
         } else {
           message = "Reward claimed!";
         }
