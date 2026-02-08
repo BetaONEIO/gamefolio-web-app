@@ -1580,6 +1580,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           walletAddress: userWithoutPassword.walletAddress || null,
           walletChain: userWithoutPassword.walletChain || null,
           gfTokenBalance: userWithoutPassword.gfTokenBalance || 0,
+          steamUsername: userWithoutPassword.steamUsername || null,
+          xboxUsername: userWithoutPassword.xboxUsername || null,
+          playstationUsername: userWithoutPassword.playstationUsername || null,
+          discordUsername: userWithoutPassword.discordUsername || null,
+          epicUsername: userWithoutPassword.epicUsername || null,
+          nintendoUsername: userWithoutPassword.nintendoUsername || null,
+          twitterUsername: userWithoutPassword.twitterUsername || null,
+          youtubeUsername: userWithoutPassword.youtubeUsername || null,
         });
       }
     } catch (error) {
@@ -1615,6 +1623,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       walletAddress: userWithoutPassword.walletAddress || null,
       walletChain: userWithoutPassword.walletChain || null,
       gfTokenBalance: userWithoutPassword.gfTokenBalance || 0,
+      steamUsername: userWithoutPassword.steamUsername || null,
+      xboxUsername: userWithoutPassword.xboxUsername || null,
+      playstationUsername: userWithoutPassword.playstationUsername || null,
+      discordUsername: userWithoutPassword.discordUsername || null,
+      epicUsername: userWithoutPassword.epicUsername || null,
+      nintendoUsername: userWithoutPassword.nintendoUsername || null,
+      twitterUsername: userWithoutPassword.twitterUsername || null,
+      youtubeUsername: userWithoutPassword.youtubeUsername || null,
     });
   });
 
