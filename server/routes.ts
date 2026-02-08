@@ -9793,10 +9793,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Final fallback: cancel in database directly
+      // Final fallback: cancel in database directly (keep Pro active until end date)
       const endDate = user.proSubscriptionEndDate ? new Date(user.proSubscriptionEndDate) : new Date();
       await db.update(users).set({
-        isPro: false,
+        isPro: true,
         proSubscriptionEndDate: endDate,
         updatedAt: new Date(),
       }).where(eq(users.id, userId));
