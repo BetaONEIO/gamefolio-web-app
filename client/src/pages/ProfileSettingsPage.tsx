@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useQuery } from '@tanstack/react-query';
 import { Redirect } from 'wouter';
-import { Loader2, Video, Gamepad2, Trophy, Upload, Code, Eye, Coffee, Scroll, Sparkles } from 'lucide-react';
+import { Loader2, Video, Gamepad2, Trophy, Upload, Code, Eye, Coffee, Scroll, Sparkles, CheckCircle2 } from 'lucide-react';
 import { HexColorPicker } from "react-colorful";
 
 import {
@@ -640,155 +640,46 @@ const ProfileSettingsPage: React.FC = () => {
                   className="space-y-6"
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Steam Username */}
-                    <FormField
-                      control={profileForm.control}
-                      name="steamUsername"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <FaSteam className="text-[#1B2838]" />
-                            Steam Username
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="your-steam-username" 
-                              {...field}
-                              value={field.value || ''}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Your Steam community username
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Xbox Username */}
-                    <FormField
-                      control={profileForm.control}
-                      name="xboxUsername"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <FaXbox className="text-[#107C10]" />
-                            Xbox Gamertag
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="YourGamertag" 
-                              {...field}
-                              value={field.value || ''}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Your Xbox Live gamertag
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* PlayStation Username */}
-                    <FormField
-                      control={profileForm.control}
-                      name="playstationUsername"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <FaPlaystation className="text-[#003087]" />
-                            PlayStation ID
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="YourPSN_ID" 
-                              {...field}
-                              value={field.value || ''}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Your PlayStation Network ID
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Discord Username */}
-                    <FormField
-                      control={profileForm.control}
-                      name="discordUsername"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <FaDiscord className="text-[#5865F2]" />
-                            Discord Username
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="username#1234" 
-                              {...field}
-                              value={field.value || ''}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Your Discord username and discriminator
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Epic Games Username */}
-                    <FormField
-                      control={profileForm.control}
-                      name="epicUsername"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <SiEpicgames className="text-[#000000]" />
-                            Epic Games Username
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="YourEpicUsername" 
-                              {...field}
-                              value={field.value || ''}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Your Epic Games Store username
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Nintendo Username */}
-                    <FormField
-                      control={profileForm.control}
-                      name="nintendoUsername"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <SiNintendo className="text-[#E60012]" />
-                            Nintendo Username
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="YourNintendoID" 
-                              {...field}
-                              value={field.value || ''}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Your Nintendo Account username
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {[
+                      { name: "steamUsername" as const, label: "Steam Username", placeholder: "your-steam-username", description: "Your Steam community username", icon: <FaSteam className="text-[#1B2838]" />, savedValue: user?.steamUsername },
+                      { name: "xboxUsername" as const, label: "Xbox Gamertag", placeholder: "YourGamertag", description: "Your Xbox Live gamertag", icon: <FaXbox className="text-[#107C10]" />, savedValue: user?.xboxUsername },
+                      { name: "playstationUsername" as const, label: "PlayStation ID", placeholder: "YourPSN_ID", description: "Your PlayStation Network ID", icon: <FaPlaystation className="text-[#003087]" />, savedValue: user?.playstationUsername },
+                      { name: "discordUsername" as const, label: "Discord Username", placeholder: "username#1234", description: "Your Discord username and discriminator", icon: <FaDiscord className="text-[#5865F2]" />, savedValue: user?.discordUsername },
+                      { name: "epicUsername" as const, label: "Epic Games Username", placeholder: "YourEpicUsername", description: "Your Epic Games Store username", icon: <SiEpicgames className="text-[#000000]" />, savedValue: user?.epicUsername },
+                      { name: "nintendoUsername" as const, label: "Nintendo Username", placeholder: "YourNintendoID", description: "Your Nintendo Account username", icon: <SiNintendo className="text-[#E60012]" />, savedValue: user?.nintendoUsername },
+                    ].map((platform) => (
+                      <FormField
+                        key={platform.name}
+                        control={profileForm.control}
+                        name={platform.name}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              {platform.icon}
+                              {platform.label}
+                              {platform.savedValue && (
+                                <span className="ml-auto flex items-center gap-1 text-xs font-normal text-emerald-400">
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  Connected
+                                </span>
+                              )}
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder={platform.placeholder}
+                                {...field}
+                                value={field.value || ''}
+                                className={platform.savedValue ? 'border-emerald-500/30 focus-visible:ring-emerald-500/30' : ''}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              {platform.description}
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    ))}
                   </div>
                 </form>
               </Form>
