@@ -240,6 +240,9 @@ router.post('/api/gf/create-payment-intent', hybridAuth, async (req: Request, re
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(gbpAmount * 100),
       currency: 'gbp',
+      automatic_payment_methods: {
+        enabled: true,
+      },
       metadata: {
         userId: userId.toString(),
         orderId: order.id,
