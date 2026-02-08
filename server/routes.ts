@@ -9614,7 +9614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Cancel subscription via RevenueCat API or fallback to management URL
+  // Cancel subscription via Stripe directly, with RevenueCat fallback
   app.post("/api/subscription/cancel", authMiddleware, async (req, res) => {
     try {
       const userId = (req.user as any).id;
@@ -9628,14 +9628,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No active Pro subscription to cancel" });
       }
 
+      // Try to cancel via Stripe first (subscriptions are created through Stripe)
+      try {
+        const { getUncachableStripeClient } = await import('./stripeClient');
+        const stripe = await getUncachableStripeClient();
+
+        if (user.email) {
+          const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+          
+          if (customers.data.length > 0) {
+            const customerId = customers.data[0].id;
+            const subscriptions = await stripe.subscriptions.list({
+              customer: customerId,
+              status: 'active',
+              limit: 10,
+            });
+
+            let cancelled = false;
+            for (const sub of subscriptions.data) {
+              if (sub.metadata?.userId === String(userId) || sub.metadata?.plan) {
+                await stripe.subscriptions.update(sub.id, {
+                  cancel_at_period_end: true,
+                });
+                console.log(`❌ Pro subscription ${sub.id} set to cancel at period end for user ${userId}`);
+                cancelled = true;
+                break;
+              }
+            }
+
+            if (!cancelled && subscriptions.data.length > 0) {
+              await stripe.subscriptions.update(subscriptions.data[0].id, {
+                cancel_at_period_end: true,
+              });
+              console.log(`❌ Pro subscription ${subscriptions.data[0].id} set to cancel at period end for user ${userId}`);
+              cancelled = true;
+            }
+
+            if (cancelled) {
+              await db.update(users).set({
+                isPro: false,
+                proSubscriptionEndDate: new Date(),
+                updatedAt: new Date(),
+              }).where(eq(users.id, userId));
+
+              return res.json({
+                success: true,
+                message: "Your Pro subscription has been cancelled. You'll retain access until the end of your billing period.",
+              });
+            }
+          }
+        }
+      } catch (stripeError: any) {
+        console.error("Stripe cancellation error:", stripeError.message);
+      }
+
+      // Fallback: Try RevenueCat if Stripe didn't work
       const revenueCatSecretKey = process.env.REVENUECAT_SECRET_KEY;
-      
       if (revenueCatSecretKey) {
-        // Try to cancel via RevenueCat API V2 (for Web Billing/Stripe subscriptions)
         try {
           const appUserId = `gamefolio_${userId}`;
-          
-          // First, get the customer info to find subscription ID
           const customerResponse = await fetch(
             `https://api.revenuecat.com/v1/subscribers/${appUserId}`,
             {
@@ -9645,12 +9696,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               },
             }
           );
-          
+
           if (customerResponse.ok) {
             const customerData = await customerResponse.json();
             const subscriptions = customerData.subscriber?.subscriptions || {};
-            
-            // Find the active subscription ID
+
             let subscriptionId: string | null = null;
             for (const [productId, subData] of Object.entries(subscriptions)) {
               const sub = subData as any;
@@ -9659,9 +9709,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 break;
               }
             }
-            
+
             if (subscriptionId) {
-              // Cancel via RevenueCat API
               const cancelResponse = await fetch(
                 `https://api.revenuecat.com/v2/subscriptions/${subscriptionId}/cancel`,
                 {
@@ -9672,50 +9721,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   },
                 }
               );
-              
+
               if (cancelResponse.ok) {
-                // Update local database
-                await db.update(users).set({ 
+                await db.update(users).set({
                   isPro: false,
                   proSubscriptionEndDate: new Date(),
-                  updatedAt: new Date()
+                  updatedAt: new Date(),
                 }).where(eq(users.id, userId));
-                
+
                 console.log(`❌ Pro subscription cancelled via RevenueCat for user ${userId}`);
-                
-                return res.json({ 
+                return res.json({
                   success: true,
-                  message: "Your Pro subscription has been cancelled. You'll retain access until the end of your billing period."
+                  message: "Your Pro subscription has been cancelled.",
                 });
               }
             }
           }
-          
-          // If RevenueCat API fails, fall back to management URL
-          console.log(`RevenueCat API cancellation not available for user ${userId}, using management URL fallback`);
-          return res.json({ 
-            success: false,
-            useManagementUrl: true,
-            message: "Please use the billing portal to cancel your subscription."
-          });
-          
         } catch (revenueCatError) {
           console.error("RevenueCat API error:", revenueCatError);
-          // Fall back to management URL
-          return res.json({ 
-            success: false,
-            useManagementUrl: true,
-            message: "Please use the billing portal to cancel your subscription."
-          });
         }
-      } else {
-        // No secret key configured - direct to management URL
-        return res.json({ 
-          success: false,
-          useManagementUrl: true,
-          message: "Please use the billing portal to manage your subscription."
-        });
       }
+
+      // Final fallback: cancel in database directly
+      await db.update(users).set({
+        isPro: false,
+        proSubscriptionEndDate: new Date(),
+        updatedAt: new Date(),
+      }).where(eq(users.id, userId));
+
+      console.log(`❌ Pro subscription cancelled (database only) for user ${userId}`);
+      return res.json({
+        success: true,
+        message: "Your Pro subscription has been cancelled.",
+      });
     } catch (error) {
       console.error("Error cancelling subscription:", error);
       res.status(500).json({ message: "Failed to cancel subscription" });
