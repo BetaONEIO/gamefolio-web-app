@@ -287,6 +287,7 @@ export default function SettingsPage() {
         userId: user.id,
         userData: { [selectedPlatform]: platformHandle.trim() }
       });
+      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       toast({ title: "Platform added", description: "Your platform connection has been saved.", duration: 3000 });
       setShowAddPlatform(false);
       setSelectedPlatform(null);
@@ -306,6 +307,7 @@ export default function SettingsPage() {
         userId: user.id,
         userData: { [key]: null }
       });
+      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       toast({ title: "Platform removed", description: "Your platform connection has been removed.", duration: 3000 });
     } catch (error) {
       toast({ title: "Failed to remove platform", description: "Please try again.", variant: "destructive" });
