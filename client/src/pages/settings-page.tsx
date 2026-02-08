@@ -1603,207 +1603,91 @@ export default function SettingsPage() {
                     <div className="grid gap-4">
                       <h3 className="text-lg font-medium">Gaming Platforms</h3>
                       
-                      <FormField
-                        control={platformsForm.control}
-                        name="steamUsername"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
-                            <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
-                              <FaSteam className="w-6 h-6 text-[#1B2838] dark:text-[#66c0f4]" />
-                            </div>
-                            <div className="flex-grow space-y-1">
-                              <FormLabel>Steam</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Enter your Steam username" 
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Your Steam profile username
-                              </FormDescription>
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={platformsForm.control}
-                        name="xboxUsername"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
-                            <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
-                              <FaXbox className="w-6 h-6 text-[#107C10]" />
-                            </div>
-                            <div className="flex-grow space-y-1">
-                              <FormLabel>Xbox</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Enter your Xbox gamertag" 
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Your Xbox Live gamertag
-                              </FormDescription>
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={platformsForm.control}
-                        name="playstationUsername"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
-                            <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
-                              <FaPlaystation className="w-6 h-6 text-[#003791]" />
-                            </div>
-                            <div className="flex-grow space-y-1">
-                              <FormLabel>PlayStation</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Enter your PlayStation ID" 
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Your PlayStation Network ID
-                              </FormDescription>
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={platformsForm.control}
-                        name="discordUsername"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
-                            <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
-                              <FaDiscord className="w-6 h-6 text-[#7289DA]" />
-                            </div>
-                            <div className="flex-grow space-y-1">
-                              <FormLabel>Discord</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Enter your Discord username" 
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Your Discord username (with or without #)
-                              </FormDescription>
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={platformsForm.control}
-                        name="epicUsername"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
-                            <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
-                              <SiEpicgames className="w-6 h-6 text-[#313131]" />
-                            </div>
-                            <div className="flex-grow space-y-1">
-                              <FormLabel>Epic Games</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Enter your Epic Games username" 
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Your Epic Games Store username
-                              </FormDescription>
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={platformsForm.control}
-                        name="nintendoUsername"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
-                            <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
-                              <SiNintendo className="w-6 h-6 text-[#E60012]" />
-                            </div>
-                            <div className="flex-grow space-y-1">
-                              <FormLabel>Nintendo</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Enter your Nintendo username" 
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Your Nintendo Switch username
-                              </FormDescription>
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
+                      {([
+                        { name: "steamUsername" as const, label: "Steam", placeholder: "Enter your Steam username", description: "Your Steam profile username", icon: <FaSteam className="w-6 h-6 text-[#1B2838] dark:text-[#66c0f4]" />, saved: user?.steamUsername },
+                        { name: "xboxUsername" as const, label: "Xbox", placeholder: "Enter your Xbox gamertag", description: "Your Xbox Live gamertag", icon: <FaXbox className="w-6 h-6 text-[#107C10]" />, saved: user?.xboxUsername },
+                        { name: "playstationUsername" as const, label: "PlayStation", placeholder: "Enter your PlayStation ID", description: "Your PlayStation Network ID", icon: <FaPlaystation className="w-6 h-6 text-[#003791]" />, saved: user?.playstationUsername },
+                        { name: "discordUsername" as const, label: "Discord", placeholder: "Enter your Discord username", description: "Your Discord username (with or without #)", icon: <FaDiscord className="w-6 h-6 text-[#7289DA]" />, saved: user?.discordUsername },
+                        { name: "epicUsername" as const, label: "Epic Games", placeholder: "Enter your Epic Games username", description: "Your Epic Games Store username", icon: <SiEpicgames className="w-6 h-6 text-[#313131]" />, saved: user?.epicUsername },
+                        { name: "nintendoUsername" as const, label: "Nintendo", placeholder: "Enter your Nintendo username", description: "Your Nintendo Switch username", icon: <SiNintendo className="w-6 h-6 text-[#E60012]" />, saved: user?.nintendoUsername },
+                      ]).map((platform) => (
+                        <FormField
+                          key={platform.name}
+                          control={platformsForm.control}
+                          name={platform.name}
+                          render={({ field }) => (
+                            <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
+                              <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
+                                {platform.icon}
+                              </div>
+                              <div className="flex-grow space-y-1">
+                                <FormLabel className="flex items-center gap-2">
+                                  {platform.label}
+                                  {platform.saved && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                      <Check className="w-3 h-3" />
+                                      Connected
+                                    </span>
+                                  )}
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder={platform.placeholder}
+                                    {...field}
+                                    className={platform.saved ? 'border-emerald-500/30' : ''}
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                  {platform.description}
+                                </FormDescription>
+                                <FormMessage />
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                      ))}
                       
                       <h3 className="text-lg font-medium mt-4">Social Media</h3>
                       
-                      <FormField
-                        control={platformsForm.control}
-                        name="twitterUsername"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
-                            <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
-                              <FaXTwitter className="w-6 h-6 text-[#000000] dark:text-[#FFFFFF]" />
-                            </div>
-                            <div className="flex-grow space-y-1">
-                              <FormLabel>X (formerly Twitter)</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Enter your X username" 
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Your X username (without @)
-                              </FormDescription>
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={platformsForm.control}
-                        name="youtubeUsername"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
-                            <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
-                              <FaYoutube className="w-6 h-6 text-[#FF0000]" />
-                            </div>
-                            <div className="flex-grow space-y-1">
-                              <FormLabel>YouTube</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Enter your YouTube username" 
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Your YouTube channel username (without @)
-                              </FormDescription>
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
+                      {([
+                        { name: "twitterUsername" as const, label: "X (formerly Twitter)", placeholder: "Enter your X username", description: "Your X username (without @)", icon: <FaXTwitter className="w-6 h-6 text-[#000000] dark:text-[#FFFFFF]" />, saved: user?.twitterUsername },
+                        { name: "youtubeUsername" as const, label: "YouTube", placeholder: "Enter your YouTube username", description: "Your YouTube channel username (without @)", icon: <FaYoutube className="w-6 h-6 text-[#FF0000]" />, saved: user?.youtubeUsername },
+                      ]).map((platform) => (
+                        <FormField
+                          key={platform.name}
+                          control={platformsForm.control}
+                          name={platform.name}
+                          render={({ field }) => (
+                            <FormItem className="flex flex-col md:flex-row md:items-center gap-4">
+                              <div className="w-full md:w-8 flex-shrink-0 flex justify-center">
+                                {platform.icon}
+                              </div>
+                              <div className="flex-grow space-y-1">
+                                <FormLabel className="flex items-center gap-2">
+                                  {platform.label}
+                                  {platform.saved && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                      <Check className="w-3 h-3" />
+                                      Connected
+                                    </span>
+                                  )}
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder={platform.placeholder}
+                                    {...field}
+                                    className={platform.saved ? 'border-emerald-500/30' : ''}
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                  {platform.description}
+                                </FormDescription>
+                                <FormMessage />
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                      ))}
                     </div>
                   </form>
                 </Form>
