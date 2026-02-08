@@ -47,6 +47,25 @@ export default function WalletPage() {
   const { createOrder, isCreatingOrder, checkOrderStatus, refreshBalances } = usePurchaseGFT();
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
+  const recoveryAttemptedRef = useRef(false);
+
+  useEffect(() => {
+    if (user && !recoveryAttemptedRef.current) {
+      recoveryAttemptedRef.current = true;
+      fetch("/api/gf/recover-orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.recovered > 0) {
+            refreshBalances();
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user, refreshBalances]);
 
   const { data: ownedNFTs = [] } = useQuery<OwnedNFT[]>({
     queryKey: ['/api/store/owned'],
@@ -139,7 +158,7 @@ export default function WalletPage() {
         totalStaked={stakedAmount}
         rewardsEarned={earnedRewards}
         estimatedApy={estimatedApy}
-        availableGft={tokenBalance?.balance || 0}
+        availableGft={user?.gfTokenBalance || tokenBalance?.balance || 0}
         onStake={stake}
         onUnstake={unstake}
         onClaimRewards={claimRewards}
@@ -156,7 +175,7 @@ export default function WalletPage() {
           refreshBalances();
         }}
         gftAmount={gftAmount}
-        availableBalance={tokenBalance?.balance || 0}
+        availableBalance={user?.gfTokenBalance || tokenBalance?.balance || 0}
       />
     );
   }
@@ -211,8 +230,8 @@ export default function WalletPage() {
     return (
       <WalletHomepage
         walletAddress={displayWalletAddress}
-        offChainBalance={tokenBalance?.balance || 0}
-        fiatValue={tokenBalance?.gbpValue || 0}
+        offChainBalance={user?.gfTokenBalance || tokenBalance?.balance || 0}
+        fiatValue={(user?.gfTokenBalance || tokenBalance?.balance || 0) * 0.01}
         stakedAmount={stakedAmount}
         nftsOwned={ownedNFTs.length}
         ownedNFTs={ownedNFTs}

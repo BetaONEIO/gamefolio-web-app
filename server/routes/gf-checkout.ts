@@ -270,6 +270,72 @@ router.post('/api/gf/create-payment-intent', hybridAuth, async (req: Request, re
   }
 });
 
+router.post('/api/gf/recover-orders', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const pendingOrders = await db.select()
+      .from(gfOrders)
+      .where(and(
+        eq(gfOrders.userId, userId),
+        eq(gfOrders.status, 'created')
+      ));
+
+    if (pendingOrders.length === 0) {
+      return res.json({ recovered: 0, message: 'No pending orders to recover' });
+    }
+
+    const stripe = await getUncachableStripeClient();
+    let recovered = 0;
+    let totalCredited = 0;
+
+    for (const order of pendingOrders) {
+      if (!order.stripeSessionId) continue;
+      
+      try {
+        let paymentSucceeded = false;
+        
+        if (order.stripeSessionId.startsWith('pi_')) {
+          const pi = await stripe.paymentIntents.retrieve(order.stripeSessionId);
+          paymentSucceeded = pi.status === 'succeeded';
+        } else if (order.stripeSessionId.startsWith('cs_')) {
+          const session = await stripe.checkout.sessions.retrieve(order.stripeSessionId);
+          paymentSucceeded = session.payment_status === 'paid';
+        }
+
+        if (paymentSucceeded) {
+          await db.update(gfOrders)
+            .set({ status: 'credited', updatedAt: new Date() })
+            .where(eq(gfOrders.id, order.id));
+
+          const [currentUser] = await db.select({ gfTokenBalance: users.gfTokenBalance })
+            .from(users).where(eq(users.id, userId));
+          
+          if (currentUser) {
+            await db.update(users)
+              .set({ gfTokenBalance: currentUser.gfTokenBalance + order.gfAmount })
+              .where(eq(users.id, userId));
+            totalCredited += order.gfAmount;
+          }
+
+          recovered++;
+          console.log(`[GF Recovery] Order ${order.id} recovered and credited ${order.gfAmount} GFT to user ${userId}`);
+        }
+      } catch (err: any) {
+        console.error(`[GF Recovery] Failed to check order ${order.id}:`, err.message);
+      }
+    }
+
+    return res.json({ recovered, totalCredited, message: `Recovered ${recovered} orders, credited ${totalCredited} GFT` });
+  } catch (error: any) {
+    console.error('Recover orders error:', error);
+    return res.status(500).json({ error: 'Failed to recover orders' });
+  }
+});
+
 router.post('/api/gf/confirm-payment', hybridAuth, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.id;
