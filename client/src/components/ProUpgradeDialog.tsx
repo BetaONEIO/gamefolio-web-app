@@ -320,7 +320,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   const checkoutPriceFormatted = selectedPackage ? formatPrice(selectedPackage) : "";
   const checkoutPeriodLabel = billingPeriod === "yearly" ? "per year" : "per month";
 
-  if (isPro) {
+  if (isPro && step !== "success") {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-[430px] w-full bg-[#020617] border-none p-0 overflow-hidden [&>button]:hidden">
