@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
   <head>
@@ -18,30 +19,33 @@
       }
       .header {
         text-align: center;
-        background: linear-gradient(135deg, #854d0e 0%, #eab308 50%, #facc15 100%);
-        padding: 40px 20px;
       }
-      .header h1 {
-        font-size: 32px;
+      .header img {
+        width: 100%;
+        display: block;
+      }
+      .header-fallback {
+        display: none;
+        background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 50%, #06B6D4 100%);
+        padding: 40px 20px;
+        text-align: center;
+        color: #ffffff;
+      }
+      .header-fallback h1 {
+        font-size: 36px;
         font-weight: bold;
         margin: 0;
-        color: #ffffff;
         text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-      }
-      .header .crown {
-        font-size: 48px;
-        margin-bottom: 10px;
       }
       .content {
         text-align: center;
-        padding: 24px 20px;
-        background-color: #0a0a0a;
+        padding: 12px 20px 24px;
       }
-      .content h2 {
-        margin: 8px 0 16px;
-        font-size: 24px;
+      .content h1 {
+        margin: 8px 0 10px;
+        font-size: 28px;
         font-weight: 800;
-        color: #facc15;
+        color: #ffffff;
       }
       .content p {
         margin: 0 0 18px;
@@ -49,38 +53,10 @@
         line-height: 1.5;
         color: #d6d6d6;
       }
-      .plan-badge {
-        display: inline-block;
-        background-color: #facc15;
-        color: #000000;
-        padding: 6px 16px;
-        border-radius: 20px;
-        font-weight: bold;
-        font-size: 14px;
-        margin-bottom: 20px;
-      }
-      .features {
-        text-align: left;
-        display: inline-block;
-        margin: 0 auto 24px;
-        padding: 0;
-        list-style: none;
-      }
-      .features li {
-        padding: 8px 0;
-        color: #d6d6d6;
-        font-size: 15px;
-      }
-      .features li::before {
-        content: "\2713";
-        color: #4ade80;
-        font-weight: bold;
-        margin-right: 10px;
-      }
       .button {
         display: inline-block;
-        background-color: #facc15;
-        color: #000000 !important;
+        background-color: #00FF66;
+        color: #ffffff !important;
         padding: 14px 28px;
         text-decoration: none;
         border-radius: 6px;
@@ -98,17 +74,24 @@
   </head>
   <body>
     <div class="container">
+      <!-- Primary image with fallback -->
       <div class="header">
-        <div class="crown">&#128081;</div>
-        <h1>Welcome to Gamefolio Pro!</h1>
+        <img src="https://i.imgur.com/j713xSq.png" alt="Welcome to Gamefolio Pro" 
+             onerror="this.style.display='none'; document.querySelector('.header-fallback').style.display='block';">
+        <div class="header-fallback">
+          <h1>Gamefolio Pro</h1>
+        </div>
       </div>
 
       <div class="content">
-        <div class="plan-badge">{{planName}} Plan</div>
-        <h2>You're now a Pro member, {{username}}!</h2>
-        <p>Thank you for upgrading to Gamefolio Pro. Your subscription is now active and you have full access to all premium features.</p>
+        <h1>Welcome to Gamefolio Pro!</h1>
+        <p>Congratulations {{username}}, you're now a Pro member! Your <strong>{{planName}}</strong> subscription is active and you have full access to all premium features.</p>
 
-        <ul class="features">
+        <div style="background-color: #1a1a1a; border: 2px solid #00FF66; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+          <p style="margin: 0 0 10px; color: #d6d6d6; font-size: 14px;">Your Pro benefits:</p>
+        </div>
+
+        <ul style="text-align:left; display:inline-block; margin:0 auto; padding-left:20px; color:#d6d6d6;">
           <li>Unlimited video and screenshot uploads</li>
           <li>500MB video file size limit</li>
           <li>100MB image file size limit</li>
@@ -119,7 +102,10 @@
           <li>Priority support</li>
         </ul>
 
+        <br>
         <a href="{{siteUrl}}/settings" class="button">Explore Your Pro Features</a>
+
+        <hr style="border: 1px solid #333; margin: 20px 0;">
 
         <p class="footer-note">
           Your {{planName}} subscription will automatically renew on {{renewalDate}}.<br>
