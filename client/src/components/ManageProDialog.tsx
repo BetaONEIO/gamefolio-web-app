@@ -46,6 +46,11 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
     proSubscriptionType: string | null;
   }>({
     queryKey: ["/api/subscription/status"],
+    queryFn: async () => {
+      const res = await fetch("/api/subscription/status", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch subscription status");
+      return res.json();
+    },
     enabled: open && !!user?.isPro,
   });
 
