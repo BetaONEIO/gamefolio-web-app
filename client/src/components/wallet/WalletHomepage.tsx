@@ -62,7 +62,7 @@ export default function WalletHomepage({
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
-  const totalBalance = parseFloat(onChainBalance) + offChainBalance;
+  const totalBalance = offChainBalance;
   const estimatedFiat = fiatValue ?? totalBalance * 0.01;
   const displayPortfolioValue = portfolioValue ?? estimatedFiat;
 
@@ -303,8 +303,8 @@ export default function WalletHomepage({
                   <span style={{ color: '#fff', fontSize: '14px', fontWeight: 600 }}>£{displayPortfolioValue.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span style={{ color: '#94a3b8', fontSize: '14px' }}>On-Chain Balance</span>
-                  <span style={{ color: '#4ade80', fontSize: '14px', fontWeight: 600 }}>{parseFloat(onChainBalance).toLocaleString(undefined, { maximumFractionDigits: 2 })} GFT</span>
+                  <span style={{ color: '#94a3b8', fontSize: '14px' }}>GFT Balance</span>
+                  <span style={{ color: '#4ade80', fontSize: '14px', fontWeight: 600 }}>{offChainBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} GFT</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span style={{ color: '#94a3b8', fontSize: '14px' }}>Staked Amount</span>
