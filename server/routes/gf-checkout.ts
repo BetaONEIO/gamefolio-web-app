@@ -522,30 +522,78 @@ router.get('/api/token/on-chain-balance', hybridAuth, async (req: Request, res: 
     }).from(users).where(eq(users.id, userId));
 
     if (!user?.walletAddress) {
-      return res.json({ balance: '0', walletAddress: null });
+      return res.json({ balance: '0', walletAddress: null, source: 'explorer' });
     }
 
-    const { createPublicClient, http } = await import('viem');
-    const { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } = await import('@shared/contracts');
+    const { GF_TOKEN_ADDRESS } = await import('@shared/contracts');
+    const explorerBaseUrl = 'https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com';
 
-    const publicClient = createPublicClient({
-      chain: SKALE_NEBULA_TESTNET,
-      transport: http(),
+    const explorerRes = await fetch(
+      `${explorerBaseUrl}/api/v2/addresses/${user.walletAddress}/token-balances`
+    );
+
+    if (!explorerRes.ok) {
+      throw new Error(`Explorer API returned ${explorerRes.status}`);
+    }
+
+    const tokenBalances = await explorerRes.json();
+
+    const gfToken = Array.isArray(tokenBalances)
+      ? tokenBalances.find((t: any) =>
+          t.token?.address?.toLowerCase() === GF_TOKEN_ADDRESS.toLowerCase()
+        )
+      : null;
+
+    const rawBalance = gfToken?.value || '0';
+    const decimals = parseInt(gfToken?.token?.decimals || '18', 10);
+    const balance = (Number(rawBalance) / Math.pow(10, decimals)).toString();
+
+    return res.json({
+      balance,
+      walletAddress: user.walletAddress,
+      source: 'explorer',
+      explorerUrl: `${explorerBaseUrl}/address/${user.walletAddress}`,
     });
-
-    const rawBalance = await publicClient.readContract({
-      address: GF_TOKEN_ADDRESS,
-      abi: GF_TOKEN_ABI,
-      functionName: 'balanceOf',
-      args: [user.walletAddress as `0x${string}`],
-    });
-
-    const balance = (Number(rawBalance) / Math.pow(10, 18)).toString();
-
-    return res.json({ balance, walletAddress: user.walletAddress });
   } catch (error: any) {
-    console.error('On-chain balance error:', error);
-    return res.status(500).json({ error: 'Failed to fetch on-chain balance' });
+    console.error('Explorer balance error, falling back to RPC:', error.message);
+
+    try {
+      const userId = (req as any).user?.id;
+      const [user] = await db.select({
+        walletAddress: users.walletAddress,
+      }).from(users).where(eq(users.id, userId));
+
+      if (!user?.walletAddress) {
+        return res.json({ balance: '0', walletAddress: null, source: 'rpc-fallback' });
+      }
+
+      const { createPublicClient, http } = await import('viem');
+      const { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } = await import('@shared/contracts');
+
+      const publicClient = createPublicClient({
+        chain: SKALE_NEBULA_TESTNET,
+        transport: http(),
+      });
+
+      const rawBalance = await publicClient.readContract({
+        address: GF_TOKEN_ADDRESS,
+        abi: GF_TOKEN_ABI,
+        functionName: 'balanceOf',
+        args: [user.walletAddress as `0x${string}`],
+      });
+
+      const balance = (Number(rawBalance) / Math.pow(10, 18)).toString();
+
+      return res.json({
+        balance,
+        walletAddress: user.walletAddress,
+        source: 'rpc-fallback',
+        explorerUrl: `https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com/address/${user.walletAddress}`,
+      });
+    } catch (fallbackError: any) {
+      console.error('RPC fallback also failed:', fallbackError.message);
+      return res.status(500).json({ error: 'Failed to fetch on-chain balance' });
+    }
   }
 });
 
