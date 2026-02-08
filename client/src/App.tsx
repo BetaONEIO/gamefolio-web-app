@@ -173,7 +173,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background relative">
+    <div className="h-screen flex flex-col bg-background relative overflow-hidden">
       {/* Simple green gradient effect */}
       <div className="fixed top-0 right-0 w-full h-full bg-gradient-to-br from-transparent via-transparent to-primary/5 pointer-events-none"></div>
       <div className="fixed bottom-0 left-0 w-full h-full bg-gradient-to-tr from-transparent via-transparent to-primary/5 pointer-events-none"></div>
@@ -222,7 +222,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile Menu Overlay */}
       <MobileMenu />
 
-      <div className="flex flex-1 relative z-10">
+      <div className="flex flex-1 min-h-0 relative z-10">
         {!isMobile && <Sidebar />}
 
         <main className={`flex-1 overflow-y-auto overflow-x-hidden w-full ${!isMobile ? 'ml-64' : ''}`}>
