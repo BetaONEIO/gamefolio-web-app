@@ -9671,24 +9671,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
               limit: 10,
             });
 
-            let cancelledSub: any = null;
-            for (const sub of subscriptions.data) {
-              if (sub.metadata?.userId === String(userId) || sub.metadata?.plan) {
-                await stripe.subscriptions.update(sub.id, {
-                  cancel_at_period_end: true,
-                });
-                console.log(`❌ Pro subscription ${sub.id} set to cancel at period end for user ${userId}`);
-                cancelledSub = sub;
-                break;
-              }
+            const matchingSub = subscriptions.data.find((s: any) =>
+              s.metadata?.userId === String(userId) || s.metadata?.plan
+            ) || subscriptions.data[0];
+
+            if (matchingSub?.cancel_at_period_end) {
+              const periodEnd = new Date(matchingSub.current_period_end * 1000);
+              const formattedEnd = periodEnd.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+              return res.status(400).json({
+                message: `Your subscription is already cancelled. You have Pro access until ${formattedEnd}.`,
+                alreadyCancelled: true,
+                endDate: periodEnd.toISOString(),
+              });
             }
 
-            if (!cancelledSub && subscriptions.data.length > 0) {
-              await stripe.subscriptions.update(subscriptions.data[0].id, {
+            let cancelledSub: any = null;
+            if (matchingSub) {
+              await stripe.subscriptions.update(matchingSub.id, {
                 cancel_at_period_end: true,
               });
-              console.log(`❌ Pro subscription ${subscriptions.data[0].id} set to cancel at period end for user ${userId}`);
-              cancelledSub = subscriptions.data[0];
+              console.log(`❌ Pro subscription ${matchingSub.id} set to cancel at period end for user ${userId}`);
+              cancelledSub = matchingSub;
             }
 
             if (cancelledSub) {

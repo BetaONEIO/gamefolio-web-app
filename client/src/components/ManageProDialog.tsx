@@ -109,11 +109,21 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
         setShowCancelConfirm(false);
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to cancel subscription. Please try again.",
-        variant: "destructive",
-      });
+      const message = error.message || "Failed to cancel subscription. Please try again.";
+      if (message.includes("already cancelled")) {
+        await queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
+        toast({
+          title: "Already cancelled",
+          description: message,
+        });
+        setShowCancelConfirm(false);
+      } else {
+        toast({
+          title: "Error",
+          description: message,
+          variant: "destructive",
+        });
+      }
     } finally {
       setCancelling(false);
     }
