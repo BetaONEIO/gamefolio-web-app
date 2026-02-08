@@ -49,6 +49,27 @@ export default function WalletPage() {
   const recoveryAttemptedRef = useRef(false);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentIntentId = params.get("payment_intent");
+    const redirectStatus = params.get("redirect_status");
+
+    if (paymentIntentId && redirectStatus === "succeeded") {
+      fetch("/api/gf/confirm-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ paymentIntentId }),
+      })
+        .then(() => refreshBalances())
+        .catch(() => {});
+
+      setPurchaseSuccess(true);
+      setShowResultScreen(true);
+      window.history.replaceState({}, "", "/wallet");
+    }
+  }, [refreshBalances]);
+
+  useEffect(() => {
     if (user && !recoveryAttemptedRef.current) {
       recoveryAttemptedRef.current = true;
       fetch("/api/gf/recover-orders", {

@@ -60,7 +60,7 @@ router.post('/api/gf/checkout', hybridAuth, async (req: Request, res: Response) 
     const baseUrl = getBaseUrl(req);
     
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
+      payment_method_types: ['card', 'paypal'],
       line_items: [{
         price_data: {
           currency: 'gbp',

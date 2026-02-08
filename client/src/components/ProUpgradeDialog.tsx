@@ -132,7 +132,7 @@ function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, paymentInt
       const result = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: window.location.origin + "/",
+          return_url: window.location.origin + "/?pro_payment=success&pi=" + paymentIntentId + "&plan=" + plan,
         },
         redirect: "if_required",
       });

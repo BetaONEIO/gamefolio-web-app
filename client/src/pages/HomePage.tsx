@@ -17,6 +17,8 @@ import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useMobile } from "@/hooks/use-mobile";
+import { apiRequest, queryClient as globalQueryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 // Popular games for filtering by name instead of using IDs
 const POPULAR_GAMES = [
@@ -45,6 +47,28 @@ const HomePage = () => {
   const userId = user?.id;
   const { openClipDialog } = useClipDialog();
   const isMobile = useMobile();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const proPayment = params.get("pro_payment");
+    const paymentIntentId = params.get("pi");
+    const plan = params.get("plan");
+
+    if (proPayment === "success" && paymentIntentId && plan) {
+      apiRequest("POST", "/api/stripe/confirm-pro-subscription", { paymentIntentId, plan })
+        .then(() => {
+          globalQueryClient.invalidateQueries({ queryKey: ["/api/user"] });
+          toast({
+            title: "Welcome to Pro!",
+            description: "Your Gamefolio Pro subscription is now active.",
+            variant: "gamefolioSuccess",
+          });
+        })
+        .catch(() => {});
+      window.history.replaceState({}, "", "/");
+    }
+  }, [toast]);
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
