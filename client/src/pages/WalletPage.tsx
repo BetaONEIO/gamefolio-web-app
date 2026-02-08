@@ -68,6 +68,11 @@ export default function WalletPage() {
 
   const { data: ownedNFTs = [] } = useQuery<OwnedNFT[]>({
     queryKey: ['/api/store/owned'],
+    queryFn: async () => {
+      const res = await fetch('/api/store/owned', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch owned NFTs');
+      return res.json();
+    },
     enabled: !!user,
   });
 
