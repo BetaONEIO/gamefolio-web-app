@@ -270,4 +270,72 @@ router.post('/api/gf/create-payment-intent', hybridAuth, async (req: Request, re
   }
 });
 
+router.post('/api/gf/confirm-payment', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { paymentIntentId } = req.body;
+    if (!paymentIntentId) {
+      return res.status(400).json({ error: 'paymentIntentId is required' });
+    }
+
+    const stripe = await getUncachableStripeClient();
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    if (paymentIntent.status !== 'succeeded') {
+      return res.status(400).json({ error: 'Payment has not succeeded yet', status: paymentIntent.status });
+    }
+
+    const [order] = await db.select()
+      .from(gfOrders)
+      .where(and(
+        eq(gfOrders.stripeSessionId, paymentIntentId),
+        eq(gfOrders.userId, userId)
+      ));
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    if (order.status === 'delivered' || order.status === 'credited') {
+      const [user] = await db.select({ gfTokenBalance: users.gfTokenBalance }).from(users).where(eq(users.id, userId));
+      return res.json({ 
+        success: true, 
+        alreadyProcessed: true, 
+        gfAmount: order.gfAmount,
+        newBalance: user?.gfTokenBalance || 0
+      });
+    }
+
+    await db.update(gfOrders)
+      .set({ 
+        status: 'credited', 
+        stripePaymentIntentId: paymentIntentId,
+        updatedAt: new Date() 
+      })
+      .where(eq(gfOrders.id, order.id));
+
+    const [updatedUser] = await db.update(users)
+      .set({ 
+        gfTokenBalance: (await db.select({ gfTokenBalance: users.gfTokenBalance }).from(users).where(eq(users.id, userId)))[0].gfTokenBalance + order.gfAmount
+      })
+      .where(eq(users.id, userId))
+      .returning({ gfTokenBalance: users.gfTokenBalance });
+
+    console.log(`[GF Confirm] Order ${order.id} credited. User ${userId} received ${order.gfAmount} GFT. New balance: ${updatedUser?.gfTokenBalance}`);
+
+    return res.json({ 
+      success: true, 
+      gfAmount: order.gfAmount,
+      newBalance: updatedUser?.gfTokenBalance || 0
+    });
+  } catch (error: any) {
+    console.error('Confirm payment error:', error);
+    return res.status(500).json({ error: 'Failed to confirm payment', message: error.message });
+  }
+});
+
 export default router;

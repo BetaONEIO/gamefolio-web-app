@@ -58,9 +58,19 @@ function PaymentForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenPr
 
       switch (paymentIntent.status) {
         case "succeeded":
+          try {
+            await fetch("/api/gf/confirm-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
+            });
+          } catch (e) {
+            console.error("Failed to confirm payment on server:", e);
+          }
           toast({
             title: "Payment successful!",
-            description: `You will receive ${gftAmount.toLocaleString()} GFT`,
+            description: `You received ${gftAmount.toLocaleString()} GFT`,
           });
           onSuccess();
           break;

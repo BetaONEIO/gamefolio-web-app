@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import express from 'express';
 import { db } from '../db';
-import { gfOrders } from '@shared/schema';
+import { gfOrders, users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { getUncachableStripeClient, getStripeSecretKey } from '../stripeClient';
 import { transferGfTokens } from '../gf-token-service';
@@ -85,11 +85,25 @@ async function processGfOrderDelivery(sessionId: string, paymentIntentId?: strin
   });
   console.log(`[GF Webhook] Order ${order.id} marked as paid`);
 
+  if (order.status !== 'credited') {
+    try {
+      const [currentUser] = await db.select({ gfTokenBalance: users.gfTokenBalance }).from(users).where(eq(users.id, order.userId));
+      if (currentUser) {
+        await db.update(users)
+          .set({ gfTokenBalance: currentUser.gfTokenBalance + order.gfAmount })
+          .where(eq(users.id, order.userId));
+        console.log(`[GF Webhook] Credited ${order.gfAmount} GFT to user ${order.userId} (off-chain)`);
+      }
+    } catch (balanceError: any) {
+      console.error(`[GF Webhook] Failed to credit off-chain balance for order ${order.id}:`, balanceError);
+    }
+  }
+
   if (!order.walletAddress) {
-    await updateOrderStatus(order.id, 'failed', { 
-      errorReason: 'No wallet address associated with order' 
+    await updateOrderStatus(order.id, 'credited', { 
+      stripePaymentIntentId: paymentIntentId || undefined 
     });
-    console.error(`[GF Webhook] Order ${order.id} failed: No wallet address`);
+    console.log(`[GF Webhook] Order ${order.id} credited (no wallet for on-chain transfer)`);
     return;
   }
 
@@ -103,17 +117,17 @@ async function processGfOrderDelivery(sessionId: string, paymentIntentId?: strin
       await updateOrderStatus(order.id, 'delivered', { txHash: result.txHash });
       console.log(`[GF Webhook] Order ${order.id} delivered successfully. TxHash: ${result.txHash}`);
     } else {
-      await updateOrderStatus(order.id, 'failed', { 
-        errorReason: result.error || 'Token transfer failed',
+      await updateOrderStatus(order.id, 'credited', { 
+        errorReason: result.error || 'On-chain transfer failed but off-chain balance credited',
         txHash: result.txHash 
       });
-      console.error(`[GF Webhook] Order ${order.id} delivery failed: ${result.error}`);
+      console.error(`[GF Webhook] Order ${order.id} on-chain delivery failed (off-chain credited): ${result.error}`);
     }
   } catch (error: any) {
-    await updateOrderStatus(order.id, 'failed', { 
-      errorReason: error.message || 'Unexpected error during token transfer' 
+    await updateOrderStatus(order.id, 'credited', { 
+      errorReason: error.message || 'On-chain transfer error but off-chain balance credited' 
     });
-    console.error(`[GF Webhook] Order ${order.id} delivery error:`, error);
+    console.error(`[GF Webhook] Order ${order.id} on-chain delivery error (off-chain credited):`, error);
   }
 }
 
