@@ -1330,7 +1330,10 @@ const AdminPage = () => {
   const [assetsBucketFolder, setAssetsBucketFolder] = useState<string>("");
   const [assetsSelectedBucketName, setAssetsSelectedBucketName] = useState<string>("");
 
-  const assetBucketNames = ["gamefolio-backgrounds", "gamefolio-profile-borders", "gamefolio-name-tags", "gamefolio-assets"] as const;
+  const { data: assetBucketList, isLoading: assetBucketsLoading } = useQuery<{ id: string; name: string; public: boolean; createdAt: string }[]>({
+    queryKey: ["/api/admin/storage/buckets"],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
 
   const { data: assetsActiveBucketData, isLoading: assetsActiveBucketLoading, refetch: refetchActiveBucket } = useQuery<BucketContents>({
     queryKey: [`/api/admin/storage/buckets/${assetsActiveBucket}/files`, assetsBucketFolder ? { folder: assetsBucketFolder } : undefined],
@@ -4663,11 +4666,11 @@ const AdminPage = () => {
           <div className="flex items-center gap-2 mb-4">
             <Select value={assetsDropdownBucket} onValueChange={setAssetsDropdownBucket}>
               <SelectTrigger className="w-[280px]">
-                <SelectValue placeholder="Select a bucket..." />
+                <SelectValue placeholder={assetBucketsLoading ? "Loading buckets..." : "Select a bucket..."} />
               </SelectTrigger>
               <SelectContent>
-                {assetBucketNames.map((name) => (
-                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                {(assetBucketList || []).map((bucket) => (
+                  <SelectItem key={bucket.name} value={bucket.name}>{bucket.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

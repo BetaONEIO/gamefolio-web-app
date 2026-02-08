@@ -1452,15 +1452,11 @@ adminRouter.get("/pro-subscribers", async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/admin/storage/buckets - List available Supabase buckets for admin
+// GET /api/admin/storage/buckets - List all Supabase buckets dynamically
 adminRouter.get("/storage/buckets", async (req: Request, res: Response) => {
   try {
-    const buckets = [
-      { name: 'gamefolio-backgrounds', description: 'Profile background images' },
-      { name: 'gamefolio-profile-borders', description: 'Profile picture border overlays' },
-      { name: 'gamefolio-name-tags', description: 'Name tag assets' },
-      { name: 'gamefolio-assets', description: 'General assets' }
-    ];
+    const { supabaseStorage } = await import('../supabase-storage');
+    const buckets = await supabaseStorage.listAllBuckets();
     res.json(buckets);
   } catch (err) {
     console.error("Error fetching buckets:", err);
@@ -1474,11 +1470,6 @@ adminRouter.get("/storage/buckets/:bucketName/files", async (req: Request, res: 
     const { bucketName } = req.params;
     const { folder } = req.query;
     
-    const allowedBuckets = ['gamefolio-backgrounds', 'gamefolio-profile-borders', 'gamefolio-name-tags', 'gamefolio-assets'];
-    if (!allowedBuckets.includes(bucketName)) {
-      return res.status(400).json({ message: "Invalid bucket name" });
-    }
-
     const { supabaseStorage } = await import('../supabase-storage');
     console.log(`[Admin Assets] Fetching files from bucket: ${bucketName}, folder: ${folder || '(root)'}`);
     const files = await supabaseStorage.listBucketFiles(bucketName, folder as string || '');

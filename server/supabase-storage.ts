@@ -69,6 +69,27 @@ export class SupabaseStorage {
     });
   }
 
+  async listAllBuckets(): Promise<{ id: string; name: string; public: boolean; createdAt: string }[]> {
+    try {
+      const { data, error } = await this.supabaseAdmin.storage.listBuckets();
+      if (error) {
+        console.error('Error listing buckets:', error.message);
+        return [];
+      }
+      return (data || [])
+        .filter(b => !this.disallowedBuckets.includes(b.name))
+        .map(b => ({
+          id: b.id,
+          name: b.name,
+          public: b.public,
+          createdAt: b.created_at,
+        }));
+    } catch (error) {
+      console.error('Error listing all buckets:', error);
+      return [];
+    }
+  }
+
   /**
    * Enforce bucket usage rules
    */
@@ -561,8 +582,8 @@ export class SupabaseStorage {
     path: string;
   }[]> {
     try {
-      if (!this.allowedBuckets.includes(bucketName)) {
-        console.error(`Bucket "${bucketName}" is not in the allowed list`);
+      if (this.disallowedBuckets.includes(bucketName)) {
+        console.error(`Bucket "${bucketName}" is explicitly disallowed`);
         return [];
       }
 
@@ -633,8 +654,8 @@ export class SupabaseStorage {
    */
   async listBucketFolders(bucketName: string, folderPath: string = ''): Promise<string[]> {
     try {
-      if (!this.allowedBuckets.includes(bucketName)) {
-        console.error(`Bucket "${bucketName}" is not in the allowed list`);
+      if (this.disallowedBuckets.includes(bucketName)) {
+        console.error(`Bucket "${bucketName}" is explicitly disallowed`);
         return [];
       }
 
