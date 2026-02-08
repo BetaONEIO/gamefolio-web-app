@@ -1152,7 +1152,9 @@ const AdminPage = () => {
   // Assets management state
   const [assetsSelectedFile, setAssetsSelectedFile] = useState<BucketFile | null>(null);
   const [assetsAssignDialogOpen, setAssetsAssignDialogOpen] = useState(false);
-  const [assetsAssignTo, setAssetsAssignTo] = useState<string>("lootbox");
+  const [assetsInLootbox, setAssetsInLootbox] = useState<boolean>(true);
+  const [assetsInStore, setAssetsInStore] = useState<boolean>(false);
+  const [assetsProOnly, setAssetsProOnly] = useState<boolean>(false);
   const [assetsRarity, setAssetsRarity] = useState<string>("common");
   const [assetsUnlockChance, setAssetsUnlockChance] = useState<number>(10);
   const [assetsStorePrice, setAssetsStorePrice] = useState<string>("");
@@ -1369,10 +1371,11 @@ const AdminPage = () => {
         name: assetsAssignName || assetsSelectedFile.name.replace(/\.[^/.]+$/, ""),
         bucket: assetsSelectedBucketName,
         path: assetsSelectedFile.path,
-        assignTo: assetsAssignTo,
+        availableInLootbox: assetsInLootbox,
+        availableInStore: assetsInStore,
+        proOnly: assetsProOnly,
         rarity: assetsRarity,
         unlockChance: assetsUnlockChance,
-        availableInStore: assetsAssignTo === 'store' || assetsAssignTo === 'both',
         storePrice: assetsStorePrice ? parseInt(assetsStorePrice) : null,
         assetType: assetsAssetType,
       });
@@ -1421,18 +1424,18 @@ const AdminPage = () => {
     if (existing) {
       setAssetsRarity(existing.rarity || 'common');
       setAssetsUnlockChance(existing.unlockChance ?? 10);
-      setAssetsAssignTo(
-        existing.availableInLootbox && existing.availableInStore ? 'both' :
-        existing.availableInLootbox ? 'lootbox' :
-        existing.availableInStore ? 'store' : 'lootbox'
-      );
+      setAssetsInLootbox(existing.availableInLootbox ?? false);
+      setAssetsInStore(existing.availableInStore ?? false);
+      setAssetsProOnly(existing.proOnly ?? false);
       setAssetsStorePrice(existing.storePrice?.toString() || '');
       setAssetsAssetType(existing.assetType || 'other');
       setAssetsAssignName(existing.name || file.name.replace(/\.[^/.]+$/, ""));
     } else {
       setAssetsRarity('common');
       setAssetsUnlockChance(60);
-      setAssetsAssignTo('lootbox');
+      setAssetsInLootbox(true);
+      setAssetsInStore(false);
+      setAssetsProOnly(false);
       setAssetsStorePrice('');
       setAssetsAssetType('other');
     }
@@ -4843,24 +4846,31 @@ const AdminPage = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Assign To</Label>
-                    <Select value={assetsAssignTo} onValueChange={setAssetsAssignTo}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="lootbox">
-                          <span className="flex items-center gap-2"><Gift className="h-4 w-4 text-yellow-500" /> Lootbox Only</span>
-                        </SelectItem>
-                        <SelectItem value="store">
-                          <span className="flex items-center gap-2"><ShoppingBag className="h-4 w-4 text-blue-500" /> Store Only</span>
-                        </SelectItem>
-                        <SelectItem value="both">
-                          <span className="flex items-center gap-2"><Gift className="h-4 w-4 text-green-500" /> Both Lootbox & Store</span>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-3">
+                    <Label>Availability</Label>
+                    <div className="space-y-2 rounded-lg border p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Gift className="h-4 w-4 text-yellow-500" />
+                          <span className="text-sm">Available in Lootbox</span>
+                        </div>
+                        <Switch checked={assetsInLootbox} onCheckedChange={setAssetsInLootbox} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <ShoppingBag className="h-4 w-4 text-blue-500" />
+                          <span className="text-sm">Available in Store</span>
+                        </div>
+                        <Switch checked={assetsInStore} onCheckedChange={setAssetsInStore} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Crown className="h-4 w-4 text-purple-500" />
+                          <span className="text-sm">Pro Users Only</span>
+                        </div>
+                        <Switch checked={assetsProOnly} onCheckedChange={setAssetsProOnly} />
+                      </div>
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -4908,7 +4918,7 @@ const AdminPage = () => {
                     </Select>
                   </div>
 
-                  {(assetsAssignTo === 'lootbox' || assetsAssignTo === 'both') && (
+                  {assetsInLootbox && (
                     <div className="space-y-2">
                       <Label>Lootbox Win Probability: {assetsUnlockChance}%</Label>
                       <input
@@ -4927,7 +4937,7 @@ const AdminPage = () => {
                     </div>
                   )}
 
-                  {(assetsAssignTo === 'store' || assetsAssignTo === 'both') && (
+                  {assetsInStore && (
                     <div className="space-y-2">
                       <Label>Store Price (GF Tokens)</Label>
                       <Input
