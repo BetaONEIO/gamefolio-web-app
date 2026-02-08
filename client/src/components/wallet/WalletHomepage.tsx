@@ -63,7 +63,7 @@ export default function WalletHomepage({
   const [copied, setCopied] = useState(false);
 
   const totalBalance = parseFloat(onChainBalance) + offChainBalance;
-  const estimatedFiat = fiatValue ?? totalBalance * 0.056;
+  const estimatedFiat = fiatValue ?? totalBalance * 0.01;
   const displayPortfolioValue = portfolioValue ?? estimatedFiat;
 
   const { data: activityData, isLoading: isLoadingActivity } = useQuery<{ activities: any[] }>({
