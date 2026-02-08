@@ -5,6 +5,7 @@ import { gfOrders, users } from '@shared/schema';
 import { eq, desc, and } from 'drizzle-orm';
 import { getUncachableStripeClient, getStripePublishableKey } from '../stripeClient';
 import { hybridAuth } from '../middleware/hybrid-auth';
+import { transferGfTokens, getTreasuryBalance, getTreasuryAddress } from '../gf-token-service';
 
 const SKALE_NEBULA_TESTNET_CHAIN_ID = 37084624;
 
@@ -321,6 +322,28 @@ router.post('/api/gf/recover-orders', hybridAuth, async (req: Request, res: Resp
             totalCredited += order.gfAmount;
           }
 
+          if (order.walletAddress) {
+            try {
+              await db.update(gfOrders)
+                .set({ status: 'delivering', updatedAt: new Date() })
+                .where(eq(gfOrders.id, order.id));
+
+              const result = await transferGfTokens(order.walletAddress, order.gfAmount);
+              if (result.success && result.txHash) {
+                await db.update(gfOrders)
+                  .set({ status: 'delivered', txHash: result.txHash, updatedAt: new Date() })
+                  .where(eq(gfOrders.id, order.id));
+                console.log(`[GF Recovery] On-chain transfer for order ${order.id}. TxHash: ${result.txHash}`);
+              } else {
+                await db.update(gfOrders)
+                  .set({ status: 'credited', errorReason: result.error, updatedAt: new Date() })
+                  .where(eq(gfOrders.id, order.id));
+              }
+            } catch (transferErr: any) {
+              console.error(`[GF Recovery] On-chain transfer error for order ${order.id}:`, transferErr.message);
+            }
+          }
+
           recovered++;
           console.log(`[GF Recovery] Order ${order.id} recovered and credited ${order.gfAmount} GFT to user ${userId}`);
         }
@@ -393,10 +416,43 @@ router.post('/api/gf/confirm-payment', hybridAuth, async (req: Request, res: Res
 
     console.log(`[GF Confirm] Order ${order.id} credited. User ${userId} received ${order.gfAmount} GFT. New balance: ${updatedUser?.gfTokenBalance}`);
 
+    let txHash: string | undefined;
+    const walletAddress = order.walletAddress;
+    if (walletAddress) {
+      try {
+        await db.update(gfOrders)
+          .set({ status: 'delivering', updatedAt: new Date() })
+          .where(eq(gfOrders.id, order.id));
+
+        const result = await transferGfTokens(walletAddress, order.gfAmount);
+
+        if (result.success && result.txHash) {
+          txHash = result.txHash;
+          await db.update(gfOrders)
+            .set({ status: 'delivered', txHash: result.txHash, updatedAt: new Date() })
+            .where(eq(gfOrders.id, order.id));
+          console.log(`[GF Confirm] On-chain transfer successful for order ${order.id}. TxHash: ${result.txHash}`);
+        } else {
+          await db.update(gfOrders)
+            .set({ status: 'credited', errorReason: result.error || 'On-chain transfer failed', updatedAt: new Date() })
+            .where(eq(gfOrders.id, order.id));
+          console.error(`[GF Confirm] On-chain transfer failed for order ${order.id}: ${result.error}`);
+        }
+      } catch (transferError: any) {
+        await db.update(gfOrders)
+          .set({ status: 'credited', errorReason: transferError.message || 'On-chain transfer error', updatedAt: new Date() })
+          .where(eq(gfOrders.id, order.id));
+        console.error(`[GF Confirm] On-chain transfer error for order ${order.id}:`, transferError);
+      }
+    } else {
+      console.log(`[GF Confirm] No wallet address for user ${userId}, skipping on-chain transfer`);
+    }
+
     return res.json({ 
       success: true, 
       gfAmount: order.gfAmount,
-      newBalance: updatedUser?.gfTokenBalance || 0
+      newBalance: updatedUser?.gfTokenBalance || 0,
+      txHash
     });
   } catch (error: any) {
     console.error('Confirm payment error:', error);
@@ -419,10 +475,13 @@ router.get('/api/wallet/activity', hybridAuth, async (req: Request, res: Respons
 
     const activities = orders.map((order) => {
       const statusMap: Record<string, string> = {
+        'delivered': 'completed',
         'credited': 'completed',
         'completed': 'completed',
+        'delivering': 'processing',
         'created': 'pending',
         'pending': 'pending',
+        'paid': 'processing',
         'processing': 'processing',
         'failed': 'failed',
       };
@@ -448,6 +507,60 @@ router.get('/api/wallet/activity', hybridAuth, async (req: Request, res: Respons
   } catch (error: any) {
     console.error('Wallet activity error:', error);
     return res.status(500).json({ error: 'Failed to fetch activity' });
+  }
+});
+
+router.get('/api/token/on-chain-balance', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const [user] = await db.select({
+      walletAddress: users.walletAddress,
+    }).from(users).where(eq(users.id, userId));
+
+    if (!user?.walletAddress) {
+      return res.json({ balance: '0', walletAddress: null });
+    }
+
+    const { createPublicClient, http } = await import('viem');
+    const { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } = await import('@shared/contracts');
+
+    const publicClient = createPublicClient({
+      chain: SKALE_NEBULA_TESTNET,
+      transport: http(),
+    });
+
+    const rawBalance = await publicClient.readContract({
+      address: GF_TOKEN_ADDRESS,
+      abi: GF_TOKEN_ABI,
+      functionName: 'balanceOf',
+      args: [user.walletAddress as `0x${string}`],
+    });
+
+    const balance = (Number(rawBalance) / Math.pow(10, 18)).toString();
+
+    return res.json({ balance, walletAddress: user.walletAddress });
+  } catch (error: any) {
+    console.error('On-chain balance error:', error);
+    return res.status(500).json({ error: 'Failed to fetch on-chain balance' });
+  }
+});
+
+router.get('/api/treasury/info', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const treasuryAddress = await getTreasuryAddress();
+    const treasuryBalance = await getTreasuryBalance();
+
+    return res.json({
+      address: treasuryAddress,
+      balance: treasuryBalance,
+    });
+  } catch (error: any) {
+    console.error('Treasury info error:', error);
+    return res.status(500).json({ error: 'Failed to fetch treasury info' });
   }
 });
 

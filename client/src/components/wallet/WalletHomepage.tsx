@@ -297,6 +297,10 @@ export default function WalletHomepage({
                   <span style={{ color: '#fff', fontSize: '14px', fontWeight: 600 }}>£{displayPortfolioValue.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between">
+                  <span style={{ color: '#94a3b8', fontSize: '14px' }}>On-Chain Balance</span>
+                  <span style={{ color: '#4ade80', fontSize: '14px', fontWeight: 600 }}>{parseFloat(onChainBalance).toLocaleString(undefined, { maximumFractionDigits: 2 })} GFT</span>
+                </div>
+                <div className="flex items-center justify-between">
                   <span style={{ color: '#94a3b8', fontSize: '14px' }}>Staked Amount</span>
                   <span style={{ color: '#fff', fontSize: '14px', fontWeight: 600 }}>{stakedAmount} GFT</span>
                 </div>

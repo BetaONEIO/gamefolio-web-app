@@ -87,11 +87,11 @@ async function processGfOrderDelivery(sessionId: string, paymentIntentId?: strin
 
   if (order.status !== 'credited') {
     try {
-      const [currentUser] = await db.select({ gfTokenBalance: users.gfTokenBalance }).from(users).where(eq(users.id, order.userId));
+      const [currentUser] = await db.select({ gfTokenBalance: users.gfTokenBalance }).from(users).where(eq(users.id, order.userId!));
       if (currentUser) {
         await db.update(users)
           .set({ gfTokenBalance: currentUser.gfTokenBalance + order.gfAmount })
-          .where(eq(users.id, order.userId));
+          .where(eq(users.id, order.userId!));
         console.log(`[GF Webhook] Credited ${order.gfAmount} GFT to user ${order.userId} (off-chain)`);
       }
     } catch (balanceError: any) {
