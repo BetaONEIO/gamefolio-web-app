@@ -116,6 +116,9 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
       currency: 'gbp',
       customer: customerId,
       setup_future_usage: 'off_session',
+      automatic_payment_methods: {
+        enabled: true,
+      },
       metadata: {
         userId: String(userId),
         plan,

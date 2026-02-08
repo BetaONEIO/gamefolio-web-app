@@ -1,15 +1,13 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Crown, Loader2, X, Check, ArrowLeft, ChevronDown } from "lucide-react";
+import { Crown, Loader2, X, Check, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { Package } from "@revenuecat/purchases-js";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import {
   Elements,
-  CardNumberElement,
-  CardExpiryElement,
-  CardCvcElement,
+  PaymentElement,
   useStripe,
   useElements,
 } from "@stripe/react-stripe-js";
@@ -74,45 +72,6 @@ const premiumBenefits = [
   },
 ];
 
-const COUNTRIES = [
-  { code: "GB", name: "United Kingdom" },
-  { code: "US", name: "United States" },
-  { code: "CA", name: "Canada" },
-  { code: "AU", name: "Australia" },
-  { code: "DE", name: "Germany" },
-  { code: "FR", name: "France" },
-  { code: "ES", name: "Spain" },
-  { code: "IT", name: "Italy" },
-  { code: "NL", name: "Netherlands" },
-  { code: "BE", name: "Belgium" },
-  { code: "AT", name: "Austria" },
-  { code: "CH", name: "Switzerland" },
-  { code: "SE", name: "Sweden" },
-  { code: "NO", name: "Norway" },
-  { code: "DK", name: "Denmark" },
-  { code: "FI", name: "Finland" },
-  { code: "IE", name: "Ireland" },
-  { code: "PT", name: "Portugal" },
-  { code: "PL", name: "Poland" },
-  { code: "CZ", name: "Czech Republic" },
-  { code: "JP", name: "Japan" },
-  { code: "KR", name: "South Korea" },
-  { code: "SG", name: "Singapore" },
-  { code: "HK", name: "Hong Kong" },
-  { code: "IN", name: "India" },
-  { code: "BR", name: "Brazil" },
-  { code: "MX", name: "Mexico" },
-];
-
-const stripeElementStyle = {
-  base: {
-    color: "#f8fafc",
-    fontFamily: "Plus Jakarta Sans, system-ui, sans-serif",
-    fontSize: "16px",
-    "::placeholder": { color: "#475569" },
-  },
-  invalid: { color: "#ef4444" },
-};
 
 function isYearlyPackage(pkg: Package): boolean {
   const id = pkg.identifier.toLowerCase();
@@ -145,78 +104,55 @@ interface CheckoutFormProps {
   planLabel: string;
   priceFormatted: string;
   periodLabel: string;
+  paymentIntentId: string;
   onBack: () => void;
   onSuccess: () => void;
 }
 
-function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, onBack, onSuccess }: CheckoutFormProps) {
+function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, paymentIntentId, onBack, onSuccess }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const { toast } = useToast();
   const [processing, setProcessing] = useState(false);
-  const [country, setCountry] = useState("GB");
-  const [postalCode, setPostalCode] = useState("");
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loadingSubscription, setLoadingSubscription] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    const createPaymentIntent = async () => {
-      setLoadingSubscription(true);
-      setError(null);
-      try {
-        const res = await apiRequest("POST", "/api/stripe/create-pro-subscription", { plan });
-        const data = await res.json();
-        if (!cancelled) {
-          setClientSecret(data.clientSecret);
-          setPaymentIntentId(data.paymentIntentId);
-        }
-      } catch (err: any) {
-        if (!cancelled) {
-          const msg = err?.message || "Failed to create payment";
-          setError(msg);
-          toast({ title: "Error", description: msg, variant: "destructive" });
-        }
-      } finally {
-        if (!cancelled) setLoadingSubscription(false);
-      }
-    };
-    createPaymentIntent();
-    return () => { cancelled = true; };
-  }, [plan]);
+  const [isReady, setIsReady] = useState(false);
 
   const handlePay = async () => {
-    if (!stripe || !elements || !clientSecret || !paymentIntentId || processing) return;
-
-    const cardNumber = elements.getElement(CardNumberElement);
-    if (!cardNumber) return;
+    if (!stripe || !elements || !paymentIntentId || processing) return;
 
     setProcessing(true);
     setError(null);
 
     try {
-      const result = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: {
-          card: cardNumber,
-          billing_details: {
-            address: { country, postal_code: postalCode },
-          },
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        throw new Error(submitError.message || "Please check your payment details");
+      }
+
+      const result = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: window.location.origin + "/",
         },
+        redirect: "if_required",
       });
 
       if (result.error) {
-        setError(result.error.message || "Payment failed");
-        toast({ title: "Payment failed", description: result.error.message || "Please try again.", variant: "destructive" });
-      } else if (result.paymentIntent?.status === "succeeded") {
+        throw new Error(result.error.message || "Payment failed");
+      }
+
+      if (result.paymentIntent?.status === "succeeded") {
         try {
           await apiRequest("POST", "/api/stripe/confirm-pro-subscription", { paymentIntentId, plan });
         } catch {
-          // non-critical
         }
         await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
         onSuccess();
+      } else if (result.paymentIntent?.status === "processing") {
+        toast({ title: "Payment processing", description: "You'll be notified when complete." });
+        onSuccess();
+      } else {
+        throw new Error("Payment could not be completed. Please try again.");
       }
     } catch (err: any) {
       const msg = err?.message || "Payment failed";
@@ -255,110 +191,35 @@ function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, onBack, on
             </div>
           </div>
 
-          {loadingSubscription ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-[#4ade80]" />
+          <div className="flex flex-col gap-6">
+            <div className="rounded-2xl overflow-hidden" style={{ background: "#0f172a" }}>
+              <PaymentElement
+                onReady={() => setIsReady(true)}
+                options={{ layout: "tabs" }}
+              />
             </div>
-          ) : error && !clientSecret ? (
-            <div className="flex flex-col items-center gap-4 py-8">
+
+            {error && (
               <p className="text-red-400 text-sm text-center">{error}</p>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-6 py-3 bg-[#1e293b] text-white rounded-2xl text-sm font-medium"
-              >
-                Retry
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-col gap-[3px]">
-                <label className="text-[#94a3b8cc] text-xs font-bold uppercase tracking-[1.2px] px-1 mb-1">
-                  Card number
-                </label>
-                <div className="bg-[#1e293b] border border-[#1e293b80] rounded-2xl h-14 px-4 flex items-center">
-                  <CardNumberElement
-                    options={{ style: stripeElementStyle, showIcon: true }}
-                    className="w-full"
-                  />
-                </div>
-              </div>
+            )}
 
-              <div className="flex gap-4">
-                <div className="flex-1 flex flex-col gap-[3px]">
-                  <label className="text-[#94a3b8cc] text-xs font-bold uppercase tracking-[1.2px] px-1 mb-1">
-                    Expiration (MM/YY)
-                  </label>
-                  <div className="bg-[#1e293b] border border-[#1e293b80] rounded-2xl h-14 px-4 flex items-center">
-                    <CardExpiryElement options={{ style: stripeElementStyle }} className="w-full" />
-                  </div>
-                </div>
-                <div className="flex-1 flex flex-col gap-[3px]">
-                  <label className="text-[#94a3b8cc] text-xs font-bold uppercase tracking-[1.2px] px-1 mb-1">
-                    Security code
-                  </label>
-                  <div className="bg-[#1e293b] border border-[#1e293b80] rounded-2xl h-14 px-4 flex items-center">
-                    <CardCvcElement options={{ style: stripeElementStyle }} className="w-full" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-[3px]">
-                <label className="text-[#94a3b8cc] text-xs font-bold uppercase tracking-[1.2px] px-1 mb-1">
-                  Country
-                </label>
-                <div className="bg-[#1e293b] border border-[#1e293b80] rounded-2xl h-14 px-4 flex items-center relative">
-                  <select
-                    value={country}
-                    onChange={(e) => setCountry(e.target.value)}
-                    className="w-full h-full bg-transparent text-[#f8fafc] text-base appearance-none outline-none cursor-pointer"
-                  >
-                    {COUNTRIES.map((c) => (
-                      <option key={c.code} value={c.code} className="bg-[#1e293b] text-[#f8fafc]">
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-5 h-5 text-[#94a3b8] absolute right-4 pointer-events-none" />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-[3px]">
-                <label className="text-[#94a3b8cc] text-xs font-bold uppercase tracking-[1.2px] px-1 mb-1">
-                  Postal code
-                </label>
-                <div className="bg-[#1e293b] border border-[#1e293b80] rounded-2xl h-14 px-4 flex items-center">
-                  <input
-                    type="text"
-                    value={postalCode}
-                    onChange={(e) => setPostalCode(e.target.value)}
-                    placeholder="Enter postal code"
-                    className="w-full h-full bg-transparent text-[#f8fafc] text-base outline-none placeholder:text-[#475569]"
-                  />
-                </div>
-              </div>
-
-              {error && (
-                <p className="text-red-400 text-sm text-center">{error}</p>
+            <button
+              onClick={handlePay}
+              disabled={processing || !stripe || !isReady}
+              className="w-full bg-[#4ade80] hover:bg-[#3bce71] rounded-2xl h-[60px] flex items-center justify-center transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{ boxShadow: "0 12px 40px -10px #4ade8080" }}
+            >
+              {processing ? (
+                <Loader2 className="w-6 h-6 animate-spin text-[#022c22]" />
+              ) : (
+                <span className="text-[#022c22] text-lg font-black">Pay now</span>
               )}
+            </button>
 
-              <button
-                onClick={handlePay}
-                disabled={processing || !stripe || !clientSecret}
-                className="w-full bg-[#4ade80] hover:bg-[#3bce71] rounded-2xl h-[60px] flex items-center justify-center transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{ boxShadow: "0 12px 40px -10px #4ade8080" }}
-              >
-                {processing ? (
-                  <Loader2 className="w-6 h-6 animate-spin text-[#022c22]" />
-                ) : (
-                  <span className="text-[#022c22] text-lg font-black">Pay now</span>
-                )}
-              </button>
-
-              <p className="text-[#94a3b8] text-xs text-center leading-[19.5px]">
-                By subscribing, you agree to allow Gamefolio to charge you according to their terms until you cancel. Subscription renews automatically. Cancel anytime. Secure checkout by Gamefolio
-              </p>
-            </div>
-          )}
+            <p className="text-[#94a3b8] text-xs text-center leading-[19.5px]">
+              By subscribing, you agree to allow Gamefolio to charge you according to their terms until you cancel. Subscription renews automatically. Cancel anytime. Secure checkout by Gamefolio
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -371,6 +232,10 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   const [purchasing, setPurchasing] = useState(false);
   const [step, setStep] = useState<"plans" | "checkout" | "success">("plans");
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
+  const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
+  const [checkoutPaymentIntentId, setCheckoutPaymentIntentId] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   const packages = getCurrentOffering();
 
@@ -419,6 +284,9 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
       setStep("plans");
       setBillingPeriod("yearly");
       setPurchasing(false);
+      setCheckoutClientSecret(null);
+      setCheckoutPaymentIntentId(null);
+      setCheckoutError(null);
     }
   }, [open]);
 
@@ -428,9 +296,24 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
     }
   }, [step, loadStripeInstance]);
 
-  const handleJoinPro = () => {
+  const handleJoinPro = async () => {
     if (!selectedPackage || purchasing) return;
-    setStep("checkout");
+    setCheckoutLoading(true);
+    setCheckoutError(null);
+    setCheckoutClientSecret(null);
+    setCheckoutPaymentIntentId(null);
+    try {
+      await loadStripeInstance();
+      const res = await apiRequest("POST", "/api/stripe/create-pro-subscription", { plan: billingPeriod });
+      const data = await res.json();
+      setCheckoutClientSecret(data.clientSecret);
+      setCheckoutPaymentIntentId(data.paymentIntentId);
+      setStep("checkout");
+    } catch (err: any) {
+      setCheckoutError(err?.message || "Failed to start checkout");
+    } finally {
+      setCheckoutLoading(false);
+    }
   };
 
   const checkoutPlanLabel = billingPeriod === "yearly" ? "Yearly" : "Monthly";
@@ -461,7 +344,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
     );
   }
 
-  const buttonDisabled = !isInitialized || isLoading || purchasing || !selectedPackage;
+  const buttonDisabled = !isInitialized || isLoading || purchasing || !selectedPackage || checkoutLoading;
 
   const planSelector = (compact: boolean = false) => {
     const yearlyPerMonth = yearlyPkg ? formatCurrency(getPriceAmount(yearlyPkg) / 12, getCurrency(yearlyPkg)) : null;
@@ -646,7 +529,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
           style={{ boxShadow: "0 0 30px -5px #4ade80" }}
           data-testid="button-upgrade-pro"
         >
-          {purchasing || isLoading ? (
+          {purchasing || isLoading || checkoutLoading ? (
             <Loader2 className="w-5 h-5 animate-spin text-[#022c22]" />
           ) : (
             <>
@@ -657,6 +540,10 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
             </>
           )}
         </button>
+
+        {checkoutError && (
+          <p className="text-red-400 text-xs text-center">{checkoutError}</p>
+        )}
 
         <span className="text-[#94a3b8] text-xs text-center">
           Cancel anytime. Terms and conditions apply.
@@ -704,13 +591,64 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
     </div>
   );
 
-  const checkoutScreen = stripePromise ? (
-    <Elements stripe={stripePromise} options={{ appearance: { theme: "night" } }}>
+  const checkoutScreen = stripePromise && checkoutClientSecret && checkoutPaymentIntentId ? (
+    <Elements
+      stripe={stripePromise}
+      options={{
+        clientSecret: checkoutClientSecret,
+        appearance: {
+          theme: "night",
+          variables: {
+            colorPrimary: "#4ade80",
+            colorBackground: "#1e293b",
+            colorText: "#f8fafc",
+            colorDanger: "#ef4444",
+            fontFamily: "Plus Jakarta Sans, system-ui, sans-serif",
+            borderRadius: "16px",
+            spacingUnit: "4px",
+          },
+          rules: {
+            ".Input": {
+              backgroundColor: "#1e293b",
+              border: "1px solid rgba(30, 41, 59, 0.5)",
+              padding: "16px",
+            },
+            ".Input:focus": {
+              border: "1px solid #4ade80",
+              boxShadow: "0 0 0 1px #4ade80",
+            },
+            ".Label": {
+              color: "#94a3b8",
+              fontSize: "10px",
+              fontWeight: "700",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+              marginBottom: "8px",
+            },
+            ".Tab": {
+              backgroundColor: "#1e293b",
+              border: "1px solid rgba(30, 41, 59, 0.5)",
+              color: "#94a3b8",
+            },
+            ".Tab:hover": {
+              backgroundColor: "#334155",
+              color: "#f8fafc",
+            },
+            ".Tab--selected": {
+              backgroundColor: "#334155",
+              border: "1px solid #4ade80",
+              color: "#f8fafc",
+            },
+          },
+        },
+      }}
+    >
       <CheckoutForm
         plan={billingPeriod}
         planLabel={checkoutPlanLabel}
         priceFormatted={checkoutPriceFormatted}
         periodLabel={checkoutPeriodLabel}
+        paymentIntentId={checkoutPaymentIntentId}
         onBack={() => setStep("plans")}
         onSuccess={() => setStep("success")}
       />
@@ -811,7 +749,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
                     style={{ boxShadow: "0 0 30px -5px #4ade80" }}
                     data-testid="button-upgrade-pro-mobile"
                   >
-                    {purchasing || isLoading ? (
+                    {purchasing || isLoading || checkoutLoading ? (
                       <Loader2 className="w-5 h-5 animate-spin text-[#022c22]" />
                     ) : (
                       <>
