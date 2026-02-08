@@ -6,7 +6,6 @@ import { useWallet } from "@/hooks/use-wallet";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useTokenBalance } from "@/hooks/use-token";
 import { useStaking } from "@/hooks/use-staking";
 import { usePurchaseGFT } from "@/hooks/use-purchase-gft";
 import { useAutoWallet } from "@/hooks/use-auto-wallet";
@@ -42,7 +41,7 @@ export default function WalletPage() {
   const [showStakingHub, setShowStakingHub] = useState(false);
   const [purchaseAmount, setPurchaseAmount] = useState(0);
   const [gftAmount, setGftAmount] = useState(0);
-  const { data: tokenBalance, isLoading: isLoadingBalance } = useTokenBalance();
+  const userGftBalance = user?.gfTokenBalance || 0;
   const { stakedAmount, earnedRewards, estimatedApy, stake, unstake, claimRewards, isStaking } = useStaking();
   const { createOrder, isCreatingOrder, checkOrderStatus, refreshBalances } = usePurchaseGFT();
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
@@ -158,7 +157,7 @@ export default function WalletPage() {
         totalStaked={stakedAmount}
         rewardsEarned={earnedRewards}
         estimatedApy={estimatedApy}
-        availableGft={user?.gfTokenBalance || tokenBalance?.balance || 0}
+        availableGft={userGftBalance}
         onStake={stake}
         onUnstake={unstake}
         onClaimRewards={claimRewards}
@@ -175,7 +174,7 @@ export default function WalletPage() {
           refreshBalances();
         }}
         gftAmount={gftAmount}
-        availableBalance={user?.gfTokenBalance || tokenBalance?.balance || 0}
+        availableBalance={userGftBalance}
       />
     );
   }
@@ -230,8 +229,8 @@ export default function WalletPage() {
     return (
       <WalletHomepage
         walletAddress={displayWalletAddress}
-        offChainBalance={user?.gfTokenBalance || tokenBalance?.balance || 0}
-        fiatValue={(user?.gfTokenBalance || tokenBalance?.balance || 0) * 0.01}
+        offChainBalance={userGftBalance}
+        fiatValue={userGftBalance * 0.01}
         stakedAmount={stakedAmount}
         nftsOwned={ownedNFTs.length}
         ownedNFTs={ownedNFTs}
@@ -240,7 +239,7 @@ export default function WalletPage() {
         onStakeClick={() => setShowStakingHub(true)}
         onNFTsClick={() => setLocation('/collection')}
         onNFTClick={(nftId) => setLocation(`/nft/${nftId}`)}
-        isLoadingBalance={isLoadingBalance}
+        isLoadingBalance={false}
       />
     );
   }
