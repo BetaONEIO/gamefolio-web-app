@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { Loader2 } from "lucide-react";
 
 interface Transaction {
   id: string;
@@ -64,32 +66,38 @@ export default function WalletHomepage({
   const estimatedFiat = fiatValue ?? totalBalance * 0.056;
   const displayPortfolioValue = portfolioValue ?? estimatedFiat;
 
-  const transactions: Transaction[] = [
-    {
-      id: "1",
-      type: "received",
-      title: "Received GFT",
-      subtitle: "From: 0x82...124",
-      amount: 150.00,
-      time: "2 hours ago"
+  const { data: activityData, isLoading: isLoadingActivity } = useQuery<{ activities: any[] }>({
+    queryKey: ['/api/wallet/activity'],
+    queryFn: async () => {
+      const res = await fetch('/api/wallet/activity', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch activity');
+      return res.json();
     },
-    {
-      id: "2", 
-      type: "staked",
-      title: "Staked GFT",
-      subtitle: "Validator: #042",
-      amount: -500.00,
-      time: "Yesterday"
-    },
-    {
-      id: "3",
-      type: "purchased",
-      title: "GFT Purchase",
-      subtitle: "Via Bank Card",
-      amount: 25.00,
-      time: "3 days ago"
-    }
-  ];
+  });
+
+  const formatTimeAgo = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  };
+
+  const transactions: Transaction[] = (activityData?.activities || []).slice(0, 5).map((a: any) => ({
+    id: a.id,
+    type: 'purchased' as const,
+    title: a.title || 'GFT Purchase',
+    subtitle: a.status === 'completed' ? `£${a.gbpAmount?.toFixed(2)} via Card` : a.status === 'pending' ? 'Payment pending' : a.status,
+    amount: a.amount,
+    time: formatTimeAgo(a.date),
+  }));
 
   const handleCopyAddress = async () => {
     if (walletAddress) {
@@ -322,6 +330,17 @@ export default function WalletHomepage({
               </div>
 
               <div className="flex flex-col gap-4">
+                {isLoadingActivity && (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="w-5 h-5 animate-spin" style={{ color: '#94a3b8' }} />
+                  </div>
+                )}
+                {!isLoadingActivity && transactions.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-6">
+                    <span style={{ color: '#94a3b8', fontSize: '14px' }}>No activity yet</span>
+                    <span style={{ color: '#64748b', fontSize: '12px' }}>Your purchases will appear here</span>
+                  </div>
+                )}
                 {transactions.map((tx) => (
                   <div 
                     key={tx.id}

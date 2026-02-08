@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ArrowLeft, Gift, TrendingUp, ShoppingCart, Award, Filter } from "lucide-react";
+import { ArrowLeft, Gift, TrendingUp, ShoppingCart, Award, Filter, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import ActivityDetailScreen from "./ActivityDetailScreen";
 
 type ActivityType = "all" | "purchases" | "staking" | "rewards";
@@ -13,78 +14,56 @@ interface Activity {
   amount: number;
   isPositive: boolean;
   date: string;
+  gbpAmount?: number;
+  stripePaymentIntentId?: string;
+  txHash?: string;
+  walletAddress?: string;
+  orderStatus?: string;
 }
 
 interface ActivityHistoryScreenProps {
   onBack: () => void;
 }
 
-const mockActivities: Activity[] = [
-  {
-    id: "1",
-    type: "reward",
-    title: "Claimed Reward",
-    status: "completed",
-    time: "4:5 AM",
-    amount: 50,
-    isPositive: true,
-    date: "today",
-  },
-  {
-    id: "2",
-    type: "stake",
-    title: "Stake GFT",
-    status: "completed",
-    time: "2:30 AM",
-    amount: 250,
-    isPositive: false,
-    date: "today",
-  },
-  {
-    id: "3",
-    type: "purchase",
-    title: "Purchase GFT",
-    status: "completed",
-    time: "12:15 AM",
-    amount: 446.42,
-    isPositive: true,
-    date: "today",
-  },
-  {
-    id: "4",
-    type: "reward",
-    title: "Daily Bonus",
-    status: "completed",
-    time: "11:30 PM",
-    amount: 25,
-    isPositive: true,
-    date: "yesterday",
-  },
-  {
-    id: "5",
-    type: "stake",
-    title: "Unstake GFT",
-    status: "completed",
-    time: "6:45 PM",
-    amount: 100,
-    isPositive: true,
-    date: "yesterday",
-  },
-  {
-    id: "6",
-    type: "purchase",
-    title: "Purchase GFT",
-    status: "completed",
-    time: "2:00 PM",
-    amount: 178.57,
-    isPositive: true,
-    date: "yesterday",
-  },
-];
-
 export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenProps) {
   const [activeFilter, setActiveFilter] = useState<ActivityType>("all");
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+
+  const { data: activityData, isLoading } = useQuery<{ activities: any[] }>({
+    queryKey: ['/api/wallet/activity'],
+    queryFn: async () => {
+      const res = await fetch('/api/wallet/activity', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch activity');
+      return res.json();
+    },
+  });
+
+  const getDateLabel = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today.getTime() - 86400000);
+    const activityDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    if (activityDate.getTime() === today.getTime()) return "today";
+    if (activityDate.getTime() === yesterday.getTime()) return "yesterday";
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
+  const activities: Activity[] = (activityData?.activities || []).map((a: any) => ({
+    id: a.id,
+    type: 'purchase' as const,
+    title: a.title || 'GFT Purchase',
+    status: a.status as Activity['status'],
+    time: a.time,
+    amount: a.amount,
+    isPositive: true,
+    date: getDateLabel(a.date),
+    gbpAmount: a.gbpAmount,
+    stripePaymentIntentId: a.stripePaymentIntentId,
+    txHash: a.txHash,
+    walletAddress: a.walletAddress,
+    orderStatus: a.orderStatus,
+  }));
 
   if (selectedActivity) {
     return (
@@ -99,11 +78,10 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
           isPositive: selectedActivity.isPositive,
           date: selectedActivity.date === "today" ? "Today" : selectedActivity.date === "yesterday" ? "Yesterday" : selectedActivity.date,
           time: selectedActivity.time,
-          transactionHash: "0x7a2f...3b4e",
-          fromAddress: "0x82a1...1f24",
-          toAddress: "0x12a8...3b89",
+          transactionHash: selectedActivity.txHash || undefined,
+          toAddress: selectedActivity.walletAddress || undefined,
           networkFee: "Free",
-          paymentMethod: selectedActivity.type === "purchase" ? "VISA •••• 4242" : undefined,
+          paymentMethod: selectedActivity.type === "purchase" ? `£${selectedActivity.gbpAmount?.toFixed(2)} Card` : undefined,
         }}
       />
     );
@@ -116,7 +94,7 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
     { id: "rewards", label: "Rewards" },
   ];
 
-  const filteredActivities = mockActivities.filter((activity) => {
+  const filteredActivities = activities.filter((activity) => {
     if (activeFilter === "all") return true;
     if (activeFilter === "purchases") return activity.type === "purchase";
     if (activeFilter === "staking") return activity.type === "stake" || activity.type === "unstake";
@@ -246,7 +224,12 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
 
       {/* Activity List */}
       <div className="flex-1 px-6 py-6 max-w-[430px] mx-auto w-full">
-        <div className="flex flex-col gap-8">
+        {isLoading && (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#4ade80' }} />
+          </div>
+        )}
+        {!isLoading && <div className="flex flex-col gap-8">
           {Object.entries(groupedActivities).map(([date, activities]) => (
             <div key={date} className="flex flex-col gap-4">
               {/* Date Label */}
@@ -333,7 +316,7 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
               </span>
             </div>
           )}
-        </div>
+        </div>}
       </div>
     </div>
   );

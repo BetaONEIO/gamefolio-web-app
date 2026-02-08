@@ -32,50 +32,21 @@ interface ActivityDetailScreenProps {
   };
 }
 
-const mockActivity = {
-  id: "1",
+const defaultActivity = {
+  id: "",
   type: "purchase" as ActivityType,
   title: "GFT Purchase",
-  status: "completed" as ActivityStatus,
-  amount: 446.42,
+  status: "pending" as ActivityStatus,
+  amount: 0,
   isPositive: true,
-  date: "May 24, 2024",
-  time: "15:30 PM",
-  transactionHash: "0x7a2f...3b4e",
-  fromAddress: "0x82a1...1f24",
-  toAddress: "0x12a8...3b89",
+  date: "",
+  time: "",
   networkFee: "Free",
-  paymentMethod: "VISA •••• 4242",
-  warningMessage: "The transaction encountered a minor delay due to high network congestion. Confirmation took longer than expected but was eventually successful.",
 };
-
-const mockTimeline: TimelineStep[] = [
-  {
-    id: "1",
-    title: "Created",
-    description: "Order initiated for 250 GFT",
-    time: "3:28 PM",
-    status: "completed",
-  },
-  {
-    id: "2",
-    title: "Payment Confirmed",
-    description: "Card payment verified",
-    time: "3:29 PM",
-    status: "completed",
-  },
-  {
-    id: "3",
-    title: "Tokens Delivered",
-    description: "GFT sent to your wallet",
-    time: "3:30 PM",
-    status: "completed",
-  },
-];
 
 export default function ActivityDetailScreen({
   onBack,
-  activity = mockActivity,
+  activity = defaultActivity,
 }: ActivityDetailScreenProps) {
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -265,7 +236,25 @@ export default function ActivityDetailScreen({
           </span>
 
           <div className="flex flex-col">
-            {mockTimeline.map((step, index) => (
+            {(() => {
+              const timeline: TimelineStep[] = [];
+              if (activity.type === 'purchase') {
+                timeline.push({ id: '1', title: 'Order Created', description: `Purchase initiated for ${activity.amount.toLocaleString()} GFT`, time: activity.time, status: 'completed' });
+                if (activity.status === 'completed' || activity.status === 'processing') {
+                  timeline.push({ id: '2', title: 'Payment Confirmed', description: 'Card payment verified', time: activity.time, status: 'completed' });
+                } else {
+                  timeline.push({ id: '2', title: 'Payment Confirmation', description: 'Awaiting payment', time: '', status: activity.status === 'pending' ? 'pending' : 'current' });
+                }
+                if (activity.status === 'completed') {
+                  timeline.push({ id: '3', title: 'Tokens Delivered', description: 'GFT credited to your balance', time: activity.time, status: 'completed' });
+                } else {
+                  timeline.push({ id: '3', title: 'Token Delivery', description: 'GFT will be credited to your balance', time: '', status: 'pending' });
+                }
+              } else {
+                timeline.push({ id: '1', title: activity.title, description: `${activity.amount.toLocaleString()} GFT`, time: activity.time, status: activity.status === 'completed' ? 'completed' : 'current' });
+              }
+              return timeline;
+            })().map((step, index, arr) => (
               <div key={step.id} className="flex gap-4">
                 {/* Timeline Line & Dot */}
                 <div className="flex flex-col items-center">
@@ -283,7 +272,7 @@ export default function ActivityDetailScreen({
                       <Clock className="w-3.5 h-3.5" style={{ color: '#fff' }} />
                     )}
                   </div>
-                  {index < mockTimeline.length - 1 && (
+                  {index < arr.length - 1 && (
                     <div
                       className="w-0.5 h-8"
                       style={{ background: step.status === 'completed' ? '#4ade80' : '#1e293b' }}

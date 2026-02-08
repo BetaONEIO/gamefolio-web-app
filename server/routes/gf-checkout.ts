@@ -404,4 +404,51 @@ router.post('/api/gf/confirm-payment', hybridAuth, async (req: Request, res: Res
   }
 });
 
+router.get('/api/wallet/activity', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const orders = await db.select()
+      .from(gfOrders)
+      .where(eq(gfOrders.userId, userId))
+      .orderBy(desc(gfOrders.createdAt))
+      .limit(50);
+
+    const activities = orders.map((order) => {
+      const statusMap: Record<string, string> = {
+        'credited': 'completed',
+        'completed': 'completed',
+        'created': 'pending',
+        'pending': 'pending',
+        'processing': 'processing',
+        'failed': 'failed',
+      };
+
+      return {
+        id: order.id,
+        type: 'purchase' as const,
+        title: 'GFT Purchase',
+        status: statusMap[order.status] || 'pending',
+        amount: order.gfAmount,
+        gbpAmount: order.gbpAmount,
+        isPositive: true,
+        date: order.createdAt.toISOString(),
+        time: order.createdAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+        stripePaymentIntentId: order.stripePaymentIntentId,
+        txHash: order.txHash,
+        walletAddress: order.walletAddress,
+        orderStatus: order.status,
+      };
+    });
+
+    return res.json({ activities });
+  } catch (error: any) {
+    console.error('Wallet activity error:', error);
+    return res.status(500).json({ error: 'Failed to fetch activity' });
+  }
+});
+
 export default router;
