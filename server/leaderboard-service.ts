@@ -132,43 +132,41 @@ export class LeaderboardService {
     // Get or create monthly leaderboard entry
     let entry = await storage.getMonthlyLeaderboardEntry(userId, monthKey, year);
     
+    const isDeduction = points < 0;
+    const countDelta = isDeduction ? -1 : 1;
+
     if (!entry) {
-      // Create new entry
       entry = await storage.createMonthlyLeaderboardEntry({
         userId,
         month: monthKey,
         year,
-        uploadsCount: action === 'upload' ? 1 : 0,
-        likesGivenCount: action === 'like' ? 1 : 0,
-        commentsCount: action === 'comment' ? 1 : 0,
-        firesGivenCount: action === 'fire' ? 1 : 0,
-        viewsCount: action === 'view' ? 1 : 0,
+        uploadsCount: action === 'upload' ? Math.max(0, countDelta) : 0,
+        likesGivenCount: action === 'like' ? Math.max(0, countDelta) : 0,
+        commentsCount: action === 'comment' ? Math.max(0, countDelta) : 0,
+        firesGivenCount: action === 'fire' ? Math.max(0, countDelta) : 0,
+        viewsCount: action === 'view' ? Math.max(0, countDelta) : 0,
         totalPoints: points,
       });
     } else {
-      // Update existing entry
       const updates = {
-        uploadsCount: entry.uploadsCount + (action === 'upload' ? 1 : 0),
-        likesGivenCount: entry.likesGivenCount + (action === 'like' ? 1 : 0),
-        commentsCount: entry.commentsCount + (action === 'comment' ? 1 : 0),
-        firesGivenCount: entry.firesGivenCount + (action === 'fire' ? 1 : 0),
-        viewsCount: entry.viewsCount + (action === 'view' ? 1 : 0),
+        uploadsCount: Math.max(0, entry.uploadsCount + (action === 'upload' ? countDelta : 0)),
+        likesGivenCount: Math.max(0, entry.likesGivenCount + (action === 'like' ? countDelta : 0)),
+        commentsCount: Math.max(0, entry.commentsCount + (action === 'comment' ? countDelta : 0)),
+        firesGivenCount: Math.max(0, entry.firesGivenCount + (action === 'fire' ? countDelta : 0)),
+        viewsCount: Math.max(0, entry.viewsCount + (action === 'view' ? countDelta : 0)),
         totalPoints: entry.totalPoints + points,
       };
       
       await storage.updateMonthlyLeaderboardEntry(entry.id, updates);
     }
 
-    // Recalculate rankings for the month
     await this.recalculateRankings(monthKey, year);
   }
 
-  // Recalculate rankings for a specific month
   static async recalculateRankings(month: string, year: number): Promise<void> {
     await storage.recalculateMonthlyRankings(month, year);
   }
 
-  // Update the weekly leaderboard for a user
   static async updateWeeklyLeaderboard(
     userId: number,
     action: keyof typeof POINT_VALUES,
@@ -177,30 +175,30 @@ export class LeaderboardService {
   ): Promise<void> {
     const { week, year } = this.getCurrentWeek(timestamp);
 
-    // Get or create weekly leaderboard entry
+    const isDeduction = points < 0;
+    const countDelta = isDeduction ? -1 : 1;
+
     let entry = await storage.getWeeklyLeaderboardEntry(userId, week, year);
     
     if (!entry) {
-      // Create new entry
       entry = await storage.createWeeklyLeaderboardEntry({
         userId,
         week,
         year,
-        uploadsCount: action === 'upload' ? 1 : 0,
-        likesGivenCount: action === 'like' ? 1 : 0,
-        commentsCount: action === 'comment' ? 1 : 0,
-        firesGivenCount: action === 'fire' ? 1 : 0,
-        viewsCount: action === 'view' ? 1 : 0,
+        uploadsCount: action === 'upload' ? Math.max(0, countDelta) : 0,
+        likesGivenCount: action === 'like' ? Math.max(0, countDelta) : 0,
+        commentsCount: action === 'comment' ? Math.max(0, countDelta) : 0,
+        firesGivenCount: action === 'fire' ? Math.max(0, countDelta) : 0,
+        viewsCount: action === 'view' ? Math.max(0, countDelta) : 0,
         totalPoints: points,
       });
     } else {
-      // Update existing entry
       const updates = {
-        uploadsCount: entry.uploadsCount + (action === 'upload' ? 1 : 0),
-        likesGivenCount: entry.likesGivenCount + (action === 'like' ? 1 : 0),
-        commentsCount: entry.commentsCount + (action === 'comment' ? 1 : 0),
-        firesGivenCount: entry.firesGivenCount + (action === 'fire' ? 1 : 0),
-        viewsCount: entry.viewsCount + (action === 'view' ? 1 : 0),
+        uploadsCount: Math.max(0, entry.uploadsCount + (action === 'upload' ? countDelta : 0)),
+        likesGivenCount: Math.max(0, entry.likesGivenCount + (action === 'like' ? countDelta : 0)),
+        commentsCount: Math.max(0, entry.commentsCount + (action === 'comment' ? countDelta : 0)),
+        firesGivenCount: Math.max(0, entry.firesGivenCount + (action === 'fire' ? countDelta : 0)),
+        viewsCount: Math.max(0, entry.viewsCount + (action === 'view' ? countDelta : 0)),
         totalPoints: entry.totalPoints + points,
       };
       
