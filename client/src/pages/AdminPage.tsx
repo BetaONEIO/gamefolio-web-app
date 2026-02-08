@@ -1351,6 +1351,7 @@ const AdminPage = () => {
   const [assetsDropdownBucket, setAssetsDropdownBucket] = useState<string>("");
   const [assetsBucketFolder, setAssetsBucketFolder] = useState<string>("");
   const [assetsSelectedBucketName, setAssetsSelectedBucketName] = useState<string>("");
+  const [assetsSearchQuery, setAssetsSearchQuery] = useState<string>("");
 
   const { data: assetBucketList, isLoading: assetBucketsLoading } = useQuery<{ id: string; name: string; public: boolean; createdAt: string }[]>({
     queryKey: ["/api/admin/storage/buckets"],
@@ -4713,6 +4714,19 @@ const AdminPage = () => {
             )}
           </div>
 
+          {assetsActiveBucket && (
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search assets by name..."
+                value={assetsSearchQuery}
+                onChange={(e) => setAssetsSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          )}
+
           {assetsBucketFolder && (
             <div className="text-sm text-muted-foreground mb-3">
               Current folder: <span className="font-mono bg-muted px-2 py-1 rounded">{assetsBucketFolder}</span>
@@ -4728,11 +4742,11 @@ const AdminPage = () => {
             <div className="text-center py-8 text-muted-foreground">Loading assets...</div>
           ) : (
             <div className="space-y-4">
-              {assetsActiveBucketData?.folders && assetsActiveBucketData.folders.length > 0 && (
+              {assetsActiveBucketData?.folders && assetsActiveBucketData.folders.filter(f => !assetsSearchQuery || f.toLowerCase().includes(assetsSearchQuery.toLowerCase())).length > 0 && (
                 <div>
                   <h4 className="text-xs font-medium mb-2 text-muted-foreground">Folders</h4>
                   <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
-                    {assetsActiveBucketData.folders.map((folder) => (
+                    {assetsActiveBucketData.folders.filter(f => !assetsSearchQuery || f.toLowerCase().includes(assetsSearchQuery.toLowerCase())).map((folder) => (
                       <button
                         key={folder}
                         onClick={() => setAssetsBucketFolder(prev => prev ? `${prev}/${folder}` : folder)}
@@ -4746,11 +4760,13 @@ const AdminPage = () => {
                 </div>
               )}
 
-              {assetsActiveBucketData?.files && assetsActiveBucketData.files.length > 0 && (
+              {assetsActiveBucketData?.files && (() => {
+                const filteredFiles = assetsActiveBucketData.files.filter(f => !assetsSearchQuery || f.name.toLowerCase().includes(assetsSearchQuery.toLowerCase()));
+                return filteredFiles.length > 0 ? (
                 <div>
-                  <h4 className="text-xs font-medium mb-2 text-muted-foreground">Assets ({assetsActiveBucketData.files.length})</h4>
+                  <h4 className="text-xs font-medium mb-2 text-muted-foreground">Assets ({filteredFiles.length}{assetsSearchQuery ? ` of ${assetsActiveBucketData.files.length}` : ''})</h4>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {assetsActiveBucketData.files.map((file) => {
+                    {filteredFiles.map((file) => {
                       const assignment = getAssignment(file.publicUrl);
                       return (
                         <div
@@ -4831,9 +4847,14 @@ const AdminPage = () => {
                     })}
                   </div>
                 </div>
-              )}
+              ) : assetsSearchQuery ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No assets matching "{assetsSearchQuery}"
+                </div>
+              ) : null;
+              })()}
 
-              {assetsActiveBucketData?.files?.length === 0 && assetsActiveBucketData?.folders?.length === 0 && (
+              {assetsActiveBucketData?.files?.length === 0 && assetsActiveBucketData?.folders?.length === 0 && !assetsSearchQuery && (
                 <div className="text-center py-8 text-muted-foreground">No files or folders in this location</div>
               )}
             </div>
