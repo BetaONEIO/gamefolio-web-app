@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 import TrendingGameCard from "@/components/clips/TrendingGameCard";
@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClipWithUser, Game } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
-import { ChevronRight, Video, Plus, Camera, Image, Eye } from "lucide-react";
+import { ChevronRight, ChevronLeft, Video, Plus, Camera, Image, Eye } from "lucide-react";
 import BannerImage from "@assets/Untitled (1920 x 1080 px).png";
 import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
 import { useLocation, Link } from "wouter";
@@ -31,12 +31,27 @@ const POPULAR_GAMES = [
   { id: 'minecraft', name: 'Minecraft' },
 ];
 
+interface HeroSlide {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  buttonText: string | null;
+  buttonLink: string | null;
+  imageUrl: string;
+  displayOrder: number;
+  isActive: boolean;
+}
+
 const HomePage = () => {
   const [feedPeriod, setFeedPeriod] = useState<'day' | 'week' | 'month'>('day');
   const [selectedGameFilter, setSelectedGameFilter] = useState<string | null>(null);
   const [activeContentTab, setActiveContentTab] = useState<'clips' | 'reels' | 'screenshots'>('clips');
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  
+  // Hero carousel state
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const slideTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
   // Refs for grab scroll behavior
   const trendingGamesRef = useRef<HTMLDivElement>(null);
@@ -48,6 +63,51 @@ const HomePage = () => {
   const { openClipDialog } = useClipDialog();
   const isMobile = useMobile();
   const { toast } = useToast();
+
+  const { data: heroSlides } = useQuery<HeroSlide[]>({
+    queryKey: ["/api/hero-slides"],
+    staleTime: 60000,
+  });
+
+  const activeSlides = useMemo(() => {
+    if (!heroSlides || heroSlides.length === 0) return null;
+    return heroSlides;
+  }, [heroSlides]);
+
+  const resetSlideTimer = useCallback(() => {
+    if (slideTimerRef.current) clearInterval(slideTimerRef.current);
+    if (activeSlides && activeSlides.length > 1) {
+      slideTimerRef.current = setInterval(() => {
+        setCurrentSlide((prev) => (prev + 1) % activeSlides.length);
+      }, 6000);
+    }
+  }, [activeSlides]);
+
+  useEffect(() => {
+    resetSlideTimer();
+    return () => { if (slideTimerRef.current) clearInterval(slideTimerRef.current); };
+  }, [resetSlideTimer]);
+
+  useEffect(() => {
+    if (activeSlides && currentSlide >= activeSlides.length) {
+      setCurrentSlide(0);
+    }
+  }, [activeSlides, currentSlide]);
+
+  const goToSlide = useCallback((idx: number) => {
+    setCurrentSlide(idx);
+    resetSlideTimer();
+  }, [resetSlideTimer]);
+
+  const nextSlide = useCallback(() => {
+    if (!activeSlides) return;
+    goToSlide((currentSlide + 1) % activeSlides.length);
+  }, [activeSlides, currentSlide, goToSlide]);
+
+  const prevSlide = useCallback(() => {
+    if (!activeSlides) return;
+    goToSlide((currentSlide - 1 + activeSlides.length) % activeSlides.length);
+  }, [activeSlides, currentSlide, goToSlide]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -335,38 +395,103 @@ const HomePage = () => {
 
   return (
     <div className="space-y-16 max-w-none px-4 md:px-6 py-4 md:py-6">
-      {/* Hero Banner - Full width with negative margin to compensate for parent padding */}
+      {/* Hero Banner Carousel - Full width with negative margin to compensate for parent padding */}
       <section className="mb-10 -mx-4 md:-mx-6 -mt-4 md:-mt-6">
         <div className="relative overflow-hidden">
-          {/* Forza Racing GIF Background */}
           <div className="w-full bg-black relative min-h-[350px] md:min-h-[450px] lg:min-h-[500px] xl:min-h-[550px] border-b-2 border-primary">
-            <img 
-              src={ForzaGif} 
-              alt="Epic racing gameplay - Build your Gamefolio" 
-              className="w-full h-full object-cover"
-            />
+            {activeSlides && activeSlides.length > 0 ? (
+              <div className="relative w-full h-full min-h-[350px] md:min-h-[450px] lg:min-h-[500px] xl:min-h-[550px]">
+                {activeSlides.map((slide, idx) => (
+                  <div
+                    key={slide.id}
+                    className="absolute inset-0 transition-opacity duration-700 ease-in-out"
+                    style={{ opacity: idx === currentSlide ? 1 : 0, zIndex: idx === currentSlide ? 1 : 0 }}
+                  >
+                    <img
+                      src={slide.imageUrl}
+                      alt={slide.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/70">
+                      <div className="flex flex-col items-start justify-center h-full max-w-3xl p-8 md:p-12">
+                        <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight drop-shadow-md">
+                          {slide.title}
+                        </h1>
+                        {slide.subtitle && (
+                          <h2 className="text-2xl md:text-3xl font-semibold text-primary mb-6 leading-tight drop-shadow-lg">
+                            {slide.subtitle}
+                          </h2>
+                        )}
+                        {slide.buttonText && (
+                          <Button
+                            className="w-fit px-6 py-5 h-auto text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground mt-4"
+                            onClick={() => slide.buttonLink && setLocation(slide.buttonLink)}
+                          >
+                            {slide.buttonText}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {activeSlides.length > 1 && (
+                  <>
+                    <button
+                      onClick={prevSlide}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+                      aria-label="Previous slide"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={nextSlide}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+                      aria-label="Next slide"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2">
+                      {activeSlides.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => goToSlide(idx)}
+                          className={`w-2.5 h-2.5 rounded-full transition-all ${idx === currentSlide ? 'bg-primary w-6' : 'bg-white/50 hover:bg-white/80'}`}
+                          aria-label={`Go to slide ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <img
+                src={ForzaGif}
+                alt="Epic racing gameplay - Build your Gamefolio"
+                className="w-full h-full object-cover"
+              />
+            )}
           </div>
-          
-          {/* Darker overlay for better text readability */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/70">
-            <div className="flex flex-col items-start justify-center h-full max-w-3xl p-8 md:p-12">
-              <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight drop-shadow-md">
-                Build Your Gamefolio
-              </h1>
-              <h2 className="text-2xl md:text-3xl font-semibold text-primary mb-6 leading-tight drop-shadow-lg">
-                With Your Best Gaming Clips
-              </h2>
-              <p className="text-gray-200 mb-8 max-w-lg text-base md:text-lg leading-relaxed">
-                Showcase your most epic gaming moments, connect with other gamers, and build your personal gaming portfolio.
-              </p>
-              <Button 
-                className="w-fit px-6 py-5 h-auto text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
-                onClick={() => setLocation('/upload')}
-              >
-                Start Building Now
-              </Button>
+          {(!activeSlides || activeSlides.length === 0) && (
+            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/70">
+              <div className="flex flex-col items-start justify-center h-full max-w-3xl p-8 md:p-12">
+                <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight drop-shadow-md">
+                  Build Your Gamefolio
+                </h1>
+                <h2 className="text-2xl md:text-3xl font-semibold text-primary mb-6 leading-tight drop-shadow-lg">
+                  With Your Best Gaming Clips
+                </h2>
+                <p className="text-gray-200 mb-8 max-w-lg text-base md:text-lg leading-relaxed">
+                  Showcase your most epic gaming moments, connect with other gamers, and build your personal gaming portfolio.
+                </p>
+                <Button
+                  className="w-fit px-6 py-5 h-auto text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                  onClick={() => setLocation('/upload')}
+                >
+                  Start Building Now
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
       
