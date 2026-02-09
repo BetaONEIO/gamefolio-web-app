@@ -1190,6 +1190,11 @@ const AdminPage = () => {
   const [slideImageUrl, setSlideImageUrl] = useState("");
   const [slideIsActive, setSlideIsActive] = useState(true);
   const [slideUploading, setSlideUploading] = useState(false);
+  const [activeSlideTab, setActiveSlideTab] = useState<string>("overview");
+  const [slideBucketBrowser, setSlideBucketBrowser] = useState(false);
+  const [slideBucketName, setSlideBucketName] = useState("gamefolio-backgrounds");
+  const [slideBucketImages, setSlideBucketImages] = useState<any[]>([]);
+  const [slideBucketLoading, setSlideBucketLoading] = useState(false);
   
   // Level management state
   const [levelUserSearch, setLevelUserSearch] = useState("");
@@ -1964,7 +1969,28 @@ const AdminPage = () => {
     setSlideButtonLink(slide.buttonLink || "");
     setSlideImageUrl(slide.imageUrl || "");
     setSlideIsActive(slide.isActive ?? true);
-    setHeroSlideDialogOpen(true);
+    setActiveSlideTab(`slide-${slide.id}`);
+  };
+
+  const fetchSlideBucketImages = async (bucket: string) => {
+    setSlideBucketLoading(true);
+    try {
+      const res = await fetch(`/api/admin/storage/buckets/${bucket}/files`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to load images");
+      const data = await res.json();
+      setSlideBucketImages(data.files?.filter((f: any) => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(f.name)) || []);
+    } catch (err) {
+      setSlideBucketImages([]);
+    } finally {
+      setSlideBucketLoading(false);
+    }
+  };
+
+  const handleAddNewSlide = () => {
+    resetSlideForm();
+    setActiveSlideTab("new-slide");
   };
 
   const handleSlideImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2013,7 +2039,7 @@ const AdminPage = () => {
         toast({ title: "Slide created", description: "New hero slide has been added." });
       }
       resetSlideForm();
-      setHeroSlideDialogOpen(false);
+      setActiveSlideTab("overview");
       refetchHeroSlides();
     } catch (err: any) {
       toast({ title: "Error", description: err.message || "Failed to save slide", variant: "destructive" });
@@ -2081,7 +2107,6 @@ const AdminPage = () => {
           <TabsTrigger value="streaks" className="text-xs px-3 py-1.5">Streaks</TabsTrigger>
           <TabsTrigger value="points" className="text-xs px-3 py-1.5">Points</TabsTrigger>
           <TabsTrigger value="hero-text" className="text-xs px-3 py-1.5">Hero</TabsTrigger>
-          <TabsTrigger value="hero-slides" className="text-xs px-3 py-1.5">Slides</TabsTrigger>
           <TabsTrigger value="asset-rewards" className="text-xs px-3 py-1.5">Rewards</TabsTrigger>
           <TabsTrigger value="lootbox" className="text-xs px-3 py-1.5">Lootbox</TabsTrigger>
           <TabsTrigger value="store-management" className="text-xs px-3 py-1.5">Store</TabsTrigger>
@@ -3844,306 +3869,346 @@ const AdminPage = () => {
           </Card>
         </TabsContent>
 
-        {/* Hero Text Tab */}
+        {/* Hero Slides Management Tab */}
         <TabsContent value="hero-text" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Type className="h-5 w-5" />
-                Hero Text Management
-              </CardTitle>
-              <CardDescription>
-                Customize the hero text displayed to different user groups on the homepage
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {heroTextLoading ? (
-                <div className="text-center py-4">Loading current settings...</div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <label htmlFor="heroTitle" className="text-sm font-medium">
-                        Hero Title
-                      </label>
-                      <Input
-                        id="heroTitle"
-                        placeholder="Enter hero title"
-                        value={heroTextTitle}
-                        onChange={(e) => setHeroTextTitle(e.target.value)}
-                        data-testid="input-hero-title"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="heroSubtitle" className="text-sm font-medium">
-                        Hero Subtitle
-                      </label>
-                      <Input
-                        id="heroSubtitle"
-                        placeholder="Enter hero subtitle"
-                        value={heroTextSubtitle}
-                        onChange={(e) => setHeroTextSubtitle(e.target.value)}
-                        data-testid="input-hero-subtitle"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <label htmlFor="heroButtonText" className="text-sm font-medium">
-                        Button Text (Optional)
-                      </label>
-                      <Input
-                        id="heroButtonText"
-                        placeholder="e.g., Get Started"
-                        value={heroButtonText}
-                        onChange={(e) => setHeroButtonText(e.target.value)}
-                        data-testid="input-hero-button-text"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="heroButtonUrl" className="text-sm font-medium">
-                        Button URL (Optional)
-                      </label>
-                      <Input
-                        id="heroButtonUrl"
-                        placeholder="e.g., /explore or https://example.com"
-                        value={heroButtonUrl}
-                        onChange={(e) => setHeroButtonUrl(e.target.value)}
-                        data-testid="input-hero-button-url"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="heroTargetAudience" className="text-sm font-medium">
-                      Target Audience
-                    </label>
-                    <select
-                      id="heroTargetAudience"
-                      value={heroTargetAudience}
-                      onChange={(e) => setHeroTargetAudience(e.target.value)}
-                      className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                      data-testid="select-hero-target-audience"
-                    >
-                      <option value="new_users">New Users (No content uploaded)</option>
-                      <option value="existing_users">Existing Users (Authenticated)</option>
-                      <option value="experienced_users">Experienced Users (With content)</option>
-                      <option value="all_users">All Users</option>
-                    </select>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Choose which users will see this hero text on the homepage
-                    </p>
-                  </div>
-                  
-                  <div className="border rounded-lg p-4 bg-muted/50">
-                    <h4 className="font-medium mb-2">Preview</h4>
-                    <div className="space-y-3">
-                      <div className="text-lg font-semibold">
-                        {heroTextTitle || "Enter title above"}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {heroTextSubtitle || "Enter subtitle above"}
-                      </div>
-                      {heroButtonText && (
-                        <Button variant="default" size="sm" disabled>
-                          {heroButtonText}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <Button 
-                      onClick={handleUpdateHeroText}
-                      disabled={!heroTextTitle.trim() || !heroTextSubtitle.trim()}
-                      data-testid="button-update-hero-text"
-                    >
-                      Update Hero Text
-                    </Button>
-                  </div>
-
-                  <div className="border-t pt-4">
-                    <h4 className="font-medium mb-2">Current Settings</h4>
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <p><strong>Current Title:</strong> {currentHeroText?.title || "Not set"}</p>
-                      <p><strong>Current Subtitle:</strong> {currentHeroText?.subtitle || "Not set"}</p>
-                      <p><strong>Button Text:</strong> {currentHeroText?.buttonText || "Not set"}</p>
-                      <p><strong>Button URL:</strong> {currentHeroText?.buttonUrl || "Not set"}</p>
-                      <p><strong>Target Audience:</strong> {
-                        currentHeroText?.targetAudience === 'new_users' ? 'New Users' :
-                        currentHeroText?.targetAudience === 'existing_users' ? 'Existing Users' :
-                        currentHeroText?.targetAudience === 'experienced_users' ? 'Experienced Users' :
-                        currentHeroText?.targetAudience === 'all_users' ? 'All Users' :
-                        'Experienced Users'
-                      }</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="hero-slides" className="space-y-4">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
-                    <Package className="h-5 w-5" />
+                    <Type className="h-5 w-5" />
                     Hero Slides Management
                   </CardTitle>
                   <CardDescription>
-                    Manage the rotating hero banner slides on the homepage. Each slide can have its own image, text, and call-to-action button.
+                    Manage the rotating hero banner slides on the homepage. Each slide has its own image, text, and call-to-action button.
                   </CardDescription>
                 </div>
-                <Button onClick={() => { resetSlideForm(); setHeroSlideDialogOpen(true); }}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Slide
-                </Button>
               </div>
             </CardHeader>
             <CardContent>
               {heroSlidesLoading ? (
                 <div className="text-center py-8 text-muted-foreground">Loading slides...</div>
-              ) : !heroSlides?.length ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No hero slides configured yet.</p>
-                  <p className="text-sm mt-1">The homepage will show the default banner until you add slides.</p>
-                </div>
               ) : (
-                <div className="space-y-3">
-                  {[...heroSlides].sort((a, b) => a.displayOrder - b.displayOrder).map((slide, idx) => (
-                    <div key={slide.id} className={`flex items-center gap-4 p-3 rounded-lg border ${slide.isActive ? 'border-border' : 'border-border/50 opacity-60'}`}>
-                      <div className="flex flex-col gap-1">
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleMoveSlide(slide, 'up')} disabled={idx === 0}>
-                          <ChevronDown className="h-4 w-4 rotate-180" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleMoveSlide(slide, 'down')} disabled={idx === heroSlides.length - 1}>
-                          <ChevronDown className="h-4 w-4" />
+                <Tabs value={activeSlideTab} onValueChange={setActiveSlideTab}>
+                  <div className="flex items-center gap-2 mb-4 overflow-x-auto">
+                    <TabsList className="flex-shrink-0">
+                      <TabsTrigger value="overview" className="text-xs px-3">Overview</TabsTrigger>
+                      {heroSlides && [...heroSlides].sort((a, b) => a.displayOrder - b.displayOrder).map((slide, idx) => (
+                        <TabsTrigger key={slide.id} value={`slide-${slide.id}`} className="text-xs px-3">
+                          Slide {idx + 1}
+                        </TabsTrigger>
+                      ))}
+                      <TabsTrigger value="new-slide" className="text-xs px-3">
+                        <Plus className="h-3 w-3 mr-1" /> Add Slide
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
+
+                  <TabsContent value="overview" className="space-y-4">
+                    {!heroSlides?.length ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <Type className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                        <p className="font-medium">No hero slides yet</p>
+                        <p className="text-sm mt-1">The homepage will show the default banner until you add slides.</p>
+                        <Button className="mt-4" onClick={handleAddNewSlide}>
+                          <Plus className="h-4 w-4 mr-2" /> Create Your First Slide
                         </Button>
                       </div>
-                      <div className="w-32 h-20 rounded overflow-hidden bg-muted flex-shrink-0">
-                        <img src={slide.imageUrl} alt={slide.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="space-y-3">
+                        {[...heroSlides].sort((a, b) => a.displayOrder - b.displayOrder).map((slide, idx) => (
+                          <div key={slide.id} className={`flex items-center gap-4 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors ${slide.isActive ? 'border-border' : 'border-border/50 opacity-60'}`} onClick={() => openEditSlide(slide)}>
+                            <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleMoveSlide(slide, 'up')} disabled={idx === 0}>
+                                <ChevronDown className="h-4 w-4 rotate-180" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleMoveSlide(slide, 'down')} disabled={idx === heroSlides.length - 1}>
+                                <ChevronDown className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="w-32 h-20 rounded overflow-hidden bg-muted flex-shrink-0">
+                              {slide.imageUrl ? (
+                                <img src={slide.imageUrl} alt={slide.title} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">No image</div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium truncate">{slide.title}</h4>
+                                {!slide.isActive && <Badge variant="secondary" className="text-xs">Inactive</Badge>}
+                              </div>
+                              {slide.subtitle && <p className="text-sm text-muted-foreground truncate">{slide.subtitle}</p>}
+                              {slide.buttonText && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Button: "{slide.buttonText}" &rarr; {slide.buttonLink || 'No link'}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <Switch checked={slide.isActive} onCheckedChange={() => handleToggleSlide(slide)} />
+                              <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={() => handleDeleteSlide(slide.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                        <Button variant="outline" className="w-full mt-2" onClick={handleAddNewSlide}>
+                          <Plus className="h-4 w-4 mr-2" /> Add Another Slide
+                        </Button>
                       </div>
-                      <div className="flex-1 min-w-0">
+                    )}
+                  </TabsContent>
+
+                  {heroSlides && heroSlides.map((slide) => (
+                    <TabsContent key={slide.id} value={`slide-${slide.id}`} className="space-y-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-lg font-semibold">Edit: {slide.title}</h3>
                         <div className="flex items-center gap-2">
-                          <h4 className="font-medium truncate">{slide.title}</h4>
-                          {!slide.isActive && <Badge variant="secondary" className="text-xs">Inactive</Badge>}
+                          <Switch checked={slideIsActive} onCheckedChange={setSlideIsActive} />
+                          <label className="text-sm">Active</label>
                         </div>
-                        {slide.subtitle && <p className="text-sm text-muted-foreground truncate">{slide.subtitle}</p>}
-                        {slide.buttonText && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Button: "{slide.buttonText}" → {slide.buttonLink || 'No link'}
-                          </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Slide Image *</label>
+                        {slideImageUrl ? (
+                          <div className="relative w-full h-48 rounded-lg overflow-hidden bg-muted">
+                            <img src={slideImageUrl} alt="Slide preview" className="w-full h-full object-cover" />
+                            <Button variant="destructive" size="sm" className="absolute top-2 right-2" onClick={() => setSlideImageUrl("")}>
+                              <Trash2 className="h-3 w-3 mr-1" /> Remove
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="border-2 border-dashed rounded-lg p-4 text-center">
+                            <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground mb-3">Choose an image for this slide</p>
+                            <div className="flex gap-2 justify-center">
+                              <label className="cursor-pointer">
+                                <input type="file" accept="image/*" className="hidden" onChange={handleSlideImageUpload} disabled={slideUploading} />
+                                <Button variant="outline" size="sm" disabled={slideUploading} asChild>
+                                  <span>{slideUploading ? "Uploading..." : "Upload Image"}</span>
+                                </Button>
+                              </label>
+                              <Button variant="outline" size="sm" onClick={() => { setSlideBucketBrowser(true); fetchSlideBucketImages(slideBucketName); }}>
+                                <FolderOpen className="h-4 w-4 mr-1" /> Browse Bucket
+                              </Button>
+                            </div>
+                          </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <Switch checked={slide.isActive} onCheckedChange={() => handleToggleSlide(slide)} />
-                        <Button variant="ghost" size="sm" onClick={() => openEditSlide(slide)}>
-                          <Edit className="h-4 w-4" />
+
+                      {slideBucketBrowser && (
+                        <div className="border rounded-lg p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-sm">Select from Supabase Storage</h4>
+                            <Button variant="ghost" size="sm" onClick={() => setSlideBucketBrowser(false)}>
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="flex gap-2">
+                            <Select value={slideBucketName} onValueChange={(val) => { setSlideBucketName(val); fetchSlideBucketImages(val); }}>
+                              <SelectTrigger className="w-[250px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(assetBucketList || []).map((b: any) => (
+                                  <SelectItem key={b.name} value={b.name}>{b.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button variant="outline" size="sm" onClick={() => fetchSlideBucketImages(slideBucketName)} disabled={slideBucketLoading}>
+                              <RefreshCw className={`h-4 w-4 ${slideBucketLoading ? 'animate-spin' : ''}`} />
+                            </Button>
+                          </div>
+                          {slideBucketLoading ? (
+                            <div className="text-center py-4 text-sm text-muted-foreground">Loading images...</div>
+                          ) : slideBucketImages.length === 0 ? (
+                            <div className="text-center py-4 text-sm text-muted-foreground">No images found in this bucket</div>
+                          ) : (
+                            <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto">
+                              {slideBucketImages.map((img) => (
+                                <div
+                                  key={img.id || img.name}
+                                  className="aspect-video rounded border overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                                  onClick={() => { setSlideImageUrl(img.publicUrl); setSlideBucketBrowser(false); }}
+                                >
+                                  <img src={img.publicUrl} alt={img.name} className="w-full h-full object-cover" />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Title *</label>
+                          <Input placeholder="e.g., Build Your Gamefolio" value={slideTitle} onChange={(e) => setSlideTitle(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Subtitle</label>
+                          <Input placeholder="e.g., With Your Best Gaming Clips" value={slideSubtitle} onChange={(e) => setSlideSubtitle(e.target.value)} />
+                        </div>
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Button Text</label>
+                          <Input placeholder="e.g., Get Started" value={slideButtonText} onChange={(e) => setSlideButtonText(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Button Link</label>
+                          <Input placeholder="e.g., /upload" value={slideButtonLink} onChange={(e) => setSlideButtonLink(e.target.value)} />
+                        </div>
+                      </div>
+
+                      <div className="border rounded-lg p-4 bg-muted/50">
+                        <h4 className="font-medium mb-2 text-sm">Preview</h4>
+                        <div className="relative w-full h-32 rounded overflow-hidden bg-black">
+                          {slideImageUrl && <img src={slideImageUrl} alt="Preview" className="w-full h-full object-cover opacity-60" />}
+                          <div className="absolute inset-0 flex flex-col justify-center p-4">
+                            <p className="text-white font-bold text-lg">{slideTitle || "Title"}</p>
+                            {slideSubtitle && <p className="text-primary text-sm font-semibold">{slideSubtitle}</p>}
+                            {slideButtonText && <span className="mt-2 inline-block bg-primary text-primary-foreground text-xs px-3 py-1 rounded w-fit">{slideButtonText}</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between">
+                        <Button variant="destructive" size="sm" onClick={() => { handleDeleteSlide(slide.id); setActiveSlideTab("overview"); }}>
+                          <Trash2 className="h-4 w-4 mr-1" /> Delete Slide
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={() => handleDeleteSlide(slide.id)}>
-                          <Trash2 className="h-4 w-4" />
+                        <Button onClick={handleSaveSlide} disabled={!slideTitle.trim() || !slideImageUrl.trim()}>
+                          Save Changes
                         </Button>
                       </div>
-                    </div>
+                    </TabsContent>
                   ))}
-                </div>
+
+                  <TabsContent value="new-slide" className="space-y-4">
+                    <h3 className="text-lg font-semibold">Add New Slide</h3>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Slide Image *</label>
+                      {slideImageUrl ? (
+                        <div className="relative w-full h-48 rounded-lg overflow-hidden bg-muted">
+                          <img src={slideImageUrl} alt="Slide preview" className="w-full h-full object-cover" />
+                          <Button variant="destructive" size="sm" className="absolute top-2 right-2" onClick={() => setSlideImageUrl("")}>
+                            <Trash2 className="h-3 w-3 mr-1" /> Remove
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed rounded-lg p-4 text-center">
+                          <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground mb-3">Choose an image for this slide</p>
+                          <div className="flex gap-2 justify-center">
+                            <label className="cursor-pointer">
+                              <input type="file" accept="image/*" className="hidden" onChange={handleSlideImageUpload} disabled={slideUploading} />
+                              <Button variant="outline" size="sm" disabled={slideUploading} asChild>
+                                <span>{slideUploading ? "Uploading..." : "Upload Image"}</span>
+                              </Button>
+                            </label>
+                            <Button variant="outline" size="sm" onClick={() => { setSlideBucketBrowser(true); fetchSlideBucketImages(slideBucketName); }}>
+                              <FolderOpen className="h-4 w-4 mr-1" /> Browse Bucket
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {slideBucketBrowser && (
+                      <div className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-sm">Select from Supabase Storage</h4>
+                          <Button variant="ghost" size="sm" onClick={() => setSlideBucketBrowser(false)}>
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="flex gap-2">
+                          <Select value={slideBucketName} onValueChange={(val) => { setSlideBucketName(val); fetchSlideBucketImages(val); }}>
+                            <SelectTrigger className="w-[250px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(assetBucketList || []).map((b: any) => (
+                                <SelectItem key={b.name} value={b.name}>{b.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button variant="outline" size="sm" onClick={() => fetchSlideBucketImages(slideBucketName)} disabled={slideBucketLoading}>
+                            <RefreshCw className={`h-4 w-4 ${slideBucketLoading ? 'animate-spin' : ''}`} />
+                          </Button>
+                        </div>
+                        {slideBucketLoading ? (
+                          <div className="text-center py-4 text-sm text-muted-foreground">Loading images...</div>
+                        ) : slideBucketImages.length === 0 ? (
+                          <div className="text-center py-4 text-sm text-muted-foreground">No images found in this bucket</div>
+                        ) : (
+                          <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto">
+                            {slideBucketImages.map((img) => (
+                              <div
+                                key={img.id || img.name}
+                                className="aspect-video rounded border overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                                onClick={() => { setSlideImageUrl(img.publicUrl); setSlideBucketBrowser(false); }}
+                              >
+                                <img src={img.publicUrl} alt={img.name} className="w-full h-full object-cover" />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Title *</label>
+                        <Input placeholder="e.g., Build Your Gamefolio" value={slideTitle} onChange={(e) => setSlideTitle(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Subtitle</label>
+                        <Input placeholder="e.g., With Your Best Gaming Clips" value={slideSubtitle} onChange={(e) => setSlideSubtitle(e.target.value)} />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Button Text</label>
+                        <Input placeholder="e.g., Get Started" value={slideButtonText} onChange={(e) => setSlideButtonText(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Button Link</label>
+                        <Input placeholder="e.g., /upload" value={slideButtonLink} onChange={(e) => setSlideButtonLink(e.target.value)} />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Switch checked={slideIsActive} onCheckedChange={setSlideIsActive} />
+                      <label className="text-sm">Active</label>
+                    </div>
+
+                    <div className="border rounded-lg p-4 bg-muted/50">
+                      <h4 className="font-medium mb-2 text-sm">Preview</h4>
+                      <div className="relative w-full h-32 rounded overflow-hidden bg-black">
+                        {slideImageUrl && <img src={slideImageUrl} alt="Preview" className="w-full h-full object-cover opacity-60" />}
+                        <div className="absolute inset-0 flex flex-col justify-center p-4">
+                          <p className="text-white font-bold text-lg">{slideTitle || "Title"}</p>
+                          {slideSubtitle && <p className="text-primary text-sm font-semibold">{slideSubtitle}</p>}
+                          {slideButtonText && <span className="mt-2 inline-block bg-primary text-primary-foreground text-xs px-3 py-1 rounded w-fit">{slideButtonText}</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button onClick={handleSaveSlide} disabled={!slideTitle.trim() || !slideImageUrl.trim()}>
+                        <Plus className="h-4 w-4 mr-1" /> Add Slide
+                      </Button>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               )}
             </CardContent>
           </Card>
-
-          <Dialog open={heroSlideDialogOpen} onOpenChange={(open) => { if (!open) { resetSlideForm(); } setHeroSlideDialogOpen(open); }}>
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle>{editingSlide ? "Edit Hero Slide" : "Add Hero Slide"}</DialogTitle>
-                <DialogDescription>
-                  {editingSlide ? "Update the hero slide details below." : "Create a new hero slide for the homepage carousel."}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-2">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Slide Image *</label>
-                  {slideImageUrl ? (
-                    <div className="relative w-full h-40 rounded-lg overflow-hidden bg-muted">
-                      <img src={slideImageUrl} alt="Slide preview" className="w-full h-full object-cover" />
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="absolute top-2 right-2"
-                        onClick={() => setSlideImageUrl("")}
-                      >
-                        <Trash2 className="h-3 w-3 mr-1" /> Remove
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                      <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground mb-2">Upload an image for this slide</p>
-                      <label className="cursor-pointer">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleSlideImageUpload}
-                          disabled={slideUploading}
-                        />
-                        <Button variant="outline" size="sm" disabled={slideUploading} asChild>
-                          <span>{slideUploading ? "Uploading..." : "Choose Image"}</span>
-                        </Button>
-                      </label>
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Title *</label>
-                  <Input
-                    placeholder="e.g., Build Your Gamefolio"
-                    value={slideTitle}
-                    onChange={(e) => setSlideTitle(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Subtitle</label>
-                  <Input
-                    placeholder="e.g., With Your Best Gaming Clips"
-                    value={slideSubtitle}
-                    onChange={(e) => setSlideSubtitle(e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-4 grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Button Text</label>
-                    <Input
-                      placeholder="e.g., Get Started"
-                      value={slideButtonText}
-                      onChange={(e) => setSlideButtonText(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Button Link</label>
-                    <Input
-                      placeholder="e.g., /upload"
-                      value={slideButtonLink}
-                      onChange={(e) => setSlideButtonLink(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch checked={slideIsActive} onCheckedChange={setSlideIsActive} />
-                  <label className="text-sm font-medium">Active</label>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => { resetSlideForm(); setHeroSlideDialogOpen(false); }}>Cancel</Button>
-                <Button onClick={handleSaveSlide} disabled={!slideTitle.trim() || !slideImageUrl.trim()}>
-                  {editingSlide ? "Save Changes" : "Add Slide"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </TabsContent>
 
         {/* Asset Rewards Tab */}
