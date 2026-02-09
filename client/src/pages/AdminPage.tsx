@@ -1179,6 +1179,17 @@ const AdminPage = () => {
   const [heroButtonText, setHeroButtonText] = useState("");
   const [heroButtonUrl, setHeroButtonUrl] = useState("");
   const [heroTargetAudience, setHeroTargetAudience] = useState("experienced_users");
+
+  // Hero slides state
+  const [heroSlideDialogOpen, setHeroSlideDialogOpen] = useState(false);
+  const [editingSlide, setEditingSlide] = useState<any>(null);
+  const [slideTitle, setSlideTitle] = useState("");
+  const [slideSubtitle, setSlideSubtitle] = useState("");
+  const [slideButtonText, setSlideButtonText] = useState("");
+  const [slideButtonLink, setSlideButtonLink] = useState("");
+  const [slideImageUrl, setSlideImageUrl] = useState("");
+  const [slideIsActive, setSlideIsActive] = useState(true);
+  const [slideUploading, setSlideUploading] = useState(false);
   
   // Level management state
   const [levelUserSearch, setLevelUserSearch] = useState("");
@@ -1434,6 +1445,12 @@ const AdminPage = () => {
   const [assetsBucketFolder, setAssetsBucketFolder] = useState<string>("");
   const [assetsSelectedBucketName, setAssetsSelectedBucketName] = useState<string>("");
   const [assetsSearchQuery, setAssetsSearchQuery] = useState<string>("");
+
+  // Hero slides query
+  const { data: heroSlides, isLoading: heroSlidesLoading, refetch: refetchHeroSlides } = useQuery<any[]>({
+    queryKey: ["/api/admin/hero-slides"],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
 
   const { data: assetBucketList, isLoading: assetBucketsLoading } = useQuery<{ id: string; name: string; public: boolean; createdAt: string }[]>({
     queryKey: ["/api/admin/storage/buckets"],
@@ -1928,6 +1945,119 @@ const AdminPage = () => {
     }));
   };
 
+  // Hero slides handlers
+  const resetSlideForm = () => {
+    setEditingSlide(null);
+    setSlideTitle("");
+    setSlideSubtitle("");
+    setSlideButtonText("");
+    setSlideButtonLink("");
+    setSlideImageUrl("");
+    setSlideIsActive(true);
+  };
+
+  const openEditSlide = (slide: any) => {
+    setEditingSlide(slide);
+    setSlideTitle(slide.title || "");
+    setSlideSubtitle(slide.subtitle || "");
+    setSlideButtonText(slide.buttonText || "");
+    setSlideButtonLink(slide.buttonLink || "");
+    setSlideImageUrl(slide.imageUrl || "");
+    setSlideIsActive(slide.isActive ?? true);
+    setHeroSlideDialogOpen(true);
+  };
+
+  const handleSlideImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSlideUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await fetch("/api/admin/hero-slides/upload-image", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setSlideImageUrl(data.imageUrl);
+      toast({ title: "Image uploaded", description: "Hero slide image uploaded successfully." });
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message || "Failed to upload image", variant: "destructive" });
+    } finally {
+      setSlideUploading(false);
+    }
+  };
+
+  const handleSaveSlide = async () => {
+    if (!slideTitle.trim() || !slideImageUrl.trim()) {
+      toast({ title: "Missing fields", description: "Title and image are required.", variant: "destructive" });
+      return;
+    }
+    try {
+      const body = {
+        title: slideTitle.trim(),
+        subtitle: slideSubtitle.trim() || null,
+        buttonText: slideButtonText.trim() || null,
+        buttonLink: slideButtonLink.trim() || null,
+        imageUrl: slideImageUrl.trim(),
+        isActive: slideIsActive,
+        displayOrder: editingSlide?.displayOrder ?? (heroSlides?.length || 0),
+      };
+      if (editingSlide) {
+        await apiRequest("PATCH", `/api/admin/hero-slides/${editingSlide.id}`, body);
+        toast({ title: "Slide updated", description: "Hero slide has been updated." });
+      } else {
+        await apiRequest("POST", "/api/admin/hero-slides", body);
+        toast({ title: "Slide created", description: "New hero slide has been added." });
+      }
+      resetSlideForm();
+      setHeroSlideDialogOpen(false);
+      refetchHeroSlides();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to save slide", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteSlide = async (id: number) => {
+    try {
+      await apiRequest("DELETE", `/api/admin/hero-slides/${id}`);
+      toast({ title: "Slide deleted", description: "Hero slide has been removed." });
+      refetchHeroSlides();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to delete slide", variant: "destructive" });
+    }
+  };
+
+  const handleToggleSlide = async (slide: any) => {
+    try {
+      await apiRequest("PATCH", `/api/admin/hero-slides/${slide.id}`, { isActive: !slide.isActive });
+      refetchHeroSlides();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to toggle slide", variant: "destructive" });
+    }
+  };
+
+  const handleMoveSlide = async (slide: any, direction: 'up' | 'down') => {
+    if (!heroSlides) return;
+    const sorted = [...heroSlides].sort((a, b) => a.displayOrder - b.displayOrder);
+    const idx = sorted.findIndex((s) => s.id === slide.id);
+    if (direction === 'up' && idx <= 0) return;
+    if (direction === 'down' && idx >= sorted.length - 1) return;
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    const reordered = sorted.map((s, i) => ({
+      id: s.id,
+      displayOrder: i === idx ? sorted[swapIdx].displayOrder : i === swapIdx ? sorted[idx].displayOrder : s.displayOrder,
+    }));
+    try {
+      await apiRequest("POST", "/api/admin/hero-slides/reorder", { slides: reordered });
+      refetchHeroSlides();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to reorder slides", variant: "destructive" });
+    }
+  };
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-6">
@@ -1951,6 +2081,7 @@ const AdminPage = () => {
           <TabsTrigger value="streaks" className="text-xs px-3 py-1.5">Streaks</TabsTrigger>
           <TabsTrigger value="points" className="text-xs px-3 py-1.5">Points</TabsTrigger>
           <TabsTrigger value="hero-text" className="text-xs px-3 py-1.5">Hero</TabsTrigger>
+          <TabsTrigger value="hero-slides" className="text-xs px-3 py-1.5">Slides</TabsTrigger>
           <TabsTrigger value="asset-rewards" className="text-xs px-3 py-1.5">Rewards</TabsTrigger>
           <TabsTrigger value="lootbox" className="text-xs px-3 py-1.5">Lootbox</TabsTrigger>
           <TabsTrigger value="store-management" className="text-xs px-3 py-1.5">Store</TabsTrigger>
@@ -3852,6 +3983,167 @@ const AdminPage = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="hero-slides" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="h-5 w-5" />
+                    Hero Slides Management
+                  </CardTitle>
+                  <CardDescription>
+                    Manage the rotating hero banner slides on the homepage. Each slide can have its own image, text, and call-to-action button.
+                  </CardDescription>
+                </div>
+                <Button onClick={() => { resetSlideForm(); setHeroSlideDialogOpen(true); }}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Slide
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {heroSlidesLoading ? (
+                <div className="text-center py-8 text-muted-foreground">Loading slides...</div>
+              ) : !heroSlides?.length ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No hero slides configured yet.</p>
+                  <p className="text-sm mt-1">The homepage will show the default banner until you add slides.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {[...heroSlides].sort((a, b) => a.displayOrder - b.displayOrder).map((slide, idx) => (
+                    <div key={slide.id} className={`flex items-center gap-4 p-3 rounded-lg border ${slide.isActive ? 'border-border' : 'border-border/50 opacity-60'}`}>
+                      <div className="flex flex-col gap-1">
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleMoveSlide(slide, 'up')} disabled={idx === 0}>
+                          <ChevronDown className="h-4 w-4 rotate-180" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleMoveSlide(slide, 'down')} disabled={idx === heroSlides.length - 1}>
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="w-32 h-20 rounded overflow-hidden bg-muted flex-shrink-0">
+                        <img src={slide.imageUrl} alt={slide.title} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium truncate">{slide.title}</h4>
+                          {!slide.isActive && <Badge variant="secondary" className="text-xs">Inactive</Badge>}
+                        </div>
+                        {slide.subtitle && <p className="text-sm text-muted-foreground truncate">{slide.subtitle}</p>}
+                        {slide.buttonText && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Button: "{slide.buttonText}" → {slide.buttonLink || 'No link'}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Switch checked={slide.isActive} onCheckedChange={() => handleToggleSlide(slide)} />
+                        <Button variant="ghost" size="sm" onClick={() => openEditSlide(slide)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={() => handleDeleteSlide(slide.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Dialog open={heroSlideDialogOpen} onOpenChange={(open) => { if (!open) { resetSlideForm(); } setHeroSlideDialogOpen(open); }}>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>{editingSlide ? "Edit Hero Slide" : "Add Hero Slide"}</DialogTitle>
+                <DialogDescription>
+                  {editingSlide ? "Update the hero slide details below." : "Create a new hero slide for the homepage carousel."}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Slide Image *</label>
+                  {slideImageUrl ? (
+                    <div className="relative w-full h-40 rounded-lg overflow-hidden bg-muted">
+                      <img src={slideImageUrl} alt="Slide preview" className="w-full h-full object-cover" />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={() => setSlideImageUrl("")}
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" /> Remove
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                      <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground mb-2">Upload an image for this slide</p>
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleSlideImageUpload}
+                          disabled={slideUploading}
+                        />
+                        <Button variant="outline" size="sm" disabled={slideUploading} asChild>
+                          <span>{slideUploading ? "Uploading..." : "Choose Image"}</span>
+                        </Button>
+                      </label>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Title *</label>
+                  <Input
+                    placeholder="e.g., Build Your Gamefolio"
+                    value={slideTitle}
+                    onChange={(e) => setSlideTitle(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Subtitle</label>
+                  <Input
+                    placeholder="e.g., With Your Best Gaming Clips"
+                    value={slideSubtitle}
+                    onChange={(e) => setSlideSubtitle(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-4 grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Button Text</label>
+                    <Input
+                      placeholder="e.g., Get Started"
+                      value={slideButtonText}
+                      onChange={(e) => setSlideButtonText(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Button Link</label>
+                    <Input
+                      placeholder="e.g., /upload"
+                      value={slideButtonLink}
+                      onChange={(e) => setSlideButtonLink(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={slideIsActive} onCheckedChange={setSlideIsActive} />
+                  <label className="text-sm font-medium">Active</label>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { resetSlideForm(); setHeroSlideDialogOpen(false); }}>Cancel</Button>
+                <Button onClick={handleSaveSlide} disabled={!slideTitle.trim() || !slideImageUrl.trim()}>
+                  {editingSlide ? "Save Changes" : "Add Slide"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         {/* Asset Rewards Tab */}
