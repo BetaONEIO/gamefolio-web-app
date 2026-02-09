@@ -7,23 +7,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/hooks/use-auth";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { useToast } from "@/hooks/use-toast";
@@ -299,14 +285,15 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
               </DialogHeader>
               <div className="space-y-4 py-2">
                 <div className="space-y-2">
-                  <Label htmlFor="cancel-password">Password</Label>
-                  <Input
+                  <label htmlFor="cancel-password" className="text-sm font-medium text-foreground">Password</label>
+                  <input
                     id="cancel-password"
                     type="password"
                     placeholder="Enter your password"
                     value={cancelPassword}
                     onChange={(e) => { setCancelPassword(e.target.value); setPasswordError(''); }}
                     onKeyDown={(e) => { if (e.key === 'Enter' && cancelPassword) handleVerifyPassword(); }}
+                    className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                   {passwordError && (
                     <p className="text-sm text-red-500">{passwordError}</p>
@@ -345,39 +332,36 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-2">
-                <RadioGroup value={cancelReason} onValueChange={setCancelReason} className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="Too expensive" id="reason-price" />
-                    <Label htmlFor="reason-price" className="cursor-pointer">Too expensive</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="Not using it enough" id="reason-usage" />
-                    <Label htmlFor="reason-usage" className="cursor-pointer">Not using it enough</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="Missing features I need" id="reason-features" />
-                    <Label htmlFor="reason-features" className="cursor-pointer">Missing features I need</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="Found an alternative" id="reason-alternative" />
-                    <Label htmlFor="reason-alternative" className="cursor-pointer">Found an alternative</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="Technical issues" id="reason-technical" />
-                    <Label htmlFor="reason-technical" className="cursor-pointer">Technical issues</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="other" id="reason-other" />
-                    <Label htmlFor="reason-other" className="cursor-pointer">Other</Label>
-                  </div>
-                </RadioGroup>
+                <div className="space-y-2">
+                  {[
+                    "Too expensive",
+                    "Not using it enough",
+                    "Missing features I need",
+                    "Found an alternative",
+                    "Technical issues",
+                    "Other",
+                  ].map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setCancelReason(option === "Other" ? "other" : option)}
+                      className={`w-full text-left px-4 py-3 rounded-lg border text-sm transition-colors ${
+                        cancelReason === (option === "Other" ? "other" : option)
+                          ? "border-red-500 bg-red-500/10 text-foreground"
+                          : "border-border hover:border-muted-foreground/30 hover:bg-muted/50 text-muted-foreground"
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
 
                 {cancelReason === 'other' && (
-                  <Textarea
+                  <textarea
                     placeholder="Please tell us more..."
                     value={cancelReasonOther}
                     onChange={(e) => setCancelReasonOther(e.target.value)}
-                    className="min-h-[80px]"
+                    className="w-full min-h-[80px] px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                   />
                 )}
 

@@ -384,6 +384,95 @@ export class EmailService {
     }
   }
 
+  static async sendCancellationReasonToSupport(
+    username: string,
+    userEmail: string,
+    reason: string,
+    planType: string
+  ): Promise<boolean> {
+    const supportEmail = 'support@gamefolio.com';
+    const cancellationTime = new Date().toLocaleString();
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Pro Subscription Cancellation - Gamefolio</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { text-align: center; margin-bottom: 30px; background-color: #dc3545; color: white; padding: 20px; border-radius: 8px; }
+            .logo { color: #ffffff; font-size: 24px; font-weight: bold; }
+            .content { background-color: #ffffff; padding: 30px; border-radius: 8px; border: 1px solid #ddd; }
+            .details { background-color: #f8f9fa; padding: 20px; border-radius: 6px; margin: 20px 0; }
+            .detail-row { padding: 8px 0; border-bottom: 1px solid #eee; }
+            .detail-row:last-child { border-bottom: none; }
+            .label { font-weight: bold; color: #555; display: inline-block; width: 140px; }
+            .value { color: #333; }
+            .reason-box { background-color: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 6px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">Pro Subscription Cancelled</div>
+              <p style="margin: 10px 0 0 0;">Gamefolio Support Notification</p>
+            </div>
+            <div class="content">
+              <h2 style="color: #dc3545;">Cancellation Report</h2>
+              <p>A Pro subscriber has cancelled their subscription. Details below:</p>
+
+              <div class="details">
+                <div class="detail-row">
+                  <span class="label">Username:</span>
+                  <span class="value">${username}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Email:</span>
+                  <span class="value">${userEmail}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Plan:</span>
+                  <span class="value">${planType}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Cancelled At:</span>
+                  <span class="value">${cancellationTime}</span>
+                </div>
+              </div>
+
+              <div class="reason-box">
+                <h3 style="margin-top: 0; color: #856404;">Cancellation Reason</h3>
+                <p style="margin-bottom: 0; font-size: 16px;">${reason}</p>
+              </div>
+
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${SITE_URL}/admin" style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">View Admin Panel</a>
+              </div>
+            </div>
+            <div class="footer">
+              <p>This is an automated notification from the Gamefolio subscription system.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    try {
+      return await sendEmail({
+        to: supportEmail,
+        subject: `Pro Cancellation: ${username} - Reason: ${reason}`,
+        html,
+      });
+    } catch (error) {
+      console.error('Failed to send cancellation reason to support:', error);
+      return false;
+    }
+  }
+
   static async sendNewUserNotification(userData: {
     username: string;
     email: string;

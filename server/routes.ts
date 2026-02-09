@@ -653,6 +653,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication Routes (Basic)
   // ==========================================
 
+  app.post("/api/auth/verify-password", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const { password } = req.body;
+
+      if (!password) {
+        return res.status(400).json({ verified: false, message: "Password is required" });
+      }
+
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ verified: false, message: "User not found" });
+      }
+
+      const isValid = await comparePasswords(password, user.password);
+      return res.json({ verified: isValid });
+    } catch (error: any) {
+      console.error("Password verification error:", error);
+      return res.status(500).json({ verified: false, message: "Failed to verify password" });
+    }
+  });
+
   // Check username availability
   app.get("/api/auth/check-username", async (req, res) => {
     try {
@@ -9645,6 +9667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/subscription/cancel", authMiddleware, async (req, res) => {
     try {
       const userId = (req.user as any).id;
+      const { reason } = req.body || {};
       const user = await storage.getUserById(userId);
 
       if (!user) {
@@ -9710,6 +9733,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   user.username || user.displayName || 'Gamer',
                   periodEnd
                 ).catch(err => console.error('Failed to send Pro cancelled email:', err));
+              }
+
+              if (reason) {
+                EmailService.sendCancellationReasonToSupport(
+                  user.username || user.displayName || 'Unknown',
+                  user.email || 'No email',
+                  reason,
+                  user.proSubscriptionType || 'Unknown'
+                ).catch(err => console.error('Failed to send cancellation reason to support:', err));
               }
 
               const formattedEnd = periodEnd.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
