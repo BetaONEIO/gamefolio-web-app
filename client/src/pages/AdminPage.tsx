@@ -650,16 +650,21 @@ function StoreManagement() {
 interface ProSubscriber {
   id: number;
   username: string;
+  email: string | null;
   displayName: string | null;
   avatarUrl: string | null;
   isPro: boolean;
   proSubscriptionType: string | null;
   proSubscriptionStartDate: string | null;
   proSubscriptionEndDate: string | null;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
   createdAt: string;
 }
 
 function ProSubscribersManagement() {
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'cancelled' | 'expired'>('all');
+
   const { data, isLoading, refetch } = useQuery<{ subscribers: ProSubscriber[]; total: number }>({
     queryKey: ['/api/admin/pro-subscribers'],
     queryFn: getQueryFn({ on401: "throw" }),
@@ -702,101 +707,178 @@ function ProSubscribersManagement() {
     }
   };
 
+  const getStatus = (sub: ProSubscriber): 'active' | 'cancelled' | 'expired' => {
+    if (sub.isPro && sub.stripeSubscriptionId) return 'active';
+    if (sub.isPro && !sub.stripeSubscriptionId) return 'active';
+    if (!sub.isPro && sub.proSubscriptionEndDate && new Date(sub.proSubscriptionEndDate) > new Date()) return 'cancelled';
+    return 'expired';
+  };
+
+  const getStatusBadge = (status: 'active' | 'cancelled' | 'expired') => {
+    switch (status) {
+      case 'active': return <Badge className="bg-green-600 text-white">Active</Badge>;
+      case 'cancelled': return <Badge className="bg-yellow-600 text-white">Cancelled</Badge>;
+      case 'expired': return <Badge className="bg-red-600 text-white">Expired</Badge>;
+    }
+  };
+
+  const filteredSubscribers = data?.subscribers?.filter(sub => {
+    if (statusFilter === 'all') return true;
+    return getStatus(sub) === statusFilter;
+  }) || [];
+
+  const activeCount = data?.subscribers?.filter(s => getStatus(s) === 'active').length || 0;
+  const cancelledCount = data?.subscribers?.filter(s => getStatus(s) === 'cancelled').length || 0;
+  const expiredCount = data?.subscribers?.filter(s => getStatus(s) === 'expired').length || 0;
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Crown className="w-5 h-5 text-amber-500" />
-          Pro Subscribers
-        </CardTitle>
-        <CardDescription>
-          View and manage Pro subscribers and their subscription details
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <RefreshCw className="w-6 h-6 animate-spin mr-2" />
-            Loading Pro subscribers...
-          </div>
-        ) : !data?.subscribers || data.subscribers.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            No Pro subscribers yet.
-          </div>
-        ) : (
-          <div className="space-y-4">
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setStatusFilter('all')}>
+          <CardContent className="pt-4 pb-3 px-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                Total Pro subscribers: <span className="font-semibold text-amber-500">{data.total}</span>
-              </p>
-              <Button variant="outline" size="sm" onClick={() => refetch()}>
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Refresh
-              </Button>
+              <p className="text-xs text-muted-foreground">Total</p>
+              <Crown className="w-4 h-4 text-amber-500" />
             </div>
-            
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Subscription Type</TableHead>
-                  <TableHead>Pro Since</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Expires</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.subscribers.map((subscriber) => (
-                  <TableRow key={subscriber.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {subscriber.avatarUrl ? (
-                          <img 
-                            src={subscriber.avatarUrl} 
-                            alt={subscriber.username}
-                            className="w-8 h-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                            <User className="w-4 h-4" />
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-medium">{subscriber.displayName || subscriber.username}</p>
-                          <p className="text-xs text-muted-foreground">@{subscriber.username}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={`${getSubscriptionBadgeColor(subscriber.proSubscriptionType)}`}>
-                        {subscriber.proSubscriptionType || 'Pro'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {formatDate(subscriber.proSubscriptionStartDate)}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-green-500 font-medium">
-                        {calculateDuration(subscriber.proSubscriptionStartDate)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {subscriber.proSubscriptionEndDate ? (
-                        <span className={new Date(subscriber.proSubscriptionEndDate) < new Date() ? 'text-red-500' : ''}>
-                          {formatDate(subscriber.proSubscriptionEndDate)}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">Never</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <p className="text-2xl font-bold mt-1">{data?.total || 0}</p>
+          </CardContent>
+        </Card>
+        <Card className="cursor-pointer hover:border-green-500/50 transition-colors" onClick={() => setStatusFilter('active')}>
+          <CardContent className="pt-4 pb-3 px-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Active</p>
+              <div className="w-2 h-2 rounded-full bg-green-500" />
+            </div>
+            <p className="text-2xl font-bold text-green-500 mt-1">{activeCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="cursor-pointer hover:border-yellow-500/50 transition-colors" onClick={() => setStatusFilter('cancelled')}>
+          <CardContent className="pt-4 pb-3 px-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Cancelled</p>
+              <div className="w-2 h-2 rounded-full bg-yellow-500" />
+            </div>
+            <p className="text-2xl font-bold text-yellow-500 mt-1">{cancelledCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="cursor-pointer hover:border-red-500/50 transition-colors" onClick={() => setStatusFilter('expired')}>
+          <CardContent className="pt-4 pb-3 px-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Expired</p>
+              <div className="w-2 h-2 rounded-full bg-red-500" />
+            </div>
+            <p className="text-2xl font-bold text-red-500 mt-1">{expiredCount}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Crown className="w-5 h-5 text-amber-500" />
+                Pro Subscribers
+                {statusFilter !== 'all' && (
+                  <Badge variant="outline" className="ml-2 text-xs capitalize">{statusFilter}</Badge>
+                )}
+              </CardTitle>
+              <CardDescription>
+                View and manage Pro subscribers and their subscription details
+              </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <RefreshCw className="w-6 h-6 animate-spin mr-2" />
+              Loading Pro subscribers...
+            </div>
+          ) : filteredSubscribers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {statusFilter === 'all' ? 'No Pro subscribers yet.' : `No ${statusFilter} subscribers.`}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Plan</TableHead>
+                    <TableHead>Pro Since</TableHead>
+                    <TableHead>Duration</TableHead>
+                    <TableHead>Renewal / Expiry</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredSubscribers.map((subscriber) => {
+                    const status = getStatus(subscriber);
+                    return (
+                      <TableRow key={subscriber.id} className={status === 'expired' ? 'opacity-60' : ''}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {subscriber.avatarUrl ? (
+                              <img 
+                                src={subscriber.avatarUrl} 
+                                alt={subscriber.username}
+                                className="w-8 h-8 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                                <User className="w-4 h-4" />
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-medium">{subscriber.displayName || subscriber.username}</p>
+                              <p className="text-xs text-muted-foreground">@{subscriber.username}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {getStatusBadge(status)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={`${getSubscriptionBadgeColor(subscriber.proSubscriptionType)}`}>
+                            {subscriber.proSubscriptionType || 'Pro'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {formatDate(subscriber.proSubscriptionStartDate)}
+                        </TableCell>
+                        <TableCell>
+                          <span className={status === 'active' ? 'text-green-500 font-medium' : 'text-muted-foreground'}>
+                            {calculateDuration(subscriber.proSubscriptionStartDate)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {subscriber.proSubscriptionEndDate ? (
+                            <span className={
+                              status === 'expired' ? 'text-red-500' :
+                              status === 'cancelled' ? 'text-yellow-500' :
+                              ''
+                            }>
+                              {formatDate(subscriber.proSubscriptionEndDate)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
