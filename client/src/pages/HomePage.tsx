@@ -66,7 +66,8 @@ const HomePage = () => {
 
   const { data: heroSlides } = useQuery<HeroSlide[]>({
     queryKey: ["/api/hero-slides"],
-    staleTime: 60000,
+    staleTime: 10000,
+    refetchOnWindowFocus: true,
   });
 
   const activeSlides = useMemo(() => {

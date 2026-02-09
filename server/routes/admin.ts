@@ -1716,9 +1716,21 @@ adminRouter.get("/hero-slides", async (req: Request, res: Response) => {
   }
 });
 
+const convertToPublicUrl = (url: string): string => {
+  if (!url) return url;
+  const signedMatch = url.match(/(.+\/storage\/v1\/object\/)sign\/(.+?)(\?.*)?$/);
+  if (signedMatch) {
+    return `${signedMatch[1]}public/${signedMatch[2]}`;
+  }
+  return url;
+};
+
 // POST /api/admin/hero-slides - Create a new hero slide
 adminRouter.post("/hero-slides", async (req: Request, res: Response) => {
   try {
+    if (req.body.imageUrl) {
+      req.body.imageUrl = convertToPublicUrl(req.body.imageUrl);
+    }
     const parsed = insertHeroSlideSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ message: "Invalid hero slide data", errors: parsed.error.errors });
@@ -1739,6 +1751,10 @@ adminRouter.patch("/hero-slides/:id", async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid slide ID" });
+    }
+
+    if (req.body.imageUrl) {
+      req.body.imageUrl = convertToPublicUrl(req.body.imageUrl);
     }
 
     const { db } = await import('../db');
