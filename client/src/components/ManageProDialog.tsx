@@ -61,14 +61,12 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
       })
     : null;
   
-  const expirationDate = proEntitlement?.expirationDate
-    ? new Date(proEntitlement.expirationDate).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })
-    : user?.proSubscriptionEndDate
-    ? new Date(user.proSubscriptionEndDate).toLocaleDateString('en-US', {
+  const rawEndDate = subscriptionStatus?.proSubscriptionEndDate
+    || proEntitlement?.expirationDate
+    || user?.proSubscriptionEndDate;
+
+  const expirationDate = rawEndDate
+    ? new Date(rawEndDate).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -111,9 +109,14 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
       const data = await response.json();
       
       if (data.success) {
-        await refreshCustomerInfo();
-        await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-        await queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
+        queryClient.setQueryData(["/api/subscription/status"], (old: any) => ({
+          ...old,
+          isCancelled: true,
+          proSubscriptionEndDate: data.endDate || old?.proSubscriptionEndDate,
+        }));
+
+        refreshCustomerInfo().catch(() => {});
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
         
         toast({
           title: "Subscription cancelled",
