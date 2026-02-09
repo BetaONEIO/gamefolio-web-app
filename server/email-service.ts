@@ -344,6 +344,46 @@ export class EmailService {
     }
   }
 
+  static async sendPaymentFailedEmail(email: string, username: string): Promise<boolean> {
+    try {
+      const html = await loadTemplate('payment-failed', {
+        username,
+        siteUrl: IMAGE_BASE_URL,
+      });
+
+      return await sendEmail({
+        to: email,
+        subject: 'Action Required: Your Gamefolio Pro Payment Failed',
+        html,
+      });
+    } catch (error) {
+      console.error('Failed to send payment failed email:', error);
+      return false;
+    }
+  }
+
+  static async sendSubscriptionRenewedEmail(email: string, username: string, plan: 'monthly' | 'yearly', nextRenewalDate: string): Promise<boolean> {
+    const planName = plan === 'monthly' ? 'Monthly' : 'Yearly';
+
+    try {
+      const html = await loadTemplate('pro-welcome', {
+        username,
+        planName,
+        renewalDate: nextRenewalDate,
+        siteUrl: IMAGE_BASE_URL,
+      });
+
+      return await sendEmail({
+        to: email,
+        subject: 'Your Gamefolio Pro Subscription Has Been Renewed!',
+        html,
+      });
+    } catch (error) {
+      console.error('Failed to send subscription renewed email:', error);
+      return false;
+    }
+  }
+
   static async sendNewUserNotification(userData: {
     username: string;
     email: string;

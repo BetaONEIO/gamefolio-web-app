@@ -189,6 +189,8 @@ router.post('/api/stripe/confirm-pro-subscription', hybridAuth, async (req: Requ
       proSubscriptionEndDate: plan === 'yearly'
         ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
         : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: subscription.id,
       updatedAt: new Date(),
     }).where(eq(users.id, userId));
 

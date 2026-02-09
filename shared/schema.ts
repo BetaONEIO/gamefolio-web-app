@@ -65,6 +65,8 @@ export const users = pgTable("users", {
   proSubscriptionType: text("pro_subscription_type"), // "yearly", "monthly", etc.
   proSubscriptionStartDate: timestamp("pro_subscription_start_date"), // When subscription started
   proSubscriptionEndDate: timestamp("pro_subscription_end_date"), // When subscription expires
+  stripeCustomerId: text("stripe_customer_id"), // Stripe customer ID for recurring billing
+  stripeSubscriptionId: text("stripe_subscription_id"), // Stripe subscription ID for managing recurring payments
   // Selected Avatar Border (from lootbox rewards)
   selectedAvatarBorderId: integer("selected_avatar_border_id"), // References asset_rewards table
   // Selected Name Tag

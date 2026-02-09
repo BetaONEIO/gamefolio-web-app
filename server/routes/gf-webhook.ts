@@ -5,6 +5,7 @@ import { gfOrders, users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { getUncachableStripeClient, getStripeSecretKey } from '../stripeClient';
 import { transferGfTokens } from '../gf-token-service';
+import { EmailService } from '../email-service';
 import Stripe from 'stripe';
 
 const router = Router();
@@ -189,6 +190,107 @@ router.post('/api/stripe/webhook',
           );
         } catch (error) {
           console.error('[GF Webhook] Error processing PaymentIntent order delivery:', error);
+        }
+      }
+    }
+
+    if (event.type === 'invoice.paid') {
+      const invoice = event.data.object as any;
+      const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id;
+
+      if (subscriptionId && invoice.billing_reason === 'subscription_cycle') {
+        try {
+          console.log(`[GF Webhook] Processing renewal for subscription: ${subscriptionId}`);
+
+          const [user] = await db.select().from(users).where(eq(users.stripeSubscriptionId, subscriptionId));
+
+          if (user) {
+            const plan = user.proSubscriptionType as 'monthly' | 'yearly' || 'monthly';
+            const newEndDate = plan === 'yearly'
+              ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+              : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+            await db.update(users).set({
+              isPro: true,
+              proSubscriptionEndDate: newEndDate,
+              updatedAt: new Date(),
+            }).where(eq(users.id, user.id));
+
+            console.log(`[GF Webhook] Renewed Pro for user ${user.id} until ${newEndDate.toISOString()}`);
+
+            if (user.email) {
+              const nextRenewal = newEndDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+              EmailService.sendSubscriptionRenewedEmail(
+                user.email,
+                user.username || user.displayName || 'Gamer',
+                plan,
+                nextRenewal
+              ).catch(err => console.error('[GF Webhook] Failed to send renewal email:', err));
+            }
+          } else {
+            console.warn(`[GF Webhook] No user found for subscription: ${subscriptionId}`);
+          }
+        } catch (error) {
+          console.error('[GF Webhook] Error processing invoice.paid:', error);
+        }
+      }
+    }
+
+    if (event.type === 'customer.subscription.deleted') {
+      const subscription = event.data.object as Stripe.Subscription;
+      const subscriptionId = subscription.id;
+
+      try {
+        console.log(`[GF Webhook] Processing subscription deletion: ${subscriptionId}`);
+
+        const [user] = await db.select().from(users).where(eq(users.stripeSubscriptionId, subscriptionId));
+
+        if (user) {
+          await db.update(users).set({
+            isPro: false,
+            stripeSubscriptionId: null,
+            proSubscriptionType: null,
+            proSubscriptionEndDate: null,
+            updatedAt: new Date(),
+          }).where(eq(users.id, user.id));
+
+          console.log(`[GF Webhook] Removed Pro status for user ${user.id} (subscription deleted)`);
+
+          if (user.email) {
+            EmailService.sendProCancelledEmail(
+              user.email,
+              user.username || user.displayName || 'Gamer',
+              new Date()
+            ).catch(err => console.error('[GF Webhook] Failed to send cancellation email:', err));
+          }
+        } else {
+          console.warn(`[GF Webhook] No user found for deleted subscription: ${subscriptionId}`);
+        }
+      } catch (error) {
+        console.error('[GF Webhook] Error processing subscription deletion:', error);
+      }
+    }
+
+    if (event.type === 'invoice.payment_failed') {
+      const invoice = event.data.object as any;
+      const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id;
+
+      if (subscriptionId) {
+        try {
+          console.log(`[GF Webhook] Payment failed for subscription: ${subscriptionId}`);
+
+          const [user] = await db.select().from(users).where(eq(users.stripeSubscriptionId, subscriptionId));
+
+          if (user && user.email) {
+            EmailService.sendPaymentFailedEmail(
+              user.email,
+              user.username || user.displayName || 'Gamer'
+            ).catch(err => console.error('[GF Webhook] Failed to send payment failed email:', err));
+
+            console.log(`[GF Webhook] Payment failed notification sent to user ${user.id}`);
+          }
+        } catch (error) {
+          console.error('[GF Webhook] Error processing payment_failed:', error);
         }
       }
     }
