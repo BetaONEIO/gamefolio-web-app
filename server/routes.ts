@@ -20,7 +20,7 @@ import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
 import { eq, sql } from "drizzle-orm";
 import { db } from "./db";
-import { users, nameTags, profileBorders, storeItems } from "@shared/schema";
+import { users, nameTags, profileBorders, storeItems, heroSlides } from "@shared/schema";
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -1898,6 +1898,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Error fetching banner settings:", err);
       res.status(500).json({ message: "Error fetching banner settings" });
+    }
+  });
+
+  // GET /api/hero-slides - Public endpoint for active hero slides
+  app.get("/api/hero-slides", async (req, res) => {
+    try {
+      const { asc } = await import('drizzle-orm');
+      const slides = await db.select().from(heroSlides).where(eq(heroSlides.isActive, true)).orderBy(asc(heroSlides.displayOrder));
+      res.json(slides);
+    } catch (err) {
+      console.error("Error fetching hero slides:", err);
+      res.status(500).json({ message: "Error fetching hero slides" });
     }
   });
 

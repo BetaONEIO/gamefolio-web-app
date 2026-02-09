@@ -7,7 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
 import { ContentFilterService } from '../services/content-filter';
-import { insertBannerSettingsSchema, insertAssetRewardSchema } from '@shared/schema';
+import { insertBannerSettingsSchema, insertAssetRewardSchema, insertHeroSlideSchema, heroSlides } from '@shared/schema';
 import { z } from 'zod';
 import { supabaseStorage } from '../supabase-storage';
 
@@ -1676,6 +1676,130 @@ adminRouter.post("/assets/unassign", async (req: Request, res: Response) => {
   } catch (err) {
     console.error("Error unassigning asset:", err);
     res.status(500).json({ message: "Error unassigning asset" });
+  }
+});
+
+// ===== Hero Slides Management =====
+
+// POST /api/admin/hero-slides/upload-image - Upload hero slide image
+adminRouter.post("/hero-slides/upload-image", rewardImageUpload.single('image'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No image file provided" });
+    }
+
+    const userId = req.user!.id;
+    const result = await supabaseStorage.uploadFile(req.file, 'image', userId);
+
+    const fs = await import('fs');
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    res.json({ imageUrl: result.url });
+  } catch (err) {
+    console.error("Error uploading hero slide image:", err);
+    res.status(500).json({ message: "Error uploading image" });
+  }
+});
+
+// GET /api/admin/hero-slides - Get all hero slides
+adminRouter.get("/hero-slides", async (req: Request, res: Response) => {
+  try {
+    const { db } = await import('../db');
+    const { asc } = await import('drizzle-orm');
+    const slides = await db.select().from(heroSlides).orderBy(asc(heroSlides.displayOrder));
+    res.json(slides);
+  } catch (err) {
+    console.error("Error fetching hero slides:", err);
+    res.status(500).json({ message: "Error fetching hero slides" });
+  }
+});
+
+// POST /api/admin/hero-slides - Create a new hero slide
+adminRouter.post("/hero-slides", async (req: Request, res: Response) => {
+  try {
+    const parsed = insertHeroSlideSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Invalid hero slide data", errors: parsed.error.errors });
+    }
+
+    const { db } = await import('../db');
+    const [slide] = await db.insert(heroSlides).values(parsed.data).returning();
+    res.json(slide);
+  } catch (err) {
+    console.error("Error creating hero slide:", err);
+    res.status(500).json({ message: "Error creating hero slide" });
+  }
+});
+
+// PATCH /api/admin/hero-slides/:id - Update a hero slide
+adminRouter.patch("/hero-slides/:id", async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid slide ID" });
+    }
+
+    const { db } = await import('../db');
+    const { eq } = await import('drizzle-orm');
+    const [updated] = await db.update(heroSlides).set(req.body).where(eq(heroSlides.id, id)).returning();
+
+    if (!updated) {
+      return res.status(404).json({ message: "Hero slide not found" });
+    }
+
+    res.json(updated);
+  } catch (err) {
+    console.error("Error updating hero slide:", err);
+    res.status(500).json({ message: "Error updating hero slide" });
+  }
+});
+
+// DELETE /api/admin/hero-slides/:id - Delete a hero slide
+adminRouter.delete("/hero-slides/:id", async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid slide ID" });
+    }
+
+    const { db } = await import('../db');
+    const { eq } = await import('drizzle-orm');
+    const [deleted] = await db.delete(heroSlides).where(eq(heroSlides.id, id)).returning();
+
+    if (!deleted) {
+      return res.status(404).json({ message: "Hero slide not found" });
+    }
+
+    res.json({ message: "Hero slide deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting hero slide:", err);
+    res.status(500).json({ message: "Error deleting hero slide" });
+  }
+});
+
+// POST /api/admin/hero-slides/reorder - Reorder hero slides
+adminRouter.post("/hero-slides/reorder", async (req: Request, res: Response) => {
+  try {
+    const { slides } = req.body;
+    if (!Array.isArray(slides)) {
+      return res.status(400).json({ message: "Invalid reorder data - slides array required" });
+    }
+
+    const { db } = await import('../db');
+    const { eq } = await import('drizzle-orm');
+
+    for (const slide of slides) {
+      if (slide.id && typeof slide.displayOrder === 'number') {
+        await db.update(heroSlides).set({ displayOrder: slide.displayOrder }).where(eq(heroSlides.id, slide.id));
+      }
+    }
+
+    res.json({ message: "Hero slides reordered successfully" });
+  } catch (err) {
+    console.error("Error reordering hero slides:", err);
+    res.status(500).json({ message: "Error reordering hero slides" });
   }
 });
 
