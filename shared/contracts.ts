@@ -1,4 +1,4 @@
-export const GF_TOKEN_ADDRESS = "0x2Db1fFAbbc41b8667B408a5F5e0E42bB6c6BA7f7" as const;
+export const GF_TOKEN_ADDRESS = "0x9c4aC24c7bb36AA3772ccd5aCBCB48a20A1704B7" as const;
 
 export const SKALE_NEBULA_TESTNET = {
   id: 37084624,

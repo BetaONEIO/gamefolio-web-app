@@ -4,7 +4,7 @@ export const SKALE_RPC_URL = "https://testnet.skalenodes.com/v1/lanky-ill-funny-
 
 export const SKALE_EXPLORER_BASE_URL = "https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com" as const;
 
-export const GF_TOKEN_ADDRESS = "0x2Db1fFAbbc41b8667B408a5F5e0E42bB6c6BA7f7" as const;
+export const GF_TOKEN_ADDRESS = "0x9c4aC24c7bb36AA3772ccd5aCBCB48a20A1704B7" as const;
 
 export const GF_TOKEN_DECIMALS = 18 as const;
 

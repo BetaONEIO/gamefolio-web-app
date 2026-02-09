@@ -8848,7 +8848,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         balance,
         walletAddress: user.walletAddress,
-        contractAddress: "0x2Db1fFAbbc41b8667B408a5F5e0E42bB6c6BA7f7",
+        contractAddress: "0x9c4aC24c7bb36AA3772ccd5aCBCB48a20A1704B7",
       });
     } catch (error) {
       console.error("Error fetching token balance:", error);
