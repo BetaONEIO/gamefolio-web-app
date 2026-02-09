@@ -4,11 +4,11 @@ export const SKALE_RPC_URL = "https://testnet.skalenodes.com/v1/lanky-ill-funny-
 
 export const SKALE_EXPLORER_BASE_URL = "https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com" as const;
 
-export const GF_TOKEN_ADDRESS = "0x9c4aC24c7bb36AA3772ccd5aCBCB48a20A1704B7" as const;
+export const GF_TOKEN_ADDRESS = "0x9c4aC24c7bb36AA3772ccd5aCBCB48a20a1704B7" as const;
 
 export const GF_TOKEN_DECIMALS = 18 as const;
 
-export const STAKING_ADDRESS = "0x9C4aC24C7Bb36AA3772ccd5aCbcB48A20A1704B7" as const;
+export const STAKING_ADDRESS = "0x9c4aC24c7bb36AA3772ccd5aCBCB48a20a1704B7" as const;
 
 export const GF_PRICING_CONFIG = {
   gbpPerGf: 0.01,

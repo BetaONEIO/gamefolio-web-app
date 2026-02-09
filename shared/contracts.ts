@@ -1,4 +1,4 @@
-export const GF_TOKEN_ADDRESS = "0x9c4aC24c7bb36AA3772ccd5aCBCB48a20A1704B7" as const;
+export const GF_TOKEN_ADDRESS = "0x9c4aC24c7bb36AA3772ccd5aCBCB48a20a1704B7" as const;
 
 export const SKALE_NEBULA_TESTNET = {
   id: 37084624,
@@ -141,7 +141,7 @@ export const GF_TOKEN_ABI = [
   }
 ] as const;
 
-export const GF_STAKING_ADDRESS = "0x9C4aC24C7Bb36AA3772ccd5aCbcB48A20A1704B7" as const;
+export const GF_STAKING_ADDRESS = "0x9c4aC24c7bb36AA3772ccd5aCBCB48a20a1704B7" as const;
 
 export const GF_STAKING_ABI = [
   {
