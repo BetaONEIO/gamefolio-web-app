@@ -5,7 +5,7 @@ import { gfOrders, users } from '@shared/schema';
 import { eq, desc, and } from 'drizzle-orm';
 import { getUncachableStripeClient, getStripePublishableKey } from '../stripeClient';
 import { hybridAuth } from '../middleware/hybrid-auth';
-import { getTreasuryBalance, getTreasuryAddress } from '../gf-token-service';
+import { getTreasuryBalance, getTreasuryAddress, transferGfTokens } from '../gf-token-service';
 
 const SKALE_NEBULA_TESTNET_CHAIN_ID = 37084624;
 
@@ -377,27 +377,54 @@ router.post('/api/gf/confirm-payment', hybridAuth, async (req: Request, res: Res
       });
     }
 
-    await db.update(gfOrders)
-      .set({ 
-        status: 'credited', 
-        stripePaymentIntentId: paymentIntentId,
-        updatedAt: new Date() 
-      })
-      .where(eq(gfOrders.id, order.id));
+    const [currentUser] = await db.select({ 
+      gfTokenBalance: users.gfTokenBalance, 
+      walletAddress: users.walletAddress 
+    }).from(users).where(eq(users.id, userId));
 
     const [updatedUser] = await db.update(users)
       .set({ 
-        gfTokenBalance: (await db.select({ gfTokenBalance: users.gfTokenBalance }).from(users).where(eq(users.id, userId)))[0].gfTokenBalance + order.gfAmount
+        gfTokenBalance: currentUser.gfTokenBalance + order.gfAmount
       })
       .where(eq(users.id, userId))
       .returning({ gfTokenBalance: users.gfTokenBalance });
 
-    console.log(`[GF Confirm] Order ${order.id} credited. User ${userId} received ${order.gfAmount} GFT. New balance: ${updatedUser?.gfTokenBalance}`);
+    let txHash: string | undefined;
+    let onChainSuccess = false;
+
+    if (currentUser.walletAddress) {
+      console.log(`[GF Confirm] Attempting on-chain transfer of ${order.gfAmount} GFT to ${currentUser.walletAddress}`);
+      try {
+        const result = await transferGfTokens(currentUser.walletAddress, order.gfAmount);
+        if (result.success) {
+          txHash = result.txHash;
+          onChainSuccess = true;
+          console.log(`[GF Confirm] On-chain transfer successful. TxHash: ${txHash}`);
+        } else {
+          console.error(`[GF Confirm] On-chain transfer failed: ${result.error}`);
+        }
+      } catch (transferError: any) {
+        console.error(`[GF Confirm] On-chain transfer error:`, transferError.message);
+      }
+    }
+
+    await db.update(gfOrders)
+      .set({ 
+        status: onChainSuccess ? 'delivered' : 'credited', 
+        stripePaymentIntentId: paymentIntentId,
+        txHash: txHash,
+        updatedAt: new Date() 
+      })
+      .where(eq(gfOrders.id, order.id));
+
+    console.log(`[GF Confirm] Order ${order.id} ${onChainSuccess ? 'delivered' : 'credited'}. User ${userId} received ${order.gfAmount} GFT. New balance: ${updatedUser?.gfTokenBalance}`);
 
     return res.json({ 
       success: true, 
       gfAmount: order.gfAmount,
       newBalance: updatedUser?.gfTokenBalance || 0,
+      onChainTransfer: onChainSuccess,
+      txHash,
     });
   } catch (error: any) {
     console.error('Confirm payment error:', error);
