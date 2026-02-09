@@ -1195,6 +1195,7 @@ const AdminPage = () => {
   const [slideBucketName, setSlideBucketName] = useState("gamefolio-backgrounds");
   const [slideBucketImages, setSlideBucketImages] = useState<any[]>([]);
   const [slideBucketLoading, setSlideBucketLoading] = useState(false);
+  const [slideBucketSearch, setSlideBucketSearch] = useState("");
   
   // Level management state
   const [levelUserSearch, setLevelUserSearch] = useState("");
@@ -3973,7 +3974,7 @@ const AdminPage = () => {
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Slide Image *</label>
                         {slideImageUrl ? (
-                          <div className="relative w-full h-48 rounded-lg overflow-hidden bg-muted">
+                          <div className="relative w-full rounded-lg overflow-hidden bg-muted" style={{ aspectRatio: '21/9' }}>
                             <img src={slideImageUrl} alt="Slide preview" className="w-full h-full object-cover" />
                             <Button variant="destructive" size="sm" className="absolute top-2 right-2" onClick={() => setSlideImageUrl("")}>
                               <Trash2 className="h-3 w-3 mr-1" /> Remove
@@ -3990,7 +3991,7 @@ const AdminPage = () => {
                                   <span>{slideUploading ? "Uploading..." : "Upload Image"}</span>
                                 </Button>
                               </label>
-                              <Button variant="outline" size="sm" onClick={() => { setSlideBucketBrowser(true); fetchSlideBucketImages(slideBucketName); }}>
+                              <Button variant="outline" size="sm" onClick={() => { setSlideBucketBrowser(true); setSlideBucketSearch(""); fetchSlideBucketImages(slideBucketName); }}>
                                 <FolderOpen className="h-4 w-4 mr-1" /> Browse Bucket
                               </Button>
                             </div>
@@ -4002,12 +4003,12 @@ const AdminPage = () => {
                         <div className="border rounded-lg p-4 space-y-3">
                           <div className="flex items-center justify-between">
                             <h4 className="font-medium text-sm">Select from Supabase Storage</h4>
-                            <Button variant="ghost" size="sm" onClick={() => setSlideBucketBrowser(false)}>
+                            <Button variant="ghost" size="sm" onClick={() => { setSlideBucketBrowser(false); setSlideBucketSearch(""); }}>
                               <XCircle className="h-4 w-4" />
                             </Button>
                           </div>
                           <div className="flex gap-2">
-                            <Select value={slideBucketName} onValueChange={(val) => { setSlideBucketName(val); fetchSlideBucketImages(val); }}>
+                            <Select value={slideBucketName} onValueChange={(val) => { setSlideBucketName(val); setSlideBucketSearch(""); fetchSlideBucketImages(val); }}>
                               <SelectTrigger className="w-[250px]">
                                 <SelectValue />
                               </SelectTrigger>
@@ -4021,19 +4022,27 @@ const AdminPage = () => {
                               <RefreshCw className={`h-4 w-4 ${slideBucketLoading ? 'animate-spin' : ''}`} />
                             </Button>
                           </div>
+                          <Input
+                            placeholder="Search images by name..."
+                            value={slideBucketSearch}
+                            onChange={(e) => setSlideBucketSearch(e.target.value)}
+                            className="w-full"
+                          />
                           {slideBucketLoading ? (
                             <div className="text-center py-4 text-sm text-muted-foreground">Loading images...</div>
-                          ) : slideBucketImages.length === 0 ? (
-                            <div className="text-center py-4 text-sm text-muted-foreground">No images found in this bucket</div>
+                          ) : slideBucketImages.filter((img) => !slideBucketSearch || img.name.toLowerCase().includes(slideBucketSearch.toLowerCase())).length === 0 ? (
+                            <div className="text-center py-4 text-sm text-muted-foreground">{slideBucketSearch ? "No images match your search" : "No images found in this bucket"}</div>
                           ) : (
-                            <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto">
-                              {slideBucketImages.map((img) => (
+                            <div className="grid grid-cols-3 gap-2 max-h-72 overflow-y-auto">
+                              {slideBucketImages.filter((img) => !slideBucketSearch || img.name.toLowerCase().includes(slideBucketSearch.toLowerCase())).map((img) => (
                                 <div
                                   key={img.id || img.name}
-                                  className="aspect-video rounded border overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                                  onClick={() => { setSlideImageUrl(img.publicUrl); setSlideBucketBrowser(false); }}
+                                  className="rounded border overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all group relative"
+                                  style={{ aspectRatio: '21/9' }}
+                                  onClick={() => { setSlideImageUrl(img.publicUrl); setSlideBucketBrowser(false); setSlideBucketSearch(""); }}
                                 >
                                   <img src={img.publicUrl} alt={img.name} className="w-full h-full object-cover" />
+                                  <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[10px] px-1 py-0.5 truncate opacity-0 group-hover:opacity-100 transition-opacity">{img.name}</div>
                                 </div>
                               ))}
                             </div>
@@ -4065,7 +4074,7 @@ const AdminPage = () => {
 
                       <div className="border rounded-lg p-4 bg-muted/50">
                         <h4 className="font-medium mb-2 text-sm">Preview</h4>
-                        <div className="relative w-full h-32 rounded overflow-hidden bg-black">
+                        <div className="relative w-full rounded overflow-hidden bg-black" style={{ aspectRatio: '21/9' }}>
                           {slideImageUrl && <img src={slideImageUrl} alt="Preview" className="w-full h-full object-cover opacity-60" />}
                           <div className="absolute inset-0 flex flex-col justify-center p-4">
                             <p className="text-white font-bold text-lg">{slideTitle || "Title"}</p>
@@ -4092,7 +4101,7 @@ const AdminPage = () => {
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Slide Image *</label>
                       {slideImageUrl ? (
-                        <div className="relative w-full h-48 rounded-lg overflow-hidden bg-muted">
+                        <div className="relative w-full rounded-lg overflow-hidden bg-muted" style={{ aspectRatio: '21/9' }}>
                           <img src={slideImageUrl} alt="Slide preview" className="w-full h-full object-cover" />
                           <Button variant="destructive" size="sm" className="absolute top-2 right-2" onClick={() => setSlideImageUrl("")}>
                             <Trash2 className="h-3 w-3 mr-1" /> Remove
@@ -4109,7 +4118,7 @@ const AdminPage = () => {
                                 <span>{slideUploading ? "Uploading..." : "Upload Image"}</span>
                               </Button>
                             </label>
-                            <Button variant="outline" size="sm" onClick={() => { setSlideBucketBrowser(true); fetchSlideBucketImages(slideBucketName); }}>
+                            <Button variant="outline" size="sm" onClick={() => { setSlideBucketBrowser(true); setSlideBucketSearch(""); fetchSlideBucketImages(slideBucketName); }}>
                               <FolderOpen className="h-4 w-4 mr-1" /> Browse Bucket
                             </Button>
                           </div>
@@ -4121,12 +4130,12 @@ const AdminPage = () => {
                       <div className="border rounded-lg p-4 space-y-3">
                         <div className="flex items-center justify-between">
                           <h4 className="font-medium text-sm">Select from Supabase Storage</h4>
-                          <Button variant="ghost" size="sm" onClick={() => setSlideBucketBrowser(false)}>
+                          <Button variant="ghost" size="sm" onClick={() => { setSlideBucketBrowser(false); setSlideBucketSearch(""); }}>
                             <XCircle className="h-4 w-4" />
                           </Button>
                         </div>
                         <div className="flex gap-2">
-                          <Select value={slideBucketName} onValueChange={(val) => { setSlideBucketName(val); fetchSlideBucketImages(val); }}>
+                          <Select value={slideBucketName} onValueChange={(val) => { setSlideBucketName(val); setSlideBucketSearch(""); fetchSlideBucketImages(val); }}>
                             <SelectTrigger className="w-[250px]">
                               <SelectValue />
                             </SelectTrigger>
@@ -4140,19 +4149,27 @@ const AdminPage = () => {
                             <RefreshCw className={`h-4 w-4 ${slideBucketLoading ? 'animate-spin' : ''}`} />
                           </Button>
                         </div>
+                        <Input
+                          placeholder="Search images by name..."
+                          value={slideBucketSearch}
+                          onChange={(e) => setSlideBucketSearch(e.target.value)}
+                          className="w-full"
+                        />
                         {slideBucketLoading ? (
                           <div className="text-center py-4 text-sm text-muted-foreground">Loading images...</div>
-                        ) : slideBucketImages.length === 0 ? (
-                          <div className="text-center py-4 text-sm text-muted-foreground">No images found in this bucket</div>
+                        ) : slideBucketImages.filter((img) => !slideBucketSearch || img.name.toLowerCase().includes(slideBucketSearch.toLowerCase())).length === 0 ? (
+                          <div className="text-center py-4 text-sm text-muted-foreground">{slideBucketSearch ? "No images match your search" : "No images found in this bucket"}</div>
                         ) : (
-                          <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto">
-                            {slideBucketImages.map((img) => (
+                          <div className="grid grid-cols-3 gap-2 max-h-72 overflow-y-auto">
+                            {slideBucketImages.filter((img) => !slideBucketSearch || img.name.toLowerCase().includes(slideBucketSearch.toLowerCase())).map((img) => (
                               <div
                                 key={img.id || img.name}
-                                className="aspect-video rounded border overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                                onClick={() => { setSlideImageUrl(img.publicUrl); setSlideBucketBrowser(false); }}
+                                className="rounded border overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all group relative"
+                                style={{ aspectRatio: '21/9' }}
+                                onClick={() => { setSlideImageUrl(img.publicUrl); setSlideBucketBrowser(false); setSlideBucketSearch(""); }}
                               >
                                 <img src={img.publicUrl} alt={img.name} className="w-full h-full object-cover" />
+                                <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[10px] px-1 py-0.5 truncate opacity-0 group-hover:opacity-100 transition-opacity">{img.name}</div>
                               </div>
                             ))}
                           </div>
@@ -4189,7 +4206,7 @@ const AdminPage = () => {
 
                     <div className="border rounded-lg p-4 bg-muted/50">
                       <h4 className="font-medium mb-2 text-sm">Preview</h4>
-                      <div className="relative w-full h-32 rounded overflow-hidden bg-black">
+                      <div className="relative w-full rounded overflow-hidden bg-black" style={{ aspectRatio: '21/9' }}>
                         {slideImageUrl && <img src={slideImageUrl} alt="Preview" className="w-full h-full object-cover opacity-60" />}
                         <div className="absolute inset-0 flex flex-col justify-center p-4">
                           <p className="text-white font-bold text-lg">{slideTitle || "Title"}</p>
