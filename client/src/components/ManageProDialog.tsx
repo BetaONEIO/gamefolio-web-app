@@ -20,12 +20,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/hooks/use-auth";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
-import { Crown, Check, Calendar, CreditCard, ExternalLink, AlertTriangle, Loader2, Clock } from "lucide-react";
+import { Crown, Check, Calendar, CreditCard, ExternalLink, AlertTriangle, Loader2, Clock, Lock } from "lucide-react";
 
 interface ManageProDialogProps {
   open: boolean;
@@ -37,6 +41,11 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
   const { customerInfo, refreshCustomerInfo } = useRevenueCat();
   const { toast } = useToast();
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelStep, setCancelStep] = useState<'password' | 'reason'>('password');
+  const [cancelPassword, setCancelPassword] = useState('');
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelReasonOther, setCancelReasonOther] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [cancelling, setCancelling] = useState(false);
 
   const { data: subscriptionStatus } = useQuery<{
@@ -88,10 +97,31 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
     }
   };
 
-  const handleCancelSubscription = async () => {
+  const handleVerifyPassword = async () => {
+    setPasswordError('');
     setCancelling(true);
     try {
-      const response = await apiRequest("POST", "/api/subscription/cancel");
+      const response = await apiRequest("POST", "/api/auth/verify-password", { password: cancelPassword });
+      const data = await response.json();
+      if (data.verified) {
+        setCancelStep('reason');
+      } else {
+        setPasswordError('Incorrect password. Please try again.');
+      }
+    } catch (error: any) {
+      setPasswordError(error.message || 'Failed to verify password. Please try again.');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    const reason = cancelReason === 'other' ? cancelReasonOther : cancelReason;
+    if (!reason) return;
+
+    setCancelling(true);
+    try {
+      const response = await apiRequest("POST", "/api/subscription/cancel", { reason });
       const data = await response.json();
       
       if (data.success) {
@@ -104,14 +134,14 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
           description: data.message || "Your Pro subscription has been cancelled.",
           variant: "gamefolioSuccess",
         });
-        setShowCancelConfirm(false);
+        resetCancelState();
       } else if (data.useManagementUrl && managementUrl) {
         window.open(managementUrl, '_blank');
         toast({
           title: "Manage subscription",
           description: "Please cancel your subscription through the billing portal.",
         });
-        setShowCancelConfirm(false);
+        resetCancelState();
       }
     } catch (error: any) {
       const message = error.message || "Failed to cancel subscription. Please try again.";
@@ -121,7 +151,7 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
           title: "Already cancelled",
           description: message,
         });
-        setShowCancelConfirm(false);
+        resetCancelState();
       } else {
         toast({
           title: "Error",
@@ -132,6 +162,15 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
     } finally {
       setCancelling(false);
     }
+  };
+
+  const resetCancelState = () => {
+    setShowCancelConfirm(false);
+    setCancelStep('password');
+    setCancelPassword('');
+    setCancelReason('');
+    setCancelReasonOther('');
+    setPasswordError('');
   };
 
   const proFeatures = [
@@ -233,7 +272,10 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
               <Button
                 variant="ghost"
                 className="w-full text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                onClick={() => setShowCancelConfirm(true)}
+                onClick={() => {
+                  resetCancelState();
+                  setShowCancelConfirm(true);
+                }}
               >
                 Cancel Subscription
               </Button>
@@ -242,52 +284,130 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-500" />
-              Cancel Pro Subscription?
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3">
-                <p>Are you sure you want to cancel your Gamefolio Pro subscription?</p>
-                <p className="text-sm font-medium">You'll lose access to:</p>
-                <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
-                  <li>Unlimited uploads</li>
-                  <li>Higher file size limits</li>
-                  <li>Exclusive avatar borders</li>
-                  <li>Ad-free experience</li>
-                  <li>Monthly bonus lootboxes</li>
-                </ul>
-                <p className="text-sm">
-                  Your access will continue until the end of your current billing period.
-                </p>
+      <Dialog open={showCancelConfirm} onOpenChange={(open) => { if (!open) resetCancelState(); }}>
+        <DialogContent className="sm:max-w-md">
+          {cancelStep === 'password' ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Lock className="h-5 w-5 text-red-500" />
+                  Confirm Your Identity
+                </DialogTitle>
+                <DialogDescription>
+                  Please enter your password to proceed with cancelling your Pro subscription.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label htmlFor="cancel-password">Password</Label>
+                  <Input
+                    id="cancel-password"
+                    type="password"
+                    placeholder="Enter your password"
+                    value={cancelPassword}
+                    onChange={(e) => { setCancelPassword(e.target.value); setPasswordError(''); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && cancelPassword) handleVerifyPassword(); }}
+                  />
+                  {passwordError && (
+                    <p className="text-sm text-red-500">{passwordError}</p>
+                  )}
+                </div>
               </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={cancelling}>Keep Pro</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                handleCancelSubscription();
-              }}
-              disabled={cancelling}
-              className="bg-red-500 hover:bg-red-600"
-            >
-              {cancelling ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Cancelling...
-                </>
-              ) : (
-                "Yes, Cancel"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              <DialogFooter className="flex-col gap-2 sm:flex-row">
+                <Button variant="outline" onClick={resetCancelState} disabled={cancelling}>
+                  Go Back
+                </Button>
+                <Button
+                  onClick={handleVerifyPassword}
+                  disabled={cancelling || !cancelPassword}
+                  className="bg-red-500 hover:bg-red-600"
+                >
+                  {cancelling ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    "Continue"
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                  Why are you cancelling?
+                </DialogTitle>
+                <DialogDescription>
+                  We'd love to know why you're leaving so we can improve. Your feedback helps us make Gamefolio better for everyone.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <RadioGroup value={cancelReason} onValueChange={setCancelReason} className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Too expensive" id="reason-price" />
+                    <Label htmlFor="reason-price" className="cursor-pointer">Too expensive</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Not using it enough" id="reason-usage" />
+                    <Label htmlFor="reason-usage" className="cursor-pointer">Not using it enough</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Missing features I need" id="reason-features" />
+                    <Label htmlFor="reason-features" className="cursor-pointer">Missing features I need</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Found an alternative" id="reason-alternative" />
+                    <Label htmlFor="reason-alternative" className="cursor-pointer">Found an alternative</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Technical issues" id="reason-technical" />
+                    <Label htmlFor="reason-technical" className="cursor-pointer">Technical issues</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="other" id="reason-other" />
+                    <Label htmlFor="reason-other" className="cursor-pointer">Other</Label>
+                  </div>
+                </RadioGroup>
+
+                {cancelReason === 'other' && (
+                  <Textarea
+                    placeholder="Please tell us more..."
+                    value={cancelReasonOther}
+                    onChange={(e) => setCancelReasonOther(e.target.value)}
+                    className="min-h-[80px]"
+                  />
+                )}
+
+                <div className="p-3 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-sm text-muted-foreground">
+                  <p>Your access will continue until the end of your current billing period.</p>
+                </div>
+              </div>
+              <DialogFooter className="flex-col gap-2 sm:flex-row">
+                <Button variant="outline" onClick={() => setCancelStep('password')} disabled={cancelling}>
+                  Go Back
+                </Button>
+                <Button
+                  onClick={handleCancelSubscription}
+                  disabled={cancelling || !cancelReason || (cancelReason === 'other' && !cancelReasonOther.trim())}
+                  className="bg-red-500 hover:bg-red-600"
+                >
+                  {cancelling ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Cancelling...
+                    </>
+                  ) : (
+                    "Confirm Cancellation"
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
