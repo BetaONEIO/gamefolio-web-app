@@ -8,7 +8,7 @@ export const GF_TOKEN_ADDRESS = "0x9c4aC24c7bb36AA3772ccd5aCBCB48a20a1704B7" as 
 
 export const GF_TOKEN_DECIMALS = 18 as const;
 
-export const STAKING_ADDRESS = "0x9c4aC24c7bb36AA3772ccd5aCBCB48a20a1704B7" as const;
+export const STAKING_ADDRESS = "0x589C36a839434ae674Ba795dBb5B06B387110172" as const;
 
 export const GF_PRICING_CONFIG = {
   gbpPerGf: 0.01,
