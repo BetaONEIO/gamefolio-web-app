@@ -1649,28 +1649,39 @@ export class DatabaseStorage implements IStorage {
   async getProSubscribers(): Promise<Array<{
     id: number;
     username: string;
+    email: string | null;
     displayName: string | null;
     avatarUrl: string | null;
     isPro: boolean;
     proSubscriptionType: string | null;
     proSubscriptionStartDate: Date | null;
     proSubscriptionEndDate: Date | null;
+    stripeCustomerId: string | null;
+    stripeSubscriptionId: string | null;
     createdAt: Date;
   }>> {
     const proUsers = await db
       .select({
         id: users.id,
         username: users.username,
+        email: users.email,
         displayName: users.displayName,
         avatarUrl: users.avatarUrl,
         isPro: users.isPro,
         proSubscriptionType: users.proSubscriptionType,
         proSubscriptionStartDate: users.proSubscriptionStartDate,
         proSubscriptionEndDate: users.proSubscriptionEndDate,
+        stripeCustomerId: users.stripeCustomerId,
+        stripeSubscriptionId: users.stripeSubscriptionId,
         createdAt: users.createdAt,
       })
       .from(users)
-      .where(eq(users.isPro, true))
+      .where(
+        or(
+          eq(users.isPro, true),
+          isNotNull(users.proSubscriptionStartDate)
+        )
+      )
       .orderBy(desc(users.proSubscriptionStartDate));
     
     return proUsers;

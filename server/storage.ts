@@ -84,12 +84,15 @@ export interface IStorage {
   getProSubscribers(): Promise<Array<{
     id: number;
     username: string;
+    email: string | null;
     displayName: string | null;
     avatarUrl: string | null;
     isPro: boolean;
     proSubscriptionType: string | null;
     proSubscriptionStartDate: Date | null;
     proSubscriptionEndDate: Date | null;
+    stripeCustomerId: string | null;
+    stripeSubscriptionId: string | null;
     createdAt: Date;
   }>>;
 
