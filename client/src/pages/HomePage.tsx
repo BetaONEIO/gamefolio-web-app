@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 import TrendingGameCard from "@/components/clips/TrendingGameCard";
 import GameClipsSection from "@/components/clips/GameClipsSection";
+import { LazyImage } from "@/components/ui/lazy-image";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -590,14 +591,13 @@ const HomePage = () => {
                       >
                         <div className={`relative ${aspectRatio} w-full rounded-sm overflow-hidden cursor-pointer group`}>
                           {/* Thumbnail */}
-                          <img
+                          <LazyImage
                             src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
                             alt={reel.title}
                             className="w-full h-full object-cover"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.src = "/placeholder-game.png";
-                            }}
+                            showLoadingSpinner={true}
+                            rootMargin="100px"
+                            threshold={0.1}
                           />
                           
                           {/* Subtle gradient overlay */}
@@ -654,14 +654,13 @@ const HomePage = () => {
                     >
                       {/* Thumbnail/Video */}
                       <div className="relative w-full h-full">
-                        <img
+                        <LazyImage
                           src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
                           alt={reel.title}
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = "/placeholder-game.png";
-                          }}
+                          showLoadingSpinner={true}
+                          rootMargin="100px"
+                          threshold={0.1}
                         />
 
                         {/* Gradient overlay */}
