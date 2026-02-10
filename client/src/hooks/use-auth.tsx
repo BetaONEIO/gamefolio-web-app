@@ -141,6 +141,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: firebaseAuthChecked,
+    staleTime: 60000,
+    refetchInterval: 60000,
   });
 
 
