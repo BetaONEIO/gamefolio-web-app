@@ -92,7 +92,7 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
       encryptedPrivateKey: user.encryptedPrivateKey,
       contractAddress: MINT_SALE_ADDRESS as Address,
       abi: MINT_SALE_ABI,
-      functionName: 'mint',
+      functionName: 'buy',
       args: [BigInt(quantity)],
     });
 

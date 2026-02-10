@@ -148,6 +148,16 @@ export const GF_TOKEN_ABI = [
 export const MINT_SALE_ABI = [
   {
     "inputs": [{"internalType": "uint256", "name": "quantity", "type": "uint256"}],
+    "name": "buy",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "address", "name": "to", "type": "address"},
+      {"internalType": "uint256", "name": "quantity", "type": "uint256"}
+    ],
     "name": "mint",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -169,14 +179,28 @@ export const MINT_SALE_ABI = [
   },
   {
     "inputs": [],
-    "name": "gfToken",
+    "name": "paymentToken",
     "outputs": [{"internalType": "address", "name": "", "type": "address"}],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "nftContract",
+    "name": "treasury",
+    "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "paused",
+    "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
     "outputs": [{"internalType": "address", "name": "", "type": "address"}],
     "stateMutability": "view",
     "type": "function"

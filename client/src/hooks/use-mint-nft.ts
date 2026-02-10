@@ -332,7 +332,7 @@ export function useMintNFT(fallbackAddress?: string | null) {
       const hash = await walletClient.writeContract({
         address: MINT_SALE_ADDRESS as Address,
         abi: MINT_SALE_ABI,
-        functionName: 'mint',
+        functionName: 'buy',
         args: [BigInt(quantity)],
       });
 
