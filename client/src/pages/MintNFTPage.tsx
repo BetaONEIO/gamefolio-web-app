@@ -195,6 +195,7 @@ export default function MintNFTPage() {
 
   const [fetchedNftImages, setFetchedNftImages] = useState<Record<number, string>>({});
   const [fetchedNftNames, setFetchedNftNames] = useState<Record<number, string>>({});
+  const [fetchedNftAttributes, setFetchedNftAttributes] = useState<Record<number, Array<{ trait_type: string; value: string }>>>({});
 
   useEffect(() => {
     if (mintedTokenIds.length > 0 && Object.keys(fetchedNftImages).length === 0) {
@@ -208,6 +209,7 @@ export default function MintNFTPage() {
           if (data.nfts) {
             const images: Record<number, string> = {};
             const names: Record<number, string> = {};
+            const attrs: Record<number, Array<{ trait_type: string; value: string }>> = {};
             for (const nft of data.nfts) {
               if (nft.tokenId != null && nft.image) {
                 images[nft.tokenId] = nft.image;
@@ -215,9 +217,13 @@ export default function MintNFTPage() {
               if (nft.tokenId != null && nft.name) {
                 names[nft.tokenId] = nft.name;
               }
+              if (nft.tokenId != null && nft.attributes) {
+                attrs[nft.tokenId] = nft.attributes;
+              }
             }
             setFetchedNftImages(images);
             setFetchedNftNames(names);
+            setFetchedNftAttributes(attrs);
           }
         })
         .catch(() => {});
@@ -356,6 +362,7 @@ export default function MintNFTPage() {
           name: fetchedNftNames[tokenId],
           imageUrl: fetchedNftImages[tokenId] || `https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-assets/nft-placeholders/guardian-${(i % 3) + 1}.png`,
           rarity: Math.floor(Math.random() * 30) + 70,
+          attributes: fetchedNftAttributes[tokenId],
         };
       });
       
@@ -364,6 +371,7 @@ export default function MintNFTPage() {
           quantity={quantity}
           mintedNfts={mintedNfts}
           txHash={txHash}
+          walletAddress={crossmintAddress || wagmiWallet || undefined}
           onViewCollection={() => navigate("/collection")}
           onViewExplorer={() => window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`, "_blank")}
           onBack={() => navigate("/store")}
