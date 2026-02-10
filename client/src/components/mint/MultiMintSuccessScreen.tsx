@@ -167,7 +167,7 @@ export default function MultiMintSuccessScreen({
           <div className="flex flex-col md:flex-row md:gap-8 md:px-4 md:py-8">
 
             <div className="md:flex-[3] relative w-full" style={{ minHeight: "450px" }}>
-              <div className="flex justify-center items-start gap-1.5 px-6 pt-4 pb-2">
+              <div className="flex justify-center items-start gap-1.5 px-6 pt-4 pb-2 max-w-[320px] mx-auto">
                 {displayNfts.slice(0, 5).map((_, i) => (
                   <div
                     key={i}

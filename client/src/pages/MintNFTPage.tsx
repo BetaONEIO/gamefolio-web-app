@@ -381,9 +381,8 @@ export default function MintNFTPage() {
     
     return (
       <div className="min-h-screen bg-[#020617] flex flex-col">
-        {/* Header */}
         <header className="sticky top-0 z-40 backdrop-blur-md bg-[#020617]/80 border-b border-[#1e293b]/50">
-          <div className="flex items-center justify-between w-full max-w-[430px] mx-auto px-6 pt-12 pb-4">
+          <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-5xl mx-auto px-6 pt-12 md:pt-6 pb-4">
             <div className="w-10 h-10" />
             <span className="text-lg font-bold text-[#f8fafc]">Mint Complete</span>
             <Button
@@ -397,132 +396,123 @@ export default function MintNFTPage() {
           </div>
         </header>
 
-        <main className="flex-1 flex flex-col items-center py-6 px-6 overflow-y-auto">
-          <div className="w-full max-w-[430px] flex flex-col items-center gap-6">
+        <main className="flex-1 flex items-start justify-center py-6 md:py-12 px-4 md:px-8 overflow-y-auto">
+          <div className="w-full max-w-[430px] md:max-w-5xl flex flex-col md:flex-row md:items-start md:gap-12 items-center gap-6">
             
-            {/* NFT Image with Glow */}
-            <div className="relative w-[300px] h-[300px]">
-              {/* Blur glow background */}
-              <div className="absolute inset-0 blur-[40px] bg-[#4ade80]/20 rounded-full scale-100" />
-              
-              {/* NFT Container */}
-              <div className="relative w-[300px] h-[300px] rounded-[40px] border-2 border-[#4ade80]/30 overflow-hidden bg-white/[0.01] shadow-[0_25px_50px_-12px_rgba(74,222,128,0.2)]">
-                {fetchedNftImages[firstTokenId] ? (
-                  <img
-                    src={fetchedNftImages[firstTokenId]}
-                    alt={`NFT #${firstTokenId}`}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <video
-                    ref={previewVideo2Ref}
-                    src={MINT_VIDEO_URL}
-                    className="w-full h-full object-cover"
-                    muted
-                    playsInline
-                    preload="metadata"
-                  />
-                )}
+            <div className="md:flex-1 flex flex-col items-center">
+              <div className="relative w-[300px] md:w-[400px] h-[300px] md:h-[400px]">
+                <div className="absolute inset-0 blur-[40px] bg-[#4ade80]/20 rounded-full scale-100" />
                 
-                {/* Gradient overlay with badge */}
-                <div className="absolute bottom-0 left-0 right-0 h-[69px] bg-gradient-to-t from-black/80 to-transparent flex items-center px-6">
-                  <div className="backdrop-blur-sm bg-[#4ade80]/20 border border-[#4ade80]/30 rounded px-2 py-1">
-                    <span className="text-[10px] font-bold text-[#4ade80] uppercase tracking-[0.5px]">
-                      Rare Edition
-                    </span>
+                <div className="relative w-full h-full rounded-[40px] border-2 border-[#4ade80]/30 overflow-hidden bg-white/[0.01] shadow-[0_25px_50px_-12px_rgba(74,222,128,0.2)]">
+                  {fetchedNftImages[firstTokenId] ? (
+                    <img
+                      src={fetchedNftImages[firstTokenId]}
+                      alt={`NFT #${firstTokenId}`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <video
+                      ref={previewVideo2Ref}
+                      src={MINT_VIDEO_URL}
+                      className="w-full h-full object-cover"
+                      muted
+                      playsInline
+                      preload="metadata"
+                    />
+                  )}
+                  
+                  <div className="absolute bottom-0 left-0 right-0 h-[69px] bg-gradient-to-t from-black/80 to-transparent flex items-center px-6">
+                    <div className="backdrop-blur-sm bg-[#4ade80]/20 border border-[#4ade80]/30 rounded px-2 py-1">
+                      <span className="text-[10px] font-bold text-[#4ade80] uppercase tracking-[0.5px]">
+                        Rare Edition
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="absolute -bottom-4 right-6 w-14 h-14 rounded-full bg-[#4ade80] border-4 border-[#020617] flex items-center justify-center shadow-[0_4px_6px_-4px_rgba(74,222,128,0.4),0_10px_15px_-3px_rgba(74,222,128,0.4)]">
+                  <Check className="h-8 w-8 text-[#022c22]" />
+                </div>
+              </div>
+            </div>
+
+            <div className="md:flex-1 flex flex-col items-center md:items-start gap-6 max-w-[382px] md:max-w-none w-full">
+              <div className="flex flex-col items-center md:items-start gap-3 mt-2">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(txHash);
+                    toast({ title: "Copied!", description: "Transaction hash copied to clipboard" });
+                  }}
+                  className="flex items-center gap-2 bg-[#1e293b]/30 border border-[#1e293b]/30 rounded-full px-4 py-2 hover:bg-[#1e293b]/50 transition-colors"
+                >
+                  <span className="text-[10px] text-[#94a3b8] font-mono">
+                    Tx Hash: {txHash.slice(0, 10)}...
+                  </span>
+                  <Copy className="h-3.5 w-3.5 text-[#94a3b8]" />
+                </button>
+                
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#4ade80]" />
+                  <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-[2px]">
+                    Network: SKALE Nebula
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center md:items-start gap-1 text-center md:text-left">
+                <span className="text-sm font-bold text-[#4ade80] uppercase tracking-[1.4px]">
+                  Successfully Minted
+                </span>
+                <h2 className="text-[30px] md:text-4xl font-bold text-[#f8fafc] leading-9 md:leading-[44px]">
+                  Guardian #{firstTokenId}
+                </h2>
+                <p className="text-sm text-[#94a3b8] leading-5 mt-1 max-w-[300px] md:max-w-none">
+                  Your Guardian has been successfully forged and added to your collection on the blockchain.
+                </p>
+              </div>
+
+              <div className="flex gap-3 w-full max-w-[382px]">
+                <div className="flex-1 bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-tight">
+                    Rarity Score
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M6.09091 3.61833C6.94044 2.09494 7.36486 1.33325 7.99983 1.33325C8.6348 1.33325 9.05923 2.09494 9.90876 3.61833L10.1287 4.01259C10.3701 4.44573 10.4908 4.66231 10.6785 4.80512C10.8662 4.94794 11.1009 5.00091 11.5703 5.10685L11.9967 5.2034C13.6461 5.57687 14.4702 5.76327 14.6667 6.39422C14.8624 7.02449 14.3006 7.68226 13.1761 8.99712L12.8851 9.33706C12.566 9.71053 12.4057 9.8976 12.334 10.1283C12.2622 10.3596 12.2864 10.609 12.3346 11.1072L12.3789 11.5611C12.5485 13.3158 12.6337 14.1929 12.1201 14.5824C11.6065 14.972 10.8341 14.6166 9.29055 13.9059L8.89026 13.7222C8.45175 13.5197 8.2325 13.4191 7.99983 13.4191C7.76717 13.4191 7.54791 13.5197 7.1094 13.7222L6.70978 13.9059C5.16561 14.6166 4.39319 14.972 3.88025 14.5831C3.36598 14.1929 3.45113 13.3158 3.62077 11.5611L3.66502 11.1079C3.7133 10.609 3.73744 10.3596 3.66502 10.1289C3.59395 9.8976 3.4337 9.71053 3.11454 9.33773L2.82354 8.99712C1.6991 7.68293 1.13722 7.02516 1.33301 6.39422C1.5288 5.76327 2.35419 5.5762 4.00363 5.2034L4.43007 5.10685C4.89875 5.00091 5.13276 4.94794 5.32117 4.80512C5.50958 4.66231 5.6296 4.44573 5.87098 4.01259L6.09091 3.61833Z" fill="#4ADE80" />
+                    </svg>
+                    <span className="text-lg font-bold text-[#f8fafc]">{rarityScore}</span>
+                  </div>
+                </div>
+                
+                <div className="flex-1 bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-tight">
+                    Mint Number
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M7.14835 2.11694C7.22198 1.85073 7.06588 1.57524 6.79968 1.5016C6.53348 1.42796 6.25798 1.58407 6.18434 1.85027L5.17501 5.48361H2.66634C2.3902 5.48361 2.16634 5.70746 2.16634 5.98361C2.16634 6.25975 2.3902 6.48361 2.66634 6.48361H4.89768L3.87901 10.1503H1.33301C1.05687 10.1503 0.833008 10.3741 0.833008 10.6503C0.833008 10.9264 1.05687 11.1503 1.33301 11.1503H3.60101L2.85101 13.8503C2.77737 14.1165 2.93347 14.392 3.19968 14.4656C3.46588 14.5392 3.74137 14.3831 3.81501 14.1169L4.63901 11.1503H9.60101L8.85101 13.8503C8.77738 14.1165 8.93348 14.392 9.19968 14.4656C9.46588 14.5392 9.74138 14.3831 9.81501 14.1169L10.639 11.1503H13.333C13.6092 11.1503 13.833 10.9264 13.833 10.6503C13.833 10.3741 13.6092 10.1503 13.333 10.1503H10.917L11.935 6.48361H14.6664C14.9425 6.48361 15.1664 6.25975 15.1664 5.98361C15.1664 5.70746 14.9425 5.48361 14.6664 5.48361H12.213L13.1483 2.11694C13.196 1.94473 13.1481 1.7602 13.0228 1.63285C12.8975 1.50549 12.7138 1.45466 12.5408 1.49951C12.3679 1.54436 12.232 1.67807 12.1843 1.85027L11.175 5.48361H6.21301L7.14835 2.11694ZM9.87901 10.1503L10.8977 6.48361H5.93501L4.91701 10.1503H9.87901Z" fill="#4ADE80" />
+                    </svg>
+                    <span className="text-lg font-bold text-[#f8fafc]">{firstTokenId}/{maxSupply.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
-              
-              {/* Success checkmark badge */}
-              <div className="absolute -bottom-4 right-6 w-14 h-14 rounded-full bg-[#4ade80] border-4 border-[#020617] flex items-center justify-center shadow-[0_4px_6px_-4px_rgba(74,222,128,0.4),0_10px_15px_-3px_rgba(74,222,128,0.4)]">
-                <Check className="h-8 w-8 text-[#022c22]" />
-              </div>
-            </div>
 
-            {/* Transaction Info */}
-            <div className="flex flex-col items-center gap-3 mt-2">
-              {/* Tx Hash Pill */}
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(txHash);
-                  toast({ title: "Copied!", description: "Transaction hash copied to clipboard" });
-                }}
-                className="flex items-center gap-2 bg-[#1e293b]/30 border border-[#1e293b]/30 rounded-full px-4 py-2 hover:bg-[#1e293b]/50 transition-colors"
-              >
-                <span className="text-[10px] text-[#94a3b8] font-mono">
-                  Tx Hash: {txHash.slice(0, 10)}...
-                </span>
-                <Copy className="h-3.5 w-3.5 text-[#94a3b8]" />
-              </button>
-              
-              {/* Network Indicator */}
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#4ade80]" />
-                <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-[2px]">
-                  Network: SKALE Nebula
-                </span>
+              <div className="flex flex-col md:flex-row gap-3 w-full max-w-[382px]">
+                <Button
+                  onClick={() => navigate("/collection")}
+                  className="w-full md:flex-1 h-14 rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22] text-base font-bold shadow-[0_4px_6px_-4px_rgba(74,222,128,0.2),0_10px_15px_-3px_rgba(74,222,128,0.2)] flex items-center justify-center gap-2"
+                >
+                  <Wallet className="h-5 w-5" />
+                  View in My NFTs
+                </Button>
+                <Button
+                  onClick={() => window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`, "_blank")}
+                  className="w-full md:flex-1 h-14 rounded-2xl bg-[#1e293b] hover:bg-[#334155] border border-[#1e293b]/50 text-[#f8fafc] text-base font-bold flex items-center justify-center gap-2"
+                >
+                  <ExternalLink className="h-5 w-5" />
+                  View on Explorer
+                </Button>
               </div>
-            </div>
-
-            {/* Success Text */}
-            <div className="flex flex-col items-center gap-1 text-center w-[300px]">
-              <span className="text-sm font-bold text-[#4ade80] uppercase tracking-[1.4px]">
-                Successfully Minted
-              </span>
-              <h2 className="text-[30px] font-bold text-[#f8fafc] leading-9">
-                Guardian #{firstTokenId}
-              </h2>
-              <p className="text-sm text-[#94a3b8] leading-5 mt-1">
-                Your Guardian has been successfully forged and added to your collection on the blockchain.
-              </p>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="flex gap-3 w-full max-w-[382px]">
-              {/* Rarity Score */}
-              <div className="flex-1 bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col gap-1">
-                <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-tight">
-                  Rarity Score
-                </span>
-                <div className="flex items-center gap-2">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M6.09091 3.61833C6.94044 2.09494 7.36486 1.33325 7.99983 1.33325C8.6348 1.33325 9.05923 2.09494 9.90876 3.61833L10.1287 4.01259C10.3701 4.44573 10.4908 4.66231 10.6785 4.80512C10.8662 4.94794 11.1009 5.00091 11.5703 5.10685L11.9967 5.2034C13.6461 5.57687 14.4702 5.76327 14.6667 6.39422C14.8624 7.02449 14.3006 7.68226 13.1761 8.99712L12.8851 9.33706C12.566 9.71053 12.4057 9.8976 12.334 10.1283C12.2622 10.3596 12.2864 10.609 12.3346 11.1072L12.3789 11.5611C12.5485 13.3158 12.6337 14.1929 12.1201 14.5824C11.6065 14.972 10.8341 14.6166 9.29055 13.9059L8.89026 13.7222C8.45175 13.5197 8.2325 13.4191 7.99983 13.4191C7.76717 13.4191 7.54791 13.5197 7.1094 13.7222L6.70978 13.9059C5.16561 14.6166 4.39319 14.972 3.88025 14.5831C3.36598 14.1929 3.45113 13.3158 3.62077 11.5611L3.66502 11.1079C3.7133 10.609 3.73744 10.3596 3.66502 10.1289C3.59395 9.8976 3.4337 9.71053 3.11454 9.33773L2.82354 8.99712C1.6991 7.68293 1.13722 7.02516 1.33301 6.39422C1.5288 5.76327 2.35419 5.5762 4.00363 5.2034L4.43007 5.10685C4.89875 5.00091 5.13276 4.94794 5.32117 4.80512C5.50958 4.66231 5.6296 4.44573 5.87098 4.01259L6.09091 3.61833Z" fill="#4ADE80" />
-                  </svg>
-                  <span className="text-lg font-bold text-[#f8fafc]">{rarityScore}</span>
-                </div>
-              </div>
-              
-              {/* Mint Number */}
-              <div className="flex-1 bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col gap-1">
-                <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-tight">
-                  Mint Number
-                </span>
-                <div className="flex items-center gap-2">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M7.14835 2.11694C7.22198 1.85073 7.06588 1.57524 6.79968 1.5016C6.53348 1.42796 6.25798 1.58407 6.18434 1.85027L5.17501 5.48361H2.66634C2.3902 5.48361 2.16634 5.70746 2.16634 5.98361C2.16634 6.25975 2.3902 6.48361 2.66634 6.48361H4.89768L3.87901 10.1503H1.33301C1.05687 10.1503 0.833008 10.3741 0.833008 10.6503C0.833008 10.9264 1.05687 11.1503 1.33301 11.1503H3.60101L2.85101 13.8503C2.77737 14.1165 2.93347 14.392 3.19968 14.4656C3.46588 14.5392 3.74137 14.3831 3.81501 14.1169L4.63901 11.1503H9.60101L8.85101 13.8503C8.77738 14.1165 8.93348 14.392 9.19968 14.4656C9.46588 14.5392 9.74138 14.3831 9.81501 14.1169L10.639 11.1503H13.333C13.6092 11.1503 13.833 10.9264 13.833 10.6503C13.833 10.3741 13.6092 10.1503 13.333 10.1503H10.917L11.935 6.48361H14.6664C14.9425 6.48361 15.1664 6.25975 15.1664 5.98361C15.1664 5.70746 14.9425 5.48361 14.6664 5.48361H12.213L13.1483 2.11694C13.196 1.94473 13.1481 1.7602 13.0228 1.63285C12.8975 1.50549 12.7138 1.45466 12.5408 1.49951C12.3679 1.54436 12.232 1.67807 12.1843 1.85027L11.175 5.48361H6.21301L7.14835 2.11694ZM9.87901 10.1503L10.8977 6.48361H5.93501L4.91701 10.1503H9.87901Z" fill="#4ADE80" />
-                  </svg>
-                  <span className="text-lg font-bold text-[#f8fafc]">{firstTokenId}/{maxSupply.toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col gap-3 w-full max-w-[382px]">
-              <Button
-                onClick={() => navigate("/collection")}
-                className="w-full h-14 rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22] text-base font-bold shadow-[0_4px_6px_-4px_rgba(74,222,128,0.2),0_10px_15px_-3px_rgba(74,222,128,0.2)] flex items-center justify-center gap-2"
-              >
-                <Wallet className="h-5 w-5" />
-                View in My NFTs
-              </Button>
-              <Button
-                onClick={() => window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`, "_blank")}
-                className="w-full h-14 rounded-2xl bg-[#1e293b] hover:bg-[#334155] border border-[#1e293b]/50 text-[#f8fafc] text-base font-bold flex items-center justify-center gap-2"
-              >
-                <ExternalLink className="h-5 w-5" />
-                View on Explorer
-              </Button>
             </div>
           </div>
         </main>
