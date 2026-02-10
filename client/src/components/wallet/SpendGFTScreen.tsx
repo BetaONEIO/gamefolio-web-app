@@ -7,7 +7,7 @@ interface SpendGFTScreenProps {
   availableBalance?: number;
 }
 
-const GFT_TO_GBP = 0.056;
+const GFT_TO_GBP = 0.01;
 
 interface FeaturedDeal {
   id: string;

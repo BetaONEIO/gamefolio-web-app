@@ -11,7 +11,7 @@ interface ConfirmStakeScreenProps {
   apy?: number;
 }
 
-const GFT_TO_GBP = 0.056;
+const GFT_TO_GBP = 0.01;
 
 type StakeFlowStep = "confirm" | "processing" | "success" | "error";
 

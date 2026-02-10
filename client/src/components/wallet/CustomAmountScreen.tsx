@@ -5,7 +5,7 @@ interface CustomAmountScreenProps {
   onApply: (amount: number) => void;
 }
 
-const GFT_RATE = 0.056;
+const GFT_RATE = 0.01;
 const MIN_AMOUNT = 5;
 
 export default function CustomAmountScreen({

@@ -184,8 +184,8 @@ export default function StakingHubScreen({
     );
   }
 
-  const fiatValueStaked = (totalStaked * 0.056).toFixed(2);
-  const fiatValueRewards = (rewardsEarned * 0.056).toFixed(2);
+  const fiatValueStaked = (totalStaked * 0.01).toFixed(2);
+  const fiatValueRewards = (rewardsEarned * 0.01).toFixed(2);
 
   return (
     <div

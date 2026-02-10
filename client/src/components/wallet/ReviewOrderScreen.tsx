@@ -10,7 +10,7 @@ interface ReviewOrderScreenProps {
   onChangeWallet?: () => void;
 }
 
-const GFT_RATE = 0.056;
+const GFT_RATE = 0.01;
 
 export default function ReviewOrderScreen({
   onBack,
