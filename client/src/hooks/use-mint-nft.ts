@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWalletClient } from 'wagmi';
-import { parseUnits, maxUint256, type Address, decodeEventLog } from 'viem';
+import { parseUnits, formatUnits, maxUint256, type Address, decodeEventLog } from 'viem';
 import { useWallet } from './use-wallet';
 import { useToast } from './use-toast';
 import {
   GF_TOKEN_ADDRESS,
   GF_TOKEN_ABI,
+  NFT_CONTRACT_ADDRESS,
+  NFT_ABI,
   MINT_SALE_ADDRESS,
   MINT_SALE_ABI,
   MINT_CONFIG,
@@ -31,6 +33,46 @@ export function useMintNFT() {
   const [totalMinted, setTotalMinted] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
 
+  const [onChainPricePerMint, setOnChainPricePerMint] = useState<number>(MINT_CONFIG.pricePerMint);
+  const [onChainMaxPerTx, setOnChainMaxPerTx] = useState<number>(MINT_CONFIG.maxPerTx);
+  const [onChainMaxSupply, setOnChainMaxSupply] = useState<number>(MINT_CONFIG.maxSupply);
+  const [onChainPriceRaw, setOnChainPriceRaw] = useState<bigint | null>(null);
+
+  const fetchContractConfig = useCallback(async () => {
+    if (!publicClient) return;
+    try {
+      const [priceRaw, maxTx] = await Promise.all([
+        publicClient.readContract({
+          address: MINT_SALE_ADDRESS as Address,
+          abi: MINT_SALE_ABI,
+          functionName: 'pricePerMint',
+        }) as Promise<bigint>,
+        publicClient.readContract({
+          address: MINT_SALE_ADDRESS as Address,
+          abi: MINT_SALE_ABI,
+          functionName: 'maxPerTx',
+        }) as Promise<bigint>,
+      ]);
+
+      setOnChainPriceRaw(priceRaw);
+      setOnChainPricePerMint(Number(formatUnits(priceRaw, 18)));
+      setOnChainMaxPerTx(Number(maxTx));
+
+      try {
+        const maxSupply = await publicClient.readContract({
+          address: NFT_CONTRACT_ADDRESS as Address,
+          abi: NFT_ABI,
+          functionName: 'MAX_SUPPLY',
+        }) as bigint;
+        setOnChainMaxSupply(Number(maxSupply));
+      } catch {
+        setOnChainMaxSupply(MINT_CONFIG.maxSupply);
+      }
+    } catch (err) {
+      console.error('Error fetching on-chain config:', err);
+    }
+  }, [publicClient]);
+
   const checkAllowance = useCallback(async () => {
     if (!walletAddress || !publicClient) {
       setAllowanceState('none');
@@ -45,38 +87,51 @@ export function useMintNFT() {
         args: [walletAddress, MINT_SALE_ADDRESS as Address],
       }) as bigint;
 
-      const requiredAmount = parseUnits(String(MINT_CONFIG.pricePerMint * MINT_CONFIG.maxPerTx), 18);
+      const requiredAmount = onChainPriceRaw
+        ? onChainPriceRaw * BigInt(onChainMaxPerTx)
+        : parseUnits(String(onChainPricePerMint * onChainMaxPerTx), 18);
       setAllowanceState(allowance >= requiredAmount ? 'approved' : 'none');
     } catch (err) {
       console.error('Error checking allowance:', err);
       setAllowanceState('none');
     }
-  }, [walletAddress, publicClient]);
+  }, [walletAddress, publicClient, onChainPriceRaw, onChainPricePerMint, onChainMaxPerTx]);
 
   const fetchOnChainData = useCallback(async () => {
     if (!publicClient) return;
     try {
-      const [balance, minted] = await Promise.all([
-        walletAddress
-          ? publicClient.readContract({
-              address: GF_TOKEN_ADDRESS as Address,
-              abi: GF_TOKEN_ABI,
-              functionName: 'balanceOf',
-              args: [walletAddress],
-            }) as Promise<bigint>
-          : Promise.resolve(BigInt(0)),
-        publicClient.readContract({
-          address: MINT_SALE_ADDRESS as Address,
-          abi: MINT_SALE_ABI,
-          functionName: 'totalMinted',
-        }).catch(() => BigInt(0)) as Promise<bigint>,
-      ]);
+      const balance = walletAddress
+        ? (await publicClient.readContract({
+            address: GF_TOKEN_ADDRESS as Address,
+            abi: GF_TOKEN_ABI,
+            functionName: 'balanceOf',
+            args: [walletAddress],
+          })) as bigint
+        : BigInt(0);
+
       setOnChainBalance(balance);
-      setTotalMinted(Number(minted));
+
+      try {
+        const nftBalanceTotal = await publicClient.readContract({
+          address: NFT_CONTRACT_ADDRESS as Address,
+          abi: NFT_ABI,
+          functionName: 'balanceOf',
+          args: [MINT_SALE_ADDRESS as Address],
+        });
+        void nftBalanceTotal;
+      } catch {}
+
+      setTotalMinted(0);
     } catch (err) {
       console.error('Error fetching on-chain data:', err);
     }
   }, [walletAddress, publicClient]);
+
+  useEffect(() => {
+    if (publicClient) {
+      fetchContractConfig();
+    }
+  }, [publicClient, fetchContractConfig]);
 
   useEffect(() => {
     if (isReady && walletAddress) {
@@ -139,10 +194,10 @@ export function useMintNFT() {
       return null;
     }
 
-    if (quantity < 1 || quantity > MINT_CONFIG.maxPerTx) {
+    if (quantity < 1 || quantity > onChainMaxPerTx) {
       toast({
         title: 'Invalid quantity',
-        description: `You can mint between 1 and ${MINT_CONFIG.maxPerTx} NFTs per transaction`,
+        description: `You can mint between 1 and ${onChainMaxPerTx} NFTs per transaction`,
         variant: 'destructive',
       });
       return null;
@@ -208,7 +263,7 @@ export function useMintNFT() {
       });
       return null;
     }
-  }, [walletClient, walletAddress, publicClient, toast, fetchOnChainData]);
+  }, [walletClient, walletAddress, publicClient, toast, fetchOnChainData, onChainMaxPerTx]);
 
   const reset = useCallback(() => {
     setMintTxState('idle');
@@ -227,8 +282,8 @@ export function useMintNFT() {
     mint,
     reset,
     checkAllowance,
-    pricePerMint: MINT_CONFIG.pricePerMint,
-    maxPerTx: MINT_CONFIG.maxPerTx,
-    maxSupply: MINT_CONFIG.maxSupply,
+    pricePerMint: onChainPricePerMint,
+    maxPerTx: onChainMaxPerTx,
+    maxSupply: onChainMaxSupply,
   };
 }

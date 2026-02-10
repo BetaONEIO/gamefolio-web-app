@@ -169,20 +169,6 @@ export const MINT_SALE_ABI = [
   },
   {
     "inputs": [],
-    "name": "totalMinted",
-    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "MAX_SUPPLY",
-    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
     "name": "gfToken",
     "outputs": [{"internalType": "address", "name": "", "type": "address"}],
     "stateMutability": "view",
@@ -233,6 +219,13 @@ export const NFT_ABI = [
     "inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}],
     "name": "ownerOf",
     "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MAX_SUPPLY",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
     "stateMutability": "view",
     "type": "function"
   },
