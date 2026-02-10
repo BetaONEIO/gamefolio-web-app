@@ -28,7 +28,7 @@ const GamePage = () => {
 
   // Get game data by slug (will create from Twitch if doesn't exist)
   const { data: game, isLoading: gameLoading } = useQuery<Game>({
-    queryKey: [`/api/twitch/games/slug/${gameSlug}`],
+    queryKey: [`/api/games/slug/${gameSlug}`],
     enabled: !!gameSlug,
   });
 
