@@ -22,6 +22,8 @@ interface MintedNftDetailScreenProps {
   walletAddress?: string;
   onClose: () => void;
   onViewExplorer: () => void;
+  initialSold?: boolean;
+  onSold?: () => void;
 }
 
 const NFT_CONTRACT_ADDRESS = "0x246624993603fbd8C3Cc60920878D0DF5c764Fb4";
@@ -52,9 +54,11 @@ export default function MintedNftDetailScreen({
   walletAddress,
   onClose,
   onViewExplorer,
+  initialSold = false,
+  onSold,
 }: MintedNftDetailScreenProps) {
   const [showQuickSell, setShowQuickSell] = useState(false);
-  const [sold, setSold] = useState(false);
+  const [sold, setSold] = useState(initialSold);
   const { toast } = useToast();
   const displayName = nft.name || `Gamefolio Genesis ${getTokenIdPadded(nft.id)}`;
   const ownerDisplay = walletAddress ? `You (${formatAddress(walletAddress)})` : "You";
@@ -69,6 +73,7 @@ export default function MintedNftDetailScreen({
         onSold={(result) => {
           setSold(true);
           setShowQuickSell(false);
+          onSold?.();
           toast({
             title: "NFT Sold!",
             description: `${result.receivedAmount} GFT has been added to your balance.`,
@@ -89,36 +94,43 @@ export default function MintedNftDetailScreen({
 
   return (
     <div className="fixed inset-0 z-[110] bg-[#020617] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* Header */}
-      <header className="sticky top-0 z-40 backdrop-blur-md bg-[#020617cc] flex-shrink-0">
-        <div className="flex items-center justify-between w-full max-w-[430px] mx-auto px-4 pt-12 pb-4">
-          <div className="flex items-center gap-4">
+      {/* Minted NFT Detail label */}
+      <div className="w-full max-w-[430px] mx-auto px-6 pt-12 pb-1">
+        <span className="text-sm font-medium text-[#64748b] tracking-wide">Minted NFT Detail</span>
+      </div>
+
+      {/* Header bar */}
+      <header className="sticky top-0 z-40 flex-shrink-0">
+        <div className="w-full max-w-[430px] mx-auto px-4 pb-4">
+          <div className="flex items-center justify-between w-full rounded-2xl bg-[#0f172a] border border-[#1e293b80] px-4 py-3">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M0 10C0 4.47715 4.47715 0 10 0C15.5228 0 20 4.47715 20 10C20 15.5228 15.5228 20 10 20C4.47715 20 0 15.5228 0 10Z" stroke="#F8FAFC" strokeWidth="1.5" />
+                  <path d="M12.5 7.5L7.5 12.5M7.5 7.5L12.5 12.5" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
+              <span className="text-base font-bold text-[#f8fafc] leading-6">NFT Details</span>
+            </div>
             <button
-              onClick={onClose}
-              className="w-10 h-10 rounded-full flex items-center justify-center"
+              onClick={() => {
+                if (navigator.share) {
+                  navigator.share({ title: displayName, url: `${SKALE_EXPLORER_BASE_URL}/tx/${txHash}` });
+                }
+              }}
+              className="w-8 h-8 rounded-full flex items-center justify-center"
             >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path fillRule="evenodd" clipRule="evenodd" d="M0 10C0 4.47715 4.47715 0 10 0C15.5228 0 20 4.47715 20 10C20 15.5228 15.5228 20 10 20C4.47715 20 0 15.5228 0 10Z" stroke="#F8FAFC" strokeWidth="1.5" />
-                <path d="M12.5 7.5L7.5 12.5M7.5 7.5L12.5 12.5" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" />
+              <svg width="15" height="18" viewBox="0 0 15 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" clipRule="evenodd" d="M5 9C5 10.3807 3.88071 11.5 2.5 11.5C1.11929 11.5 0 10.3807 0 9C0 7.61929 1.11929 6.5 2.5 6.5C3.88071 6.5 5 7.61929 5 9Z" stroke="#94A3B8" strokeWidth="1.5" />
+                <path d="M10 3.5L5 7M10 14.5L5 11" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M15 15.5C15 16.8807 13.8807 18 12.5 18C11.1193 18 10 16.8807 10 15.5C10 14.1193 11.1193 13 12.5 13C13.8807 13 15 14.1193 15 15.5Z" stroke="#94A3B8" strokeWidth="1.5" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M15 2.5C15 3.88071 13.8807 5 12.5 5C11.1193 5 10 3.88071 10 2.5C10 1.11929 11.1193 0 12.5 0C13.8807 0 15 1.11929 15 2.5Z" stroke="#94A3B8" strokeWidth="1.5" />
               </svg>
             </button>
-            <span className="text-xl font-bold text-[#f8fafc] uppercase tracking-[-0.5px] leading-7">NFT Details</span>
           </div>
-          <button
-            onClick={() => {
-              if (navigator.share) {
-                navigator.share({ title: displayName, url: `${SKALE_EXPLORER_BASE_URL}/tx/${txHash}` });
-              }
-            }}
-            className="w-10 h-10 rounded-full flex items-center justify-center"
-          >
-            <svg width="15" height="18" viewBox="0 0 15 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" clipRule="evenodd" d="M5 9C5 10.3807 3.88071 11.5 2.5 11.5C1.11929 11.5 0 10.3807 0 9C0 7.61929 1.11929 6.5 2.5 6.5C3.88071 6.5 5 7.61929 5 9Z" stroke="#94A3B8" strokeWidth="1.5" />
-              <path d="M10 3.5L5 7M10 14.5L5 11" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
-              <path fillRule="evenodd" clipRule="evenodd" d="M15 15.5C15 16.8807 13.8807 18 12.5 18C11.1193 18 10 16.8807 10 15.5C10 14.1193 11.1193 13 12.5 13C13.8807 13 15 14.1193 15 15.5Z" stroke="#94A3B8" strokeWidth="1.5" />
-              <path fillRule="evenodd" clipRule="evenodd" d="M15 2.5C15 3.88071 13.8807 5 12.5 5C11.1193 5 10 3.88071 10 2.5C10 1.11929 11.1193 0 12.5 0C13.8807 0 15 1.11929 15 2.5Z" stroke="#94A3B8" strokeWidth="1.5" />
-            </svg>
-          </button>
         </div>
       </header>
 
@@ -133,20 +145,28 @@ export default function MintedNftDetailScreen({
                 <img
                   src={nft.imageUrl}
                   alt={displayName}
-                  className="w-full h-full object-cover"
+                  className={`w-full h-full object-cover transition-all duration-300 ${sold ? "grayscale brightness-50" : ""}`}
                 />
               ) : (
                 <div className="w-full h-full bg-[#1e293b] flex items-center justify-center">
                   <div className="w-12 h-12 rounded-full border-2 border-[#4ade80]/30 border-t-[#4ade80] animate-spin" />
                 </div>
               )}
-              {/* Newly Minted badge */}
-              <div className="absolute top-4 left-4 backdrop-blur-lg bg-black/40 rounded-2xl flex items-center gap-2 px-3 py-1.5">
-                <div className="w-2 h-2 rounded-full bg-[#4ade80]" />
-                <span className="text-[10px] font-bold text-white uppercase tracking-[0.5px] leading-[15px]">
-                  Newly Minted
-                </span>
-              </div>
+              {sold && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-5xl font-black text-white/80 uppercase tracking-[8px] rotate-[-15deg] drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
+                    SOLD
+                  </span>
+                </div>
+              )}
+              {!sold && (
+                <div className="absolute top-4 left-4 backdrop-blur-lg bg-black/40 rounded-2xl flex items-center gap-2 px-3 py-1.5">
+                  <div className="w-2 h-2 rounded-full bg-[#4ade80]" />
+                  <span className="text-[10px] font-bold text-white uppercase tracking-[0.5px] leading-[15px]">
+                    Newly Minted
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

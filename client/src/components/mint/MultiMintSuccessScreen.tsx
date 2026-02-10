@@ -23,6 +23,8 @@ interface MultiMintSuccessScreenProps {
   onViewCollection: () => void;
   onViewExplorer: () => void;
   onBack: () => void;
+  soldNftIds?: Set<number>;
+  onNftSold?: (nftId: number) => void;
 }
 
 function getRarityLabel(rarity: number): string {
@@ -46,11 +48,24 @@ export default function MultiMintSuccessScreen({
   onViewCollection,
   onViewExplorer,
   onBack,
+  soldNftIds: externalSoldIds,
+  onNftSold,
 }: MultiMintSuccessScreenProps) {
   const [copied, setCopied] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedNft, setSelectedNft] = useState<MintedNFT | null>(null);
+  const [internalSoldIds, setInternalSoldIds] = useState<Set<number>>(new Set());
   const carouselRef = useRef<HTMLDivElement>(null);
+
+  const soldNftIds = externalSoldIds || internalSoldIds;
+
+  const handleNftSold = (nftId: number) => {
+    if (onNftSold) {
+      onNftSold(nftId);
+    } else {
+      setInternalSoldIds(prev => { const next = new Set(prev); next.add(nftId); return next; });
+    }
+  };
 
   const displayNfts = mintedNfts.length > 0
     ? mintedNfts
@@ -116,6 +131,8 @@ export default function MultiMintSuccessScreen({
         walletAddress={walletAddress}
         onClose={() => setSelectedNft(null)}
         onViewExplorer={() => window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`, "_blank")}
+        initialSold={soldNftIds.has(selectedNft.id)}
+        onSold={() => handleNftSold(selectedNft.id)}
       />
     );
   }
@@ -201,7 +218,7 @@ export default function MultiMintSuccessScreen({
                         <img
                           src={nft.imageUrl}
                           alt={nft.name || `NFT #${nft.id}`}
-                          className="w-full h-full object-cover"
+                          className={`w-full h-full object-cover transition-all duration-300 ${soldNftIds.has(nft.id) ? "grayscale brightness-50" : ""}`}
                         />
                       ) : (
                         <div className="w-full h-full bg-[#1e293b] flex items-center justify-center">
@@ -209,14 +226,24 @@ export default function MultiMintSuccessScreen({
                         </div>
                       )}
 
-                      {/* Rarity badge */}
-                      <div className="absolute bottom-3 left-3">
-                        <div className="backdrop-blur-md bg-black/40 border border-white/10 rounded-full px-3 py-1.5 flex items-center justify-center">
-                          <span className="text-[10px] font-bold text-white uppercase tracking-[0.5px] leading-[15px]">
-                            {getRarityLabel(nft.rarity)}
+                      {soldNftIds.has(nft.id) && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-4xl font-black text-white/80 uppercase tracking-[6px] rotate-[-15deg] drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
+                            SOLD
                           </span>
                         </div>
-                      </div>
+                      )}
+
+                      {/* Rarity badge */}
+                      {!soldNftIds.has(nft.id) && (
+                        <div className="absolute bottom-3 left-3">
+                          <div className="backdrop-blur-md bg-black/40 border border-white/10 rounded-full px-3 py-1.5 flex items-center justify-center">
+                            <span className="text-[10px] font-bold text-white uppercase tracking-[0.5px] leading-[15px]">
+                              {getRarityLabel(nft.rarity)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
