@@ -1,0 +1,279 @@
+ SES Removing unpermitted intrinsics
+ [Coframe] Replit Enterprise watcher loaded
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+Tracking Prevention blocked access to storage for <URL>.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+/~:1  The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+/~:1  The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+/~:1  The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+ 
+      /////////////////////
+   ///////////////////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////        Curious and driven?
+  ///////////////@@@@@@@///////        Work with us!
+  ///////////////@@@@@@@///////
+  ///////////////@@@@@@@///////        https://join.replit.com/hack.with.us
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@#//////////////
+   ///////////////////////////
+      /////////////////////
+      
+ Download the Apollo DevTools for a better development experience: https://chrome.google.com/webstore/detail/apollo-client-developer-t/jdkknkkbebbapilgoeccciglkfbmbnfm
+  [ai-chat] Creating connection with chat proxy enabled
+(anonymous) @ 5ff7a3be23ef62e1.js:14
+ [LaunchDarkly] LaunchDarkly client initialized
+ SES Removing unpermitted intrinsics
+/~:1 [Intervention] Images loaded lazily and replaced with placeholders. Load events are deferred. See https://go.microsoft.com/fwlink/?linkid=2048113
+ SES Removing unpermitted intrinsics
+ SES Removing unpermitted intrinsics
+/repls:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+ SES Removing unpermitted intrinsics
+ SES Removing unpermitted intrinsics
+js.stripe.com/v3/controller-with-preconnect-8daeebea595cdb5839e4a55e8df8baea.html#__shared_params__[version]=acacia&__shared_params__[light_experiment_assignments]=%7B%22token%22%3A%22ff7255b7-ef62-4559-9217-b0d3458b7b56%22%2C%22assignments%22%3A%7B%22elements_generic_skeleton_loader_v3%22%3A%22treatment%22%7D%7D&apiKey=pk_live_515YpNsJAmnYVOvfnsBqRdATWS6SzbNAslOz1z2tujdKuvRMDAwWMeFXp6dJL1YKRrQjB0WAp0UDGwlFYL7hxw7Fc00QkfxBFsL&apiVersion=2025-01-27.acacia&stripeJsId=ff7255b7-ef62-4559-9217-b0d3458b7b56&stripeObjId=sobj-b8b2d0a1-d2b9-4301-9254-8a84febea54c&firstStripeInstanceCreatedLatency=14&controllerCount=1&isCheckout=false&stripeJsLoadTime=1770747080662&manualBrowserDeprecationRollout=false&mids[guid]=NA&mids[muid]=a03c3343-12cf-4957-9534-1a15c02cefd85c33b3&mids[sid]=NA&referrer=https%3A%2F%2Freplit.com%2F~&controllerId=__privateStripeController7021:1  Access to fetch at 'https://r.stripe.com/b' from origin 'https://js.stripe.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+js.stripe.com/v3/controller-with-preconnect-8daeebea595cdb5839e4a55e8df8baea.html#__shared_params__[version]=acacia&__shared_params__[light_experiment_assignments]=%7B%22token%22%3A%22ff7255b7-ef62-4559-9217-b0d3458b7b56%22%2C%22assignments%22%3A%7B%22elements_generic_skeleton_loader_v3%22%3A%22treatment%22%7D%7D&apiKey=pk_live_515YpNsJAmnYVOvfnsBqRdATWS6SzbNAslOz1z2tujdKuvRMDAwWMeFXp6dJL1YKRrQjB0WAp0UDGwlFYL7hxw7Fc00QkfxBFsL&apiVersion=2025-01-27.acacia&stripeJsId=ff7255b7-ef62-4559-9217-b0d3458b7b56&stripeObjId=sobj-b8b2d0a1-d2b9-4301-9254-8a84febea54c&firstStripeInstanceCreatedLatency=14&controllerCount=1&isCheckout=false&stripeJsLoadTime=1770747080662&manualBrowserDeprecationRollout=false&mids[guid]=NA&mids[muid]=a03c3343-12cf-4957-9534-1a15c02cefd85c33b3&mids[sid]=NA&referrer=https%3A%2F%2Freplit.com%2F~&controllerId=__privateStripeController7021:1  Access to fetch at 'https://r.stripe.com/b' from origin 'https://js.stripe.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+js.stripe.com/v3/controller-with-preconnect-8daeebea595cdb5839e4a55e8df8baea.html#__shared_params__[version]=acacia&__shared_params__[light_experiment_assignments]=%7B%22token%22%3A%22ff7255b7-ef62-4559-9217-b0d3458b7b56%22%2C%22assignments%22%3A%7B%22elements_generic_skeleton_loader_v3%22%3A%22treatment%22%7D%7D&apiKey=pk_live_515YpNsJAmnYVOvfnsBqRdATWS6SzbNAslOz1z2tujdKuvRMDAwWMeFXp6dJL1YKRrQjB0WAp0UDGwlFYL7hxw7Fc00QkfxBFsL&apiVersion=2025-01-27.acacia&stripeJsId=ff7255b7-ef62-4559-9217-b0d3458b7b56&stripeObjId=sobj-b8b2d0a1-d2b9-4301-9254-8a84febea54c&firstStripeInstanceCreatedLatency=14&controllerCount=1&isCheckout=false&stripeJsLoadTime=1770747080662&manualBrowserDeprecationRollout=false&mids[guid]=NA&mids[muid]=a03c3343-12cf-4957-9534-1a15c02cefd85c33b3&mids[sid]=NA&referrer=https%3A%2F%2Freplit.com%2F~&controllerId=__privateStripeController7021:1  Access to fetch at 'https://r.stripe.com/b' from origin 'https://js.stripe.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+r.stripe.com/b:1   Failed to load resource: net::ERR_FAILED
+r.stripe.com/b:1   Failed to load resource: net::ERR_FAILED
+r.stripe.com/b:1   Failed to load resource: net::ERR_FAILED
+shared-b4dae6bf13e71…3a6dfab3244d3d.js:1  Uncaught (in promise) 
+  [ai-chat] Creating connection with chat proxy enabled
+(anonymous) @ 5ff7a3be23ef62e1.js:14
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+  Unrecognized feature: 'ambient-light-sensor'.
+C @ 9954129c7dd6dc22.js:2
+  Unrecognized feature: 'battery'.
+C @ 9954129c7dd6dc22.js:2
+  Unrecognized feature: 'execution-while-not-rendered'.
+C @ 9954129c7dd6dc22.js:2
+9954129c7dd6dc22.js:2  Unrecognized feature: 'execution-while-out-of-viewport'.
+C @ 9954129c7dd6dc22.js:2
+9954129c7dd6dc22.js:2  Unrecognized feature: 'layout-animations'.
+C @ 9954129c7dd6dc22.js:2
+9954129c7dd6dc22.js:2  Unrecognized feature: 'legacy-image-formats'.
+C @ 9954129c7dd6dc22.js:2
+9954129c7dd6dc22.js:2  Unrecognized feature: 'navigation-override'.
+C @ 9954129c7dd6dc22.js:2
+9954129c7dd6dc22.js:2  Unrecognized feature: 'oversized-images'.
+C @ 9954129c7dd6dc22.js:2
+9954129c7dd6dc22.js:2  Unrecognized feature: 'publickey-credentials'.
+C @ 9954129c7dd6dc22.js:2
+9954129c7dd6dc22.js:2  Unrecognized feature: 'speaker-selection'.
+C @ 9954129c7dd6dc22.js:2
+9954129c7dd6dc22.js:2  Unrecognized feature: 'unoptimized-images'.
+C @ 9954129c7dd6dc22.js:2
+9954129c7dd6dc22.js:2  Unrecognized feature: 'unsized-media'.
+C @ 9954129c7dd6dc22.js:2
+9954129c7dd6dc22.js:2  Unrecognized feature: 'pointer-lock'.
+C @ 9954129c7dd6dc22.js:2
+9954129c7dd6dc22.js:2  Allow attribute will take precedence over 'allowfullscreen'.
+C @ 9954129c7dd6dc22.js:2
+9954129c7dd6dc22.js:2  Allow attribute will take precedence over 'allowpaymentrequest'.
+C @ 9954129c7dd6dc22.js:2
+lockdown-install.js:1 SES Removing unpermitted intrinsics
+workspace_iframe.html?initialPath=%2F&id=%3Ar278%3A:32  Unrecognized feature: 'ambient-light-sensor'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar278%3A:32  Unrecognized feature: 'battery'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar278%3A:32  Unrecognized feature: 'execution-while-not-rendered'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar278%3A:32  Unrecognized feature: 'execution-while-out-of-viewport'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar278%3A:32  Unrecognized feature: 'layout-animations'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar278%3A:32  Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar278%3A:32  Unrecognized feature: 'navigation-override'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar278%3A:32  Unrecognized feature: 'oversized-images'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar278%3A:32  Unrecognized feature: 'publickey-credentials'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar278%3A:32  Unrecognized feature: 'speaker-selection'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar278%3A:32  Unrecognized feature: 'unoptimized-images'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar278%3A:32  Unrecognized feature: 'unsized-media'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar278%3A:32  Allow attribute will take precedence over 'allowfullscreen'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar278%3A:32  Allow attribute will take precedence over 'allowpaymentrequest'.
+lockdown-install.js:1 SES Removing unpermitted intrinsics
+client:536  WebSocket connection to 'wss://c9fa12a0-25f6-499c-85a1-3fdaf44e555f-00-2i2gmevrrbqn1.riker.replit.dev/?token=XlWhI-P2DWyg' failed: 
+setupWebSocket @ client:536
+injected.js:37 Firebase initialized successfully
+injected.js:37 Theme accent color changed to: #4ADE80 (HSL: 142 69% 58%)
+injected.js:37 RevenueCat initialized successfully
+injected.js:37 Offerings: Object
+injected.js:37 Current offering: Object
+injected.js:37 Available packages: Array(2)
+c9fa12a0-25f6-499c-85a1-3fdaf44e555f-00-2i2gmevrrbqn1.riker.replit.dev/:1  Access to XMLHttpRequest at 'https://cloudflareinsights.com/cdn-cgi/rum' from origin 'https://c9fa12a0-25f6-499c-85a1-3fdaf44e555f-00-2i2gmevrrbqn1.riker.replit.dev' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+cloudflareinsights.com/cdn-cgi/rum:1   Failed to load resource: net::ERR_FAILED
+lockdown-install.js:1 SES Removing unpermitted intrinsics
+lockdown-install.js:1 SES Removing unpermitted intrinsics
+grand-theft-auto-v:1  Access to XMLHttpRequest at 'https://cloudflareinsights.com/cdn-cgi/rum' from origin 'https://c9fa12a0-25f6-499c-85a1-3fdaf44e555f-00-2i2gmevrrbqn1.riker.replit.dev' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+cloudflareinsights.com/cdn-cgi/rum:1   Failed to load resource: net::ERR_FAILED
+injected.js:37  [["/api/games/slug/grand-theft-auto-v"]]: No queryFn was passed as an option, and no default queryFn was found. The queryFn parameter is only optional when using a default queryFn. More info here: https://tanstack.com/query/latest/docs/framework/react/guides/default-query-function
+(anonymous) @ injected.js:37
+injected.js:37  [["/api/games/undefined/clips"]]: No queryFn was passed as an option, and no default queryFn was found. The queryFn parameter is only optional when using a default queryFn. More info here: https://tanstack.com/query/latest/docs/framework/react/guides/default-query-function
+(anonymous) @ injected.js:37
+injected.js:37  [["/api/games/slug/grand-theft-auto-v"]]: No queryFn was passed as an option, and no default queryFn was found. The queryFn parameter is only optional when using a default queryFn. More info here: https://tanstack.com/query/latest/docs/framework/react/guides/default-query-function
+(anonymous) @ injected.js:37
+injected.js:37  [["/api/games/undefined/clips"]]: No queryFn was passed as an option, and no default queryFn was found. The queryFn parameter is only optional when using a default queryFn. More info here: https://tanstack.com/query/latest/docs/framework/react/guides/default-query-function
+(anonymous) @ injected.js:37
+injected.js:37  [["/api/games/slug/grand-theft-auto-v"]]: No queryFn was passed as an option, and no default queryFn was found. The queryFn parameter is only optional when using a default queryFn. More info here: https://tanstack.com/query/latest/docs/framework/react/guides/default-query-function
+(anonymous) @ injected.js:37
+injected.js:37  [["/api/games/undefined/clips"]]: No queryFn was passed as an option, and no default queryFn was found. The queryFn parameter is only optional when using a default queryFn. More info here: https://tanstack.com/query/latest/docs/framework/react/guides/default-query-function
+(anonymous) @ injected.js:37
+injected.js:37  [["/api/games/slug/grand-theft-auto-v"]]: No queryFn was passed as an option, and no default queryFn was found. The queryFn parameter is only optional when using a default queryFn. More info here: https://tanstack.com/query/latest/docs/framework/react/guides/default-query-function
+(anonymous) @ injected.js:37
+useBaseQuery @ useBaseQuery.ts:63
+useQuery @ useQuery.ts:51
+GamePage @ game-page.tsx:30
+renderWithHooks @ react-dom.development.js:15486
+updateFunctionComponent @ react-dom.development.js:19617
+beginWork @ react-dom.development.js:21640
+beginWork$1 @ react-dom.development.js:27465
+performUnitOfWork @ react-dom.development.js:26596
+workLoopSync @ react-dom.development.js:26505
+renderRootSync @ react-dom.development.js:26473
+performSyncWorkOnRoot @ react-dom.development.js:26124
+flushSyncCallbacks @ react-dom.development.js:12042
+(anonymous) @ react-dom.development.js:25690
+injected.js:37  [["/api/games/undefined/clips"]]: No queryFn was passed as an option, and no default queryFn was found. The queryFn parameter is only optional when using a default queryFn. More info here: https://tanstack.com/query/latest/docs/framework/react/guides/default-query-function
+(anonymous) @ injected.js:37
+useBaseQuery @ useBaseQuery.ts:63
+useQuery @ useQuery.ts:51
+GamePage @ game-page.tsx:36
+renderWithHooks @ react-dom.development.js:15486
+updateFunctionComponent @ react-dom.development.js:19617
+beginWork @ react-dom.development.js:21640
+beginWork$1 @ react-dom.development.js:27465
+performUnitOfWork @ react-dom.development.js:26596
+workLoopSync @ react-dom.development.js:26505
+renderRootSync @ react-dom.development.js:26473
+performSyncWorkOnRoot @ react-dom.development.js:26124
+flushSyncCallbacks @ react-dom.development.js:12042
+(anonymous) @ react-dom.development.js:25690
+content.js:1  Uncaught (in promise) Error: Extension context invalidated.
+    at content.js:1:20039
+    at new Promise (<anonymous>)
+    at m (content.js:1:19964)
+    at Object.apply (content.js:1:17289)
+    at z (content.js:18:393230)
+(anonymous) @ content.js:1
+m @ content.js:1
+apply @ content.js:1
+z @ content.js:18
+content.js:1  Uncaught (in promise) Error: Extension context invalidated.
+    at content.js:1:20039
+    at new Promise (<anonymous>)
+    at m (content.js:1:19964)
+    at Object.apply (content.js:1:17289)
+    at z (content.js:18:393230)
+(anonymous) @ content.js:1
+m @ content.js:1
+apply @ content.js:1
+z @ content.js:18
+setTimeout
+ee @ content.js:18
+z @ content.js:18
+setTimeout
+ee @ content.js:18
+z @ content.js:18
+setTimeout
+ee @ content.js:18
+z @ content.js:18
+setTimeout
+ee @ content.js:18
+z @ content.js:18

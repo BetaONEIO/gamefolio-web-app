@@ -28,13 +28,23 @@ const GamePage = () => {
 
   // Get game data by slug (will create from Twitch if doesn't exist)
   const { data: game, isLoading: gameLoading } = useQuery<Game>({
-    queryKey: [`/api/games/slug/${gameSlug}`],
+    queryKey: ['/api/games/slug', gameSlug],
+    queryFn: async () => {
+      const response = await fetch(`/api/games/slug/${gameSlug}`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch game');
+      return response.json();
+    },
     enabled: !!gameSlug,
   });
 
   // Get clips for this specific game
   const { data: clips, isLoading } = useQuery<ClipWithUser[]>({
-    queryKey: [`/api/games/${game?.id}/clips`],
+    queryKey: ['/api/games', game?.id, 'clips'],
+    queryFn: async () => {
+      const response = await fetch(`/api/games/${game?.id}/clips`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch clips');
+      return response.json();
+    },
     enabled: !!game?.id,
   });
 
