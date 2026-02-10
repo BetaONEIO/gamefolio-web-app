@@ -8,6 +8,10 @@ export const GF_TOKEN_ADDRESS = "0x9c4aC24c7bb36AA3772ccd5aCBCB48a20a1704B7" as 
 
 export const GF_TOKEN_DECIMALS = 18 as const;
 
+export const NFT_CONTRACT_ADDRESS = "0x246624993603fbd8C3Cc60920878D0DF5c764Fb4" as const;
+
+export const MINT_SALE_ADDRESS = "0xC9Cd5a4c22096183b14c0877fC1C16468f94EA28" as const;
+
 export const STAKING_ADDRESS = "0x589C36a839434ae674Ba795dBb5B06B387110172" as const;
 
 export const GF_PRICING_CONFIG = {
@@ -49,6 +53,8 @@ export const WEB3_CONFIG = {
   explorerBaseUrl: SKALE_EXPLORER_BASE_URL,
   gfTokenAddress: GF_TOKEN_ADDRESS,
   gfTokenDecimals: GF_TOKEN_DECIMALS,
+  nftContractAddress: NFT_CONTRACT_ADDRESS,
+  mintSaleAddress: MINT_SALE_ADDRESS,
   stakingAddress: STAKING_ADDRESS,
   pricing: GF_PRICING_CONFIG,
 } as const;
