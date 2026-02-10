@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useCrossmint } from "@/hooks/use-crossmint";
-import { ArrowLeft, Minus, Plus, Wallet, Sparkles, X, ExternalLink, Check, Shield, Copy } from "lucide-react";
+import { ArrowLeft, Minus, Plus, Wallet, Sparkles, X, ExternalLink, Check, Shield, Copy, AlertTriangle, Lock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import MultiMintSuccessScreen from "@/components/mint/MultiMintSuccessScreen";
@@ -29,6 +29,8 @@ export default function MintNFTPage() {
   const { toast } = useToast();
   const [quantity, setQuantity] = useState(1);
   const [mintState, setMintState] = useState<MintState>("idle");
+  const [allowanceApproved, setAllowanceApproved] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
   const [mintedNftId] = useState(() => Math.floor(Math.random() * 487) + 1);
   const [txHash] = useState(() => `0x${Math.random().toString(16).slice(2, 10).toUpperCase()}`);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -50,7 +52,27 @@ export default function MintNFTPage() {
   const totalAmount = mintPrice + networkFee;
   const totalUSD = totalAmount * 0.049;
 
-  const canMint = isConnected && gfBalance >= totalAmount && quantity <= MAX_PER_WALLET;
+  const canMint = isConnected && gfBalance >= totalAmount && quantity <= MAX_PER_WALLET && allowanceApproved;
+  const hasInsufficientBalance = gfBalance < totalAmount;
+
+  const handleEnableAllowance = async () => {
+    if (!isConnected) {
+      toast({
+        title: "Wallet Required",
+        description: "Please connect your wallet first",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsApproving(true);
+    await new Promise(r => setTimeout(r, 2000));
+    setAllowanceApproved(true);
+    setIsApproving(false);
+    toast({
+      title: "Allowance Approved",
+      description: "GFT spending has been enabled for the mint contract",
+    });
+  };
 
   useEffect(() => {
     const seekToFirstFrame = (video: HTMLVideoElement | null) => {
@@ -438,8 +460,8 @@ export default function MintNFTPage() {
 
   return (
     <div className="min-h-screen bg-[#020617] flex flex-col">
-      <header className="sticky top-0 z-40 backdrop-blur-md bg-[#020617]/80 border-b border-white/10">
-        <div className="flex items-center justify-between w-full max-w-7xl mx-auto px-4 py-4">
+      <header className="sticky top-0 z-40 backdrop-blur-md bg-[#020617]/80">
+        <div className="flex items-center justify-between w-full max-w-7xl mx-auto px-4 pt-12 pb-4">
           <Button
             variant="ghost"
             size="icon"
@@ -448,42 +470,65 @@ export default function MintNFTPage() {
           >
             <ArrowLeft className="h-6 w-6 text-white" />
           </Button>
-          <span className="text-lg font-bold text-[#f8fafc] md:hidden">Confirm Mint</span>
-          <div className="w-10 h-10 md:hidden" />
+          <span className="text-lg font-bold text-[#f8fafc]">NFT Minting</span>
+          <div className="w-10 h-10" />
         </div>
       </header>
 
-      <main className="flex-1 flex items-center justify-center py-6 md:py-12 px-4 md:px-8">
+      <main className="flex-1 flex items-start justify-center py-6 md:py-12 px-4 md:px-8 overflow-y-auto">
         <div className="w-full max-w-[430px] md:max-w-5xl flex flex-col md:flex-row md:items-start md:gap-12 gap-6">
-          
-          <div className="md:flex-1 md:max-w-md">
-            <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-3xl p-5 md:p-6">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-lg font-bold text-white">NFTs</span>
-                <Link href="/store" className="text-sm font-medium text-[#4ade80] hover:underline">
-                  View All
-                </Link>
-              </div>
-              <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(74,222,128,0.15)]">
-                <video
-                  ref={previewVideo3Ref}
-                  src={MINT_VIDEO_URL}
-                  className="w-full h-full object-cover"
-                  muted
-                  playsInline
-                  preload="metadata"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+
+          {/* NFT Preview Card */}
+          <div className="md:flex-1 md:max-w-[382px]">
+            <div className="relative w-full aspect-square rounded-3xl overflow-hidden bg-white/[0.01] shadow-[0_25px_50px_-12px_rgba(74,222,128,0.05)]">
+              <video
+                ref={previewVideo3Ref}
+                src={MINT_VIDEO_URL}
+                className="w-full h-full object-cover"
+                muted
+                playsInline
+                preload="metadata"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute bottom-0 left-0 right-0 p-6 flex items-end justify-between">
+                <div className="flex flex-col gap-2">
+                  <div className="bg-[#4ade80]/20 border border-[#4ade80]/20 rounded-xl px-2 py-1 w-fit">
+                    <span className="text-[10px] font-bold text-[#4ade80] uppercase tracking-[0.5px]">
+                      Live Minting
+                    </span>
+                  </div>
+                  <h2 className="text-2xl font-bold text-[#f8fafc] leading-8">
+                    Cosmic Fragments #124
+                  </h2>
+                  <span className="text-sm text-[#94a3b8]">
+                    Celestial Collection by Astra
+                  </span>
+                </div>
+                <div className="backdrop-blur-md bg-white/10 border border-white/10 rounded-2xl p-3 flex flex-col items-center">
+                  <span className="text-[10px] font-bold text-[#94a3b8] uppercase text-center">
+                    Supply
+                  </span>
+                  <span className="text-sm font-bold text-[#f8fafc]">
+                    487/1000
+                  </span>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="md:flex-1 flex flex-col gap-5">
+          {/* Minting Details */}
+          <div className="md:flex-1 flex flex-col gap-6 max-w-[382px] w-full mx-auto md:mx-0">
+
+            {/* Balance & Allowance Card */}
             <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-3xl overflow-hidden">
-              <div className="flex items-center justify-between p-5">
+              {/* Balance Header */}
+              <div className="flex items-center justify-between p-5 bg-[#14532d]/5 border-b border-[#1e293b]/50">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-[#4ade80]/20 flex items-center justify-center">
-                    <Wallet className="h-5 w-5 text-[#4ade80]" />
+                    <svg width="18" height="15" viewBox="0 0 18 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M15.9164 4.16984C15.8691 4.16706 15.8189 4.16595 15.7655 4.1665H13.6614C11.938 4.1665 10.4639 5.52317 10.4639 7.2915C10.4639 9.05984 11.9389 10.4165 13.6614 10.4165H15.7655C15.8189 10.4171 15.8694 10.4159 15.9172 10.4132C16.6498 10.369 17.2363 9.78864 17.288 9.0565C17.2914 9.0065 17.2914 8.95234 17.2914 8.90234V5.68067C17.2914 5.63067 17.2914 5.5765 17.288 5.5265C17.2363 4.79437 16.649 4.21401 15.9164 4.16984ZM13.4772 8.12484C13.9205 8.12484 14.2797 7.7515 14.2797 7.2915C14.2797 6.8315 13.9205 6.45817 13.4772 6.45817C13.033 6.45817 12.6739 6.8315 12.6739 7.2915C12.6739 7.7515 13.033 8.12484 13.4772 8.12484Z" fill="#4ADE80" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M15.765 11.6667C15.8234 11.6643 15.8795 11.69 15.9158 11.7357C15.9522 11.7815 15.9646 11.8419 15.9491 11.8983C15.7825 12.4916 15.5166 12.9983 15.0908 13.4233C14.4666 14.0483 13.6758 14.3241 12.6991 14.4558C11.7492 14.5833 10.5367 14.5833 9.00499 14.5833H7.24499C5.71333 14.5833 4.49999 14.5833 3.55083 14.4558C2.57416 14.3241 1.78333 14.0475 1.15917 13.4241C0.535833 12.8 0.259166 12.0092 0.1275 11.0325C0 10.0825 0 8.86999 0 7.33832V7.24499C0 5.71333 0 4.49999 0.1275 3.54999C0.259166 2.57333 0.535833 1.7825 1.15917 1.15833C1.78333 0.534999 2.57416 0.258333 3.55083 0.126666C4.50083 0 5.71333 0 7.24499 0H9.00499C10.5367 0 11.75 0 12.6991 0.1275C13.6758 0.259166 14.4666 0.535833 15.0908 1.15917C15.5166 1.58583 15.7825 2.09166 15.9491 2.685C15.9646 2.74139 15.9522 2.80179 15.9158 2.84756C15.8795 2.89334 15.8234 2.91901 15.765 2.91666H13.6616C11.2975 2.91666 9.21415 4.78333 9.21415 7.29166C9.21415 9.79999 11.2975 11.6667 13.6616 11.6667H15.765ZM4.16666 10.4167C3.82148 10.4167 3.54166 10.1368 3.54166 9.79165V4.79166C3.54166 4.44648 3.82148 4.16666 4.16666 4.16666C4.51184 4.16666 4.79166 4.44648 4.79166 4.79166V9.79165C4.79166 10.1368 4.51184 10.4167 4.16666 10.4167Z" fill="#4ADE80" />
+                    </svg>
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[10px] font-bold text-[#94a3b8] uppercase">
@@ -494,90 +539,142 @@ export default function MintNFTPage() {
                     </span>
                   </div>
                 </div>
-                <div className={`px-3 py-2 rounded-full border ${
-                  isConnected 
-                    ? "bg-[#1e293b]/50 border-[#1e293b]/30" 
-                    : "bg-red-500/20 border-red-500/30"
-                }`}>
-                  <span className={`text-[10px] font-bold ${
-                    isConnected ? "text-[#4ade80]" : "text-red-400"
-                  }`}>
-                    {isConnected ? "Connected" : "Not Connected"}
+                <div className="flex items-center gap-1.5">
+                  <AlertTriangle className={`h-3 w-3 ${allowanceApproved ? 'text-[#4ade80]' : 'text-[#ef4444]'}`} />
+                  <span className={`text-[10px] font-bold uppercase ${allowanceApproved ? 'text-[#4ade80]' : 'text-[#ef4444]'}`}>
+                    {allowanceApproved ? 'Approved' : 'No Allowance'}
                   </span>
+                </div>
+              </div>
+
+              {/* Mint Details */}
+              <div className="p-5 flex flex-col gap-5">
+                {/* Quantity Controls */}
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-[#f8fafc]">Mint Quantity</span>
+                    <span className="text-[10px] font-bold text-[#94a3b8] uppercase">
+                      {MINT_PRICE} GFT per NFT
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4 bg-[#1e293b] rounded-2xl p-1">
+                    <button
+                      onClick={handleDecrement}
+                      disabled={quantity <= 1}
+                      className="w-10 h-10 rounded-2xl bg-[#1e293b] hover:bg-[#334155] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                    >
+                      <Minus className="h-5 w-5 text-[#f8fafc]" />
+                    </button>
+                    <span className="text-lg font-bold text-[#f8fafc] w-4 text-center">
+                      {quantity}
+                    </span>
+                    <button
+                      onClick={handleIncrement}
+                      disabled={quantity >= MAX_PER_WALLET}
+                      className="w-10 h-10 rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                    >
+                      <Plus className="h-5 w-5 text-[#022c22]" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="h-px bg-[#1e293b]/30" />
+
+                {/* Price Breakdown */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-[#94a3b8]">Price ({quantity} NFT)</span>
+                    <span className="text-sm font-bold text-[#f8fafc]">
+                      {mintPrice.toFixed(2)} GFT
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-[#94a3b8]">Gas Estimate</span>
+                    <span className="text-sm font-bold text-[#f8fafc]">
+                      {networkFee.toFixed(2)} GFT
+                    </span>
+                  </div>
+                </div>
+
+                {/* Total */}
+                <div className="flex items-center justify-between pt-3 border-t border-[#1e293b]/30">
+                  <span className="text-base font-bold text-[#f8fafc]">Total Required</span>
+                  <div className="flex flex-col items-end">
+                    <span className="text-xl font-bold text-[#4ade80]">
+                      {totalAmount.toFixed(2)} GFT
+                    </span>
+                    <span className="text-[10px] font-medium text-[#94a3b8]">
+                      {hasInsufficientBalance ? 'Insufficient balance' : `≈ $${totalUSD.toFixed(2)} USD`}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-3xl p-5 flex flex-col gap-5">
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col">
-                  <span className="text-sm font-bold text-[#f8fafc]">Quantity</span>
-                  <span className="text-[10px] font-bold text-[#94a3b8] uppercase">
-                    Max {MAX_PER_WALLET} per wallet
+            {/* Allowance Warning */}
+            {!allowanceApproved && (
+              <div className="bg-[#ef4444]/10 border border-[#ef4444]/20 rounded-2xl p-5 flex gap-3">
+                <AlertTriangle className="h-5 w-5 text-[#ef4444] flex-shrink-0 mt-0.5" />
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-bold text-[#f8fafc]">Allowance Required</span>
+                  <span className="text-xs text-[#94a3b8] leading-[19.5px]">
+                    To mint your NFT, you first need to authorize the mint contract to spend GFT from your wallet.
                   </span>
                 </div>
-                <div className="flex items-center gap-4 bg-[#1e293b] rounded-2xl p-1">
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-4">
+              {!allowanceApproved ? (
+                <>
                   <button
-                    onClick={handleDecrement}
-                    disabled={quantity <= 1}
-                    className="w-10 h-10 rounded-2xl bg-[#1e293b] hover:bg-[#334155] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                    onClick={handleEnableAllowance}
+                    disabled={isApproving}
+                    className="w-full h-[68px] rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] disabled:opacity-70 text-[#022c22] text-xl font-bold flex items-center justify-center gap-2.5 transition-colors"
+                    style={{ boxShadow: '0 8px 10px -6px rgba(74, 222, 128, 0.2), 0 20px 25px -5px rgba(74, 222, 128, 0.2)' }}
                   >
-                    <Minus className="h-5 w-5 text-[#f8fafc]" />
+                    {isApproving ? (
+                      <>
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                        Approving...
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="h-6 w-6" />
+                        Enable GFT Spending
+                      </>
+                    )}
                   </button>
-                  <span className="text-lg font-bold text-[#f8fafc] w-4 text-center">
-                    {quantity}
-                  </span>
                   <button
-                    onClick={handleIncrement}
-                    disabled={quantity >= MAX_PER_WALLET}
-                    className="w-10 h-10 rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                    disabled
+                    className="w-full h-[68px] rounded-2xl bg-[#1e293b] text-[#94a3b8] text-xl font-bold flex items-center justify-center gap-2.5 cursor-not-allowed"
                   >
-                    <Plus className="h-5 w-5 text-[#022c22]" />
+                    <Sparkles className="h-6 w-6" />
+                    Mint NFT
                   </button>
-                </div>
-              </div>
-
-              <div className="h-px bg-[#1e293b]/30" />
-
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[#94a3b8]">Mint Price</span>
-                  <span className="text-sm font-bold text-[#f8fafc]">
-                    {mintPrice.toFixed(2)} GFT
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[#94a3b8]">Network Fee</span>
-                  <span className="text-sm font-bold text-[#f8fafc]">
-                    {networkFee.toFixed(2)} GFT
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-3 border-t border-[#1e293b]/30">
-                <span className="text-base font-bold text-[#f8fafc]">Total Amount</span>
-                <div className="flex flex-col items-end">
-                  <span className="text-xl font-bold text-[#4ade80]">
-                    {totalAmount.toFixed(2)} GFT
-                  </span>
-                  <span className="text-[10px] font-medium text-[#94a3b8]">
-                    ≈ ${totalUSD.toFixed(2)} USD
-                  </span>
-                </div>
-              </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-full h-[68px] rounded-2xl bg-[#1e293b] text-[#4ade80] text-xl font-bold flex items-center justify-center gap-2.5">
+                    <Check className="h-6 w-6" />
+                    GFT Spending Enabled
+                  </div>
+                  <Button
+                    onClick={handleMint}
+                    disabled={!canMint || mintState !== "idle"}
+                    className="w-full h-[68px] rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] disabled:bg-[#4ade80]/50 text-[#022c22] text-xl font-bold flex items-center justify-center gap-2.5"
+                    style={{ boxShadow: '0 8px 10px -6px rgba(74, 222, 128, 0.2), 0 20px 25px -5px rgba(74, 222, 128, 0.2)' }}
+                  >
+                    <Sparkles className="h-6 w-6" />
+                    Mint NFT
+                  </Button>
+                </>
+              )}
             </div>
 
-            <Button
-              onClick={handleMint}
-              disabled={mintState !== "idle"}
-              className="w-full h-[68px] rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] disabled:bg-[#4ade80]/50 text-[#022c22] text-xl font-bold shadow-[0_8px_10px_-6px_rgba(74,222,128,0.2),0_20px_25px_-5px_rgba(74,222,128,0.2)] flex items-center justify-center gap-2.5"
-            >
-              <Sparkles className="h-6 w-6" />
-              Confirm Mint
-            </Button>
-
-            <p className="text-[10px] text-[#94a3b8] text-center px-4">
-              By clicking Confirm, you agree to the Terms of Service and authorize the smart contract to execute this transaction.
+            <p className="text-[10px] text-[#94a3b8] text-center px-4 leading-[16.25px]">
+              Enabling GFT spending is a one-time transaction per contract. This will call GFT.approve(mintContract, maxUint256) to save you gas on future mints.
             </p>
           </div>
         </div>
