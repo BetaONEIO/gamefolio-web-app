@@ -3208,8 +3208,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Try to find game in database first
       const games = await storage.getAllGames();
+      const normalizedSlug = gameSlug.toLowerCase().replace(/[^a-z0-9]/g, '');
       let game = games.find((g: any) =>
-        g.name.toLowerCase().replace(/[^a-z0-9]/g, '') === gameSlug
+        g.name.toLowerCase().replace(/[^a-z0-9]/g, '') === normalizedSlug
       );
 
       if (game) {
@@ -3219,7 +3220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If not found in database, try to find on Twitch and create it
       try {
         // Convert slug back to a searchable name (best effort)
-        const searchName = gameSlug.replace(/([a-z])([A-Z])/g, '$1 $2'); // Add spaces before capital letters
+        const searchName = gameSlug.replace(/-/g, ' ');
         const twitchGames = await twitchApi.searchGames(searchName);
 
         if (twitchGames && twitchGames.length > 0) {
