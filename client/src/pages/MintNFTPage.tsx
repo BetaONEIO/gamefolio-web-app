@@ -60,7 +60,8 @@ export default function MintNFTPage() {
 
   const onChainBalanceFormatted = Number(formatUnits(onChainBalance, 18));
   const mintPrice = pricePerMint * quantity;
-  const totalUSD = mintPrice * 0.01;
+  const GFT_PRICE_GBP = 0.01;
+  const totalGBP = mintPrice * GFT_PRICE_GBP;
 
   const allowanceApproved = allowanceState === 'approved';
   const isApproving = allowanceState === 'approving';
@@ -623,7 +624,7 @@ export default function MintNFTPage() {
                       {mintPrice.toLocaleString()} GFT
                     </span>
                     <span className="text-[10px] font-medium text-[#94a3b8]">
-                      {hasInsufficientBalance ? 'Insufficient balance' : `≈ $${totalUSD.toFixed(2)} USD`}
+                      {hasInsufficientBalance ? 'Insufficient balance' : `≈ £${totalGBP.toFixed(2)} GBP`}
                     </span>
                   </div>
                 </div>
