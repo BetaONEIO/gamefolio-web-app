@@ -193,6 +193,31 @@ export default function MintNFTPage() {
   const mintedTokenIds = mintResult?.tokenIds || [];
   const firstTokenId = mintedTokenIds[0] || 0;
 
+  const [fetchedNftImages, setFetchedNftImages] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    if (mintedTokenIds.length > 0 && Object.keys(fetchedNftImages).length === 0) {
+      fetch('/api/nft/metadata/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tokenIds: mintedTokenIds }),
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.nfts) {
+            const images: Record<number, string> = {};
+            for (const nft of data.nfts) {
+              if (nft.tokenId != null && nft.image) {
+                images[nft.tokenId] = nft.image;
+              }
+            }
+            setFetchedNftImages(images);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [mintedTokenIds]);
+
   const copyTxHash = () => {
     navigator.clipboard.writeText(txHash);
     toast({ title: "Copied!", description: "Transaction hash copied to clipboard" });
@@ -318,11 +343,14 @@ export default function MintNFTPage() {
     
     // Show multi-mint success screen when quantity > 1
     if (quantity > 1) {
-      const mintedNfts = Array.from({ length: quantity }, (_, i) => ({
-        id: mintedTokenIds[i] || firstTokenId + i,
-        imageUrl: `https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-assets/nft-placeholders/guardian-${(i % 3) + 1}.png`,
-        rarity: Math.floor(Math.random() * 30) + 70,
-      }));
+      const mintedNfts = Array.from({ length: quantity }, (_, i) => {
+        const tokenId = mintedTokenIds[i] || firstTokenId + i;
+        return {
+          id: tokenId,
+          imageUrl: fetchedNftImages[tokenId] || `https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-assets/nft-placeholders/guardian-${(i % 3) + 1}.png`,
+          rarity: Math.floor(Math.random() * 30) + 70,
+        };
+      });
       
       return (
         <MultiMintSuccessScreen
@@ -364,14 +392,22 @@ export default function MintNFTPage() {
               
               {/* NFT Container */}
               <div className="relative w-[300px] h-[300px] rounded-[40px] border-2 border-[#4ade80]/30 overflow-hidden bg-white/[0.01] shadow-[0_25px_50px_-12px_rgba(74,222,128,0.2)]">
-                <video
-                  ref={previewVideo2Ref}
-                  src={MINT_VIDEO_URL}
-                  className="w-full h-full object-cover"
-                  muted
-                  playsInline
-                  preload="metadata"
-                />
+                {fetchedNftImages[firstTokenId] ? (
+                  <img
+                    src={fetchedNftImages[firstTokenId]}
+                    alt={`NFT #${firstTokenId}`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <video
+                    ref={previewVideo2Ref}
+                    src={MINT_VIDEO_URL}
+                    className="w-full h-full object-cover"
+                    muted
+                    playsInline
+                    preload="metadata"
+                  />
+                )}
                 
                 {/* Gradient overlay with badge */}
                 <div className="absolute bottom-0 left-0 right-0 h-[69px] bg-gradient-to-t from-black/80 to-transparent flex items-center px-6">

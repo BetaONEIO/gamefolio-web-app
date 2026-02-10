@@ -179,4 +179,111 @@ router.post('/api/mint/regenerate-wallet', async (req: Request, res: Response) =
   }
 });
 
+const IPFS_GATEWAYS = [
+  'https://nftstorage.link/ipfs/',
+  'https://cloudflare-ipfs.com/ipfs/',
+  'https://ipfs.io/ipfs/',
+];
+
+function ipfsToHttp(ipfsUri: string, gatewayIndex = 0): string {
+  if (!ipfsUri.startsWith('ipfs://')) return ipfsUri;
+  const path = ipfsUri.replace('ipfs://', '');
+  return `${IPFS_GATEWAYS[gatewayIndex % IPFS_GATEWAYS.length]}${path}`;
+}
+
+router.get('/api/nft/metadata/:tokenId', async (req: Request, res: Response) => {
+  try {
+    const tokenId = parseInt(req.params.tokenId);
+    if (isNaN(tokenId) || tokenId < 0) {
+      return res.status(400).json({ error: 'Invalid token ID' });
+    }
+
+    const tokenURI = await publicClient.readContract({
+      address: NFT_CONTRACT_ADDRESS as `0x${string}`,
+      abi: NFT_ABI,
+      functionName: 'tokenURI',
+      args: [BigInt(tokenId)],
+    });
+
+    const metadataUrl = ipfsToHttp(tokenURI as string) + '.json';
+
+    let metadata: any = null;
+    for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
+      try {
+        const url = ipfsToHttp(tokenURI as string, i) + '.json';
+        const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        if (response.ok) {
+          metadata = await response.json();
+          break;
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    if (!metadata) {
+      return res.status(502).json({ error: 'Failed to fetch metadata from IPFS' });
+    }
+
+    if (metadata.image) {
+      metadata.image = ipfsToHttp(metadata.image);
+    }
+
+    return res.json({
+      tokenId,
+      tokenURI,
+      ...metadata,
+    });
+  } catch (error: any) {
+    console.error('NFT metadata fetch error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch metadata' });
+  }
+});
+
+router.post('/api/nft/metadata/batch', async (req: Request, res: Response) => {
+  try {
+    const { tokenIds } = req.body;
+    if (!Array.isArray(tokenIds) || tokenIds.length === 0 || tokenIds.length > 20) {
+      return res.status(400).json({ error: 'Provide 1-20 token IDs' });
+    }
+
+    const results = await Promise.allSettled(
+      tokenIds.map(async (tokenId: number) => {
+        const tokenURI = await publicClient.readContract({
+          address: NFT_CONTRACT_ADDRESS as `0x${string}`,
+          abi: NFT_ABI,
+          functionName: 'tokenURI',
+          args: [BigInt(tokenId)],
+        });
+
+        for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
+          try {
+            const url = ipfsToHttp(tokenURI as string, i) + '.json';
+            const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+            if (response.ok) {
+              const metadata = await response.json();
+              if (metadata.image) {
+                metadata.image = ipfsToHttp(metadata.image);
+              }
+              return { tokenId, ...metadata };
+            }
+          } catch {
+            continue;
+          }
+        }
+        return { tokenId, name: `Gamefolio Genesis #${tokenId}`, image: null };
+      })
+    );
+
+    const nfts = results.map((r) =>
+      r.status === 'fulfilled' ? r.value : { tokenId: null, error: 'Failed' }
+    );
+
+    return res.json({ nfts });
+  } catch (error: any) {
+    console.error('Batch metadata fetch error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch metadata' });
+  }
+});
+
 export default router;
