@@ -94,11 +94,11 @@ export default function MintedNftDetailScreen({
 
   return (
     <div className="fixed inset-0 z-[110] bg-[#020617] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
-      <div className="w-full max-w-[430px] md:max-w-5xl mx-auto px-6 pt-12 md:pt-8 pb-1">
+      <div className="w-full max-w-[430px] md:max-w-5xl mx-auto px-6 pt-16 md:pt-20 pb-1">
         <span className="text-sm font-medium text-[#64748b] tracking-wide">Minted NFT Detail</span>
       </div>
 
-      <header className="sticky top-0 z-40 flex-shrink-0">
+      <header className="z-40 flex-shrink-0">
         <div className="w-full max-w-[430px] md:max-w-5xl mx-auto px-4 pb-4">
           <div className="flex items-center justify-between w-full rounded-2xl bg-[#0f172a] border border-[#1e293b80] px-4 py-3">
             <div className="flex items-center gap-3">
