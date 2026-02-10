@@ -82,6 +82,7 @@ export async function transferGfTokens(
       abi: GF_TOKEN_ABI,
       functionName: 'transfer',
       args: [toAddress as Address, amountInWei],
+      type: 'legacy' as any,
     });
 
     const receipt = await publicClient.waitForTransactionReceipt({ 

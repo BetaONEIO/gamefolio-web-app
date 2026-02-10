@@ -49,6 +49,7 @@ router.post('/api/mint/approve', async (req: Request, res: Response) => {
       abi: GF_TOKEN_ABI,
       functionName: 'approve',
       args: [MINT_SALE_ADDRESS as Address, maxUint256],
+      type: 'legacy' as any,
     });
 
     const receipt = await publicClient.waitForTransactionReceipt({
@@ -101,6 +102,7 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
       abi: MINT_SALE_ABI,
       functionName: 'mint',
       args: [BigInt(quantity)],
+      type: 'legacy' as any,
     });
 
     const receipt = await publicClient.waitForTransactionReceipt({
