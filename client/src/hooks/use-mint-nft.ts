@@ -21,10 +21,12 @@ interface MintResult {
   tokenIds: number[];
 }
 
-export function useMintNFT() {
+export function useMintNFT(fallbackAddress?: string | null) {
   const { walletAddress, publicClient, isReady } = useWallet();
   const { data: walletClient } = useWalletClient();
   const { toast } = useToast();
+
+  const effectiveAddress = walletAddress || (fallbackAddress as `0x${string}` | null) || null;
 
   const [allowanceState, setAllowanceState] = useState<AllowanceState>('checking');
   const [mintTxState, setMintTxState] = useState<MintTxState>('idle');
@@ -74,7 +76,7 @@ export function useMintNFT() {
   }, [publicClient]);
 
   const checkAllowance = useCallback(async () => {
-    if (!walletAddress || !publicClient) {
+    if (!effectiveAddress || !publicClient) {
       setAllowanceState('none');
       return;
     }
@@ -84,7 +86,7 @@ export function useMintNFT() {
         address: GF_TOKEN_ADDRESS as Address,
         abi: GF_TOKEN_ABI,
         functionName: 'allowance',
-        args: [walletAddress, MINT_SALE_ADDRESS as Address],
+        args: [effectiveAddress as Address, MINT_SALE_ADDRESS as Address],
       }) as bigint;
 
       const requiredAmount = onChainPriceRaw
@@ -95,17 +97,17 @@ export function useMintNFT() {
       console.error('Error checking allowance:', err);
       setAllowanceState('none');
     }
-  }, [walletAddress, publicClient, onChainPriceRaw, onChainPricePerMint, onChainMaxPerTx]);
+  }, [effectiveAddress, publicClient, onChainPriceRaw, onChainPricePerMint, onChainMaxPerTx]);
 
   const fetchOnChainData = useCallback(async () => {
     if (!publicClient) return;
     try {
-      const balance = walletAddress
+      const balance = effectiveAddress
         ? (await publicClient.readContract({
             address: GF_TOKEN_ADDRESS as Address,
             abi: GF_TOKEN_ABI,
             functionName: 'balanceOf',
-            args: [walletAddress],
+            args: [effectiveAddress as Address],
           })) as bigint
         : BigInt(0);
 
@@ -125,7 +127,7 @@ export function useMintNFT() {
     } catch (err) {
       console.error('Error fetching on-chain data:', err);
     }
-  }, [walletAddress, publicClient]);
+  }, [effectiveAddress, publicClient]);
 
   useEffect(() => {
     if (publicClient) {
@@ -134,13 +136,13 @@ export function useMintNFT() {
   }, [publicClient, fetchContractConfig]);
 
   useEffect(() => {
-    if (isReady && walletAddress) {
+    if (effectiveAddress && publicClient) {
       checkAllowance();
       fetchOnChainData();
     } else {
       setAllowanceState('none');
     }
-  }, [isReady, walletAddress, checkAllowance, fetchOnChainData]);
+  }, [effectiveAddress, publicClient, checkAllowance, fetchOnChainData]);
 
   const approve = useCallback(async () => {
     if (!walletClient || !walletAddress) {

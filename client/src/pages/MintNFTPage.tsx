@@ -29,6 +29,8 @@ export default function MintNFTPage() {
   const { toast } = useToast();
   const { walletAddress: wagmiWallet, isReady: walletReady, connect: connectWallet } = useWallet();
 
+  const crossmintAddress = wallet?.address || user?.walletAddress;
+
   const {
     allowanceState,
     mintTxState,
@@ -40,7 +42,7 @@ export default function MintNFTPage() {
     pricePerMint,
     maxPerTx,
     maxSupply,
-  } = useMintNFT();
+  } = useMintNFT(crossmintAddress);
 
   const [quantity, setQuantity] = useState(1);
   const [mintState, setMintState] = useState<MintState>("idle");
@@ -54,7 +56,6 @@ export default function MintNFTPage() {
     { id: 3, title: "Confirming", subtitle: "Waiting for block confirmation", status: "pending" },
   ]);
 
-  const crossmintAddress = wallet?.address || user?.walletAddress;
   const activeWallet = wagmiWallet || crossmintAddress;
   const isConnected = walletReady || !!crossmintAddress;
 
