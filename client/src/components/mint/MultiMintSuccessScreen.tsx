@@ -1,17 +1,25 @@
 import { ArrowLeft, ArrowRight, Copy, Check, Share2 } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
+import MintedNftDetailScreen from "./MintedNftDetailScreen";
+
+interface NftAttribute {
+  trait_type: string;
+  value: string;
+}
 
 interface MintedNFT {
   id: number;
   name?: string;
   imageUrl: string;
   rarity: number;
+  attributes?: NftAttribute[];
 }
 
 interface MultiMintSuccessScreenProps {
   quantity: number;
   mintedNfts: MintedNFT[];
   txHash: string;
+  walletAddress?: string;
   onViewCollection: () => void;
   onViewExplorer: () => void;
   onBack: () => void;
@@ -28,16 +36,20 @@ function getTokenIdPadded(id: number): string {
   return `#${String(id).padStart(4, "0")}`;
 }
 
+const SKALE_EXPLORER_BASE_URL = "https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com";
+
 export default function MultiMintSuccessScreen({
   quantity,
   mintedNfts,
   txHash,
+  walletAddress,
   onViewCollection,
   onViewExplorer,
   onBack,
 }: MultiMintSuccessScreenProps) {
   const [copied, setCopied] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [selectedNft, setSelectedNft] = useState<MintedNFT | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   const displayNfts = mintedNfts.length > 0
@@ -96,6 +108,18 @@ export default function MultiMintSuccessScreen({
   const costPerNft = 100;
   const totalValue = quantity * costPerNft;
 
+  if (selectedNft) {
+    return (
+      <MintedNftDetailScreen
+        nft={selectedNft}
+        txHash={txHash}
+        walletAddress={walletAddress}
+        onClose={() => setSelectedNft(null)}
+        onViewExplorer={() => window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`, "_blank")}
+      />
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-[100] bg-[#020617] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
       {/* Header */}
@@ -151,10 +175,11 @@ export default function MultiMintSuccessScreen({
               {displayNfts.map((nft, index) => (
                 <div
                   key={index}
-                  className="snap-center flex-shrink-0"
+                  className="snap-center flex-shrink-0 cursor-pointer"
                   style={{ width: "280px" }}
+                  onClick={() => setSelectedNft(nft)}
                 >
-                  <div className="w-[280px] rounded-[40px] border border-[#1e293b80] bg-[#0f172a] overflow-hidden shadow-[0_25px_50px_-12px_rgba(74,222,128,0.05)]">
+                  <div className="w-[280px] rounded-[40px] border border-[#1e293b80] bg-[#0f172a] overflow-hidden shadow-[0_25px_50px_-12px_rgba(74,222,128,0.05)] active:scale-[0.98] transition-transform">
                     {/* Card info header */}
                     <div className="p-6 pb-1 flex flex-col gap-1">
                       <div className="flex items-start justify-between gap-4">
