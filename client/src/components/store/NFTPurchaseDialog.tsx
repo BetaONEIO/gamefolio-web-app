@@ -17,7 +17,7 @@ interface NFT {
   name: string;
   image: string;
   price: number;
-  priceUSD: number;
+  priceGBP: number;
   description: string;
   forSale: boolean;
   rarity: string;
@@ -78,7 +78,7 @@ export function NFTPurchaseDialog({
   if (!nft) return null;
 
   const userBalance = user?.gfTokenBalance || 0;
-  const networkFee = 1.50;
+  const networkFee = 0;
   const totalAmount = nft.price + networkFee;
   const hasEnoughBalance = userBalance >= totalAmount;
   const remainingBalance = userBalance - totalAmount;
@@ -208,17 +208,17 @@ export function NFTPurchaseDialog({
                     <span className="text-sm text-[#94a3b8]">Item Price</span>
                     <span className="text-sm font-bold text-[#f8fafc]">{nft.price.toFixed(2)} GFT</span>
                   </div>
-                  {/* Network Fee row - 53px height */}
+                  {/* Gas (sFUEL) row - 53px height */}
                   <div className="flex items-center justify-between px-4 h-[53px] border-b border-[#1e293b]/30">
-                    <span className="text-sm text-[#94a3b8]">Network Fee</span>
-                    <span className="text-sm font-bold text-[#f8fafc]">{networkFee.toFixed(2)} GFT</span>
+                    <span className="text-sm text-[#94a3b8]">Gas (sFUEL)</span>
+                    <span className="text-sm font-bold text-[#4ade80]">Free</span>
                   </div>
                   {/* Total Payment row - 75px height, green tinted bg */}
                   <div className="flex items-center justify-between px-4 h-[75px] bg-[#14532d]/10">
                     <span className="text-sm font-bold text-[#f8fafc]">Total Payment</span>
                     <div className="flex flex-col items-end">
                       <span className="text-lg font-bold text-[#4ade80] leading-7">{totalAmount.toFixed(2)} GFT</span>
-                      <span className="text-[10px] text-[#94a3b8]">≈ ${(totalAmount * 4.44).toFixed(2)} USD</span>
+                      <span className="text-[10px] text-[#94a3b8]">≈ £{(totalAmount * 0.01).toFixed(2)} GBP</span>
                     </div>
                   </div>
                 </div>
@@ -362,7 +362,7 @@ export function NFTPurchaseDialog({
                     <div className="flex items-baseline gap-2">
                       <span className="text-2xl font-bold text-[#f8fafc]">{nft.price} GFT</span>
                     </div>
-                    <span className="text-sm text-[#94a3b8]">${nft.priceUSD.toFixed(2)}</span>
+                    <span className="text-sm text-[#94a3b8]">£{nft.priceGBP.toFixed(2)}</span>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">

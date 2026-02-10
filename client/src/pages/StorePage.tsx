@@ -108,7 +108,7 @@ interface NFT {
   name: string;
   image: string;
   price: number;
-  priceUSD: number;
+  priceGBP: number;
   description: string;
   forSale: boolean;
   rarity: string;
@@ -455,7 +455,7 @@ export default function StorePage() {
       name: "Cyber Pilot #001",
       image: nft1,
       price: 250,
-      priceUSD: 12.50,
+      priceGBP: 2.50,
       description: "Elite cyber pilot with advanced tech helmet and signature yellow jacket",
       forSale: true,
       rarity: "epic",
@@ -467,7 +467,7 @@ export default function StorePage() {
       name: "Divine Guardian #002",
       image: nft2,
       price: 800,
-      priceUSD: 40.00,
+      priceGBP: 8.00,
       description: "Blessed guardian with golden halo and pure spirit",
       forSale: true,
       rarity: "legendary",
@@ -479,7 +479,7 @@ export default function StorePage() {
       name: "Street Samurai #003",
       image: nft3,
       price: 550,
-      priceUSD: 27.50,
+      priceGBP: 5.50,
       description: "Tattooed warrior with deadly precision and street style",
       forSale: true,
       rarity: "legendary",
@@ -491,7 +491,7 @@ export default function StorePage() {
       name: "Urban Rogue #004",
       image: nft4,
       price: 350,
-      priceUSD: 17.50,
+      priceGBP: 3.50,
       description: "Mysterious rogue with ice-blue shades and urban aesthetic",
       forSale: true,
       rarity: "rare",
@@ -503,7 +503,7 @@ export default function StorePage() {
       name: "Matrix Assassin #005",
       image: nft5,
       price: 700,
-      priceUSD: 35.00,
+      priceGBP: 7.00,
       description: "Digital assassin mastering the code matrix",
       forSale: true,
       rarity: "legendary",
@@ -515,7 +515,7 @@ export default function StorePage() {
       name: "Golden Warrior #006",
       image: nft6,
       price: 600,
-      priceUSD: 30.00,
+      priceGBP: 6.00,
       description: "Legendary warrior wielding the sacred blade of light",
       forSale: true,
       rarity: "legendary",
@@ -527,7 +527,7 @@ export default function StorePage() {
       name: "Cyber Ronin #007",
       image: nft7,
       price: 650,
-      priceUSD: 32.50,
+      priceGBP: 6.50,
       description: "Futuristic ronin with laser-edge katana",
       forSale: true,
       rarity: "legendary",
@@ -539,7 +539,7 @@ export default function StorePage() {
       name: "Desert Wanderer #008",
       image: nft8,
       price: 400,
-      priceUSD: 20.00,
+      priceGBP: 4.00,
       description: "Nomadic survivor with crystalline blade",
       forSale: true,
       rarity: "epic",
@@ -551,7 +551,7 @@ export default function StorePage() {
       name: "Space Mercenary #009",
       image: nft9,
       price: 500,
-      priceUSD: 25.00,
+      priceGBP: 5.00,
       description: "Battle-hardened merc from the outer rim",
       forSale: true,
       rarity: "epic",
@@ -563,7 +563,7 @@ export default function StorePage() {
       name: "Crystal Knight #010",
       image: nft10,
       price: 750,
-      priceUSD: 37.50,
+      priceGBP: 7.50,
       description: "Cosmic knight wielding the ethereal crystal blade",
       forSale: true,
       rarity: "legendary",
@@ -575,7 +575,7 @@ export default function StorePage() {
       name: "Retro Explorer #011",
       image: nft11,
       price: 300,
-      priceUSD: 15.00,
+      priceGBP: 3.00,
       description: "Classic adventurer with 3D vision and frontier spirit",
       forSale: true,
       rarity: "rare",
@@ -587,7 +587,7 @@ export default function StorePage() {
       name: "Eastern Mystic #012",
       image: nft12,
       price: 450,
-      priceUSD: 22.50,
+      priceGBP: 4.50,
       description: "Wise wanderer from the ancient lands",
       forSale: true,
       rarity: "epic",
@@ -599,7 +599,7 @@ export default function StorePage() {
       name: "Digital Miner #013",
       image: nft13,
       price: 350,
-      priceUSD: 17.50,
+      priceGBP: 3.50,
       description: "VR-enabled miner extracting digital resources",
       forSale: true,
       rarity: "rare",
@@ -611,7 +611,7 @@ export default function StorePage() {
       name: "Tech Operative #014",
       image: nft14,
       price: 420,
-      priceUSD: 21.00,
+      priceGBP: 4.20,
       description: "Tactical agent with next-gen plasma weaponry",
       forSale: true,
       rarity: "epic",
@@ -623,7 +623,7 @@ export default function StorePage() {
       name: "Royal Outlaw #015",
       image: nft15,
       price: 900,
-      priceUSD: 45.00,
+      priceGBP: 9.00,
       description: "Crowned rebel leading the resistance with style",
       forSale: true,
       rarity: "legendary",
@@ -730,7 +730,7 @@ export default function StorePage() {
           <span className="text-sm text-gray-400">GF</span>
         </div>
         <p className="text-xs text-gray-500 mt-1" data-testid="text-gf-balance-usd">
-          ≈ ${(gfBalance * 0.05).toFixed(2)} USD
+          ≈ £{(gfBalance * 0.01).toFixed(2)} GBP
         </p>
         {!wallet?.address && (
           <Link href="/wallet">
@@ -852,7 +852,7 @@ export default function StorePage() {
                     <span className="text-sm text-gray-400">GF</span>
                   </div>
                   <p className="text-xs text-gray-500 mt-1" data-testid="text-gf-balance-usd-mobile">
-                    ≈ ${(gfBalance * 0.05).toFixed(2)} USD
+                    ≈ £{(gfBalance * 0.01).toFixed(2)} GBP
                   </p>
                   {!wallet?.address && (
                     <Link href="/wallet">
@@ -1693,7 +1693,7 @@ export default function StorePage() {
                                 name: item.nftName,
                                 image: item.nftImage,
                                 price: item.nftPrice,
-                                priceUSD: item.nftPrice * 0.05,
+                                priceGBP: item.nftPrice * 0.01,
                                 description: "",
                                 forSale: true,
                                 rarity: "Epic",

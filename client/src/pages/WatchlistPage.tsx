@@ -27,7 +27,7 @@ interface NFT {
   description: string;
   image: string;
   price: number;
-  priceUSD: number;
+  priceGBP: number;
   rarity: string;
   type: string;
   mintNumber: number;
@@ -83,7 +83,7 @@ export default function WatchlistPage() {
       description: "",
       image: watchlistItem.nftImage,
       price: watchlistItem.nftPrice,
-      priceUSD: watchlistItem.nftPrice * 0.05,
+      priceGBP: watchlistItem.nftPrice * 0.01,
       rarity: "Epic",
       type: "Avatar",
       mintNumber: 1,
@@ -209,7 +209,7 @@ export default function WatchlistPage() {
                         </p>
                       </div>
                       <p className="text-xs text-gray-500">
-                        ≈ ${(item.nftPrice * 0.05).toFixed(2)}
+                        ≈ £{(item.nftPrice * 0.01).toFixed(2)}
                       </p>
                     </div>
 

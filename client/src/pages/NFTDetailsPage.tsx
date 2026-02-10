@@ -20,7 +20,7 @@ interface NFTDetails {
   creator: string;
   creatorAvatar?: string;
   price: number;
-  priceUSD: number;
+  priceGBP: number;
   rarity: string;
   isOwned: boolean;
   isGameReady: boolean;
@@ -41,7 +41,7 @@ const sampleNFTs: Record<string, NFTDetails> = {
     description: "The Sentinel #882 is a high-tier protective unit designed for the Etheria metaverse. Equipped with Phase-Shift armor and a Neural-Link core, it provides unmatched defensive capabilities for any fleet. Part of the limited Genesis collection.",
     creator: "Aura_Studio",
     price: 250,
-    priceUSD: 14.00,
+    priceGBP: 2.50,
     rarity: "Legendary",
     isOwned: true,
     isGameReady: true,
