@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db';
 import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
-import { createPublicClient, http, maxUint256, type Address, decodeEventLog, parseUnits } from 'viem';
+import { maxUint256, type Address, decodeEventLog } from 'viem';
 import {
   GF_TOKEN_ADDRESS,
   GF_TOKEN_ABI,
@@ -11,16 +11,11 @@ import {
   MINT_CONFIG,
   NFT_ABI,
   NFT_CONTRACT_ADDRESS,
-  SKALE_NEBULA_TESTNET,
 } from '../../shared/contracts';
-import { decryptPrivateKey, getUserWalletClient, encryptPrivateKey } from '../wallet-crypto';
+import { encryptPrivateKey } from '../wallet-crypto';
+import { writeContractWithPoW, publicClient } from '../skale-pow';
 
 const router = Router();
-
-const publicClient = createPublicClient({
-  chain: SKALE_NEBULA_TESTNET,
-  transport: http(SKALE_NEBULA_TESTNET.rpcUrls.default.http[0]),
-});
 
 router.post('/api/mint/approve', async (req: Request, res: Response) => {
   try {
@@ -42,14 +37,12 @@ router.post('/api/mint/approve', async (req: Request, res: Response) => {
       });
     }
 
-    const walletClient = getUserWalletClient(user.encryptedPrivateKey);
-
-    const hash = await walletClient.writeContract({
-      address: GF_TOKEN_ADDRESS as Address,
+    const hash = await writeContractWithPoW({
+      encryptedPrivateKey: user.encryptedPrivateKey,
+      contractAddress: GF_TOKEN_ADDRESS as Address,
       abi: GF_TOKEN_ABI,
       functionName: 'approve',
       args: [MINT_SALE_ADDRESS as Address, maxUint256],
-      type: 'legacy' as any,
     });
 
     const receipt = await publicClient.waitForTransactionReceipt({
@@ -95,14 +88,12 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
       });
     }
 
-    const walletClient = getUserWalletClient(user.encryptedPrivateKey);
-
-    const hash = await walletClient.writeContract({
-      address: MINT_SALE_ADDRESS as Address,
+    const hash = await writeContractWithPoW({
+      encryptedPrivateKey: user.encryptedPrivateKey,
+      contractAddress: MINT_SALE_ADDRESS as Address,
       abi: MINT_SALE_ABI,
       functionName: 'mint',
       args: [BigInt(quantity)],
-      type: 'legacy' as any,
     });
 
     const receipt = await publicClient.waitForTransactionReceipt({

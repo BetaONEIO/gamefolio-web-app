@@ -17,6 +17,7 @@
     "@crossmint/client-sdk-react-ui": "^2.5.7",
     "@crossmint/client-sdk-smart-wallet": "^0.3.37",
     "@crossmint/wallets-sdk": "^0.18.2",
+    "@eidolon-labs/gasless": "^0.1.2",
     "@emailjs/browser": "^4.4.1",
     "@firebase/auth": "^1.10.6",
     "@getbrevo/brevo": "^2.5.0",
