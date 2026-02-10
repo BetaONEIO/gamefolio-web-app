@@ -27,7 +27,7 @@ export function useMintNFT() {
   const [allowanceState, setAllowanceState] = useState<AllowanceState>('checking');
   const [mintTxState, setMintTxState] = useState<MintTxState>('idle');
   const [mintResult, setMintResult] = useState<MintResult | null>(null);
-  const [onChainBalance, setOnChainBalance] = useState<bigint>(0n);
+  const [onChainBalance, setOnChainBalance] = useState<bigint>(BigInt(0));
   const [totalMinted, setTotalMinted] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,12 +64,12 @@ export function useMintNFT() {
               functionName: 'balanceOf',
               args: [walletAddress],
             }) as Promise<bigint>
-          : Promise.resolve(0n),
+          : Promise.resolve(BigInt(0)),
         publicClient.readContract({
           address: MINT_SALE_ADDRESS as Address,
           abi: MINT_SALE_ABI,
           functionName: 'totalMinted',
-        }).catch(() => 0n) as Promise<bigint>,
+        }).catch(() => BigInt(0)) as Promise<bigint>,
       ]);
       setOnChainBalance(balance);
       setTotalMinted(Number(minted));

@@ -6,12 +6,12 @@ import { ArrowLeft, Minus, Plus, Wallet, Sparkles, X, ExternalLink, Check, Shiel
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import MultiMintSuccessScreen from "@/components/mint/MultiMintSuccessScreen";
+import { useMintNFT } from "@/hooks/use-mint-nft";
+import { formatUnits } from "viem";
+import { useWallet } from "@/hooks/use-wallet";
+import { SKALE_EXPLORER_BASE_URL } from "../../../config/web3";
 
 const MINT_VIDEO_URL = "https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/sign/gamefolio-assets/NFT%20mint.mp4?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hMzEyZGM4MC1lOGJlLTRjMDAtODFhNy1kOTI5MTgyYTJlYWEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJnYW1lZm9saW8tYXNzZXRzL05GVCBtaW50Lm1wNCIsImlhdCI6MTc3MDEzNzMzOSwiZXhwIjoyMDg1NDk3MzM5fQ.rdKpWSU4H8CdDO-mfEAbTc96_zdl35E6Y7Md38HS-uY";
-
-const MINT_PRICE = 50;
-const NETWORK_FEE = 0.50;
-const MAX_PER_WALLET = 5;
 
 type MintState = "idle" | "processing" | "video" | "success";
 
@@ -27,51 +27,53 @@ export default function MintNFTPage() {
   const { user } = useAuth();
   const { wallet } = useCrossmint();
   const { toast } = useToast();
+  const { walletAddress: wagmiWallet, isReady: walletReady, connect: connectWallet } = useWallet();
+
+  const {
+    allowanceState,
+    mintTxState,
+    mintResult,
+    onChainBalance,
+    totalMinted,
+    approve,
+    mint,
+    pricePerMint,
+    maxPerTx,
+    maxSupply,
+  } = useMintNFT();
+
   const [quantity, setQuantity] = useState(1);
   const [mintState, setMintState] = useState<MintState>("idle");
-  const [allowanceApproved, setAllowanceApproved] = useState(false);
-  const [isApproving, setIsApproving] = useState(false);
-  const [mintedNftId] = useState(() => Math.floor(Math.random() * 487) + 1);
-  const [txHash] = useState(() => `0x${Math.random().toString(16).slice(2, 10).toUpperCase()}`);
   const videoRef = useRef<HTMLVideoElement>(null);
   const previewVideo1Ref = useRef<HTMLVideoElement>(null);
   const previewVideo2Ref = useRef<HTMLVideoElement>(null);
   const previewVideo3Ref = useRef<HTMLVideoElement>(null);
   const [mintSteps, setMintSteps] = useState<MintStep[]>([
-    { id: 1, title: "Reserving Supply", subtitle: "Allocation secured for your wallet", status: "pending" },
-    { id: 2, title: "Minting NFT", subtitle: "Writing metadata to the network", status: "pending" },
-    { id: 3, title: "Finalising", subtitle: "Confirming transaction blocks", status: "pending" },
+    { id: 1, title: "Approving Transaction", subtitle: "Waiting for wallet confirmation", status: "pending" },
+    { id: 2, title: "Minting NFT", subtitle: "Writing to the blockchain", status: "pending" },
+    { id: 3, title: "Confirming", subtitle: "Waiting for block confirmation", status: "pending" },
   ]);
 
-  const gfBalance = user?.gfTokenBalance || 0;
-  const walletAddress = wallet?.address || user?.walletAddress;
-  const isConnected = !!walletAddress;
+  const crossmintAddress = wallet?.address || user?.walletAddress;
+  const activeWallet = wagmiWallet || crossmintAddress;
+  const isConnected = walletReady || !!crossmintAddress;
 
-  const mintPrice = MINT_PRICE * quantity;
-  const networkFee = NETWORK_FEE * quantity;
-  const totalAmount = mintPrice + networkFee;
-  const totalUSD = totalAmount * 0.049;
+  const onChainBalanceFormatted = Number(formatUnits(onChainBalance, 18));
+  const mintPrice = pricePerMint * quantity;
+  const totalUSD = mintPrice * 0.01;
 
-  const canMint = isConnected && gfBalance >= totalAmount && quantity <= MAX_PER_WALLET && allowanceApproved;
-  const hasInsufficientBalance = gfBalance < totalAmount;
+  const allowanceApproved = allowanceState === 'approved';
+  const isApproving = allowanceState === 'approving';
+  const isCheckingAllowance = allowanceState === 'checking';
+  const canMint = isConnected && onChainBalanceFormatted >= mintPrice && quantity <= maxPerTx && allowanceApproved;
+  const hasInsufficientBalance = onChainBalanceFormatted < mintPrice;
 
   const handleEnableAllowance = async () => {
     if (!isConnected) {
-      toast({
-        title: "Wallet Required",
-        description: "Please connect your wallet first",
-        variant: "destructive",
-      });
+      connectWallet();
       return;
     }
-    setIsApproving(true);
-    await new Promise(r => setTimeout(r, 2000));
-    setAllowanceApproved(true);
-    setIsApproving(false);
-    toast({
-      title: "Allowance Approved",
-      description: "GFT spending has been enabled for the mint contract",
-    });
+    await approve();
   };
 
   useEffect(() => {
@@ -95,41 +97,19 @@ export default function MintNFTPage() {
   };
 
   const handleIncrement = () => {
-    if (quantity < MAX_PER_WALLET) setQuantity(quantity + 1);
-  };
-
-  const simulateMintingSteps = async () => {
-    setMintSteps(steps => steps.map((s, i) => i === 0 ? { ...s, status: "active" } : s));
-    await new Promise(r => setTimeout(r, 1500));
-    
-    setMintSteps(steps => steps.map((s, i) => 
-      i === 0 ? { ...s, status: "completed" } : i === 1 ? { ...s, status: "active" } : s
-    ));
-    await new Promise(r => setTimeout(r, 2000));
-    
-    setMintSteps(steps => steps.map((s, i) => 
-      i <= 1 ? { ...s, status: "completed" } : i === 2 ? { ...s, status: "active" } : s
-    ));
-    await new Promise(r => setTimeout(r, 1500));
-    
-    setMintSteps(steps => steps.map(s => ({ ...s, status: "completed" })));
-    await new Promise(r => setTimeout(r, 500));
+    if (quantity < maxPerTx) setQuantity(quantity + 1);
   };
 
   const handleMint = async () => {
     if (!canMint) {
       if (!isConnected) {
-        toast({
-          title: "Wallet Required",
-          description: "Please connect your wallet first",
-          variant: "destructive",
-        });
+        connectWallet();
         return;
       }
-      if (gfBalance < totalAmount) {
+      if (hasInsufficientBalance) {
         toast({
           title: "Insufficient Balance",
-          description: `You need ${totalAmount.toFixed(2)} GFT but only have ${gfBalance.toFixed(2)} GFT`,
+          description: `You need ${mintPrice.toLocaleString()} GFT but only have ${onChainBalanceFormatted.toLocaleString()} GFT`,
           variant: "destructive",
         });
         return;
@@ -138,24 +118,46 @@ export default function MintNFTPage() {
     }
 
     setMintState("processing");
-    
-    await simulateMintingSteps();
-    
-    setMintState("video");
-    
-    setTimeout(() => {
-      if (videoRef.current) {
-        videoRef.current.currentTime = 0;
-        videoRef.current.play().catch(() => {
-          setMintState("success");
-          toast({
-            title: "NFT Minted!",
-            description: `Successfully minted ${quantity} NFT${quantity > 1 ? "s" : ""}`,
+    setMintSteps(steps => steps.map((s, i) => i === 0 ? { ...s, status: "active" } : s));
+
+    const result = await mint(quantity);
+
+    if (result) {
+      setMintSteps(steps => steps.map(s => ({ ...s, status: "completed" as const })));
+
+      setMintState("video");
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.currentTime = 0;
+          videoRef.current.play().catch(() => {
+            setMintState("success");
+            toast({
+              title: "NFT Minted!",
+              description: `Successfully minted ${quantity} NFT${quantity > 1 ? "s" : ""}`,
+            });
           });
-        });
-      }
-    }, 100);
+        }
+      }, 100);
+    } else {
+      setMintState("idle");
+      setMintSteps([
+        { id: 1, title: "Approving Transaction", subtitle: "Waiting for wallet confirmation", status: "pending" },
+        { id: 2, title: "Minting NFT", subtitle: "Writing to the blockchain", status: "pending" },
+        { id: 3, title: "Confirming", subtitle: "Waiting for block confirmation", status: "pending" },
+      ]);
+    }
   };
+
+  useEffect(() => {
+    if (mintTxState === 'sending') {
+      setMintSteps(steps => steps.map((s, i) => i === 0 ? { ...s, status: "active" } : s));
+    } else if (mintTxState === 'confirming') {
+      setMintSteps(steps => steps.map((s, i) =>
+        i === 0 ? { ...s, status: "completed" } :
+        i === 1 ? { ...s, status: "active" } : s
+      ));
+    }
+  }, [mintTxState]);
 
   const handleVideoEnd = () => {
     setMintState("success");
@@ -171,6 +173,10 @@ export default function MintNFTPage() {
     }
     setMintState("success");
   };
+
+  const txHash = mintResult?.txHash || '';
+  const mintedTokenIds = mintResult?.tokenIds || [];
+  const firstTokenId = mintedTokenIds[0] || 0;
 
   const copyTxHash = () => {
     navigator.clipboard.writeText(txHash);
@@ -298,7 +304,7 @@ export default function MintNFTPage() {
     // Show multi-mint success screen when quantity > 1
     if (quantity > 1) {
       const mintedNfts = Array.from({ length: quantity }, (_, i) => ({
-        id: mintedNftId + i,
+        id: mintedTokenIds[i] || firstTokenId + i,
         imageUrl: `https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-assets/nft-placeholders/guardian-${(i % 3) + 1}.png`,
         rarity: Math.floor(Math.random() * 30) + 70,
       }));
@@ -309,7 +315,7 @@ export default function MintNFTPage() {
           mintedNfts={mintedNfts}
           txHash={txHash}
           onViewCollection={() => navigate("/collection")}
-          onViewExplorer={() => window.open(`https://explorer.skale.space/tx/${txHash}`, "_blank")}
+          onViewExplorer={() => window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`, "_blank")}
           onBack={() => navigate("/store")}
         />
       );
@@ -399,7 +405,7 @@ export default function MintNFTPage() {
                 Successfully Minted
               </span>
               <h2 className="text-[30px] font-bold text-[#f8fafc] leading-9">
-                Guardian #{mintedNftId}
+                Guardian #{firstTokenId}
               </h2>
               <p className="text-sm text-[#94a3b8] leading-5 mt-1">
                 Your Guardian has been successfully forged and added to your collection on the blockchain.
@@ -430,7 +436,7 @@ export default function MintNFTPage() {
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                     <path fillRule="evenodd" clipRule="evenodd" d="M7.14835 2.11694C7.22198 1.85073 7.06588 1.57524 6.79968 1.5016C6.53348 1.42796 6.25798 1.58407 6.18434 1.85027L5.17501 5.48361H2.66634C2.3902 5.48361 2.16634 5.70746 2.16634 5.98361C2.16634 6.25975 2.3902 6.48361 2.66634 6.48361H4.89768L3.87901 10.1503H1.33301C1.05687 10.1503 0.833008 10.3741 0.833008 10.6503C0.833008 10.9264 1.05687 11.1503 1.33301 11.1503H3.60101L2.85101 13.8503C2.77737 14.1165 2.93347 14.392 3.19968 14.4656C3.46588 14.5392 3.74137 14.3831 3.81501 14.1169L4.63901 11.1503H9.60101L8.85101 13.8503C8.77738 14.1165 8.93348 14.392 9.19968 14.4656C9.46588 14.5392 9.74138 14.3831 9.81501 14.1169L10.639 11.1503H13.333C13.6092 11.1503 13.833 10.9264 13.833 10.6503C13.833 10.3741 13.6092 10.1503 13.333 10.1503H10.917L11.935 6.48361H14.6664C14.9425 6.48361 15.1664 6.25975 15.1664 5.98361C15.1664 5.70746 14.9425 5.48361 14.6664 5.48361H12.213L13.1483 2.11694C13.196 1.94473 13.1481 1.7602 13.0228 1.63285C12.8975 1.50549 12.7138 1.45466 12.5408 1.49951C12.3679 1.54436 12.232 1.67807 12.1843 1.85027L11.175 5.48361H6.21301L7.14835 2.11694ZM9.87901 10.1503L10.8977 6.48361H5.93501L4.91701 10.1503H9.87901Z" fill="#4ADE80" />
                   </svg>
-                  <span className="text-lg font-bold text-[#f8fafc]">{mintedNftId}/1000</span>
+                  <span className="text-lg font-bold text-[#f8fafc]">{firstTokenId}/{maxSupply.toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -445,7 +451,7 @@ export default function MintNFTPage() {
                 View in My NFTs
               </Button>
               <Button
-                onClick={() => window.open(`https://explorer.skale.space/tx/${txHash}`, "_blank")}
+                onClick={() => window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`, "_blank")}
                 className="w-full h-14 rounded-2xl bg-[#1e293b] hover:bg-[#334155] border border-[#1e293b]/50 text-[#f8fafc] text-base font-bold flex items-center justify-center gap-2"
               >
                 <ExternalLink className="h-5 w-5" />
@@ -509,7 +515,7 @@ export default function MintNFTPage() {
                     Supply
                   </span>
                   <span className="text-sm font-bold text-[#f8fafc]">
-                    487/1000
+                    {totalMinted.toLocaleString()}/{maxSupply.toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -535,15 +541,28 @@ export default function MintNFTPage() {
                       Your Balance
                     </span>
                     <span className="text-sm font-bold text-[#f8fafc]">
-                      {gfBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GFT
+                      {onChainBalanceFormatted.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GFT
                     </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <AlertTriangle className={`h-3 w-3 ${allowanceApproved ? 'text-[#4ade80]' : 'text-[#ef4444]'}`} />
-                  <span className={`text-[10px] font-bold uppercase ${allowanceApproved ? 'text-[#4ade80]' : 'text-[#ef4444]'}`}>
-                    {allowanceApproved ? 'Approved' : 'No Allowance'}
-                  </span>
+                  {isCheckingAllowance ? (
+                    <>
+                      <Loader2 className="h-3 w-3 text-[#94a3b8] animate-spin" />
+                      <span className="text-[10px] font-bold uppercase text-[#94a3b8]">Checking...</span>
+                    </>
+                  ) : (
+                    <>
+                      {allowanceApproved ? (
+                        <Check className="h-3 w-3 text-[#4ade80]" />
+                      ) : (
+                        <AlertTriangle className="h-3 w-3 text-[#ef4444]" />
+                      )}
+                      <span className={`text-[10px] font-bold uppercase ${allowanceApproved ? 'text-[#4ade80]' : 'text-[#ef4444]'}`}>
+                        {allowanceApproved ? 'Approved' : 'No Allowance'}
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -554,7 +573,7 @@ export default function MintNFTPage() {
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-[#f8fafc]">Mint Quantity</span>
                     <span className="text-[10px] font-bold text-[#94a3b8] uppercase">
-                      {MINT_PRICE} GFT per NFT
+                      {pricePerMint} GFT per NFT
                     </span>
                   </div>
                   <div className="flex items-center gap-4 bg-[#1e293b] rounded-2xl p-1">
@@ -570,7 +589,7 @@ export default function MintNFTPage() {
                     </span>
                     <button
                       onClick={handleIncrement}
-                      disabled={quantity >= MAX_PER_WALLET}
+                      disabled={quantity >= maxPerTx}
                       className="w-10 h-10 rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
                     >
                       <Plus className="h-5 w-5 text-[#022c22]" />
@@ -589,9 +608,9 @@ export default function MintNFTPage() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#94a3b8]">Gas Estimate</span>
-                    <span className="text-sm font-bold text-[#f8fafc]">
-                      {networkFee.toFixed(2)} GFT
+                    <span className="text-sm text-[#94a3b8]">Gas (sFUEL)</span>
+                    <span className="text-sm font-bold text-[#4ade80]">
+                      Free
                     </span>
                   </div>
                 </div>
@@ -601,7 +620,7 @@ export default function MintNFTPage() {
                   <span className="text-base font-bold text-[#f8fafc]">Total Required</span>
                   <div className="flex flex-col items-end">
                     <span className="text-xl font-bold text-[#4ade80]">
-                      {totalAmount.toFixed(2)} GFT
+                      {mintPrice.toLocaleString()} GFT
                     </span>
                     <span className="text-[10px] font-medium text-[#94a3b8]">
                       {hasInsufficientBalance ? 'Insufficient balance' : `≈ $${totalUSD.toFixed(2)} USD`}
