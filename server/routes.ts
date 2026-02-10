@@ -4413,6 +4413,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get clip thumbnail - returns signed URL redirect for private Supabase thumbnails
+  app.get("/api/clips/:id/thumbnail", async (req, res) => {
+    try {
+      const clipId = parseInt(req.params.id);
+      const clip = await storage.getClip(clipId);
+
+      if (!clip) {
+        return res.status(404).json({ message: "Clip not found" });
+      }
+
+      if (clip.thumbnailUrl) {
+        const signedUrl = await supabaseStorage.convertToSignedUrl(clip.thumbnailUrl, 3600);
+        if (signedUrl) {
+          return res.redirect(signedUrl);
+        }
+      }
+
+      return res.status(404).json({ message: "Thumbnail not available" });
+    } catch (error) {
+      console.error("Error getting clip thumbnail:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Update clip thumbnail
   app.put("/api/clips/:id/thumbnail", authMiddleware, async (req, res) => {
     try {
