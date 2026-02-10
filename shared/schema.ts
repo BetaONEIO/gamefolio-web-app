@@ -58,6 +58,7 @@ export const users = pgTable("users", {
   walletAddress: text("wallet_address"),
   walletChain: text("wallet_chain").default("skale-nebula-testnet"),
   walletCreatedAt: timestamp("wallet_created_at"),
+  encryptedPrivateKey: text("encrypted_private_key"),
   // GF Token Balance
   gfTokenBalance: real("gf_token_balance").default(0).notNull(),
   // Gamefolio Pro subscription

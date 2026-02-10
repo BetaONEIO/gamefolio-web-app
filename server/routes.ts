@@ -53,6 +53,7 @@ import migrationRouter from "./routes/migration";
 import viewRouter from "./routes/view";
 import supportRouter from "./routes/support";
 import { reportsRouter } from "./routes/reports";
+import mintNftRouter from "./routes/mint-nft";
 import { twitchApi } from "./services/twitch-api";
 import { VideoProcessor } from "./video-processor";
 import sharp from "sharp";
@@ -7667,6 +7668,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount upload routes
   app.use('/api/upload', uploadRouter);
 
+  // Mount mint NFT routes
+  app.use(mintNftRouter);
+
   // Desktop app video upload endpoint - combines upload and processing in one step
   // Expected by desktop app: POST /api/videos/upload with multipart/form-data
   app.post('/api/videos/upload', hybridAuth, videoUpload.single('video'), async (req: Request, res: Response) => {
@@ -8754,15 +8758,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate a new wallet using ethers.js
+      const { encryptPrivateKey } = await import('./wallet-crypto');
       const { ethers } = await import('ethers');
       const wallet = ethers.Wallet.createRandom();
       const walletAddress = wallet.address.toLowerCase();
 
-      // Save wallet to database (only storing the public address)
+      // Save wallet to database with encrypted private key
       await storage.updateUser(userId, {
         walletAddress: walletAddress,
         walletChain: 'skale-nebula-testnet',
         walletCreatedAt: new Date(),
+        encryptedPrivateKey: encryptPrivateKey(wallet.privateKey),
       });
 
       console.log(`Wallet created for user ${userId}: ${walletAddress}`);

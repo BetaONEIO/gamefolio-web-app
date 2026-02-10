@@ -42,10 +42,23 @@ export default function MintNFTPage() {
     pricePerMint,
     maxPerTx,
     maxSupply,
+    useServerSigning,
+    needsWalletRegeneration,
+    regenerateWallet,
   } = useMintNFT(crossmintAddress);
 
   const [quantity, setQuantity] = useState(1);
   const [mintState, setMintState] = useState<MintState>("idle");
+  const [isRegenerating, setIsRegenerating] = useState(false);
+
+  const handleRegenerateWallet = async () => {
+    setIsRegenerating(true);
+    try {
+      await regenerateWallet();
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
   const videoRef = useRef<HTMLVideoElement>(null);
   const previewVideo1Ref = useRef<HTMLVideoElement>(null);
   const previewVideo2Ref = useRef<HTMLVideoElement>(null);
@@ -526,6 +539,41 @@ export default function MintNFTPage() {
 
           {/* Minting Details */}
           <div className="md:flex-1 flex flex-col gap-6 max-w-[382px] w-full mx-auto md:mx-0">
+
+            {needsWalletRegeneration && (
+              <div className="bg-[#1e293b] border border-[#ef4444]/30 rounded-3xl p-5 flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-[#ef4444]" />
+                  <span className="text-sm font-bold text-[#f8fafc]">Wallet Key Missing</span>
+                </div>
+                <p className="text-xs text-[#94a3b8]">
+                  Your wallet was created before signing keys were stored. To mint NFTs, you need to regenerate your wallet. This will create a new wallet address.
+                </p>
+                <Button
+                  onClick={handleRegenerateWallet}
+                  disabled={isRegenerating}
+                  className="w-full h-12 rounded-2xl bg-[#ef4444] hover:bg-[#dc2626] text-white text-sm font-bold"
+                >
+                  {isRegenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Regenerating...
+                    </>
+                  ) : (
+                    'Regenerate Wallet'
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {useServerSigning && !needsWalletRegeneration && (
+              <div className="bg-[#14532d]/20 border border-[#4ade80]/20 rounded-3xl p-4 flex items-center gap-3">
+                <Shield className="h-5 w-5 text-[#4ade80] shrink-0" />
+                <p className="text-xs text-[#94a3b8]">
+                  Transactions will be signed securely on the server using your Gamefolio wallet.
+                </p>
+              </div>
+            )}
 
             {/* Balance & Allowance Card */}
             <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-3xl overflow-hidden">

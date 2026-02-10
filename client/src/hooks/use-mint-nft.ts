@@ -3,6 +3,7 @@ import { useWalletClient } from 'wagmi';
 import { parseUnits, formatUnits, maxUint256, type Address, decodeEventLog } from 'viem';
 import { useWallet } from './use-wallet';
 import { useToast } from './use-toast';
+import { apiRequest } from '@/lib/queryClient';
 import {
   GF_TOKEN_ADDRESS,
   GF_TOKEN_ABI,
@@ -27,6 +28,7 @@ export function useMintNFT(fallbackAddress?: string | null) {
   const { toast } = useToast();
 
   const effectiveAddress = walletAddress || (fallbackAddress as `0x${string}` | null) || null;
+  const useServerSigning = !!effectiveAddress && !walletClient;
 
   const [allowanceState, setAllowanceState] = useState<AllowanceState>('checking');
   const [mintTxState, setMintTxState] = useState<MintTxState>('idle');
@@ -34,6 +36,7 @@ export function useMintNFT(fallbackAddress?: string | null) {
   const [onChainBalance, setOnChainBalance] = useState<bigint>(BigInt(0));
   const [totalMinted, setTotalMinted] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  const [needsWalletRegeneration, setNeedsWalletRegeneration] = useState(false);
 
   const [onChainPricePerMint, setOnChainPricePerMint] = useState<number>(MINT_CONFIG.pricePerMint);
   const [onChainMaxPerTx, setOnChainMaxPerTx] = useState<number>(MINT_CONFIG.maxPerTx);
@@ -144,7 +147,120 @@ export function useMintNFT(fallbackAddress?: string | null) {
     }
   }, [effectiveAddress, publicClient, checkAllowance, fetchOnChainData]);
 
+  const handleServerError = useCallback((data: any) => {
+    if (data?.code === 'MISSING_PRIVATE_KEY') {
+      setNeedsWalletRegeneration(true);
+      return true;
+    }
+    return false;
+  }, []);
+
+  const serverApprove = useCallback(async (): Promise<boolean> => {
+    try {
+      setAllowanceState('approving');
+      setError(null);
+
+      const res = await apiRequest('POST', '/api/mint/approve');
+      const data = await res.json();
+
+      if (data.success) {
+        setAllowanceState('approved');
+        await checkAllowance();
+        await fetchOnChainData();
+        toast({
+          title: 'Allowance Approved',
+          description: 'GFT spending has been enabled for the mint contract',
+        });
+        return true;
+      } else {
+        throw new Error(data.error || 'Approval failed');
+      }
+    } catch (err: any) {
+      console.error('Server approval error:', err);
+      setAllowanceState('none');
+
+      let errData: any = null;
+      try {
+        const errText = err.message || '';
+        if (errText.includes('{')) {
+          errData = JSON.parse(errText.substring(errText.indexOf('{')));
+        }
+      } catch {}
+
+      if (errData && handleServerError(errData)) {
+        toast({
+          title: 'Wallet Key Missing',
+          description: 'Your wallet needs to be regenerated to enable signing.',
+          variant: 'destructive',
+        });
+        return false;
+      }
+
+      const message = err?.message || 'Approval transaction failed';
+      setError(message);
+      toast({
+        title: 'Approval Failed',
+        description: message,
+        variant: 'destructive',
+      });
+      return false;
+    }
+  }, [toast, checkAllowance, fetchOnChainData, handleServerError]);
+
+  const serverMint = useCallback(async (quantity: number): Promise<MintResult | null> => {
+    try {
+      setMintTxState('sending');
+      setError(null);
+
+      const res = await apiRequest('POST', '/api/mint/mint', { quantity });
+      const data = await res.json();
+
+      if (data.success) {
+        const result: MintResult = { txHash: data.txHash, tokenIds: data.tokenIds || [] };
+        setMintResult(result);
+        setMintTxState('confirmed');
+        await fetchOnChainData();
+        return result;
+      } else {
+        throw new Error(data.error || 'Mint failed');
+      }
+    } catch (err: any) {
+      console.error('Server mint error:', err);
+      setMintTxState('error');
+
+      let errData: any = null;
+      try {
+        const errText = err.message || '';
+        if (errText.includes('{')) {
+          errData = JSON.parse(errText.substring(errText.indexOf('{')));
+        }
+      } catch {}
+
+      if (errData && handleServerError(errData)) {
+        toast({
+          title: 'Wallet Key Missing',
+          description: 'Your wallet needs to be regenerated to enable signing.',
+          variant: 'destructive',
+        });
+        return null;
+      }
+
+      const message = err?.message || 'Mint transaction failed';
+      setError(message);
+      toast({
+        title: 'Mint Failed',
+        description: message,
+        variant: 'destructive',
+      });
+      return null;
+    }
+  }, [toast, fetchOnChainData, handleServerError]);
+
   const approve = useCallback(async () => {
+    if (useServerSigning) {
+      return serverApprove();
+    }
+
     if (!walletClient || !walletAddress) {
       toast({
         title: 'Wallet not connected',
@@ -184,9 +300,13 @@ export function useMintNFT(fallbackAddress?: string | null) {
       });
       return false;
     }
-  }, [walletClient, walletAddress, publicClient, toast]);
+  }, [walletClient, walletAddress, publicClient, toast, useServerSigning, serverApprove]);
 
   const mint = useCallback(async (quantity: number): Promise<MintResult | null> => {
+    if (useServerSigning) {
+      return serverMint(quantity);
+    }
+
     if (!walletClient || !walletAddress) {
       toast({
         title: 'Wallet not connected',
@@ -265,7 +385,34 @@ export function useMintNFT(fallbackAddress?: string | null) {
       });
       return null;
     }
-  }, [walletClient, walletAddress, publicClient, toast, fetchOnChainData, onChainMaxPerTx]);
+  }, [walletClient, walletAddress, publicClient, toast, fetchOnChainData, onChainMaxPerTx, useServerSigning, serverMint]);
+
+  const regenerateWallet = useCallback(async (): Promise<boolean> => {
+    try {
+      const res = await apiRequest('POST', '/api/mint/regenerate-wallet');
+      const data = await res.json();
+
+      if (data.success) {
+        setNeedsWalletRegeneration(false);
+        toast({
+          title: 'Wallet Regenerated',
+          description: `New wallet address: ${data.address.slice(0, 10)}...`,
+        });
+        await fetchOnChainData();
+        await checkAllowance();
+        return true;
+      }
+      return false;
+    } catch (err: any) {
+      console.error('Wallet regeneration error:', err);
+      toast({
+        title: 'Regeneration Failed',
+        description: err?.message || 'Failed to regenerate wallet',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  }, [toast, fetchOnChainData, checkAllowance]);
 
   const reset = useCallback(() => {
     setMintTxState('idle');
@@ -287,5 +434,8 @@ export function useMintNFT(fallbackAddress?: string | null) {
     pricePerMint: onChainPricePerMint,
     maxPerTx: onChainMaxPerTx,
     maxSupply: onChainMaxSupply,
+    useServerSigning,
+    needsWalletRegeneration,
+    regenerateWallet,
   };
 }
