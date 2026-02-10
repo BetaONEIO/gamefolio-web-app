@@ -194,6 +194,7 @@ export default function MintNFTPage() {
   const firstTokenId = mintedTokenIds[0] || 0;
 
   const [fetchedNftImages, setFetchedNftImages] = useState<Record<number, string>>({});
+  const [fetchedNftNames, setFetchedNftNames] = useState<Record<number, string>>({});
 
   useEffect(() => {
     if (mintedTokenIds.length > 0 && Object.keys(fetchedNftImages).length === 0) {
@@ -206,12 +207,17 @@ export default function MintNFTPage() {
         .then(data => {
           if (data.nfts) {
             const images: Record<number, string> = {};
+            const names: Record<number, string> = {};
             for (const nft of data.nfts) {
               if (nft.tokenId != null && nft.image) {
                 images[nft.tokenId] = nft.image;
               }
+              if (nft.tokenId != null && nft.name) {
+                names[nft.tokenId] = nft.name;
+              }
             }
             setFetchedNftImages(images);
+            setFetchedNftNames(names);
           }
         })
         .catch(() => {});
@@ -347,6 +353,7 @@ export default function MintNFTPage() {
         const tokenId = mintedTokenIds[i] || firstTokenId + i;
         return {
           id: tokenId,
+          name: fetchedNftNames[tokenId],
           imageUrl: fetchedNftImages[tokenId] || `https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-assets/nft-placeholders/guardian-${(i % 3) + 1}.png`,
           rarity: Math.floor(Math.random() * 30) + 70,
         };
