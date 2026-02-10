@@ -1,0 +1,234 @@
+import { useState, useEffect, useCallback } from 'react';
+import { useWalletClient } from 'wagmi';
+import { parseUnits, maxUint256, type Address, decodeEventLog } from 'viem';
+import { useWallet } from './use-wallet';
+import { useToast } from './use-toast';
+import {
+  GF_TOKEN_ADDRESS,
+  GF_TOKEN_ABI,
+  MINT_SALE_ADDRESS,
+  MINT_SALE_ABI,
+  MINT_CONFIG,
+} from '../../../shared/contracts';
+
+export type AllowanceState = 'checking' | 'none' | 'approving' | 'approved';
+export type MintTxState = 'idle' | 'sending' | 'confirming' | 'confirmed' | 'error';
+
+interface MintResult {
+  txHash: string;
+  tokenIds: number[];
+}
+
+export function useMintNFT() {
+  const { walletAddress, publicClient, isReady } = useWallet();
+  const { data: walletClient } = useWalletClient();
+  const { toast } = useToast();
+
+  const [allowanceState, setAllowanceState] = useState<AllowanceState>('checking');
+  const [mintTxState, setMintTxState] = useState<MintTxState>('idle');
+  const [mintResult, setMintResult] = useState<MintResult | null>(null);
+  const [onChainBalance, setOnChainBalance] = useState<bigint>(0n);
+  const [totalMinted, setTotalMinted] = useState<number>(0);
+  const [error, setError] = useState<string | null>(null);
+
+  const checkAllowance = useCallback(async () => {
+    if (!walletAddress || !publicClient) {
+      setAllowanceState('none');
+      return;
+    }
+    try {
+      setAllowanceState('checking');
+      const allowance = await publicClient.readContract({
+        address: GF_TOKEN_ADDRESS as Address,
+        abi: GF_TOKEN_ABI,
+        functionName: 'allowance',
+        args: [walletAddress, MINT_SALE_ADDRESS as Address],
+      }) as bigint;
+
+      const requiredAmount = parseUnits(String(MINT_CONFIG.pricePerMint * MINT_CONFIG.maxPerTx), 18);
+      setAllowanceState(allowance >= requiredAmount ? 'approved' : 'none');
+    } catch (err) {
+      console.error('Error checking allowance:', err);
+      setAllowanceState('none');
+    }
+  }, [walletAddress, publicClient]);
+
+  const fetchOnChainData = useCallback(async () => {
+    if (!publicClient) return;
+    try {
+      const [balance, minted] = await Promise.all([
+        walletAddress
+          ? publicClient.readContract({
+              address: GF_TOKEN_ADDRESS as Address,
+              abi: GF_TOKEN_ABI,
+              functionName: 'balanceOf',
+              args: [walletAddress],
+            }) as Promise<bigint>
+          : Promise.resolve(0n),
+        publicClient.readContract({
+          address: MINT_SALE_ADDRESS as Address,
+          abi: MINT_SALE_ABI,
+          functionName: 'totalMinted',
+        }).catch(() => 0n) as Promise<bigint>,
+      ]);
+      setOnChainBalance(balance);
+      setTotalMinted(Number(minted));
+    } catch (err) {
+      console.error('Error fetching on-chain data:', err);
+    }
+  }, [walletAddress, publicClient]);
+
+  useEffect(() => {
+    if (isReady && walletAddress) {
+      checkAllowance();
+      fetchOnChainData();
+    } else {
+      setAllowanceState('none');
+    }
+  }, [isReady, walletAddress, checkAllowance, fetchOnChainData]);
+
+  const approve = useCallback(async () => {
+    if (!walletClient || !walletAddress) {
+      toast({
+        title: 'Wallet not connected',
+        description: 'Please connect your wallet first',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    try {
+      setAllowanceState('approving');
+      setError(null);
+
+      const hash = await walletClient.writeContract({
+        address: GF_TOKEN_ADDRESS as Address,
+        abi: GF_TOKEN_ABI,
+        functionName: 'approve',
+        args: [MINT_SALE_ADDRESS as Address, maxUint256],
+      });
+
+      await publicClient.waitForTransactionReceipt({ hash });
+      setAllowanceState('approved');
+      toast({
+        title: 'Allowance Approved',
+        description: 'GFT spending has been enabled for the mint contract',
+      });
+      return true;
+    } catch (err: any) {
+      console.error('Approval error:', err);
+      setAllowanceState('none');
+      const message = err?.shortMessage || err?.message || 'Approval transaction failed';
+      setError(message);
+      toast({
+        title: 'Approval Failed',
+        description: message,
+        variant: 'destructive',
+      });
+      return false;
+    }
+  }, [walletClient, walletAddress, publicClient, toast]);
+
+  const mint = useCallback(async (quantity: number): Promise<MintResult | null> => {
+    if (!walletClient || !walletAddress) {
+      toast({
+        title: 'Wallet not connected',
+        description: 'Please connect your wallet first',
+        variant: 'destructive',
+      });
+      return null;
+    }
+
+    if (quantity < 1 || quantity > MINT_CONFIG.maxPerTx) {
+      toast({
+        title: 'Invalid quantity',
+        description: `You can mint between 1 and ${MINT_CONFIG.maxPerTx} NFTs per transaction`,
+        variant: 'destructive',
+      });
+      return null;
+    }
+
+    try {
+      setMintTxState('sending');
+      setError(null);
+
+      const hash = await walletClient.writeContract({
+        address: MINT_SALE_ADDRESS as Address,
+        abi: MINT_SALE_ABI,
+        functionName: 'mint',
+        args: [BigInt(quantity)],
+      });
+
+      setMintTxState('confirming');
+
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+      const tokenIds: number[] = [];
+      for (const log of receipt.logs) {
+        try {
+          const decoded = decodeEventLog({
+            abi: [
+              {
+                anonymous: false,
+                inputs: [
+                  { indexed: true, name: 'from', type: 'address' },
+                  { indexed: true, name: 'to', type: 'address' },
+                  { indexed: true, name: 'tokenId', type: 'uint256' },
+                ],
+                name: 'Transfer',
+                type: 'event',
+              },
+            ],
+            data: log.data,
+            topics: log.topics,
+          });
+          if (decoded.eventName === 'Transfer') {
+            tokenIds.push(Number((decoded.args as any).tokenId));
+          }
+        } catch {
+        }
+      }
+
+      const result: MintResult = { txHash: hash, tokenIds };
+      setMintResult(result);
+      setMintTxState('confirmed');
+
+      await fetchOnChainData();
+
+      return result;
+    } catch (err: any) {
+      console.error('Mint error:', err);
+      setMintTxState('error');
+      const message = err?.shortMessage || err?.message || 'Mint transaction failed';
+      setError(message);
+      toast({
+        title: 'Mint Failed',
+        description: message,
+        variant: 'destructive',
+      });
+      return null;
+    }
+  }, [walletClient, walletAddress, publicClient, toast, fetchOnChainData]);
+
+  const reset = useCallback(() => {
+    setMintTxState('idle');
+    setMintResult(null);
+    setError(null);
+  }, []);
+
+  return {
+    allowanceState,
+    mintTxState,
+    mintResult,
+    onChainBalance,
+    totalMinted,
+    error,
+    approve,
+    mint,
+    reset,
+    checkAllowance,
+    pricePerMint: MINT_CONFIG.pricePerMint,
+    maxPerTx: MINT_CONFIG.maxPerTx,
+    maxSupply: MINT_CONFIG.maxSupply,
+  };
+}
