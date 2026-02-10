@@ -65,13 +65,12 @@ export default function QuickSellScreen({
 
   return (
     <div className="fixed inset-0 z-[120] bg-[#020617] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* Header */}
       <header className="backdrop-blur-md bg-[#020617cc] flex-shrink-0 z-40">
-        <div className="flex items-center justify-between w-full max-w-[430px] mx-auto px-4 pt-12 pb-4">
+        <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-3xl mx-auto px-4 pt-12 md:pt-6 pb-4">
           <div className="flex items-center gap-4">
             <button
               onClick={onClose}
-              className="w-10 h-10 rounded-full flex items-center justify-center"
+              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-[#1e293b] transition-colors"
             >
               <ArrowLeft className="w-6 h-6 text-[#f8fafc]" />
             </button>
@@ -81,13 +80,11 @@ export default function QuickSellScreen({
         </div>
       </header>
 
-      {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="w-full max-w-[430px] mx-auto flex flex-col items-center px-6 pt-4 pb-[250px]">
+        <div className="w-full max-w-[430px] md:max-w-3xl mx-auto flex flex-col items-center px-6 pt-4 pb-[250px] md:pb-[200px]">
 
-          {/* NFT Preview + Info */}
-          <div className="flex items-center gap-6 w-full py-6">
-            <div className="w-[192px] h-[192px] rounded-3xl overflow-hidden bg-white/[0.01] shadow-[0_25px_50px_-12px_rgba(74,222,128,0.1)] flex-shrink-0">
+          <div className="flex flex-col md:flex-row items-center gap-6 w-full py-6">
+            <div className="w-[192px] h-[192px] md:w-[240px] md:h-[240px] rounded-3xl overflow-hidden bg-white/[0.01] shadow-[0_25px_50px_-12px_rgba(74,222,128,0.1)] flex-shrink-0">
               {nft.imageUrl ? (
                 <img
                   src={nft.imageUrl}
@@ -99,18 +96,16 @@ export default function QuickSellScreen({
               )}
             </div>
             <div className="flex flex-col gap-1 flex-1 min-w-0">
-              <span className="text-sm font-normal text-[#4ade80] leading-5 text-center">
+              <span className="text-sm font-normal text-[#4ade80] leading-5 text-center md:text-left">
                 {collectionName}
               </span>
-              <span className="text-2xl font-bold text-[#f8fafc] leading-8 text-center truncate">
+              <span className="text-2xl md:text-3xl font-bold text-[#f8fafc] leading-8 md:leading-9 text-center md:text-left truncate">
                 {displayName}
               </span>
             </div>
           </div>
 
-          {/* Price Breakdown Card */}
-          <div className="w-full rounded-3xl bg-[#0f172a] border border-[#1e293b80] p-6 flex flex-col gap-6">
-            {/* Price header */}
+          <div className="w-full rounded-3xl bg-[#0f172a] border border-[#1e293b80] p-6 md:p-8 flex flex-col gap-6">
             <div className="flex flex-col items-center gap-2">
               <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-[1.2px] leading-4">
                 Fixed Quick Sell Price
@@ -120,7 +115,7 @@ export default function QuickSellScreen({
                   <circle cx="16" cy="16" r="16" fill="#4ADE80" fillOpacity="0.15" />
                   <text x="16" y="22" textAnchor="middle" fill="#4ADE80" fontSize="16" fontWeight="700" fontFamily="Plus Jakarta Sans">G</text>
                 </svg>
-                <span className="text-4xl font-bold text-[#f8fafc] leading-10">
+                <span className="text-4xl md:text-5xl font-bold text-[#f8fafc] leading-10 md:leading-[56px]">
                   {QUICK_SELL_PRICE} GFT
                 </span>
               </div>
@@ -129,10 +124,8 @@ export default function QuickSellScreen({
               </span>
             </div>
 
-            {/* Divider */}
             <div className="w-full h-px bg-[#1e293b4d]" />
 
-            {/* Fee breakdown */}
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-normal text-[#94a3b8] leading-5">Platform Fee (1.5%)</span>
@@ -149,7 +142,6 @@ export default function QuickSellScreen({
             </div>
           </div>
 
-          {/* Rapid Liquidity Info Card */}
           <div className="w-full rounded-2xl bg-[#14532d1a] border border-[#14532d33] p-[17px] flex gap-4 mt-6">
             <div className="flex-shrink-0 pt-0.5">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -166,7 +158,6 @@ export default function QuickSellScreen({
             </div>
           </div>
 
-          {/* Disclaimer */}
           <div className="py-4">
             <span className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.55px] leading-[16.5px] text-center block">
               Proceeding will list this asset for immediate purchase
@@ -175,13 +166,12 @@ export default function QuickSellScreen({
         </div>
       </div>
 
-      {/* Fixed Footer */}
       <div className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md bg-[#020617cc] border-t border-[#1e293b4d]">
-        <div className="w-full max-w-[430px] mx-auto flex flex-col gap-3 px-6 py-6 pb-8">
+        <div className="w-full max-w-[430px] md:max-w-3xl mx-auto flex flex-col md:flex-row-reverse gap-3 px-6 py-6 pb-8 md:pb-6">
           <button
             onClick={handleConfirmSell}
             disabled={isProcessing}
-            className="w-full h-[60px] rounded-2xl bg-[#4ade80] flex items-center justify-center gap-2 shadow-[0_4px_6px_-4px_rgba(74,222,128,0.2),0_10px_15px_-3px_rgba(74,222,128,0.2)] disabled:opacity-60"
+            className="w-full md:flex-1 h-[60px] rounded-2xl bg-[#4ade80] flex items-center justify-center gap-2 shadow-[0_4px_6px_-4px_rgba(74,222,128,0.2),0_10px_15px_-3px_rgba(74,222,128,0.2)] disabled:opacity-60 hover:bg-[#22c55e] transition-colors"
           >
             {isProcessing ? (
               <>
@@ -195,7 +185,7 @@ export default function QuickSellScreen({
           <button
             onClick={onClose}
             disabled={isProcessing}
-            className="w-full h-[60px] rounded-2xl flex items-center justify-center"
+            className="w-full md:flex-1 h-[60px] rounded-2xl flex items-center justify-center hover:bg-[#1e293b] transition-colors"
           >
             <span className="text-lg font-bold text-[#94a3b8] leading-7">Go Back</span>
           </button>
