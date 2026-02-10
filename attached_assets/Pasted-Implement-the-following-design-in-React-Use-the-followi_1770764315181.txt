@@ -1,0 +1,710 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/QuickSellNft.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,undefined;0,700;0,400&display=swap";
+.QuickSellNft_131_494 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_131_495 {
+  background: #020617;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 100%;
+  padding-bottom: 250px;
+  display: flex;
+}
+.Container_131_496 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 32px;
+  padding: 16px 24px 0;
+  display: flex;
+}
+.Container_131_497 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  width: 382px;
+  padding: 0 95px;
+  display: flex;
+}
+.Container_131_498 {
+  background: #ffffff03;
+  border-radius: 24px;
+  justify-content: center;
+  align-items: center;
+  width: 192px;
+  height: 192px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px #4ade801a;
+}
+.Image_131_499 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  flex-shrink: 0;
+  width: 192px;
+  height: 192px;
+}
+.Container_131_500 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  width: 154px;
+  display: flex;
+}
+.Container_131_501 {
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.NeonNexusCollection_131_502 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 156px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_131_503 {
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 0.5px 1.719px 0.5px 1.281px;
+  display: flex;
+}
+.Wraith_882_131_504 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 151px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_131_505 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b80;
+  border-radius: 24px;
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px;
+  width: 382px;
+  height: 299px;
+  padding: 25px;
+  display: flex;
+}
+.Container_131_506 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  width: 332px;
+  padding: 0 70.594px 0 71.406px;
+  display: flex;
+}
+.Container_131_507 {
+  justify-content: center;
+  align-items: center;
+  width: 176px;
+  height: 16px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.FixedQuickSellPrice_131_508 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 179px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_131_509 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  display: flex;
+}
+.Container_131_510 {
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+}
+.Container_131_512 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  display: flex;
+}
+.Gft_131_513 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 149px;
+  height: 46px;
+  font-family: Plus Jakarta Sans;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 40px;
+  display: inline-block;
+}
+.Container_131_514 {
+  justify-content: center;
+  align-items: center;
+  width: 102px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+._112_50Usd_131_515 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 104px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_131_516 {
+  background: #1e293b4d;
+  flex-shrink: 0;
+  width: 332px;
+  height: 1px;
+}
+.Container_131_517 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 332px;
+  height: 108px;
+  display: flex;
+}
+.Container_131_518 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 138.141px;
+  height: 20px;
+  display: flex;
+}
+.Container_131_519 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.PlatformFee_1_5_131_520 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 129px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_131_521 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+._75Gft_131_522 {
+  color: #ef4444;
+  font-feature-settings: "dlig" on;
+  width: 69px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_131_523 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 120.297px;
+  height: 20px;
+  display: flex;
+}
+.Container_131_524 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.QuickListProcessing_131_525 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 149px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_131_526 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+._25Gft_131_527 {
+  color: #ef4444;
+  font-feature-settings: "dlig" on;
+  width: 67px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_131_528 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 104.914px;
+  height: 36px;
+  padding-top: 8px;
+  display: flex;
+}
+.Container_131_529 {
+  justify-content: center;
+  align-items: center;
+  width: 126px;
+  height: 24px;
+  padding: 2px 0;
+  display: flex;
+}
+.YouWillReceive_131_530 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 129px;
+  height: 20px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_131_531 {
+  justify-content: center;
+  align-items: center;
+  width: 102px;
+  height: 28px;
+  padding: 1px 0;
+  display: flex;
+}
+._0Gft_131_532 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 105px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_131_533 {
+  box-sizing: border-box;
+  background: #14532d1a;
+  border: 1px solid #14532d33;
+  border-radius: 16px;
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 382px;
+  height: 149px;
+  padding: 17px;
+  display: flex;
+}
+.Container_131_534 {
+  flex-direction: column;
+  flex-shrink: 0;
+  align-items: center;
+  width: 24px;
+  height: 115px;
+  padding-bottom: 91px;
+  display: flex;
+}
+.Container_131_535 {
+  flex-shrink: 0;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_131_537 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  width: 308px;
+  height: 115px;
+  display: flex;
+}
+.Container_131_538 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 20px;
+  padding: 1px 186.5px 1px 0;
+  display: flex;
+}
+.RapidLiquidity_131_539 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+  width: 123px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_131_540 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 91px;
+  padding: 2.5px 31px 2.5px 0;
+  display: flex;
+}
+.QuickSellBypassesTheStandardAuctionProcessYourNftIsListedAtTheFloorGuaranteedPriceOf_250GftAndTypicallySettlesWithinMinutes_131_541 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 278px;
+  height: 86px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 22.75px;
+  display: inline-block;
+}
+.Container_131_542 {
+  justify-content: center;
+  align-items: center;
+  width: 382px;
+  height: 49px;
+  padding: 8px;
+  display: flex;
+}
+.Container_131_543 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 366px;
+  height: 33px;
+  padding: 1px 30.953px 1px 31.047px;
+  display: flex;
+}
+.ProceedingWillListThisAssetForImmediatePurchase_131_544 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 304px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Footer_131_545 {
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+  background: #020617cc;
+  border-top: 1px solid #1e293b4d;
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  height: 181px;
+  padding: 25px 24px 24px;
+  display: flex;
+}
+.Button_131_546 {
+  background: #4ade80;
+  border-radius: 16px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 382px;
+  height: 60px;
+  padding: 18.5px 108.109px 18.5px 108.891px;
+  display: flex;
+  box-shadow:
+    0 4px 6px -4px #4ade8033,
+    0 10px 15px -3px #4ade8033;
+}
+.ConfirmQuickSell_131_547 {
+  color: #022c22;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 165px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Button_131_548 {
+  border-radius: 16px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 382px;
+  height: 60px;
+  padding: 18.5px 0;
+  display: flex;
+}
+.GoBack_131_549 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 77px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Header_131_550 {
+  backdrop-filter: blur(6px);
+  background: #020617cc;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 190px;
+  height: 104px;
+  padding: 48px 16px 16px;
+  display: flex;
+}
+.Container_131_551 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  width: 168px;
+  height: 40px;
+  display: flex;
+}
+.Button_131_552 {
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_131_553 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_131_555 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 112px;
+  height: 28px;
+  padding: 1px 0;
+  display: flex;
+}
+.QuickSell_131_556 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.5px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 115px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_131_557 {
+  width: 40px;
+  height: 40px;
+}
+
+```
+
+---
+
+```src/components/QuickSellNft.tsx
+import React from 'react';
+import styles from '../styles/QuickSellNft.module.css';
+
+
+export default function QuickSellNft() {
+  return (
+    <div className={styles.QuickSellNft_131_494}>
+      <div className={styles.Container_131_495}>
+        <div className={styles.Container_131_496}>
+          <div className={styles.Container_131_497}>
+            <div className={styles.Container_131_498}>
+              <div className={styles.Image_131_499}></div>
+            </div>
+            <div className={styles.Container_131_500}>
+              <div className={styles.Container_131_501}><span className={styles.NeonNexusCollection_131_502}>Neon Nexus Collection</span></div>
+              <div className={styles.Container_131_503}><span className={styles.Wraith_882_131_504}>Wraith #882</span></div>
+            </div>
+          </div>
+          <div className={styles.Container_131_505}>
+            <div className={styles.Container_131_506}>
+              <div className={styles.Container_131_507}><span className={styles.FixedQuickSellPrice_131_508}>Fixed Quick-Sell Price</span></div>
+              <div className={styles.Container_131_509}>
+                <div className={styles.Container_131_510}><svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M21.4672 6.16254L23.9222 8.61754C27.5296 12.2263 29.3326 14.0293 29.3326 16.2696C29.3326 18.5114 27.5296 20.3144 23.9222 23.9218C20.3135 27.5305 18.5105 29.3335 16.2688 29.3335C14.0284 29.3335 12.2241 27.5305 8.61669 23.9231L6.16169 21.4681C4.08902 19.3941 3.05201 18.3584 2.66699 17.0129C2.28063 15.6673 2.61065 14.2386 3.27068 11.3824L3.65034 9.73504C4.20439 7.33101 4.48209 6.129 5.30445 5.3053C6.12681 4.4816 7.33016 4.20524 9.73419 3.65119L11.3816 3.27019C14.2391 2.6115 15.6664 2.28148 17.012 2.6665C18.3576 3.05287 19.3932 4.08987 21.4659 6.16254M14.7716 19.0413C13.8688 18.1397 13.8755 16.8438 14.4161 15.8176C14.14 15.4187 14.1878 14.8795 14.5299 14.5354C14.872 14.1914 15.4108 14.1404 15.8113 14.4143C16.2675 14.1728 16.7678 14.044 17.2669 14.0494C17.8226 14.0546 18.2688 14.5093 18.2637 15.065C18.2585 15.6206 17.8038 16.0669 17.2481 16.0617C16.9375 16.0732 16.6439 16.2067 16.4311 16.4333C15.9119 16.9525 16.0474 17.473 16.1937 17.6192C16.3412 17.7655 16.8604 17.901 17.3796 17.3818C18.4313 16.33 20.2478 15.9812 21.4109 17.1443C22.3137 18.0472 22.307 19.3431 21.7664 20.3694C22.0408 20.7683 21.9921 21.3061 21.6506 21.6493C21.309 21.9925 20.7715 22.0438 20.3712 21.7713C19.7692 22.1016 19.0709 22.2116 18.3965 22.0825C18.0442 22.0101 17.7573 21.7553 17.6438 21.4141C17.5304 21.0728 17.6076 20.6969 17.8464 20.428C18.0852 20.1591 18.4493 20.0381 18.8016 20.1105C19.0391 20.1601 19.4227 20.0823 19.7514 19.7536C20.2706 19.2331 20.1351 18.7139 19.9889 18.5677C19.8413 18.4215 19.3221 18.286 18.8029 18.8051C17.7512 19.8569 15.9348 20.2057 14.7716 19.0413ZM13.2611 13.6282C13.9388 12.9502 14.2033 11.9622 13.9551 11.0363C13.7068 10.1105 12.9834 9.38735 12.0575 9.13941C11.1315 8.89147 10.1436 9.15637 9.46588 9.83431C8.41824 10.8823 8.41854 12.5812 9.46655 13.6288C10.5146 14.6765 12.2134 14.6762 13.2611 13.6282Z" fill="#4ADE80" />
+                  </svg>
+                </div>
+                <div className={styles.Container_131_512}><span className={styles.Gft_131_513}>250 GFT</span></div>
+              </div>
+              <div className={styles.Container_131_514}><span className={styles._112_50Usd_131_515}>&#x2248; $1,112.50 USD</span></div>
+            </div>
+            <div className={styles.Container_131_516}></div>
+            <div className={styles.Container_131_517}>
+              <div className={styles.Container_131_518}>
+                <div className={styles.Container_131_519}><span className={styles.PlatformFee_1_5_131_520}>Platform Fee (1.5%)</span></div>
+                <div className={styles.Container_131_521}><span className={styles._75Gft_131_522}>-3.75 GFT</span></div>
+              </div>
+              <div className={styles.Container_131_523}>
+                <div className={styles.Container_131_524}><span className={styles.QuickListProcessing_131_525}>Quick-List Processing</span></div>
+                <div className={styles.Container_131_526}><span className={styles._25Gft_131_527}>-1.25 GFT</span></div>
+              </div>
+              <div className={styles.Container_131_528}>
+                <div className={styles.Container_131_529}><span className={styles.YouWillReceive_131_530}>You Will Receive</span></div>
+                <div className={styles.Container_131_531}><span className={styles._0Gft_131_532}>245.0 GFT</span></div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_131_533}>
+            <div className={styles.Container_131_534}>
+              <div className={styles.Container_131_535}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M12.832 21.6777C15.958 21.0517 20 18.8027 20 12.9877C20 7.69671 16.127 4.17271 13.342 2.55371C12.723 2.19371 12 2.66671 12 3.38171V5.20971C12 6.65171 11.394 9.28371 9.71 10.3787C8.85 10.9377 7.92 10.1007 7.816 9.08071L7.73 8.24271C7.63 7.26871 6.638 6.67771 5.86 7.27171C4.461 8.33671 3 10.2067 3 12.9867C3 20.0977 8.289 21.8767 10.933 21.8767C11.0877 21.8767 11.249 21.8717 11.417 21.8617C10.111 21.7507 8 20.9407 8 18.3207C8 16.2707 9.495 14.8857 10.631 14.2107C10.937 14.0307 11.294 14.2657 11.294 14.6207V15.2107C11.294 15.6607 11.469 16.3657 11.884 16.8477C12.354 17.3937 13.043 16.8217 13.098 16.1037C13.116 15.8777 13.344 15.7337 13.54 15.8477C14.181 16.2227 15 17.0227 15 18.3207C15 20.3687 13.871 21.3107 12.832 21.6777Z" fill="#4ADE80" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_131_537}>
+              <div className={styles.Container_131_538}><span className={styles.RapidLiquidity_131_539}>Rapid Liquidity</span></div>
+              <div className={styles.Container_131_540}><span className={styles.QuickSellBypassesTheStandardAuctionProcessYourNftIsListedAtTheFloorGuaranteedPriceOf_250GftAndTypicallySettlesWithinMinutes_131_541}>Quick Sell bypasses the standard auction process. Your NFT is listed at the floor-guaranteed price of 250 GFT and typically settles within minutes.</span></div>
+            </div>
+          </div>
+          <div className={styles.Container_131_542}>
+            <div className={styles.Container_131_543}><span className={styles.ProceedingWillListThisAssetForImmediatePurchase_131_544}>Proceeding will list this asset for immediate purchase</span></div>
+          </div>
+        </div>
+        <div className={styles.Footer_131_545}>
+          <div className={styles.Button_131_546}><span className={styles.ConfirmQuickSell_131_547}>Confirm Quick Sell</span></div>
+          <div className={styles.Button_131_548}><span className={styles.GoBack_131_549}>Go Back</span></div>
+        </div>
+        <div className={styles.Header_131_550}>
+          <div className={styles.Container_131_551}>
+            <div className={styles.Button_131_552}>
+              <div className={styles.Container_131_553}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_131_555}><span className={styles.QuickSell_131_556}>Quick Sell</span></div>
+          </div>
+          <div className={styles.Container_131_557}></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+

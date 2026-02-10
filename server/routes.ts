@@ -54,6 +54,7 @@ import viewRouter from "./routes/view";
 import supportRouter from "./routes/support";
 import { reportsRouter } from "./routes/reports";
 import mintNftRouter from "./routes/mint-nft";
+import quickSellRouter from "./routes/quick-sell";
 import { twitchApi } from "./services/twitch-api";
 import { VideoProcessor } from "./video-processor";
 import sharp from "sharp";
@@ -7670,6 +7671,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Mount mint NFT routes
   app.use(mintNftRouter);
+
+  // Mount quick sell routes
+  app.use(quickSellRouter);
 
   // Desktop app video upload endpoint - combines upload and processing in one step
   // Expected by desktop app: POST /api/videos/upload with multipart/form-data
