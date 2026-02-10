@@ -9,7 +9,7 @@ interface BuyGFTScreenProps {
 }
 
 const presetAmounts = [5, 10, 25, 50, 100];
-const GFT_RATE = 0.056;
+const GFT_RATE = 0.01;
 
 export default function BuyGFTScreen({
   onBack,
