@@ -1612,6 +1612,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           nintendoUsername: userWithoutPassword.nintendoUsername || null,
           twitterUsername: userWithoutPassword.twitterUsername || null,
           youtubeUsername: userWithoutPassword.youtubeUsername || null,
+          nftProfileTokenId: userWithoutPassword.nftProfileTokenId || null,
+          nftProfileImageUrl: userWithoutPassword.nftProfileImageUrl || null,
         });
       }
     } catch (error) {
@@ -1655,6 +1657,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       nintendoUsername: userWithoutPassword.nintendoUsername || null,
       twitterUsername: userWithoutPassword.twitterUsername || null,
       youtubeUsername: userWithoutPassword.youtubeUsername || null,
+      nftProfileTokenId: userWithoutPassword.nftProfileTokenId || null,
+      nftProfileImageUrl: userWithoutPassword.nftProfileImageUrl || null,
     });
   });
 
