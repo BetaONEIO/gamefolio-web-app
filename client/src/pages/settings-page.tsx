@@ -33,6 +33,8 @@ import DOMPurify from "dompurify";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import type { NameTag } from "@shared/schema";
 import { KeyboardAvoidingWrapper } from "@/components/shared/KeyboardAvoidingWrapper";
+import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
+import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
 
 // Component to fetch SVG and render it inline with color replacement
 const InlineSvgBorder: React.FC<{
@@ -372,6 +374,7 @@ export default function SettingsPage() {
   const [profilePicTab, setProfilePicTab] = useState<'upload' | 'nft'>('upload');
   const [showNftSelector, setShowNftSelector] = useState(false);
   const [nftPreview, setNftPreview] = useState<{ tokenId: number; image: string; name: string } | null>(null);
+  const [viewingNftDetail, setViewingNftDetail] = useState<any>(null);
   
   // Name tag state - undefined means no pending change, null means remove tag, number means select tag
   const [pendingNameTagId, setPendingNameTagId] = useState<number | null | undefined>(undefined);
