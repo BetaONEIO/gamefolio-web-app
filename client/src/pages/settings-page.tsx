@@ -27,6 +27,7 @@ import { FaSteam, FaXbox, FaPlaystation, FaYoutube, FaDiscord } from 'react-icon
 import { FaXTwitter } from 'react-icons/fa6';
 import { SiEpicgames, SiNintendo } from 'react-icons/si';
 import Cropper from "react-easy-crop";
+import NftProfilePopup from "@/components/nft/NftProfilePopup";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import DOMPurify from "dompurify";
@@ -373,6 +374,7 @@ export default function SettingsPage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [profilePicTab, setProfilePicTab] = useState<'upload' | 'nft'>('upload');
   const [showNftSelector, setShowNftSelector] = useState(false);
+  const [showNftPopup, setShowNftPopup] = useState(false);
   const [nftPreview, setNftPreview] = useState<{ tokenId: number; image: string; name: string } | null>(null);
   const [viewingNftDetail, setViewingNftDetail] = useState<any>(null);
   const [selectedPreviousAvatar, setSelectedPreviousAvatar] = useState<string | null>(null);
@@ -1244,7 +1246,13 @@ export default function SettingsPage() {
                                   ? 'border-green-500/40 shadow-[0_0_20px_rgba(74,222,128,0.15)] hover:shadow-[0_0_25px_rgba(74,222,128,0.25)]'
                                   : 'border-slate-600 opacity-40 grayscale hover:opacity-60'
                               }`}
-                              onClick={() => setShowNftSelector(true)}
+                              onClick={() => {
+                                if ((user as any)?.nftProfileTokenId) {
+                                  setShowNftPopup(true);
+                                } else {
+                                  setShowNftSelector(true);
+                                }
+                              }}
                             >
                               <img
                                 src={previewImage}
@@ -2152,6 +2160,15 @@ export default function SettingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {showNftPopup && user && (user as any)?.nftProfileTokenId && (
+        <NftProfilePopup
+          userId={user.id}
+          tokenId={(user as any).nftProfileTokenId}
+          imageUrl={(user as any)?.nftProfileImageUrl}
+          onClose={() => setShowNftPopup(false)}
+        />
+      )}
 
       {showNftSelector && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
