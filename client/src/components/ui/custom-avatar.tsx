@@ -2,9 +2,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, AssetReward } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import DOMPurify from "dompurify";
 import { useSignedUrl } from "@/hooks/use-signed-url";
+
+const NftProfilePopup = lazy(() => import("@/components/nft/NftProfilePopup"));
 
 // Helper to extract clip path from SVG and generate border content
 const useSvgBorderData = (svgUrl: string, color: string) => {
@@ -302,6 +304,7 @@ export const CustomAvatar = ({
   const clipId = useMemo(() => `avatar-clip-${user?.id || 'default'}-${Math.random().toString(36).substr(2, 6)}`, [user?.id]);
   
   const hasNftProfile = !!(user?.nftProfileTokenId && user?.nftProfileImageUrl);
+  const [showNftPopup, setShowNftPopup] = useState(false);
   
   // Get signed URL for avatar (private bucket)
   const { signedUrl: avatarSignedUrl } = useSignedUrl(user?.avatarUrl);
@@ -317,10 +320,20 @@ export const CustomAvatar = ({
   const hasAvatarBorderOverlay = showAvatarBorderOverlay && avatarBorder?.imageUrl;
 
   if (hasNftProfile) {
+    const handleNftAvatarClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onNftClick && user?.id && user?.nftProfileTokenId) {
+        onNftClick(user.id, user.nftProfileTokenId, user.nftProfileImageUrl || '');
+      } else if (user?.id && user?.nftProfileTokenId) {
+        setShowNftPopup(true);
+      }
+    };
+
     return (
+      <>
       <div
-        className={`${nftSizeClasses[size]} relative inline-flex items-center justify-center ${className} ${onNftClick ? 'cursor-pointer' : ''}`}
-        onClick={() => onNftClick && user?.id && user?.nftProfileTokenId && onNftClick(user.id, user.nftProfileTokenId, user.nftProfileImageUrl || '')}
+        className={`${nftSizeClasses[size]} relative inline-flex items-center justify-center ${className} cursor-pointer`}
+        onClick={handleNftAvatarClick}
       >
         <div
           className="w-full h-full rounded-lg overflow-hidden"
@@ -337,6 +350,17 @@ export const CustomAvatar = ({
           </svg>
         </div>
       </div>
+      {showNftPopup && user?.id && user?.nftProfileTokenId && (
+        <Suspense fallback={null}>
+          <NftProfilePopup
+            userId={user.id}
+            tokenId={user.nftProfileTokenId}
+            imageUrl={user.nftProfileImageUrl || ''}
+            onClose={() => setShowNftPopup(false)}
+          />
+        </Suspense>
+      )}
+      </>
     );
   }
 
