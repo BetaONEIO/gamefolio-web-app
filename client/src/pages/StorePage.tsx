@@ -1709,9 +1709,11 @@ export default function StorePage() {
               <p className="text-sm md:text-base text-gray-400 text-center max-w-md" data-testid="text-sell-description">
                 List your owned NFTs for sale in the Gamefolio marketplace. This feature is coming soon!
               </p>
-              <Button className="mt-6" variant="outline" size="sm" data-testid="button-view-inventory">
-                View Your Inventory
-              </Button>
+              <Link href="/collection">
+                <Button className="mt-6" variant="outline" size="sm" data-testid="button-view-inventory">
+                  View Your Inventory
+                </Button>
+              </Link>
             </div>
           )}
 
