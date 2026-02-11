@@ -428,11 +428,27 @@ export default function MintNFTPage() {
             
             <div className="md:flex-1 flex flex-col items-center">
               <div className="relative w-[300px] md:w-[400px] h-[300px] md:h-[400px]">
-                <div className="absolute inset-0 blur-[40px] bg-[#4ade80]/20 rounded-full scale-100" />
+                {(() => {
+                  const attrs = fetchedNftAttributes[firstTokenId];
+                  const rarityAttr = attrs?.find((a: { trait_type: string; value: string }) => a.trait_type.toLowerCase() === "rarity");
+                  const isLeg = rarityAttr ? rarityAttr.value.toLowerCase() === "legendary" : false;
+                  return isLeg
+                    ? <div className="absolute -inset-3 rounded-[48px] bg-gradient-to-br from-[#fbbf24] via-[#f59e0b] to-[#d97706] opacity-40 blur-[24px] pointer-events-none animate-pulse" />
+                    : <div className="absolute inset-0 blur-[40px] bg-[#4ade80]/20 rounded-full scale-100" />;
+                })()}
                 
                 <div
                 onClick={() => setShowSingleNftDetail(true)}
-                className="relative w-full h-full rounded-[40px] border-2 border-[#4ade80]/30 overflow-hidden bg-white/[0.01] shadow-[0_25px_50px_-12px_rgba(74,222,128,0.2)] cursor-pointer hover:border-[#4ade80]/60 transition-colors"
+                className={`relative w-full h-full rounded-[40px] overflow-hidden bg-white/[0.01] cursor-pointer transition-colors ${
+                  (() => {
+                    const attrs = fetchedNftAttributes[firstTokenId];
+                    const rarityAttr = attrs?.find((a: { trait_type: string; value: string }) => a.trait_type.toLowerCase() === "rarity");
+                    const isLeg = rarityAttr ? rarityAttr.value.toLowerCase() === "legendary" : false;
+                    return isLeg
+                      ? "border-2 border-[#fbbf24]/60 shadow-[0_0_30px_rgba(251,191,36,0.3)] hover:border-[#fbbf24]/80"
+                      : "border-2 border-[#4ade80]/30 shadow-[0_25px_50px_-12px_rgba(74,222,128,0.2)] hover:border-[#4ade80]/60";
+                  })()
+                }`}
               >
                   {fetchedNftImages[firstTokenId] ? (
                     <img
@@ -452,11 +468,23 @@ export default function MintNFTPage() {
                   )}
                   
                   <div className="absolute bottom-0 left-0 right-0 h-[69px] bg-gradient-to-t from-black/80 to-transparent flex items-center px-6">
-                    <div className="backdrop-blur-sm bg-[#4ade80]/20 border border-[#4ade80]/30 rounded px-2 py-1">
-                      <span className="text-[10px] font-bold text-[#4ade80] uppercase tracking-[0.5px]">
-                        Rare Edition
-                      </span>
-                    </div>
+                    {(() => {
+                      const attrs = fetchedNftAttributes[firstTokenId];
+                      const rarityAttr = attrs?.find((a: { trait_type: string; value: string }) => a.trait_type.toLowerCase() === "rarity");
+                      const isLeg = rarityAttr ? rarityAttr.value.toLowerCase() === "legendary" : false;
+                      const rarityLabel = rarityAttr?.value || "Rare Edition";
+                      return (
+                        <div className={`backdrop-blur-sm border rounded px-2 py-1 ${
+                          isLeg ? "bg-[#fbbf24]/20 border-[#fbbf24]/40" : "bg-[#4ade80]/20 border-[#4ade80]/30"
+                        }`}>
+                          <span className={`text-[10px] font-bold uppercase tracking-[0.5px] ${
+                            isLeg ? "text-[#fbbf24]" : "text-[#4ade80]"
+                          }`}>
+                            {rarityLabel}
+                          </span>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
                 
