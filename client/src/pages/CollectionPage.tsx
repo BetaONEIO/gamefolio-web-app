@@ -23,6 +23,7 @@ import { formatDistance } from "date-fns";
 import { Link } from "wouter";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { SKALE_NEBULA_TESTNET, NFT_CONTRACT_ADDRESS } from "@shared/contracts";
+import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 
 interface CollectionItem {
   id: number;
@@ -51,6 +52,9 @@ interface OwnedNft {
   image: string | null;
   description?: string;
   attributes?: Array<{ trait_type: string; value: string | number }>;
+  txHash?: string;
+  mintedAt?: string;
+  sold?: boolean;
 }
 
 interface OwnedNftsData {
@@ -96,44 +100,89 @@ const rewardTypeIcons: Record<string, typeof Zap> = {
   default: Sparkles
 };
 
-function getNftRarity(nft: OwnedNft): string {
+const RARE_TRAITS: Record<string, string[]> = {
+  Background: ["Melting_gold", "Aurora", "Neon_city", "Galaxy", "Diamond"],
+  Hand: ["Cyber_punk_sword", "Lightning_staff", "Golden_scepter", "Plasma_gun"],
+  Skin: ["Diamond_skin", "Galaxy_skin", "Golden_skin", "Holographic_skin"],
+  Costume: ["Legendary_armor", "Royal_cape", "Cyber_suit", "Dragon_scale"],
+  Eyes: ["Laser_eyes", "Diamond_eyes", "Galaxy_eyes", "Fire_eyes"],
+  Mouth: ["Golden_grill", "Diamond_teeth", "Flame_breath"],
+  Headwear: ["Crown", "Halo", "Dragon_horns", "Diamond_tiara"],
+};
+
+function computeNftRarityScore(nft: OwnedNft): number {
+  if (!nft.attributes || nft.attributes.length === 0) return 30;
+
+  let score = 0;
+  const traitCount = nft.attributes.length;
+  score += Math.min(traitCount * 8, 40);
+
+  for (const attr of nft.attributes) {
+    const traitType = attr.trait_type;
+    const traitValue = String(attr.value);
+    const rareList = RARE_TRAITS[traitType];
+    if (rareList && rareList.some(r => traitValue.toLowerCase().includes(r.toLowerCase()))) {
+      score += 15;
+    }
+  }
+
+  let hash = 0;
+  const combo = nft.attributes.map(a => `${a.trait_type}:${a.value}`).join('|');
+  for (let i = 0; i < combo.length; i++) {
+    hash = ((hash << 5) - hash + combo.charCodeAt(i)) | 0;
+  }
+  score += Math.abs(hash % 20);
+
+  return Math.min(score, 100);
+}
+
+function getNftRarity(nft: OwnedNft): { label: string; score: number } {
   const rarityAttr = nft.attributes?.find(a => a.trait_type.toLowerCase() === "rarity");
   if (rarityAttr) {
     const val = String(rarityAttr.value).toLowerCase();
-    if (["legendary", "epic", "rare", "common"].includes(val)) return val;
+    if (val === "legendary") return { label: "legendary", score: 95 };
+    if (val === "epic") return { label: "epic", score: 80 };
+    if (val === "rare") return { label: "rare", score: 55 };
+    if (val === "common") return { label: "common", score: 25 };
   }
-  const scoreAttr = nft.attributes?.find(a => a.trait_type.toLowerCase() === "rarity score" || a.trait_type.toLowerCase() === "score");
-  if (scoreAttr) {
-    const score = Number(scoreAttr.value);
-    if (score >= 95) return "legendary";
-    if (score >= 75) return "epic";
-    if (score >= 40) return "rare";
-  }
-  return "common";
+
+  const score = computeNftRarityScore(nft);
+  if (score >= 85) return { label: "legendary", score };
+  if (score >= 65) return { label: "epic", score };
+  if (score >= 40) return { label: "rare", score };
+  return { label: "common", score };
 }
 
-function NftCard({ nft }: { nft: OwnedNft }) {
-  const rarity = getNftRarity(nft);
+function NftCard({ nft, onClick }: { nft: OwnedNft; onClick: () => void }) {
+  const { label: rarity, score } = getNftRarity(nft);
   const colors = rarityColors[rarity] || rarityColors.common;
   const isLegendary = rarity === "legendary";
   const [imgFailed, setImgFailed] = useState(false);
   
   return (
-    <Card className={`${colors.border} border overflow-hidden relative group transition-transform hover:scale-[1.02] ${isLegendary ? 'ring-1 ring-yellow-500/30' : ''}`}>
+    <Card 
+      className={`${colors.border} border overflow-hidden relative group transition-transform hover:scale-[1.02] cursor-pointer ${isLegendary ? 'ring-1 ring-yellow-500/30' : ''} ${nft.sold ? 'opacity-60' : ''}`}
+      onClick={onClick}
+    >
       {isLegendary && (
         <div className="absolute inset-0 rounded-lg animate-pulse bg-gradient-to-br from-yellow-500/10 via-transparent to-amber-500/10 pointer-events-none z-0" />
       )}
       <div className="relative z-[1]">
-        <div className="aspect-square bg-gray-900/80 flex items-center justify-center overflow-hidden">
+        <div className="aspect-square bg-gray-900/80 flex items-center justify-center overflow-hidden relative">
           {nft.image && !imgFailed ? (
             <img 
               src={nft.image} 
               alt={nft.name} 
-              className="w-full h-full object-cover"
+              className={`w-full h-full object-cover ${nft.sold ? 'grayscale' : ''}`}
               onError={() => setImgFailed(true)}
             />
           ) : (
             <Hexagon className="w-12 h-12 text-gray-600" />
+          )}
+          {nft.sold && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+              <span className="text-white/90 font-bold text-lg uppercase tracking-wider rotate-[-15deg]">SOLD</span>
+            </div>
           )}
         </div>
         <div className={`p-3 bg-gradient-to-br ${colors.gradient}`}>
@@ -218,6 +267,7 @@ function RarityBadge({ rarity, count }: { rarity: string; count: number }) {
 export default function CollectionPage() {
   const { user } = useAuth();
   const [filter, setFilter] = useState("all");
+  const [selectedNft, setSelectedNft] = useState<OwnedNft | null>(null);
 
   const { data, isLoading, refetch, isRefetching } = useQuery<CollectionData>({
     queryKey: ["/api/lootbox/collection"],
@@ -244,6 +294,37 @@ export default function CollectionPage() {
     refetch();
     refetchNfts();
   };
+
+  if (selectedNft) {
+    const { score } = getNftRarity(selectedNft);
+    return (
+      <MintedNftDetailScreen
+        nft={{
+          id: selectedNft.tokenId,
+          name: selectedNft.name,
+          imageUrl: selectedNft.image || '',
+          rarity: score,
+          attributes: selectedNft.attributes?.map(a => ({
+            trait_type: a.trait_type,
+            value: String(a.value),
+          })),
+        }}
+        txHash={selectedNft.txHash || ''}
+        walletAddress={user?.walletAddress || undefined}
+        onClose={() => setSelectedNft(null)}
+        onViewExplorer={() => {
+          if (selectedNft.txHash) {
+            window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${selectedNft.txHash}`, '_blank');
+          }
+        }}
+        initialSold={selectedNft.sold || false}
+        onSold={() => {
+          refetchNfts();
+        }}
+        mintedAt={selectedNft.mintedAt}
+      />
+    );
+  }
 
   if (!user) {
     return (
@@ -321,7 +402,7 @@ export default function CollectionPage() {
           ) : nftData && nftData.nfts.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {nftData.nfts.map((nft: OwnedNft) => (
-                <NftCard key={nft.tokenId} nft={nft} />
+                <NftCard key={nft.tokenId} nft={nft} onClick={() => setSelectedNft(nft)} />
               ))}
             </div>
           ) : (

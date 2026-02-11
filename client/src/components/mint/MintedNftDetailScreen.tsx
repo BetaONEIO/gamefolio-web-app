@@ -24,6 +24,7 @@ interface MintedNftDetailScreenProps {
   onViewExplorer: () => void;
   initialSold?: boolean;
   onSold?: () => void;
+  mintedAt?: string;
 }
 
 const NFT_CONTRACT_ADDRESS = "0x246624993603fbd8C3Cc60920878D0DF5c764Fb4";
@@ -43,9 +44,9 @@ function formatAddress(address: string): string {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
-function formatDate(): string {
-  const now = new Date();
-  return now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+function formatDate(dateStr?: string): string {
+  const d = dateStr ? new Date(dateStr) : new Date();
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 export default function MintedNftDetailScreen({
@@ -56,13 +57,14 @@ export default function MintedNftDetailScreen({
   onViewExplorer,
   initialSold = false,
   onSold,
+  mintedAt,
 }: MintedNftDetailScreenProps) {
   const [showQuickSell, setShowQuickSell] = useState(false);
   const [sold, setSold] = useState(initialSold);
   const { toast } = useToast();
   const displayName = nft.name || `Gamefolio Genesis ${getTokenIdPadded(nft.id)}`;
   const ownerDisplay = walletAddress ? `You (${formatAddress(walletAddress)})` : "You";
-  const mintDate = formatDate();
+  const mintDate = formatDate(mintedAt);
 
   if (showQuickSell && !sold) {
     return (
