@@ -1,7 +1,9 @@
-import { ArrowLeft, ExternalLink, Share2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Share2, Image } from "lucide-react";
 import { useState } from "react";
 import QuickSellScreen from "./QuickSellScreen";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface NftAttribute {
   trait_type: string;
@@ -73,6 +75,46 @@ export default function MintedNftDetailScreen({
   const mintDate = formatDate(mintedAt);
   const soldDate = soldAt ? formatDate(soldAt) : null;
   const isListedOnMarketplace = sold && (listingActive === true);
+
+  const setProfilePictureMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/nft/set-profile-picture', {
+        tokenId: nft.id,
+        imageUrl: nft.imageUrl,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      toast({
+        title: "Profile Picture Updated",
+        description: `${displayName} is now your profile picture.`,
+      });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Failed to set profile picture",
+        description: err.message || "Something went wrong",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const clearProfilePictureMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/nft/set-profile-picture', {
+        tokenId: null,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      toast({
+        title: "Profile Picture Cleared",
+        description: "Your NFT profile picture has been removed.",
+      });
+    },
+  });
 
   if (showQuickSell && !sold) {
     return (
@@ -294,6 +336,19 @@ export default function MintedNftDetailScreen({
                 ))}
               </div>
             </div>
+
+            {!sold && (
+              <button
+                onClick={() => setProfilePictureMutation.mutate()}
+                disabled={setProfilePictureMutation.isPending}
+                className="h-[44px] w-full rounded-xl bg-[#0f172a] border border-[#4ade80]/30 flex items-center justify-center gap-2 hover:bg-[#4ade80]/10 hover:border-[#4ade80]/50 transition-colors disabled:opacity-50"
+              >
+                <Image className="w-4 h-4 text-[#4ade80]" />
+                <span className="text-sm font-bold text-[#4ade80] leading-5">
+                  {setProfilePictureMutation.isPending ? 'Setting...' : 'Set as Profile Picture'}
+                </span>
+              </button>
+            )}
 
             <div className={`grid ${sold ? 'grid-cols-1' : 'grid-cols-2'} gap-3 pt-1`}>
               {!sold && (
