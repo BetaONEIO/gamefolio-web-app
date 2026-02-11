@@ -369,6 +369,8 @@ export default function SettingsPage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [profilePicTab, setProfilePicTab] = useState<'upload' | 'nft'>('upload');
+  const [showNftSelector, setShowNftSelector] = useState(false);
   
   // Name tag state - undefined means no pending change, null means remove tag, number means select tag
   const [pendingNameTagId, setPendingNameTagId] = useState<number | null | undefined>(undefined);
@@ -594,6 +596,27 @@ export default function SettingsPage() {
     enabled: !!user,
   });
   
+  const { data: ownedNftsData, isLoading: nftsLoading } = useQuery<{ nfts: any[]; count: number }>({
+    queryKey: ['/api/nfts/owned'],
+    enabled: !!user,
+    staleTime: 30000,
+  });
+
+  const setNftProfileMutation = useMutation({
+    mutationFn: async ({ tokenId, imageUrl }: { tokenId: number | null; imageUrl?: string }) => {
+      const res = await apiRequest('POST', '/api/nft/set-profile-picture', { tokenId, imageUrl });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      toast({ title: 'Profile picture updated', description: 'Your NFT profile picture has been set.' });
+      setShowNftSelector(false);
+    },
+    onError: (err: any) => {
+      toast({ title: 'Failed to set NFT', description: err.message || 'Something went wrong', variant: 'destructive' });
+    },
+  });
+
   // Track selected avatar border ID
   const [selectedBorderId, setSelectedBorderId] = useState<number | null>(user?.selectedAvatarBorderId || null);
   
@@ -902,7 +925,7 @@ export default function SettingsPage() {
                 <CardTitle>Profile Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Profile Picture Section */}
+                {/* Profile Picture Section with Tabs */}
                 <div className="space-y-4">
                   <div>
                     <Label className="text-base font-medium">Profile Picture</Label>
@@ -910,95 +933,162 @@ export default function SettingsPage() {
                       Upload a profile picture that represents you. Recommended size: 400x400 pixels or larger.
                     </p>
                   </div>
-                  
-                  <div className="flex flex-col md:flex-row md:items-start space-y-4 md:space-y-0 md:space-x-6">
-                    {/* Current/Preview Avatar with Border */}
-                    <div className="flex flex-col items-center space-y-3">
-                      <div 
-                        className="relative h-48 w-48 flex items-center justify-center"
-                      >
+
+                  <div className="flex gap-0 border-b border-border mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setProfilePicTab('upload')}
+                      className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                        profilePicTab === 'upload'
+                          ? 'border-green-500 text-green-400'
+                          : 'border-transparent text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Camera className="h-4 w-4" />
+                      Profile Picture
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProfilePicTab('nft')}
+                      className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                        profilePicTab === 'nft'
+                          ? 'border-green-500 text-green-400'
+                          : 'border-transparent text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Shield className="h-4 w-4" />
+                      NFT
+                    </button>
+                  </div>
+
+                  {profilePicTab === 'upload' && (
+                    <div className="flex flex-col md:flex-row md:items-start space-y-4 md:space-y-0 md:space-x-6">
+                      <div className="flex flex-col items-center space-y-3">
                         <div 
-                          className="h-32 w-32 rounded-full overflow-hidden z-10"
+                          className="relative h-48 w-48 flex items-center justify-center"
                         >
-                          <img 
-                            src={avatarPreview || user?.avatarUrl || ''} 
-                            alt={user?.displayName || 'Profile'}
-                            className="w-full h-full object-cover rounded-full"
-                          />
-                          {!(avatarPreview || user?.avatarUrl) && (
-                            <div className="w-full h-full flex items-center justify-center bg-primary/20 text-3xl font-bold rounded-full">
-                              {user?.displayName?.charAt(0) || '?'}
-                            </div>
-                          )}
-                        </div>
-                        {/* SVG Border Overlay - rendered inline with color replacement */}
-                        {selectedBorderId && avatarBorders && (() => {
-                          const border = (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId);
-                          if (!border) return null;
-                          
-                          return (
-                            <InlineSvgBorder
-                              svgUrl={border.imageUrl}
-                              color={avatarBorderColor}
-                              className="absolute inset-0 pointer-events-none [&>svg]:w-full [&>svg]:h-full"
-                              style={{ zIndex: 5 }}
+                          <div 
+                            className="h-32 w-32 rounded-full overflow-hidden z-10"
+                          >
+                            <img 
+                              src={avatarPreview || user?.avatarUrl || ''} 
+                              alt={user?.displayName || 'Profile'}
+                              className="w-full h-full object-cover rounded-full"
                             />
-                          );
-                        })()}
+                            {!(avatarPreview || user?.avatarUrl) && (
+                              <div className="w-full h-full flex items-center justify-center bg-primary/20 text-3xl font-bold rounded-full">
+                                {user?.displayName?.charAt(0) || '?'}
+                              </div>
+                            )}
+                          </div>
+                          {selectedBorderId && avatarBorders && (() => {
+                            const border = (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId);
+                            if (!border) return null;
+                            
+                            return (
+                              <InlineSvgBorder
+                                svgUrl={border.imageUrl}
+                                color={avatarBorderColor}
+                                className="absolute inset-0 pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+                                style={{ zIndex: 5 }}
+                              />
+                            );
+                          })()}
+                        </div>
+                        <div className="text-center">
+                          <span className="text-sm font-medium">
+                            {avatarFile ? 'New Preview' : 'Current'}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-center">
-                        <span className="text-sm font-medium">
-                          {avatarFile ? 'New Preview' : 'Current'}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    {/* Upload Controls */}
-                    <div className="flex-1 space-y-3">
-                      <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="sm"
-                          className="relative"
-                          onClick={() => document.getElementById('avatar-upload')?.click()}
-                          disabled={uploadingAvatar}
-                        >
-                          <Camera className="h-4 w-4 mr-2" />
-                          {uploadingAvatar ? 'Uploading...' : avatarFile ? 'Change Picture' : 'Upload Picture'}
-                        </Button>
-                        
-                        {avatarFile && !uploadingAvatar && (
+                      
+                      <div className="flex-1 space-y-3">
+                        <div className="flex flex-wrap gap-2 justify-center md:justify-start">
                           <Button 
                             type="button" 
-                            variant="ghost"
+                            variant="outline" 
                             size="sm"
-                            onClick={() => {
-                              setAvatarFile(null);
-                              setAvatarPreview('');
-                            }}
+                            className="relative"
+                            onClick={() => document.getElementById('avatar-upload')?.click()}
+                            disabled={uploadingAvatar}
                           >
-                            Cancel
+                            <Camera className="h-4 w-4 mr-2" />
+                            {uploadingAvatar ? 'Uploading...' : avatarFile ? 'Change Picture' : 'Upload Picture'}
                           </Button>
-                        )}
-                      </div>
-                      
-                      <input
-                        id="avatar-upload"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleAvatarChange}
-                        className="hidden"
-                      />
-                      
-                      <div className="text-xs text-muted-foreground space-y-1">
-                        <div>• Recommended: 400x400 pixels or larger</div>
-                        <div>• Square images work best</div>
-                        <div>• Maximum file size: 5MB</div>
-                        <div>• Supported formats: JPG, PNG, GIF</div>
+                          
+                          {avatarFile && !uploadingAvatar && (
+                            <Button 
+                              type="button" 
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setAvatarFile(null);
+                                setAvatarPreview('');
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          )}
+                        </div>
+                        
+                        <input
+                          id="avatar-upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAvatarChange}
+                          className="hidden"
+                        />
+                        
+                        <div className="text-xs text-muted-foreground space-y-1">
+                          <div>• Recommended: 400x400 pixels or larger</div>
+                          <div>• Square images work best</div>
+                          <div>• Maximum file size: 5MB</div>
+                          <div>• Supported formats: JPG, PNG, GIF</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
+
+                  {profilePicTab === 'nft' && (
+                    <div className="space-y-4">
+                      {(user as any)?.nftProfileTokenId ? (
+                        <div className="flex items-center gap-4 p-4 rounded-lg border border-green-500/30 bg-green-500/5">
+                          {(user as any)?.nftProfileImageUrl && (
+                            <img
+                              src={(user as any).nftProfileImageUrl}
+                              alt="Current NFT"
+                              className="w-16 h-16 rounded-lg object-cover border-2 border-green-500/40"
+                            />
+                          )}
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-green-400">NFT Profile Picture Active</p>
+                            <p className="text-xs text-muted-foreground">Token #{(user as any).nftProfileTokenId}</p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-red-400 border-red-500/30 hover:bg-red-500/10"
+                            onClick={() => setNftProfileMutation.mutate({ tokenId: null })}
+                            disabled={setNftProfileMutation.isPending}
+                          >
+                            {setNftProfileMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Remove'}
+                          </Button>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No NFT profile picture set. Select one from your collection below.</p>
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowNftSelector(true)}
+                        className="border-green-500/30 text-green-400 hover:bg-green-500/10"
+                      >
+                        <Shield className="h-4 w-4 mr-2" />
+                        Select NFT to use as Profile Picture
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Profile Picture Border Selection Section */}
@@ -1844,6 +1934,94 @@ export default function SettingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {showNftSelector && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setShowNftSelector(false)} />
+          <div className="relative bg-[#0f172a] border border-slate-700 rounded-xl w-full max-w-lg max-h-[80vh] overflow-hidden shadow-2xl mx-4">
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <h3 className="text-lg font-semibold text-white">Select NFT as Profile Picture</h3>
+              <button
+                type="button"
+                onClick={() => setShowNftSelector(false)}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              {nftsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-green-400" />
+                </div>
+              ) : !ownedNftsData?.nfts || ownedNftsData.nfts.length === 0 ? (
+                <div className="text-center py-12">
+                  <Shield className="h-12 w-12 mx-auto mb-3 text-slate-600" />
+                  <p className="text-slate-400 text-sm">You don't own any NFTs yet.</p>
+                  <p className="text-slate-500 text-xs mt-1">Mint or purchase NFTs to use them as your profile picture.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-3">
+                  {ownedNftsData.nfts
+                    .filter((nft: any) => !nft.sold)
+                    .map((nft: any) => {
+                      const isSelected = (user as any)?.nftProfileTokenId === nft.tokenId;
+                      return (
+                        <button
+                          key={nft.tokenId}
+                          type="button"
+                          onClick={() => {
+                            setNftProfileMutation.mutate({
+                              tokenId: nft.tokenId,
+                              imageUrl: nft.image || '',
+                            });
+                          }}
+                          disabled={setNftProfileMutation.isPending}
+                          className={`relative rounded-lg overflow-hidden border-2 transition-all aspect-square group ${
+                            isSelected
+                              ? 'border-green-500 ring-2 ring-green-500/30'
+                              : 'border-slate-700 hover:border-green-500/50'
+                          }`}
+                        >
+                          {nft.image ? (
+                            <img
+                              src={nft.image}
+                              alt={nft.name || `NFT #${nft.tokenId}`}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-slate-800 flex items-center justify-center">
+                              <Shield className="h-8 w-8 text-slate-600" />
+                            </div>
+                          )}
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/80 px-2 py-1">
+                            <p className="text-[10px] text-white truncate font-medium">
+                              {nft.name || `Token #${nft.tokenId}`}
+                            </p>
+                          </div>
+                          {isSelected && (
+                            <div className="absolute top-1 right-1 bg-green-500 rounded-full p-0.5">
+                              <Check className="h-3 w-3 text-white" />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-green-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </button>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+
+            {setNftProfileMutation.isPending && (
+              <div className="p-3 border-t border-slate-700 flex items-center justify-center gap-2 text-sm text-green-400">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Setting NFT as profile picture...
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </KeyboardAvoidingWrapper>
   );
 }
