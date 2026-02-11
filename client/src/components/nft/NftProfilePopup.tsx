@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { X } from "lucide-react";
+import { useEffect } from "react";
 
 interface NftAttribute {
   trait_type: string;
@@ -19,6 +20,14 @@ function getTokenIdPadded(id: number): string {
 }
 
 export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose }: NftProfilePopupProps) {
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [onClose]);
+
   const { data, isLoading } = useQuery<{
     hasNftProfile: boolean;
     tokenId: number;
@@ -29,13 +38,13 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose }: 
       attributes?: NftAttribute[];
     } | null;
   }>({
-    queryKey: [`/api/nft/profile-picture/${userId}`],
+    queryKey: ["/api/nft/profile-picture", userId],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     staleTime: 60 * 1000,
   });
 
   const metadata = data?.metadata;
-  const nftImage = metadata?.image || imageUrl || "";
+  const nftImage = metadata?.image || data?.imageUrl || imageUrl || "";
   const displayName = metadata?.name || `Gamefolio Genesis ${getTokenIdPadded(tokenId)}`;
   const ownerDisplay = "Owner";
 
@@ -46,23 +55,33 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose }: 
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center"
-      onClick={onClose}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
     >
       <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" />
 
       <div
-        className="relative z-10 w-[367px] max-w-[90vw] max-h-[90vh] bg-[#0f172a] rounded-3xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] flex flex-col"
+        className="relative z-10 w-[367px] max-w-[90vw] max-h-[90vh] bg-[#0f172a] rounded-3xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] flex flex-col animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          onClick={onClose}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
           className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center hover:bg-black/60 transition-colors"
         >
           <X className="w-4 h-4 text-white" />
         </button>
 
         <div className="w-full aspect-square relative overflow-hidden flex-shrink-0">
-          {nftImage ? (
+          {isLoading ? (
+            <div className="w-full h-full bg-[#1e293b] flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full border-2 border-[#4ade80]/30 border-t-[#4ade80] animate-spin" />
+            </div>
+          ) : nftImage ? (
             <img
               src={nftImage}
               alt={displayName}
@@ -70,11 +89,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose }: 
             />
           ) : (
             <div className="w-full h-full bg-[#1e293b] flex items-center justify-center">
-              {isLoading ? (
-                <div className="w-12 h-12 rounded-full border-2 border-[#4ade80]/30 border-t-[#4ade80] animate-spin" />
-              ) : (
-                <span className="text-[#64748b] text-sm">No image</span>
-              )}
+              <span className="text-[#64748b] text-sm">No image</span>
             </div>
           )}
 
@@ -91,7 +106,8 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose }: 
             <div className="flex items-center gap-[7px]">
               <span className="text-sm font-normal text-[#4ade80] leading-5">Genesis Collection</span>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path fillRule="evenodd" clipRule="evenodd" d="M6.3515 1.97329C6.24341 2.0703 6.13026 2.1615 6.01252 2.24653C5.80845 2.38349 5.57904 2.47799 5.338 2.52593C5.23322 2.54647 5.12365 2.55537 4.9052 2.57249C4.35668 2.61632 4.08208 2.63823 3.85335 2.71904C3.3235 2.9058 2.90677 3.32253 2.72001 3.85238C2.63921 4.0811 2.61729 4.3557 2.57347 4.90423C2.5656 5.04921 2.55006 5.19368 2.5269 5.33702C2.47897 5.57807 2.38446 5.80748 2.2475 6.01154C2.18793 6.10057 2.11671 6.18411 1.97427 6.35052C1.61749 6.76962 1.43876 6.97916 1.33398 7.1983C1.09225 7.70505 1.09225 8.29397 1.33398 8.80072C1.43876 9.01986 1.61749 9.22941 1.97427 9.6485C2.11671 9.81491 2.18793 9.89846 2.2475 9.98748C2.38446 10.1915 2.47897 10.421 2.5269 10.662C2.54745 10.7668 2.55635 10.8763 2.57347 11.0948C2.61729 11.6433 2.63921 11.9179 2.72001 12.1466C2.90677 12.6765 3.3235 13.0932 3.85335 13.28C4.08208 13.3608 4.35668 13.3827 4.9052 13.4265C5.12365 13.4437 5.23322 13.4526 5.338 13.4731C5.57904 13.521 5.80845 13.6162 6.01252 13.7525C6.10154 13.8121 6.18509 13.8833 6.3515 14.0257C6.77059 14.3825 6.98014 14.5612 7.19928 14.666C7.70603 14.9077 8.29495 14.9077 8.8017 14.666C9.02084 14.5612 9.23038 14.3825 9.64948 14.0257C9.81589 13.8833 9.89943 13.8121 9.98846 13.7525C10.1925 13.6155 10.4219 13.521 10.663 13.4731C10.7678 13.4526 10.8773 13.4437 11.0958 13.4265C11.6443 13.3827 11.9189 13.3608 12.1476 13.28C12.6775 13.0932 13.0942 12.6765 13.281 12.1466C13.3618 11.9179 13.3837 11.6433 13.4275 11.0948C13.4446 10.8763 13.4535 10.7668 13.4741 10.662C13.522 10.421 13.6172 10.1915 13.7535 9.98748C13.813 9.89846 13.8843 9.81491 14.0267 9.6485C14.3835 9.22941 14.5622 9.01986 14.667 8.80072C14.9087 8.29397 14.9087 7.70505 14.667 7.1983C14.5622 6.97916 14.3835 6.76962 14.0267 6.35052C13.9297 6.24244 13.8385 6.12929 13.7535 6.01154C13.6164 5.80751 13.5214 5.5782 13.4741 5.33702C13.4509 5.19368 13.4354 5.04921 13.4275 4.90423C13.3837 4.3557 13.3618 4.0811 13.281 3.85238C13.0942 3.32253 12.6775 2.9058 12.1476 2.71904C11.9189 2.63823 11.6443 2.61632 11.0958 2.57249C10.8773 2.55537 10.7678 2.54647 10.663 2.52593C10.4219 2.47799 10.1925 2.38349 9.98846 2.24653C9.89943 2.1869 9.81589 2.11568 9.64948 1.97329C9.23038 1.61651 9.02084 1.43778 8.8017 1.333C8.29495 1.09127 7.70603 1.09127 7.19928 1.333C6.98014 1.43778 6.77059 1.61651 6.3515 1.97329ZM10.9708 6.47163C11.214 6.22761 11.214 5.83231 10.9708 5.5883C10.7268 5.34458 10.3315 5.34458 10.0875 5.5883L7.00049 8.67531L5.91348 7.5883C5.66947 7.34458 5.27417 7.34458 5.03015 7.5883C4.78614 7.83231 4.78614 8.22761 5.03015 8.47163L6.55883 9.99996C6.80284 10.244 7.19814 10.244 7.44215 9.99996L10.9708 6.47163Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M6.3515 1.97329C6.24341 2.0703 6.13026 2.1615 6.01252 2.24653C5.80845 2.38349 5.57904 2.47799 5.338 2.52593C5.23322 2.54647 5.12365 2.55537 4.9052 2.57249C4.35668 2.61632 4.08208 2.63823 3.85335 2.71904C3.3235 2.9058 2.90677 3.32253 2.72001 3.85238C2.63921 4.0811 2.61729 4.3557 2.57347 4.90423C2.5656 5.04921 2.55006 5.19368 2.5269 5.33702C2.47897 5.57807 2.38446 5.80748 2.2475 6.01154C2.18793 6.10057 2.11671 6.18411 1.97427 6.35052C1.61749 6.76962 1.43876 6.97916 1.33398 7.1983C1.09225 7.70505 1.09225 8.29397 1.33398 8.80072C1.43876 9.01986 1.61749 9.22941 1.97427 9.6485C2.11671 9.81491 2.18793 9.89846 2.2475 9.98748C2.38446 10.1915 2.47897 10.421 2.5269 10.662C2.54745 10.7668 2.55635 10.8763 2.57347 11.0948C2.61729 11.6433 2.63921 11.9179 2.72001 12.1466C2.90677 12.6765 3.3235 13.0932 3.85335 13.28C4.08208 13.3608 4.35668 13.3827 4.9052 13.4265C5.12365 13.4437 5.23322 13.4526 5.338 13.4731C5.57904 13.521 5.80845 13.6162 6.01252 13.7525C6.10154 13.8121 6.18509 13.8833 6.3515 14.0257C6.77059 14.3825 6.98014 14.5612 7.19928 14.666C7.70603 14.9077 8.29495 14.9077 8.8017 14.666C9.02084 14.5612 9.23038 14.3825 9.64948 14.0257C9.81589 13.8833 9.89943 13.8121 9.98846 13.7525C10.1925 13.6155 10.4219 13.521 10.663 13.4731C10.7678 13.4526 10.8773 13.4437 11.0958 13.4265C11.6443 13.3827 11.9189 13.3608 12.1476 13.28C12.6775 13.0932 13.0942 12.6765 13.281 12.1466C13.3618 11.9179 13.3837 11.6433 13.4275 11.0948C13.4446 10.8763 13.4535 10.7668 13.4741 10.662C13.522 10.421 13.6172 10.1915 13.7535 9.98748C13.813 9.89846 13.8843 9.81491 14.0267 9.6485C14.3835 9.22941 14.5622 9.01986 14.667 8.80072C14.9087 8.29397 14.9087 7.70505 14.667 7.1983C14.5622 6.97916 14.3835 6.76962 14.0267 6.35052C13.9297 6.24244 13.8385 6.12929 13.7535 6.01154C13.6164 5.80751 13.5214 5.5782 13.4741 5.33702C13.4509 5.19368 13.4354 5.04921 13.4275 4.90423C13.3837 4.3557 13.3618 4.0811 13.281 3.85238C13.0942 3.32253 12.6775 2.9058 12.1476 2.71904C11.9189 2.63823 11.6443 2.61632 11.0958 2.57249C10.8773 2.55537 10.7678 2.54647 10.663 2.52593C10.4219 2.47799 10.1925 2.38349 9.98846 2.24653C9.89943 2.1869 9.81589 2.11568 9.64948 1.97329C9.23038 1.61651 9.02084 1.43778 8.8017 1.333C8.29495 1.09127 7.70603 1.09127 7.19928 1.333C6.98014 1.43778 6.77059 1.61651 6.3515 1.97329Z" fill="#4ADE80" />
+                <path d="M10.1654 6.50024L7.08203 9.58358L5.83203 8.33358" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
 

@@ -2,11 +2,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, AssetReward } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
-import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo } from "react";
 import DOMPurify from "dompurify";
 import { useSignedUrl } from "@/hooks/use-signed-url";
-
-const NftProfilePopup = lazy(() => import("@/components/nft/NftProfilePopup"));
+import NftProfilePopup from "@/components/nft/NftProfilePopup";
 
 // Helper to extract clip path from SVG and generate border content
 const useSvgBorderData = (svgUrl: string, color: string) => {
@@ -351,14 +350,12 @@ export const CustomAvatar = ({
         </div>
       </div>
       {showNftPopup && user?.id && user?.nftProfileTokenId && (
-        <Suspense fallback={null}>
-          <NftProfilePopup
-            userId={user.id}
-            tokenId={user.nftProfileTokenId}
-            imageUrl={user.nftProfileImageUrl || ''}
-            onClose={() => setShowNftPopup(false)}
-          />
-        </Suspense>
+        <NftProfilePopup
+          userId={user.id}
+          tokenId={user.nftProfileTokenId}
+          imageUrl={user.nftProfileImageUrl || ''}
+          onClose={() => setShowNftPopup(false)}
+        />
       )}
       </>
     );
