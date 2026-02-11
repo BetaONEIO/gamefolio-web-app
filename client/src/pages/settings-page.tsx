@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HexColorPicker } from "react-colorful";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { BannerUploadPreview } from "@/components/BannerUploadPreview";
 import { BannerPositionPreview } from "@/components/BannerPositionPreview";
 import { useUpdateProfile } from "@/hooks/use-profile";
@@ -587,17 +587,20 @@ export default function SettingsPage() {
   // Fetch user's unlocked avatar borders (only borders they have access to)
   const { data: avatarBorders, isLoading: isLoadingBorders } = useQuery({
     queryKey: ['/api/user/avatar-borders'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user,
   });
   
   // Fetch user's unlocked name tags
   const { data: userNameTags = [], isLoading: isLoadingNameTags } = useQuery<NameTag[]>({
     queryKey: ['/api/user/name-tags'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user,
   });
   
   const { data: ownedNftsData, isLoading: nftsLoading } = useQuery<{ nfts: any[]; count: number }>({
     queryKey: ['/api/nfts/owned'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user,
     staleTime: 30000,
   });
