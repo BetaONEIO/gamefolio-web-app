@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { getQueryFn } from "@/lib/queryClient";
@@ -112,42 +112,11 @@ function getNftRarity(nft: OwnedNft): string {
   return "common";
 }
 
-const IPFS_FALLBACK_GATEWAYS = [
-  'https://ipfs.io/ipfs/',
-  'https://cloudflare-ipfs.com/ipfs/',
-  'https://w3s.link/ipfs/',
-  'https://nftstorage.link/ipfs/',
-];
-
-function getIpfsFallbackUrl(originalUrl: string, attempt: number): string | null {
-  const match = originalUrl.match(/\/ipfs\/(.+)$/);
-  if (!match) return null;
-  const path = match[1];
-  if (attempt >= IPFS_FALLBACK_GATEWAYS.length) return null;
-  return `${IPFS_FALLBACK_GATEWAYS[attempt]}${path}`;
-}
-
 function NftCard({ nft }: { nft: OwnedNft }) {
   const rarity = getNftRarity(nft);
   const colors = rarityColors[rarity] || rarityColors.common;
   const isLegendary = rarity === "legendary";
-  const [imgSrc, setImgSrc] = useState(nft.image);
-  const [imgError, setImgError] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-
-  const handleImgError = useCallback(() => {
-    if (!nft.image || retryCount >= IPFS_FALLBACK_GATEWAYS.length) {
-      setImgError(true);
-      return;
-    }
-    const fallback = getIpfsFallbackUrl(nft.image, retryCount);
-    if (fallback) {
-      setImgSrc(fallback);
-      setRetryCount(prev => prev + 1);
-    } else {
-      setImgError(true);
-    }
-  }, [nft.image, retryCount]);
+  const [imgFailed, setImgFailed] = useState(false);
   
   return (
     <Card className={`${colors.border} border overflow-hidden relative group transition-transform hover:scale-[1.02] ${isLegendary ? 'ring-1 ring-yellow-500/30' : ''}`}>
@@ -156,13 +125,12 @@ function NftCard({ nft }: { nft: OwnedNft }) {
       )}
       <div className="relative z-[1]">
         <div className="aspect-square bg-gray-900/80 flex items-center justify-center overflow-hidden">
-          {imgSrc && !imgError ? (
+          {nft.image && !imgFailed ? (
             <img 
-              src={imgSrc} 
+              src={nft.image} 
               alt={nft.name} 
               className="w-full h-full object-cover"
-              loading="lazy"
-              onError={handleImgError}
+              onError={() => setImgFailed(true)}
             />
           ) : (
             <Hexagon className="w-12 h-12 text-gray-600" />

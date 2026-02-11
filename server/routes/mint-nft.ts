@@ -394,6 +394,43 @@ function ipfsToHttp(ipfsUri: string, gatewayIndex = 0): string {
   return `${IPFS_GATEWAYS[gatewayIndex % IPFS_GATEWAYS.length]}${path}`;
 }
 
+function ipfsToProxyUrl(ipfsUri: string): string {
+  if (!ipfsUri.startsWith('ipfs://')) return ipfsUri;
+  const path = ipfsUri.replace('ipfs://', '');
+  return `/api/nft/image/${path}`;
+}
+
+router.get('/api/nft/image/:cid/*', async (req: Request, res: Response) => {
+  try {
+    const cid = req.params.cid;
+    const rest = req.params[0] || '';
+    const ipfsPath = rest ? `${cid}/${rest}` : cid;
+
+    for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
+      try {
+        const url = `${IPFS_GATEWAYS[i]}${ipfsPath}`;
+        const response = await fetch(url, {
+          signal: AbortSignal.timeout(15000),
+          redirect: 'follow',
+        });
+        if (response.ok && response.body) {
+          const contentType = response.headers.get('content-type') || 'image/png';
+          res.setHeader('Content-Type', contentType);
+          res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+          const buffer = Buffer.from(await response.arrayBuffer());
+          return res.send(buffer);
+        }
+      } catch {
+        continue;
+      }
+    }
+    return res.status(502).json({ error: 'Failed to fetch image from IPFS' });
+  } catch (error: any) {
+    console.error('IPFS image proxy error:', error);
+    return res.status(500).json({ error: 'Image proxy error' });
+  }
+});
+
 router.get('/api/nft/metadata/:tokenId', async (req: Request, res: Response) => {
   try {
     const tokenId = parseInt(req.params.tokenId);
@@ -429,7 +466,7 @@ router.get('/api/nft/metadata/:tokenId', async (req: Request, res: Response) => 
     }
 
     if (metadata.image) {
-      metadata.image = ipfsToHttp(metadata.image);
+      metadata.image = ipfsToProxyUrl(metadata.image);
     }
 
     return res.json({
@@ -466,7 +503,7 @@ router.post('/api/nft/metadata/batch', async (req: Request, res: Response) => {
             if (response.ok) {
               const metadata = await response.json();
               if (metadata.image) {
-                metadata.image = ipfsToHttp(metadata.image);
+                metadata.image = ipfsToProxyUrl(metadata.image);
               }
               return { tokenId, ...metadata };
             }
@@ -523,7 +560,7 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
             if (response.ok) {
               const metadata = await response.json();
               if (metadata.image) {
-                metadata.image = ipfsToHttp(metadata.image);
+                metadata.image = ipfsToProxyUrl(metadata.image);
               }
               return { tokenId, ...metadata };
             }
