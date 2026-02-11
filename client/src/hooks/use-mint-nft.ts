@@ -3,7 +3,7 @@ import { useWalletClient } from 'wagmi';
 import { parseUnits, formatUnits, maxUint256, type Address, decodeEventLog } from 'viem';
 import { useWallet } from './use-wallet';
 import { useToast } from './use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import {
   GF_TOKEN_ADDRESS,
   GF_TOKEN_ABI,
@@ -178,8 +178,6 @@ export function useMintNFT(fallbackAddress?: string | null) {
 
       if (data.success) {
         setAllowanceState('approved');
-        await checkAllowance();
-        await fetchOnChainData();
         toast({
           title: 'Allowance Approved',
           description: 'GFT spending has been enabled for the mint contract',
@@ -218,7 +216,7 @@ export function useMintNFT(fallbackAddress?: string | null) {
       });
       return false;
     }
-  }, [toast, checkAllowance, fetchOnChainData, handleServerError]);
+  }, [toast, handleServerError]);
 
   const serverMint = useCallback(async (quantity: number): Promise<MintResult | null> => {
     try {
@@ -411,8 +409,7 @@ export function useMintNFT(fallbackAddress?: string | null) {
           title: 'Wallet Regenerated',
           description: `New wallet address: ${data.address.slice(0, 10)}...`,
         });
-        await fetchOnChainData();
-        await checkAllowance();
+        await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
         return true;
       }
       return false;
@@ -425,7 +422,7 @@ export function useMintNFT(fallbackAddress?: string | null) {
       });
       return false;
     }
-  }, [toast, fetchOnChainData, checkAllowance]);
+  }, [toast]);
 
   const reset = useCallback(() => {
     setMintTxState('idle');
