@@ -680,4 +680,101 @@ router.post('/api/admin/nfts/backfill', async (req: Request, res: Response) => {
   }
 });
 
+router.post('/api/nft/set-profile-picture', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { tokenId, imageUrl } = req.body;
+
+    if (tokenId === null || tokenId === undefined) {
+      await db.update(users).set({
+        nftProfileTokenId: null,
+        nftProfileImageUrl: null,
+      }).where(eq(users.id, userId));
+      return res.json({ success: true, cleared: true });
+    }
+
+    if (typeof tokenId !== 'number' || tokenId < 0) {
+      return res.status(400).json({ error: 'Invalid token ID' });
+    }
+
+    const nftCheck = await db.execute(
+      sql`SELECT id FROM user_nfts WHERE user_id = ${userId} AND token_id = ${tokenId} AND (sold = false OR sold IS NULL)`
+    );
+    const nftRows = (nftCheck as any).rows || nftCheck;
+    if (!nftRows || nftRows.length === 0) {
+      return res.status(403).json({ error: 'You do not own this NFT or it has been sold' });
+    }
+
+    await db.update(users).set({
+      nftProfileTokenId: tokenId,
+      nftProfileImageUrl: imageUrl || null,
+    }).where(eq(users.id, userId));
+
+    return res.json({ success: true, tokenId, imageUrl });
+  } catch (error: any) {
+    console.error('Set NFT profile picture error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to set NFT profile picture' });
+  }
+});
+
+router.get('/api/nft/profile-picture/:userId', async (req: Request, res: Response) => {
+  try {
+    const targetUserId = parseInt(req.params.userId);
+    if (isNaN(targetUserId)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    const [user] = await db.select({
+      nftProfileTokenId: users.nftProfileTokenId,
+      nftProfileImageUrl: users.nftProfileImageUrl,
+    }).from(users).where(eq(users.id, targetUserId)).limit(1);
+
+    if (!user || !user.nftProfileTokenId) {
+      return res.json({ hasNftProfile: false });
+    }
+
+    let metadata = null;
+    try {
+      const tokenURI = await publicClient.readContract({
+        address: NFT_CONTRACT_ADDRESS as `0x${string}`,
+        abi: NFT_ABI,
+        functionName: 'tokenURI',
+        args: [BigInt(user.nftProfileTokenId)],
+      });
+
+      for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
+        try {
+          const url = ipfsToHttp(tokenURI as string, i) + '.json';
+          const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+          if (response.ok) {
+            metadata = await response.json();
+            if (metadata.image) {
+              metadata.image = ipfsToProxyUrl(metadata.image);
+            }
+            break;
+          }
+        } catch {
+          continue;
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch NFT metadata for profile:', err);
+    }
+
+    return res.json({
+      hasNftProfile: true,
+      tokenId: user.nftProfileTokenId,
+      imageUrl: user.nftProfileImageUrl,
+      metadata,
+    });
+  } catch (error: any) {
+    console.error('Get NFT profile picture error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to get NFT profile picture' });
+  }
+});
+
 export default router;
