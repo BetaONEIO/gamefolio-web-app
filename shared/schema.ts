@@ -74,6 +74,9 @@ export const users = pgTable("users", {
   selectedNameTagId: integer("selected_name_tag_id"), // References name_tags table
   // Selected Profile Border
   selectedBorderId: integer("selected_border_id"), // References profile_borders table
+  // NFT Profile Picture
+  nftProfileTokenId: integer("nft_profile_token_id"),
+  nftProfileImageUrl: text("nft_profile_image_url"),
   // Welcome Pack
   welcomePackClaimed: boolean("welcome_pack_claimed").default(false).notNull(), // Whether the user has claimed their welcome pack
   // Two-Factor Authentication
