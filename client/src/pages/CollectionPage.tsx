@@ -343,7 +343,7 @@ export default function CollectionPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0a0a1a] via-[#1a1a2e] to-[#0a0a1a]">
       <div className="sticky top-0 z-10 bg-[#0a0a1a]/95 backdrop-blur-sm border-b border-gray-800">
-        <div className="max-w-4xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/">
               <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
@@ -370,7 +370,7 @@ export default function CollectionPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 space-y-6">
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-2">
@@ -424,14 +424,14 @@ export default function CollectionPage() {
                 </div>
 
                 {nftsLoading ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {[...Array(3)].map((_, i) => (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+                    {[...Array(5)].map((_, i) => (
                       <Skeleton key={i} className="aspect-[3/4] bg-gray-800 rounded-lg" />
                     ))}
                   </div>
                 ) : nftTab === "owned" ? (
                   ownedNfts.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                       {ownedNfts.map((nft: OwnedNft) => (
                         <NftCard key={nft.tokenId} nft={nft} onClick={() => setSelectedNft(nft)} />
                       ))}
@@ -449,7 +449,7 @@ export default function CollectionPage() {
                   )
                 ) : (
                   soldNfts.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                       {soldNfts.map((nft: OwnedNft) => (
                         <NftCard key={nft.tokenId} nft={nft} onClick={() => setSelectedNft(nft)} />
                       ))}
@@ -472,13 +472,13 @@ export default function CollectionPage() {
         <section>
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Stats Overview</h2>
           {isLoading ? (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
               {[...Array(4)].map((_, i) => (
                 <Skeleton key={i} className="h-20 bg-gray-800" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
               <StatCard 
                 icon={Package} 
                 label="Lootboxes Opened" 
@@ -549,13 +549,13 @@ export default function CollectionPage() {
             Collected Items ({filteredItems.length})
           </h2>
           {isLoading ? (
-            <div className="grid grid-cols-2 gap-3">
-              {[...Array(6)].map((_, i) => (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+              {[...Array(5)].map((_, i) => (
                 <Skeleton key={i} className="h-36 bg-gray-800" />
               ))}
             </div>
           ) : filteredItems.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
               {filteredItems.map((item: CollectionItem) => (
                 <CollectionItemCard key={`${item.id}-${item.claimedAt}`} item={item} />
               ))}
