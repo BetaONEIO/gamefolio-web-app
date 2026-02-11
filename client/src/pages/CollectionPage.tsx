@@ -121,15 +121,7 @@ function NftCard({ nft, onClick }: { nft: OwnedNft; onClick: () => void }) {
       className={`rounded-2xl overflow-hidden cursor-pointer transition-all duration-200 hover:scale-[1.03] ${styles.bg} ${styles.glow} ${nft.sold ? 'opacity-50 grayscale' : ''}`}
       onClick={onClick}
     >
-      <div className="p-3 pb-1">
-        <h3 className={`text-sm font-bold truncate ${styles.nameColor}`}>{nft.name}</h3>
-        <div className="flex items-center gap-1.5 mt-1">
-          <div className={`w-2 h-2 rounded-full ${styles.dotColor}`} />
-          <span className={`text-[11px] uppercase tracking-tight ${styles.textStyle}`}>{rarity}</span>
-        </div>
-      </div>
-
-      <div className="relative mt-1">
+      <div className="relative">
         <div className="aspect-square overflow-hidden">
           {nft.image && !imgFailed ? (
             <img
@@ -154,6 +146,14 @@ function NftCard({ nft, onClick }: { nft: OwnedNft; onClick: () => void }) {
             <span className="text-white/90 font-bold text-lg uppercase tracking-wider rotate-[-15deg]">SOLD</span>
           </div>
         )}
+      </div>
+
+      <div className="p-3 pt-2">
+        <h3 className={`text-sm font-bold truncate ${styles.nameColor}`}>{nft.name}</h3>
+        <div className="flex items-center gap-1.5 mt-1">
+          <div className={`w-2 h-2 rounded-full ${styles.dotColor}`} />
+          <span className={`text-[11px] uppercase tracking-tight ${styles.textStyle}`}>{rarity}</span>
+        </div>
       </div>
     </div>
   );

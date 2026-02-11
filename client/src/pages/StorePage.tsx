@@ -1218,40 +1218,33 @@ export default function StorePage() {
               </h3>
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 mb-8">
                 {marketplaceData.listings.map((listing: MarketplaceListing) => (
-                  <Card
+                  <div
                     key={`marketplace-${listing.token_id}-${listing.user_id}`}
-                    className="bg-gray-800/50 border-gray-700 overflow-hidden transition-all hover:shadow-lg hover:border-orange-400 hover:shadow-orange-400/20"
+                    className="rounded-2xl overflow-hidden bg-slate-900 transition-all duration-200 hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(249,115,22,0.3)]"
                   >
-                    <div className="relative aspect-square overflow-hidden bg-gray-900">
-                      <img
-                        src={`/api/nft/metadata/${listing.token_id}`}
-                        alt={`Genesis #${listing.token_id}`}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300 hidden"
-                      />
+                    <div className="relative aspect-square overflow-hidden">
                       <MarketplaceNftImage tokenId={listing.token_id} />
                       <div className="absolute top-2 left-2 bg-orange-500/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
                         Resale
                       </div>
+                      <div className="absolute top-2 right-2 backdrop-blur-md bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5">
+                        <span className="text-[10px] font-bold text-green-400">#{listing.token_id}</span>
+                      </div>
                     </div>
                     
-                    <div className="p-2 space-y-1.5">
-                      <div>
-                        <h3 className="font-semibold text-xs line-clamp-1">Genesis #{listing.token_id}</h3>
-                        <p className="text-[10px] text-gray-400">by {listing.display_name || listing.username}</p>
-                      </div>
+                    <div className="p-3 pt-2">
+                      <h3 className="font-bold text-sm text-slate-50 truncate">Genesis #{listing.token_id}</h3>
+                      <p className="text-[11px] text-slate-400 mt-0.5">by {listing.display_name || listing.username}</p>
                       
-                      <div className="flex items-center justify-between pt-1.5 border-t border-gray-700">
-                        <div>
-                          <p className="text-[9px] text-gray-500">Price</p>
-                          <div className="flex items-center gap-0.5">
-                            <img src={gfTokenLogo} alt="GF" className="w-3 h-3" />
-                            <span className="text-xs font-bold text-orange-400">{listing.listed_price}</span>
-                          </div>
+                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800">
+                        <div className="flex items-center gap-1">
+                          <img src={gfTokenLogo} alt="GF" className="w-3.5 h-3.5" />
+                          <span className="text-sm font-bold text-orange-400">{listing.listed_price}</span>
                         </div>
                         <Button
                           size="sm"
                           disabled={buyingTokenId === listing.token_id || listing.user_id === user?.id}
-                          className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-[10px] h-6 px-2 disabled:opacity-50"
+                          className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-[10px] h-7 px-3 rounded-xl disabled:opacity-50"
                           onClick={() => {
                             setBuyingTokenId(listing.token_id);
                             buyMarketplaceNftMutation.mutate({ tokenId: listing.token_id, sellerId: listing.user_id });
@@ -1270,7 +1263,7 @@ export default function StorePage() {
                         </Button>
                       </div>
                     </div>
-                  </Card>
+                  </div>
                 ))}
               </div>
               </>
