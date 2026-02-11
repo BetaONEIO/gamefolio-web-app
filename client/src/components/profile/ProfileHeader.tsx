@@ -57,7 +57,7 @@ const ProfileHeader = ({
 }: ProfileHeaderProps) => {
   const { user } = useAuth();
   const { isOpen, actionType, openDialog, closeDialog } = useJoinDialog();
-  const [nftPopup, setNftPopup] = useState<{ userId: number; tokenId: number; imageUrl: string } | null>(null);
+  const [nftPopup, setNftPopup] = useState<{ userId: number; tokenId: number; imageUrl: string; anchorRect: DOMRect | null } | null>(null);
 
   const { data: nameTagData } = useQuery<{ nameTag: NameTag | null }>({
     queryKey: ['/api/user', profile.id, 'name-tag'],
@@ -132,7 +132,10 @@ const ProfileHeader = ({
               className="shadow-lg"
               borderIntensity="strong"
               showAvatarBorderOverlay={true}
-              onNftClick={(userId, tokenId, imageUrl) => setNftPopup({ userId, tokenId, imageUrl })}
+              onNftClick={(userId, tokenId, imageUrl, event) => {
+                const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+                setNftPopup({ userId, tokenId, imageUrl, anchorRect: rect });
+              }}
             />
             
             {/* Collections Tab */}
@@ -366,6 +369,7 @@ const ProfileHeader = ({
           tokenId={nftPopup.tokenId}
           imageUrl={nftPopup.imageUrl}
           onClose={() => setNftPopup(null)}
+          anchorRect={nftPopup.anchorRect}
         />
       )}
     </div>

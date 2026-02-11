@@ -250,7 +250,7 @@ interface CustomAvatarProps {
   showBorder?: boolean;
   borderIntensity?: "subtle" | "normal" | "strong";
   showAvatarBorderOverlay?: boolean;
-  onNftClick?: (userId: number, tokenId: number, imageUrl: string) => void;
+  onNftClick?: (userId: number, tokenId: number, imageUrl: string, event: React.MouseEvent) => void;
 }
 
 const sizeClasses = {
@@ -304,6 +304,7 @@ export const CustomAvatar = ({
   
   const hasNftProfile = !!(user?.nftProfileTokenId && user?.nftProfileImageUrl);
   const [showNftPopup, setShowNftPopup] = useState(false);
+  const [nftAnchorRect, setNftAnchorRect] = useState<DOMRect | null>(null);
   
   // Get signed URL for avatar (private bucket)
   const { signedUrl: avatarSignedUrl } = useSignedUrl(user?.avatarUrl);
@@ -322,8 +323,10 @@ export const CustomAvatar = ({
     const handleNftAvatarClick = (e: React.MouseEvent) => {
       e.stopPropagation();
       if (onNftClick && user?.id && user?.nftProfileTokenId) {
-        onNftClick(user.id, user.nftProfileTokenId, user.nftProfileImageUrl || '');
+        onNftClick(user.id, user.nftProfileTokenId, user.nftProfileImageUrl || '', e);
       } else if (user?.id && user?.nftProfileTokenId) {
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setNftAnchorRect(rect);
         setShowNftPopup(true);
       }
     };
@@ -354,7 +357,8 @@ export const CustomAvatar = ({
           userId={user.id}
           tokenId={user.nftProfileTokenId}
           imageUrl={user.nftProfileImageUrl || ''}
-          onClose={() => setShowNftPopup(false)}
+          onClose={() => { setShowNftPopup(false); setNftAnchorRect(null); }}
+          anchorRect={nftAnchorRect}
         />
       )}
       </>

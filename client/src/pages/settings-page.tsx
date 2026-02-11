@@ -375,6 +375,7 @@ export default function SettingsPage() {
   const [profilePicTab, setProfilePicTab] = useState<'upload' | 'nft'>('upload');
   const [showNftSelector, setShowNftSelector] = useState(false);
   const [showNftPopup, setShowNftPopup] = useState(false);
+  const [nftAnchorRect, setNftAnchorRect] = useState<DOMRect | null>(null);
   const [nftPreview, setNftPreview] = useState<{ tokenId: number; image: string; name: string } | null>(null);
   const [viewingNftDetail, setViewingNftDetail] = useState<any>(null);
   const [selectedPreviousAvatar, setSelectedPreviousAvatar] = useState<string | null>(null);
@@ -1246,8 +1247,10 @@ export default function SettingsPage() {
                                   ? 'border-green-500/40 shadow-[0_0_20px_rgba(74,222,128,0.15)] hover:shadow-[0_0_25px_rgba(74,222,128,0.25)]'
                                   : 'border-slate-600 opacity-40 grayscale hover:opacity-60'
                               }`}
-                              onClick={() => {
+                              onClick={(e) => {
                                 if ((user as any)?.nftProfileTokenId) {
+                                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                  setNftAnchorRect(rect);
                                   setShowNftPopup(true);
                                 } else {
                                   setShowNftSelector(true);
@@ -2166,7 +2169,8 @@ export default function SettingsPage() {
           userId={user.id}
           tokenId={(user as any).nftProfileTokenId}
           imageUrl={(user as any)?.nftProfileImageUrl}
-          onClose={() => setShowNftPopup(false)}
+          onClose={() => { setShowNftPopup(false); setNftAnchorRect(null); }}
+          anchorRect={nftAnchorRect}
         />
       )}
 
