@@ -30,7 +30,7 @@ import Cropper from "react-easy-crop";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import DOMPurify from "dompurify";
-import { useSignedUrl } from "@/hooks/use-signed-url";
+import { useSignedUrl, useSignedUrls } from "@/hooks/use-signed-url";
 import type { NameTag } from "@shared/schema";
 import { KeyboardAvoidingWrapper } from "@/components/shared/KeyboardAvoidingWrapper";
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
@@ -617,6 +617,14 @@ export default function SettingsPage() {
     enabled: !!user,
   });
 
+  const { signedUrl: signedAvatarUrl } = useSignedUrl(user?.avatarUrl);
+  const { signedUrl: signedSelectedPrevAvatar } = useSignedUrl(selectedPreviousAvatar);
+  const previousAvatarUrls = React.useMemo(
+    () => (previousAvatarsData?.avatars || []).map(a => a.avatarUrl),
+    [previousAvatarsData]
+  );
+  const { getSignedUrl: getPrevAvatarSignedUrl } = useSignedUrls(previousAvatarUrls);
+
   const setNftProfileMutation = useMutation({
     mutationFn: async ({ tokenId, imageUrl }: { tokenId: number | null; imageUrl?: string }) => {
       const res = await apiRequest('POST', '/api/nft/set-profile-picture', { tokenId, imageUrl });
@@ -1025,11 +1033,11 @@ export default function SettingsPage() {
                               className="h-32 w-32 rounded-full overflow-hidden z-10"
                             >
                               <img 
-                                src={avatarPreview || selectedPreviousAvatar || user?.avatarUrl || ''} 
+                                src={avatarPreview || signedSelectedPrevAvatar || signedAvatarUrl || ''} 
                                 alt={user?.displayName || 'Profile'}
                                 className="w-full h-full object-cover rounded-full"
                               />
-                              {!(avatarPreview || selectedPreviousAvatar || user?.avatarUrl) && (
+                              {!(avatarPreview || signedSelectedPrevAvatar || signedAvatarUrl) && (
                                 <div className="w-full h-full flex items-center justify-center bg-primary/20 text-3xl font-bold rounded-full">
                                   {user?.displayName?.charAt(0) || '?'}
                                 </div>
@@ -1129,7 +1137,7 @@ export default function SettingsPage() {
                                   }`}
                                 >
                                   <img
-                                    src={prev.avatarUrl}
+                                    src={getPrevAvatarSignedUrl(prev.avatarUrl) || prev.avatarUrl}
                                     alt="Previous avatar"
                                     className="w-full h-full object-cover"
                                   />
@@ -1246,11 +1254,11 @@ export default function SettingsPage() {
                         className="h-32 w-32 rounded-full overflow-hidden z-10"
                       >
                         <img 
-                          src={avatarPreview || profileData.avatarUrl || ""} 
+                          src={avatarPreview || signedAvatarUrl || ""} 
                           alt="Preview" 
                           className="w-full h-full object-cover rounded-full"
                         />
-                        {!(avatarPreview || profileData.avatarUrl) && (
+                        {!(avatarPreview || signedAvatarUrl) && (
                           <div className="w-full h-full flex items-center justify-center bg-primary/20 text-foreground font-semibold text-xl rounded-full">
                             {user?.username?.substring(0, 2).toUpperCase() || "U"}
                           </div>
