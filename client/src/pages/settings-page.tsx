@@ -375,6 +375,7 @@ export default function SettingsPage() {
   const [showNftSelector, setShowNftSelector] = useState(false);
   const [nftPreview, setNftPreview] = useState<{ tokenId: number; image: string; name: string } | null>(null);
   const [viewingNftDetail, setViewingNftDetail] = useState<any>(null);
+  const [selectedPreviousAvatar, setSelectedPreviousAvatar] = useState<string | null>(null);
   
   // Name tag state - undefined means no pending change, null means remove tag, number means select tag
   const [pendingNameTagId, setPendingNameTagId] = useState<number | null | undefined>(undefined);
@@ -474,6 +475,7 @@ export default function SettingsPage() {
     profileData.profileBackgroundTheme !== ((user as any)?.profileBackgroundTheme || "default") ||
     profileData.profileBackgroundAnimation !== ((user as any)?.profileBackgroundAnimation || "none") ||
     avatarFile !== null ||
+    selectedPreviousAvatar !== null ||
     (pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId);
   
   // Debug logging
@@ -607,6 +609,12 @@ export default function SettingsPage() {
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user,
     staleTime: 30000,
+  });
+
+  const { data: previousAvatarsData } = useQuery<{ avatars: Array<{ id: number; avatarUrl: string; createdAt: string }> }>({
+    queryKey: ['/api/user/previous-avatars'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!user,
   });
 
   const setNftProfileMutation = useMutation({
@@ -765,8 +773,9 @@ export default function SettingsPage() {
   const handleSave = async () => {
     try {
       let updatedData = { ...profileData };
+      let newAvatarUrl: string | null = null;
 
-      // Upload new avatar if selected
+      // Upload new avatar if a file is selected
       if (avatarFile) {
         setUploadingAvatar(true);
         const formData = new FormData();
@@ -782,25 +791,38 @@ export default function SettingsPage() {
         }
 
         const uploadResult = await response.json();
-        updatedData.avatarUrl = uploadResult.avatarUrl;
+        newAvatarUrl = uploadResult.avatarUrl;
+        updatedData.avatarUrl = newAvatarUrl!;
         
-        // Reset avatar upload state
         setAvatarFile(null);
         setAvatarPreview('');
         setUploadingAvatar(false);
+      } else if (selectedPreviousAvatar) {
+        newAvatarUrl = selectedPreviousAvatar;
+        updatedData.avatarUrl = selectedPreviousAvatar;
+      }
+
+      // Save current avatar to history before replacing
+      if (newAvatarUrl && user?.avatarUrl && user.avatarUrl !== newAvatarUrl) {
+        try {
+          await apiRequest("POST", "/api/user/previous-avatars", { avatarUrl: user.avatarUrl });
+        } catch (e) {
+          console.warn("Failed to save previous avatar to history:", e);
+        }
       }
 
       // Save name tag selection if changed
       if (pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId) {
         await apiRequest("PUT", "/api/user/name-tag", { nameTagId: pendingNameTagId });
         await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-        // Also invalidate the profile's name tag query so it updates on the profile page
         if (user?.id) {
           await queryClient.invalidateQueries({ queryKey: ['/api/user', user.id, 'name-tag'] });
         }
       }
 
       updateProfileMutation.mutate(updatedData);
+      setSelectedPreviousAvatar(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/user/previous-avatars'] });
     } catch (error) {
       setUploadingAvatar(false);
       toast({
@@ -974,90 +996,140 @@ export default function SettingsPage() {
                   </div>
 
                   {profilePicTab === 'upload' && (
-                    <div className="flex flex-col md:flex-row md:items-start space-y-4 md:space-y-0 md:space-x-6">
-                      <div className="flex flex-col items-center space-y-3">
-                        <div 
-                          className="relative h-48 w-48 flex items-center justify-center"
-                        >
+                    <div className="space-y-5">
+                      <div className="flex flex-col md:flex-row md:items-start space-y-4 md:space-y-0 md:space-x-6">
+                        <div className="flex flex-col items-center space-y-3">
                           <div 
-                            className="h-32 w-32 rounded-full overflow-hidden z-10"
+                            className="relative h-48 w-48 flex items-center justify-center"
                           >
-                            <img 
-                              src={avatarPreview || user?.avatarUrl || ''} 
-                              alt={user?.displayName || 'Profile'}
-                              className="w-full h-full object-cover rounded-full"
-                            />
-                            {!(avatarPreview || user?.avatarUrl) && (
-                              <div className="w-full h-full flex items-center justify-center bg-primary/20 text-3xl font-bold rounded-full">
-                                {user?.displayName?.charAt(0) || '?'}
-                              </div>
-                            )}
-                          </div>
-                          {selectedBorderId && avatarBorders && (() => {
-                            const border = (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId);
-                            if (!border) return null;
-                            
-                            return (
-                              <InlineSvgBorder
-                                svgUrl={border.imageUrl}
-                                color={avatarBorderColor}
-                                className="absolute inset-0 pointer-events-none [&>svg]:w-full [&>svg]:h-full"
-                                style={{ zIndex: 5 }}
+                            <div 
+                              className="h-32 w-32 rounded-full overflow-hidden z-10"
+                            >
+                              <img 
+                                src={avatarPreview || selectedPreviousAvatar || user?.avatarUrl || ''} 
+                                alt={user?.displayName || 'Profile'}
+                                className="w-full h-full object-cover rounded-full"
                               />
-                            );
-                          })()}
+                              {!(avatarPreview || selectedPreviousAvatar || user?.avatarUrl) && (
+                                <div className="w-full h-full flex items-center justify-center bg-primary/20 text-3xl font-bold rounded-full">
+                                  {user?.displayName?.charAt(0) || '?'}
+                                </div>
+                              )}
+                            </div>
+                            {selectedBorderId && avatarBorders && (() => {
+                              const border = (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId);
+                              if (!border) return null;
+                              
+                              return (
+                                <InlineSvgBorder
+                                  svgUrl={border.imageUrl}
+                                  color={avatarBorderColor}
+                                  className="absolute inset-0 pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+                                  style={{ zIndex: 5 }}
+                                />
+                              );
+                            })()}
+                          </div>
+                          <div className="text-center">
+                            <span className="text-sm font-medium">
+                              {avatarFile ? 'New Preview' : selectedPreviousAvatar ? 'Selected' : 'Current'}
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-center">
-                          <span className="text-sm font-medium">
-                            {avatarFile ? 'New Preview' : 'Current'}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex-1 space-y-3">
-                        <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            size="sm"
-                            className="relative"
-                            onClick={() => document.getElementById('avatar-upload')?.click()}
-                            disabled={uploadingAvatar}
-                          >
-                            <Camera className="h-4 w-4 mr-2" />
-                            {uploadingAvatar ? 'Uploading...' : avatarFile ? 'Change Picture' : 'Upload Picture'}
-                          </Button>
-                          
-                          {avatarFile && !uploadingAvatar && (
+                        
+                        <div className="flex-1 space-y-3">
+                          <div className="flex flex-wrap gap-2 justify-center md:justify-start">
                             <Button 
                               type="button" 
-                              variant="ghost"
+                              variant="outline" 
                               size="sm"
-                              onClick={() => {
-                                setAvatarFile(null);
-                                setAvatarPreview('');
-                              }}
+                              className="relative"
+                              onClick={() => document.getElementById('avatar-upload')?.click()}
+                              disabled={uploadingAvatar}
                             >
-                              Cancel
+                              <Camera className="h-4 w-4 mr-2" />
+                              {uploadingAvatar ? 'Uploading...' : avatarFile ? 'Change Picture' : 'Upload Picture'}
                             </Button>
-                          )}
-                        </div>
-                        
-                        <input
-                          id="avatar-upload"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleAvatarChange}
-                          className="hidden"
-                        />
-                        
-                        <div className="text-xs text-muted-foreground space-y-1">
-                          <div>• Recommended: 400x400 pixels or larger</div>
-                          <div>• Square images work best</div>
-                          <div>• Maximum file size: 5MB</div>
-                          <div>• Supported formats: JPG, PNG, GIF</div>
+                            
+                            {(avatarFile || selectedPreviousAvatar) && !uploadingAvatar && (
+                              <Button 
+                                type="button" 
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setAvatarFile(null);
+                                  setAvatarPreview('');
+                                  setSelectedPreviousAvatar(null);
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                            )}
+                          </div>
+                          
+                          <input
+                            id="avatar-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleAvatarChange}
+                            className="hidden"
+                          />
+                          
+                          <div className="text-xs text-muted-foreground space-y-1">
+                            <div>• Recommended: 400x400 pixels or larger</div>
+                            <div>• Square images work best</div>
+                            <div>• Maximum file size: 5MB</div>
+                            <div>• Supported formats: JPG, PNG, GIF</div>
+                          </div>
                         </div>
                       </div>
+
+                      {previousAvatarsData?.avatars && previousAvatarsData.avatars.length > 0 && (
+                        <div className="space-y-3 pt-3 border-t border-slate-700/50">
+                          <Label className="text-sm font-medium text-muted-foreground">Previously Uploaded</Label>
+                          <div className="flex flex-wrap gap-3">
+                            {previousAvatarsData.avatars.map((prev) => {
+                              const isActive = selectedPreviousAvatar === prev.avatarUrl;
+                              const isCurrent = user?.avatarUrl === prev.avatarUrl;
+                              return (
+                                <button
+                                  key={prev.id}
+                                  type="button"
+                                  onClick={() => {
+                                    if (isCurrent) return;
+                                    setSelectedPreviousAvatar(prev.avatarUrl);
+                                    setAvatarFile(null);
+                                    setAvatarPreview('');
+                                  }}
+                                  className={`relative w-16 h-16 rounded-full overflow-hidden border-2 transition-all ${
+                                    isActive
+                                      ? 'border-primary ring-2 ring-primary/30 scale-105'
+                                      : isCurrent
+                                        ? 'border-green-500/40 opacity-60 cursor-default'
+                                        : 'border-slate-700 hover:border-slate-500 hover:scale-105'
+                                  }`}
+                                >
+                                  <img
+                                    src={prev.avatarUrl}
+                                    alt="Previous avatar"
+                                    className="w-full h-full object-cover"
+                                  />
+                                  {isCurrent && (
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                      <Check className="h-4 w-4 text-green-400" />
+                                    </div>
+                                  )}
+                                  {isActive && (
+                                    <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                                      <Check className="h-4 w-4 text-primary" />
+                                    </div>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 

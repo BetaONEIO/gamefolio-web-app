@@ -1395,3 +1395,12 @@ export const insertHeroSlideSchema = createInsertSchema(heroSlides).omit({
 });
 export type InsertHeroSlide = z.infer<typeof insertHeroSlideSchema>;
 export type HeroSlide = typeof heroSlides.$inferSelect;
+
+export const previousAvatars = pgTable("previous_avatars", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  avatarUrl: text("avatar_url").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type PreviousAvatar = typeof previousAvatars.$inferSelect;

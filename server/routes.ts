@@ -20,7 +20,7 @@ import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
 import { eq, sql } from "drizzle-orm";
 import { db } from "./db";
-import { users, nameTags, profileBorders, storeItems, heroSlides } from "@shared/schema";
+import { users, nameTags, profileBorders, storeItems, heroSlides, previousAvatars } from "@shared/schema";
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -6256,6 +6256,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Error fetching user avatar border:", err);
       return res.status(500).json({ message: "Error fetching user avatar border" });
+    }
+  });
+
+  // ==========================================
+  // Previous Avatars Routes
+  // ==========================================
+
+  app.post("/api/user/previous-avatars", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    try {
+      const { avatarUrl } = req.body;
+      if (!avatarUrl) return res.status(400).json({ message: "avatarUrl required" });
+
+      const existing = await db.select()
+        .from(previousAvatars)
+        .where(sql`${previousAvatars.userId} = ${req.user!.id} AND ${previousAvatars.avatarUrl} = ${avatarUrl}`)
+        .limit(1);
+      if (existing.length === 0) {
+        await db.insert(previousAvatars).values({ userId: req.user!.id, avatarUrl });
+      }
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error saving previous avatar:", err);
+      res.status(500).json({ message: "Failed to save previous avatar" });
+    }
+  });
+
+  app.get("/api/user/previous-avatars", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    try {
+      const avatars = await db.select()
+        .from(previousAvatars)
+        .where(eq(previousAvatars.userId, req.user!.id))
+        .orderBy(sql`${previousAvatars.createdAt} DESC`)
+        .limit(20);
+      res.json({ avatars });
+    } catch (err) {
+      console.error("Error fetching previous avatars:", err);
+      res.status(500).json({ message: "Failed to fetch previous avatars" });
+    }
+  });
+
+  app.delete("/api/user/previous-avatars/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    try {
+      const avatarId = parseInt(req.params.id);
+      await db.delete(previousAvatars)
+        .where(sql`${previousAvatars.id} = ${avatarId} AND ${previousAvatars.userId} = ${req.user!.id}`);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error deleting previous avatar:", err);
+      res.status(500).json({ message: "Failed to delete previous avatar" });
     }
   });
 

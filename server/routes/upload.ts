@@ -1082,11 +1082,6 @@ router.post('/avatar', fullAccessMiddleware, avatarUpload.single('file'), async 
       if (err) console.warn('Could not delete temp avatar file:', err);
     });
 
-    // Update user's avatar URL in database
-    await storage.updateUser(req.user!.id, {
-      avatarUrl: uploadResult.url
-    });
-
     res.json({
       success: true,
       avatarUrl: uploadResult.url,
