@@ -1071,10 +1071,34 @@ export default function SettingsPage() {
                               );
                             })()}
                           </div>
-                          <div className="text-center">
+                          <div className="text-center flex flex-col items-center gap-1">
                             <span className="text-sm font-medium">
                               {avatarFile ? 'New Preview' : selectedPreviousAvatar ? 'Selected' : 'Current'}
                             </span>
+                            {!avatarFile && !selectedPreviousAvatar && !!(user as any)?.avatarUrl && !(user as any)?.nftProfileTokenId && (
+                              <button
+                                type="button"
+                                className="group px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400 transition-colors"
+                                onClick={async () => {
+                                  try {
+                                    await apiRequest("PATCH", `/api/users/${user?.id}`, { avatarUrl: null });
+                                    queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+                                    queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
+                                    queryClient.invalidateQueries({ queryKey: ["/api/comments"] });
+                                    queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+                                    queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+                                    queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
+                                    queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+                                    toast({ title: "Profile picture deactivated", description: "Your uploaded profile picture has been removed." });
+                                  } catch (e: any) {
+                                    toast({ title: "Failed", description: e.message || "Something went wrong", variant: "destructive" });
+                                  }
+                                }}
+                              >
+                                <span className="group-hover:hidden">Active</span>
+                                <span className="hidden group-hover:inline">Deactivate</span>
+                              </button>
+                            )}
                           </div>
                         </div>
                         
