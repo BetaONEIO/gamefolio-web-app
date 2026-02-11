@@ -1125,79 +1125,67 @@ export default function SettingsPage() {
                         </div>
                       </div>
 
-                      {!!(user as any)?.avatarUrl && !(user as any)?.nftProfileTokenId && (
-                        <div className="flex items-center gap-3 p-3 rounded-lg border border-green-500/30 bg-green-500/5">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-green-400">Uploaded Profile Picture Active</p>
-                            <p className="text-xs text-muted-foreground">Your uploaded photo is displayed as your profile picture across the platform.</p>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="text-red-400 border-red-500/30 hover:bg-red-500/10"
-                            onClick={async () => {
-                              try {
-                                await apiRequest("PATCH", `/api/users/${user?.id}`, { avatarUrl: null });
-                                queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-                                queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
-                                queryClient.invalidateQueries({ queryKey: ["/api/comments"] });
-                                queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
-                                queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
-                                queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
-                                queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-                                toast({ title: "Profile picture deactivated", description: "Your uploaded profile picture has been removed." });
-                              } catch (e: any) {
-                                toast({ title: "Failed", description: e.message || "Something went wrong", variant: "destructive" });
-                              }
-                            }}
-                          >
-                            Deactivate
-                          </Button>
-                        </div>
-                      )}
-
                       {previousAvatarsData?.avatars && previousAvatarsData.avatars.length > 0 && (
                         <div className="space-y-3 pt-3 border-t border-slate-700/50">
                           <Label className="text-sm font-medium text-muted-foreground">Previously Uploaded</Label>
                           <div className="flex flex-wrap gap-3">
                             {previousAvatarsData.avatars.map((prev) => {
-                              const isActive = selectedPreviousAvatar === prev.avatarUrl;
-                              const isCurrent = user?.avatarUrl === prev.avatarUrl;
+                              const isSelected = selectedPreviousAvatar === prev.avatarUrl;
+                              const isCurrent = user?.avatarUrl === prev.avatarUrl && !(user as any)?.nftProfileTokenId;
                               return (
-                                <button
-                                  key={prev.id}
-                                  type="button"
-                                  onClick={() => {
-                                    if (isCurrent) return;
-                                    setSelectedPreviousAvatar(prev.avatarUrl);
-                                    setAvatarFile(null);
-                                    setAvatarPreview('');
-                                  }}
-                                  className={`relative w-16 h-16 rounded-full overflow-hidden border-2 transition-all ${
-                                    isActive
-                                      ? 'border-primary ring-2 ring-primary/30 scale-105'
-                                      : isCurrent
-                                        ? 'border-green-500/40 opacity-60 cursor-default'
-                                        : 'border-slate-700 hover:border-slate-500 hover:scale-105'
-                                  }`}
-                                >
-                                  <img
-                                    src={getPrevAvatarSignedUrl(prev.avatarUrl) || prev.avatarUrl}
-                                    alt="Previous avatar"
-                                    className="w-full h-full object-cover"
-                                  />
-                                  {isCurrent && (
-                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                      <Check className="h-4 w-4 text-green-400" />
-                                    </div>
-                                  )}
-                                  {isActive && (
-                                    <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                                      <Check className="h-4 w-4 text-primary" />
-                                    </div>
-                                  )}
-                                </button>
+                                <div key={prev.id} className="flex flex-col items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (isCurrent) return;
+                                      setSelectedPreviousAvatar(prev.avatarUrl);
+                                      setAvatarFile(null);
+                                      setAvatarPreview('');
+                                    }}
+                                    className={`relative w-16 h-16 rounded-full overflow-hidden border-2 transition-all ${
+                                      isSelected
+                                        ? 'border-primary ring-2 ring-primary/30 scale-105'
+                                        : isCurrent
+                                          ? 'border-green-500 ring-2 ring-green-500/30'
+                                          : 'border-slate-700 hover:border-slate-500 hover:scale-105'
+                                    }`}
+                                  >
+                                    <img
+                                      src={getPrevAvatarSignedUrl(prev.avatarUrl) || prev.avatarUrl}
+                                      alt="Previous avatar"
+                                      className="w-full h-full object-cover"
+                                    />
+                                    {isSelected && !isCurrent && (
+                                      <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                                        <Check className="h-4 w-4 text-primary" />
+                                      </div>
+                                    )}
+                                  </button>
+                                  {isCurrent ? (
+                                    <button
+                                      type="button"
+                                      className="group px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400 transition-colors"
+                                      onClick={async () => {
+                                        try {
+                                          await apiRequest("PATCH", `/api/users/${user?.id}`, { avatarUrl: null });
+                                          queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+                                          queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
+                                          queryClient.invalidateQueries({ queryKey: ["/api/comments"] });
+                                          queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+                                          queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+                                          queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
+                                          queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+                                          toast({ title: "Profile picture deactivated", description: "Your uploaded profile picture has been removed." });
+                                        } catch (e: any) {
+                                          toast({ title: "Failed", description: e.message || "Something went wrong", variant: "destructive" });
+                                        }
+                                      }}
+                                    >
+                                      <span className="group-hover:hidden">Active</span>
+                                      <span className="hidden group-hover:inline">Deactivate</span>
+                                    </button>
+                                  ) : null}
+                                </div>
                               );
                             })}
                           </div>
@@ -1240,27 +1228,27 @@ export default function SettingsPage() {
                               {previewName || 'Preview'}
                             </span>
                           </div>
+                          {(user as any)?.nftProfileTokenId && (
+                            <button
+                              type="button"
+                              className="group px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400 transition-colors"
+                              onClick={() => setNftProfileMutation.mutate({ tokenId: null })}
+                              disabled={setNftProfileMutation.isPending}
+                            >
+                              {setNftProfileMutation.isPending ? (
+                                <Loader2 className="h-3 w-3 animate-spin inline" />
+                              ) : (
+                                <>
+                                  <span className="group-hover:hidden">Active</span>
+                                  <span className="hidden group-hover:inline">Deactivate</span>
+                                </>
+                              )}
+                            </button>
+                          )}
                         </div>
 
                         <div className="flex-1 space-y-3">
-                          {(user as any)?.nftProfileTokenId ? (
-                            <div className="flex items-center gap-3 p-3 rounded-lg border border-green-500/30 bg-green-500/5">
-                              <div className="flex-1">
-                                <p className="text-sm font-medium text-green-400">NFT Profile Picture Active</p>
-                                <p className="text-xs text-muted-foreground">Your NFT is displayed as your profile picture across the platform.</p>
-                              </div>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="text-red-400 border-red-500/30 hover:bg-red-500/10"
-                                onClick={() => setNftProfileMutation.mutate({ tokenId: null })}
-                                disabled={setNftProfileMutation.isPending}
-                              >
-                                {setNftProfileMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Deactivate'}
-                              </Button>
-                            </div>
-                          ) : (
+                          {!(user as any)?.nftProfileTokenId && (
                             <p className="text-sm text-muted-foreground">Select an NFT from your collection to use as your profile picture. Your NFT will be displayed as a square image with rounded corners.</p>
                           )}
                           <Button
