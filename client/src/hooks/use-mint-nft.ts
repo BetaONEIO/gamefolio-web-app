@@ -140,12 +140,16 @@ export function useMintNFT(fallbackAddress?: string | null) {
 
   useEffect(() => {
     if (effectiveAddress && publicClient) {
-      checkAllowance();
+      if (useServerSigning) {
+        setAllowanceState('approved');
+      } else {
+        checkAllowance();
+      }
       fetchOnChainData();
     } else {
       setAllowanceState('none');
     }
-  }, [effectiveAddress, publicClient, checkAllowance, fetchOnChainData]);
+  }, [effectiveAddress, publicClient, checkAllowance, fetchOnChainData, useServerSigning]);
 
   useEffect(() => {
     if (useServerSigning) {
@@ -231,6 +235,7 @@ export function useMintNFT(fallbackAddress?: string | null) {
         setMintResult(result);
         setMintTxState('confirmed');
         await fetchOnChainData();
+        await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
         return result;
       } else {
         throw new Error(data.error || 'Mint failed');

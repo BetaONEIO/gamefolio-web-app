@@ -13,7 +13,7 @@ import {
   NFT_CONTRACT_ADDRESS,
 } from '../../shared/contracts';
 import { encryptPrivateKey } from '../wallet-crypto';
-import { writeContractWithPoW, publicClient } from '../skale-pow';
+import { writeContractWithPoW, writeContractWithPoWFromRawKey, publicClient } from '../skale-pow';
 
 const router = Router();
 
@@ -191,20 +191,34 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (!user.encryptedPrivateKey) {
+    if (!user.walletAddress) {
       return res.status(400).json({
-        error: 'No signing key available',
-        code: 'MISSING_PRIVATE_KEY',
-        message: 'Your wallet does not have a signing key. Please regenerate your wallet.',
+        error: 'No wallet available',
+        message: 'Please create a wallet first.',
       });
     }
 
-    const hash = await writeContractWithPoW({
-      encryptedPrivateKey: user.encryptedPrivateKey,
+    const totalCost = quantity * MINT_CONFIG.pricePerMint;
+    const currentBalance = user.gfTokenBalance || 0;
+    if (currentBalance < totalCost) {
+      return res.status(400).json({
+        error: `Insufficient GF balance. Need ${totalCost} GF but you have ${currentBalance} GF.`,
+      });
+    }
+
+    const treasuryKey = process.env.TREASURY_WALLET_PRIVATE_KEY;
+    if (!treasuryKey) {
+      return res.status(500).json({ error: 'Treasury wallet not configured' });
+    }
+
+    console.log(`🪙 Minting ${quantity} NFT(s) for user ${userId} (${user.walletAddress}) via treasury. Cost: ${totalCost} GF`);
+
+    const hash = await writeContractWithPoWFromRawKey({
+      privateKeyRaw: treasuryKey,
       contractAddress: MINT_SALE_ADDRESS as Address,
       abi: MINT_SALE_ABI,
-      functionName: 'buy',
-      args: [BigInt(quantity)],
+      functionName: 'mint',
+      args: [user.walletAddress as Address, BigInt(quantity)],
     });
 
     const receipt = await publicClient.waitForTransactionReceipt({
@@ -215,6 +229,12 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
     if (receipt.status !== 'success') {
       return res.status(400).json({ error: 'Mint transaction reverted', txHash: hash });
     }
+
+    await db.update(users)
+      .set({ gfTokenBalance: currentBalance - totalCost })
+      .where(eq(users.id, userId));
+
+    console.log(`✅ Deducted ${totalCost} GF from user ${userId}. New balance: ${currentBalance - totalCost}`);
 
     const tokenIds: number[] = [];
     for (const log of receipt.logs) {
@@ -246,16 +266,12 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
 
     if (tokenIds.length > 0) {
       try {
-        const insertValues = tokenIds.map((tokenId) => ({
-          user_id: userId,
-          token_id: tokenId,
-          tx_hash: hash,
-        }));
-        for (const val of insertValues) {
+        for (const tokenId of tokenIds) {
           await db.execute(
-            sql`INSERT INTO user_nfts (user_id, token_id, tx_hash) VALUES (${val.user_id}, ${val.token_id}, ${val.tx_hash}) ON CONFLICT (user_id, token_id) DO NOTHING`
+            sql`INSERT INTO user_nfts (user_id, token_id, tx_hash) VALUES (${userId}, ${tokenId}, ${hash}) ON CONFLICT (user_id, token_id) DO NOTHING`
           );
         }
+        console.log(`✅ Recorded ${tokenIds.length} NFT(s) for user ${userId}: [${tokenIds.join(', ')}]`);
       } catch (dbErr) {
         console.error('Failed to save minted NFTs to database:', dbErr);
       }
