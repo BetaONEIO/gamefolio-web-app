@@ -5,10 +5,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useUpdateProfile } from '@/hooks/use-profile';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest, getQueryFn } from '@/lib/queryClient';
-import { useQuery } from '@tanstack/react-query';
+import { apiRequest, getQueryFn, queryClient } from '@/lib/queryClient';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Redirect } from 'wouter';
-import { Loader2, Video, Gamepad2, Trophy, Upload, Code, Eye, Coffee, Scroll, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Loader2, Video, Gamepad2, Trophy, Upload, Code, Eye, Coffee, Scroll, Sparkles, CheckCircle2, ImageIcon, Hexagon, Check } from 'lucide-react';
 import { HexColorPicker } from "react-colorful";
 
 import {
@@ -71,9 +71,33 @@ const ProfileSettingsPage: React.FC = () => {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
+  const [profilePicTab, setProfilePicTab] = useState<'upload' | 'nft'>('upload');
+  const [showNftSelector, setShowNftSelector] = useState(false);
   
   // Get signed URL for avatar (handles private Supabase bucket)
   const { signedUrl: avatarSignedUrl, isLoading: avatarLoading } = useSignedUrl(user?.avatarUrl);
+
+  const { data: ownedNftsData, isLoading: nftsLoading } = useQuery<{ nfts: any[]; count: number }>({
+    queryKey: ['/api/nfts/owned'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!user,
+    staleTime: 30000,
+  });
+
+  const setNftProfileMutation = useMutation({
+    mutationFn: async ({ tokenId, imageUrl }: { tokenId: number | null; imageUrl?: string }) => {
+      const res = await apiRequest('POST', '/api/nft/set-profile-picture', { tokenId, imageUrl });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      toast({ title: 'Profile picture updated', description: 'Your NFT profile picture has been set.' });
+      setShowNftSelector(false);
+    },
+    onError: (err: any) => {
+      toast({ title: 'Failed to set NFT', description: err.message || 'Something went wrong', variant: 'destructive' });
+    },
+  });
 
   // Fetch user's unlocked profile banners
   const { data: unlockedBanners = [], isLoading: bannersLoading } = useQuery<ProfileBanner[]>({
@@ -352,104 +376,176 @@ const ProfileSettingsPage: React.FC = () => {
                   onSubmit={profileForm.handleSubmit(onProfileSubmit)} 
                   className="space-y-6"
                 >
-                  {/* Profile Picture Upload Section */}
-                  <div className="flex items-center space-x-6 mb-6">
-                    <div 
-                      className="w-20 h-20 border-2 overflow-hidden relative bg-gray-800 rounded-lg"
-                      style={{ 
-                        borderColor: user.accentColor || '#4ADE80',
-                        borderRadius: '8px'
-                      }}
-                    >
-                      {avatarLoading ? (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-800 rounded-md">
-                          <div className="w-6 h-6 border-2 border-gray-600 border-t-gray-400 rounded-full animate-spin" />
-                        </div>
-                      ) : avatarPreview || avatarSignedUrl ? (
-                        <img
-                          src={avatarPreview || avatarSignedUrl || ''}
-                          alt={user.displayName}
-                          className="w-full h-full object-cover rounded-md"
-                        />
-                      ) : (
-                        <div
-                          className="w-full h-full flex items-center justify-center text-lg font-bold text-primary-foreground rounded-md"
+                  {/* Profile Picture Section with Tabs */}
+                  <div className="mb-6">
+                    <h3 className="text-base font-medium mb-3">Profile Picture</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Your profile picture is visible to other users.</p>
+
+                    <div className="flex gap-0 mb-4">
+                      <button
+                        type="button"
+                        onClick={() => setProfilePicTab('upload')}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                          profilePicTab === 'upload'
+                            ? 'border-green-500 text-green-400'
+                            : 'border-transparent text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        <ImageIcon className="h-4 w-4" />
+                        Profile Picture
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setProfilePicTab('nft')}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                          profilePicTab === 'nft'
+                            ? 'border-green-500 text-green-400'
+                            : 'border-transparent text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        <Hexagon className="h-4 w-4" />
+                        NFT
+                      </button>
+                    </div>
+
+                    {profilePicTab === 'upload' && (
+                      <div className="flex items-center space-x-6">
+                        <div 
+                          className="w-20 h-20 border-2 overflow-hidden relative bg-gray-800 rounded-lg"
                           style={{ 
-                            backgroundColor: user.accentColor || '#4ADE80'
+                            borderColor: user.accentColor || '#4ADE80',
+                            borderRadius: '8px'
                           }}
                         >
-                          {user.displayName.charAt(0)}
+                          {avatarLoading ? (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-800 rounded-md">
+                              <div className="w-6 h-6 border-2 border-gray-600 border-t-gray-400 rounded-full animate-spin" />
+                            </div>
+                          ) : avatarPreview || avatarSignedUrl ? (
+                            <img
+                              src={avatarPreview || avatarSignedUrl || ''}
+                              alt={user.displayName}
+                              className="w-full h-full object-cover rounded-md"
+                            />
+                          ) : (
+                            <div
+                              className="w-full h-full flex items-center justify-center text-lg font-bold text-primary-foreground rounded-md"
+                              style={{ 
+                                backgroundColor: user.accentColor || '#4ADE80'
+                              }}
+                            >
+                              {user.displayName.charAt(0)}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h3 className="text-base font-medium">Profile Picture</h3>
-                      <p className="text-sm text-muted-foreground">Your profile picture is visible to other users.</p>
-                      {user?.isPro && (
-                        <div className="flex items-center gap-2 text-sm text-purple-400 bg-purple-500/10 rounded-lg px-3 py-2 border border-purple-500/20">
-                          <Sparkles className="h-4 w-4" />
-                          <span>Pro Perk: You can upload animated GIFs as your profile picture!</span>
-                        </div>
-                      )}
-                      {!user?.isPro && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
-                          <span>Want animated profile pictures? <a href="/settings/account" className="text-purple-400 hover:text-purple-300 underline">Upgrade to Pro</a> to use GIFs!</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowAvatarSelector(true)}
-                          type="button"
-                          className="max-w-xs"
-                          data-testid="button-select-avatar"
-                        >
-                          Select Avatar
-                        </Button>
-                        <Button
-                          variant="outline"
-                          type="button"
-                          onClick={() => document.getElementById('avatar-upload-input')?.click()}
-                          disabled={avatarUploading}
-                          className="max-w-xs"
-                          data-testid="button-upload-avatar"
-                        >
-                          Upload Custom
-                        </Button>
-                        <input
-                          id="avatar-upload-input"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleAvatarUpload}
-                          className="hidden"
-                          data-testid="input-avatar-file"
-                        />
-                        {avatarUploading && (
-                          <div className="flex items-center">
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            <span className="text-xs">Uploading...</span>
+                        
+                        <div className="space-y-2">
+                          {user?.isPro && (
+                            <div className="flex items-center gap-2 text-sm text-purple-400 bg-purple-500/10 rounded-lg px-3 py-2 border border-purple-500/20">
+                              <Sparkles className="h-4 w-4" />
+                              <span>Pro Perk: You can upload animated GIFs as your profile picture!</span>
+                            </div>
+                          )}
+                          {!user?.isPro && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+                              <span>Want animated profile pictures? <a href="/settings/account" className="text-purple-400 hover:text-purple-300 underline">Upgrade to Pro</a> to use GIFs!</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Button
+                              variant="outline"
+                              onClick={() => setShowAvatarSelector(true)}
+                              type="button"
+                              className="max-w-xs"
+                              data-testid="button-select-avatar"
+                            >
+                              Select Avatar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              type="button"
+                              onClick={() => document.getElementById('avatar-upload-input')?.click()}
+                              disabled={avatarUploading}
+                              className="max-w-xs"
+                              data-testid="button-upload-avatar"
+                            >
+                              Upload Custom
+                            </Button>
+                            <input
+                              id="avatar-upload-input"
+                              type="file"
+                              accept="image/*"
+                              onChange={handleAvatarUpload}
+                              className="hidden"
+                              data-testid="input-avatar-file"
+                            />
+                            {avatarUploading && (
+                              <div className="flex items-center">
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                <span className="text-xs">Uploading...</span>
+                              </div>
+                            )}
                           </div>
-                        )}
+                      
+                          <FormField
+                            control={profileForm.control}
+                            name="avatarUrl"
+                            render={({ field }) => (
+                              <FormItem className="hidden">
+                                <FormControl>
+                                  <Input 
+                                    type="hidden"
+                                    {...field}
+                                    value={field.value || ''}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
                       </div>
-                  
-                      {/* Hidden field to store avatarUrl */}
-                      <FormField
-                        control={profileForm.control}
-                        name="avatarUrl"
-                        render={({ field }) => (
-                          <FormItem className="hidden">
-                            <FormControl>
-                              <Input 
-                                type="hidden"
-                                {...field}
-                                value={field.value || ''}
+                    )}
+
+                    {profilePicTab === 'nft' && (
+                      <div className="space-y-4">
+                        {(user as any)?.nftProfileTokenId ? (
+                          <div className="flex items-center gap-4 p-4 rounded-lg border border-green-500/30 bg-green-500/5">
+                            {(user as any)?.nftProfileImageUrl && (
+                              <img
+                                src={(user as any).nftProfileImageUrl}
+                                alt="Current NFT"
+                                className="w-16 h-16 rounded-lg object-cover border-2 border-green-500/40"
                               />
-                            </FormControl>
-                          </FormItem>
+                            )}
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-green-400">NFT Profile Picture Active</p>
+                              <p className="text-xs text-muted-foreground">Token #{(user as any).nftProfileTokenId}</p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="text-red-400 border-red-500/30 hover:bg-red-500/10"
+                              onClick={() => setNftProfileMutation.mutate({ tokenId: null })}
+                              disabled={setNftProfileMutation.isPending}
+                            >
+                              {setNftProfileMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Remove'}
+                            </Button>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No NFT profile picture set. Select one from your collection below.</p>
                         )}
-                      />
-                    </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setShowNftSelector(true)}
+                          className="border-green-500/30 text-green-400 hover:bg-green-500/10"
+                        >
+                          <Hexagon className="h-4 w-4 mr-2" />
+                          Select NFT to use as Profile Picture
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   
                   {/* Display Name */}
@@ -882,9 +978,7 @@ const ProfileSettingsPage: React.FC = () => {
         onClose={() => setShowAvatarSelector(false)}
         currentAvatarUrl={profileForm.watch('avatarUrl') || user?.avatarUrl || ''}
         onAvatarSelect={(avatarUrl: string) => {
-          // Update form field and mark it as dirty so the save button becomes enabled
           profileForm.setValue('avatarUrl', avatarUrl, { shouldDirty: true, shouldValidate: true });
-          // Update preview immediately
           setAvatarPreview(avatarUrl);
           
           toast({
@@ -894,6 +988,94 @@ const ProfileSettingsPage: React.FC = () => {
           });
         }}
       />
+
+      {/* NFT Selector Popup */}
+      {showNftSelector && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setShowNftSelector(false)} />
+          <div className="relative bg-[#0f172a] border border-slate-700 rounded-xl w-full max-w-lg max-h-[80vh] overflow-hidden shadow-2xl mx-4">
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <h3 className="text-lg font-semibold text-white">Select NFT as Profile Picture</h3>
+              <button
+                onClick={() => setShowNftSelector(false)}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              {nftsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-green-400" />
+                </div>
+              ) : !ownedNftsData?.nfts || ownedNftsData.nfts.length === 0 ? (
+                <div className="text-center py-12">
+                  <Hexagon className="h-12 w-12 mx-auto mb-3 text-slate-600" />
+                  <p className="text-slate-400 text-sm">You don't own any NFTs yet.</p>
+                  <p className="text-slate-500 text-xs mt-1">Mint or purchase NFTs to use them as your profile picture.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-3">
+                  {ownedNftsData.nfts
+                    .filter((nft: any) => !nft.sold)
+                    .map((nft: any) => {
+                      const isSelected = (user as any)?.nftProfileTokenId === nft.tokenId;
+                      return (
+                        <button
+                          key={nft.tokenId}
+                          type="button"
+                          onClick={() => {
+                            setNftProfileMutation.mutate({
+                              tokenId: nft.tokenId,
+                              imageUrl: nft.image || '',
+                            });
+                          }}
+                          disabled={setNftProfileMutation.isPending}
+                          className={`relative rounded-lg overflow-hidden border-2 transition-all aspect-square group ${
+                            isSelected
+                              ? 'border-green-500 ring-2 ring-green-500/30'
+                              : 'border-slate-700 hover:border-green-500/50'
+                          }`}
+                        >
+                          {nft.image ? (
+                            <img
+                              src={nft.image}
+                              alt={nft.name || `NFT #${nft.tokenId}`}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-slate-800 flex items-center justify-center">
+                              <Hexagon className="h-8 w-8 text-slate-600" />
+                            </div>
+                          )}
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/80 px-2 py-1">
+                            <p className="text-[10px] text-white truncate font-medium">
+                              {nft.name || `Token #${nft.tokenId}`}
+                            </p>
+                          </div>
+                          {isSelected && (
+                            <div className="absolute top-1 right-1 bg-green-500 rounded-full p-0.5">
+                              <Check className="h-3 w-3 text-white" />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-green-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </button>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+
+            {setNftProfileMutation.isPending && (
+              <div className="p-3 border-t border-slate-700 flex items-center justify-center gap-2 text-sm text-green-400">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Setting NFT as profile picture...
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
