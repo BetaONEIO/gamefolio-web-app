@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db';
 import { users } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
-import { maxUint256, type Address, decodeEventLog } from 'viem';
+import { maxUint256, parseUnits, type Address, decodeEventLog } from 'viem';
 import {
   GF_TOKEN_ADDRESS,
   GF_TOKEN_ABI,
@@ -198,6 +198,14 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
       });
     }
 
+    if (!user.encryptedPrivateKey) {
+      return res.status(400).json({
+        error: 'No signing key available',
+        code: 'MISSING_PRIVATE_KEY',
+        message: 'Your wallet does not have a signing key. Please regenerate your wallet.',
+      });
+    }
+
     const totalCost = quantity * MINT_CONFIG.pricePerMint;
     const currentBalance = user.gfTokenBalance || 0;
     if (currentBalance < totalCost) {
@@ -211,14 +219,65 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
       return res.status(500).json({ error: 'Treasury wallet not configured' });
     }
 
-    console.log(`🪙 Minting ${quantity} NFT(s) for user ${userId} (${user.walletAddress}) via treasury. Cost: ${totalCost} GF`);
+    const costInWei = parseUnits(String(totalCost), 18);
+    const userAddress = user.walletAddress as Address;
 
-    const hash = await writeContractWithPoWFromRawKey({
-      privateKeyRaw: treasuryKey,
+    console.log(`🪙 Minting ${quantity} NFT(s) for user ${userId} (${userAddress}). Cost: ${totalCost} GF`);
+
+    const onChainBalance = await publicClient.readContract({
+      address: GF_TOKEN_ADDRESS as Address,
+      abi: GF_TOKEN_ABI,
+      functionName: 'balanceOf',
+      args: [userAddress],
+    }) as bigint;
+
+    if (onChainBalance < costInWei) {
+      const deficit = costInWei - onChainBalance;
+      console.log(`📤 Funding user wallet with ${deficit} GFT wei via treasury mint`);
+      const fundHash = await writeContractWithPoWFromRawKey({
+        privateKeyRaw: treasuryKey,
+        contractAddress: GF_TOKEN_ADDRESS as Address,
+        abi: GF_TOKEN_ABI,
+        functionName: 'mint',
+        args: [userAddress, deficit],
+      });
+      const fundReceipt = await publicClient.waitForTransactionReceipt({ hash: fundHash, timeout: 60_000 });
+      if (fundReceipt.status !== 'success') {
+        return res.status(400).json({ error: 'Failed to fund wallet with GFT', txHash: fundHash });
+      }
+      console.log(`✅ Funded user wallet. TX: ${fundHash}`);
+    }
+
+    const allowance = await publicClient.readContract({
+      address: GF_TOKEN_ADDRESS as Address,
+      abi: GF_TOKEN_ABI,
+      functionName: 'allowance',
+      args: [userAddress, MINT_SALE_ADDRESS as Address],
+    }) as bigint;
+
+    if (allowance < costInWei) {
+      console.log(`🔓 Approving MintSale to spend GFT for user ${userId}`);
+      const approveHash = await writeContractWithPoW({
+        encryptedPrivateKey: user.encryptedPrivateKey,
+        contractAddress: GF_TOKEN_ADDRESS as Address,
+        abi: GF_TOKEN_ABI,
+        functionName: 'approve',
+        args: [MINT_SALE_ADDRESS as Address, maxUint256],
+      });
+      const approveReceipt = await publicClient.waitForTransactionReceipt({ hash: approveHash, timeout: 60_000 });
+      if (approveReceipt.status !== 'success') {
+        return res.status(400).json({ error: 'Approval transaction reverted', txHash: approveHash });
+      }
+      console.log(`✅ Approved MintSale. TX: ${approveHash}`);
+    }
+
+    console.log(`🛒 Calling buy(${quantity}) from user wallet`);
+    const hash = await writeContractWithPoW({
+      encryptedPrivateKey: user.encryptedPrivateKey,
       contractAddress: MINT_SALE_ADDRESS as Address,
       abi: MINT_SALE_ABI,
-      functionName: 'mint',
-      args: [user.walletAddress as Address, BigInt(quantity)],
+      functionName: 'buy',
+      args: [BigInt(quantity)],
     });
 
     const receipt = await publicClient.waitForTransactionReceipt({
