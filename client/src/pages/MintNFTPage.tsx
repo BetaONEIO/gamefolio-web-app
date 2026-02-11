@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useCrossmint } from "@/hooks/use-crossmint";
-import { ArrowLeft, Minus, Plus, Wallet, Sparkles, X, ExternalLink, Check, Shield, Copy, AlertTriangle, Lock, Loader2 } from "lucide-react";
+import { ArrowLeft, Minus, Plus, Wallet, Sparkles, X, ExternalLink, Check, Shield, Copy, AlertTriangle, Lock, Loader2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import MultiMintSuccessScreen from "@/components/mint/MultiMintSuccessScreen";
@@ -460,9 +460,12 @@ export default function MintNFTPage() {
                   </div>
                 </div>
                 
-                <div className="absolute -bottom-4 right-6 w-14 h-14 rounded-full bg-[#4ade80] border-4 border-[#020617] flex items-center justify-center shadow-[0_4px_6px_-4px_rgba(74,222,128,0.4),0_10px_15px_-3px_rgba(74,222,128,0.4)]">
-                  <Check className="h-8 w-8 text-[#022c22]" />
-                </div>
+                <button
+                  onClick={() => setShowSingleNftDetail(true)}
+                  className="absolute -bottom-4 right-6 w-14 h-14 rounded-full bg-[#4ade80] border-4 border-[#020617] flex items-center justify-center shadow-[0_4px_6px_-4px_rgba(74,222,128,0.4),0_10px_15px_-3px_rgba(74,222,128,0.4)] hover:bg-[#22c55e] transition-colors cursor-pointer"
+                >
+                  <Eye className="h-7 w-7 text-[#022c22]" />
+                </button>
               </div>
             </div>
 
