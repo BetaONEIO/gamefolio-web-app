@@ -381,6 +381,12 @@ export default function MintNFTPage() {
           onViewCollection={() => navigate("/collection")}
           onViewExplorer={() => window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`, "_blank")}
           onBack={() => navigate("/store")}
+          onMintMore={() => {
+            setMintStep("idle");
+            setTxHash("");
+            setQuantity(1);
+            setMintedTokenIds([]);
+          }}
         />
       );
     }

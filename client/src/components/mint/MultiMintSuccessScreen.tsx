@@ -23,6 +23,7 @@ interface MultiMintSuccessScreenProps {
   onViewCollection: () => void;
   onViewExplorer: () => void;
   onBack: () => void;
+  onMintMore?: () => void;
   soldNftIds?: Set<number>;
   onNftSold?: (nftId: number) => void;
 }
@@ -54,6 +55,7 @@ export default function MultiMintSuccessScreen({
   onViewCollection,
   onViewExplorer,
   onBack,
+  onMintMore,
   soldNftIds: externalSoldIds,
   onNftSold,
 }: MultiMintSuccessScreenProps) {
@@ -397,7 +399,7 @@ export default function MultiMintSuccessScreen({
                 </button>
 
                 <button
-                  onClick={onBack}
+                  onClick={onMintMore || onBack}
                   className="w-full h-[58px] rounded-2xl bg-[#1e293b] border border-[#1e293b80] flex items-center justify-center gap-[6.5px] hover:bg-[#334155] transition-colors"
                 >
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
