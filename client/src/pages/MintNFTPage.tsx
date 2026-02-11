@@ -568,7 +568,7 @@ export default function MintNFTPage() {
                   className="w-full md:flex-1 h-14 rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22] text-base font-bold shadow-[0_4px_6px_-4px_rgba(74,222,128,0.2),0_10px_15px_-3px_rgba(74,222,128,0.2)] flex items-center justify-center gap-2"
                 >
                   <Wallet className="h-5 w-5" />
-                  View in My NFTs
+                  Add to Collection
                 </Button>
                 <Button
                   onClick={() => window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`, "_blank")}
