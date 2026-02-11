@@ -802,6 +802,13 @@ export default function SettingsPage() {
         updatedData.avatarUrl = selectedPreviousAvatar;
       }
 
+      // If a new regular avatar is being set, clear the NFT profile picture (either/or)
+      if (newAvatarUrl) {
+        updatedData.nftProfileTokenId = null;
+        updatedData.nftProfileImageUrl = null;
+        setNftPreview(null);
+      }
+
       // Save current avatar to history before replacing
       if (newAvatarUrl && user?.avatarUrl && user.avatarUrl !== newAvatarUrl) {
         try {
