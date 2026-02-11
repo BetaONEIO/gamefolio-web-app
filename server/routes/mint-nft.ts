@@ -510,7 +510,7 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
     }
 
     const dbNfts = await db.execute(
-      sql`SELECT token_id, tx_hash, minted_at FROM user_nfts WHERE user_id = ${userId} AND sold = false ORDER BY minted_at DESC`
+      sql`SELECT token_id, tx_hash, minted_at, sold FROM user_nfts WHERE user_id = ${userId} ORDER BY minted_at DESC`
     );
 
     const rows = (dbNfts as any).rows || dbNfts;
@@ -518,10 +518,19 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
       return res.json({ nfts: [], count: 0 });
     }
 
+    const rowMap = new Map<number, { txHash: string; mintedAt: string; sold: boolean }>();
+    for (const r of rows) {
+      rowMap.set(Number(r.token_id), {
+        txHash: r.tx_hash,
+        mintedAt: r.minted_at,
+        sold: r.sold === true || r.sold === 't',
+      });
+    }
     const ownedTokenIds = rows.map((r: any) => Number(r.token_id));
 
     const metadataResults = await Promise.allSettled(
       ownedTokenIds.slice(0, 50).map(async (tokenId: number) => {
+        const dbRow = rowMap.get(tokenId);
         const tokenURI = await publicClient.readContract({
           address: NFT_CONTRACT_ADDRESS as `0x${string}`,
           abi: NFT_ABI,
@@ -538,13 +547,26 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
               if (metadata.image) {
                 metadata.image = ipfsToProxyUrl(metadata.image);
               }
-              return { tokenId, ...metadata };
+              return {
+                tokenId,
+                txHash: dbRow?.txHash || '',
+                mintedAt: dbRow?.mintedAt || '',
+                sold: dbRow?.sold || false,
+                ...metadata,
+              };
             }
           } catch {
             continue;
           }
         }
-        return { tokenId, name: `Gamefolio Genesis #${tokenId}`, image: null };
+        return {
+          tokenId,
+          name: `Gamefolio Genesis #${tokenId}`,
+          image: null,
+          txHash: dbRow?.txHash || '',
+          mintedAt: dbRow?.mintedAt || '',
+          sold: dbRow?.sold || false,
+        };
       })
     );
 
