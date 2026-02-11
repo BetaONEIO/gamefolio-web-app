@@ -222,7 +222,7 @@ export default function CollectionPage() {
   return (
     <div className="min-h-screen bg-[#020617] flex flex-col">
       <div className="sticky top-0 z-10 backdrop-blur-md bg-[#020617]/80 border-b border-slate-800/30">
-        <div className="w-full px-4 md:px-8 py-4 flex items-center justify-between">
+        <div className="w-full px-6 md:px-12 lg:px-16 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/">
               <button className="bg-slate-800 border border-slate-800 rounded-2xl w-10 h-10 flex items-center justify-center hover:bg-slate-700 transition-colors">
@@ -244,7 +244,7 @@ export default function CollectionPage() {
         </div>
       </div>
 
-      <div className="w-full px-4 md:px-8 flex-1">
+      <div className="w-full px-6 md:px-12 lg:px-16 flex-1">
         <div className="bg-gradient-to-b from-green-900/10 to-transparent py-6 md:py-8">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
             <div className="flex items-start gap-6 md:gap-10">
