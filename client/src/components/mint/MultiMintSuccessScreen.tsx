@@ -1,4 +1,4 @@
-import { ArrowLeft, Copy, Check, Share2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Copy, Check, Share2 } from "lucide-react";
 import { useState, useRef, useCallback } from "react";
 import MintedNftDetailScreen from "./MintedNftDetailScreen";
 
@@ -64,6 +64,7 @@ export default function MultiMintSuccessScreen({
 
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const hasDraggedRef = useRef(false);
   const dragStartRef = useRef<{ x: number; time: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -88,33 +89,44 @@ export default function MultiMintSuccessScreen({
 
   const totalSlides = displayNfts.length;
 
+  const goNext = useCallback(() => {
+    setActiveIndex(prev => (prev + 1) % totalSlides);
+  }, [totalSlides]);
+
+  const goPrev = useCallback(() => {
+    setActiveIndex(prev => (prev - 1 + totalSlides) % totalSlides);
+  }, [totalSlides]);
+
   const handleDragStart = useCallback((clientX: number) => {
     dragStartRef.current = { x: clientX, time: Date.now() };
+    hasDraggedRef.current = false;
     setIsDragging(true);
   }, []);
 
   const handleDragMove = useCallback((clientX: number) => {
     if (!dragStartRef.current) return;
     const diff = clientX - dragStartRef.current.x;
+    if (Math.abs(diff) > 5) hasDraggedRef.current = true;
     setDragX(diff);
   }, []);
 
   const handleDragEnd = useCallback(() => {
     if (!dragStartRef.current) return;
     const threshold = 80;
-    const velocity = Math.abs(dragX) / (Date.now() - dragStartRef.current.time) * 1000;
+    const elapsed = Date.now() - dragStartRef.current.time;
+    const velocity = elapsed > 0 ? Math.abs(dragX) / elapsed * 1000 : 0;
     const shouldSwipe = Math.abs(dragX) > threshold || velocity > 400;
 
-    if (shouldSwipe && dragX < 0 && activeIndex < totalSlides - 1) {
-      setActiveIndex(prev => prev + 1);
-    } else if (shouldSwipe && dragX > 0 && activeIndex > 0) {
-      setActiveIndex(prev => prev - 1);
+    if (shouldSwipe && dragX < 0) {
+      goNext();
+    } else if (shouldSwipe && dragX > 0) {
+      goPrev();
     }
 
     setDragX(0);
     setIsDragging(false);
     dragStartRef.current = null;
-  }, [dragX, activeIndex, totalSlides]);
+  }, [dragX, goNext, goPrev]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -190,113 +202,135 @@ export default function MultiMintSuccessScreen({
                 ))}
               </div>
 
-              <div
-                ref={containerRef}
-                className="relative w-[280px] md:w-[320px] flex-1 mt-4 touch-pan-y"
-                style={{ height: "420px", maxHeight: "420px" }}
-                onPointerDown={onPointerDown}
-                onPointerMove={onPointerMove}
-                onPointerUp={onPointerUp}
-                onPointerCancel={onPointerUp}
-              >
-                {displayNfts.map((nft, index) => {
-                  const offset = index - activeIndex;
-                  const isActive = offset === 0;
-                  const isVisible = Math.abs(offset) <= 2;
-                  if (!isVisible) return null;
+              <div className="relative w-full flex items-center justify-center mt-4" style={{ height: "420px" }}>
+                {totalSlides > 1 && (
+                  <button
+                    onClick={goPrev}
+                    className="absolute left-2 md:left-4 z-30 w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#1e293bcc] border border-[#1e293b80] backdrop-blur-md flex items-center justify-center shadow-lg hover:bg-[#334155] transition-colors"
+                  >
+                    <ChevronLeft className="h-5 w-5 md:h-6 md:w-6 text-[#f8fafc]" />
+                  </button>
+                )}
 
-                  const legendary = isLegendary(nft);
-                  const translateX = isActive ? dragX : offset * 30;
-                  const scale = isActive ? 1 : 1 - Math.abs(offset) * 0.06;
-                  const opacity = isActive ? 1 : Math.max(0, 1 - Math.abs(offset) * 0.3);
-                  const zIndex = totalSlides - Math.abs(offset);
-                  const rotate = isActive ? dragX * 0.04 : 0;
+                <div
+                  ref={containerRef}
+                  className="relative w-[280px] md:w-[320px] touch-pan-y"
+                  style={{ height: "420px" }}
+                  onPointerDown={onPointerDown}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerUp}
+                  onPointerCancel={onPointerUp}
+                >
+                  {displayNfts.map((nft, index) => {
+                    let offset = index - activeIndex;
+                    if (offset > totalSlides / 2) offset -= totalSlides;
+                    if (offset < -totalSlides / 2) offset += totalSlides;
+                    const isActive = offset === 0;
+                    const absOffset = Math.abs(offset);
+                    if (absOffset > 2) return null;
 
-                  return (
-                    <div
-                      key={index}
-                      className="absolute inset-0 select-none"
-                      style={{
-                        transform: `translateX(${translateX}px) scale(${scale}) rotate(${rotate}deg)`,
-                        opacity,
-                        zIndex,
-                        transition: isDragging && isActive ? "none" : "transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease",
-                        pointerEvents: isActive ? "auto" : "none",
-                      }}
-                    >
-                      {legendary && (
-                        <div className="absolute -inset-3 rounded-[48px] bg-gradient-to-br from-[#fbbf24] via-[#f59e0b] to-[#d97706] opacity-40 blur-[24px] pointer-events-none animate-pulse" />
-                      )}
+                    const legendary = isLegendary(nft);
+                    const translateX = isActive ? dragX : offset * 25;
+                    const scale = isActive ? 1 : 1 - absOffset * 0.06;
+                    const opacity = isActive ? 1 : Math.max(0, 1 - absOffset * 0.3);
+                    const zIndex = totalSlides - absOffset;
+                    const rotate = isActive ? dragX * 0.04 : 0;
+
+                    return (
                       <div
-                        className={`relative w-full rounded-[40px] overflow-hidden bg-[#0f172a] shadow-[0_25px_50px_-12px_rgba(74,222,128,0.05)] ${
-                          legendary
-                            ? "border-2 border-[#fbbf24]/60 shadow-[0_0_30px_rgba(251,191,36,0.3)]"
-                            : "border border-[#1e293b80] hover:border-[#4ade8040]"
-                        } transition-all`}
-                        onClick={() => {
-                          if (!isDragging || Math.abs(dragX) < 5) {
-                            setSelectedNft(nft);
-                          }
+                        key={index}
+                        className="absolute inset-0 select-none"
+                        style={{
+                          transform: `translateX(${translateX}px) scale(${scale}) rotate(${rotate}deg)`,
+                          opacity,
+                          zIndex,
+                          transition: isDragging && isActive ? "none" : "transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease",
+                          pointerEvents: isActive ? "auto" : "none",
                         }}
                       >
-                        <div className="relative w-full aspect-square">
-                          {nft.imageUrl ? (
-                            <img
-                              src={nft.imageUrl}
-                              alt={nft.name || `NFT #${nft.id}`}
-                              className={`w-full h-full object-cover transition-all duration-300 pointer-events-none ${soldNftIds.has(nft.id) ? "grayscale brightness-50" : ""}`}
-                              draggable={false}
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-[#1e293b] flex items-center justify-center">
-                              <div className="w-12 h-12 rounded-full border-2 border-[#4ade80]/30 border-t-[#4ade80] animate-spin" />
-                            </div>
-                          )}
+                        {legendary && (
+                          <div className="absolute -inset-3 rounded-[48px] bg-gradient-to-br from-[#fbbf24] via-[#f59e0b] to-[#d97706] opacity-40 blur-[24px] pointer-events-none animate-pulse" />
+                        )}
+                        <div
+                          className={`relative w-full rounded-[40px] overflow-hidden bg-[#0f172a] shadow-[0_25px_50px_-12px_rgba(74,222,128,0.05)] cursor-pointer ${
+                            legendary
+                              ? "border-2 border-[#fbbf24]/60 shadow-[0_0_30px_rgba(251,191,36,0.3)]"
+                              : "border border-[#1e293b80] hover:border-[#4ade8040]"
+                          } transition-all`}
+                          onClick={() => {
+                            if (!hasDraggedRef.current) {
+                              setSelectedNft(nft);
+                            }
+                          }}
+                        >
+                          <div className="relative w-full aspect-square">
+                            {nft.imageUrl ? (
+                              <img
+                                src={nft.imageUrl}
+                                alt={nft.name || `NFT #${nft.id}`}
+                                className={`w-full h-full object-cover transition-all duration-300 pointer-events-none ${soldNftIds.has(nft.id) ? "grayscale brightness-50" : ""}`}
+                                draggable={false}
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-[#1e293b] flex items-center justify-center">
+                                <div className="w-12 h-12 rounded-full border-2 border-[#4ade80]/30 border-t-[#4ade80] animate-spin" />
+                              </div>
+                            )}
 
-                          {soldNftIds.has(nft.id) && (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <span className="text-4xl font-black text-white/80 uppercase tracking-[6px] rotate-[-15deg] drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
-                                SOLD
-                              </span>
-                            </div>
-                          )}
-
-                          {!soldNftIds.has(nft.id) && (
-                            <div className="absolute bottom-3 left-3">
-                              <div className={`backdrop-blur-md border rounded-full px-3 py-1.5 flex items-center justify-center ${
-                                legendary
-                                  ? "bg-[#fbbf24]/30 border-[#fbbf24]/40"
-                                  : "bg-black/40 border-white/10"
-                              }`}>
-                                <span className={`text-[10px] font-bold uppercase tracking-[0.5px] leading-[15px] ${
-                                  legendary ? "text-[#fbbf24]" : "text-white"
-                                }`}>
-                                  {getRarityLabel(nft.rarity)}
+                            {soldNftIds.has(nft.id) && (
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="text-4xl font-black text-white/80 uppercase tracking-[6px] rotate-[-15deg] drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
+                                  SOLD
                                 </span>
                               </div>
-                            </div>
-                          )}
-                        </div>
+                            )}
 
-                        <div className="p-4 pb-5 flex flex-col gap-1">
-                          <div className="flex items-start justify-between gap-3">
-                            <span className="text-base font-bold text-[#f8fafc] leading-6 truncate">
-                              {nft.name || `Gamefolio Genesis`}
-                            </span>
-                            <span className={`text-sm font-normal font-['JetBrains_Mono',monospace] leading-5 flex-shrink-0 ${
-                              legendary ? "text-[#fbbf24]" : "text-[#4ade80]"
-                            }`}>
-                              {getTokenIdPadded(nft.id)}
+                            {!soldNftIds.has(nft.id) && (
+                              <div className="absolute bottom-3 left-3">
+                                <div className={`backdrop-blur-md border rounded-full px-3 py-1.5 flex items-center justify-center ${
+                                  legendary
+                                    ? "bg-[#fbbf24]/30 border-[#fbbf24]/40"
+                                    : "bg-black/40 border-white/10"
+                                }`}>
+                                  <span className={`text-[10px] font-bold uppercase tracking-[0.5px] leading-[15px] ${
+                                    legendary ? "text-[#fbbf24]" : "text-white"
+                                  }`}>
+                                    {getRarityLabel(nft.rarity)}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="p-4 pb-5 flex flex-col gap-1">
+                            <div className="flex items-start justify-between gap-3">
+                              <span className="text-base font-bold text-[#f8fafc] leading-6 truncate">
+                                {nft.name || `Gamefolio Genesis`}
+                              </span>
+                              <span className={`text-sm font-normal font-['JetBrains_Mono',monospace] leading-5 flex-shrink-0 ${
+                                legendary ? "text-[#fbbf24]" : "text-[#4ade80]"
+                              }`}>
+                                {getTokenIdPadded(nft.id)}
+                              </span>
+                            </div>
+                            <span className="text-xs font-normal text-[#94a3b8] leading-4">
+                              Genesis Collection
                             </span>
                           </div>
-                          <span className="text-xs font-normal text-[#94a3b8] leading-4">
-                            Genesis Collection
-                          </span>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+
+                {totalSlides > 1 && (
+                  <button
+                    onClick={goNext}
+                    className="absolute right-2 md:right-4 z-30 w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#1e293bcc] border border-[#1e293b80] backdrop-blur-md flex items-center justify-center shadow-lg hover:bg-[#334155] transition-colors"
+                  >
+                    <ChevronRight className="h-5 w-5 md:h-6 md:w-6 text-[#f8fafc]" />
+                  </button>
+                )}
               </div>
 
               <div className="flex items-center justify-center gap-4 mt-4 pb-2">
