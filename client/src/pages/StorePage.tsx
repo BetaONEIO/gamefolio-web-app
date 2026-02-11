@@ -1008,12 +1008,18 @@ export default function StorePage() {
               </div>
               
               <div className="hidden md:flex items-center gap-3">
-                <Avatar className="h-10 w-10" data-testid="avatar-user">
-                  <AvatarImage src={user?.avatarUrl || undefined} />
-                  <AvatarFallback className="bg-gray-800">
-                    {user?.username?.[0]?.toUpperCase() || "U"}
-                  </AvatarFallback>
-                </Avatar>
+                {user?.nftProfileTokenId && user?.nftProfileImageUrl ? (
+                  <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                    <img src={user.nftProfileImageUrl} alt={user.username || "User"} className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <Avatar className="h-10 w-10" data-testid="avatar-user">
+                    <AvatarImage src={user?.avatarUrl || undefined} />
+                    <AvatarFallback className="bg-gray-800">
+                      {user?.username?.[0]?.toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
                 <span className="text-sm text-gray-400" data-testid="text-username">
                   {user?.username || "Guest"}
                 </span>

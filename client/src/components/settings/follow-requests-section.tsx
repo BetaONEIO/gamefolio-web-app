@@ -14,6 +14,8 @@ interface FollowRequest {
     username: string;
     displayName: string;
     avatarUrl?: string;
+    nftProfileTokenId?: string | null;
+    nftProfileImageUrl?: string | null;
   };
   createdAt: string;
 }
@@ -124,12 +126,18 @@ export function FollowRequestsSection() {
             className="flex items-center justify-between p-4 border rounded-lg"
           >
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={request.requester.avatarUrl} />
-                <AvatarFallback>
-                  {request.requester.displayName.slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              {request.requester.nftProfileTokenId && request.requester.nftProfileImageUrl ? (
+                <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                  <img src={request.requester.nftProfileImageUrl} alt={request.requester.displayName} className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={request.requester.avatarUrl} />
+                  <AvatarFallback>
+                    {request.requester.displayName.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              )}
               <div>
                 <p className="font-semibold">{request.requester.displayName}</p>
                 <p className="text-sm text-muted-foreground">

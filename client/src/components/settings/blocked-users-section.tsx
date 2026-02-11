@@ -27,6 +27,8 @@ interface BlockedUser {
   username: string;
   displayName: string;
   avatarUrl?: string;
+  nftProfileTokenId?: string | null;
+  nftProfileImageUrl?: string | null;
 }
 
 export function BlockedUsersSection() {
@@ -249,12 +251,18 @@ export function BlockedUsersSection() {
           <div className="space-y-3">
             {blockedUsers.map((user) => (
               <div key={user.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <Avatar className="w-10 h-10">
-                  <AvatarImage src={user.avatarUrl} />
-                  <AvatarFallback>
-                    {user.displayName[0]?.toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                {user.nftProfileTokenId && user.nftProfileImageUrl ? (
+                  <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                    <img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={user.avatarUrl} />
+                    <AvatarFallback>
+                      {user.displayName[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <p className="font-medium">{user.displayName}</p>

@@ -197,10 +197,16 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center">
               <Link href={`/profile/${clip.user.username}`} onClick={(e) => e.stopPropagation()}>
-                <Avatar className="h-8 w-8 mr-3 hover:opacity-80 transition-opacity cursor-pointer">
-                  <AvatarImage src={clip.user.avatarUrl || `/uploaded_assets/gamefolio social logo 3d circle web.png`} />
-                  <AvatarFallback className="text-sm">{clip.user.displayName.charAt(0)}</AvatarFallback>
-                </Avatar>
+                {clip.user.nftProfileTokenId && clip.user.nftProfileImageUrl ? (
+                  <div className="h-8 w-8 mr-3 rounded-lg overflow-hidden border border-[#4ade80]/40 hover:opacity-80 transition-opacity cursor-pointer">
+                    <img src={clip.user.nftProfileImageUrl} alt={clip.user.displayName} className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <Avatar className="h-8 w-8 mr-3 hover:opacity-80 transition-opacity cursor-pointer">
+                    <AvatarImage src={clip.user.avatarUrl || `/uploaded_assets/gamefolio social logo 3d circle web.png`} />
+                    <AvatarFallback className="text-sm">{clip.user.displayName.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                )}
               </Link>
               <div>
                 <h3 className="font-semibold text-base text-foreground line-clamp-2 leading-tight">{clip.title}</h3>

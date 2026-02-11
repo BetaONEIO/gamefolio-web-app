@@ -45,6 +45,8 @@ interface MessageDialogProps {
     username: string;
     displayName: string;
     avatarUrl: string | null;
+    nftProfileTokenId?: string | null;
+    nftProfileImageUrl?: string | null;
   };
 }
 
@@ -115,12 +117,18 @@ export function MessageDialog({ open, onOpenChange, targetUser }: MessageDialogP
       <DialogContent className="sm:max-w-[500px] h-[600px] max-h-[80vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-4 py-3 border-b flex-shrink-0">
           <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={targetUser.avatarUrl || ""} alt={targetUser.displayName} />
-              <AvatarFallback className="bg-primary/20">
-                {targetUser.displayName?.substring(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            {targetUser.nftProfileTokenId && targetUser.nftProfileImageUrl ? (
+              <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                <img src={targetUser.nftProfileImageUrl} alt={targetUser.displayName} className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={targetUser.avatarUrl || ""} alt={targetUser.displayName} />
+                <AvatarFallback className="bg-primary/20">
+                  {targetUser.displayName?.substring(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            )}
             <div className="flex-1">
               <DialogTitle className="text-base font-semibold">
                 {targetUser.displayName}

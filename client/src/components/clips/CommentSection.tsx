@@ -200,15 +200,23 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                 animation: highlightCommentId === comment.id ? 'pulse 1s ease-in-out infinite' : 'none'
               }}
             >
-              <Avatar className="h-8 w-8 flex-shrink-0">
-                <AvatarImage 
-                  src={comment.user.avatarUrl || undefined} 
-                  alt={comment.user.username || "User"} 
+              {comment.user.nftProfileTokenId && comment.user.nftProfileImageUrl ? (
+                <img
+                  src={comment.user.nftProfileImageUrl}
+                  alt={comment.user.username || "User"}
+                  className="h-8 w-8 rounded-lg border border-[#4ade80]/40 object-cover flex-shrink-0"
                 />
-                <AvatarFallback className="text-xs">
-                  {comment.user.username?.[0].toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
+              ) : (
+                <Avatar className="h-8 w-8 flex-shrink-0">
+                  <AvatarImage 
+                    src={comment.user.avatarUrl || undefined} 
+                    alt={comment.user.username || "User"} 
+                  />
+                  <AvatarFallback className="text-xs">
+                    {comment.user.username?.[0].toUpperCase() || "U"}
+                  </AvatarFallback>
+                </Avatar>
+              )}
               <div className="flex-1">
                 <div className="flex flex-wrap items-baseline">
                   <Link href={`/profile/${comment.user.username}`}>
@@ -277,15 +285,23 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
           className="mt-4 space-y-3 flex-shrink-0"
         >
           <div className="flex items-start gap-3">
-            <Avatar className="h-8 w-8 hidden sm:flex flex-shrink-0">
-              <AvatarImage 
-                src={currentUser?.avatarUrl || undefined} 
-                alt={currentUser?.username || "User"} 
+            {currentUser?.nftProfileTokenId && currentUser?.nftProfileImageUrl ? (
+              <img
+                src={currentUser.nftProfileImageUrl}
+                alt={currentUser?.username || "User"}
+                className="h-8 w-8 rounded-lg border border-[#4ade80]/40 object-cover flex-shrink-0 hidden sm:flex"
               />
-              <AvatarFallback className="text-xs">
-                {currentUser?.username?.[0].toUpperCase() || "U"}
-              </AvatarFallback>
-            </Avatar>
+            ) : (
+              <Avatar className="h-8 w-8 hidden sm:flex flex-shrink-0">
+                <AvatarImage 
+                  src={currentUser?.avatarUrl || undefined} 
+                  alt={currentUser?.username || "User"} 
+                />
+                <AvatarFallback className="text-xs">
+                  {currentUser?.username?.[0].toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
+            )}
             <div className="flex-1 space-y-2">
               <StyledMentionInput
                 value={newComment}

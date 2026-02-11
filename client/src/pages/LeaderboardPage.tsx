@@ -20,6 +20,8 @@ interface PointsLeaderboardEntry {
     username: string;
     displayName: string;
     avatarUrl?: string | null;
+    nftProfileTokenId?: string | null;
+    nftProfileImageUrl?: string | null;
   };
 }
 
@@ -39,6 +41,8 @@ interface TopContributor {
     username: string;
     displayName: string;
     avatarUrl?: string | null;
+    nftProfileTokenId?: string | null;
+    nftProfileImageUrl?: string | null;
   };
 }
 
@@ -207,14 +211,20 @@ const LeaderboardPage = () => {
           </div>
 
           {/* Avatar */}
-          <div className={`w-12 h-12 rounded-2xl border ${styles.avatarBorder} bg-[#0f172a] overflow-hidden flex-shrink-0`}>
-            <Avatar className="w-full h-full rounded-none">
-              <AvatarImage src={entry.user.avatarUrl || undefined} className="object-cover" />
-              <AvatarFallback className="bg-[#0f172a] text-slate-400 rounded-none">
-                {entry.user.displayName.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-          </div>
+          {entry.user.nftProfileTokenId && entry.user.nftProfileImageUrl ? (
+            <div className="w-12 h-12 rounded-lg border border-[#4ade80]/40 overflow-hidden flex-shrink-0">
+              <img src={entry.user.nftProfileImageUrl} alt={entry.user.displayName} className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <div className={`w-12 h-12 rounded-2xl border ${styles.avatarBorder} bg-[#0f172a] overflow-hidden flex-shrink-0`}>
+              <Avatar className="w-full h-full rounded-none">
+                <AvatarImage src={entry.user.avatarUrl || undefined} className="object-cover" />
+                <AvatarFallback className="bg-[#0f172a] text-slate-400 rounded-none">
+                  {entry.user.displayName.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          )}
 
           {/* User Info */}
           <div className="flex-1 min-w-0">
@@ -282,14 +292,20 @@ const LeaderboardPage = () => {
           </svg>
         </div>
         
-        <div className="w-10 h-10 rounded-xl border border-[#f0b100]/30 bg-[#0f172a] overflow-hidden flex-shrink-0">
-          <Avatar className="w-full h-full rounded-none">
-            <AvatarImage src={contributor.user.avatarUrl || undefined} className="object-cover" />
-            <AvatarFallback className="bg-[#0f172a] text-slate-400 rounded-none text-xs">
-              {contributor.user.displayName.charAt(0)}
-            </AvatarFallback>
-          </Avatar>
-        </div>
+        {contributor.user.nftProfileTokenId && contributor.user.nftProfileImageUrl ? (
+          <div className="w-10 h-10 rounded-lg border border-[#4ade80]/40 overflow-hidden flex-shrink-0">
+            <img src={contributor.user.nftProfileImageUrl} alt={contributor.user.displayName} className="w-full h-full object-cover" />
+          </div>
+        ) : (
+          <div className="w-10 h-10 rounded-xl border border-[#f0b100]/30 bg-[#0f172a] overflow-hidden flex-shrink-0">
+            <Avatar className="w-full h-full rounded-none">
+              <AvatarImage src={contributor.user.avatarUrl || undefined} className="object-cover" />
+              <AvatarFallback className="bg-[#0f172a] text-slate-400 rounded-none text-xs">
+                {contributor.user.displayName.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+        )}
         
         <div className="flex-1 min-w-0">
           <div className="font-bold text-slate-50 text-sm truncate">
@@ -441,8 +457,8 @@ const LeaderboardPage = () => {
               
               {historicMonthlyData && historicMonthlyData.length > 0 ? (
                 <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-                  {historicMonthlyData.map((contributor) => (
-                    <HistoricWinnerCard key={contributor.id} contributor={contributor} type="monthly" />
+                  {historicMonthlyData.map((contributor: TopContributor) => (
+                    <HistoricWinnerCard key={`${contributor.userId}-${contributor.period}`} contributor={contributor} type="monthly" />
                   ))}
                 </div>
               ) : (
@@ -460,8 +476,8 @@ const LeaderboardPage = () => {
               
               {historicWeeklyData && historicWeeklyData.length > 0 ? (
                 <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-                  {historicWeeklyData.map((contributor) => (
-                    <HistoricWinnerCard key={contributor.id} contributor={contributor} type="weekly" />
+                  {historicWeeklyData.map((contributor: TopContributor) => (
+                    <HistoricWinnerCard key={`${contributor.userId}-${contributor.period}`} contributor={contributor} type="weekly" />
                   ))}
                 </div>
               ) : (

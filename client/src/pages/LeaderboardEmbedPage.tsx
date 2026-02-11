@@ -13,6 +13,8 @@ interface LeaderboardEntry {
     avatarUrl?: string | null;
     bio?: string | null;
     role?: string;
+    nftProfileTokenId?: string | null;
+    nftProfileImageUrl?: string | null;
   };
   likesReceived: number;
   commentsReceived: number;
@@ -109,12 +111,18 @@ const LeaderboardEmbedPage = () => {
                     {getRankIcon(entry.rank)}
                   </div>
                   
-                  <Avatar className="h-10 w-10 border-2 border-primary/20">
-                    <AvatarImage src={entry.user.avatarUrl || undefined} />
-                    <AvatarFallback className="text-sm font-bold">
-                      {entry.user.displayName.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
+                  {entry.user.nftProfileTokenId && entry.user.nftProfileImageUrl ? (
+                    <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                      <img src={entry.user.nftProfileImageUrl} alt={entry.user.displayName} className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <Avatar className="h-10 w-10 border-2 border-primary/20">
+                      <AvatarImage src={entry.user.avatarUrl || undefined} />
+                      <AvatarFallback className="text-sm font-bold">
+                        {entry.user.displayName.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
                   
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-foreground truncate">
