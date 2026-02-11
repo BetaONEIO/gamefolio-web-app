@@ -14,11 +14,14 @@ import {
   Award, 
   RefreshCw,
   ArrowLeft,
-  Sparkles
+  Sparkles,
+  Hexagon,
+  ExternalLink
 } from "lucide-react";
 import { formatDistance } from "date-fns";
 import { Link } from "wouter";
 import { useSignedUrl } from "@/hooks/use-signed-url";
+import { SKALE_NEBULA_TESTNET, NFT_CONTRACT_ADDRESS } from "@shared/contracts";
 
 interface CollectionItem {
   id: number;
@@ -40,6 +43,21 @@ interface CollectionData {
   };
   items: CollectionItem[];
 }
+
+interface OwnedNft {
+  tokenId: number;
+  name: string;
+  image: string | null;
+  description?: string;
+  attributes?: Array<{ trait_type: string; value: string | number }>;
+}
+
+interface OwnedNftsData {
+  nfts: OwnedNft[];
+  count: number;
+}
+
+const SKALE_EXPLORER_BASE_URL = SKALE_NEBULA_TESTNET.blockExplorers.default.url;
 
 const rarityColors: Record<string, { bg: string; border: string; text: string; gradient: string }> = {
   legendary: {
@@ -76,6 +94,57 @@ const rewardTypeIcons: Record<string, typeof Zap> = {
   special: Gem,
   default: Sparkles
 };
+
+function getNftRarity(nft: OwnedNft): string {
+  const rarityAttr = nft.attributes?.find(a => a.trait_type.toLowerCase() === "rarity");
+  if (rarityAttr) {
+    const val = String(rarityAttr.value).toLowerCase();
+    if (["legendary", "epic", "rare", "common"].includes(val)) return val;
+  }
+  const scoreAttr = nft.attributes?.find(a => a.trait_type.toLowerCase() === "rarity score" || a.trait_type.toLowerCase() === "score");
+  if (scoreAttr) {
+    const score = Number(scoreAttr.value);
+    if (score >= 95) return "legendary";
+    if (score >= 75) return "epic";
+    if (score >= 40) return "rare";
+  }
+  return "common";
+}
+
+function NftCard({ nft }: { nft: OwnedNft }) {
+  const rarity = getNftRarity(nft);
+  const colors = rarityColors[rarity] || rarityColors.common;
+  const isLegendary = rarity === "legendary";
+  
+  return (
+    <Card className={`${colors.border} border overflow-hidden relative group transition-transform hover:scale-[1.02] ${isLegendary ? 'ring-1 ring-yellow-500/30' : ''}`}>
+      {isLegendary && (
+        <div className="absolute inset-0 rounded-lg animate-pulse bg-gradient-to-br from-yellow-500/10 via-transparent to-amber-500/10 pointer-events-none z-0" />
+      )}
+      <div className="relative z-[1]">
+        <div className="aspect-square bg-gray-900/80 flex items-center justify-center overflow-hidden">
+          {nft.image ? (
+            <img 
+              src={nft.image} 
+              alt={nft.name} 
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <Hexagon className="w-12 h-12 text-gray-600" />
+          )}
+        </div>
+        <div className={`p-3 bg-gradient-to-br ${colors.gradient}`}>
+          <h3 className="font-semibold text-sm text-white truncate">{nft.name}</h3>
+          <div className="flex items-center justify-between mt-1.5">
+            <span className={`text-xs capitalize font-medium ${colors.text}`}>{rarity}</span>
+            <span className="text-xs text-gray-500 font-mono">#{nft.tokenId}</span>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
 
 function CollectionItemCard({ item }: { item: CollectionItem }) {
   const { signedUrl } = useSignedUrl(item.imageUrl);
@@ -153,6 +222,12 @@ export default function CollectionPage() {
     enabled: !!user,
   });
 
+  const { data: nftData, isLoading: nftsLoading, refetch: refetchNfts, isRefetching: nftsRefetching } = useQuery<OwnedNftsData>({
+    queryKey: ["/api/nfts/owned"],
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+
   const filteredItems = data?.items.filter((item: CollectionItem) => {
     if (filter === "all") return true;
     if (filter === "xp") return item.rewardType === "xp_reward";
@@ -160,6 +235,11 @@ export default function CollectionPage() {
     if (filter === "special") return ["avatar_border", "profile_banner", "profile_background", "badge", "emoji", "sound_effect"].includes(item.rewardType);
     return true;
   }) || [];
+
+  const handleRefresh = () => {
+    refetch();
+    refetchNfts();
+  };
 
   if (!user) {
     return (
@@ -176,7 +256,6 @@ export default function CollectionPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0a0a1a] via-[#1a1a2e] to-[#0a0a1a]">
-      {/* Header */}
       <div className="sticky top-0 z-10 bg-[#0a0a1a]/95 backdrop-blur-sm border-b border-gray-800">
         <div className="max-w-4xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -190,23 +269,72 @@ export default function CollectionPage() {
                 <Package className="w-5 h-5 text-purple-400" />
                 My Collection
               </h1>
-              <p className="text-xs text-gray-500">Lootbox rewards</p>
+              <p className="text-xs text-gray-500">NFTs & Lootbox rewards</p>
             </div>
           </div>
           <Button 
             variant="ghost" 
             size="icon"
-            onClick={() => refetch()}
-            disabled={isRefetching}
+            onClick={handleRefresh}
+            disabled={isRefetching || nftsRefetching}
             className="text-gray-400 hover:text-white"
           >
-            <RefreshCw className={`w-5 h-5 ${isRefetching ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-5 h-5 ${(isRefetching || nftsRefetching) ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 space-y-6">
-        {/* Stats Overview */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-2">
+              <Hexagon className="w-4 h-4 text-emerald-400" />
+              My NFTs
+              {nftData && nftData.count > 0 && (
+                <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-bold">
+                  {nftData.count}
+                </span>
+              )}
+            </h2>
+            {nftData && nftData.count > 0 && (
+              <a
+                href={`${SKALE_EXPLORER_BASE_URL}/address/${NFT_CONTRACT_ADDRESS}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-gray-500 hover:text-emerald-400 flex items-center gap-1 transition-colors"
+              >
+                View Contract <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+          </div>
+
+          {nftsLoading ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="aspect-[3/4] bg-gray-800 rounded-lg" />
+              ))}
+            </div>
+          ) : nftData && nftData.nfts.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {nftData.nfts.map((nft) => (
+                <NftCard key={nft.tokenId} nft={nft} />
+              ))}
+            </div>
+          ) : (
+            <Card className="bg-gray-900/50 border-gray-800 border-dashed p-6 text-center">
+              <Hexagon className="w-10 h-10 text-gray-600 mx-auto mb-2" />
+              <p className="text-gray-400 text-sm">No NFTs collected yet</p>
+              <Link href="/store">
+                <Button variant="ghost" size="sm" className="mt-2 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10">
+                  Mint NFTs
+                </Button>
+              </Link>
+            </Card>
+          )}
+        </section>
+
+        <div className="border-t border-gray-800/50" />
+
         <section>
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Stats Overview</h2>
           {isLoading ? (
@@ -245,7 +373,6 @@ export default function CollectionPage() {
           )}
         </section>
 
-        {/* Rarity Breakdown */}
         <section>
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Rarity Breakdown</h2>
           {isLoading ? (
@@ -264,7 +391,6 @@ export default function CollectionPage() {
           )}
         </section>
 
-        {/* Filter Tabs */}
         <section>
           <Tabs value={filter} onValueChange={setFilter} className="w-full">
             <TabsList className="bg-gray-900/50 border border-gray-800 w-full justify-start">
@@ -284,7 +410,6 @@ export default function CollectionPage() {
           </Tabs>
         </section>
 
-        {/* Items Grid */}
         <section>
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">
             Collected Items ({filteredItems.length})
