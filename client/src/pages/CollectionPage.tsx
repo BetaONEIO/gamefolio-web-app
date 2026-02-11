@@ -268,6 +268,7 @@ export default function CollectionPage() {
   const { user } = useAuth();
   const [filter, setFilter] = useState("all");
   const [selectedNft, setSelectedNft] = useState<OwnedNft | null>(null);
+  const [nftTab, setNftTab] = useState<"owned" | "sold">("owned");
 
   const { data, isLoading, refetch, isRefetching } = useQuery<CollectionData>({
     queryKey: ["/api/lootbox/collection"],
@@ -393,29 +394,77 @@ export default function CollectionPage() {
             )}
           </div>
 
-          {nftsLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="aspect-[3/4] bg-gray-800 rounded-lg" />
-              ))}
-            </div>
-          ) : nftData && nftData.nfts.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {nftData.nfts.map((nft: OwnedNft) => (
-                <NftCard key={nft.tokenId} nft={nft} onClick={() => setSelectedNft(nft)} />
-              ))}
-            </div>
-          ) : (
-            <Card className="bg-gray-900/50 border-gray-800 border-dashed p-6 text-center">
-              <Hexagon className="w-10 h-10 text-gray-600 mx-auto mb-2" />
-              <p className="text-gray-400 text-sm">No NFTs collected yet</p>
-              <Link href="/store">
-                <Button variant="ghost" size="sm" className="mt-2 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10">
-                  Mint NFTs
-                </Button>
-              </Link>
-            </Card>
-          )}
+          {(() => {
+            const ownedNfts = nftData?.nfts.filter((n: OwnedNft) => !n.sold) || [];
+            const soldNfts = nftData?.nfts.filter((n: OwnedNft) => n.sold) || [];
+
+            return (
+              <>
+                <div className="flex gap-2 mb-4">
+                  <button
+                    onClick={() => setNftTab("owned")}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      nftTab === "owned"
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                        : "bg-gray-800/50 text-gray-400 border border-gray-700 hover:text-gray-300"
+                    }`}
+                  >
+                    Owned {ownedNfts.length > 0 && <span className="ml-1.5 text-xs bg-emerald-500/30 px-1.5 py-0.5 rounded-full">{ownedNfts.length}</span>}
+                  </button>
+                  <button
+                    onClick={() => setNftTab("sold")}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      nftTab === "sold"
+                        ? "bg-red-500/20 text-red-400 border border-red-500/40"
+                        : "bg-gray-800/50 text-gray-400 border border-gray-700 hover:text-gray-300"
+                    }`}
+                  >
+                    Sold {soldNfts.length > 0 && <span className="ml-1.5 text-xs bg-red-500/30 px-1.5 py-0.5 rounded-full">{soldNfts.length}</span>}
+                  </button>
+                </div>
+
+                {nftsLoading ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {[...Array(3)].map((_, i) => (
+                      <Skeleton key={i} className="aspect-[3/4] bg-gray-800 rounded-lg" />
+                    ))}
+                  </div>
+                ) : nftTab === "owned" ? (
+                  ownedNfts.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {ownedNfts.map((nft: OwnedNft) => (
+                        <NftCard key={nft.tokenId} nft={nft} onClick={() => setSelectedNft(nft)} />
+                      ))}
+                    </div>
+                  ) : (
+                    <Card className="bg-gray-900/50 border-gray-800 border-dashed p-6 text-center">
+                      <Hexagon className="w-10 h-10 text-gray-600 mx-auto mb-2" />
+                      <p className="text-gray-400 text-sm">No NFTs owned yet</p>
+                      <Link href="/store">
+                        <Button variant="ghost" size="sm" className="mt-2 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10">
+                          Mint NFTs
+                        </Button>
+                      </Link>
+                    </Card>
+                  )
+                ) : (
+                  soldNfts.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {soldNfts.map((nft: OwnedNft) => (
+                        <NftCard key={nft.tokenId} nft={nft} onClick={() => setSelectedNft(nft)} />
+                      ))}
+                    </div>
+                  ) : (
+                    <Card className="bg-gray-900/50 border-gray-800 border-dashed p-6 text-center">
+                      <Hexagon className="w-10 h-10 text-gray-600 mx-auto mb-2" />
+                      <p className="text-gray-400 text-sm">No sold NFTs</p>
+                      <p className="text-gray-500 text-xs mt-1">Quick sell NFTs from their detail view to list them here</p>
+                    </Card>
+                  )
+                )}
+              </>
+            );
+          })()}
         </section>
 
         <div className="border-t border-gray-800/50" />

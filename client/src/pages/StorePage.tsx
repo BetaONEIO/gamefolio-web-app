@@ -142,6 +142,34 @@ function resolveStoreImage(imagePath: string | null): string {
   return nftImageMap[imagePath] || imagePath;
 }
 
+function MarketplaceNftImage({ tokenId }: { tokenId: number }) {
+  const { data } = useQuery({
+    queryKey: ['/api/nft/metadata', tokenId],
+    queryFn: async () => {
+      const res = await fetch(`/api/nft/metadata/${tokenId}`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    staleTime: 300_000,
+  });
+
+  if (!data?.image) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-800">
+        <Loader2 className="h-8 w-8 text-gray-600 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={data.image}
+      alt={data.name || `Genesis #${tokenId}`}
+      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+    />
+  );
+}
+
 export default function StorePage() {
   const { user } = useAuth();
   const { wallet } = useCrossmint();
@@ -278,6 +306,48 @@ export default function StorePage() {
     onError: (error: Error) => {
       toast({ title: "Purchase Failed", description: error.message, variant: "destructive" });
       setPurchasingBorderId(null);
+    },
+  });
+
+  interface MarketplaceListing {
+    token_id: number;
+    listed_price: number;
+    sold_at: string;
+    user_id: number;
+    username: string;
+    display_name: string | null;
+  }
+
+  const { data: marketplaceData, isLoading: isLoadingMarketplace, refetch: refetchMarketplace } = useQuery<{ listings: MarketplaceListing[] }>({
+    queryKey: ["/api/marketplace/listings"],
+    queryFn: async () => {
+      const response = await fetch('/api/marketplace/listings', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch marketplace listings');
+      return response.json();
+    },
+  });
+
+  const [buyingTokenId, setBuyingTokenId] = useState<number | null>(null);
+
+  const buyMarketplaceNftMutation = useMutation({
+    mutationFn: async ({ tokenId, sellerId }: { tokenId: number; sellerId: number }) => {
+      const response = await apiRequest("POST", "/api/marketplace/buy", { tokenId, sellerId });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to purchase NFT");
+      }
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "NFT Purchased!", description: data.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/marketplace/listings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/nfts/owned"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      setBuyingTokenId(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Purchase Failed", description: error.message, variant: "destructive" });
+      setBuyingTokenId(null);
     },
   });
 
@@ -1127,6 +1197,76 @@ export default function StorePage() {
                         >
                           <ShoppingCart className="h-2.5 w-2.5 mr-0.5" />
                           Buy
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+              </>
+              )}
+
+              {/* Marketplace Listings */}
+              {marketplaceData && marketplaceData.listings.length > 0 && accessFilter !== "pro" && (
+              <>
+              <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                <Tag className="h-4 w-4 text-orange-400" />
+                Marketplace
+                <Badge className="bg-orange-600/30 text-[10px] px-1.5 py-0.5 text-orange-300 ml-1">
+                  Player Listed
+                </Badge>
+              </h3>
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 mb-8">
+                {marketplaceData.listings.map((listing: MarketplaceListing) => (
+                  <Card
+                    key={`marketplace-${listing.token_id}-${listing.user_id}`}
+                    className="bg-gray-800/50 border-gray-700 overflow-hidden transition-all hover:shadow-lg hover:border-orange-400 hover:shadow-orange-400/20"
+                  >
+                    <div className="relative aspect-square overflow-hidden bg-gray-900">
+                      <img
+                        src={`/api/nft/metadata/${listing.token_id}`}
+                        alt={`Genesis #${listing.token_id}`}
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300 hidden"
+                      />
+                      <MarketplaceNftImage tokenId={listing.token_id} />
+                      <div className="absolute top-2 left-2 bg-orange-500/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+                        Resale
+                      </div>
+                    </div>
+                    
+                    <div className="p-2 space-y-1.5">
+                      <div>
+                        <h3 className="font-semibold text-xs line-clamp-1">Genesis #{listing.token_id}</h3>
+                        <p className="text-[10px] text-gray-400">by {listing.display_name || listing.username}</p>
+                      </div>
+                      
+                      <div className="flex items-center justify-between pt-1.5 border-t border-gray-700">
+                        <div>
+                          <p className="text-[9px] text-gray-500">Price</p>
+                          <div className="flex items-center gap-0.5">
+                            <img src={gfTokenLogo} alt="GF" className="w-3 h-3" />
+                            <span className="text-xs font-bold text-orange-400">{listing.listed_price}</span>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          disabled={buyingTokenId === listing.token_id || listing.user_id === user?.id}
+                          className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-[10px] h-6 px-2 disabled:opacity-50"
+                          onClick={() => {
+                            setBuyingTokenId(listing.token_id);
+                            buyMarketplaceNftMutation.mutate({ tokenId: listing.token_id, sellerId: listing.user_id });
+                          }}
+                        >
+                          {buyingTokenId === listing.token_id ? (
+                            <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                          ) : listing.user_id === user?.id ? (
+                            "Your listing"
+                          ) : (
+                            <>
+                              <ShoppingCart className="h-2.5 w-2.5 mr-0.5" />
+                              Buy
+                            </>
+                          )}
                         </Button>
                       </div>
                     </div>

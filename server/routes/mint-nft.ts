@@ -28,6 +28,8 @@ const router = Router();
         sold BOOLEAN DEFAULT FALSE,
         sold_at TIMESTAMP,
         minted_at TIMESTAMP DEFAULT NOW(),
+        listed_price INTEGER DEFAULT 250,
+        listing_active BOOLEAN DEFAULT FALSE,
         UNIQUE(user_id, token_id)
       )
     `);
