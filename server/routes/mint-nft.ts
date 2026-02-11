@@ -106,6 +106,28 @@ const router = Router();
   }
 })();
 
+router.get('/api/mint/wallet-status', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.json({
+      hasWallet: !!user.walletAddress,
+      hasSigningKey: !!user.encryptedPrivateKey,
+      walletAddress: user.walletAddress,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message || 'Failed to check wallet status' });
+  }
+});
+
 router.post('/api/mint/approve', async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.id;

@@ -147,6 +147,19 @@ export function useMintNFT(fallbackAddress?: string | null) {
     }
   }, [effectiveAddress, publicClient, checkAllowance, fetchOnChainData]);
 
+  useEffect(() => {
+    if (useServerSigning) {
+      fetch('/api/mint/wallet-status', { credentials: 'include' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.hasWallet && !data.hasSigningKey) {
+            setNeedsWalletRegeneration(true);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [useServerSigning]);
+
   const handleServerError = useCallback((data: any) => {
     if (data?.code === 'MISSING_PRIVATE_KEY') {
       setNeedsWalletRegeneration(true);
