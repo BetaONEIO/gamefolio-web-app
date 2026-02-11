@@ -1,0 +1,1587 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/MyCollection.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,900;0,500;0,undefined;0,400&display=swap";
+.MyCollection_135_153 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_135_154 {
+  background: #020617;
+  flex: 1 0 0;
+  width: 100%;
+}
+.Container_135_155 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: -0.847229px;
+  width: 431px;
+  display: flex;
+}
+.Container_135_156 {
+  background: linear-gradient(#14532d1a 0%, #14532d00 100%);
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 23.9757px;
+  padding: 23.993px 24.007px 24.031px 23.993px;
+  display: flex;
+}
+.Container_135_157 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 383px;
+  height: 60px;
+  display: flex;
+}
+.Container_135_158 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3.98264px;
+  width: 126px;
+  padding-bottom: 0.017px;
+  display: flex;
+}
+.Container_135_159 {
+  align-items: center;
+  height: 16px;
+  padding: 0 68.5px 1px 0;
+  display: flex;
+}
+.MyNfTs_135_160 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  width: 59px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_135_161 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 7.91667px;
+  height: 40px;
+  padding-right: 0.083px;
+  display: flex;
+}
+.Container_135_162 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  display: flex;
+}
+.generated_24_135_163 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 50px;
+  height: 46px;
+  font-family: Plus Jakarta Sans;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 40px;
+  display: inline-block;
+}
+.Container_135_164 {
+  justify-content: center;
+  align-items: center;
+  width: 73px;
+  height: 20px;
+  padding-bottom: 2px;
+  display: flex;
+}
+.ItemsTotal_135_165 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 75px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  display: inline-block;
+}
+.Button_135_166 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 5.97916px;
+  width: 120px;
+  padding-right: 0.021px;
+  display: flex;
+}
+.Container_135_167 {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+}
+.G_135_168 {
+  width: 12.628px;
+  height: 13.325px;
+}
+.Container_135_171 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding-bottom: 2px;
+  display: flex;
+}
+.ViewContract_135_172 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 100px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_135_173 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1.111px solid #1e293b;
+  border-radius: 16px;
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 7.89585px;
+  width: 383px;
+  height: 51px;
+  padding: 5.104px 6px 5.896px 5.104px;
+  display: flex;
+}
+.Button_135_174 {
+  background: #4ade80;
+  border-radius: 16px;
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6.42361px;
+  width: 182px;
+  height: 40px;
+  padding: 10px 49.764px 10px 48.813px;
+  display: flex;
+  box-shadow: 0 0 15px -5px #4ade80;
+}
+.Owned_135_175 {
+  color: #022c22;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 54px;
+  height: 20px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_135_176 {
+  background: #022c2233;
+  border-radius: 10px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 23px;
+  height: 19px;
+  padding: 1.997px 4.51px 4.003px 4.49px;
+  display: flex;
+}
+.generated_18_135_177 {
+  color: #022c22;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 14px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 14.286px;
+  display: inline-block;
+}
+.Button_135_178 {
+  border-radius: 16px;
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6.01044px;
+  width: 182px;
+  height: 40px;
+  padding: 10px 61.542px 10px 61.448px;
+  display: flex;
+}
+.Sold_135_179 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 34px;
+  height: 20px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_135_180 {
+  background: #1e293b;
+  border-radius: 10px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 19px;
+  height: 19px;
+  padding: 1.997px 5.01px 4.003px 4.99px;
+  display: flex;
+}
+.generated_6_135_181 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 9px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 14.286px;
+  display: inline-block;
+}
+.Container_135_182 {
+  flex-direction: column;
+  align-items: center;
+  padding: 0 24.007px 96px 23.993px;
+  display: flex;
+}
+.Container_135_183 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 383px;
+  height: 775px;
+  display: flex;
+}
+.Container_135_184 {
+  background: linear-gradient(#4ade8033 0%, #14532d4d 50%, #4ade8033 100%);
+  border-radius: 16px;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: -0.996491px;
+  width: 184px;
+  height: 248px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 0 20px #4ade804d;
+}
+.Container_135_185 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3.97568px;
+  padding: 11.997px 12.003px 12.028px 11.997px;
+  display: flex;
+}
+.Container_135_186 {
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding-bottom: 2px;
+  display: flex;
+  overflow: hidden;
+}
+.GamefolioGenesis_71_135_187 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 161px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_135_188 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 5.97569px;
+  height: 17px;
+  padding-right: 118.024px;
+  display: flex;
+}
+.Container_135_189 {
+  background: #4ade80;
+  border-radius: 37282700px;
+  width: 8px;
+  height: 8px;
+  box-shadow: 0 0 8px #4ade80;
+}
+.Container_135_190 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 17px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.Rare_135_191 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.275px;
+  text-transform: uppercase;
+  width: 30px;
+  height: 14px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_135_192 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 184px;
+  display: flex;
+}
+.Image_135_193 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 184px;
+  height: 184px;
+}
+.Container_135_194 {
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+  background: #0009;
+  border: 1.111px solid #ffffff1a;
+  border-radius: 12px;
+  justify-content: center;
+  align-items: center;
+  width: 37px;
+  padding: 12.882px 8.903px 9.118px 9.097px;
+  display: flex;
+}
+.Container_135_195 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 19px;
+  height: 13px;
+  display: flex;
+}
+.generated_71_135_196 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 22px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_135_197 {
+  background: linear-gradient(#f6cfff 0%, #cefafe 50%, #fff085 100%);
+  border-radius: 16px;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: -0.979157px;
+  width: 184px;
+  height: 248px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 0 25px #ec489966;
+}
+.Container_135_198 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3.97571px;
+  padding: 11.997px 12.003px 12.028px 11.997px;
+  display: flex;
+}
+.Container_135_199 {
+  justify-content: flex-end;
+  align-items: center;
+  height: 20px;
+  padding-bottom: 2px;
+  display: flex;
+  overflow: hidden;
+}
+.GamefolioGenesis_142_135_200 {
+  color: #1d293d;
+  font-feature-settings: "dlig" on;
+  width: 171px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_135_201 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 5.97569px;
+  height: 17px;
+  padding-right: 82.024px;
+  display: flex;
+}
+.Container_135_202 {
+  background: #22c55e;
+  border-radius: 37282700px;
+  width: 8px;
+  height: 8px;
+  box-shadow: 0 0 8px #22c55e;
+}
+.Container_135_203 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 17px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.Legendary_135_204 {
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.275px;
+  text-transform: uppercase;
+  -webkit-text-fill-color: transparent;
+  background: linear-gradient(270deg, #2b7fff 0%, #ad46ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  width: 69px;
+  height: 14px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_135_205 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 184px;
+  display: flex;
+}
+.Image_135_206 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 184px;
+  height: 184px;
+}
+.Container_135_207 {
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+  background: #0009;
+  border: 1.111px solid #ffffff1a;
+  border-radius: 12px;
+  justify-content: center;
+  align-items: center;
+  width: 44px;
+  padding: 12.882px 8.903px 9.118px 9.097px;
+  display: flex;
+}
+.Container_135_208 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 26px;
+  height: 13px;
+  display: flex;
+}
+.generated_142_135_209 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 29px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_135_210 {
+  background: #0f172a;
+  border-radius: 16px;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: -0.996521px;
+  width: 184px;
+  height: 248px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_135_211 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3.97571px;
+  padding: 11.997px 12.003px 12.028px 11.997px;
+  display: flex;
+}
+.Container_135_212 {
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding-bottom: 2px;
+  display: flex;
+  overflow: hidden;
+}
+.GamefolioGenesis_85_135_213 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 165px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_135_214 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 5.97569px;
+  height: 17px;
+  padding-right: 92.024px;
+  display: flex;
+}
+.Container_135_215 {
+  background: #94a3b880;
+  border-radius: 37282700px;
+  width: 8px;
+  height: 8px;
+  box-shadow: 0 0 8px #1e293b;
+}
+.Container_135_216 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 17px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.Common_135_217 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.275px;
+  text-transform: uppercase;
+  width: 56px;
+  height: 14px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_135_218 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 184px;
+  display: flex;
+}
+.Image_135_219 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 184px;
+  height: 184px;
+}
+.Container_135_220 {
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+  background: #0009;
+  border: 1.111px solid #ffffff1a;
+  border-radius: 12px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  padding: 12.882px 8.903px 9.118px 9.097px;
+  display: flex;
+}
+.Container_135_221 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 22px;
+  height: 13px;
+  display: flex;
+}
+.generated_85_135_222 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 25px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_135_223 {
+  background: linear-gradient(#4ade8033 0%, #14532d4d 50%, #4ade8033 100%);
+  border-radius: 16px;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: -0.979187px;
+  width: 184px;
+  height: 248px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 0 20px #4ade804d;
+}
+.Container_135_224 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3.97571px;
+  padding: 11.997px 12.003px 12.028px 11.997px;
+  display: flex;
+}
+.Container_135_225 {
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding-bottom: 2px;
+  display: flex;
+  overflow: hidden;
+}
+.GamefolioGenesis_99_135_226 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 165px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_135_227 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 5.97569px;
+  height: 17px;
+  padding-right: 118.024px;
+  display: flex;
+}
+.Container_135_228 {
+  background: #4ade80;
+  border-radius: 37282700px;
+  width: 8px;
+  height: 8px;
+  box-shadow: 0 0 8px #4ade80;
+}
+.Container_135_229 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 17px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.Rare_135_230 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.275px;
+  text-transform: uppercase;
+  width: 30px;
+  height: 14px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_135_231 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 184px;
+  display: flex;
+}
+.Image_135_232 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 184px;
+  height: 184px;
+}
+.Container_135_233 {
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+  background: #0009;
+  border: 1.111px solid #ffffff1a;
+  border-radius: 12px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  padding: 12.882px 8.903px 9.118px 9.097px;
+  display: flex;
+}
+.Container_135_234 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 22px;
+  height: 13px;
+  display: flex;
+}
+.generated_99_135_235 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 25px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_135_236 {
+  background: #0f172a;
+  border-radius: 16px;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: -0.996521px;
+  width: 184px;
+  height: 248px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_135_237 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3.97577px;
+  padding: 11.997px 12.003px 12.028px 11.997px;
+  display: flex;
+}
+.Container_135_238 {
+  align-items: center;
+  height: 20px;
+  padding: 0 47.5px 2px 0;
+  display: flex;
+  overflow: hidden;
+}
+.VanguardArmor_135_239 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 114px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_135_240 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 5.97569px;
+  height: 17px;
+  padding-right: 121.024px;
+  display: flex;
+}
+.Container_135_241 {
+  background: #16a34a;
+  border-radius: 37282700px;
+  width: 8px;
+  height: 8px;
+  box-shadow: 0 0 8px #16a34a;
+}
+.Container_135_242 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 17px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.Epic_135_243 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.275px;
+  text-transform: uppercase;
+  width: 27px;
+  height: 14px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_135_244 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 184px;
+  display: flex;
+}
+.Image_135_245 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 184px;
+  height: 184px;
+}
+.Container_135_246 {
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+  background: #0009;
+  border: 1.111px solid #ffffff1a;
+  border-radius: 12px;
+  justify-content: center;
+  align-items: center;
+  width: 45px;
+  padding: 12.882px 8.903px 9.118px 9.097px;
+  display: flex;
+}
+.Container_135_247 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 27px;
+  height: 13px;
+  display: flex;
+}
+.generated_201_135_248 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 30px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_135_249 {
+  background: #0f172a;
+  border-radius: 16px;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: -0.979126px;
+  width: 184px;
+  height: 248px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_135_250 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3.97571px;
+  padding: 11.997px 12.003px 12.028px 11.997px;
+  display: flex;
+}
+.Container_135_251 {
+  align-items: center;
+  height: 20px;
+  padding: 0 70.5px 2px 0;
+  display: flex;
+  overflow: hidden;
+}
+.MysticBlade_135_252 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 91px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_135_253 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 5.97569px;
+  height: 17px;
+  padding-right: 118.024px;
+  display: flex;
+}
+.Container_135_254 {
+  background: #4ade80;
+  border-radius: 37282700px;
+  width: 8px;
+  height: 8px;
+  box-shadow: 0 0 8px #4ade80;
+}
+.Container_135_255 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 17px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.Rare_135_256 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.275px;
+  text-transform: uppercase;
+  width: 30px;
+  height: 14px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_135_257 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 184px;
+  display: flex;
+}
+.Image_135_258 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 184px;
+  height: 184px;
+}
+.Container_135_259 {
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+  background: #0009;
+  border: 1.111px solid #ffffff1a;
+  border-radius: 12px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  padding: 12.882px 8.903px 9.118px 9.097px;
+  display: flex;
+}
+.Container_135_260 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 22px;
+  height: 13px;
+  display: flex;
+}
+.generated_32_135_261 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 25px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_135_262 {
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+  background: #020617cc;
+  border-bottom: 1.111px solid #1e293b4d;
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 149.014px;
+  width: 431px;
+  padding: 47.986px 24.993px 26.014px 23.993px;
+  display: flex;
+}
+.Container_135_263 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 15.9896px;
+  width: 193px;
+  height: 44px;
+  padding-right: 0.01px;
+  display: flex;
+}
+.Button_135_264 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1.111px solid #1e293b;
+  border-radius: 16px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 8.003px 7.997px 7.997px 8.003px;
+  display: flex;
+}
+.Container_135_265 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_135_267 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: -0.0138855px;
+  height: 44px;
+  padding-bottom: 0.014px;
+  display: flex;
+}
+.Container_135_268 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 28px;
+  padding: 1.111px 0 0.889px;
+  display: flex;
+}
+.MyCollection_135_269 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 138px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_135_270 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding-bottom: 1px;
+  display: flex;
+}
+.NfTsLootboxRewards_135_271 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 139px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  display: inline-block;
+}
+.Button_135_272 {
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1.111px solid #1e293b;
+  border-radius: 16px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+  display: flex;
+}
+.Container_135_273 {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_135_275 {
+  box-sizing: border-box;
+  background: #020617;
+  border-top: 1.111px solid #1e293b;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 78.7847px;
+  padding: 13.108px 24.792px 12.892px 23.993px;
+  display: flex;
+}
+.Container_135_276 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 3.98608px;
+  width: 30px;
+  height: 43px;
+  display: flex;
+}
+.Container_135_277 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.G_135_278 {
+  width: 19.994px;
+  height: 19.994px;
+}
+.Container_135_281 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.Home_135_282 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 32px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_135_283 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 3.98608px;
+  width: 50px;
+  height: 43px;
+  display: flex;
+}
+.Container_135_284 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_135_286 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.Collection_135_287 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  width: 52px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_135_288 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 3.98608px;
+  width: 34px;
+  height: 43px;
+  display: flex;
+}
+.Container_135_289 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.G_135_290 {
+  width: 19.994px;
+  height: 19.994px;
+}
+.Container_135_293 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.Market_135_294 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 36px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_135_295 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 3.98608px;
+  width: 31px;
+  height: 43px;
+  display: flex;
+}
+.Container_135_296 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.G_135_297 {
+  width: 19.994px;
+  height: 19.994px;
+}
+.Container_135_301 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.Profile_135_302 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 33px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 15px;
+  display: inline-block;
+}
+
+```
+
+---
+
+```src/components/MyCollection.tsx
+import React from 'react';
+import styles from '../styles/MyCollection.module.css';
+
+
+export default function MyCollection() {
+  return (
+    <div className={styles.MyCollection_135_153}>
+      <div className={styles.Container_135_154}>
+        <div className={styles.Container_135_155}>
+          <div className={styles.Container_135_156}>
+            <div className={styles.Container_135_157}>
+              <div className={styles.Container_135_158}>
+                <div className={styles.Container_135_159}><span className={styles.MyNfTs_135_160}>My NFTs</span></div>
+                <div className={styles.Container_135_161}>
+                  <div className={styles.Container_135_162}><span className={styles.generated_24_135_163}>24</span></div>
+                  <div className={styles.Container_135_164}><span className={styles.ItemsTotal_135_165}>Items Total</span></div>
+                </div>
+              </div>
+              <div className={styles.Button_135_166}>
+                <div className={styles.Container_135_167}>
+                  <div className={styles.G_135_168}><svg width="13" height="14" viewBox="0 0 13 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M4.66406 7.99467C3.56452 6.89075 3.66382 5.00123 4.88528 3.77538L8.42484 0.222683C9.64631 -1.0039 11.5278 -1.10319 12.6281 0C13.7283 1.10319 13.6283 2.99344 12.4068 4.22002L10.6371 5.99637" stroke="#4ADE80" strokeWidth="1.09516" strokeLinecap="round" />
+                      <path d="M7.96403 5.32983C9.06357 6.43376 8.96428 8.32328 7.7428 9.54913L5.97302 11.3255L4.20324 13.1018C2.98176 14.3284 1.10027 14.4277 0 13.3245C-1.10027 12.2213 -1.00025 10.3311 0.221223 9.1045L1.99101 7.32814" stroke="#4ADE80" strokeWidth="1.09516" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                </div>
+                <div className={styles.Container_135_171}><span className={styles.ViewContract_135_172}>View Contract</span></div>
+              </div>
+            </div>
+            <div className={styles.Container_135_173}>
+              <div className={styles.Button_135_174}><span className={styles.Owned_135_175}>Owned</span>
+                <div className={styles.Container_135_176}><span className={styles.generated_18_135_177}>18</span></div>
+              </div>
+              <div className={styles.Button_135_178}><span className={styles.Sold_135_179}>Sold</span>
+                <div className={styles.Container_135_180}><span className={styles.generated_6_135_181}>6</span></div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_135_182}>
+            <div className={styles.Container_135_183}>
+              <div className={styles.Container_135_184}>
+                <div className={styles.Container_135_185}>
+                  <div className={styles.Container_135_186}><span className={styles.GamefolioGenesis_71_135_187}>Gamefolio Genesis #71</span></div>
+                  <div className={styles.Container_135_188}>
+                    <div className={styles.Container_135_189}></div>
+                    <div className={styles.Container_135_190}><span className={styles.Rare_135_191}>Rare</span></div>
+                  </div>
+                </div>
+                <div className={styles.Container_135_192}>
+                  <div className={styles.Image_135_193}></div>
+                  <div className={styles.Container_135_194}>
+                    <div className={styles.Container_135_195}><span className={styles.generated_71_135_196}>#71</span></div>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.Container_135_197}>
+                <div className={styles.Container_135_198}>
+                  <div className={styles.Container_135_199}><span className={styles.GamefolioGenesis_142_135_200}>Gamefolio Genesis #142</span></div>
+                  <div className={styles.Container_135_201}>
+                    <div className={styles.Container_135_202}></div>
+                    <div className={styles.Container_135_203}><span className={styles.Legendary_135_204}>Legendary</span></div>
+                  </div>
+                </div>
+                <div className={styles.Container_135_205}>
+                  <div className={styles.Image_135_206}></div>
+                  <div className={styles.Container_135_207}>
+                    <div className={styles.Container_135_208}><span className={styles.generated_142_135_209}>#142</span></div>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.Container_135_210}>
+                <div className={styles.Container_135_211}>
+                  <div className={styles.Container_135_212}><span className={styles.GamefolioGenesis_85_135_213}>Gamefolio Genesis #85</span></div>
+                  <div className={styles.Container_135_214}>
+                    <div className={styles.Container_135_215}></div>
+                    <div className={styles.Container_135_216}><span className={styles.Common_135_217}>Common</span></div>
+                  </div>
+                </div>
+                <div className={styles.Container_135_218}>
+                  <div className={styles.Image_135_219}></div>
+                  <div className={styles.Container_135_220}>
+                    <div className={styles.Container_135_221}><span className={styles.generated_85_135_222}>#85</span></div>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.Container_135_223}>
+                <div className={styles.Container_135_224}>
+                  <div className={styles.Container_135_225}><span className={styles.GamefolioGenesis_99_135_226}>Gamefolio Genesis #99</span></div>
+                  <div className={styles.Container_135_227}>
+                    <div className={styles.Container_135_228}></div>
+                    <div className={styles.Container_135_229}><span className={styles.Rare_135_230}>Rare</span></div>
+                  </div>
+                </div>
+                <div className={styles.Container_135_231}>
+                  <div className={styles.Image_135_232}></div>
+                  <div className={styles.Container_135_233}>
+                    <div className={styles.Container_135_234}><span className={styles.generated_99_135_235}>#99</span></div>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.Container_135_236}>
+                <div className={styles.Container_135_237}>
+                  <div className={styles.Container_135_238}><span className={styles.VanguardArmor_135_239}>Vanguard Armor</span></div>
+                  <div className={styles.Container_135_240}>
+                    <div className={styles.Container_135_241}></div>
+                    <div className={styles.Container_135_242}><span className={styles.Epic_135_243}>Epic</span></div>
+                  </div>
+                </div>
+                <div className={styles.Container_135_244}>
+                  <div className={styles.Image_135_245}></div>
+                  <div className={styles.Container_135_246}>
+                    <div className={styles.Container_135_247}><span className={styles.generated_201_135_248}>#201</span></div>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.Container_135_249}>
+                <div className={styles.Container_135_250}>
+                  <div className={styles.Container_135_251}><span className={styles.MysticBlade_135_252}>Mystic Blade</span></div>
+                  <div className={styles.Container_135_253}>
+                    <div className={styles.Container_135_254}></div>
+                    <div className={styles.Container_135_255}><span className={styles.Rare_135_256}>Rare</span></div>
+                  </div>
+                </div>
+                <div className={styles.Container_135_257}>
+                  <div className={styles.Image_135_258}></div>
+                  <div className={styles.Container_135_259}>
+                    <div className={styles.Container_135_260}><span className={styles.generated_32_135_261}>#32</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_135_262}>
+          <div className={styles.Container_135_263}>
+            <div className={styles.Button_135_264}>
+              <div className={styles.Container_135_265}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M19.9944 11.9966H3.99902M3.99902 11.9966L9.99729 5.99829M3.99902 11.9966L9.99729 17.9948" stroke="#F8FAFC" strokeWidth="1.49957" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_135_267}>
+              <div className={styles.Container_135_268}><span className={styles.MyCollection_135_269}>My Collection</span></div>
+              <div className={styles.Container_135_270}><span className={styles.NfTsLootboxRewards_135_271}>NFTs &#x26; Lootbox rewards</span></div>
+            </div>
+          </div>
+          <div className={styles.Button_135_272}>
+            <div className={styles.Container_135_273}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g clipPath="url(#clip0_135_273)">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M2.88966 9.44418H2.26466H2.88966Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M2.88966 10.8333L2.44966 11.2767C2.69329 11.5182 3.08604 11.5182 3.32967 11.2767L2.88966 10.8333Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M4.72967 9.88835C4.97497 9.64488 4.97647 9.24865 4.733 9.00335C4.48953 8.75804 4.09331 8.75655 3.848 9.00001L4.72967 9.88835Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M1.92966 9.00001C1.68345 8.76398 1.29348 8.76892 1.05333 9.01112C0.813179 9.25331 0.811547 9.64332 1.04966 9.88751L1.92966 9.00001Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M15.3364 6.16001C15.4504 6.3564 15.662 6.47547 15.8891 6.47102C16.1161 6.46656 16.3229 6.33929 16.4292 6.13858C16.5355 5.93786 16.5245 5.6953 16.4005 5.50501L15.3364 6.16001Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M9.88884 1.875C5.683 1.875 2.26466 5.25917 2.26466 9.44418H3.51383C3.51383 5.95917 6.36384 3.125 9.88884 3.125V1.875Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M2.26466 9.44418L2.26383 10.8333H3.51383V9.44418H2.26466Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M3.3305 11.2775L4.72967 9.88835L3.848 9.00001L2.448 10.3892L3.3305 11.2775Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M3.3305 10.39L1.92966 9.00001L1.04883 9.88751L2.44883 11.2758L3.3305 10.39Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M16.4005 5.50667C15.0092 3.24655 12.5429 1.87135 9.88884 1.875V3.125C12.1091 3.12072 14.1729 4.27039 15.3372 6.16084L16.4005 5.50667Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M16.7514 9.16668L17.1905 8.72251C16.9471 8.48211 16.5556 8.48211 16.3122 8.72251L16.7514 9.16668Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M14.9064 10.1108C14.6608 10.3536 14.6586 10.7495 14.9014 10.995C15.1441 11.2406 15.54 11.2428 15.7855 11L14.9064 10.1108Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M17.7172 11C17.8752 11.1612 18.1078 11.2247 18.3258 11.1662C18.5438 11.1076 18.7132 10.936 18.7691 10.7174C18.825 10.4987 18.7587 10.2668 18.5955 10.1108L17.7172 11Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M4.25467 13.8384C4.13736 13.6483 3.92756 13.5352 3.70428 13.5417C3.481 13.5483 3.27817 13.6734 3.17219 13.8701C3.06622 14.0667 3.0732 14.3049 3.1905 14.495L4.25467 13.8384Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M9.72551 18.125C13.9438 18.125 17.3755 14.7434 17.3755 10.5558H16.1255C16.1255 14.0392 13.2672 16.875 9.72551 16.875V18.125Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M17.3755 10.5558V9.16668H16.1255V10.5558H17.3755Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M16.3122 8.72251L14.9064 10.1108L15.7855 11L17.1905 9.61085L16.3122 8.72251Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M16.3122 9.61085L17.7172 11L18.5955 10.1108L17.1905 8.72251L16.3122 9.61085Z" fill="#F8FAFC" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M3.18967 14.4942C4.59035 16.7565 7.0647 18.1308 9.72551 18.125V16.875C7.49849 16.8808 5.42692 15.7314 4.25383 13.8384L3.18967 14.4942Z" fill="#F8FAFC" />
+                </g>
+                <defs>
+                  <clipPath id="clip0_135_273">
+                    <rect width="20" height="20" fill="white" />
+                  </clipPath>
+                </defs>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_135_275}>
+          <div className={styles.Container_135_276}>
+            <div className={styles.Container_135_277}>
+              <div className={styles.G_135_278}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M0 10.201C0 7.91269 0 6.76903 0.519848 5.8213C1.0377 4.87258 1.98642 4.28475 3.88287 3.10709L5.88228 1.86646C7.8867 0.621819 8.88941 0 9.99708 0C11.1048 0 12.1065 0.621819 14.1119 1.86646L16.1113 3.10709C18.0077 4.28475 18.9565 4.87258 19.4753 5.8213C19.9942 6.77003 19.9942 7.91269 19.9942 10.2V11.7216C19.9942 15.6204 19.9942 17.5709 18.8225 18.7825C17.6509 19.9942 15.7664 19.9942 11.9965 19.9942H7.99767C4.22777 19.9942 2.34232 19.9942 1.17166 18.7825C0.000999689 17.5709 0 15.6214 0 11.7216V10.201Z" stroke="#F8FAFC" strokeWidth="1.49956" />
+                  <path d="M9.99707 12.9961V15.9952" stroke="#F8FAFC" strokeWidth="1.49957" strokeLinecap="round" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_135_281}><span className={styles.Home_135_282}>Home</span></div>
+          </div>
+          <div className={styles.Container_135_283}>
+            <div className={styles.Container_135_284}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" clipRule="evenodd" d="M17.5725 4.4308L15.5731 3.38111C13.8176 2.46038 12.9398 1.99951 11.9961 1.99951C11.0524 1.99951 10.1746 2.45938 8.41915 3.38111L6.41974 4.4308C4.64725 5.36053 3.60456 5.90837 2.95874 6.64016L11.9961 11.1588L21.0335 6.64016C20.3877 5.90837 19.346 5.36053 17.5725 4.4308Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M21.7413 7.96178L12.7459 12.4605V21.8977C13.4637 21.7188 14.2804 21.2909 15.5731 20.6121L17.5725 19.5624C19.7229 18.4337 20.7986 17.8699 21.3964 16.8552C21.9932 15.8415 21.9932 14.5789 21.9932 12.0566V11.9396C21.9932 10.0472 21.9932 8.86351 21.7413 7.96178Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M11.2463 21.8977V12.4605L2.25095 7.96178C1.99902 8.86351 1.99902 10.0472 1.99902 11.9376V12.0546C1.99902 14.5789 1.99902 15.8415 2.59585 16.8552C3.19368 17.8699 4.26936 18.4347 6.41974 19.5634L8.41915 20.6121C9.71178 21.2909 10.5285 21.7188 11.2463 21.8977Z" fill="#4ADE80" />
+              </svg>
+            </div>
+            <div className={styles.Container_135_286}><span className={styles.Collection_135_287}>Collection</span></div>
+          </div>
+          <div className={styles.Container_135_288}>
+            <div className={styles.Container_135_289}>
+              <div className={styles.G_135_290}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M0 9.99708C0 5.28446 0 2.92815 1.46357 1.46357C2.92915 0 5.28446 0 9.99708 0C14.7097 0 17.066 0 18.5296 1.46357C19.9942 2.92915 19.9942 5.28446 19.9942 9.99708C19.9942 14.7097 19.9942 17.066 18.5296 18.5296C17.067 19.9942 14.7097 19.9942 9.99708 19.9942C5.28446 19.9942 2.92815 19.9942 1.46357 18.5296C0 17.067 0 14.7097 0 9.99708Z" stroke="#F8FAFC" strokeWidth="1.49956" />
+                  <path d="M4.99902 11.9964L7.29136 9.70407C7.68175 9.3138 8.31457 9.3138 8.70496 9.70407L10.2905 11.2896C10.6809 11.6799 11.3137 11.6799 11.7041 11.2896L14.9961 7.99756M14.9961 7.99756V10.4968M14.9961 7.99756H12.4969" stroke="#F8FAFC" strokeWidth="1.49957" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_135_293}><span className={styles.Market_135_294}>Market</span></div>
+          </div>
+          <div className={styles.Container_135_295}>
+            <div className={styles.Container_135_296}>
+              <div className={styles.G_135_297}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M6.99805 6.99816C6.99805 5.34178 8.3408 3.99902 9.99718 3.99902C11.6536 3.99902 12.9963 5.34178 12.9963 6.99816C12.9963 8.65453 11.6536 9.99729 9.99718 9.99729C8.3408 9.99729 6.99805 8.65453 6.99805 6.99816Z" stroke="#F8FAFC" strokeWidth="1.49957" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M0 9.99708C0 4.47585 4.47585 0 9.99708 0C15.5183 0 19.9942 4.47585 19.9942 9.99708C19.9942 15.5183 15.5183 19.9942 9.99708 19.9942C4.47585 19.9942 0 15.5183 0 9.99708Z" stroke="#F8FAFC" strokeWidth="1.49956" />
+                  <path d="M15.9659 17.9947C15.8059 15.1035 14.9212 12.9961 9.99759 12.9961C5.074 12.9961 4.18925 15.1035 4.0293 17.9947" stroke="#F8FAFC" strokeWidth="1.49957" strokeLinecap="round" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_135_301}><span className={styles.Profile_135_302}>Profile</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+

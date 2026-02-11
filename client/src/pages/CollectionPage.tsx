@@ -2,49 +2,17 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { getQueryFn } from "@/lib/queryClient";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Package, 
-  Zap, 
-  Coins, 
-  Crown, 
-  Gem, 
-  Award, 
   RefreshCw,
   ArrowLeft,
-  Sparkles,
   Hexagon,
   ExternalLink
 } from "lucide-react";
-import { formatDistance } from "date-fns";
 import { Link } from "wouter";
-import { useSignedUrl } from "@/hooks/use-signed-url";
 import { SKALE_NEBULA_TESTNET, NFT_CONTRACT_ADDRESS } from "@shared/contracts";
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
-
-interface CollectionItem {
-  id: number;
-  name: string;
-  imageUrl: string;
-  rarity: string;
-  rewardType: string;
-  claimedAt: string;
-}
-
-interface CollectionData {
-  stats: {
-    totalLootboxesOpened: number;
-    totalXpEarned: number;
-    legendaryCount: number;
-    epicCount: number;
-    rareCount: number;
-    commonCount: number;
-  };
-  items: CollectionItem[];
-}
 
 interface OwnedNft {
   tokenId: number;
@@ -64,42 +32,6 @@ interface OwnedNftsData {
 
 const SKALE_EXPLORER_BASE_URL = SKALE_NEBULA_TESTNET.blockExplorers.default.url;
 
-const rarityColors: Record<string, { bg: string; border: string; text: string; gradient: string }> = {
-  legendary: {
-    bg: "bg-yellow-500/10",
-    border: "border-yellow-500/50",
-    text: "text-yellow-400",
-    gradient: "from-yellow-500/20 via-amber-500/10 to-orange-500/20"
-  },
-  epic: {
-    bg: "bg-purple-500/10",
-    border: "border-purple-500/50",
-    text: "text-purple-400",
-    gradient: "from-purple-500/20 via-violet-500/10 to-fuchsia-500/20"
-  },
-  rare: {
-    bg: "bg-blue-500/10",
-    border: "border-blue-500/50",
-    text: "text-blue-400",
-    gradient: "from-blue-500/20 via-cyan-500/10 to-sky-500/20"
-  },
-  common: {
-    bg: "bg-gray-500/10",
-    border: "border-gray-500/50",
-    text: "text-gray-400",
-    gradient: "from-gray-500/20 via-slate-500/10 to-zinc-500/20"
-  }
-};
-
-const rewardTypeIcons: Record<string, typeof Zap> = {
-  xp: Zap,
-  coins: Coins,
-  avatar_border: Crown,
-  badge: Award,
-  special: Gem,
-  default: Sparkles
-};
-
 const RARE_TRAITS: Record<string, string[]> = {
   Background: ["Melting_gold", "Aurora", "Neon_city", "Galaxy", "Diamond"],
   Hand: ["Cyber_punk_sword", "Lightning_staff", "Golden_scepter", "Plasma_gun"],
@@ -112,11 +44,9 @@ const RARE_TRAITS: Record<string, string[]> = {
 
 function computeNftRarityScore(nft: OwnedNft): number {
   if (!nft.attributes || nft.attributes.length === 0) return 30;
-
   let score = 0;
   const traitCount = nft.attributes.length;
   score += Math.min(traitCount * 8, 40);
-
   for (const attr of nft.attributes) {
     const traitType = attr.trait_type;
     const traitValue = String(attr.value);
@@ -125,14 +55,12 @@ function computeNftRarityScore(nft: OwnedNft): number {
       score += 15;
     }
   }
-
   let hash = 0;
   const combo = nft.attributes.map(a => `${a.trait_type}:${a.value}`).join('|');
   for (let i = 0; i < combo.length; i++) {
     hash = ((hash << 5) - hash + combo.charCodeAt(i)) | 0;
   }
   score += Math.abs(hash % 20);
-
   return Math.min(score, 100);
 }
 
@@ -145,7 +73,6 @@ function getNftRarity(nft: OwnedNft): { label: string; score: number } {
     if (val === "rare") return { label: "rare", score: 55 };
     if (val === "common") return { label: "common", score: 25 };
   }
-
   const score = computeNftRarityScore(nft);
   if (score >= 85) return { label: "legendary", score };
   if (score >= 65) return { label: "epic", score };
@@ -153,128 +80,89 @@ function getNftRarity(nft: OwnedNft): { label: string; score: number } {
   return { label: "common", score };
 }
 
+const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: string; textStyle: string; nameColor: string }> = {
+  legendary: {
+    bg: "bg-gradient-to-b from-[#f6cfff] via-[#cefafe] to-[#fff085]",
+    glow: "shadow-[0_0_25px_rgba(236,72,153,0.4)]",
+    dotColor: "bg-green-500 shadow-[0_0_8px_#22c55e]",
+    textStyle: "bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent font-black",
+    nameColor: "text-slate-800",
+  },
+  epic: {
+    bg: "bg-slate-900",
+    glow: "",
+    dotColor: "bg-green-600 shadow-[0_0_8px_#16a34a]",
+    textStyle: "text-slate-400 font-normal",
+    nameColor: "text-slate-50",
+  },
+  rare: {
+    bg: "bg-gradient-to-b from-[#4ade8033] via-[#14532d4d] to-[#4ade8033]",
+    glow: "shadow-[0_0_20px_rgba(74,222,128,0.3)]",
+    dotColor: "bg-green-400 shadow-[0_0_8px_#4ade80]",
+    textStyle: "text-slate-400 font-normal",
+    nameColor: "text-slate-50",
+  },
+  common: {
+    bg: "bg-slate-900",
+    glow: "",
+    dotColor: "bg-slate-400/50 shadow-[0_0_8px_#1e293b]",
+    textStyle: "text-slate-400 font-normal",
+    nameColor: "text-slate-50",
+  },
+};
+
 function NftCard({ nft, onClick }: { nft: OwnedNft; onClick: () => void }) {
-  const { label: rarity, score } = getNftRarity(nft);
-  const colors = rarityColors[rarity] || rarityColors.common;
-  const isLegendary = rarity === "legendary";
+  const { label: rarity } = getNftRarity(nft);
+  const styles = rarityCardStyles[rarity] || rarityCardStyles.common;
   const [imgFailed, setImgFailed] = useState(false);
-  
+
   return (
-    <Card 
-      className={`${colors.border} border overflow-hidden relative group transition-transform hover:scale-[1.02] cursor-pointer ${isLegendary ? 'ring-1 ring-yellow-500/30' : ''} ${nft.sold ? 'opacity-60' : ''}`}
+    <div
+      className={`rounded-2xl overflow-hidden cursor-pointer transition-all duration-200 hover:scale-[1.03] ${styles.bg} ${styles.glow} ${nft.sold ? 'opacity-50 grayscale' : ''}`}
       onClick={onClick}
     >
-      {isLegendary && (
-        <div className="absolute inset-0 rounded-lg animate-pulse bg-gradient-to-br from-yellow-500/10 via-transparent to-amber-500/10 pointer-events-none z-0" />
-      )}
-      <div className="relative z-[1]">
-        <div className="aspect-square bg-gray-900/80 flex items-center justify-center overflow-hidden relative">
+      <div className="p-3 pb-1">
+        <h3 className={`text-sm font-bold truncate ${styles.nameColor}`}>{nft.name}</h3>
+        <div className="flex items-center gap-1.5 mt-1">
+          <div className={`w-2 h-2 rounded-full ${styles.dotColor}`} />
+          <span className={`text-[11px] uppercase tracking-tight ${styles.textStyle}`}>{rarity}</span>
+        </div>
+      </div>
+
+      <div className="relative mt-1">
+        <div className="aspect-square overflow-hidden">
           {nft.image && !imgFailed ? (
-            <img 
-              src={nft.image} 
-              alt={nft.name} 
+            <img
+              src={nft.image}
+              alt={nft.name}
               className={`w-full h-full object-cover ${nft.sold ? 'grayscale' : ''}`}
               onError={() => setImgFailed(true)}
             />
           ) : (
-            <Hexagon className="w-12 h-12 text-gray-600" />
-          )}
-          {nft.sold && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-              <span className="text-white/90 font-bold text-lg uppercase tracking-wider rotate-[-15deg]">SOLD</span>
+            <div className="w-full h-full flex items-center justify-center bg-slate-800">
+              <Hexagon className="w-12 h-12 text-slate-600" />
             </div>
           )}
         </div>
-        <div className={`p-3 bg-gradient-to-br ${colors.gradient}`}>
-          <h3 className="font-semibold text-sm text-white truncate">{nft.name}</h3>
-          <div className="flex items-center justify-between mt-1.5">
-            <span className={`text-xs capitalize font-medium ${colors.text}`}>{rarity}</span>
-            <span className="text-xs text-gray-500 font-mono">#{nft.tokenId}</span>
+
+        <div className="absolute top-2 right-2 backdrop-blur-md bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5">
+          <span className="text-[10px] font-bold text-green-400">#{nft.tokenId}</span>
+        </div>
+
+        {nft.sold && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+            <span className="text-white/90 font-bold text-lg uppercase tracking-wider rotate-[-15deg]">SOLD</span>
           </div>
-        </div>
+        )}
       </div>
-    </Card>
-  );
-}
-
-function CollectionItemCard({ item }: { item: CollectionItem }) {
-  const { signedUrl } = useSignedUrl(item.imageUrl);
-  const colors = rarityColors[item.rarity] || rarityColors.common;
-  const IconComponent = rewardTypeIcons[item.rewardType] || rewardTypeIcons.default;
-  
-  return (
-    <Card className={`${colors.bg} ${colors.border} border overflow-hidden`}>
-      <div className={`bg-gradient-to-br ${colors.gradient} p-4`}>
-        <div className="flex items-center justify-center mb-3">
-          {signedUrl ? (
-            <img 
-              src={signedUrl} 
-              alt={item.name} 
-              className="w-16 h-16 object-contain rounded-lg"
-            />
-          ) : (
-            <div className={`w-16 h-16 rounded-lg ${colors.bg} flex items-center justify-center`}>
-              <IconComponent className={`w-8 h-8 ${colors.text}`} />
-            </div>
-          )}
-        </div>
-        <h3 className="font-semibold text-sm text-center text-white truncate">{item.name}</h3>
-        <p className={`text-xs text-center ${colors.text} capitalize mt-1`}>{item.rarity}</p>
-        <p className="text-xs text-center text-gray-500 mt-2">
-          {formatDistance(new Date(item.claimedAt), new Date(), { addSuffix: true })}
-        </p>
-      </div>
-    </Card>
-  );
-}
-
-function StatCard({ 
-  icon: Icon, 
-  label, 
-  value, 
-  iconColor 
-}: { 
-  icon: typeof Package; 
-  label: string; 
-  value: number | string; 
-  iconColor: string;
-}) {
-  return (
-    <Card className="bg-gray-900/50 border-gray-800">
-      <CardContent className="p-4 flex items-center gap-3">
-        <div className={`p-2 rounded-lg ${iconColor}`}>
-          <Icon className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <p className="text-2xl font-bold text-white">{value}</p>
-          <p className="text-xs text-gray-400">{label}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function RarityBadge({ rarity, count }: { rarity: string; count: number }) {
-  const colors = rarityColors[rarity] || rarityColors.common;
-  return (
-    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${colors.bg} ${colors.border} border`}>
-      <span className={`text-lg font-bold ${colors.text}`}>{count}</span>
-      <span className={`text-sm capitalize ${colors.text}`}>{rarity}</span>
     </div>
   );
 }
 
 export default function CollectionPage() {
   const { user } = useAuth();
-  const [filter, setFilter] = useState("all");
   const [selectedNft, setSelectedNft] = useState<OwnedNft | null>(null);
   const [nftTab, setNftTab] = useState<"owned" | "sold">("owned");
-
-  const { data, isLoading, refetch, isRefetching } = useQuery<CollectionData>({
-    queryKey: ["/api/lootbox/collection"],
-    queryFn: getQueryFn({ on401: "throw" }),
-    enabled: !!user,
-  });
 
   const { data: nftData, isLoading: nftsLoading, refetch: refetchNfts, isRefetching: nftsRefetching } = useQuery<OwnedNftsData>({
     queryKey: ["/api/nfts/owned"],
@@ -282,19 +170,6 @@ export default function CollectionPage() {
     enabled: !!user,
     staleTime: 60_000,
   });
-
-  const filteredItems = data?.items.filter((item: CollectionItem) => {
-    if (filter === "all") return true;
-    if (filter === "xp") return item.rewardType === "xp_reward";
-    if (filter === "coins") return item.rewardType === "gf_tokens";
-    if (filter === "special") return ["avatar_border", "profile_banner", "profile_background", "badge", "emoji", "sound_effect"].includes(item.rewardType);
-    return true;
-  }) || [];
-
-  const handleRefresh = () => {
-    refetch();
-    refetchNfts();
-  };
 
   if (selectedNft) {
     const { score } = getNftRarity(selectedNft);
@@ -329,245 +204,144 @@ export default function CollectionPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#0a0a1a] to-[#1a1a2e] flex items-center justify-center">
-        <Card className="bg-gray-900/50 border-gray-800 p-8 text-center">
-          <p className="text-gray-400 mb-4">Please log in to view your collection</p>
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 text-center">
+          <p className="text-slate-400 mb-4">Please log in to view your collection</p>
           <Link href="/auth">
-            <Button className="bg-purple-600 hover:bg-purple-700">Log In</Button>
+            <Button className="bg-green-400 hover:bg-green-500 text-slate-900 font-bold">Log In</Button>
           </Link>
-        </Card>
+        </div>
       </div>
     );
   }
 
+  const ownedNfts = nftData?.nfts.filter((n: OwnedNft) => !n.sold) || [];
+  const soldNfts = nftData?.nfts.filter((n: OwnedNft) => n.sold) || [];
+  const displayNfts = nftTab === "owned" ? ownedNfts : soldNfts;
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a0a1a] via-[#1a1a2e] to-[#0a0a1a]">
-      <div className="sticky top-0 z-10 bg-[#0a0a1a]/95 backdrop-blur-sm border-b border-gray-800">
+    <div className="min-h-screen bg-[#020617] flex flex-col">
+      <div className="sticky top-0 z-10 backdrop-blur-md bg-[#020617]/80 border-b border-slate-800/30">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <Link href="/">
-              <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
+              <button className="bg-slate-800 border border-slate-800 rounded-2xl w-10 h-10 flex items-center justify-center hover:bg-slate-700 transition-colors">
+                <ArrowLeft className="w-5 h-5 text-slate-50" />
+              </button>
             </Link>
             <div>
-              <h1 className="text-xl font-bold text-white flex items-center gap-2">
-                <Package className="w-5 h-5 text-purple-400" />
-                My Collection
-              </h1>
-              <p className="text-xs text-gray-500">NFTs & Lootbox rewards</p>
+              <h1 className="text-xl font-bold text-slate-50 leading-7">My Collection</h1>
+              <p className="text-xs text-slate-400">NFTs & Lootbox rewards</p>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={handleRefresh}
-            disabled={isRefetching || nftsRefetching}
-            className="text-gray-400 hover:text-white"
+          <button
+            onClick={() => refetchNfts()}
+            disabled={nftsRefetching}
+            className="bg-slate-800 border border-slate-800 rounded-2xl w-10 h-10 flex items-center justify-center hover:bg-slate-700 transition-colors disabled:opacity-50"
           >
-            <RefreshCw className={`w-5 h-5 ${(isRefetching || nftsRefetching) ? 'animate-spin' : ''}`} />
-          </Button>
+            <RefreshCw className={`w-5 h-5 text-slate-50 ${nftsRefetching ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 space-y-6">
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-2">
-              <Hexagon className="w-4 h-4 text-emerald-400" />
-              My NFTs
-              {nftData && nftData.count > 0 && (
-                <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-bold">
-                  {nftData.count}
-                </span>
-              )}
-            </h2>
-            {nftData && nftData.count > 0 && (
-              <a
-                href={`${SKALE_EXPLORER_BASE_URL}/address/${NFT_CONTRACT_ADDRESS}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-gray-500 hover:text-emerald-400 flex items-center gap-1 transition-colors"
-              >
-                View Contract <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
-          </div>
-
-          {(() => {
-            const ownedNfts = nftData?.nfts.filter((n: OwnedNft) => !n.sold) || [];
-            const soldNfts = nftData?.nfts.filter((n: OwnedNft) => n.sold) || [];
-
-            return (
-              <>
-                <div className="flex gap-2 mb-4">
-                  <button
-                    onClick={() => setNftTab("owned")}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      nftTab === "owned"
-                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                        : "bg-gray-800/50 text-gray-400 border border-gray-700 hover:text-gray-300"
-                    }`}
-                  >
-                    Owned {ownedNfts.length > 0 && <span className="ml-1.5 text-xs bg-emerald-500/30 px-1.5 py-0.5 rounded-full">{ownedNfts.length}</span>}
-                  </button>
-                  <button
-                    onClick={() => setNftTab("sold")}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      nftTab === "sold"
-                        ? "bg-red-500/20 text-red-400 border border-red-500/40"
-                        : "bg-gray-800/50 text-gray-400 border border-gray-700 hover:text-gray-300"
-                    }`}
-                  >
-                    Sold {soldNfts.length > 0 && <span className="ml-1.5 text-xs bg-red-500/30 px-1.5 py-0.5 rounded-full">{soldNfts.length}</span>}
-                  </button>
+      <div className="max-w-7xl mx-auto w-full px-4 md:px-8 flex-1">
+        <div className="bg-gradient-to-b from-green-900/10 to-transparent py-6 md:py-8">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+            <div className="flex items-start gap-6 md:gap-10">
+              <div>
+                <p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-1">My NFTs</p>
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl md:text-5xl font-black text-slate-50 leading-none">
+                    {nftsLoading ? "—" : nftData?.count || 0}
+                  </span>
+                  <span className="text-sm text-slate-400 pb-1">Items Total</span>
                 </div>
+              </div>
 
-                {nftsLoading ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Skeleton key={i} className="aspect-[3/4] bg-gray-800 rounded-lg" />
-                    ))}
-                  </div>
-                ) : nftTab === "owned" ? (
-                  ownedNfts.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
-                      {ownedNfts.map((nft: OwnedNft) => (
-                        <NftCard key={nft.tokenId} nft={nft} onClick={() => setSelectedNft(nft)} />
-                      ))}
-                    </div>
-                  ) : (
-                    <Card className="bg-gray-900/50 border-gray-800 border-dashed p-6 text-center">
-                      <Hexagon className="w-10 h-10 text-gray-600 mx-auto mb-2" />
-                      <p className="text-gray-400 text-sm">No NFTs owned yet</p>
-                      <Link href="/store">
-                        <Button variant="ghost" size="sm" className="mt-2 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10">
-                          Mint NFTs
-                        </Button>
-                      </Link>
-                    </Card>
-                  )
-                ) : (
-                  soldNfts.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
-                      {soldNfts.map((nft: OwnedNft) => (
-                        <NftCard key={nft.tokenId} nft={nft} onClick={() => setSelectedNft(nft)} />
-                      ))}
-                    </div>
-                  ) : (
-                    <Card className="bg-gray-900/50 border-gray-800 border-dashed p-6 text-center">
-                      <Hexagon className="w-10 h-10 text-gray-600 mx-auto mb-2" />
-                      <p className="text-gray-400 text-sm">No sold NFTs</p>
-                      <p className="text-gray-500 text-xs mt-1">Quick sell NFTs from their detail view to list them here</p>
-                    </Card>
-                  )
-                )}
-              </>
-            );
-          })()}
-        </section>
-
-        <div className="border-t border-gray-800/50" />
-
-        <section>
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Stats Overview</h2>
-          {isLoading ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-              {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-20 bg-gray-800" />
-              ))}
+              {nftData && nftData.count > 0 && (
+                <a
+                  href={`${SKALE_EXPLORER_BASE_URL}/address/${NFT_CONTRACT_ADDRESS}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-sm text-green-400 hover:text-green-300 transition-colors mt-1"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>View Contract</span>
+                </a>
+              )}
             </div>
-          ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-              <StatCard 
-                icon={Package} 
-                label="Lootboxes Opened" 
-                value={data?.stats.totalLootboxesOpened || 0}
-                iconColor="bg-purple-600"
-              />
-              <StatCard 
-                icon={Zap} 
-                label="XP Earned" 
-                value={data?.stats.totalXpEarned || 0}
-                iconColor="bg-yellow-600"
-              />
-              <StatCard 
-                icon={Crown} 
-                label="Legendary Items" 
-                value={data?.stats.legendaryCount || 0}
-                iconColor="bg-amber-600"
-              />
-              <StatCard 
-                icon={Gem} 
-                label="Total Items" 
-                value={(data?.stats.legendaryCount || 0) + (data?.stats.epicCount || 0) + (data?.stats.rareCount || 0) + (data?.stats.commonCount || 0)}
-                iconColor="bg-blue-600"
-              />
-            </div>
-          )}
-        </section>
 
-        <section>
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Rarity Breakdown</h2>
-          {isLoading ? (
-            <div className="flex gap-2 flex-wrap">
-              {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-10 w-24 bg-gray-800" />
-              ))}
+            <div className="bg-slate-800 border border-slate-800 rounded-2xl p-1.5 flex w-full md:w-auto">
+              <button
+                onClick={() => setNftTab("owned")}
+                className={`flex-1 md:w-44 h-10 rounded-2xl flex items-center justify-center gap-2 text-sm font-bold transition-all ${
+                  nftTab === "owned"
+                    ? "bg-green-400 text-green-950 shadow-[0_0_15px_-5px_#4ade80]"
+                    : "text-slate-400 hover:text-slate-300"
+                }`}
+              >
+                <span>Owned</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-lg ${
+                  nftTab === "owned"
+                    ? "bg-green-950/20 text-green-950"
+                    : "bg-slate-800 text-slate-400"
+                }`}>
+                  {ownedNfts.length}
+                </span>
+              </button>
+              <button
+                onClick={() => setNftTab("sold")}
+                className={`flex-1 md:w-44 h-10 rounded-2xl flex items-center justify-center gap-2 text-sm transition-all ${
+                  nftTab === "sold"
+                    ? "bg-green-400 text-green-950 font-bold shadow-[0_0_15px_-5px_#4ade80]"
+                    : "text-slate-400 hover:text-slate-300"
+                }`}
+              >
+                <span>Sold</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-lg ${
+                  nftTab === "sold"
+                    ? "bg-green-950/20 text-green-950"
+                    : "bg-slate-800 text-slate-400"
+                }`}>
+                  {soldNfts.length}
+                </span>
+              </button>
             </div>
-          ) : (
-            <div className="flex gap-2 flex-wrap">
-              <RarityBadge rarity="legendary" count={data?.stats.legendaryCount || 0} />
-              <RarityBadge rarity="epic" count={data?.stats.epicCount || 0} />
-              <RarityBadge rarity="rare" count={data?.stats.rareCount || 0} />
-              <RarityBadge rarity="common" count={data?.stats.commonCount || 0} />
-            </div>
-          )}
-        </section>
+          </div>
+        </div>
 
-        <section>
-          <Tabs value={filter} onValueChange={setFilter} className="w-full">
-            <TabsList className="bg-gray-900/50 border border-gray-800 w-full justify-start">
-              <TabsTrigger value="all" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
-                All
-              </TabsTrigger>
-              <TabsTrigger value="xp" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
-                XP
-              </TabsTrigger>
-              <TabsTrigger value="coins" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
-                Coins
-              </TabsTrigger>
-              <TabsTrigger value="special" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
-                Special
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </section>
-
-        <section>
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">
-            Collected Items ({filteredItems.length})
-          </h2>
-          {isLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+        <div className="pb-24 md:pb-12">
+          {nftsLoading ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-36 bg-gray-800" />
+                <Skeleton key={i} className="aspect-[3/4] bg-slate-800 rounded-2xl" />
               ))}
             </div>
-          ) : filteredItems.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
-              {filteredItems.map((item: CollectionItem) => (
-                <CollectionItemCard key={`${item.id}-${item.claimedAt}`} item={item} />
+          ) : displayNfts.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {displayNfts.map((nft: OwnedNft) => (
+                <NftCard key={nft.tokenId} nft={nft} onClick={() => setSelectedNft(nft)} />
               ))}
             </div>
           ) : (
-            <Card className="bg-gray-900/50 border-gray-800 p-8 text-center">
-              <Package className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-400">No items in this category yet</p>
-              <p className="text-gray-500 text-sm mt-1">Open lootboxes to collect rewards!</p>
-            </Card>
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <Hexagon className="w-12 h-12 text-slate-600 mb-3" />
+              <p className="text-slate-400 text-sm">
+                {nftTab === "owned" ? "No NFTs owned yet" : "No sold NFTs"}
+              </p>
+              {nftTab === "owned" && (
+                <Link href="/store">
+                  <Button variant="ghost" size="sm" className="mt-3 text-green-400 hover:text-green-300 hover:bg-green-500/10">
+                    Mint NFTs
+                  </Button>
+                </Link>
+              )}
+              {nftTab === "sold" && (
+                <p className="text-slate-500 text-xs mt-1">Quick sell NFTs from their detail view to list them here</p>
+              )}
+            </div>
           )}
-        </section>
+        </div>
       </div>
     </div>
   );
