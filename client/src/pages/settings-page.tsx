@@ -1143,7 +1143,10 @@ export default function SettingsPage() {
                       <div className="flex flex-col md:flex-row md:items-start space-y-4 md:space-y-0 md:space-x-6">
                         <div className="flex flex-col items-center space-y-3 shrink-0">
                           {hasPreview ? (
-                            <div className="w-52 h-52 rounded-xl overflow-hidden border-2 border-green-500/40 shadow-[0_0_20px_rgba(74,222,128,0.15)]">
+                            <div
+                              className="w-52 h-52 rounded-xl overflow-hidden border-2 border-green-500/40 shadow-[0_0_20px_rgba(74,222,128,0.15)] cursor-pointer hover:shadow-[0_0_25px_rgba(74,222,128,0.25)] transition-shadow"
+                              onClick={() => setShowNftSelector(true)}
+                            >
                               <img
                                 src={previewImage}
                                 alt={previewName || "NFT Preview"}
@@ -1151,7 +1154,10 @@ export default function SettingsPage() {
                               />
                             </div>
                           ) : (
-                            <div className="w-52 h-52 rounded-xl overflow-hidden border-2 border-dashed border-slate-600 bg-slate-800/50 flex flex-col items-center justify-center gap-3">
+                            <div
+                              className="w-52 h-52 rounded-xl overflow-hidden border-2 border-dashed border-slate-600 bg-slate-800/50 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-slate-500 hover:bg-slate-800/70 transition-all"
+                              onClick={() => setShowNftSelector(true)}
+                            >
                               <Hexagon className="h-14 w-14 text-slate-600" />
                               <span className="text-xs text-slate-500 font-medium">No NFT Selected</span>
                             </div>
