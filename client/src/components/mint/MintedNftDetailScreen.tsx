@@ -25,6 +25,9 @@ interface MintedNftDetailScreenProps {
   initialSold?: boolean;
   onSold?: () => void;
   mintedAt?: string;
+  soldAt?: string | null;
+  listedPrice?: number | null;
+  listingActive?: boolean;
 }
 
 const NFT_CONTRACT_ADDRESS = "0x246624993603fbd8C3Cc60920878D0DF5c764Fb4";
@@ -58,6 +61,9 @@ export default function MintedNftDetailScreen({
   initialSold = false,
   onSold,
   mintedAt,
+  soldAt,
+  listedPrice,
+  listingActive,
 }: MintedNftDetailScreenProps) {
   const [showQuickSell, setShowQuickSell] = useState(false);
   const [sold, setSold] = useState(initialSold);
@@ -65,6 +71,8 @@ export default function MintedNftDetailScreen({
   const displayName = nft.name || `Gamefolio Genesis ${getTokenIdPadded(nft.id)}`;
   const ownerDisplay = walletAddress ? `You (${formatAddress(walletAddress)})` : "You";
   const mintDate = formatDate(mintedAt);
+  const soldDate = soldAt ? formatDate(soldAt) : null;
+  const isListedOnMarketplace = sold && (listingActive === true);
 
   if (showQuickSell && !sold) {
     return (
@@ -185,34 +193,81 @@ export default function MintedNftDetailScreen({
               </h1>
 
               <div className="flex items-center gap-2 mt-1">
-                <div className="w-6 h-6 rounded-full border-2 border-[#020617] bg-[#4ade80]/20 flex items-center justify-center overflow-hidden">
-                  <div className="w-full h-full bg-gradient-to-br from-[#4ade80] to-[#22c55e] opacity-60" />
+                <div className={`w-6 h-6 rounded-full border-2 border-[#020617] flex items-center justify-center overflow-hidden ${sold ? 'bg-amber-500/20' : 'bg-[#4ade80]/20'}`}>
+                  <div className={`w-full h-full opacity-60 ${sold ? 'bg-gradient-to-br from-amber-500 to-orange-500' : 'bg-gradient-to-br from-[#4ade80] to-[#22c55e]'}`} />
                 </div>
-                <span className="text-sm font-normal text-[#94a3b8] leading-5">Owned by</span>
-                <span className="text-sm font-normal text-[#f8fafc] leading-5">{ownerDisplay}</span>
+                {sold ? (
+                  <>
+                    <span className="text-sm font-normal text-[#94a3b8] leading-5">
+                      {isListedOnMarketplace ? 'Listed on Marketplace' : 'Sold'}
+                    </span>
+                    {listedPrice && (
+                      <span className="text-sm font-bold text-amber-400 leading-5">{listedPrice} GFT</span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <span className="text-sm font-normal text-[#94a3b8] leading-5">Owned by</span>
+                    <span className="text-sm font-normal text-[#f8fafc] leading-5">{ownerDisplay}</span>
+                  </>
+                )}
               </div>
             </div>
 
             <div className="w-full rounded-2xl bg-[#0f172a] border border-[#1e293b80] p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-[1.2px] leading-4">
-                    Mint Status
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-[#4ade80] leading-7">Confirmed</span>
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path fillRule="evenodd" clipRule="evenodd" d="M18.3336 9.99982C18.3336 14.6023 14.6028 18.3331 10.0003 18.3331C5.39782 18.3331 1.66699 14.6023 1.66699 9.99982C1.66699 5.39733 5.39782 1.6665 10.0003 1.6665C14.6028 1.6665 18.3336 5.39733 18.3336 9.99982ZM13.3586 7.47482C13.6023 7.71884 13.6023 8.11414 13.3586 8.35815L9.19197 12.5248C8.94796 12.7685 8.55266 12.7685 8.30864 12.5248L6.64198 10.8581C6.47477 10.7023 6.40594 10.4677 6.46249 10.2462C6.51905 10.0248 6.69196 9.85188 6.91341 9.79533C7.13485 9.73878 7.3695 9.80761 7.52531 9.97482L8.75031 11.1998L10.6128 9.33732L12.4753 7.47482C12.7193 7.23111 13.1146 7.23111 13.3586 7.47482Z" fill="#4ADE80" />
-                    </svg>
+              {sold ? (
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-[1.2px] leading-4">
+                        Status
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-bold text-amber-400 leading-7">
+                          {isListedOnMarketplace ? 'Listed for Sale' : 'Sold'}
+                        </span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path fillRule="evenodd" clipRule="evenodd" d="M16.1002 4.62203L17.9414 6.46328C20.647 9.16982 21.9992 10.5221 21.9992 12.2024C21.9992 13.8836 20.647 15.2359 17.9414 17.9414C15.2349 20.648 13.8826 22.0002 12.2014 22.0002C10.5211 22.0002 9.16781 20.648 6.46227 17.9424L4.62102 16.1012C3.06652 14.5457 2.28876 13.7689 2 12.7598C1.71023 11.7506 1.95774 10.679 2.45277 8.53695L2.73751 7.3014C3.15305 5.49838 3.36132 4.59687 3.97809 3.9791C4.59486 3.36132 5.49738 3.15405 7.3004 2.73851L8.53595 2.45277C10.679 1.95875 11.7496 1.71124 12.7588 2C13.7679 2.28977 14.5447 3.06752 16.0992 4.62203Z" fill="#F59E0B" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1 text-right">
+                      <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-[1.2px] leading-4">
+                        {isListedOnMarketplace ? 'Listed Date' : 'Sold Date'}
+                      </span>
+                      <span className="text-sm font-bold text-[#f8fafc] leading-5">{soldDate || mintDate}</span>
+                    </div>
+                  </div>
+                  {listedPrice && (
+                    <div className="flex items-center justify-between border-t border-[#1e293b4d] pt-3">
+                      <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-[1.2px] leading-4">
+                        {isListedOnMarketplace ? 'Listing Price' : 'Sale Price'}
+                      </span>
+                      <span className="text-lg font-bold text-amber-400 leading-7">{listedPrice} GFT</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-[1.2px] leading-4">
+                      Mint Status
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-bold text-[#4ade80] leading-7">Confirmed</span>
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M18.3336 9.99982C18.3336 14.6023 14.6028 18.3331 10.0003 18.3331C5.39782 18.3331 1.66699 14.6023 1.66699 9.99982C1.66699 5.39733 5.39782 1.6665 10.0003 1.6665C14.6028 1.6665 18.3336 5.39733 18.3336 9.99982ZM13.3586 7.47482C13.6023 7.71884 13.6023 8.11414 13.3586 8.35815L9.19197 12.5248C8.94796 12.7685 8.55266 12.7685 8.30864 12.5248L6.64198 10.8581C6.47477 10.7023 6.40594 10.4677 6.46249 10.2462C6.51905 10.0248 6.69196 9.85188 6.91341 9.79533C7.13485 9.73878 7.3695 9.80761 7.52531 9.97482L8.75031 11.1998L10.6128 9.33732L12.4753 7.47482C12.7193 7.23111 13.1146 7.23111 13.3586 7.47482Z" fill="#4ADE80" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-[1.2px] leading-4">
+                      Minted Date
+                    </span>
+                    <span className="text-sm font-bold text-[#f8fafc] leading-5">{mintDate}</span>
                   </div>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-[1.2px] leading-4">
-                    Minted Date
-                  </span>
-                  <span className="text-sm font-bold text-[#f8fafc] leading-5">{mintDate}</span>
-                </div>
-              </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-3">
@@ -240,26 +295,41 @@ export default function MintedNftDetailScreen({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <button
-                onClick={onClose}
-                className="h-[52px] rounded-xl bg-[#4ade80] flex items-center justify-center gap-2 shadow-[0_4px_6px_-4px_rgba(74,222,128,0.2),0_10px_15px_-3px_rgba(74,222,128,0.2)] hover:bg-[#22c55e] transition-colors"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22ZM12.75 9C12.75 8.58579 12.4142 8.25 12 8.25C11.5858 8.25 11.25 8.58579 11.25 9V11.25H9C8.58579 11.25 8.25 11.5858 8.25 12C8.25 12.4142 8.58579 12.75 9 12.75H11.25V15C11.25 15.4142 11.5858 15.75 12 15.75C12.4142 15.75 12.75 15.4142 12.75 15V12.75H15C15.4142 12.75 15.75 12.4142 15.75 12C15.75 11.5858 15.4142 11.25 15 11.25H12.75V9Z" fill="#022C22" />
-                </svg>
-                <span className="text-sm font-bold text-[#022c22] leading-5">Add to Collection</span>
-              </button>
-              <button
-                onClick={() => !sold && setShowQuickSell(true)}
-                disabled={sold}
-                className={`h-[52px] rounded-xl flex items-center justify-center gap-2 transition-colors ${sold ? 'bg-[#1e293b60] opacity-50 cursor-not-allowed' : 'bg-[#1e293b] hover:bg-[#ef4444] group'}`}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M16.1002 4.62203L17.9414 6.46328C20.647 9.16982 21.9992 10.5221 21.9992 12.2024C21.9992 13.8836 20.647 15.2359 17.9414 17.9414C15.2349 20.648 13.8826 22.0002 12.2014 22.0002C10.5211 22.0002 9.16781 20.648 6.46227 17.9424L4.62102 16.1012C3.06652 14.5457 2.28876 13.7689 2 12.7598C1.71023 11.7506 1.95774 10.679 2.45277 8.53695L2.73751 7.3014C3.15305 5.49838 3.36132 4.59687 3.97809 3.9791C4.59486 3.36132 5.49738 3.15405 7.3004 2.73851L8.53595 2.45277C10.679 1.95875 11.7496 1.71124 12.7588 2C13.7679 2.28977 14.5447 3.06752 16.0992 4.62203M11.0785 14.2811C10.4014 13.6049 10.4064 12.633 10.8119 11.8633C10.6047 11.5641 10.6406 11.1597 10.8972 10.9017C11.1537 10.6436 11.5579 10.6054 11.8583 10.8109C12.2003 10.6297 12.5756 10.5332 12.9499 10.5372C13.3667 10.5411 13.7014 10.8821 13.6975 11.2988C13.6936 11.7156 13.3526 12.0503 12.9358 12.0464C12.7029 12.055 12.4827 12.1552 12.3231 12.3251C11.9337 12.7145 12.0353 13.1049 12.145 13.2145C12.2557 13.3242 12.6451 13.4258 13.0344 13.0365C13.8233 12.2476 15.1856 11.986 16.0579 12.8584C16.7351 13.5355 16.73 14.5074 16.3246 15.2772C16.5303 15.5764 16.4938 15.9797 16.2377 16.2371C15.9815 16.4945 15.5783 16.5329 15.2782 16.3286C14.8267 16.5763 14.3029 16.6589 13.7971 16.562C13.5329 16.5077 13.3177 16.3166 13.2326 16.0607C13.1475 15.8047 13.2054 15.5228 13.3846 15.3212C13.5637 15.1195 13.8368 15.0287 14.101 15.083C14.2791 15.1202 14.5668 15.0618 14.8133 14.8153C15.2027 14.4249 15.1011 14.0356 14.9914 13.9259C14.8807 13.8162 14.4913 13.7146 14.102 14.104C13.3131 14.8928 11.9508 15.1544 11.0785 14.2811ZM9.94556 10.2212C10.4538 9.71279 10.6523 8.97179 10.4661 8.27738C10.2799 7.58296 9.73734 7.04063 9.04286 6.85468C8.34838 6.66873 7.60745 6.8674 7.09917 7.37586C6.31343 8.16187 6.31366 9.43602 7.09967 10.2218C7.88568 11.0075 9.15983 11.0073 9.94556 10.2212Z" fill="#F8FAFC" />
-                </svg>
-                <span className="text-sm font-bold text-[#f8fafc] leading-5">{sold ? "Sold" : "Quick Sell"}</span>
-              </button>
+            <div className={`grid ${sold ? 'grid-cols-1' : 'grid-cols-2'} gap-3 pt-1`}>
+              {!sold && (
+                <button
+                  onClick={onClose}
+                  className="h-[52px] rounded-xl bg-[#4ade80] flex items-center justify-center gap-2 shadow-[0_4px_6px_-4px_rgba(74,222,128,0.2),0_10px_15px_-3px_rgba(74,222,128,0.2)] hover:bg-[#22c55e] transition-colors"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22ZM12.75 9C12.75 8.58579 12.4142 8.25 12 8.25C11.5858 8.25 11.25 8.58579 11.25 9V11.25H9C8.58579 11.25 8.25 11.5858 8.25 12C8.25 12.4142 8.58579 12.75 9 12.75H11.25V15C11.25 15.4142 11.5858 15.75 12 15.75C12.4142 15.75 12.75 15.4142 12.75 15V12.75H15C15.4142 12.75 15.75 12.4142 15.75 12C15.75 11.5858 15.4142 11.25 15 11.25H12.75V9Z" fill="#022C22" />
+                  </svg>
+                  <span className="text-sm font-bold text-[#022c22] leading-5">Add to Collection</span>
+                </button>
+              )}
+              {sold ? (
+                <button
+                  disabled
+                  className="h-[52px] rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center gap-2 cursor-not-allowed"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M16.1002 4.62203L17.9414 6.46328C20.647 9.16982 21.9992 10.5221 21.9992 12.2024C21.9992 13.8836 20.647 15.2359 17.9414 17.9414C15.2349 20.648 13.8826 22.0002 12.2014 22.0002C10.5211 22.0002 9.16781 20.648 6.46227 17.9424L4.62102 16.1012C3.06652 14.5457 2.28876 13.7689 2 12.7598C1.71023 11.7506 1.95774 10.679 2.45277 8.53695L2.73751 7.3014C3.15305 5.49838 3.36132 4.59687 3.97809 3.9791C4.59486 3.36132 5.49738 3.15405 7.3004 2.73851L8.53595 2.45277C10.679 1.95875 11.7496 1.71124 12.7588 2C13.7679 2.28977 14.5447 3.06752 16.0992 4.62203Z" fill="#F59E0B" />
+                  </svg>
+                  <span className="text-sm font-bold text-amber-400 leading-5">
+                    {isListedOnMarketplace ? 'Listed on Marketplace' : 'Sold'}
+                  </span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowQuickSell(true)}
+                  className="h-[52px] rounded-xl bg-[#1e293b] hover:bg-[#ef4444] group flex items-center justify-center gap-2 transition-colors"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M16.1002 4.62203L17.9414 6.46328C20.647 9.16982 21.9992 10.5221 21.9992 12.2024C21.9992 13.8836 20.647 15.2359 17.9414 17.9414C15.2349 20.648 13.8826 22.0002 12.2014 22.0002C10.5211 22.0002 9.16781 20.648 6.46227 17.9424L4.62102 16.1012C3.06652 14.5457 2.28876 13.7689 2 12.7598C1.71023 11.7506 1.95774 10.679 2.45277 8.53695L2.73751 7.3014C3.15305 5.49838 3.36132 4.59687 3.97809 3.9791C4.59486 3.36132 5.49738 3.15405 7.3004 2.73851L8.53595 2.45277C10.679 1.95875 11.7496 1.71124 12.7588 2C13.7679 2.28977 14.5447 3.06752 16.0992 4.62203M11.0785 14.2811C10.4014 13.6049 10.4064 12.633 10.8119 11.8633C10.6047 11.5641 10.6406 11.1597 10.8972 10.9017C11.1537 10.6436 11.5579 10.6054 11.8583 10.8109C12.2003 10.6297 12.5756 10.5332 12.9499 10.5372C13.3667 10.5411 13.7014 10.8821 13.6975 11.2988C13.6936 11.7156 13.3526 12.0503 12.9358 12.0464C12.7029 12.055 12.4827 12.1552 12.3231 12.3251C11.9337 12.7145 12.0353 13.1049 12.145 13.2145C12.2557 13.3242 12.6451 13.4258 13.0344 13.0365C13.8233 12.2476 15.1856 11.986 16.0579 12.8584C16.7351 13.5355 16.73 14.5074 16.3246 15.2772C16.5303 15.5764 16.4938 15.9797 16.2377 16.2371C15.9815 16.4945 15.5783 16.5329 15.2782 16.3286C14.8267 16.5763 14.3029 16.6589 13.7971 16.562C13.5329 16.5077 13.3177 16.3166 13.2326 16.0607C13.1475 15.8047 13.2054 15.5228 13.3846 15.3212C13.5637 15.1195 13.8368 15.0287 14.101 15.083C14.2791 15.1202 14.5668 15.0618 14.8133 14.8153C15.2027 14.4249 15.1011 14.0356 14.9914 13.9259C14.8807 13.8162 14.4913 13.7146 14.102 14.104C13.3131 14.8928 11.9508 15.1544 11.0785 14.2811ZM9.94556 10.2212C10.4538 9.71279 10.6523 8.97179 10.4661 8.27738C10.2799 7.58296 9.73734 7.04063 9.04286 6.85468C8.34838 6.66873 7.60745 6.8674 7.09917 7.37586C6.31343 8.16187 6.31366 9.43602 7.09967 10.2218C7.88568 11.0075 9.15983 11.0073 9.94556 10.2212Z" fill="#F8FAFC" />
+                  </svg>
+                  <span className="text-sm font-bold text-[#f8fafc] leading-5">Quick Sell</span>
+                </button>
+              )}
             </div>
 
             <div className="flex flex-col gap-4 pt-2">
@@ -289,13 +359,47 @@ export default function MintedNftDetailScreen({
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between px-4 py-4">
+                <div className={`flex items-center justify-between px-4 py-4 ${sold ? 'border-b border-[#1e293b4d]' : ''}`}>
                   <span className="text-sm font-normal text-[#94a3b8] leading-5">Network</span>
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-[#4ade80]" />
                     <span className="text-sm font-normal text-[#f8fafc] leading-5">SKALE Nebula</span>
                   </div>
                 </div>
+
+                {sold && (
+                  <>
+                    <div className="flex items-center justify-between px-4 py-4 border-b border-[#1e293b4d]">
+                      <span className="text-sm font-normal text-[#94a3b8] leading-5">Sale Status</span>
+                      <div className="flex items-center gap-1.5">
+                        <div className={`w-2 h-2 rounded-full ${isListedOnMarketplace ? 'bg-amber-400' : 'bg-red-400'}`} />
+                        <span className="text-sm font-normal text-amber-400 leading-5">
+                          {isListedOnMarketplace ? 'Active Listing' : 'Sold'}
+                        </span>
+                      </div>
+                    </div>
+                    {listedPrice && (
+                      <div className="flex items-center justify-between px-4 py-4 border-b border-[#1e293b4d]">
+                        <span className="text-sm font-normal text-[#94a3b8] leading-5">
+                          {isListedOnMarketplace ? 'Listing Price' : 'Sale Price'}
+                        </span>
+                        <span className="text-sm font-bold text-amber-400 font-['JetBrains_Mono',monospace] leading-5">
+                          {listedPrice} GFT
+                        </span>
+                      </div>
+                    )}
+                    {soldDate && (
+                      <div className="flex items-center justify-between px-4 py-4">
+                        <span className="text-sm font-normal text-[#94a3b8] leading-5">
+                          {isListedOnMarketplace ? 'Listed Date' : 'Sold Date'}
+                        </span>
+                        <span className="text-sm font-normal text-[#f8fafc] font-['JetBrains_Mono',monospace] leading-5">
+                          {soldDate}
+                        </span>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               <button

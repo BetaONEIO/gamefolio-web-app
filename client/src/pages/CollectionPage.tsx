@@ -27,6 +27,9 @@ interface OwnedNft {
   txHash?: string;
   mintedAt?: string;
   sold?: boolean;
+  soldAt?: string | null;
+  listedPrice?: number | null;
+  listingActive?: boolean;
 }
 
 interface OwnedNftsData {
@@ -284,6 +287,9 @@ export default function CollectionPage() {
           refetchNfts();
         }}
         mintedAt={selectedNft.mintedAt}
+        soldAt={selectedNft.soldAt}
+        listedPrice={selectedNft.listedPrice}
+        listingActive={selectedNft.listingActive}
       />
     );
   }
