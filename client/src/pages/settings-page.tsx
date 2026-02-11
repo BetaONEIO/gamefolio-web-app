@@ -996,30 +996,44 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="flex gap-0 border-b border-border mb-2">
-                    <button
-                      type="button"
-                      onClick={() => setProfilePicTab('upload')}
-                      className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                        profilePicTab === 'upload'
-                          ? 'border-green-500 text-green-400'
-                          : 'border-transparent text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <Camera className="h-4 w-4" />
-                      Profile Picture
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setProfilePicTab('nft')}
-                      className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                        profilePicTab === 'nft'
-                          ? 'border-green-500 text-green-400'
-                          : 'border-transparent text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <Shield className="h-4 w-4" />
-                      NFT
-                    </button>
+                    {(() => {
+                      const isNftActive = !!(user as any)?.nftProfileTokenId;
+                      const isUploadedActive = !isNftActive && !!user?.avatarUrl;
+                      return (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setProfilePicTab('upload')}
+                            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                              profilePicTab === 'upload'
+                                ? 'border-green-500 text-green-400'
+                                : 'border-transparent text-muted-foreground hover:text-foreground'
+                            }`}
+                          >
+                            <Camera className="h-4 w-4" />
+                            Uploaded
+                            {isUploadedActive && (
+                              <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-green-500/20 text-green-400 rounded-full">Active</span>
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setProfilePicTab('nft')}
+                            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                              profilePicTab === 'nft'
+                                ? 'border-green-500 text-green-400'
+                                : 'border-transparent text-muted-foreground hover:text-foreground'
+                            }`}
+                          >
+                            <Shield className="h-4 w-4" />
+                            NFT
+                            {isNftActive && (
+                              <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-green-500/20 text-green-400 rounded-full">Active</span>
+                            )}
+                          </button>
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {profilePicTab === 'upload' && (
@@ -1110,6 +1124,38 @@ export default function SettingsPage() {
                           </div>
                         </div>
                       </div>
+
+                      {!!(user as any)?.avatarUrl && !(user as any)?.nftProfileTokenId && (
+                        <div className="flex items-center gap-3 p-3 rounded-lg border border-green-500/30 bg-green-500/5">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-green-400">Uploaded Profile Picture Active</p>
+                            <p className="text-xs text-muted-foreground">Your uploaded photo is displayed as your profile picture across the platform.</p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-red-400 border-red-500/30 hover:bg-red-500/10"
+                            onClick={async () => {
+                              try {
+                                await apiRequest("PATCH", `/api/users/${user?.id}`, { avatarUrl: null });
+                                queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+                                queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
+                                queryClient.invalidateQueries({ queryKey: ["/api/comments"] });
+                                queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+                                queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+                                queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
+                                queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+                                toast({ title: "Profile picture deactivated", description: "Your uploaded profile picture has been removed." });
+                              } catch (e: any) {
+                                toast({ title: "Failed", description: e.message || "Something went wrong", variant: "destructive" });
+                              }
+                            }}
+                          >
+                            Deactivate
+                          </Button>
+                        </div>
+                      )}
 
                       {previousAvatarsData?.avatars && previousAvatarsData.avatars.length > 0 && (
                         <div className="space-y-3 pt-3 border-t border-slate-700/50">
@@ -1211,7 +1257,7 @@ export default function SettingsPage() {
                                 onClick={() => setNftProfileMutation.mutate({ tokenId: null })}
                                 disabled={setNftProfileMutation.isPending}
                               >
-                                {setNftProfileMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Remove'}
+                                {setNftProfileMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Deactivate'}
                               </Button>
                             </div>
                           ) : (
