@@ -1711,7 +1711,7 @@ export default function StorePage() {
               </p>
               <Link href="/collection">
                 <Button className="mt-6" variant="outline" size="sm" data-testid="button-view-inventory">
-                  View Your Inventory
+                  View Collection
                 </Button>
               </Link>
             </div>
