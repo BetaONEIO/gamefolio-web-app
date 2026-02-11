@@ -1041,7 +1041,7 @@ export default function SettingsPage() {
                       <div className="flex flex-col md:flex-row md:items-start space-y-4 md:space-y-0 md:space-x-6">
                         <div className="flex flex-col items-center space-y-3">
                           <div 
-                            className="relative h-48 w-48 flex items-center justify-center"
+                            className={`relative h-48 w-48 flex items-center justify-center ${(user as any)?.nftProfileTokenId ? 'opacity-40 grayscale' : ''} transition-all`}
                           >
                             <div 
                               className="h-32 w-32 rounded-full overflow-hidden z-10"
@@ -1205,7 +1205,11 @@ export default function SettingsPage() {
                         <div className="flex flex-col items-center space-y-3 shrink-0">
                           {hasPreview ? (
                             <div
-                              className="w-52 h-52 rounded-xl overflow-hidden border-2 border-green-500/40 shadow-[0_0_20px_rgba(74,222,128,0.15)] cursor-pointer hover:shadow-[0_0_25px_rgba(74,222,128,0.25)] transition-shadow"
+                              className={`w-52 h-52 rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
+                                (user as any)?.nftProfileTokenId
+                                  ? 'border-green-500/40 shadow-[0_0_20px_rgba(74,222,128,0.15)] hover:shadow-[0_0_25px_rgba(74,222,128,0.25)]'
+                                  : 'border-slate-600 opacity-40 grayscale hover:opacity-60'
+                              }`}
                               onClick={() => setShowNftSelector(true)}
                             >
                               <img
