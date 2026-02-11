@@ -286,4 +286,99 @@ router.post('/api/nft/metadata/batch', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/api/nfts/owned', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const walletAddress = user.walletAddress;
+    if (!walletAddress) {
+      return res.json({ nfts: [], count: 0 });
+    }
+
+    const totalSupply = await publicClient.readContract({
+      address: NFT_CONTRACT_ADDRESS as `0x${string}`,
+      abi: NFT_ABI,
+      functionName: 'totalSupply',
+    });
+
+    const total = Number(totalSupply);
+    if (total === 0) {
+      return res.json({ nfts: [], count: 0 });
+    }
+
+    const ownedTokenIds: number[] = [];
+    const batchSize = 50;
+    for (let start = 1; start <= total; start += batchSize) {
+      const end = Math.min(start + batchSize - 1, total);
+      const calls = [];
+      for (let tokenId = start; tokenId <= end; tokenId++) {
+        calls.push(
+          publicClient.readContract({
+            address: NFT_CONTRACT_ADDRESS as `0x${string}`,
+            abi: NFT_ABI,
+            functionName: 'ownerOf',
+            args: [BigInt(tokenId)],
+          }).then((owner) => ({ tokenId, owner: (owner as string).toLowerCase() }))
+            .catch(() => ({ tokenId, owner: '' }))
+        );
+      }
+      const results = await Promise.all(calls);
+      for (const r of results) {
+        if (r.owner === walletAddress.toLowerCase()) {
+          ownedTokenIds.push(r.tokenId);
+        }
+      }
+    }
+
+    if (ownedTokenIds.length === 0) {
+      return res.json({ nfts: [], count: 0 });
+    }
+
+    const metadataResults = await Promise.allSettled(
+      ownedTokenIds.slice(0, 50).map(async (tokenId) => {
+        const tokenURI = await publicClient.readContract({
+          address: NFT_CONTRACT_ADDRESS as `0x${string}`,
+          abi: NFT_ABI,
+          functionName: 'tokenURI',
+          args: [BigInt(tokenId)],
+        });
+
+        for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
+          try {
+            const url = ipfsToHttp(tokenURI as string, i) + '.json';
+            const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+            if (response.ok) {
+              const metadata = await response.json();
+              if (metadata.image) {
+                metadata.image = ipfsToHttp(metadata.image);
+              }
+              return { tokenId, ...metadata };
+            }
+          } catch {
+            continue;
+          }
+        }
+        return { tokenId, name: `Gamefolio Genesis #${tokenId}`, image: null };
+      })
+    );
+
+    const nfts = metadataResults
+      .filter((r) => r.status === 'fulfilled')
+      .map((r) => (r as PromiseFulfilledResult<any>).value);
+
+    return res.json({ nfts, count: ownedTokenIds.length });
+  } catch (error: any) {
+    console.error('Owned NFTs fetch error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch owned NFTs' });
+  }
+});
+
 export default router;
