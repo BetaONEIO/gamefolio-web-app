@@ -392,6 +392,9 @@ export default function SettingsPage() {
 
   // Track previous avatarUrl to detect successful uploads
   const prevAvatarUrl = React.useRef(user?.avatarUrl);
+  
+  // Track deactivated avatar URL so preview stays visible but greyed out
+  const [deactivatedAvatarUrl, setDeactivatedAvatarUrl] = useState<string | null>(null);
 
   // Update profile data when user data changes (preserve uploaded banners)
   useEffect(() => {
@@ -444,7 +447,11 @@ export default function SettingsPage() {
         console.log('✅ Avatar successfully uploaded, clearing upload state');
         setAvatarFile(null);
         setAvatarPreview('');
+        setDeactivatedAvatarUrl(null);
         prevAvatarUrl.current = user.avatarUrl;
+      }
+      if (user.avatarUrl) {
+        setDeactivatedAvatarUrl(null);
       }
     }
   }, [user, uploadedBannerUrl]);
@@ -618,6 +625,7 @@ export default function SettingsPage() {
   });
 
   const { signedUrl: signedAvatarUrl } = useSignedUrl(user?.avatarUrl);
+  const { signedUrl: signedDeactivatedAvatarUrl } = useSignedUrl(deactivatedAvatarUrl);
   const { signedUrl: signedSelectedPrevAvatar } = useSignedUrl(selectedPreviousAvatar);
   const previousAvatarUrls = React.useMemo(
     () => (previousAvatarsData?.avatars || []).map(a => a.avatarUrl),
@@ -1041,17 +1049,17 @@ export default function SettingsPage() {
                       <div className="flex flex-col md:flex-row md:items-start space-y-4 md:space-y-0 md:space-x-6">
                         <div className="flex flex-col items-center space-y-3">
                           <div 
-                            className={`relative h-48 w-48 flex items-center justify-center ${(user as any)?.nftProfileTokenId ? 'opacity-40 grayscale' : ''} transition-all`}
+                            className={`relative h-48 w-48 flex items-center justify-center ${(user as any)?.nftProfileTokenId || (!user?.avatarUrl && deactivatedAvatarUrl) ? 'opacity-40 grayscale' : ''} transition-all`}
                           >
                             <div 
                               className="h-32 w-32 rounded-full overflow-hidden z-10"
                             >
                               <img 
-                                src={avatarPreview || signedSelectedPrevAvatar || signedAvatarUrl || ''} 
+                                src={avatarPreview || signedSelectedPrevAvatar || signedAvatarUrl || signedDeactivatedAvatarUrl || ''} 
                                 alt={user?.displayName || 'Profile'}
                                 className="w-full h-full object-cover rounded-full"
                               />
-                              {!(avatarPreview || signedSelectedPrevAvatar || signedAvatarUrl) && (
+                              {!(avatarPreview || signedSelectedPrevAvatar || signedAvatarUrl || signedDeactivatedAvatarUrl) && (
                                 <div className="w-full h-full flex items-center justify-center bg-primary/20 text-3xl font-bold rounded-full">
                                   {user?.displayName?.charAt(0) || '?'}
                                 </div>
@@ -1081,6 +1089,7 @@ export default function SettingsPage() {
                                 className="group px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400 transition-colors"
                                 onClick={async () => {
                                   try {
+                                    setDeactivatedAvatarUrl(user?.avatarUrl || null);
                                     await apiRequest("PATCH", `/api/users/${user?.id}`, { avatarUrl: null });
                                     queryClient.invalidateQueries({ queryKey: ["/api/user"] });
                                     queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
@@ -1089,7 +1098,7 @@ export default function SettingsPage() {
                                     queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
                                     queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
                                     queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-                                    toast({ title: "Profile picture deactivated", description: "Your uploaded profile picture has been removed." });
+                                    toast({ title: "Profile picture deactivated", description: "Your profile picture is no longer active but still saved." });
                                   } catch (e: any) {
                                     toast({ title: "Failed", description: e.message || "Something went wrong", variant: "destructive" });
                                   }
@@ -1191,6 +1200,7 @@ export default function SettingsPage() {
                                       className="group px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400 transition-colors"
                                       onClick={async () => {
                                         try {
+                                          setDeactivatedAvatarUrl(user?.avatarUrl || null);
                                           await apiRequest("PATCH", `/api/users/${user?.id}`, { avatarUrl: null });
                                           queryClient.invalidateQueries({ queryKey: ["/api/user"] });
                                           queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
@@ -1199,7 +1209,7 @@ export default function SettingsPage() {
                                           queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
                                           queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
                                           queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-                                          toast({ title: "Profile picture deactivated", description: "Your uploaded profile picture has been removed." });
+                                          toast({ title: "Profile picture deactivated", description: "Your profile picture is no longer active but still saved." });
                                         } catch (e: any) {
                                           toast({ title: "Failed", description: e.message || "Something went wrong", variant: "destructive" });
                                         }
