@@ -336,7 +336,7 @@ export const CustomAvatar = ({
         onClick={handleNftAvatarClick}
       >
         <div
-          className="w-full h-full rounded-lg overflow-hidden"
+          className="w-full h-full rounded-lg overflow-hidden border-2 border-[#4ade80]/40"
         >
           <img
             src={user.nftProfileImageUrl || ''}
