@@ -1,5 +1,5 @@
-import { ArrowLeft, ArrowRight, Copy, Check, Share2 } from "lucide-react";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { ArrowLeft, Copy, Check, Share2 } from "lucide-react";
+import { useState, useRef, useCallback } from "react";
 import MintedNftDetailScreen from "./MintedNftDetailScreen";
 
 interface NftAttribute {
@@ -34,6 +34,12 @@ function getRarityLabel(rarity: number): string {
   return "Common";
 }
 
+function isLegendary(nft: MintedNFT): boolean {
+  const rarityAttr = nft.attributes?.find(a => a.trait_type.toLowerCase() === "rarity");
+  if (rarityAttr) return rarityAttr.value.toLowerCase() === "legendary";
+  return nft.rarity >= 95;
+}
+
 function getTokenIdPadded(id: number): string {
   return `#${String(id).padStart(4, "0")}`;
 }
@@ -55,7 +61,11 @@ export default function MultiMintSuccessScreen({
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedNft, setSelectedNft] = useState<MintedNFT | null>(null);
   const [internalSoldIds, setInternalSoldIds] = useState<Set<number>>(new Set());
-  const carouselRef = useRef<HTMLDivElement>(null);
+
+  const [dragX, setDragX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{ x: number; time: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const soldNftIds = externalSoldIds || internalSoldIds;
 
@@ -78,41 +88,42 @@ export default function MultiMintSuccessScreen({
 
   const totalSlides = displayNfts.length;
 
-  const scrollToIndex = useCallback((index: number) => {
-    if (!carouselRef.current) return;
-    const el = carouselRef.current;
-    const cardWidth = 280;
-    const gap = 16;
-    const containerWidth = el.clientWidth;
-    const scrollPos = index * (cardWidth + gap) - (containerWidth - cardWidth) / 2;
-    el.scrollTo({ left: scrollPos, behavior: "smooth" });
-    setActiveIndex(index);
+  const handleDragStart = useCallback((clientX: number) => {
+    dragStartRef.current = { x: clientX, time: Date.now() };
+    setIsDragging(true);
   }, []);
 
-  const handlePrev = () => {
-    const newIndex = Math.max(0, activeIndex - 1);
-    scrollToIndex(newIndex);
-  };
+  const handleDragMove = useCallback((clientX: number) => {
+    if (!dragStartRef.current) return;
+    const diff = clientX - dragStartRef.current.x;
+    setDragX(diff);
+  }, []);
 
-  const handleNext = () => {
-    const newIndex = Math.min(totalSlides - 1, activeIndex + 1);
-    scrollToIndex(newIndex);
-  };
+  const handleDragEnd = useCallback(() => {
+    if (!dragStartRef.current) return;
+    const threshold = 80;
+    const velocity = Math.abs(dragX) / (Date.now() - dragStartRef.current.time) * 1000;
+    const shouldSwipe = Math.abs(dragX) > threshold || velocity > 400;
 
-  useEffect(() => {
-    const el = carouselRef.current;
-    if (!el) return;
-    const handleScroll = () => {
-      const cardWidth = 280;
-      const gap = 16;
-      const containerWidth = el.clientWidth;
-      const offset = el.scrollLeft + (containerWidth - cardWidth) / 2;
-      const idx = Math.round(offset / (cardWidth + gap));
-      setActiveIndex(Math.max(0, Math.min(totalSlides - 1, idx)));
-    };
-    el.addEventListener("scroll", handleScroll, { passive: true });
-    return () => el.removeEventListener("scroll", handleScroll);
-  }, [totalSlides]);
+    if (shouldSwipe && dragX < 0 && activeIndex < totalSlides - 1) {
+      setActiveIndex(prev => prev + 1);
+    } else if (shouldSwipe && dragX > 0 && activeIndex > 0) {
+      setActiveIndex(prev => prev - 1);
+    }
+
+    setDragX(0);
+    setIsDragging(false);
+    dragStartRef.current = null;
+  }, [dragX, activeIndex, totalSlides]);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    handleDragStart(e.clientX);
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (isDragging) handleDragMove(e.clientX);
+  };
+  const onPointerUp = () => handleDragEnd();
 
   const copyTxHash = () => {
     navigator.clipboard.writeText(txHash);
@@ -166,99 +177,133 @@ export default function MultiMintSuccessScreen({
 
           <div className="flex flex-col md:flex-row md:gap-8 md:px-4 md:py-8">
 
-            <div className="md:flex-[3] relative w-full" style={{ minHeight: "450px" }}>
-              <div className="flex justify-center items-start gap-1.5 px-6 pt-4 pb-2 max-w-[320px] mx-auto">
-                {displayNfts.slice(0, 5).map((_, i) => (
-                  <div
+            <div className="md:flex-[3] relative w-full flex flex-col items-center" style={{ minHeight: "500px" }}>
+              <div className="flex justify-center items-start gap-1.5 px-6 pt-4 pb-2 max-w-[320px] w-full">
+                {displayNfts.map((_, i) => (
+                  <button
                     key={i}
+                    onClick={() => setActiveIndex(i)}
                     className={`flex-1 h-1.5 rounded-full transition-colors ${
-                      i === activeIndex % 5 ? "bg-[#4ade80]" : "bg-[#1e293b]"
+                      i === activeIndex ? "bg-[#4ade80]" : "bg-[#1e293b]"
                     }`}
                   />
                 ))}
               </div>
 
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full bg-[#4ade801a] blur-[40px] pointer-events-none" />
-
               <div
-                ref={carouselRef}
-                className="flex gap-4 overflow-x-auto snap-x snap-mandatory px-[75px] md:px-[calc(50%-140px)] py-4 scrollbar-hide"
-                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                ref={containerRef}
+                className="relative w-[280px] md:w-[320px] flex-1 mt-4 touch-pan-y"
+                style={{ height: "420px", maxHeight: "420px" }}
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerUp}
               >
-                {displayNfts.map((nft, index) => (
-                  <div
-                    key={index}
-                    className="snap-center flex-shrink-0 cursor-pointer"
-                    style={{ width: "280px" }}
-                    onClick={() => setSelectedNft(nft)}
-                  >
-                    <div className="w-[280px] rounded-[40px] border border-[#1e293b80] bg-[#0f172a] overflow-hidden shadow-[0_25px_50px_-12px_rgba(74,222,128,0.05)] active:scale-[0.98] hover:border-[#4ade8040] transition-all">
-                      <div className="p-6 pb-1 flex flex-col gap-1">
-                        <div className="flex items-start justify-between gap-4">
-                          <span className="text-lg font-bold text-[#f8fafc] leading-7 truncate">
-                            {nft.name || `Gamefolio Genesis ${getTokenIdPadded(nft.id)}`}
-                          </span>
-                          <span className="text-sm font-normal text-[#4ade80] font-['JetBrains_Mono',monospace] leading-5 flex-shrink-0">
-                            {getTokenIdPadded(nft.id)}
-                          </span>
-                        </div>
-                        <span className="text-xs font-normal text-[#94a3b8] leading-4">
-                          Genesis Collection
-                        </span>
-                      </div>
+                {displayNfts.map((nft, index) => {
+                  const offset = index - activeIndex;
+                  const isActive = offset === 0;
+                  const isVisible = Math.abs(offset) <= 2;
+                  if (!isVisible) return null;
 
-                      <div className="relative w-full aspect-square">
-                        {nft.imageUrl ? (
-                          <img
-                            src={nft.imageUrl}
-                            alt={nft.name || `NFT #${nft.id}`}
-                            className={`w-full h-full object-cover transition-all duration-300 ${soldNftIds.has(nft.id) ? "grayscale brightness-50" : ""}`}
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-[#1e293b] flex items-center justify-center">
-                            <div className="w-12 h-12 rounded-full border-2 border-[#4ade80]/30 border-t-[#4ade80] animate-spin" />
-                          </div>
-                        )}
+                  const legendary = isLegendary(nft);
+                  const translateX = isActive ? dragX : offset * 30;
+                  const scale = isActive ? 1 : 1 - Math.abs(offset) * 0.06;
+                  const opacity = isActive ? 1 : Math.max(0, 1 - Math.abs(offset) * 0.3);
+                  const zIndex = totalSlides - Math.abs(offset);
+                  const rotate = isActive ? dragX * 0.04 : 0;
 
-                        {soldNftIds.has(nft.id) && (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-4xl font-black text-white/80 uppercase tracking-[6px] rotate-[-15deg] drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
-                              SOLD
-                            </span>
-                          </div>
-                        )}
+                  return (
+                    <div
+                      key={index}
+                      className="absolute inset-0 select-none"
+                      style={{
+                        transform: `translateX(${translateX}px) scale(${scale}) rotate(${rotate}deg)`,
+                        opacity,
+                        zIndex,
+                        transition: isDragging && isActive ? "none" : "transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease",
+                        pointerEvents: isActive ? "auto" : "none",
+                      }}
+                    >
+                      {legendary && (
+                        <div className="absolute -inset-3 rounded-[48px] bg-gradient-to-br from-[#fbbf24] via-[#f59e0b] to-[#d97706] opacity-40 blur-[24px] pointer-events-none animate-pulse" />
+                      )}
+                      <div
+                        className={`relative w-full rounded-[40px] overflow-hidden bg-[#0f172a] shadow-[0_25px_50px_-12px_rgba(74,222,128,0.05)] ${
+                          legendary
+                            ? "border-2 border-[#fbbf24]/60 shadow-[0_0_30px_rgba(251,191,36,0.3)]"
+                            : "border border-[#1e293b80] hover:border-[#4ade8040]"
+                        } transition-all`}
+                        onClick={() => {
+                          if (!isDragging || Math.abs(dragX) < 5) {
+                            setSelectedNft(nft);
+                          }
+                        }}
+                      >
+                        <div className="relative w-full aspect-square">
+                          {nft.imageUrl ? (
+                            <img
+                              src={nft.imageUrl}
+                              alt={nft.name || `NFT #${nft.id}`}
+                              className={`w-full h-full object-cover transition-all duration-300 pointer-events-none ${soldNftIds.has(nft.id) ? "grayscale brightness-50" : ""}`}
+                              draggable={false}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-[#1e293b] flex items-center justify-center">
+                              <div className="w-12 h-12 rounded-full border-2 border-[#4ade80]/30 border-t-[#4ade80] animate-spin" />
+                            </div>
+                          )}
 
-                        {!soldNftIds.has(nft.id) && (
-                          <div className="absolute bottom-3 left-3">
-                            <div className="backdrop-blur-md bg-black/40 border border-white/10 rounded-full px-3 py-1.5 flex items-center justify-center">
-                              <span className="text-[10px] font-bold text-white uppercase tracking-[0.5px] leading-[15px]">
-                                {getRarityLabel(nft.rarity)}
+                          {soldNftIds.has(nft.id) && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-4xl font-black text-white/80 uppercase tracking-[6px] rotate-[-15deg] drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
+                                SOLD
                               </span>
                             </div>
+                          )}
+
+                          {!soldNftIds.has(nft.id) && (
+                            <div className="absolute bottom-3 left-3">
+                              <div className={`backdrop-blur-md border rounded-full px-3 py-1.5 flex items-center justify-center ${
+                                legendary
+                                  ? "bg-[#fbbf24]/30 border-[#fbbf24]/40"
+                                  : "bg-black/40 border-white/10"
+                              }`}>
+                                <span className={`text-[10px] font-bold uppercase tracking-[0.5px] leading-[15px] ${
+                                  legendary ? "text-[#fbbf24]" : "text-white"
+                                }`}>
+                                  {getRarityLabel(nft.rarity)}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="p-4 pb-5 flex flex-col gap-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <span className="text-base font-bold text-[#f8fafc] leading-6 truncate">
+                              {nft.name || `Gamefolio Genesis`}
+                            </span>
+                            <span className={`text-sm font-normal font-['JetBrains_Mono',monospace] leading-5 flex-shrink-0 ${
+                              legendary ? "text-[#fbbf24]" : "text-[#4ade80]"
+                            }`}>
+                              {getTokenIdPadded(nft.id)}
+                            </span>
                           </div>
-                        )}
+                          <span className="text-xs font-normal text-[#94a3b8] leading-4">
+                            Genesis Collection
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
-              {activeIndex > 0 && (
-                <button
-                  onClick={handlePrev}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-[#1e293bcc] border border-[#1e293b80] backdrop-blur-md flex items-center justify-center shadow-[0_4px_6px_-4px_rgba(0,0,0,0.1),0_10px_15px_-3px_rgba(0,0,0,0.1)] hover:bg-[#334155] transition-colors"
-                >
-                  <ArrowLeft className="h-6 w-6 text-[#f8fafc]" />
-                </button>
-              )}
-              {activeIndex < totalSlides - 1 && (
-                <button
-                  onClick={handleNext}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-[#1e293bcc] border border-[#1e293b80] backdrop-blur-md flex items-center justify-center shadow-[0_4px_6px_-4px_rgba(0,0,0,0.1),0_10px_15px_-3px_rgba(0,0,0,0.1)] hover:bg-[#334155] transition-colors"
-                >
-                  <ArrowRight className="h-6 w-6 text-[#f8fafc]" />
-                </button>
-              )}
+              <div className="flex items-center justify-center gap-4 mt-4 pb-2">
+                <span className="text-sm text-[#94a3b8]">
+                  {activeIndex + 1} / {totalSlides}
+                </span>
+              </div>
             </div>
 
             <div className="md:flex-[2] flex flex-col">
