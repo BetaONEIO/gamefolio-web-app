@@ -1053,43 +1053,79 @@ export default function SettingsPage() {
                   )}
 
                   {profilePicTab === 'nft' && (
-                    <div className="space-y-4">
-                      {(user as any)?.nftProfileTokenId ? (
-                        <div className="flex items-center gap-4 p-4 rounded-lg border border-green-500/30 bg-green-500/5">
-                          {(user as any)?.nftProfileImageUrl && (
-                            <img
-                              src={(user as any).nftProfileImageUrl}
-                              alt="Current NFT"
-                              className="w-16 h-16 rounded-lg object-cover border-2 border-green-500/40"
-                            />
+                    <div className="flex flex-col md:flex-row md:items-start space-y-4 md:space-y-0 md:space-x-6">
+                      <div className="flex flex-col items-center space-y-3">
+                        <div className="relative h-48 w-48 flex items-center justify-center">
+                          {(user as any)?.nftProfileImageUrl ? (
+                            <div className="h-32 w-32 rounded-lg overflow-hidden border-2 border-green-500/40 shadow-[0_0_15px_rgba(74,222,128,0.2)]">
+                              <img
+                                src={(user as any).nftProfileImageUrl}
+                                alt="NFT Profile Picture"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="h-32 w-32 rounded-lg overflow-hidden border-2 border-dashed border-slate-600 bg-slate-800/50 flex flex-col items-center justify-center gap-2">
+                              <Hexagon className="h-10 w-10 text-slate-600" />
+                              <span className="text-[10px] text-slate-500 font-medium">No NFT Selected</span>
+                            </div>
                           )}
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-green-400">NFT Profile Picture Active</p>
-                            <p className="text-xs text-muted-foreground">Token #{(user as any).nftProfileTokenId}</p>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="text-red-400 border-red-500/30 hover:bg-red-500/10"
-                            onClick={() => setNftProfileMutation.mutate({ tokenId: null })}
-                            disabled={setNftProfileMutation.isPending}
-                          >
-                            {setNftProfileMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Remove'}
-                          </Button>
+                          {selectedBorderId && avatarBorders && (user as any)?.nftProfileImageUrl && (() => {
+                            const border = (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId);
+                            if (!border) return null;
+                            return (
+                              <InlineSvgBorder
+                                svgUrl={border.imageUrl}
+                                color={avatarBorderColor}
+                                className="absolute inset-0 pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+                                style={{ zIndex: 5 }}
+                              />
+                            );
+                          })()}
                         </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">No NFT profile picture set. Select one from your collection below.</p>
-                      )}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setShowNftSelector(true)}
-                        className="border-green-500/30 text-green-400 hover:bg-green-500/10"
-                      >
-                        <Shield className="h-4 w-4 mr-2" />
-                        Select NFT to use as Profile Picture
-                      </Button>
+                        <div className="text-center">
+                          <span className="text-sm font-medium">
+                            {(user as any)?.nftProfileTokenId ? `Token #${(user as any).nftProfileTokenId}` : 'Preview'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex-1 space-y-3">
+                        {(user as any)?.nftProfileTokenId ? (
+                          <div className="flex items-center gap-3 p-3 rounded-lg border border-green-500/30 bg-green-500/5">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-green-400">NFT Profile Picture Active</p>
+                              <p className="text-xs text-muted-foreground">Your NFT is displayed as your profile picture across the platform.</p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="text-red-400 border-red-500/30 hover:bg-red-500/10"
+                              onClick={() => setNftProfileMutation.mutate({ tokenId: null })}
+                              disabled={setNftProfileMutation.isPending}
+                            >
+                              {setNftProfileMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Remove'}
+                            </Button>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Select an NFT from your collection to use as your profile picture. Your NFT will be displayed as a square image with rounded corners.</p>
+                        )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setShowNftSelector(true)}
+                          className="border-green-500/30 text-green-400 hover:bg-green-500/10"
+                        >
+                          <Hexagon className="h-4 w-4 mr-2" />
+                          {(user as any)?.nftProfileTokenId ? 'Change NFT' : 'Select NFT to use as Profile Picture'}
+                        </Button>
+                        <div className="text-xs text-muted-foreground space-y-1">
+                          <div>• NFT profile pictures appear as square with rounded corners</div>
+                          <div>• Only unsold NFTs from your collection can be used</div>
+                          <div>• You can change or remove your NFT profile picture anytime</div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
