@@ -624,6 +624,12 @@ export default function SettingsPage() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clips'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/comments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/leaderboard'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
       if (variables.tokenId === null) {
         setNftPreview(null);
         toast({ title: 'NFT removed', description: 'Your NFT profile picture has been cleared.' });
@@ -751,9 +757,15 @@ export default function SettingsPage() {
       queryClient.setQueryData(["/api/user"], cacheUpdater);
       queryClient.setQueryData([`/api/users/${user?.username}`], cacheUpdater);
       
-      // Force refresh of all user-related queries to ensure UI updates
+      // Force refresh of all user-related and content queries to ensure UI updates everywhere
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/comments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       
       toast({
         title: "Settings updated!",
