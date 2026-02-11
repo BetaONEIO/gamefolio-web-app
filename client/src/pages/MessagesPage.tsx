@@ -558,12 +558,18 @@ const MessagesPage: React.FC = () => {
                           setNewMessage(""); // Clear any existing message
                         }}
                       >
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={user.avatarUrl || ""} />
-                          <AvatarFallback>
-                            {user.displayName.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        {user.nftProfileTokenId && user.nftProfileImageUrl ? (
+                          <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                            <img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={user.avatarUrl || ""} />
+                            <AvatarFallback>
+                              {user.displayName.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
                         <div className="flex-1">
                           <p className="font-medium">{user.displayName}</p>
                           <p className="text-sm text-muted-foreground">@{user.username}</p>
@@ -676,12 +682,18 @@ const MessagesPage: React.FC = () => {
                           setShowMobileConversationList(false); // Hide conversation list on mobile when chat is selected
                         }}
                       >
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={avatarUrl} />
-                          <AvatarFallback>
-                            {displayName.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        {user.nftProfileTokenId && user.nftProfileImageUrl ? (
+                          <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                            <img src={user.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={avatarUrl} />
+                            <AvatarFallback>
+                              {displayName.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
                             <p className={`font-medium truncate ${conversation.unreadCount > 0 ? 'text-green-500' : ''}`}>{displayName}</p>
@@ -803,20 +815,32 @@ const MessagesPage: React.FC = () => {
                         <div className="flex items-center gap-3">
                           {username && username !== 'unknown' ? (
                             <Link href={`/profile/${username}`} data-testid="link-profile-avatar">
-                              <Avatar className="h-10 w-10 cursor-pointer">
+                              {otherUser.nftProfileTokenId && otherUser.nftProfileImageUrl ? (
+                                <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40 cursor-pointer">
+                                  <img src={otherUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
+                                </div>
+                              ) : (
+                                <Avatar className="h-10 w-10 cursor-pointer">
+                                  <AvatarImage src={avatarUrl} />
+                                  <AvatarFallback>
+                                    {displayName.charAt(0).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                              )}
+                            </Link>
+                          ) : (
+                            otherUser.nftProfileTokenId && otherUser.nftProfileImageUrl ? (
+                              <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                                <img src={otherUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
+                              </div>
+                            ) : (
+                              <Avatar className="h-10 w-10">
                                 <AvatarImage src={avatarUrl} />
                                 <AvatarFallback>
                                   {displayName.charAt(0).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
-                            </Link>
-                          ) : (
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={avatarUrl} />
-                              <AvatarFallback>
-                                {displayName.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
+                            )
                           )}
                           <div>
                             <h2 className="font-semibold">{displayName}</h2>
@@ -840,20 +864,32 @@ const MessagesPage: React.FC = () => {
                       <div className="flex items-center gap-3">
                         {username && username !== 'unknown' ? (
                           <Link href={`/profile/${username}`} data-testid="link-profile-avatar">
-                            <Avatar className="h-10 w-10 cursor-pointer">
+                            {selectedUserInfo.nftProfileTokenId && selectedUserInfo.nftProfileImageUrl ? (
+                              <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40 cursor-pointer">
+                                <img src={selectedUserInfo.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
+                              </div>
+                            ) : (
+                              <Avatar className="h-10 w-10 cursor-pointer">
+                                <AvatarImage src={avatarUrl} />
+                                <AvatarFallback>
+                                  {displayName.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                            )}
+                          </Link>
+                        ) : (
+                          selectedUserInfo.nftProfileTokenId && selectedUserInfo.nftProfileImageUrl ? (
+                            <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                              <img src={selectedUserInfo.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
+                            </div>
+                          ) : (
+                            <Avatar className="h-10 w-10">
                               <AvatarImage src={avatarUrl} />
                               <AvatarFallback>
                                 {displayName.charAt(0).toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
-                          </Link>
-                        ) : (
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={avatarUrl} />
-                            <AvatarFallback>
-                              {displayName.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                          )
                         )}
                         <div>
                           <h2 className="font-semibold">{displayName}</h2>
@@ -943,20 +979,32 @@ const MessagesPage: React.FC = () => {
                     <div className="flex items-center gap-3">
                       {username && username !== 'unknown' ? (
                         <Link href={`/profile/${username}`} data-testid="link-profile-avatar">
-                          <Avatar className="h-10 w-10 cursor-pointer">
+                          {conversationUser.nftProfileTokenId && conversationUser.nftProfileImageUrl ? (
+                            <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40 cursor-pointer">
+                              <img src={conversationUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
+                            </div>
+                          ) : (
+                            <Avatar className="h-10 w-10 cursor-pointer">
+                              <AvatarImage src={avatarUrl} />
+                              <AvatarFallback>
+                                {displayName.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                        </Link>
+                      ) : (
+                        conversationUser.nftProfileTokenId && conversationUser.nftProfileImageUrl ? (
+                          <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                            <img src={conversationUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <Avatar className="h-10 w-10">
                             <AvatarImage src={avatarUrl} />
                             <AvatarFallback>
                               {displayName.charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                        </Link>
-                      ) : (
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={avatarUrl} />
-                          <AvatarFallback>
-                            {displayName.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        )
                       )}
                       <div>
                         <h2 className="font-semibold">{displayName}</h2>

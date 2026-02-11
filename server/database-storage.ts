@@ -2445,7 +2445,9 @@ export class DatabaseStorage implements IStorage {
               id: otherUser.id,
               username: otherUser.username,
               displayName: otherUser.displayName,
-              avatarUrl: otherUser.avatarUrl
+              avatarUrl: otherUser.avatarUrl,
+              nftProfileTokenId: otherUser.nftProfileTokenId,
+              nftProfileImageUrl: otherUser.nftProfileImageUrl
             },
             lastMessage: {
               id: lastMessage.id,

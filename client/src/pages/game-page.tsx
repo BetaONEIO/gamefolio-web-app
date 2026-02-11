@@ -138,14 +138,16 @@ const GamePage = () => {
   // Extract unique users from current content for the filter dropdown
   const uniqueUsers = useMemo(() => {
     if (!rawDisplayData) return [];
-    const usersMap = new Map<number, { id: number; username: string; displayName?: string; avatarUrl?: string }>();
+    const usersMap = new Map<number, { id: number; username: string; displayName?: string; avatarUrl?: string; nftProfileTokenId?: string; nftProfileImageUrl?: string }>();
     rawDisplayData.forEach((item: any) => {
       if (item.user && item.user.id) {
         usersMap.set(item.user.id, {
           id: item.user.id,
           username: item.user.username,
           displayName: item.user.displayName,
-          avatarUrl: item.user.avatarUrl
+          avatarUrl: item.user.avatarUrl,
+          nftProfileTokenId: item.user.nftProfileTokenId,
+          nftProfileImageUrl: item.user.nftProfileImageUrl
         });
       }
     });
@@ -267,12 +269,16 @@ const GamePage = () => {
                 {uniqueUsers.map((u) => (
                   <SelectItem key={u.id} value={u.id.toString()} data-testid={`select-user-${u.id}`}>
                     <div className="flex items-center gap-2">
-                      <Avatar className="h-5 w-5">
-                        <AvatarImage src={u.avatarUrl || ''} alt={u.username} />
-                        <AvatarFallback className="text-xs">
-                          {u.username?.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      {u.nftProfileTokenId && u.nftProfileImageUrl ? (
+                        <div className="h-5 w-5 rounded-sm overflow-hidden border border-[#4ade80]/40"><img src={u.nftProfileImageUrl} alt={u.username} className="w-full h-full object-cover" /></div>
+                      ) : (
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={u.avatarUrl || ''} alt={u.username} />
+                          <AvatarFallback className="text-xs">
+                            {u.username?.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
                       <span>{u.displayName || u.username}</span>
                     </div>
                   </SelectItem>

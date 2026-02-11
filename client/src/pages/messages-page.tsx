@@ -390,12 +390,18 @@ export default function MessagesPage() {
                     }`}
                     onClick={() => setSelectedConversation(conversation)}
                   >
-                    <Avatar className="w-10 h-10">
-                      <AvatarImage src={conversation.avatarUrl} />
-                      <AvatarFallback className="bg-navy-light">
-                        {conversation.displayName[0]?.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    {conversation.nftProfileTokenId && conversation.nftProfileImageUrl ? (
+                      <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                        <img src={conversation.nftProfileImageUrl} alt={conversation.displayName} className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <Avatar className="w-10 h-10">
+                        <AvatarImage src={conversation.avatarUrl} />
+                        <AvatarFallback className="bg-navy-light">
+                          {conversation.displayName[0]?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -430,12 +436,18 @@ export default function MessagesPage() {
               {/* Chat Header */}
               <div className="p-4 border-b border-navy-light flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src={selectedConversation.avatarUrl} />
-                    <AvatarFallback className="bg-navy-light">
-                      {selectedConversation.displayName[0]?.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  {selectedConversation.nftProfileTokenId && selectedConversation.nftProfileImageUrl ? (
+                    <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                      <img src={selectedConversation.nftProfileImageUrl} alt={selectedConversation.displayName} className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={selectedConversation.avatarUrl} />
+                      <AvatarFallback className="bg-navy-light">
+                        {selectedConversation.displayName[0]?.toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
                   <div>
                     <p className="font-medium text-white">
                       {selectedConversation.displayName}

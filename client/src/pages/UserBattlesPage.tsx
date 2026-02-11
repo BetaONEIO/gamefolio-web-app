@@ -17,6 +17,8 @@ interface BattleUser {
   avatarUrl: string | null;
   level?: number;
   totalXP?: number;
+  nftProfileTokenId?: string;
+  nftProfileImageUrl?: string;
 }
 
 const ADMIN_USERNAME = "admin";
@@ -375,12 +377,16 @@ export default function UserBattlesPage() {
                           className="mb-2"
                           data-testid={`checkbox-user-${user.id}`}
                         />
-                        <Avatar className="w-12 h-12 mb-2">
-                          <AvatarImage src={user.avatarUrl || undefined} />
-                          <AvatarFallback className="bg-primary/20 text-xs">
-                            {user.displayName[0]?.toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        {user.nftProfileTokenId && user.nftProfileImageUrl ? (
+                          <div className="w-12 h-12 mb-2 rounded-lg overflow-hidden border border-[#4ade80]/40"><img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" /></div>
+                        ) : (
+                          <Avatar className="w-12 h-12 mb-2">
+                            <AvatarImage src={user.avatarUrl || undefined} />
+                            <AvatarFallback className="bg-primary/20 text-xs">
+                              {user.displayName[0]?.toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
                         <p className="text-xs font-medium text-center truncate w-full">
                           {user.displayName}
                         </p>
@@ -514,18 +520,28 @@ export default function UserBattlesPage() {
                     data-testid={`arena-user-${user.id}`}
                   >
                     <div className="relative">
-                      <Avatar className={`w-16 h-16 border-4 shadow-2xl transition-all ${
-                        isEliminated 
-                          ? 'border-red-500 shadow-red-500/50' 
-                          : isWinner
-                          ? 'border-yellow-500 shadow-yellow-500/80 animate-bounce'
-                          : 'border-green-500 shadow-green-500/50'
-                      }`}>
-                        <AvatarImage src={user.avatarUrl || undefined} />
-                        <AvatarFallback className="bg-primary/20 text-lg font-bold">
-                          {user.displayName[0]?.toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      {user.nftProfileTokenId && user.nftProfileImageUrl ? (
+                        <div className={`w-16 h-16 rounded-lg overflow-hidden border-4 border-[#4ade80]/40 shadow-2xl transition-all ${
+                          isEliminated 
+                            ? 'shadow-red-500/50' 
+                            : isWinner
+                            ? 'shadow-yellow-500/80 animate-bounce'
+                            : 'shadow-green-500/50'
+                        }`}><img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" /></div>
+                      ) : (
+                        <Avatar className={`w-16 h-16 border-4 shadow-2xl transition-all ${
+                          isEliminated 
+                            ? 'border-red-500 shadow-red-500/50' 
+                            : isWinner
+                            ? 'border-yellow-500 shadow-yellow-500/80 animate-bounce'
+                            : 'border-green-500 shadow-green-500/50'
+                        }`}>
+                          <AvatarImage src={user.avatarUrl || undefined} />
+                          <AvatarFallback className="bg-primary/20 text-lg font-bold">
+                            {user.displayName[0]?.toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
                       
                       {isWinner && (
                         <div className="absolute -top-3 -right-3">
@@ -671,12 +687,16 @@ export default function UserBattlesPage() {
             <CardContent className="p-8 text-center">
               <Crown className="w-16 h-16 text-yellow-500 mx-auto mb-4 animate-bounce" />
               <h2 className="text-4xl font-bold mb-4 text-yellow-500">Victory Royale!</h2>
-              <Avatar className="w-32 h-32 mx-auto mb-4 border-4 border-yellow-500 shadow-2xl">
-                <AvatarImage src={winner.avatarUrl || undefined} />
-                <AvatarFallback className="bg-primary/20 text-3xl">
-                  {winner.displayName[0]?.toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              {winner.nftProfileTokenId && winner.nftProfileImageUrl ? (
+                <div className="w-32 h-32 mx-auto mb-4 rounded-lg overflow-hidden border-4 border-[#4ade80]/40 shadow-2xl"><img src={winner.nftProfileImageUrl} alt={winner.displayName} className="w-full h-full object-cover" /></div>
+              ) : (
+                <Avatar className="w-32 h-32 mx-auto mb-4 border-4 border-yellow-500 shadow-2xl">
+                  <AvatarImage src={winner.avatarUrl || undefined} />
+                  <AvatarFallback className="bg-primary/20 text-3xl">
+                    {winner.displayName[0]?.toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              )}
               <p className="text-3xl font-bold">{winner.displayName}</p>
               <p className="text-muted-foreground text-lg">@{winner.username}</p>
               <Badge className="mt-4 text-lg px-4 py-2" variant="secondary">
@@ -704,12 +724,16 @@ export default function UserBattlesPage() {
                     data-testid={`card-user-alive-${user.id}`}
                   >
                     <div className="relative">
-                      <Avatar className="w-16 h-16 border-2 border-green-500 shadow-lg">
-                        <AvatarImage src={user.avatarUrl || undefined} />
-                        <AvatarFallback className="bg-primary/20">
-                          {user.displayName[0]?.toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      {user.nftProfileTokenId && user.nftProfileImageUrl ? (
+                        <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-[#4ade80]/40 shadow-lg"><img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" /></div>
+                      ) : (
+                        <Avatar className="w-16 h-16 border-2 border-green-500 shadow-lg">
+                          <AvatarImage src={user.avatarUrl || undefined} />
+                          <AvatarFallback className="bg-primary/20">
+                            {user.displayName[0]?.toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
                       {battleActive && (
                         <div className="absolute -top-1 -right-1">
                           <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse" />
@@ -743,12 +767,16 @@ export default function UserBattlesPage() {
                     className="flex flex-col items-center p-4 rounded-lg bg-red-500/10 border border-red-500/30 opacity-50 grayscale"
                     data-testid={`card-user-eliminated-${user.id}`}
                   >
-                    <Avatar className="w-16 h-16 border-2 border-red-500">
-                      <AvatarImage src={user.avatarUrl || undefined} />
-                      <AvatarFallback className="bg-primary/20">
-                        {user.displayName[0]?.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    {user.nftProfileTokenId && user.nftProfileImageUrl ? (
+                      <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-[#4ade80]/40"><img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" /></div>
+                    ) : (
+                      <Avatar className="w-16 h-16 border-2 border-red-500">
+                        <AvatarImage src={user.avatarUrl || undefined} />
+                        <AvatarFallback className="bg-primary/20">
+                          {user.displayName[0]?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     <p className="text-sm font-medium mt-2 text-center truncate w-full line-through">
                       {user.displayName}
                     </p>
