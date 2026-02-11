@@ -97,7 +97,7 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
   },
   rare: {
     bg: "bg-gradient-to-b from-[#4ade8033] via-[#14532d4d] to-[#4ade8033]",
-    glow: "shadow-[0_0_20px_rgba(74,222,128,0.3)]",
+    glow: "",
     dotColor: "bg-green-400 shadow-[0_0_8px_#4ade80]",
     textStyle: "text-slate-400 font-normal",
     nameColor: "text-slate-50",
@@ -150,9 +150,12 @@ function NftCard({ nft, onClick }: { nft: OwnedNft; onClick: () => void }) {
 
       <div className="p-3 pt-2">
         <h3 className={`text-sm font-bold truncate ${styles.nameColor}`}>{nft.name}</h3>
-        <div className="flex items-center gap-1.5 mt-1">
-          <div className={`w-2 h-2 rounded-full ${styles.dotColor}`} />
-          <span className={`text-[11px] uppercase tracking-tight ${styles.textStyle}`}>{rarity}</span>
+        <div className="flex items-center justify-between mt-1">
+          <div className="flex items-center gap-1.5">
+            <div className={`w-2 h-2 rounded-full ${styles.dotColor}`} />
+            <span className={`text-[11px] uppercase tracking-tight ${styles.textStyle}`}>{rarity}</span>
+          </div>
+          <span className="text-[11px] text-slate-500 font-medium">#{nft.tokenId}</span>
         </div>
       </div>
     </div>
@@ -312,13 +315,13 @@ export default function CollectionPage() {
 
         <div className="pb-24 md:pb-12">
           {nftsLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {[...Array(5)].map((_, i) => (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
+              {[...Array(3)].map((_, i) => (
                 <Skeleton key={i} className="aspect-[3/4] bg-slate-800 rounded-2xl" />
               ))}
             </div>
           ) : displayNfts.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
               {displayNfts.map((nft: OwnedNft) => (
                 <NftCard key={nft.tokenId} nft={nft} onClick={() => setSelectedNft(nft)} />
               ))}
