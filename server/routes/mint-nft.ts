@@ -207,22 +207,8 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
     }
 
     const totalCost = quantity * MINT_CONFIG.pricePerMint;
-    const currentBalance = user.gfTokenBalance || 0;
-    if (currentBalance < totalCost) {
-      return res.status(400).json({
-        error: `Insufficient GF balance. Need ${totalCost} GF but you have ${currentBalance} GF.`,
-      });
-    }
-
-    const treasuryKey = process.env.TREASURY_WALLET_PRIVATE_KEY;
-    if (!treasuryKey) {
-      return res.status(500).json({ error: 'Treasury wallet not configured' });
-    }
-
     const costInWei = parseUnits(String(totalCost), 18);
     const userAddress = user.walletAddress as Address;
-
-    console.log(`🪙 Minting ${quantity} NFT(s) for user ${userId} (${userAddress}). Cost: ${totalCost} GF`);
 
     const onChainBalance = await publicClient.readContract({
       address: GF_TOKEN_ADDRESS as Address,
@@ -231,22 +217,16 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
       args: [userAddress],
     }) as bigint;
 
+    const { formatUnits } = await import('viem');
+    const readableBalance = formatUnits(onChainBalance, 18);
+
     if (onChainBalance < costInWei) {
-      const deficit = costInWei - onChainBalance;
-      console.log(`📤 Funding user wallet with ${deficit} GFT wei via treasury mint`);
-      const fundHash = await writeContractWithPoWFromRawKey({
-        privateKeyRaw: treasuryKey,
-        contractAddress: GF_TOKEN_ADDRESS as Address,
-        abi: GF_TOKEN_ABI,
-        functionName: 'mint',
-        args: [userAddress, deficit],
+      return res.status(400).json({
+        error: `Insufficient on-chain GFT balance. Need ${totalCost} GFT but you have ${readableBalance} GFT.`,
       });
-      const fundReceipt = await publicClient.waitForTransactionReceipt({ hash: fundHash, timeout: 60_000 });
-      if (fundReceipt.status !== 'success') {
-        return res.status(400).json({ error: 'Failed to fund wallet with GFT', txHash: fundHash });
-      }
-      console.log(`✅ Funded user wallet. TX: ${fundHash}`);
     }
+
+    console.log(`🪙 Minting ${quantity} NFT(s) for user ${userId} (${userAddress}). Cost: ${totalCost} GFT. On-chain balance: ${readableBalance}`);
 
     const allowance = await publicClient.readContract({
       address: GF_TOKEN_ADDRESS as Address,
@@ -289,11 +269,7 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Mint transaction reverted', txHash: hash });
     }
 
-    await db.update(users)
-      .set({ gfTokenBalance: currentBalance - totalCost })
-      .where(eq(users.id, userId));
-
-    console.log(`✅ Deducted ${totalCost} GF from user ${userId}. New balance: ${currentBalance - totalCost}`);
+    console.log(`✅ NFT minted successfully. On-chain GFT was spent via MintSale contract.`);
 
     const tokenIds: number[] = [];
     for (const log of receipt.logs) {
