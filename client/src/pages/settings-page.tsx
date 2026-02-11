@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon } from "lucide-react";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -1938,7 +1938,7 @@ export default function SettingsPage() {
       {showNftSelector && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/70" onClick={() => setShowNftSelector(false)} />
-          <div className="relative bg-[#0f172a] border border-slate-700 rounded-xl w-full max-w-lg max-h-[80vh] overflow-hidden shadow-2xl mx-4">
+          <div className="relative bg-[#0f172a] border border-slate-700 rounded-xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl mx-4">
             <div className="flex items-center justify-between p-4 border-b border-slate-700">
               <h3 className="text-lg font-semibold text-white">Select NFT as Profile Picture</h3>
               <button
@@ -1950,23 +1950,64 @@ export default function SettingsPage() {
               </button>
             </div>
 
-            <div className="p-4 overflow-y-auto max-h-[60vh]">
+            <div className="p-4 overflow-y-auto max-h-[70vh]">
               {nftsLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-green-400" />
                 </div>
-              ) : !ownedNftsData?.nfts || ownedNftsData.nfts.length === 0 ? (
+              ) : !ownedNftsData?.nfts || ownedNftsData.nfts.filter((n: any) => !n.sold).length === 0 ? (
                 <div className="text-center py-12">
-                  <Shield className="h-12 w-12 mx-auto mb-3 text-slate-600" />
+                  <Hexagon className="h-12 w-12 mx-auto mb-3 text-slate-600" />
                   <p className="text-slate-400 text-sm">You don't own any NFTs yet.</p>
                   <p className="text-slate-500 text-xs mt-1">Mint or purchase NFTs to use them as your profile picture.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {ownedNftsData.nfts
                     .filter((nft: any) => !nft.sold)
                     .map((nft: any) => {
                       const isSelected = (user as any)?.nftProfileTokenId === nft.tokenId;
+                      const attrs = nft.attributes || [];
+                      const rarityAttr = attrs.find((a: any) => a.trait_type?.toLowerCase() === "rarity");
+                      let rarityLabel = "common";
+                      if (rarityAttr) {
+                        const val = String(rarityAttr.value).toLowerCase();
+                        if (["legendary", "epic", "rare", "common"].includes(val)) rarityLabel = val;
+                      } else {
+                        let score = 0;
+                        score += Math.min(attrs.length * 8, 40);
+                        score += Math.abs(attrs.map((a: any) => `${a.trait_type}:${a.value}`).join('|').split('').reduce((h: number, c: string) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0) % 20);
+                        if (score >= 85) rarityLabel = "legendary";
+                        else if (score >= 65) rarityLabel = "epic";
+                        else if (score >= 40) rarityLabel = "rare";
+                      }
+
+                      const cardBg: Record<string, string> = {
+                        legendary: "bg-gradient-to-b from-[#f6cfff] via-[#cefafe] to-[#fff085]",
+                        epic: "bg-slate-900",
+                        rare: "bg-gradient-to-b from-[#4ade8033] via-[#14532d4d] to-[#4ade8033]",
+                        common: "bg-slate-900",
+                      };
+                      const cardGlow: Record<string, string> = {
+                        legendary: "shadow-[0_0_25px_rgba(236,72,153,0.4)]",
+                        epic: "",
+                        rare: "",
+                        common: "",
+                      };
+                      const dotColor: Record<string, string> = {
+                        legendary: "bg-green-500 shadow-[0_0_8px_#22c55e]",
+                        epic: "bg-green-600 shadow-[0_0_8px_#16a34a]",
+                        rare: "bg-green-400 shadow-[0_0_8px_#4ade80]",
+                        common: "bg-slate-400/50 shadow-[0_0_8px_#1e293b]",
+                      };
+                      const rarityText: Record<string, string> = {
+                        legendary: "bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent font-black",
+                        epic: "text-slate-400 font-normal",
+                        rare: "text-slate-400 font-normal",
+                        common: "text-slate-400 font-normal",
+                      };
+                      const nameColor = rarityLabel === "legendary" ? "text-slate-800" : "text-slate-50";
+
                       return (
                         <button
                           key={nft.tokenId}
@@ -1978,34 +2019,43 @@ export default function SettingsPage() {
                             });
                           }}
                           disabled={setNftProfileMutation.isPending}
-                          className={`relative rounded-lg overflow-hidden border-2 transition-all aspect-square group ${
-                            isSelected
-                              ? 'border-green-500 ring-2 ring-green-500/30'
-                              : 'border-slate-700 hover:border-green-500/50'
+                          className={`relative rounded-2xl overflow-hidden transition-all duration-200 hover:scale-[1.03] text-left ${cardBg[rarityLabel]} ${cardGlow[rarityLabel]} ${
+                            isSelected ? 'ring-2 ring-green-500 ring-offset-2 ring-offset-[#0f172a]' : ''
                           }`}
                         >
-                          {nft.image ? (
-                            <img
-                              src={nft.image}
-                              alt={nft.name || `NFT #${nft.tokenId}`}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-slate-800 flex items-center justify-center">
-                              <Shield className="h-8 w-8 text-slate-600" />
+                          <div className="relative">
+                            <div className="aspect-square overflow-hidden">
+                              {nft.image ? (
+                                <img
+                                  src={nft.image}
+                                  alt={nft.name || `NFT #${nft.tokenId}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-slate-800">
+                                  <Hexagon className="w-12 h-12 text-slate-600" />
+                                </div>
+                              )}
                             </div>
-                          )}
-                          <div className="absolute bottom-0 left-0 right-0 bg-black/80 px-2 py-1">
-                            <p className="text-[10px] text-white truncate font-medium">
-                              {nft.name || `Token #${nft.tokenId}`}
-                            </p>
+                            <div className="absolute top-2 right-2 backdrop-blur-md bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5">
+                              <span className="text-[10px] font-bold text-green-400">#{nft.tokenId}</span>
+                            </div>
+                            {isSelected && (
+                              <div className="absolute top-2 left-2 bg-green-500 rounded-full p-1">
+                                <Check className="h-3 w-3 text-white" />
+                              </div>
+                            )}
                           </div>
-                          {isSelected && (
-                            <div className="absolute top-1 right-1 bg-green-500 rounded-full p-0.5">
-                              <Check className="h-3 w-3 text-white" />
+                          <div className="p-3 pt-2">
+                            <h3 className={`text-sm font-bold truncate ${nameColor}`}>{nft.name || `Token #${nft.tokenId}`}</h3>
+                            <div className="flex items-center justify-between mt-1">
+                              <div className="flex items-center gap-1.5">
+                                <div className={`w-2 h-2 rounded-full ${dotColor[rarityLabel]}`} />
+                                <span className={`text-[11px] uppercase tracking-tight ${rarityText[rarityLabel]}`}>{rarityLabel}</span>
+                              </div>
+                              <span className="text-[11px] text-slate-500 font-medium">#{nft.tokenId}</span>
                             </div>
-                          )}
-                          <div className="absolute inset-0 bg-green-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
                         </button>
                       );
                     })}
