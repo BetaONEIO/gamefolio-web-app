@@ -8,11 +8,15 @@ import {
   RefreshCw,
   ArrowLeft,
   Hexagon,
-  ExternalLink
+  ExternalLink,
+  Image,
+  Type
 } from "lucide-react";
 import { Link } from "wouter";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 import { SKALE_NEBULA_TESTNET, NFT_CONTRACT_ADDRESS } from "@shared/contracts";
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
+import type { NameTag } from "@shared/schema";
 
 interface OwnedNft {
   tokenId: number;
@@ -28,6 +32,14 @@ interface OwnedNft {
 interface OwnedNftsData {
   nfts: OwnedNft[];
   count: number;
+}
+
+interface ProfileBorder {
+  id: number;
+  name: string;
+  imageUrl: string;
+  rarity: string;
+  isDefault?: boolean;
 }
 
 const SKALE_EXPLORER_BASE_URL = SKALE_NEBULA_TESTNET.blockExplorers.default.url;
@@ -111,6 +123,13 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
   },
 };
 
+const rarityDotColors: Record<string, string> = {
+  legendary: "bg-green-500 shadow-[0_0_8px_#22c55e]",
+  epic: "bg-green-600 shadow-[0_0_8px_#16a34a]",
+  rare: "bg-green-400 shadow-[0_0_8px_#4ade80]",
+  common: "bg-slate-400/50 shadow-[0_0_8px_#1e293b]",
+};
+
 function NftCard({ nft, onClick }: { nft: OwnedNft; onClick: () => void }) {
   const { label: rarity } = getNftRarity(nft);
   const styles = rarityCardStyles[rarity] || rarityCardStyles.common;
@@ -162,16 +181,80 @@ function NftCard({ nft, onClick }: { nft: OwnedNft; onClick: () => void }) {
   );
 }
 
+function SignedImage({ imageUrl, alt, className }: { imageUrl: string; alt: string; className?: string }) {
+  const { signedUrl, isLoading } = useSignedUrl(imageUrl);
+  if (isLoading) return <div className={`${className} bg-slate-800 animate-pulse`} />;
+  return (
+    <img
+      src={signedUrl || imageUrl}
+      alt={alt}
+      className={className}
+      onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
+    />
+  );
+}
+
+function BorderCard({ border }: { border: ProfileBorder }) {
+  const dotColor = rarityDotColors[border.rarity] || rarityDotColors.common;
+  return (
+    <div className="rounded-2xl overflow-hidden bg-slate-900">
+      <div className="aspect-square overflow-hidden flex items-center justify-center bg-slate-800/50 p-4">
+        <SignedImage imageUrl={border.imageUrl} alt={border.name} className="w-full h-full object-contain" />
+      </div>
+      <div className="p-3 pt-2">
+        <h3 className="text-sm font-bold truncate text-slate-50">{border.name}</h3>
+        <div className="flex items-center gap-1.5 mt-1">
+          <div className={`w-2 h-2 rounded-full ${dotColor}`} />
+          <span className="text-[11px] uppercase tracking-tight text-slate-400">{border.rarity}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NameTagCard({ tag }: { tag: NameTag }) {
+  const dotColor = rarityDotColors[tag.rarity] || rarityDotColors.common;
+  return (
+    <div className="rounded-2xl overflow-hidden bg-slate-900">
+      <div className="aspect-square overflow-hidden flex items-center justify-center bg-slate-800/50 p-4">
+        <SignedImage imageUrl={tag.imageUrl} alt={tag.name} className="w-full h-full object-contain" />
+      </div>
+      <div className="p-3 pt-2">
+        <h3 className="text-sm font-bold truncate text-slate-50">{tag.name}</h3>
+        <div className="flex items-center gap-1.5 mt-1">
+          <div className={`w-2 h-2 rounded-full ${dotColor}`} />
+          <span className="text-[11px] uppercase tracking-tight text-slate-400">{tag.rarity}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type CollectionTab = "nfts" | "borders" | "nametags";
+
 export default function CollectionPage() {
   const { user } = useAuth();
   const [selectedNft, setSelectedNft] = useState<OwnedNft | null>(null);
   const [nftTab, setNftTab] = useState<"owned" | "sold">("owned");
+  const [collectionTab, setCollectionTab] = useState<CollectionTab>("nfts");
 
   const { data: nftData, isLoading: nftsLoading, refetch: refetchNfts, isRefetching: nftsRefetching } = useQuery<OwnedNftsData>({
     queryKey: ["/api/nfts/owned"],
     queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!user,
     staleTime: 60_000,
+  });
+
+  const { data: borders = [], isLoading: bordersLoading } = useQuery<ProfileBorder[]>({
+    queryKey: ["/api/user/avatar-borders"],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: !!user && collectionTab === "borders",
+  });
+
+  const { data: nameTags = [], isLoading: nameTagsLoading } = useQuery<NameTag[]>({
+    queryKey: ["/api/user/name-tags"],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: !!user && collectionTab === "nametags",
   });
 
   if (selectedNft) {
@@ -222,6 +305,12 @@ export default function CollectionPage() {
   const soldNfts = nftData?.nfts.filter((n: OwnedNft) => n.sold) || [];
   const displayNfts = nftTab === "owned" ? ownedNfts : soldNfts;
 
+  const collectionTabs: { key: CollectionTab; label: string; icon: typeof Hexagon }[] = [
+    { key: "nfts", label: "NFTs", icon: Hexagon },
+    { key: "borders", label: "Profile Borders", icon: Image },
+    { key: "nametags", label: "Name Tags", icon: Type },
+  ];
+
   return (
     <div className="min-h-screen bg-[#020617] flex flex-col">
       <div className="sticky top-0 z-10 backdrop-blur-md bg-[#020617]/80 border-b border-slate-800/30">
@@ -248,105 +337,202 @@ export default function CollectionPage() {
       </div>
 
       <div className="w-full flex-1">
-        <div className="bg-gradient-to-b from-green-900/10 to-transparent py-6 md:py-8 px-6 md:px-12 lg:px-16">
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-            <div className="flex items-start gap-6 md:gap-10">
-              <div>
-                <p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-1">My NFTs</p>
-                <div className="flex items-end gap-2">
-                  <span className="text-4xl md:text-5xl font-black text-slate-50 leading-none">
-                    {nftsLoading ? "—" : nftData?.count || 0}
-                  </span>
-                  <span className="text-sm text-slate-400 pb-1">Items Total</span>
+        <div className="px-6 md:px-12 lg:px-16 pt-6">
+          <div className="flex gap-2 mb-6">
+            {collectionTabs.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setCollectionTab(key)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  collectionTab === key
+                    ? "bg-green-400 text-green-950 shadow-[0_0_15px_-5px_#4ade80]"
+                    : "bg-slate-800 text-slate-400 hover:text-slate-300 hover:bg-slate-700"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {collectionTab === "nfts" && (
+          <>
+            <div className="bg-gradient-to-b from-green-900/10 to-transparent py-6 md:py-8 px-6 md:px-12 lg:px-16">
+              <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+                <div className="flex items-start gap-6 md:gap-10">
+                  <div>
+                    <p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-1">My NFTs</p>
+                    <div className="flex items-end gap-2">
+                      <span className="text-4xl md:text-5xl font-black text-slate-50 leading-none">
+                        {nftsLoading ? "—" : nftData?.count || 0}
+                      </span>
+                      <span className="text-sm text-slate-400 pb-1">Items Total</span>
+                    </div>
+                  </div>
+
+                  {nftData && nftData.count > 0 && (
+                    <a
+                      href={`${SKALE_EXPLORER_BASE_URL}/address/${NFT_CONTRACT_ADDRESS}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-sm text-green-400 hover:text-green-300 transition-colors mt-1"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>View Contract</span>
+                    </a>
+                  )}
+                </div>
+
+                <div className="bg-slate-800 border border-slate-800 rounded-2xl p-1.5 flex w-full md:w-auto">
+                  <button
+                    onClick={() => setNftTab("owned")}
+                    className={`flex-1 md:w-44 h-10 rounded-2xl flex items-center justify-center gap-2 text-sm font-bold transition-all ${
+                      nftTab === "owned"
+                        ? "bg-green-400 text-green-950 shadow-[0_0_15px_-5px_#4ade80]"
+                        : "text-slate-400 hover:text-slate-300"
+                    }`}
+                  >
+                    <span>Owned</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-lg ${
+                      nftTab === "owned"
+                        ? "bg-green-950/20 text-green-950"
+                        : "bg-slate-800 text-slate-400"
+                    }`}>
+                      {ownedNfts.length}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setNftTab("sold")}
+                    className={`flex-1 md:w-44 h-10 rounded-2xl flex items-center justify-center gap-2 text-sm transition-all ${
+                      nftTab === "sold"
+                        ? "bg-green-400 text-green-950 font-bold shadow-[0_0_15px_-5px_#4ade80]"
+                        : "text-slate-400 hover:text-slate-300"
+                    }`}
+                  >
+                    <span>Sold</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-lg ${
+                      nftTab === "sold"
+                        ? "bg-green-950/20 text-green-950"
+                        : "bg-slate-800 text-slate-400"
+                    }`}>
+                      {soldNfts.length}
+                    </span>
+                  </button>
                 </div>
               </div>
+            </div>
 
-              {nftData && nftData.count > 0 && (
-                <a
-                  href={`${SKALE_EXPLORER_BASE_URL}/address/${NFT_CONTRACT_ADDRESS}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-sm text-green-400 hover:text-green-300 transition-colors mt-1"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span>View Contract</span>
-                </a>
+            <div className="pb-24 md:pb-12 px-6 md:px-12 lg:px-16">
+              {nftsLoading ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="aspect-[3/4] bg-slate-800 rounded-2xl" />
+                  ))}
+                </div>
+              ) : displayNfts.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
+                  {displayNfts.map((nft: OwnedNft) => (
+                    <NftCard key={nft.tokenId} nft={nft} onClick={() => setSelectedNft(nft)} />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <Hexagon className="w-12 h-12 text-slate-600 mb-3" />
+                  <p className="text-slate-400 text-sm">
+                    {nftTab === "owned" ? "No NFTs owned yet" : "No sold NFTs"}
+                  </p>
+                  {nftTab === "owned" && (
+                    <Link href="/store">
+                      <Button variant="ghost" size="sm" className="mt-3 text-green-400 hover:text-green-300 hover:bg-green-500/10">
+                        Mint NFTs
+                      </Button>
+                    </Link>
+                  )}
+                  {nftTab === "sold" && (
+                    <p className="text-slate-500 text-xs mt-1">Quick sell NFTs from their detail view to list them here</p>
+                  )}
+                </div>
               )}
             </div>
+          </>
+        )}
 
-            <div className="bg-slate-800 border border-slate-800 rounded-2xl p-1.5 flex w-full md:w-auto">
-              <button
-                onClick={() => setNftTab("owned")}
-                className={`flex-1 md:w-44 h-10 rounded-2xl flex items-center justify-center gap-2 text-sm font-bold transition-all ${
-                  nftTab === "owned"
-                    ? "bg-green-400 text-green-950 shadow-[0_0_15px_-5px_#4ade80]"
-                    : "text-slate-400 hover:text-slate-300"
-                }`}
-              >
-                <span>Owned</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-lg ${
-                  nftTab === "owned"
-                    ? "bg-green-950/20 text-green-950"
-                    : "bg-slate-800 text-slate-400"
-                }`}>
-                  {ownedNfts.length}
+        {collectionTab === "borders" && (
+          <div className="px-6 md:px-12 lg:px-16 pb-24 md:pb-12">
+            <div className="mb-6">
+              <p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-1">Profile Borders</p>
+              <div className="flex items-end gap-2">
+                <span className="text-4xl md:text-5xl font-black text-slate-50 leading-none">
+                  {bordersLoading ? "—" : borders.length}
                 </span>
-              </button>
-              <button
-                onClick={() => setNftTab("sold")}
-                className={`flex-1 md:w-44 h-10 rounded-2xl flex items-center justify-center gap-2 text-sm transition-all ${
-                  nftTab === "sold"
-                    ? "bg-green-400 text-green-950 font-bold shadow-[0_0_15px_-5px_#4ade80]"
-                    : "text-slate-400 hover:text-slate-300"
-                }`}
-              >
-                <span>Sold</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-lg ${
-                  nftTab === "sold"
-                    ? "bg-green-950/20 text-green-950"
-                    : "bg-slate-800 text-slate-400"
-                }`}>
-                  {soldNfts.length}
-                </span>
-              </button>
+                <span className="text-sm text-slate-400 pb-1">Unlocked</span>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="pb-24 md:pb-12 px-6 md:px-12 lg:px-16">
-          <div className="md:max-w-[60%]">
-          {nftsLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
-              {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="aspect-[3/4] bg-slate-800 rounded-2xl" />
-              ))}
-            </div>
-          ) : displayNfts.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
-              {displayNfts.map((nft: OwnedNft) => (
-                <NftCard key={nft.tokenId} nft={nft} onClick={() => setSelectedNft(nft)} />
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <Hexagon className="w-12 h-12 text-slate-600 mb-3" />
-              <p className="text-slate-400 text-sm">
-                {nftTab === "owned" ? "No NFTs owned yet" : "No sold NFTs"}
-              </p>
-              {nftTab === "owned" && (
+            {bordersLoading ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="aspect-[3/4] bg-slate-800 rounded-2xl" />
+                ))}
+              </div>
+            ) : borders.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
+                {borders.map((border: ProfileBorder) => (
+                  <BorderCard key={border.id} border={border} />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <Image className="w-12 h-12 text-slate-600 mb-3" />
+                <p className="text-slate-400 text-sm">No profile borders unlocked yet</p>
                 <Link href="/store">
                   <Button variant="ghost" size="sm" className="mt-3 text-green-400 hover:text-green-300 hover:bg-green-500/10">
-                    Mint NFTs
+                    Browse Store
                   </Button>
                 </Link>
-              )}
-              {nftTab === "sold" && (
-                <p className="text-slate-500 text-xs mt-1">Quick sell NFTs from their detail view to list them here</p>
-              )}
-            </div>
-          )}
+              </div>
+            )}
           </div>
-        </div>
+        )}
+
+        {collectionTab === "nametags" && (
+          <div className="px-6 md:px-12 lg:px-16 pb-24 md:pb-12">
+            <div className="mb-6">
+              <p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-1">Name Tags</p>
+              <div className="flex items-end gap-2">
+                <span className="text-4xl md:text-5xl font-black text-slate-50 leading-none">
+                  {nameTagsLoading ? "—" : nameTags.length}
+                </span>
+                <span className="text-sm text-slate-400 pb-1">Collected</span>
+              </div>
+            </div>
+
+            {nameTagsLoading ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="aspect-[3/4] bg-slate-800 rounded-2xl" />
+                ))}
+              </div>
+            ) : nameTags.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
+                {nameTags.map((tag: NameTag) => (
+                  <NameTagCard key={tag.id} tag={tag} />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <Type className="w-12 h-12 text-slate-600 mb-3" />
+                <p className="text-slate-400 text-sm">No name tags collected yet</p>
+                <Link href="/store">
+                  <Button variant="ghost" size="sm" className="mt-3 text-green-400 hover:text-green-300 hover:bg-green-500/10">
+                    Browse Store
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
