@@ -6,6 +6,7 @@ import { ArrowLeft, Minus, Plus, Wallet, Sparkles, X, ExternalLink, Check, Shiel
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import MultiMintSuccessScreen from "@/components/mint/MultiMintSuccessScreen";
+import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { useMintNFT } from "@/hooks/use-mint-nft";
 import { formatUnits } from "viem";
 import { useWallet } from "@/hooks/use-wallet";
@@ -50,6 +51,8 @@ export default function MintNFTPage() {
   const [quantity, setQuantity] = useState(1);
   const [mintState, setMintState] = useState<MintState>("idle");
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [showSingleNftDetail, setShowSingleNftDetail] = useState(false);
+  const [singleNftSold, setSingleNftSold] = useState(false);
 
   const handleRegenerateWallet = async () => {
     setIsRegenerating(true);
@@ -238,90 +241,94 @@ export default function MintNFTPage() {
   if (mintState === "processing") {
     return (
       <div className="fixed inset-0 z-[100] bg-[#020617] flex flex-col items-center justify-center px-6">
-        <div className="w-full max-w-md md:max-w-2xl flex flex-col items-center">
-          <div className="relative mb-8">
-            <div className="absolute inset-0 blur-[32px] bg-[#4ade80]/20 rounded-full scale-150" />
-            <div className="relative w-48 h-48 md:w-64 md:h-64 rounded-full border-4 border-[#1e293b]/50 flex items-center justify-center">
-              <div className="w-40 h-40 md:w-52 md:h-52 rounded-full border-2 border-[#1e293b]/50 flex items-center justify-center overflow-hidden p-0.5">
-                <video
-                  ref={previewVideo1Ref}
-                  src={MINT_VIDEO_URL}
-                  className="w-full h-full rounded-full object-cover"
-                  muted
-                  playsInline
-                  preload="metadata"
-                />
+        <div className="w-full max-w-md md:max-w-4xl flex flex-col md:flex-row md:items-center md:gap-16 items-center">
+          <div className="md:flex-1 flex flex-col items-center">
+            <div className="relative mb-8 md:mb-0">
+              <div className="absolute inset-0 blur-[32px] bg-[#4ade80]/20 rounded-full scale-150" />
+              <div className="relative w-48 h-48 md:w-72 md:h-72 rounded-full border-4 border-[#1e293b]/50 flex items-center justify-center">
+                <div className="w-40 h-40 md:w-60 md:h-60 rounded-full border-2 border-[#1e293b]/50 flex items-center justify-center overflow-hidden p-0.5">
+                  <video
+                    ref={previewVideo1Ref}
+                    src={MINT_VIDEO_URL}
+                    className="w-full h-full rounded-full object-cover"
+                    muted
+                    playsInline
+                    preload="metadata"
+                  />
+                </div>
               </div>
-            </div>
-            
-            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2">
-              <div className="bg-[#0f172a] border border-[#1e293b] rounded-full px-4 py-2 shadow-lg flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[#4ade80] animate-pulse" />
-                <span className="text-xs font-bold text-[#4ade80]">On-Chain Processing</span>
+              
+              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2">
+                <div className="bg-[#0f172a] border border-[#1e293b] rounded-full px-4 py-2 shadow-lg flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[#4ade80] animate-pulse" />
+                  <span className="text-xs font-bold text-[#4ade80]">On-Chain Processing</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="text-center mb-8">
-            <h1 className="text-2xl md:text-3xl font-bold text-[#f8fafc] mb-2">
-              Minting Your NFT
-            </h1>
-            <p className="text-sm md:text-base text-[#94a3b8] max-w-xs mx-auto">
-              Please don't close the app or refresh. Your Guardian is being forged on the blockchain.
-            </p>
-          </div>
+          <div className="md:flex-1 flex flex-col items-center md:items-start">
+            <div className="text-center md:text-left mb-8">
+              <h1 className="text-2xl md:text-4xl font-bold text-[#f8fafc] mb-2">
+                Minting Your NFT
+              </h1>
+              <p className="text-sm md:text-base text-[#94a3b8] max-w-xs">
+                Please don't close the app or refresh. Your Guardian is being forged on the blockchain.
+              </p>
+            </div>
 
-          <div className="w-full max-w-sm bg-[#0f172a] border border-[#1e293b]/50 rounded-3xl p-6">
-            <div className="flex flex-col gap-4">
-              {mintSteps.map((step, index) => (
-                <div key={step.id} className="flex items-start gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                      step.status === "completed" ? "bg-[#4ade80]" :
-                      step.status === "active" ? "bg-[#14532d] animate-pulse" :
-                      "bg-[#1e293b]"
-                    }`}>
-                      {step.status === "completed" ? (
-                        <Check className="w-4 h-4 text-[#022c22]" />
-                      ) : step.status === "active" ? (
-                        <div className="w-3 h-3 rounded-full bg-[#4ade80] animate-pulse" />
-                      ) : (
-                        <div className="w-2 h-2 rounded-full bg-[#94a3b8]" />
+            <div className="w-full max-w-sm bg-[#0f172a] border border-[#1e293b]/50 rounded-3xl p-6">
+              <div className="flex flex-col gap-4">
+                {mintSteps.map((step, index) => (
+                  <div key={step.id} className="flex items-start gap-4">
+                    <div className="flex flex-col items-center">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                        step.status === "completed" ? "bg-[#4ade80]" :
+                        step.status === "active" ? "bg-[#14532d] animate-pulse" :
+                        "bg-[#1e293b]"
+                      }`}>
+                        {step.status === "completed" ? (
+                          <Check className="w-4 h-4 text-[#022c22]" />
+                        ) : step.status === "active" ? (
+                          <div className="w-3 h-3 rounded-full bg-[#4ade80] animate-pulse" />
+                        ) : (
+                          <div className="w-2 h-2 rounded-full bg-[#94a3b8]" />
+                        )}
+                      </div>
+                      {index < mintSteps.length - 1 && (
+                        <div className={`w-0.5 h-8 ${
+                          step.status === "completed" ? "bg-[#4ade80]/30" : "bg-[#1e293b]/50"
+                        }`} />
                       )}
                     </div>
-                    {index < mintSteps.length - 1 && (
-                      <div className={`w-0.5 h-8 ${
-                        step.status === "completed" ? "bg-[#4ade80]/30" : "bg-[#1e293b]/50"
-                      }`} />
-                    )}
+                    <div className="flex-1 pt-0.5">
+                      <p className={`text-sm font-bold ${
+                        step.status === "active" ? "text-[#4ade80]" : "text-[#f8fafc]"
+                      }`}>
+                        {step.title}
+                      </p>
+                      <p className="text-xs text-[#94a3b8]">{step.subtitle}</p>
+                    </div>
                   </div>
-                  <div className="flex-1 pt-0.5">
-                    <p className={`text-sm font-bold ${
-                      step.status === "active" ? "text-[#4ade80]" : "text-[#f8fafc]"
-                    }`}>
-                      {step.title}
-                    </p>
-                    <p className="text-xs text-[#94a3b8]">{step.subtitle}</p>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
 
-          <div className="flex flex-col items-center gap-4 mt-8">
-            <div className="flex items-center gap-2">
-              <Shield className="w-3 h-3 text-[#94a3b8]" />
-              <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">
-                Secure Transaction
-              </span>
+            <div className="flex flex-col items-center md:items-start gap-4 mt-8">
+              <div className="flex items-center gap-2">
+                <Shield className="w-3 h-3 text-[#94a3b8]" />
+                <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">
+                  Secure Transaction
+                </span>
+              </div>
+              <button
+                onClick={copyTxHash}
+                className="bg-[#1e293b]/30 rounded-full px-4 py-2 flex items-center gap-2 hover:bg-[#1e293b]/50 transition-colors"
+              >
+                <span className="text-xs font-mono text-[#94a3b8]">tx: {txHash}...</span>
+                <Copy className="w-3 h-3 text-[#94a3b8]" />
+              </button>
             </div>
-            <button
-              onClick={copyTxHash}
-              className="bg-[#1e293b]/30 rounded-full px-4 py-2 flex items-center gap-2 hover:bg-[#1e293b]/50 transition-colors"
-            >
-              <span className="text-xs font-mono text-[#94a3b8]">tx: {txHash}...</span>
-              <Copy className="w-3 h-3 text-[#94a3b8]" />
-            </button>
           </div>
         </div>
       </div>
@@ -353,7 +360,6 @@ export default function MintNFTPage() {
   if (mintState === "success") {
     const rarityScore = (Math.random() * 10 + 90).toFixed(1);
     
-    // Show multi-mint success screen when quantity > 1
     if (quantity > 1) {
       const mintedNfts = Array.from({ length: quantity }, (_, i) => {
         const tokenId = mintedTokenIds[i] || firstTokenId + i;
@@ -375,6 +381,27 @@ export default function MintNFTPage() {
           onViewCollection={() => navigate("/collection")}
           onViewExplorer={() => window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`, "_blank")}
           onBack={() => navigate("/store")}
+        />
+      );
+    }
+
+    if (showSingleNftDetail) {
+      const singleNft = {
+        id: firstTokenId,
+        name: fetchedNftNames[firstTokenId],
+        imageUrl: fetchedNftImages[firstTokenId] || `https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/public/gamefolio-assets/nft-placeholders/guardian-1.png`,
+        rarity: Math.floor(Math.random() * 30) + 70,
+        attributes: fetchedNftAttributes[firstTokenId],
+      };
+      return (
+        <MintedNftDetailScreen
+          nft={singleNft}
+          txHash={txHash}
+          walletAddress={crossmintAddress || wagmiWallet || undefined}
+          onClose={() => setShowSingleNftDetail(false)}
+          onViewExplorer={() => window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`, "_blank")}
+          initialSold={singleNftSold}
+          onSold={() => setSingleNftSold(true)}
         />
       );
     }
@@ -403,7 +430,10 @@ export default function MintNFTPage() {
               <div className="relative w-[300px] md:w-[400px] h-[300px] md:h-[400px]">
                 <div className="absolute inset-0 blur-[40px] bg-[#4ade80]/20 rounded-full scale-100" />
                 
-                <div className="relative w-full h-full rounded-[40px] border-2 border-[#4ade80]/30 overflow-hidden bg-white/[0.01] shadow-[0_25px_50px_-12px_rgba(74,222,128,0.2)]">
+                <div
+                onClick={() => setShowSingleNftDetail(true)}
+                className="relative w-full h-full rounded-[40px] border-2 border-[#4ade80]/30 overflow-hidden bg-white/[0.01] shadow-[0_25px_50px_-12px_rgba(74,222,128,0.2)] cursor-pointer hover:border-[#4ade80]/60 transition-colors"
+              >
                   {fetchedNftImages[firstTokenId] ? (
                     <img
                       src={fetchedNftImages[firstTokenId]}
