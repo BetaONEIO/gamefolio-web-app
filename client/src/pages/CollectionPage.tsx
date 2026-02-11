@@ -247,8 +247,8 @@ export default function CollectionPage() {
         </div>
       </div>
 
-      <div className="w-full px-6 md:px-12 lg:px-16 flex-1">
-        <div className="bg-gradient-to-b from-green-900/10 to-transparent py-6 md:py-8">
+      <div className="w-full flex-1">
+        <div className="bg-gradient-to-b from-green-900/10 to-transparent py-6 md:py-8 px-6 md:px-12 lg:px-16">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
             <div className="flex items-start gap-6 md:gap-10">
               <div>
@@ -313,7 +313,8 @@ export default function CollectionPage() {
           </div>
         </div>
 
-        <div className="pb-24 md:pb-12">
+        <div className="pb-24 md:pb-12 px-6 md:px-12 lg:px-16">
+          <div className="md:max-w-[60%]">
           {nftsLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
               {[...Array(3)].map((_, i) => (
@@ -344,6 +345,7 @@ export default function CollectionPage() {
               )}
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>
