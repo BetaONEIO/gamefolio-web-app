@@ -83,8 +83,8 @@ export default function MintNFTPage() {
   const allowanceApproved = allowanceState === 'approved';
   const isApproving = allowanceState === 'approving';
   const isCheckingAllowance = allowanceState === 'checking';
-  const canMint = isConnected && onChainBalanceFormatted >= mintPrice && quantity <= maxPerTx && allowanceApproved;
-  const hasInsufficientBalance = onChainBalanceFormatted < mintPrice;
+  const canMint = isConnected && quantity <= maxPerTx && allowanceApproved && (useServerSigning || onChainBalanceFormatted >= mintPrice);
+  const hasInsufficientBalance = !useServerSigning && onChainBalanceFormatted < mintPrice;
 
   const handleEnableAllowance = async () => {
     if (!isConnected) {
