@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { getQueryFn } from "@/lib/queryClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -219,11 +220,13 @@ export default function CollectionPage() {
 
   const { data, isLoading, refetch, isRefetching } = useQuery<CollectionData>({
     queryKey: ["/api/lootbox/collection"],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!user,
   });
 
   const { data: nftData, isLoading: nftsLoading, refetch: refetchNfts, isRefetching: nftsRefetching } = useQuery<OwnedNftsData>({
     queryKey: ["/api/nfts/owned"],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!user,
     staleTime: 60_000,
   });
@@ -316,7 +319,7 @@ export default function CollectionPage() {
             </div>
           ) : nftData && nftData.nfts.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {nftData.nfts.map((nft) => (
+              {nftData.nfts.map((nft: OwnedNft) => (
                 <NftCard key={nft.tokenId} nft={nft} />
               ))}
             </div>
@@ -422,7 +425,7 @@ export default function CollectionPage() {
             </div>
           ) : filteredItems.length > 0 ? (
             <div className="grid grid-cols-2 gap-3">
-              {filteredItems.map((item) => (
+              {filteredItems.map((item: CollectionItem) => (
                 <CollectionItemCard key={`${item.id}-${item.claimedAt}`} item={item} />
               ))}
             </div>

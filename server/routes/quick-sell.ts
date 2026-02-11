@@ -36,6 +36,10 @@ router.post('/api/nft/quick-sell', async (req: Request, res: Response) => {
       })
       .where(eq(users.id, userId));
 
+    await db.execute(
+      sql`UPDATE user_nfts SET sold = true, sold_at = NOW() WHERE user_id = ${userId} AND token_id = ${tokenId}`
+    );
+
     console.log(`[Quick Sell] User ${userId} sold NFT #${tokenId} for ${receivedAmount} GFT (price: ${QUICK_SELL_PRICE}, fees: ${totalDeductions})`);
 
     return res.json({

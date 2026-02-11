@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
 import { users } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { maxUint256, type Address, decodeEventLog } from 'viem';
 import {
   GF_TOKEN_ADDRESS,
@@ -16,6 +16,95 @@ import { encryptPrivateKey } from '../wallet-crypto';
 import { writeContractWithPoW, publicClient } from '../skale-pow';
 
 const router = Router();
+
+(async () => {
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS user_nfts (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        token_id INTEGER NOT NULL,
+        tx_hash VARCHAR(255),
+        sold BOOLEAN DEFAULT FALSE,
+        sold_at TIMESTAMP,
+        minted_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(user_id, token_id)
+      )
+    `);
+    console.log('✅ user_nfts table ready');
+
+    const existingCount = await db.execute(sql`SELECT COUNT(*) as cnt FROM user_nfts`);
+    const count = Number((existingCount as any)[0]?.cnt || 0);
+    if (count === 0) {
+      console.log('🔄 No NFT records found, running backfill...');
+      const allUsersResult = await db.execute(
+        sql`SELECT id, wallet_address FROM users WHERE wallet_address IS NOT NULL`
+      );
+      const userRows = (allUsersResult as any) || [];
+      let totalBackfilled = 0;
+
+      for (const u of userRows) {
+        if (!u.wallet_address) continue;
+        try {
+          const balanceResult = await publicClient.readContract({
+            address: NFT_CONTRACT_ADDRESS as `0x${string}`,
+            abi: NFT_ABI,
+            functionName: 'balanceOf',
+            args: [u.wallet_address as `0x${string}`],
+          });
+          const balance = Number(balanceResult);
+          if (balance === 0) continue;
+
+          const currentBlock = await publicClient.getBlockNumber();
+          const allTokenIds: number[] = [];
+          const CHUNK = 2000;
+
+          for (let i = 0; i < 100 && allTokenIds.length < balance; i++) {
+            const toBlock = Number(currentBlock) - (i * CHUNK);
+            const fromBlock = Math.max(0, toBlock - CHUNK + 1);
+            try {
+              const logs = await publicClient.getLogs({
+                address: NFT_CONTRACT_ADDRESS as `0x${string}`,
+                event: {
+                  type: 'event' as const,
+                  name: 'Transfer',
+                  inputs: [
+                    { indexed: true, name: 'from', type: 'address' },
+                    { indexed: true, name: 'to', type: 'address' },
+                    { indexed: true, name: 'tokenId', type: 'uint256' },
+                  ],
+                },
+                args: { to: u.wallet_address as `0x${string}` },
+                fromBlock: BigInt(fromBlock),
+                toBlock: BigInt(toBlock),
+              });
+              for (const log of logs) {
+                const tokenId = Number((log as any).args.tokenId);
+                if (!allTokenIds.includes(tokenId)) allTokenIds.push(tokenId);
+              }
+            } catch { continue; }
+            if (fromBlock === 0) break;
+          }
+
+          for (const tokenId of allTokenIds) {
+            await db.execute(
+              sql`INSERT INTO user_nfts (user_id, token_id, tx_hash) VALUES (${u.id}, ${tokenId}, ${'backfill'}) ON CONFLICT (user_id, token_id) DO NOTHING`
+            );
+          }
+          if (allTokenIds.length > 0) {
+            console.log(`✅ Backfilled ${allTokenIds.length} NFTs for user ${u.id}`);
+            totalBackfilled += allTokenIds.length;
+          }
+        } catch (err) {
+          console.error(`Backfill error for user ${u.id}:`, err);
+        }
+      }
+      console.log(`✅ NFT backfill complete: ${totalBackfilled} total records`);
+    }
+  } catch (err) {
+    console.error('Failed to create user_nfts table:', err);
+  }
+})();
 
 router.post('/api/mint/approve', async (req: Request, res: Response) => {
   try {
@@ -130,6 +219,23 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
         }
       } catch {
         continue;
+      }
+    }
+
+    if (tokenIds.length > 0) {
+      try {
+        const insertValues = tokenIds.map((tokenId) => ({
+          user_id: userId,
+          token_id: tokenId,
+          tx_hash: hash,
+        }));
+        for (const val of insertValues) {
+          await db.execute(
+            sql`INSERT INTO user_nfts (user_id, token_id, tx_hash) VALUES (${val.user_id}, ${val.token_id}, ${val.tx_hash}) ON CONFLICT (user_id, token_id) DO NOTHING`
+          );
+        }
+      } catch (dbErr) {
+        console.error('Failed to save minted NFTs to database:', dbErr);
       }
     }
 
@@ -293,57 +399,19 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    const dbNfts = await db.execute(
+      sql`SELECT token_id, tx_hash, minted_at FROM user_nfts WHERE user_id = ${userId} AND sold = false ORDER BY minted_at DESC`
+    );
 
-    const walletAddress = user.walletAddress;
-    if (!walletAddress) {
+    const rows = (dbNfts as any).rows || dbNfts;
+    if (!rows || rows.length === 0) {
       return res.json({ nfts: [], count: 0 });
     }
 
-    const totalSupply = await publicClient.readContract({
-      address: NFT_CONTRACT_ADDRESS as `0x${string}`,
-      abi: NFT_ABI,
-      functionName: 'totalSupply',
-    });
-
-    const total = Number(totalSupply);
-    if (total === 0) {
-      return res.json({ nfts: [], count: 0 });
-    }
-
-    const ownedTokenIds: number[] = [];
-    const batchSize = 50;
-    for (let start = 1; start <= total; start += batchSize) {
-      const end = Math.min(start + batchSize - 1, total);
-      const calls = [];
-      for (let tokenId = start; tokenId <= end; tokenId++) {
-        calls.push(
-          publicClient.readContract({
-            address: NFT_CONTRACT_ADDRESS as `0x${string}`,
-            abi: NFT_ABI,
-            functionName: 'ownerOf',
-            args: [BigInt(tokenId)],
-          }).then((owner) => ({ tokenId, owner: (owner as string).toLowerCase() }))
-            .catch(() => ({ tokenId, owner: '' }))
-        );
-      }
-      const results = await Promise.all(calls);
-      for (const r of results) {
-        if (r.owner === walletAddress.toLowerCase()) {
-          ownedTokenIds.push(r.tokenId);
-        }
-      }
-    }
-
-    if (ownedTokenIds.length === 0) {
-      return res.json({ nfts: [], count: 0 });
-    }
+    const ownedTokenIds = rows.map((r: any) => Number(r.token_id));
 
     const metadataResults = await Promise.allSettled(
-      ownedTokenIds.slice(0, 50).map(async (tokenId) => {
+      ownedTokenIds.slice(0, 50).map(async (tokenId: number) => {
         const tokenURI = await publicClient.readContract({
           address: NFT_CONTRACT_ADDRESS as `0x${string}`,
           abi: NFT_ABI,
@@ -378,6 +446,94 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Owned NFTs fetch error:', error);
     return res.status(500).json({ error: error.message || 'Failed to fetch owned NFTs' });
+  }
+});
+
+router.post('/api/admin/nfts/backfill', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const allUsers = await db.execute(
+      sql`SELECT id, wallet_address FROM users WHERE wallet_address IS NOT NULL`
+    );
+    const userRows = (allUsers as any).rows || allUsers;
+    let totalBackfilled = 0;
+
+    for (const u of userRows) {
+      const walletAddress = u.wallet_address;
+      if (!walletAddress) continue;
+
+      try {
+        const balanceResult = await publicClient.readContract({
+          address: NFT_CONTRACT_ADDRESS as `0x${string}`,
+          abi: NFT_ABI,
+          functionName: 'balanceOf',
+          args: [walletAddress as `0x${string}`],
+        });
+        const balance = Number(balanceResult);
+        if (balance === 0) continue;
+
+        const currentBlock = await publicClient.getBlockNumber();
+        const allTokenIds: number[] = [];
+        const CHUNK = 2000;
+
+        for (let i = 0; i < 100 && allTokenIds.length < balance; i++) {
+          const toBlock = Number(currentBlock) - (i * CHUNK);
+          const fromBlock = Math.max(0, toBlock - CHUNK + 1);
+
+          try {
+            const logs = await publicClient.getLogs({
+              address: NFT_CONTRACT_ADDRESS as `0x${string}`,
+              event: {
+                type: 'event' as const,
+                name: 'Transfer',
+                inputs: [
+                  { indexed: true, name: 'from', type: 'address' },
+                  { indexed: true, name: 'to', type: 'address' },
+                  { indexed: true, name: 'tokenId', type: 'uint256' },
+                ],
+              },
+              args: { to: walletAddress as `0x${string}` },
+              fromBlock: BigInt(fromBlock),
+              toBlock: BigInt(toBlock),
+            });
+
+            for (const log of logs) {
+              const tokenId = Number((log as any).args.tokenId);
+              if (!allTokenIds.includes(tokenId)) {
+                allTokenIds.push(tokenId);
+              }
+            }
+          } catch {
+            continue;
+          }
+
+          if (fromBlock === 0) break;
+        }
+
+        for (const tokenId of allTokenIds) {
+          await db.execute(
+            sql`INSERT INTO user_nfts (user_id, token_id, tx_hash) VALUES (${u.id}, ${tokenId}, ${'backfill'}) ON CONFLICT (user_id, token_id) DO NOTHING`
+          );
+          totalBackfilled++;
+        }
+      } catch (err) {
+        console.error(`Backfill error for user ${u.id}:`, err);
+      }
+    }
+
+    return res.json({ success: true, totalBackfilled });
+  } catch (error: any) {
+    console.error('Backfill error:', error);
+    return res.status(500).json({ error: error.message || 'Backfill failed' });
   }
 });
 
