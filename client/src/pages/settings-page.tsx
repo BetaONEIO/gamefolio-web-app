@@ -653,12 +653,11 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
       queryClient.invalidateQueries({ queryKey: ['/api/user/previous-avatars'] });
       if (variables.tokenId === null) {
-        setNftPreview(null);
         setProfilePicTab('upload');
         if (data.restoredAvatarUrl) {
           setProfileData(prev => ({ ...prev, avatarUrl: data.restoredAvatarUrl }));
         }
-        toast({ title: 'NFT removed', description: 'Your previous profile picture has been restored.' });
+        toast({ title: 'NFT deactivated', description: 'Your uploaded profile picture is now active.' });
       } else {
         setProfilePicTab('nft');
         toast({ title: 'Profile picture updated', description: 'Your NFT profile picture has been set.' });
@@ -1060,7 +1059,7 @@ export default function SettingsPage() {
                       <div className="flex flex-col md:flex-row md:items-start space-y-4 md:space-y-0 md:space-x-6">
                         <div className="flex flex-col items-center space-y-3">
                           <div 
-                            className={`relative h-48 w-48 flex items-center justify-center ${(user as any)?.nftProfileTokenId || (!user?.avatarUrl && deactivatedAvatarUrl) ? 'opacity-40 grayscale' : ''} transition-all`}
+                            className={`relative h-48 w-48 flex items-center justify-center ${(user as any)?.nftProfileTokenId ? 'opacity-60' : (!user?.avatarUrl && deactivatedAvatarUrl) ? 'opacity-40 grayscale' : ''} transition-all`}
                           >
                             <div 
                               className="h-32 w-32 rounded-full overflow-hidden z-10"
@@ -1094,31 +1093,53 @@ export default function SettingsPage() {
                             <span className="text-sm font-medium">
                               {avatarFile ? 'New Preview' : selectedPreviousAvatar ? 'Selected' : 'Current'}
                             </span>
-                            {!avatarFile && !selectedPreviousAvatar && !!(user as any)?.avatarUrl && !(user as any)?.nftProfileTokenId && (
-                              <button
-                                type="button"
-                                className="group px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400 transition-colors"
-                                onClick={async () => {
-                                  try {
-                                    setDeactivatedAvatarUrl(user?.avatarUrl || null);
-                                    await apiRequest("PATCH", `/api/users/${user?.id}`, { avatarUrl: null });
-                                    queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-                                    queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
-                                    queryClient.invalidateQueries({ queryKey: ["/api/comments"] });
-                                    queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
-                                    queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
-                                    queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
-                                    queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-                                    toast({ title: "Profile picture deactivated", description: "Your profile picture is no longer active but still saved." });
-                                  } catch (e: any) {
-                                    toast({ title: "Failed", description: e.message || "Something went wrong", variant: "destructive" });
-                                  }
-                                }}
-                              >
-                                <span className="group-hover:hidden">Active</span>
-                                <span className="hidden group-hover:inline">Deactivate</span>
-                              </button>
-                            )}
+                            {!avatarFile && !selectedPreviousAvatar && !!(user as any)?.avatarUrl && (() => {
+                              const isUploadActive = !(user as any)?.nftProfileTokenId;
+                              if (isUploadActive) {
+                                return (
+                                  <button
+                                    type="button"
+                                    className="group px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400 transition-colors"
+                                    onClick={async () => {
+                                      try {
+                                        setDeactivatedAvatarUrl(user?.avatarUrl || null);
+                                        await apiRequest("PATCH", `/api/users/${user?.id}`, { avatarUrl: null });
+                                        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+                                        queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
+                                        queryClient.invalidateQueries({ queryKey: ["/api/comments"] });
+                                        queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+                                        queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+                                        queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
+                                        queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+                                        toast({ title: "Profile picture deactivated", description: "Your profile picture is no longer active but still saved." });
+                                      } catch (e: any) {
+                                        toast({ title: "Failed", description: e.message || "Something went wrong", variant: "destructive" });
+                                      }
+                                    }}
+                                  >
+                                    <span className="group-hover:hidden">Active</span>
+                                    <span className="hidden group-hover:inline">Deactivate</span>
+                                  </button>
+                                );
+                              } else {
+                                return (
+                                  <button
+                                    type="button"
+                                    className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-slate-500/20 text-slate-400 hover:bg-green-500/20 hover:text-green-400 transition-colors"
+                                    onClick={() => {
+                                      setNftProfileMutation.mutate({ tokenId: null });
+                                    }}
+                                    disabled={setNftProfileMutation.isPending}
+                                  >
+                                    {setNftProfileMutation.isPending ? (
+                                      <Loader2 className="h-3 w-3 animate-spin inline" />
+                                    ) : (
+                                      'Activate'
+                                    )}
+                                  </button>
+                                );
+                              }
+                            })()}
                           </div>
                         </div>
                         
@@ -1253,7 +1274,7 @@ export default function SettingsPage() {
                               className={`w-52 h-52 rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
                                 (user as any)?.nftProfileTokenId
                                   ? 'border-green-500/40 shadow-[0_0_20px_rgba(74,222,128,0.15)] hover:shadow-[0_0_25px_rgba(74,222,128,0.25)]'
-                                  : 'border-slate-600 opacity-40 grayscale hover:opacity-60'
+                                  : 'border-slate-600 opacity-60 hover:opacity-80'
                               }`}
                               onClick={(e) => {
                                 if ((user as any)?.nftProfileTokenId) {
@@ -1285,23 +1306,49 @@ export default function SettingsPage() {
                               {previewName || 'Preview'}
                             </span>
                           </div>
-                          {(user as any)?.nftProfileTokenId && (
-                            <button
-                              type="button"
-                              className="group px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400 transition-colors"
-                              onClick={() => setNftProfileMutation.mutate({ tokenId: null })}
-                              disabled={setNftProfileMutation.isPending}
-                            >
-                              {setNftProfileMutation.isPending ? (
-                                <Loader2 className="h-3 w-3 animate-spin inline" />
-                              ) : (
-                                <>
-                                  <span className="group-hover:hidden">Active</span>
-                                  <span className="hidden group-hover:inline">Deactivate</span>
-                                </>
-                              )}
-                            </button>
-                          )}
+                          {(() => {
+                            const isNftActive = !!(user as any)?.nftProfileTokenId;
+                            if (isNftActive) {
+                              return (
+                                <button
+                                  type="button"
+                                  className="group px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400 transition-colors"
+                                  onClick={() => setNftProfileMutation.mutate({ tokenId: null })}
+                                  disabled={setNftProfileMutation.isPending}
+                                >
+                                  {setNftProfileMutation.isPending ? (
+                                    <Loader2 className="h-3 w-3 animate-spin inline" />
+                                  ) : (
+                                    <>
+                                      <span className="group-hover:hidden">Active</span>
+                                      <span className="hidden group-hover:inline">Deactivate</span>
+                                    </>
+                                  )}
+                                </button>
+                              );
+                            } else if (hasPreview && previewTokenId) {
+                              return (
+                                <button
+                                  type="button"
+                                  className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-slate-500/20 text-slate-400 hover:bg-green-500/20 hover:text-green-400 transition-colors"
+                                  onClick={() => {
+                                    setNftProfileMutation.mutate({
+                                      tokenId: previewTokenId,
+                                      imageUrl: previewImage || '',
+                                    });
+                                  }}
+                                  disabled={setNftProfileMutation.isPending}
+                                >
+                                  {setNftProfileMutation.isPending ? (
+                                    <Loader2 className="h-3 w-3 animate-spin inline" />
+                                  ) : (
+                                    'Activate'
+                                  )}
+                                </button>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
 
                         <div className="flex-1 space-y-3">
