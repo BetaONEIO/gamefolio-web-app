@@ -49,12 +49,12 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
     const popup = popupRef.current;
     const popupWidth = popup.offsetWidth || 600;
     const popupHeight = popup.offsetHeight || 420;
-    const gap = 8;
+    const gap = 4;
     const viewportW = window.innerWidth;
     const viewportH = window.innerHeight;
 
     let left = anchorRect.right + gap;
-    let top = anchorRect.top + (anchorRect.height / 2) - (popupHeight / 2);
+    let top = anchorRect.top - 20;
 
     if (left + popupWidth > viewportW - 12) {
       left = anchorRect.left - popupWidth - gap;
@@ -127,21 +127,17 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
         style={usePositioned && position ? { top: position.top, left: position.left } : usePositioned ? { visibility: 'hidden' } : undefined}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="w-[240px] self-stretch relative overflow-hidden flex-shrink-0">
+        <div className="w-[240px] self-stretch relative overflow-hidden flex-shrink-0 bg-[#1e293b] flex items-center justify-center">
           {isLoading ? (
-            <div className="w-full h-full bg-[#1e293b] flex items-center justify-center">
-              <div className="w-10 h-10 rounded-full border-2 border-[#4ade80]/30 border-t-[#4ade80] animate-spin" />
-            </div>
+            <div className="w-10 h-10 rounded-full border-2 border-[#4ade80]/30 border-t-[#4ade80] animate-spin" />
           ) : nftImage ? (
             <img
               src={nftImage}
               alt={displayName}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
             />
           ) : (
-            <div className="w-full h-full bg-[#1e293b] flex items-center justify-center">
-              <span className="text-[#64748b] text-sm">No image</span>
-            </div>
+            <span className="text-[#64748b] text-sm">No image</span>
           )}
 
           <div className="absolute top-3 left-3 backdrop-blur-lg bg-black/50 rounded-xl flex items-center gap-1.5 px-2 py-1">
