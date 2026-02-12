@@ -1997,6 +1997,45 @@ const AdminPage = () => {
   const handleSlideImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Hero banner images must be under 10MB.", variant: "destructive" });
+      e.target.value = '';
+      return;
+    }
+    
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast({ title: "Invalid format", description: "Please upload a JPG, PNG, or WebP image.", variant: "destructive" });
+      e.target.value = '';
+      return;
+    }
+    
+    const img = new window.Image();
+    const objectUrl = URL.createObjectURL(file);
+    const dimensionCheck = await new Promise<{ width: number; height: number }>((resolve) => {
+      img.onload = () => {
+        resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        URL.revokeObjectURL(objectUrl);
+      };
+      img.onerror = () => {
+        resolve({ width: 0, height: 0 });
+        URL.revokeObjectURL(objectUrl);
+      };
+      img.src = objectUrl;
+    });
+    
+    if (dimensionCheck.width < 1200 || dimensionCheck.height < 400) {
+      toast({ title: "Image too small", description: `Image is ${dimensionCheck.width}×${dimensionCheck.height}px. Minimum recommended is 1200×400px for sharp display.`, variant: "destructive" });
+      e.target.value = '';
+      return;
+    }
+    
+    if (dimensionCheck.height > dimensionCheck.width) {
+      toast({ title: "Landscape orientation required", description: "Hero banners should be wider than they are tall. Please use a landscape image.", variant: "destructive" });
+      e.target.value = '';
+      return;
+    }
+    
     setSlideUploading(true);
     try {
       const formData = new FormData();
@@ -2009,7 +2048,7 @@ const AdminPage = () => {
       if (!res.ok) throw new Error("Upload failed");
       const data = await res.json();
       setSlideImageUrl(data.imageUrl);
-      toast({ title: "Image uploaded", description: "Hero slide image uploaded successfully." });
+      toast({ title: "Image uploaded", description: `Hero slide image uploaded successfully (${dimensionCheck.width}×${dimensionCheck.height}px).` });
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message || "Failed to upload image", variant: "destructive" });
     } finally {
@@ -3927,7 +3966,7 @@ const AdminPage = () => {
                                 <ChevronDown className="h-4 w-4" />
                               </Button>
                             </div>
-                            <div className="w-32 h-20 rounded overflow-hidden bg-muted flex-shrink-0">
+                            <div className="w-36 h-16 rounded overflow-hidden bg-muted flex-shrink-0" style={{ aspectRatio: '16/7' }}>
                               {slide.imageUrl ? (
                                 <img src={slide.imageUrl} alt={slide.title} className="w-full h-full object-cover" />
                               ) : (
@@ -3974,16 +4013,17 @@ const AdminPage = () => {
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Slide Image *</label>
                         {slideImageUrl ? (
-                          <div className="relative w-full rounded-lg overflow-hidden bg-muted" style={{ aspectRatio: '21/9' }}>
+                          <div className="relative w-full rounded-lg overflow-hidden bg-muted" style={{ aspectRatio: '16/7' }}>
                             <img src={slideImageUrl} alt="Slide preview" className="w-full h-full object-cover" />
                             <Button variant="destructive" size="sm" className="absolute top-2 right-2" onClick={() => setSlideImageUrl("")}>
                               <Trash2 className="h-3 w-3 mr-1" /> Remove
                             </Button>
                           </div>
                         ) : (
-                          <div className="border-2 border-dashed rounded-lg p-4 text-center">
-                            <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-                            <p className="text-sm text-muted-foreground mb-3">Choose an image for this slide</p>
+                          <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                            <Upload className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
+                            <p className="text-sm font-medium text-foreground mb-1">Choose an image for this slide</p>
+                            <p className="text-xs text-muted-foreground mb-4">Recommended: 1920×820px or larger, landscape orientation. Max 10MB. JPG or PNG.</p>
                             <div className="flex gap-2 justify-center">
                               <label className="cursor-pointer">
                                 <input type="file" accept="image/*" className="hidden" onChange={handleSlideImageUpload} disabled={slideUploading} />
@@ -4038,7 +4078,7 @@ const AdminPage = () => {
                                 <div
                                   key={img.id || img.name}
                                   className="rounded border overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all group relative"
-                                  style={{ aspectRatio: '21/9' }}
+                                  style={{ aspectRatio: '16/7' }}
                                   onClick={() => { setSlideImageUrl(img.publicUrl); setSlideBucketBrowser(false); setSlideBucketSearch(""); }}
                                 >
                                   <img src={img.publicUrl} alt={img.name} className="w-full h-full object-cover" />
@@ -4073,13 +4113,33 @@ const AdminPage = () => {
                       </div>
 
                       <div className="border rounded-lg p-4 bg-muted/50">
-                        <h4 className="font-medium mb-2 text-sm">Preview</h4>
-                        <div className="relative w-full rounded overflow-hidden bg-black" style={{ aspectRatio: '21/9' }}>
-                          {slideImageUrl && <img src={slideImageUrl} alt="Preview" className="w-full h-full object-cover opacity-60" />}
-                          <div className="absolute inset-0 flex flex-col justify-center p-4">
-                            <p className="text-white font-bold text-lg">{slideTitle || "Title"}</p>
-                            {slideSubtitle && <p className="text-primary text-sm font-semibold">{slideSubtitle}</p>}
-                            {slideButtonText && <span className="mt-2 inline-block bg-primary text-primary-foreground text-xs px-3 py-1 rounded w-fit">{slideButtonText}</span>}
+                        <h4 className="font-medium mb-2 text-sm flex items-center gap-2">
+                          <Eye className="h-4 w-4" />
+                          Live Preview
+                        </h4>
+                        <p className="text-xs text-muted-foreground mb-3">This preview matches how the slide will appear on the homepage.</p>
+                        <div className="relative w-full rounded-lg overflow-hidden bg-black border-b-2 border-primary" style={{ aspectRatio: '16/7', minHeight: '280px' }}>
+                          {slideImageUrl ? (
+                            <img src={slideImageUrl} alt="Preview" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-800" />
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/70">
+                            <div className="flex flex-col items-start justify-center h-full max-w-[70%] p-6 md:p-8">
+                              <h3 className="text-xl md:text-2xl font-bold text-white mb-2 leading-tight drop-shadow-md">
+                                {slideTitle || "Slide Title"}
+                              </h3>
+                              {(slideSubtitle || !slideTitle) && (
+                                <h4 className="text-lg md:text-xl font-semibold text-primary mb-4 leading-tight drop-shadow-lg">
+                                  {slideSubtitle || "Subtitle text"}
+                                </h4>
+                              )}
+                              {(slideButtonText || !slideTitle) && (
+                                <span className="mt-2 inline-block bg-primary text-primary-foreground text-sm px-4 py-2 rounded font-semibold">
+                                  {slideButtonText || "Button Text"}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -4101,16 +4161,17 @@ const AdminPage = () => {
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Slide Image *</label>
                       {slideImageUrl ? (
-                        <div className="relative w-full rounded-lg overflow-hidden bg-muted" style={{ aspectRatio: '21/9' }}>
+                        <div className="relative w-full rounded-lg overflow-hidden bg-muted" style={{ aspectRatio: '16/7' }}>
                           <img src={slideImageUrl} alt="Slide preview" className="w-full h-full object-cover" />
                           <Button variant="destructive" size="sm" className="absolute top-2 right-2" onClick={() => setSlideImageUrl("")}>
                             <Trash2 className="h-3 w-3 mr-1" /> Remove
                           </Button>
                         </div>
                       ) : (
-                        <div className="border-2 border-dashed rounded-lg p-4 text-center">
-                          <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-                          <p className="text-sm text-muted-foreground mb-3">Choose an image for this slide</p>
+                        <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                          <Upload className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
+                          <p className="text-sm font-medium text-foreground mb-1">Choose an image for this slide</p>
+                          <p className="text-xs text-muted-foreground mb-4">Recommended: 1920×820px or larger, landscape orientation. Max 10MB. JPG or PNG.</p>
                           <div className="flex gap-2 justify-center">
                             <label className="cursor-pointer">
                               <input type="file" accept="image/*" className="hidden" onChange={handleSlideImageUpload} disabled={slideUploading} />
@@ -4165,7 +4226,7 @@ const AdminPage = () => {
                               <div
                                 key={img.id || img.name}
                                 className="rounded border overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all group relative"
-                                style={{ aspectRatio: '21/9' }}
+                                style={{ aspectRatio: '16/7' }}
                                 onClick={() => { setSlideImageUrl(img.publicUrl); setSlideBucketBrowser(false); setSlideBucketSearch(""); }}
                               >
                                 <img src={img.publicUrl} alt={img.name} className="w-full h-full object-cover" />
@@ -4205,13 +4266,33 @@ const AdminPage = () => {
                     </div>
 
                     <div className="border rounded-lg p-4 bg-muted/50">
-                      <h4 className="font-medium mb-2 text-sm">Preview</h4>
-                      <div className="relative w-full rounded overflow-hidden bg-black" style={{ aspectRatio: '21/9' }}>
-                        {slideImageUrl && <img src={slideImageUrl} alt="Preview" className="w-full h-full object-cover opacity-60" />}
-                        <div className="absolute inset-0 flex flex-col justify-center p-4">
-                          <p className="text-white font-bold text-lg">{slideTitle || "Title"}</p>
-                          {slideSubtitle && <p className="text-primary text-sm font-semibold">{slideSubtitle}</p>}
-                          {slideButtonText && <span className="mt-2 inline-block bg-primary text-primary-foreground text-xs px-3 py-1 rounded w-fit">{slideButtonText}</span>}
+                      <h4 className="font-medium mb-2 text-sm flex items-center gap-2">
+                        <Eye className="h-4 w-4" />
+                        Live Preview
+                      </h4>
+                      <p className="text-xs text-muted-foreground mb-3">This preview matches how the slide will appear on the homepage.</p>
+                      <div className="relative w-full rounded-lg overflow-hidden bg-black border-b-2 border-primary" style={{ aspectRatio: '16/7', minHeight: '280px' }}>
+                        {slideImageUrl ? (
+                          <img src={slideImageUrl} alt="Preview" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-800" />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/70">
+                          <div className="flex flex-col items-start justify-center h-full max-w-[70%] p-6 md:p-8">
+                            <h3 className="text-xl md:text-2xl font-bold text-white mb-2 leading-tight drop-shadow-md">
+                              {slideTitle || "Slide Title"}
+                            </h3>
+                            {(slideSubtitle || !slideTitle) && (
+                              <h4 className="text-lg md:text-xl font-semibold text-primary mb-4 leading-tight drop-shadow-lg">
+                                {slideSubtitle || "Subtitle text"}
+                              </h4>
+                            )}
+                            {(slideButtonText || !slideTitle) && (
+                              <span className="mt-2 inline-block bg-primary text-primary-foreground text-sm px-4 py-2 rounded font-semibold">
+                                {slideButtonText || "Button Text"}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>

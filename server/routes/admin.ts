@@ -1689,14 +1689,53 @@ adminRouter.post("/hero-slides/upload-image", rewardImageUpload.single('image'),
     }
 
     const userId = req.user!.id;
-    const result = await supabaseStorage.uploadFile(req.file, 'image', userId);
+    const sharp = (await import('sharp')).default;
+    
+    const metadata = await sharp(req.file.path).metadata();
+    const origWidth = metadata.width || 0;
+    const origHeight = metadata.height || 0;
+    
+    if (origHeight > origWidth) {
+      const fs = await import('fs');
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return res.status(400).json({ message: "Hero banner images must be landscape orientation (wider than tall)." });
+    }
+    
+    let processedBuffer: Buffer;
+    const maxWidth = 1920;
+    const maxHeight = 820;
+    
+    if (origWidth > maxWidth || origHeight > maxHeight) {
+      processedBuffer = await sharp(req.file.path)
+        .resize(maxWidth, maxHeight, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 85, progressive: true })
+        .toBuffer();
+    } else {
+      processedBuffer = await sharp(req.file.path)
+        .jpeg({ quality: 85, progressive: true })
+        .toBuffer();
+    }
+    
+    const processedMeta = await sharp(processedBuffer).metadata();
+    const fileName = `hero-slide-${Date.now()}-${Math.random().toString(36).substr(2, 8)}.jpg`;
+    
+    const result = await supabaseStorage.uploadBuffer(
+      processedBuffer,
+      fileName,
+      'image/jpeg',
+      'image',
+      userId
+    );
 
     const fs = await import('fs');
     if (fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
 
-    res.json({ imageUrl: result.url });
+    res.json({ 
+      imageUrl: result.url,
+      dimensions: { width: processedMeta.width, height: processedMeta.height }
+    });
   } catch (err) {
     console.error("Error uploading hero slide image:", err);
     res.status(500).json({ message: "Error uploading image" });
