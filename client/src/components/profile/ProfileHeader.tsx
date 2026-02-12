@@ -370,6 +370,7 @@ const ProfileHeader = ({
           imageUrl={nftPopup.imageUrl}
           onClose={() => setNftPopup(null)}
           anchorRect={nftPopup.anchorRect}
+          username={profile.username}
         />
       )}
     </div>

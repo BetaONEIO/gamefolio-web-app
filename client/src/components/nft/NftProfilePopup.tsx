@@ -14,6 +14,7 @@ interface NftProfilePopupProps {
   imageUrl?: string;
   onClose: () => void;
   anchorRect?: DOMRect | null;
+  username?: string;
 }
 
 function getTokenIdPadded(id: number): string {
@@ -40,7 +41,7 @@ function getTraitRarity(traitType: string, value: string): keyof typeof RARITY_M
   return "common";
 }
 
-export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, anchorRect }: NftProfilePopupProps) {
+export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, anchorRect, username }: NftProfilePopupProps) {
   const popupRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 
@@ -105,7 +106,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
   const metadata = data?.metadata;
   const nftImage = metadata?.image || data?.imageUrl || imageUrl || "";
   const displayName = metadata?.name || `Gamefolio Genesis ${getTokenIdPadded(tokenId)}`;
-  const ownerDisplay = "Owner";
+  const ownerDisplay = username || "Owner";
 
   const allAttributes = metadata?.attributes || [];
 

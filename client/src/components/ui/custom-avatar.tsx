@@ -359,6 +359,7 @@ export const CustomAvatar = ({
           imageUrl={user.nftProfileImageUrl || ''}
           onClose={() => { setShowNftPopup(false); setNftAnchorRect(null); }}
           anchorRect={nftAnchorRect}
+          username={user?.username || user?.displayName}
         />
       )}
       </>

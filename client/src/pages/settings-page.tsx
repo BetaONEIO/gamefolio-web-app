@@ -815,6 +815,8 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       
+      setAccentColor(updatedUser.accentColor || profileData.accentColor);
+      
       toast({
         title: "Settings updated!",
         description: "Your profile has been successfully updated. Check your profile page!",
@@ -924,26 +926,17 @@ export default function SettingsPage() {
   };
 
   const applyPresetTheme = (theme: typeof PRESET_THEMES[0]) => {
-    console.log('🎨 THEME PRESET APPLIED:', theme.name);
-    console.log('🛡️ Banner URL before theme change:', profileData.bannerUrl);
+    setProfileData(prev => ({
+      ...prev,
+      backgroundColor: theme.backgroundColor,
+      accentColor: theme.accentColor
+    }));
     
-    // Update local profile data (for user's profile customization)
-    setProfileData(prev => {
-      console.log('✅ Theme only updating colors, banner preserved:', prev.bannerUrl);
-      return {
-        ...prev,
-        backgroundColor: theme.backgroundColor,
-        accentColor: theme.accentColor
-      };
-    });
-    
-    // Update global theme (affects entire app)
-    setAccentColor(theme.accentColor);
+    setAvatarBorderColor(theme.accentColor);
     
     toast({
-      title: "Theme Applied!",
-      description: `${theme.name} theme has been applied to the entire app.`,
-      variant: "gamefolioSuccess",
+      title: "Theme Selected",
+      description: `${theme.name} theme selected. Click "Save Changes" to apply.`,
     });
   };
 
@@ -2264,6 +2257,7 @@ export default function SettingsPage() {
           imageUrl={(user as any)?.nftProfileImageUrl}
           onClose={() => { setShowNftPopup(false); setNftAnchorRect(null); }}
           anchorRect={nftAnchorRect}
+          username={user.username}
         />
       )}
 
