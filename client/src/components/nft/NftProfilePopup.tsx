@@ -49,7 +49,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
     const popup = popupRef.current;
     const popupWidth = popup.offsetWidth || 340;
     const popupHeight = popup.offsetHeight || 500;
-    const gap = 4;
+    const gap = 0;
     const viewportW = window.innerWidth;
     const viewportH = window.innerHeight;
 
@@ -162,7 +162,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col p-4 overflow-y-auto font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="flex-1 flex flex-col p-4 overflow-y-auto scrollbar-hide font-['Plus_Jakarta_Sans',sans-serif]" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           <div className="flex flex-col gap-1 mb-3">
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-medium text-[#4ade80] leading-4">Genesis Collection</span>
