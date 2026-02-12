@@ -372,7 +372,9 @@ export default function SettingsPage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [profilePicTab, setProfilePicTab] = useState<'upload' | 'nft'>('upload');
+  const [profilePicTab, setProfilePicTab] = useState<'upload' | 'nft'>(
+    (user as any)?.nftProfileTokenId ? 'nft' : 'upload'
+  );
   const [showNftSelector, setShowNftSelector] = useState(false);
   const [showNftPopup, setShowNftPopup] = useState(false);
   const [nftAnchorRect, setNftAnchorRect] = useState<DOMRect | null>(null);
@@ -652,11 +654,13 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/user/previous-avatars'] });
       if (variables.tokenId === null) {
         setNftPreview(null);
+        setProfilePicTab('upload');
         if (data.restoredAvatarUrl) {
           setProfileData(prev => ({ ...prev, avatarUrl: data.restoredAvatarUrl }));
         }
         toast({ title: 'NFT removed', description: 'Your previous profile picture has been restored.' });
       } else {
+        setProfilePicTab('nft');
         toast({ title: 'Profile picture updated', description: 'Your NFT profile picture has been set.' });
       }
       setShowNftSelector(false);
