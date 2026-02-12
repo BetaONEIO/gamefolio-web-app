@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
-import { users } from '@shared/schema';
-import { eq, sql } from 'drizzle-orm';
+import { users, previousAvatars } from '@shared/schema';
+import { eq, sql, desc } from 'drizzle-orm';
 import { maxUint256, parseUnits, type Address, decodeEventLog } from 'viem';
 import {
   GF_TOKEN_ADDRESS,
@@ -689,12 +689,26 @@ router.post('/api/nft/set-profile-picture', async (req: Request, res: Response) 
 
     const { tokenId, imageUrl } = req.body;
 
+    const [currentUser] = await db.select().from(users).where(eq(users.id, userId));
+    if (!currentUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
     if (tokenId === null || tokenId === undefined) {
+      const [mostRecentAvatar] = await db.select()
+        .from(previousAvatars)
+        .where(eq(previousAvatars.userId, userId))
+        .orderBy(desc(previousAvatars.createdAt))
+        .limit(1);
+
+      const restoredAvatarUrl = currentUser.avatarUrl || mostRecentAvatar?.avatarUrl || null;
+
       await db.update(users).set({
         nftProfileTokenId: null,
         nftProfileImageUrl: null,
+        avatarUrl: restoredAvatarUrl,
       }).where(eq(users.id, userId));
-      return res.json({ success: true, cleared: true });
+      return res.json({ success: true, cleared: true, restoredAvatarUrl });
     }
 
     if (typeof tokenId !== 'number' || tokenId < 0) {
@@ -707,6 +721,19 @@ router.post('/api/nft/set-profile-picture', async (req: Request, res: Response) 
     const nftRows = (nftCheck as any).rows || nftCheck;
     if (!nftRows || nftRows.length === 0) {
       return res.status(403).json({ error: 'You do not own this NFT or it has been sold' });
+    }
+
+    if (currentUser.avatarUrl) {
+      const existingHistory = await db.select()
+        .from(previousAvatars)
+        .where(eq(previousAvatars.userId, userId));
+      const alreadySaved = existingHistory.some(pa => pa.avatarUrl === currentUser.avatarUrl);
+      if (!alreadySaved) {
+        await db.insert(previousAvatars).values({
+          userId,
+          avatarUrl: currentUser.avatarUrl,
+        });
+      }
     }
 
     await db.update(users).set({
