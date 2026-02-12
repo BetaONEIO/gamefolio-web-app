@@ -641,7 +641,7 @@ export default function SettingsPage() {
       const res = await apiRequest('POST', '/api/nft/set-profile-picture', { tokenId, imageUrl });
       return res.json();
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       queryClient.invalidateQueries({ queryKey: ['/api/clips'] });
       queryClient.invalidateQueries({ queryKey: ['/api/comments'] });
@@ -649,9 +649,13 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
       queryClient.invalidateQueries({ queryKey: ['/api/leaderboard'] });
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/previous-avatars'] });
       if (variables.tokenId === null) {
         setNftPreview(null);
-        toast({ title: 'NFT removed', description: 'Your NFT profile picture has been cleared.' });
+        if (data.restoredAvatarUrl) {
+          setProfileData(prev => ({ ...prev, avatarUrl: data.restoredAvatarUrl }));
+        }
+        toast({ title: 'NFT removed', description: 'Your previous profile picture has been restored.' });
       } else {
         toast({ title: 'Profile picture updated', description: 'Your NFT profile picture has been set.' });
       }
