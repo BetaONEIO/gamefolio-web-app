@@ -644,6 +644,28 @@ export default function SettingsPage() {
       return res.json();
     },
     onSuccess: (data, variables) => {
+      const optimisticUpdate = (oldData: any) => {
+        if (!oldData) return oldData;
+        if (variables.tokenId === null) {
+          return {
+            ...oldData,
+            nftProfileTokenId: null,
+            nftProfileImageUrl: null,
+            avatarUrl: data.restoredAvatarUrl || oldData.avatarUrl,
+          };
+        } else {
+          return {
+            ...oldData,
+            nftProfileTokenId: variables.tokenId,
+            nftProfileImageUrl: variables.imageUrl || null,
+          };
+        }
+      };
+      queryClient.setQueryData(['/api/user'], optimisticUpdate);
+      if (user?.username) {
+        queryClient.setQueryData([`/api/users/${user.username}`], optimisticUpdate);
+      }
+
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       queryClient.invalidateQueries({ queryKey: ['/api/clips'] });
       queryClient.invalidateQueries({ queryKey: ['/api/comments'] });
@@ -1103,6 +1125,14 @@ export default function SettingsPage() {
                                     onClick={async () => {
                                       try {
                                         setDeactivatedAvatarUrl(user?.avatarUrl || null);
+                                        const deactivateUpdate = (oldData: any) => {
+                                          if (!oldData) return oldData;
+                                          return { ...oldData, avatarUrl: null };
+                                        };
+                                        queryClient.setQueryData(['/api/user'], deactivateUpdate);
+                                        if (user?.username) {
+                                          queryClient.setQueryData([`/api/users/${user.username}`], deactivateUpdate);
+                                        }
                                         await apiRequest("PATCH", `/api/users/${user?.id}`, { avatarUrl: null });
                                         queryClient.invalidateQueries({ queryKey: ["/api/user"] });
                                         queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
@@ -1233,6 +1263,14 @@ export default function SettingsPage() {
                                       onClick={async () => {
                                         try {
                                           setDeactivatedAvatarUrl(user?.avatarUrl || null);
+                                          const deactivateUpdate = (oldData: any) => {
+                                            if (!oldData) return oldData;
+                                            return { ...oldData, avatarUrl: null };
+                                          };
+                                          queryClient.setQueryData(['/api/user'], deactivateUpdate);
+                                          if (user?.username) {
+                                            queryClient.setQueryData([`/api/users/${user.username}`], deactivateUpdate);
+                                          }
                                           await apiRequest("PATCH", `/api/users/${user?.id}`, { avatarUrl: null });
                                           queryClient.invalidateQueries({ queryKey: ["/api/user"] });
                                           queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
