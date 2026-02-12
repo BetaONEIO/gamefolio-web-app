@@ -47,8 +47,8 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
   const calculatePosition = useCallback(() => {
     if (!anchorRect || !popupRef.current) return;
     const popup = popupRef.current;
-    const popupWidth = popup.offsetWidth || 580;
-    const popupHeight = popup.offsetHeight || 400;
+    const popupWidth = popup.offsetWidth || 600;
+    const popupHeight = popup.offsetHeight || 420;
     const gap = 8;
     const viewportW = window.innerWidth;
     const viewportH = window.innerHeight;
@@ -97,7 +97,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
       attributes?: NftAttribute[];
     } | null;
   }>({
-    queryKey: ["/api/nft/profile-picture", userId],
+    queryKey: [`/api/nft/profile-picture/${userId}`],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     staleTime: 60 * 1000,
   });
@@ -123,11 +123,11 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
 
       <div
         ref={popupRef}
-        className={`${usePositioned ? 'absolute' : 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'} z-10 w-[580px] max-w-[95vw] bg-[#0f172a] rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6)] border border-[#1e293b] flex flex-row animate-in fade-in zoom-in-95 duration-150`}
+        className={`${usePositioned ? 'absolute' : 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'} z-10 w-[600px] max-w-[95vw] bg-[#0f172a] rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6)] border border-[#1e293b] flex flex-row animate-in fade-in zoom-in-95 duration-150`}
         style={usePositioned && position ? { top: position.top, left: position.left } : usePositioned ? { visibility: 'hidden' } : undefined}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="w-[230px] min-h-[360px] relative overflow-hidden flex-shrink-0">
+        <div className="w-[240px] self-stretch relative overflow-hidden flex-shrink-0">
           {isLoading ? (
             <div className="w-full h-full bg-[#1e293b] flex items-center justify-center">
               <div className="w-10 h-10 rounded-full border-2 border-[#4ade80]/30 border-t-[#4ade80] animate-spin" />
