@@ -20,6 +20,26 @@ function getTokenIdPadded(id: number): string {
   return `#${String(id).padStart(3, "0")}`;
 }
 
+const RARITY_MAP: Record<string, { label: string; color: string; bg: string; percent: string }> = {
+  common: { label: "Common", color: "text-[#94a3b8]", bg: "bg-[#94a3b8]/10 border-[#94a3b8]/20", percent: "62%" },
+  uncommon: { label: "Uncommon", color: "text-[#4ade80]", bg: "bg-[#4ade80]/10 border-[#4ade80]/20", percent: "25%" },
+  rare: { label: "Rare", color: "text-[#38bdf8]", bg: "bg-[#38bdf8]/10 border-[#38bdf8]/20", percent: "10%" },
+  epic: { label: "Epic", color: "text-[#a78bfa]", bg: "bg-[#a78bfa]/10 border-[#a78bfa]/20", percent: "3%" },
+};
+
+function getTraitRarity(traitType: string, value: string): keyof typeof RARITY_MAP {
+  let hash = 0;
+  const str = `${traitType}:${value}`;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  const n = Math.abs(hash) % 100;
+  if (n < 3) return "epic";
+  if (n < 13) return "rare";
+  if (n < 38) return "uncommon";
+  return "common";
+}
+
 export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, anchorRect }: NftProfilePopupProps) {
   const popupRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
@@ -27,8 +47,8 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
   const calculatePosition = useCallback(() => {
     if (!anchorRect || !popupRef.current) return;
     const popup = popupRef.current;
-    const popupWidth = popup.offsetWidth || 560;
-    const popupHeight = popup.offsetHeight || 340;
+    const popupWidth = popup.offsetWidth || 580;
+    const popupHeight = popup.offsetHeight || 400;
     const gap = 8;
     const viewportW = window.innerWidth;
     const viewportH = window.innerHeight;
@@ -87,9 +107,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
   const displayName = metadata?.name || `Gamefolio Genesis ${getTokenIdPadded(tokenId)}`;
   const ownerDisplay = "Owner";
 
-  const displayAttributes = metadata?.attributes && metadata.attributes.length > 0
-    ? metadata.attributes.slice(0, 6)
-    : [];
+  const allAttributes = metadata?.attributes || [];
 
   const usePositioned = !!anchorRect;
 
@@ -105,11 +123,11 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
 
       <div
         ref={popupRef}
-        className={`${usePositioned ? 'absolute' : 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'} z-10 w-[560px] max-w-[95vw] bg-[#0f172a] rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6)] border border-[#1e293b] flex flex-row animate-in fade-in zoom-in-95 duration-150`}
+        className={`${usePositioned ? 'absolute' : 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'} z-10 w-[580px] max-w-[95vw] bg-[#0f172a] rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6)] border border-[#1e293b] flex flex-row animate-in fade-in zoom-in-95 duration-150`}
         style={usePositioned && position ? { top: position.top, left: position.left } : usePositioned ? { visibility: 'hidden' } : undefined}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="w-[220px] min-h-[320px] relative overflow-hidden flex-shrink-0">
+        <div className="w-[230px] min-h-[360px] relative overflow-hidden flex-shrink-0">
           {isLoading ? (
             <div className="w-full h-full bg-[#1e293b] flex items-center justify-center">
               <div className="w-10 h-10 rounded-full border-2 border-[#4ade80]/30 border-t-[#4ade80] animate-spin" />
@@ -189,25 +207,37 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
             </div>
           </div>
 
-          {displayAttributes.length > 0 && (
+          {allAttributes.length > 0 && (
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-[0.6px]">
                 Traits & Rarity
               </span>
               <div className="grid grid-cols-2 gap-1.5">
-                {displayAttributes.map((attr: NftAttribute, index: number) => (
-                  <div
-                    key={index}
-                    className="bg-[#1e293b]/50 border border-[#1e293b] rounded-lg px-2.5 py-1.5 flex flex-col gap-0.5"
-                  >
-                    <span className="text-[8px] font-bold text-[#94a3b8] uppercase tracking-wider">
-                      {attr.trait_type}
-                    </span>
-                    <span className="text-[11px] font-medium text-[#f8fafc] truncate">
-                      {String(attr.value).replace(/_/g, " ")}
-                    </span>
-                  </div>
-                ))}
+                {allAttributes.map((attr: NftAttribute, index: number) => {
+                  const rarityKey = getTraitRarity(attr.trait_type, attr.value);
+                  const rarity = RARITY_MAP[rarityKey];
+                  return (
+                    <div
+                      key={index}
+                      className={`${rarity.bg} border rounded-lg px-2.5 py-1.5 flex flex-col gap-0.5`}
+                    >
+                      <span className="text-[8px] font-bold text-[#94a3b8] uppercase tracking-wider">
+                        {attr.trait_type}
+                      </span>
+                      <span className="text-[11px] font-medium text-[#f8fafc] truncate">
+                        {String(attr.value).replace(/_/g, " ")}
+                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[9px] font-semibold ${rarity.color}`}>
+                          {rarity.label}
+                        </span>
+                        <span className="text-[9px] text-[#64748b]">
+                          {rarity.percent}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
