@@ -47,8 +47,8 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
   const calculatePosition = useCallback(() => {
     if (!anchorRect || !popupRef.current) return;
     const popup = popupRef.current;
-    const popupWidth = popup.offsetWidth || 600;
-    const popupHeight = popup.offsetHeight || 420;
+    const popupWidth = popup.offsetWidth || 340;
+    const popupHeight = popup.offsetHeight || 500;
     const gap = 4;
     const viewportW = window.innerWidth;
     const viewportH = window.innerHeight;
@@ -123,22 +123,36 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
 
       <div
         ref={popupRef}
-        className={`${usePositioned ? 'absolute' : 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'} z-10 w-[600px] max-w-[95vw] bg-[#0f172a] rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6)] border border-[#1e293b] flex flex-row animate-in fade-in zoom-in-95 duration-150`}
+        className={`${usePositioned ? 'absolute' : 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'} z-10 w-[340px] max-w-[95vw] max-h-[85vh] bg-[#0f172a] rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6)] border border-[#1e293b] flex flex-col animate-in fade-in zoom-in-95 duration-150`}
         style={usePositioned && position ? { top: position.top, left: position.left } : usePositioned ? { visibility: 'hidden' } : undefined}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="w-[240px] self-stretch relative overflow-hidden flex-shrink-0 bg-[#1e293b] flex items-center justify-center">
+        <div className="relative w-full flex-shrink-0">
           {isLoading ? (
-            <div className="w-10 h-10 rounded-full border-2 border-[#4ade80]/30 border-t-[#4ade80] animate-spin" />
+            <div className="w-full aspect-square bg-[#1e293b] flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full border-2 border-[#4ade80]/30 border-t-[#4ade80] animate-spin" />
+            </div>
           ) : nftImage ? (
             <img
               src={nftImage}
               alt={displayName}
-              className="w-full h-full object-contain"
+              className="w-full aspect-square object-contain bg-[#1e293b]"
             />
           ) : (
-            <span className="text-[#64748b] text-sm">No image</span>
+            <div className="w-full aspect-square bg-[#1e293b] flex items-center justify-center">
+              <span className="text-[#64748b] text-sm">No image</span>
+            </div>
           )}
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className="absolute top-3 right-3 z-20 w-7 h-7 rounded-full bg-black/50 backdrop-blur-lg flex items-center justify-center hover:bg-black/70 transition-colors"
+          >
+            <X className="w-3.5 h-3.5 text-white" />
+          </button>
 
           <div className="absolute top-3 left-3 backdrop-blur-lg bg-black/50 rounded-xl flex items-center gap-1.5 px-2 py-1">
             <div className="w-2 h-2 rounded-full bg-[#4ade80]" />
@@ -148,17 +162,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col p-4 overflow-y-auto max-h-[85vh] font-['Plus_Jakarta_Sans',sans-serif]">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onClose();
-            }}
-            className="absolute top-3 right-3 z-20 w-7 h-7 rounded-full bg-[#1e293b] flex items-center justify-center hover:bg-[#334155] transition-colors"
-          >
-            <X className="w-3.5 h-3.5 text-white" />
-          </button>
-
+        <div className="flex-1 flex flex-col p-4 overflow-y-auto font-['Plus_Jakarta_Sans',sans-serif]">
           <div className="flex flex-col gap-1 mb-3">
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-medium text-[#4ade80] leading-4">Genesis Collection</span>
@@ -168,7 +172,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
               </svg>
             </div>
 
-            <h2 className="text-lg font-bold text-[#f8fafc] leading-6 pr-8">
+            <h2 className="text-lg font-bold text-[#f8fafc] leading-6">
               {displayName}
             </h2>
 
