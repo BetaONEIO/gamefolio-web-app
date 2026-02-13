@@ -255,7 +255,7 @@ const ProfilePage = () => {
   const { data: profileNftData, isLoading: profileNftsLoading, refetch: refetchProfileNfts } = useQuery<OwnedNftsData>({
     queryKey: ["/api/nfts/owned"],
     queryFn: getQueryFn({ on401: "throw" }),
-    enabled: !!currentUser && isOwnProfile && profileSectionTab === 'collection',
+    enabled: !!currentUser && isOwnProfile,
     staleTime: 60_000,
   });
 
