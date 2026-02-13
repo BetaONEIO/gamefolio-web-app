@@ -420,7 +420,7 @@ const Header = () => {
                       onClick={() => setLocation(`/profile/${user.username}`)}
                     >
                       <GamefolioProfileIcon className="mr-2 h-4 w-4" />
-                      <span>View Profile</span>
+                      <span>View Gamefolio</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="cursor-pointer"
