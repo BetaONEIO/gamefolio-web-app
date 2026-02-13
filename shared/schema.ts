@@ -1386,6 +1386,7 @@ export const heroSlides = pgTable("hero_slides", {
   imageUrl: text("image_url").notNull(),
   displayOrder: integer("display_order").notNull().default(0),
   isActive: boolean("is_active").notNull().default(true),
+  visibility: text("visibility").notNull().default("everyone"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
