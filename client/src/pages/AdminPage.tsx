@@ -3929,7 +3929,20 @@ const AdminPage = () => {
               {heroSlidesLoading ? (
                 <div className="text-center py-8 text-muted-foreground">Loading slides...</div>
               ) : (
-                <Tabs value={activeSlideTab} onValueChange={setActiveSlideTab}>
+                <Tabs value={activeSlideTab} onValueChange={(tab) => {
+                    if (tab.startsWith('slide-') && heroSlides) {
+                      const slideId = parseInt(tab.replace('slide-', ''));
+                      const slide = heroSlides.find((s: any) => s.id === slideId);
+                      if (slide) {
+                        openEditSlide(slide);
+                        return;
+                      }
+                    }
+                    if (tab === 'new-slide') {
+                      resetSlideForm();
+                    }
+                    setActiveSlideTab(tab);
+                  }}>
                   <div className="flex items-center gap-2 mb-4 overflow-x-auto">
                     <TabsList className="flex-shrink-0">
                       <TabsTrigger value="overview" className="text-xs px-3">Overview</TabsTrigger>
