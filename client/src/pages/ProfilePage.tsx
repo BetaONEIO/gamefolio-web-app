@@ -42,7 +42,8 @@ import {
   Code,
   Coffee,
   Scroll,
-  Pin
+  Pin,
+  Hexagon
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -86,6 +87,106 @@ import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { formatDistance } from "date-fns";
 import { cn } from "@/lib/utils";
 import NotFound from "./not-found";
+import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
+import { SKALE_NEBULA_TESTNET, NFT_CONTRACT_ADDRESS } from "@shared/contracts";
+
+interface OwnedNft {
+  tokenId: number;
+  name: string;
+  image: string | null;
+  description?: string;
+  attributes?: Array<{ trait_type: string; value: string | number }>;
+  txHash?: string;
+  mintedAt?: string;
+  sold?: boolean;
+  soldAt?: string | null;
+  listedPrice?: number | null;
+  listingActive?: boolean;
+}
+
+interface OwnedNftsData {
+  nfts: OwnedNft[];
+  count: number;
+}
+
+const RARE_TRAITS: Record<string, string[]> = {
+  Background: ["Melting_gold", "Aurora", "Neon_city", "Galaxy", "Diamond"],
+  Hand: ["Cyber_punk_sword", "Lightning_staff", "Golden_scepter", "Plasma_gun"],
+  Skin: ["Diamond_skin", "Galaxy_skin", "Golden_skin", "Holographic_skin"],
+  Costume: ["Legendary_armor", "Royal_cape", "Cyber_suit", "Dragon_scale"],
+  Eyes: ["Laser_eyes", "Diamond_eyes", "Galaxy_eyes", "Fire_eyes"],
+  Mouth: ["Golden_grill", "Diamond_teeth", "Flame_breath"],
+  Headwear: ["Crown", "Halo", "Dragon_horns", "Diamond_tiara"],
+};
+
+function computeNftRarityScore(nft: OwnedNft): number {
+  if (!nft.attributes || nft.attributes.length === 0) return 30;
+  let score = 0;
+  const traitCount = nft.attributes.length;
+  score += Math.min(traitCount * 8, 40);
+  for (const attr of nft.attributes) {
+    const traitType = attr.trait_type;
+    const traitValue = String(attr.value);
+    const rareList = RARE_TRAITS[traitType];
+    if (rareList && rareList.some(r => traitValue.toLowerCase().includes(r.toLowerCase()))) {
+      score += 15;
+    }
+  }
+  let hash = 0;
+  const combo = nft.attributes.map(a => `${a.trait_type}:${a.value}`).join('|');
+  for (let i = 0; i < combo.length; i++) {
+    hash = ((hash << 5) - hash + combo.charCodeAt(i)) | 0;
+  }
+  score += Math.abs(hash % 20);
+  return Math.min(score, 100);
+}
+
+function getNftRarity(nft: OwnedNft): { label: string; score: number } {
+  const rarityAttr = nft.attributes?.find(a => a.trait_type.toLowerCase() === "rarity");
+  if (rarityAttr) {
+    const val = String(rarityAttr.value).toLowerCase();
+    if (val === "legendary") return { label: "legendary", score: 95 };
+    if (val === "epic") return { label: "epic", score: 80 };
+    if (val === "rare") return { label: "rare", score: 55 };
+    if (val === "common") return { label: "common", score: 25 };
+  }
+  const score = computeNftRarityScore(nft);
+  if (score >= 85) return { label: "legendary", score };
+  if (score >= 65) return { label: "epic", score };
+  if (score >= 40) return { label: "rare", score };
+  return { label: "common", score };
+}
+
+const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: string; textStyle: string; nameColor: string }> = {
+  legendary: {
+    bg: "bg-gradient-to-b from-[#f6cfff] via-[#cefafe] to-[#fff085]",
+    glow: "shadow-[0_0_25px_rgba(236,72,153,0.4)]",
+    dotColor: "bg-green-500 shadow-[0_0_8px_#22c55e]",
+    textStyle: "bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent font-black",
+    nameColor: "text-slate-800",
+  },
+  epic: {
+    bg: "bg-slate-900",
+    glow: "",
+    dotColor: "bg-green-600 shadow-[0_0_8px_#16a34a]",
+    textStyle: "text-slate-400 font-normal",
+    nameColor: "text-slate-50",
+  },
+  rare: {
+    bg: "bg-gradient-to-b from-[#4ade8033] via-[#14532d4d] to-[#4ade8033]",
+    glow: "",
+    dotColor: "bg-green-400 shadow-[0_0_8px_#4ade80]",
+    textStyle: "text-slate-400 font-normal",
+    nameColor: "text-slate-50",
+  },
+  common: {
+    bg: "bg-slate-900",
+    glow: "",
+    dotColor: "bg-slate-400/50 shadow-[0_0_8px_#1e293b]",
+    textStyle: "text-slate-400 font-normal",
+    nameColor: "text-slate-50",
+  },
+};
 
 const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
   streamer: { label: "Streamer", icon: Video, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
@@ -149,6 +250,14 @@ const ProfilePage = () => {
   
   // Profile section tab state (stats/bio vs collection)
   const [profileSectionTab, setProfileSectionTab] = useState<'stats' | 'collection'>('stats');
+  const [selectedProfileNft, setSelectedProfileNft] = useState<OwnedNft | null>(null);
+
+  const { data: profileNftData, isLoading: profileNftsLoading, refetch: refetchProfileNfts } = useQuery<OwnedNftsData>({
+    queryKey: ["/api/nfts/owned"],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: !!currentUser && isOwnProfile && profileSectionTab === 'collection',
+    staleTime: 60_000,
+  });
 
   // Screenshot action handlers
   const handleScreenshotLike = () => {
@@ -1139,6 +1248,39 @@ const ProfilePage = () => {
   // Debug: Log the actual colors being used
   console.log('Profile colors:', { accentColor, backgroundColor, bgRgb, accentRgb });
 
+  if (selectedProfileNft) {
+    const { score } = getNftRarity(selectedProfileNft);
+    return (
+      <MintedNftDetailScreen
+        nft={{
+          id: selectedProfileNft.tokenId,
+          name: selectedProfileNft.name,
+          imageUrl: selectedProfileNft.image || '',
+          rarity: score,
+          attributes: selectedProfileNft.attributes?.map(a => ({
+            trait_type: a.trait_type,
+            value: String(a.value),
+          })),
+        }}
+        txHash={selectedProfileNft.txHash || ''}
+        walletAddress={currentUser?.walletAddress || undefined}
+        onClose={() => setSelectedProfileNft(null)}
+        onViewExplorer={() => {
+          if (selectedProfileNft.txHash) {
+            const SKALE_EXPLORER_BASE_URL = SKALE_NEBULA_TESTNET.blockExplorers.default.url;
+            window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${selectedProfileNft.txHash}`, '_blank');
+          }
+        }}
+        initialSold={selectedProfileNft.sold || false}
+        onSold={() => refetchProfileNfts()}
+        mintedAt={selectedProfileNft.mintedAt}
+        soldAt={selectedProfileNft.soldAt}
+        listedPrice={selectedProfileNft.listedPrice}
+        listingActive={selectedProfileNft.listingActive}
+      />
+    );
+  }
+
   return (
     <div 
       className="min-h-screen pb-12 px-4 md:px-6 relative profile-theme-scope" 
@@ -1579,7 +1721,59 @@ const ProfilePage = () => {
                   )}
                 </>
               ) : (
-                <p className="text-sm text-foreground/70 mt-4">Coming soon</p>
+                <div className="mt-4">
+                  {isOwnProfile ? (
+                    profileNftsLoading ? (
+                      <div className="grid grid-cols-3 gap-2">
+                        {[1,2,3].map(i => (
+                          <div key={i} className="aspect-square rounded-xl bg-slate-800 animate-pulse" />
+                        ))}
+                      </div>
+                    ) : profileNftData && profileNftData.nfts.filter(n => !n.sold).length > 0 ? (
+                      <div className="grid grid-cols-3 gap-2">
+                        {profileNftData.nfts.filter(n => !n.sold).map((nft) => {
+                          const { label: rarity } = getNftRarity(nft);
+                          const styles = rarityCardStyles[rarity] || rarityCardStyles.common;
+                          return (
+                            <div
+                              key={nft.tokenId}
+                              className={`rounded-xl overflow-hidden cursor-pointer transition-all duration-200 hover:scale-[1.03] ${styles.bg} ${styles.glow}`}
+                              onClick={() => setSelectedProfileNft(nft)}
+                            >
+                              <div className="aspect-square overflow-hidden">
+                                {nft.image ? (
+                                  <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-slate-800">
+                                    <Hexagon className="w-8 h-8 text-slate-600" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="p-2">
+                                <h3 className={`text-xs font-bold truncate ${styles.nameColor}`}>{nft.name}</h3>
+                                <div className="flex items-center gap-1 mt-0.5">
+                                  <div className={`w-1.5 h-1.5 rounded-full ${styles.dotColor}`} />
+                                  <span className={`text-[9px] uppercase tracking-tight ${styles.textStyle}`}>{rarity}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6">
+                        <Hexagon className="w-10 h-10 mx-auto mb-2 text-slate-600" />
+                        <p className="text-sm text-foreground/70">No NFTs yet</p>
+                        <p className="text-xs text-muted-foreground mt-1">Mint your first NFT from the store</p>
+                      </div>
+                    )
+                  ) : (
+                    <div className="text-center py-6">
+                      <Hexagon className="w-10 h-10 mx-auto mb-2 text-slate-600" />
+                      <p className="text-sm text-foreground/70">Collection is private</p>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -1848,7 +2042,59 @@ const ProfilePage = () => {
                     )}
                   </>
                 ) : (
-                  <p className="text-base text-foreground/70 mt-8">Coming soon</p>
+                  <div className="mt-4">
+                    {isOwnProfile ? (
+                      profileNftsLoading ? (
+                        <div className="grid grid-cols-3 gap-2">
+                          {[1,2,3].map(i => (
+                            <div key={i} className="aspect-square rounded-xl bg-slate-800 animate-pulse" />
+                          ))}
+                        </div>
+                      ) : profileNftData && profileNftData.nfts.filter(n => !n.sold).length > 0 ? (
+                        <div className="grid grid-cols-3 gap-2">
+                          {profileNftData.nfts.filter(n => !n.sold).map((nft) => {
+                            const { label: rarity } = getNftRarity(nft);
+                            const styles = rarityCardStyles[rarity] || rarityCardStyles.common;
+                            return (
+                              <div
+                                key={nft.tokenId}
+                                className={`rounded-xl overflow-hidden cursor-pointer transition-all duration-200 hover:scale-[1.03] ${styles.bg} ${styles.glow}`}
+                                onClick={() => setSelectedProfileNft(nft)}
+                              >
+                                <div className="aspect-square overflow-hidden">
+                                  {nft.image ? (
+                                    <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-slate-800">
+                                      <Hexagon className="w-8 h-8 text-slate-600" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="p-2">
+                                  <h3 className={`text-xs font-bold truncate ${styles.nameColor}`}>{nft.name}</h3>
+                                  <div className="flex items-center gap-1 mt-0.5">
+                                    <div className={`w-1.5 h-1.5 rounded-full ${styles.dotColor}`} />
+                                    <span className={`text-[9px] uppercase tracking-tight ${styles.textStyle}`}>{rarity}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-center py-6">
+                          <Hexagon className="w-10 h-10 mx-auto mb-2 text-slate-600" />
+                          <p className="text-sm text-foreground/70">No NFTs yet</p>
+                          <p className="text-xs text-muted-foreground mt-1">Mint your first NFT from the store</p>
+                        </div>
+                      )
+                    ) : (
+                      <div className="text-center py-6">
+                        <Hexagon className="w-10 h-10 mx-auto mb-2 text-slate-600" />
+                        <p className="text-sm text-foreground/70">Collection is private</p>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -2127,7 +2373,7 @@ const ProfilePage = () => {
         <div className="h-[12px]"></div>
 
         {/* Enhanced Tabs section with rounded container style */}
-        <div className="max-w-[90%] mx-auto mt-8">
+        {profileSectionTab === 'stats' && (<div className="max-w-[90%] mx-auto mt-8">
         <Tabs 
           defaultValue="clips" 
           value={activeTab} 
@@ -2853,7 +3099,7 @@ const ProfilePage = () => {
             </div>
           </TabsContent>
         </Tabs>
-        </div>
+        </div>)}
 
         {/* Game Selection Dialog */}
         {isOwnProfile && profile && (
