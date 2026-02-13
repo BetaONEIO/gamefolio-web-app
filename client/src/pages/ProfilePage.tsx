@@ -1251,7 +1251,7 @@ const ProfilePage = () => {
   const selectedProfileNftDetail = selectedProfileNft ? (() => {
     const { score } = getNftRarity(selectedProfileNft);
     return (
-      <div className="fixed inset-0 z-50 bg-background overflow-y-auto">
+      <div className="fixed inset-0 z-50 bg-background overflow-y-auto pt-16">
         <MintedNftDetailScreen
           nft={{
             id: selectedProfileNft.tokenId,
