@@ -2306,10 +2306,10 @@ const ProfilePage = () => {
         </div>
 
         {/* Spacer for tabs section */}
-        <div className="h-[12px]"></div>
+        <div className="h-0 md:h-[12px]"></div>
 
         {/* Enhanced Tabs section with rounded container style */}
-        <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-8">
+        <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-2 md:mt-8">
         {profileSectionTab === 'collection' ? (
           <div className="w-full">
             <div 
