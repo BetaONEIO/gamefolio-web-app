@@ -1251,7 +1251,7 @@ const ProfilePage = () => {
   const selectedProfileNftDetail = selectedProfileNft ? (() => {
     const { score } = getNftRarity(selectedProfileNft);
     return (
-      <div className="fixed inset-0 z-50 bg-background overflow-y-auto pt-4 md:pt-16">
+      <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-sm overflow-y-auto pt-4 md:pt-16">
         <MintedNftDetailScreen
           nft={{
             id: selectedProfileNft.tokenId,
@@ -1458,9 +1458,11 @@ const ProfilePage = () => {
                 />
               </div>
               {/* Online status indicator - green circle at top-right corner */}
+              {!selectedProfileNft && (
               <div className="absolute z-30" style={{ top: '-2px', right: '-2px' }}>
                 <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_0_2px_rgba(0,0,0,0.8)]"></div>
               </div>
+              )}
               {/* Level Badge with Progress - positioned halfway on/off bottom border */}
               <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 scale-75" style={{ top: '100%' }}>
                 <LevelBadgeWithProgress 
