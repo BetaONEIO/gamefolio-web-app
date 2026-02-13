@@ -1907,11 +1907,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/hero-slides - Public endpoint for active hero slides
+  // GET /api/hero-slides - Public endpoint for active hero slides filtered by user status
   app.get("/api/hero-slides", async (req, res) => {
     try {
-      const { asc } = await import('drizzle-orm');
-      const slides = await db.select().from(heroSlides).where(eq(heroSlides.isActive, true)).orderBy(asc(heroSlides.displayOrder));
+      const { asc, and, inArray } = await import('drizzle-orm');
+      const isLoggedIn = !!(req.user as any);
+      const isPro = !!(req.user as any)?.isPro;
+
+      const allowedVisibilities = ["everyone"];
+      if (isLoggedIn) {
+        allowedVisibilities.push("logged_in");
+        if (isPro) {
+          allowedVisibilities.push("pro_only");
+        }
+      } else {
+        allowedVisibilities.push("logged_out");
+      }
+
+      const slides = await db.select().from(heroSlides)
+        .where(and(
+          eq(heroSlides.isActive, true),
+          inArray(heroSlides.visibility, allowedVisibilities)
+        ))
+        .orderBy(asc(heroSlides.displayOrder));
       res.json(slides);
     } catch (err) {
       console.error("Error fetching hero slides:", err);
