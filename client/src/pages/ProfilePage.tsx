@@ -1423,19 +1423,7 @@ const ProfilePage = () => {
           <div className="flex justify-start mb-2 pl-2">
             {/* Explicit dimensions to ensure circular glow renders correctly - matches profile avatar sizes */}
             <div className="relative h-28 w-28">
-              {/* Circular glow - only show when NO SVG border is selected and no overlay is open */}
-              {!profile.selectedAvatarBorderId && !selectedProfileNft && !lightboxData.isOpen && (
-                <div 
-                  className="absolute inset-0 rounded-full animate-pulse"
-                  style={{
-                    background: `linear-gradient(45deg, hsl(var(--primary)), hsl(var(--card)))`,
-                    padding: '4px',
-                    filter: `drop-shadow(0 0 20px hsl(var(--primary)))`,
-                  }}
-                >
-                  <div className="w-full h-full rounded-full bg-background"></div>
-                </div>
-              )}
+              {/* Circular glow removed on mobile per user request */}
               <div 
                 className="relative z-10 cursor-pointer h-full w-full"
                 onClick={() => {
@@ -1457,9 +1445,9 @@ const ProfilePage = () => {
                   className="h-full w-full"
                 />
               </div>
-              {/* Online status indicator - green circle at top-right corner of the circular avatar */}
+              {/* Online status indicator - green circle at the edge of the circular avatar glow position */}
               {!selectedProfileNft && !lightboxData.isOpen && (
-              <div className="absolute z-30" style={{ top: '2px', right: '2px' }}>
+              <div className="absolute z-30" style={{ top: '-2px', right: '-2px' }}>
                 <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_0_2px_rgba(0,0,0,0.8)]"></div>
               </div>
               )}
