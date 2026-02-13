@@ -1189,6 +1189,7 @@ const AdminPage = () => {
   const [slideButtonLink, setSlideButtonLink] = useState("");
   const [slideImageUrl, setSlideImageUrl] = useState("");
   const [slideIsActive, setSlideIsActive] = useState(true);
+  const [slideVisibility, setSlideVisibility] = useState("everyone");
   const [slideUploading, setSlideUploading] = useState(false);
   const [activeSlideTab, setActiveSlideTab] = useState<string>("overview");
   const [slideBucketBrowser, setSlideBucketBrowser] = useState(false);
@@ -1960,6 +1961,7 @@ const AdminPage = () => {
     setSlideButtonLink("");
     setSlideImageUrl("");
     setSlideIsActive(true);
+    setSlideVisibility("everyone");
   };
 
   const openEditSlide = (slide: any) => {
@@ -1970,6 +1972,7 @@ const AdminPage = () => {
     setSlideButtonLink(slide.buttonLink || "");
     setSlideImageUrl(slide.imageUrl || "");
     setSlideIsActive(slide.isActive ?? true);
+    setSlideVisibility(slide.visibility || "everyone");
     setActiveSlideTab(`slide-${slide.id}`);
   };
 
@@ -2069,6 +2072,7 @@ const AdminPage = () => {
         buttonLink: slideButtonLink.trim() || null,
         imageUrl: slideImageUrl.trim(),
         isActive: slideIsActive,
+        visibility: slideVisibility,
         displayOrder: editingSlide?.displayOrder ?? (heroSlides?.length || 0),
       };
       if (editingSlide) {
@@ -3988,8 +3992,20 @@ const AdminPage = () => {
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-muted-foreground w-5">#{idx + 1}</span>
                                 <h4 className="font-medium truncate">{slide.title}</h4>
                                 {!slide.isActive && <Badge variant="secondary" className="text-xs">Inactive</Badge>}
+                                <Badge variant="outline" className={`text-xs ${
+                                  slide.visibility === 'everyone' ? 'border-green-500 text-green-600' :
+                                  slide.visibility === 'logged_in' ? 'border-blue-500 text-blue-600' :
+                                  slide.visibility === 'logged_out' ? 'border-orange-500 text-orange-600' :
+                                  slide.visibility === 'pro_only' ? 'border-purple-500 text-purple-600' : ''
+                                }`}>
+                                  {slide.visibility === 'everyone' ? 'Everyone' :
+                                   slide.visibility === 'logged_in' ? 'Logged In' :
+                                   slide.visibility === 'logged_out' ? 'Logged Out' :
+                                   slide.visibility === 'pro_only' ? 'Pro Only' : slide.visibility}
+                                </Badge>
                               </div>
                               {slide.subtitle && <p className="text-sm text-muted-foreground truncate">{slide.subtitle}</p>}
                               {slide.buttonText && (
@@ -4122,6 +4138,23 @@ const AdminPage = () => {
                         <div className="space-y-2">
                           <label className="text-sm font-medium">Button Link</label>
                           <Input placeholder="e.g., /upload" value={slideButtonLink} onChange={(e) => setSlideButtonLink(e.target.value)} />
+                        </div>
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Shown To</label>
+                          <Select value={slideVisibility} onValueChange={setSlideVisibility}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="everyone">Everyone</SelectItem>
+                              <SelectItem value="logged_in">Logged In Users</SelectItem>
+                              <SelectItem value="logged_out">Logged Out Users</SelectItem>
+                              <SelectItem value="pro_only">Pro Users Only</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
 
@@ -4273,9 +4306,25 @@ const AdminPage = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <Switch checked={slideIsActive} onCheckedChange={setSlideIsActive} />
-                      <label className="text-sm">Active</label>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Shown To</label>
+                        <Select value={slideVisibility} onValueChange={setSlideVisibility}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="everyone">Everyone</SelectItem>
+                            <SelectItem value="logged_in">Logged In Users</SelectItem>
+                            <SelectItem value="logged_out">Logged Out Users</SelectItem>
+                            <SelectItem value="pro_only">Pro Users Only</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center gap-2 pt-6">
+                        <Switch checked={slideIsActive} onCheckedChange={setSlideIsActive} />
+                        <label className="text-sm">Active</label>
+                      </div>
                     </div>
 
                     <div className="border rounded-lg p-4 bg-muted/50">
