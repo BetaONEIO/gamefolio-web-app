@@ -1721,58 +1721,15 @@ const ProfilePage = () => {
                   )}
                 </>
               ) : (
-                <div className="mt-4">
-                  {isOwnProfile ? (
-                    profileNftsLoading ? (
-                      <div className="grid grid-cols-3 gap-2">
-                        {[1,2,3].map(i => (
-                          <div key={i} className="aspect-square rounded-xl bg-slate-800 animate-pulse" />
-                        ))}
-                      </div>
-                    ) : profileNftData && profileNftData.nfts.filter(n => !n.sold).length > 0 ? (
-                      <div className="grid grid-cols-3 gap-2">
-                        {profileNftData.nfts.filter(n => !n.sold).map((nft) => {
-                          const { label: rarity } = getNftRarity(nft);
-                          const styles = rarityCardStyles[rarity] || rarityCardStyles.common;
-                          return (
-                            <div
-                              key={nft.tokenId}
-                              className={`rounded-xl overflow-hidden cursor-pointer transition-all duration-200 hover:scale-[1.03] ${styles.bg} ${styles.glow}`}
-                              onClick={() => setSelectedProfileNft(nft)}
-                            >
-                              <div className="aspect-square overflow-hidden">
-                                {nft.image ? (
-                                  <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center bg-slate-800">
-                                    <Hexagon className="w-8 h-8 text-slate-600" />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="p-2">
-                                <h3 className={`text-xs font-bold truncate ${styles.nameColor}`}>{nft.name}</h3>
-                                <div className="flex items-center gap-1 mt-0.5">
-                                  <div className={`w-1.5 h-1.5 rounded-full ${styles.dotColor}`} />
-                                  <span className={`text-[9px] uppercase tracking-tight ${styles.textStyle}`}>{rarity}</span>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-center py-6">
-                        <Hexagon className="w-10 h-10 mx-auto mb-2 text-slate-600" />
-                        <p className="text-sm text-foreground/70">No NFTs yet</p>
-                        <p className="text-xs text-muted-foreground mt-1">Mint your first NFT from the store</p>
-                      </div>
-                    )
-                  ) : (
-                    <div className="text-center py-6">
-                      <Hexagon className="w-10 h-10 mx-auto mb-2 text-slate-600" />
-                      <p className="text-sm text-foreground/70">Collection is private</p>
-                    </div>
-                  )}
+                <div className="mt-2">
+                  <div className="flex items-center gap-2">
+                    <Hexagon className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-foreground/70">
+                      {isOwnProfile 
+                        ? `${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`
+                        : "Collection below"}
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
@@ -2043,57 +2000,14 @@ const ProfilePage = () => {
                   </>
                 ) : (
                   <div className="mt-4">
-                    {isOwnProfile ? (
-                      profileNftsLoading ? (
-                        <div className="grid grid-cols-3 gap-2">
-                          {[1,2,3].map(i => (
-                            <div key={i} className="aspect-square rounded-xl bg-slate-800 animate-pulse" />
-                          ))}
-                        </div>
-                      ) : profileNftData && profileNftData.nfts.filter(n => !n.sold).length > 0 ? (
-                        <div className="grid grid-cols-3 gap-2">
-                          {profileNftData.nfts.filter(n => !n.sold).map((nft) => {
-                            const { label: rarity } = getNftRarity(nft);
-                            const styles = rarityCardStyles[rarity] || rarityCardStyles.common;
-                            return (
-                              <div
-                                key={nft.tokenId}
-                                className={`rounded-xl overflow-hidden cursor-pointer transition-all duration-200 hover:scale-[1.03] ${styles.bg} ${styles.glow}`}
-                                onClick={() => setSelectedProfileNft(nft)}
-                              >
-                                <div className="aspect-square overflow-hidden">
-                                  {nft.image ? (
-                                    <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-slate-800">
-                                      <Hexagon className="w-8 h-8 text-slate-600" />
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="p-2">
-                                  <h3 className={`text-xs font-bold truncate ${styles.nameColor}`}>{nft.name}</h3>
-                                  <div className="flex items-center gap-1 mt-0.5">
-                                    <div className={`w-1.5 h-1.5 rounded-full ${styles.dotColor}`} />
-                                    <span className={`text-[9px] uppercase tracking-tight ${styles.textStyle}`}>{rarity}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="text-center py-6">
-                          <Hexagon className="w-10 h-10 mx-auto mb-2 text-slate-600" />
-                          <p className="text-sm text-foreground/70">No NFTs yet</p>
-                          <p className="text-xs text-muted-foreground mt-1">Mint your first NFT from the store</p>
-                        </div>
-                      )
-                    ) : (
-                      <div className="text-center py-6">
-                        <Hexagon className="w-10 h-10 mx-auto mb-2 text-slate-600" />
-                        <p className="text-sm text-foreground/70">Collection is private</p>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <Hexagon className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-foreground/70">
+                        {isOwnProfile 
+                          ? `${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`
+                          : "Collection below"}
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -2373,7 +2287,74 @@ const ProfilePage = () => {
         <div className="h-[12px]"></div>
 
         {/* Enhanced Tabs section with rounded container style */}
-        {profileSectionTab === 'stats' && (<div className="max-w-[90%] mx-auto mt-8">
+        <div className="max-w-[90%] mx-auto mt-8">
+        {profileSectionTab === 'collection' ? (
+          <>
+            <div 
+              className="w-full max-w-lg lg:max-w-full mx-auto justify-center rounded-full h-11 md:h-12 p-1 relative flex gap-0.5 bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg"
+            >
+              <div className="relative rounded-full h-9 md:h-10 flex-1 flex items-center justify-center px-3 md:px-5 text-sm font-semibold text-white !bg-primary">
+                NFTs
+              </div>
+            </div>
+            <div className="pt-4 px-4">
+              {isOwnProfile ? (
+                profileNftsLoading ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                    {[1,2,3,4,5,6].map(i => (
+                      <div key={i} className="aspect-square rounded-xl bg-slate-800 animate-pulse" />
+                    ))}
+                  </div>
+                ) : profileNftData && profileNftData.nfts.filter(n => !n.sold).length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                    {profileNftData.nfts.filter(n => !n.sold).map((nft) => {
+                      const { label: rarity } = getNftRarity(nft);
+                      const styles = rarityCardStyles[rarity] || rarityCardStyles.common;
+                      return (
+                        <div
+                          key={nft.tokenId}
+                          className={`rounded-2xl overflow-hidden cursor-pointer transition-all duration-200 hover:scale-[1.03] ${styles.bg} ${styles.glow}`}
+                          onClick={() => setSelectedProfileNft(nft)}
+                        >
+                          <div className="aspect-square overflow-hidden">
+                            {nft.image ? (
+                              <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-slate-800">
+                                <Hexagon className="w-10 h-10 text-slate-600" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-3 pt-2">
+                            <h3 className={`text-sm font-bold truncate ${styles.nameColor}`}>{nft.name}</h3>
+                            <div className="flex items-center justify-between mt-1">
+                              <div className="flex items-center gap-1.5">
+                                <div className={`w-2 h-2 rounded-full ${styles.dotColor}`} />
+                                <span className={`text-[11px] uppercase tracking-tight ${styles.textStyle}`}>{rarity}</span>
+                              </div>
+                              <span className="text-[11px] text-slate-500 font-medium">#{nft.tokenId}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center">
+                    <Hexagon className="w-12 h-12 mx-auto mb-3 text-slate-600" />
+                    <p className="text-base text-foreground/70 font-medium">No NFTs yet</p>
+                    <p className="text-sm text-muted-foreground mt-1">Mint your first NFT from the store</p>
+                  </div>
+                )
+              ) : (
+                <div className="py-12 text-center">
+                  <Hexagon className="w-12 h-12 mx-auto mb-3 text-slate-600" />
+                  <p className="text-base text-foreground/70">Collection is private</p>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
         <Tabs 
           defaultValue="clips" 
           value={activeTab} 
@@ -3099,7 +3080,8 @@ const ProfilePage = () => {
             </div>
           </TabsContent>
         </Tabs>
-        </div>)}
+        )}
+        </div>
 
         {/* Game Selection Dialog */}
         {isOwnProfile && profile && (
