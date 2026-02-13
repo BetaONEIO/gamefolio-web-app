@@ -1420,7 +1420,7 @@ const ProfilePage = () => {
         {/* Mobile Layout - Left-aligned like reference design */}
         <div className="block md:hidden pb-6 relative" style={{ marginTop: '-80px', paddingTop: '0px' }}>
           {/* Profile Picture - Left aligned on Mobile */}
-          <div className="flex justify-start mb-2 pl-2">
+          <div className="flex justify-start mb-2 pl-4">
             {/* Explicit dimensions to ensure circular glow renders correctly - matches profile avatar sizes */}
             <div className="relative h-28 w-28">
               {/* Circular glow removed on mobile per user request */}
@@ -1591,7 +1591,7 @@ const ProfilePage = () => {
           
 
           {/* Username and Display Name - Left aligned on Mobile */}
-          <div className="flex flex-col items-start gap-0.5 mb-2 mt-8 pl-2">
+          <div className="flex flex-col items-start gap-0.5 mb-2 mt-8 pl-4">
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold">{profile.displayName}</h1>
               <ModeratorBadge 
@@ -1741,7 +1741,7 @@ const ProfilePage = () => {
           </div>
 
           {/* Platform tags and Social Links - hidden when collection tab is active */}
-          {profileSectionTab === 'stats' && <div className="flex flex-wrap gap-1.5 mb-4 pl-2 pr-8">
+          {profileSectionTab === 'stats' && <div className="flex flex-wrap gap-1.5 mb-4 pl-4 pr-8">
             {profile.steamUsername && (
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(27, 40, 56, 0.8)', color: '#FFFFFF' }}>
                 <SiSteam className="w-2.5 h-2.5" />
