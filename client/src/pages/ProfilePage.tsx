@@ -1458,12 +1458,13 @@ const ProfilePage = () => {
                 />
               </div>
               {/* Online status indicator - green circle at top-right of the circular avatar */}
-              {!selectedProfileNft && (
+              {!selectedProfileNft && !lightboxData.isOpen && (
               <div className="absolute z-30" style={{ top: '10px', right: '6px' }}>
                 <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_0_2px_rgba(0,0,0,0.8)]"></div>
               </div>
               )}
               {/* Level Badge with Progress - positioned halfway on/off bottom border */}
+              {!selectedProfileNft && !lightboxData.isOpen && (
               <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 scale-75" style={{ top: '100%' }}>
                 <LevelBadgeWithProgress 
                   userId={profile.id}
@@ -1472,6 +1473,7 @@ const ProfilePage = () => {
                   username={profile.username}
                 />
               </div>
+              )}
             </div>
           </div>
 
@@ -1879,6 +1881,7 @@ const ProfilePage = () => {
                 />
               </div>
               {/* Level Badge with Progress */}
+              {!selectedProfileNft && !lightboxData.isOpen && (
               <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 z-30">
                 <LevelBadgeWithProgress 
                   userId={profile.id}
@@ -1887,6 +1890,7 @@ const ProfilePage = () => {
                   username={profile.username}
                 />
               </div>
+              )}
             </div>
 
             {/* Display Name and Badges */}
