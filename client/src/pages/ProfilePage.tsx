@@ -1248,40 +1248,44 @@ const ProfilePage = () => {
   // Debug: Log the actual colors being used
   console.log('Profile colors:', { accentColor, backgroundColor, bgRgb, accentRgb });
 
-  if (selectedProfileNft) {
+  const selectedProfileNftDetail = selectedProfileNft ? (() => {
     const { score } = getNftRarity(selectedProfileNft);
     return (
-      <MintedNftDetailScreen
-        nft={{
-          id: selectedProfileNft.tokenId,
-          name: selectedProfileNft.name,
-          imageUrl: selectedProfileNft.image || '',
-          rarity: score,
-          attributes: selectedProfileNft.attributes?.map(a => ({
-            trait_type: a.trait_type,
-            value: String(a.value),
-          })),
-        }}
-        txHash={selectedProfileNft.txHash || ''}
-        walletAddress={currentUser?.walletAddress || undefined}
-        onClose={() => setSelectedProfileNft(null)}
-        onViewExplorer={() => {
-          if (selectedProfileNft.txHash) {
-            const SKALE_EXPLORER_BASE_URL = SKALE_NEBULA_TESTNET.blockExplorers.default.url;
-            window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${selectedProfileNft.txHash}`, '_blank');
-          }
-        }}
-        initialSold={selectedProfileNft.sold || false}
-        onSold={() => refetchProfileNfts()}
-        mintedAt={selectedProfileNft.mintedAt}
-        soldAt={selectedProfileNft.soldAt}
-        listedPrice={selectedProfileNft.listedPrice}
-        listingActive={selectedProfileNft.listingActive}
-      />
+      <div className="fixed inset-0 z-50 bg-background overflow-y-auto">
+        <MintedNftDetailScreen
+          nft={{
+            id: selectedProfileNft.tokenId,
+            name: selectedProfileNft.name,
+            imageUrl: selectedProfileNft.image || '',
+            rarity: score,
+            attributes: selectedProfileNft.attributes?.map(a => ({
+              trait_type: a.trait_type,
+              value: String(a.value),
+            })),
+          }}
+          txHash={selectedProfileNft.txHash || ''}
+          walletAddress={currentUser?.walletAddress || undefined}
+          onClose={() => setSelectedProfileNft(null)}
+          onViewExplorer={() => {
+            if (selectedProfileNft.txHash) {
+              const SKALE_EXPLORER_BASE_URL = SKALE_NEBULA_TESTNET.blockExplorers.default.url;
+              window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${selectedProfileNft.txHash}`, '_blank');
+            }
+          }}
+          initialSold={selectedProfileNft.sold || false}
+          onSold={() => refetchProfileNfts()}
+          mintedAt={selectedProfileNft.mintedAt}
+          soldAt={selectedProfileNft.soldAt}
+          listedPrice={selectedProfileNft.listedPrice}
+          listingActive={selectedProfileNft.listingActive}
+        />
+      </div>
     );
-  }
+  })() : null;
 
   return (
+    <>
+    {selectedProfileNftDetail}
     <div 
       className="min-h-screen pb-12 px-4 md:px-6 relative profile-theme-scope" 
       ref={profileThemeScopeRef}
@@ -3393,6 +3397,7 @@ const ProfilePage = () => {
         </Dialog>
       )}
     </div>
+    </>
   );
 };
 
