@@ -1251,7 +1251,7 @@ const ProfilePage = () => {
   const selectedProfileNftDetail = selectedProfileNft ? (() => {
     const { score } = getNftRarity(selectedProfileNft);
     return (
-      <div className="fixed inset-0 z-50 bg-background overflow-y-auto pt-16">
+      <div className="fixed inset-0 z-50 bg-background overflow-y-auto pt-4 md:pt-16">
         <MintedNftDetailScreen
           nft={{
             id: selectedProfileNft.tokenId,
@@ -1438,7 +1438,16 @@ const ProfilePage = () => {
               )}
               <div 
                 className="relative z-10 cursor-pointer h-full w-full"
-                onClick={() => profileAvatarSignedUrl && openLightbox(profileAvatarSignedUrl, profile.displayName, profile.username)}
+                onClick={() => {
+                  if (profile.nftProfileTokenId && profileNftData?.nfts) {
+                    const nft = profileNftData.nfts.find(n => n.tokenId === profile.nftProfileTokenId);
+                    if (nft) {
+                      setSelectedProfileNft(nft);
+                      return;
+                    }
+                  }
+                  profileAvatarSignedUrl && openLightbox(profileAvatarSignedUrl, profile.displayName, profile.username);
+                }}
               >
                 <CustomAvatar 
                   user={profile}
@@ -1849,7 +1858,16 @@ const ProfilePage = () => {
               )}
               <div 
                 className="relative z-10 cursor-pointer"
-                onClick={() => profileAvatarSignedUrl && openLightbox(profileAvatarSignedUrl, profile.displayName, profile.username)}
+                onClick={() => {
+                  if (profile.nftProfileTokenId && profileNftData?.nfts) {
+                    const nft = profileNftData.nfts.find(n => n.tokenId === profile.nftProfileTokenId);
+                    if (nft) {
+                      setSelectedProfileNft(nft);
+                      return;
+                    }
+                  }
+                  profileAvatarSignedUrl && openLightbox(profileAvatarSignedUrl, profile.displayName, profile.username);
+                }}
               >
                 <CustomAvatar 
                   user={profile}
