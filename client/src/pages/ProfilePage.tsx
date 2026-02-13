@@ -1728,7 +1728,7 @@ const ProfilePage = () => {
                 <div className="mt-2">
                   <div className="flex items-center gap-2">
                     <Hexagon className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-foreground/70">
+                    <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>
                       {isOwnProfile 
                         ? `${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`
                         : "Collection below"}
@@ -2006,7 +2006,7 @@ const ProfilePage = () => {
                   <div className="mt-4">
                     <div className="flex items-center gap-2">
                       <Hexagon className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm text-foreground/70">
+                      <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>
                         {isOwnProfile 
                           ? `${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`
                           : "Collection below"}
