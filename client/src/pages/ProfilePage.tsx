@@ -1423,8 +1423,8 @@ const ProfilePage = () => {
           <div className="flex justify-start mb-2 pl-2">
             {/* Explicit dimensions to ensure circular glow renders correctly - matches profile avatar sizes */}
             <div className="relative h-28 w-28">
-              {/* Circular glow - only show when NO SVG border is selected (CustomAvatar handles its own glow) */}
-              {!profile.selectedAvatarBorderId && (
+              {/* Circular glow - only show when NO SVG border is selected and no overlay is open */}
+              {!profile.selectedAvatarBorderId && !selectedProfileNft && !lightboxData.isOpen && (
                 <div 
                   className="absolute inset-0 rounded-full animate-pulse"
                   style={{
@@ -1457,9 +1457,9 @@ const ProfilePage = () => {
                   className="h-full w-full"
                 />
               </div>
-              {/* Online status indicator - green circle at top-right of the circular avatar */}
+              {/* Online status indicator - green circle at top-right corner of the circular avatar */}
               {!selectedProfileNft && !lightboxData.isOpen && (
-              <div className="absolute z-30" style={{ top: '10px', right: '6px' }}>
+              <div className="absolute z-30" style={{ top: '2px', right: '2px' }}>
                 <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_0_2px_rgba(0,0,0,0.8)]"></div>
               </div>
               )}
@@ -1847,8 +1847,8 @@ const ProfilePage = () => {
           <div className="flex flex-col">
             {/* Profile Picture positioned to overlap banner - explicit dimensions to ensure circular glow renders correctly */}
             <div className="relative flex-shrink-0 mb-4 h-56 w-56">
-              {/* Circular glow - only show when NO SVG border is selected (CustomAvatar handles its own glow) */}
-              {!profile.selectedAvatarBorderId && (
+              {/* Circular glow - only show when NO SVG border is selected and no overlay is open */}
+              {!profile.selectedAvatarBorderId && !selectedProfileNft && !lightboxData.isOpen && (
                 <div 
                   className="absolute inset-0 rounded-full animate-pulse"
                   style={{
