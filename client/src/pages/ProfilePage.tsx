@@ -1459,7 +1459,7 @@ const ProfilePage = () => {
               </div>
               {/* Online status indicator - green circle on border of avatar */}
               <div className="absolute z-30" style={{ top: '4px', right: '4px' }}>
-                <div className="w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-background"></div>
+                <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_0_2px_rgba(0,0,0,0.8)]"></div>
               </div>
               {/* Level Badge with Progress - positioned halfway on/off bottom border */}
               <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 scale-75" style={{ top: '100%' }}>
