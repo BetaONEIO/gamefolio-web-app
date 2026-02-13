@@ -1287,7 +1287,7 @@ const ProfilePage = () => {
     <>
     {selectedProfileNftDetail}
     <div 
-      className="min-h-screen pb-12 px-4 md:px-6 relative profile-theme-scope" 
+      className="min-h-screen pb-12 px-1 md:px-6 relative profile-theme-scope" 
       ref={profileThemeScopeRef}
       style={{ 
         background: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
@@ -1297,7 +1297,7 @@ const ProfilePage = () => {
     >
       {/* Enhanced Banner with global theme colors */}
       <div 
-        className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-2 md:-mx-8 border-b-4 border-primary ${profile?.bannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
+        className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-1 md:-mx-8 border-b-4 border-primary ${profile?.bannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
         style={{
           ...bannerStyle,
         }}
@@ -1415,7 +1415,7 @@ const ProfilePage = () => {
       </div>
 
       {/* Profile Info - positioned below banner with overlapping profile picture */}
-      <div className="max-w-[90%] mx-auto relative z-20">
+      <div className="max-w-[98%] md:max-w-[90%] mx-auto relative z-20">
 
         {/* Mobile Layout - Left-aligned like reference design */}
         <div className="block md:hidden pb-6 relative" style={{ marginTop: '-80px', paddingTop: '0px' }}>
@@ -2309,7 +2309,7 @@ const ProfilePage = () => {
         <div className="h-[12px]"></div>
 
         {/* Enhanced Tabs section with rounded container style */}
-        <div className="max-w-[90%] mx-auto mt-8">
+        <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-8">
         {profileSectionTab === 'collection' ? (
           <div className="w-full">
             <div 
@@ -2319,7 +2319,7 @@ const ProfilePage = () => {
                 NFTs
               </div>
             </div>
-            <div className="pt-4 px-4">
+            <div className="pt-4 px-1 md:px-4">
               {isOwnProfile ? (
                 profileNftsLoading ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
@@ -2420,7 +2420,7 @@ const ProfilePage = () => {
           </TabsList>
 
           {/* Clips Tab */}
-          <TabsContent value="clips" className="pt-4 px-4">
+          <TabsContent value="clips" className="pt-4 px-1 md:px-4">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
@@ -2560,7 +2560,7 @@ const ProfilePage = () => {
           </TabsContent>
 
           {/* Reels Tab */}
-          <TabsContent value="reels" className="pt-4 px-4">
+          <TabsContent value="reels" className="pt-4 px-1 md:px-4">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
@@ -2700,7 +2700,7 @@ const ProfilePage = () => {
           </TabsContent>
 
           {/* Screenshots Tab */}
-          <TabsContent value="screenshots" className="pt-4 px-4">
+          <TabsContent value="screenshots" className="pt-4 px-1 md:px-4">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
@@ -2839,7 +2839,7 @@ const ProfilePage = () => {
           </TabsContent>
 
           {/* Favorite Games Tab */}
-          <TabsContent value="favorites" className="pt-6 px-4">
+          <TabsContent value="favorites" className="pt-6 px-1 md:px-4">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
