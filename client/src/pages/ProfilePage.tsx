@@ -2293,7 +2293,7 @@ const ProfilePage = () => {
         {/* Enhanced Tabs section with rounded container style */}
         <div className="max-w-[90%] mx-auto mt-8">
         {profileSectionTab === 'collection' ? (
-          <>
+          <div className="w-full">
             <div 
               className="w-full max-w-lg lg:max-w-full mx-auto justify-center rounded-full h-11 md:h-12 p-1 relative flex gap-0.5 bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg"
             >
@@ -2357,7 +2357,7 @@ const ProfilePage = () => {
                 </div>
               )}
             </div>
-          </>
+          </div>
         ) : (
         <Tabs 
           defaultValue="clips" 
