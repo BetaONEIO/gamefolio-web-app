@@ -1629,7 +1629,7 @@ const ProfilePage = () => {
           </div>
 
           {/* L-shaped fading border container for profile info */}
-          <div className="relative my-4 mx-4">
+          <div className="relative mt-4 mb-1 mx-4">
             {/* Curved corner piece */}
             <div 
               className="absolute top-0 -left-4 w-3 h-3 pointer-events-none"
