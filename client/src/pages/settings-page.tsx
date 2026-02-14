@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -1884,6 +1884,12 @@ export default function SettingsPage() {
                           );
                         })}
                       </div>
+
+                      <Link href="/store">
+                        <p className="text-sm text-muted-foreground hover:text-green-500 transition-colors cursor-pointer mt-2 text-center">
+                          Browse more verification badges in our store
+                        </p>
+                      </Link>
                     </div>
                   )}
                 </div>
