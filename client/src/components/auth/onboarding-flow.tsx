@@ -1430,7 +1430,7 @@ export default function OnboardingFlow({
   };
 
   return (
-    <div className="w-full max-w-lg md:max-w-3xl mx-auto p-4 sm:p-6 bg-gray-900 rounded-lg shadow-lg">
+    <div className={`w-full mx-auto p-4 sm:p-6 bg-gray-900 rounded-lg shadow-lg ${currentStep === OnboardingStep.Welcome ? 'max-w-lg md:max-w-4xl' : 'max-w-lg md:max-w-3xl'}`}>
       <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} />
       {renderStepContent()}
     </div>
