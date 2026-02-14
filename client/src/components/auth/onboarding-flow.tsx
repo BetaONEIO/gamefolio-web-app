@@ -27,7 +27,7 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
   const { data: trendingGames, isLoading } = useQuery<TwitchGame[]>({
     queryKey: ["/api/twitch/games/top"],
     queryFn: async () => {
-      const response = await fetch("/api/twitch/games/top?limit=20");
+      const response = await fetch("/api/twitch/games/top?limit=10");
       if (!response.ok) throw new Error("Failed to fetch trending games");
       return await response.json();
     }
@@ -56,27 +56,27 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
   }
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
-      {trendingGames.map((game: TwitchGame) => {
+    <div className="grid grid-cols-5 md:grid-cols-5 gap-3">
+      {trendingGames.slice(0, 10).map((game: TwitchGame) => {
         const isSelected = selectedGames.some(g => g.id === parseInt(game.id));
         
         return (
           <button
             key={game.id}
             onClick={() => onSelectGame(game)}
-            className={`group flex flex-col items-center p-2 rounded-lg transition-all focus:outline-none focus:ring-2 flex-shrink-0 w-[72px] ${
+            className={`group flex flex-col items-center p-2 rounded-lg transition-all focus:outline-none focus:ring-2 ${
               isSelected 
                 ? 'bg-green-500/20 border-2 border-green-500 ring-2 ring-green-500/50' 
                 : 'hover:bg-primary/20 border-2 border-transparent focus:ring-primary/50'
             }`}
           >
-            <div className="relative w-14 aspect-[3/4] mb-2 overflow-hidden rounded-md">
+            <div className="relative w-full aspect-[3/4] mb-2 overflow-hidden rounded-md">
               <img
-                src={game.box_art_url ? game.box_art_url.replace('{width}', '150').replace('{height}', '200') : "https://placehold.co/60x80?text=Game"}
+                src={game.box_art_url ? game.box_art_url.replace('{width}', '300').replace('{height}', '400') : "https://placehold.co/120x160?text=Game"}
                 alt={game.name}
                 className="h-full w-full object-cover transition-transform group-hover:scale-110"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = "https://placehold.co/60x80?text=Game";
+                  (e.target as HTMLImageElement).src = "https://placehold.co/120x160?text=Game";
                 }}
               />
               <div className={`absolute inset-0 flex items-center justify-center transition-opacity ${
@@ -91,7 +91,7 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
                 )}
               </div>
             </div>
-            <span className={`text-xs text-center line-clamp-2 w-full transition-colors ${
+            <span className={`text-sm text-center line-clamp-2 w-full transition-colors ${
               isSelected 
                 ? 'text-green-500 font-semibold' 
                 : 'text-gray-300 group-hover:text-primary'
@@ -882,31 +882,27 @@ export default function OnboardingFlow({
                     <p className="text-sm text-gray-500 mt-1">Search or select from trending games (up to 5)</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="flex flex-wrap gap-2">
                     {selectedGames.map((game) => (
                       <div
                         key={game.id}
-                        className="relative group p-2 border border-primary/50 bg-primary/10 rounded-md"
+                        className="flex items-center gap-2 px-2 py-1.5 border border-primary/50 bg-primary/10 rounded-full"
                       >
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={game.imageUrl || "https://placehold.co/40x40?text=Game"}
-                            alt={game.name}
-                            className="w-10 h-10 object-cover rounded flex-shrink-0"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = "https://placehold.co/40x40?text=Game";
-                            }}
-                          />
-                          <span className="text-sm text-white truncate flex-1">{game.name}</span>
-                          
-                          {/* Remove button */}
-                          <button
-                            onClick={() => toggleGameSelection(game)}
-                            className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white"
-                          >
-                            ×
-                          </button>
-                        </div>
+                        <img
+                          src={game.imageUrl || "https://placehold.co/24x24?text=G"}
+                          alt={game.name}
+                          className="w-6 h-6 object-cover rounded-full flex-shrink-0"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "https://placehold.co/24x24?text=G";
+                          }}
+                        />
+                        <span className="text-sm text-white whitespace-nowrap">{game.name}</span>
+                        <button
+                          onClick={() => toggleGameSelection(game)}
+                          className="w-5 h-5 flex items-center justify-center rounded-full bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white text-xs"
+                        >
+                          ×
+                        </button>
                       </div>
                     ))}
                   </div>
