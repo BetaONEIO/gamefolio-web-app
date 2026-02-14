@@ -10322,5 +10322,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Auto-sync verification badges from gamefolio-verification bucket on startup
+  (async () => {
+    try {
+      const files = await supabaseStorage.listBucketFiles('gamefolio-verification', '');
+      if (!files || files.length === 0) {
+        console.log("No verification badge files found in gamefolio-verification bucket");
+        return;
+      }
+
+      const existingBadges = await storage.getAllVerificationBadges();
+      const existingNames = new Set(existingBadges.map(b => b.name.toLowerCase()));
+
+      let synced = 0;
+      const rarities = ['common', 'rare', 'epic', 'legendary'];
+      const rarityPrices: Record<string, number> = {
+        common: 100,
+        rare: 250,
+        epic: 500,
+        legendary: 1000,
+      };
+
+      for (const file of files) {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        if (!ext || !['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) continue;
+
+        const nameBase = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+        const displayName = nameBase.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        const nameKey = file.name.replace(/\.[^.]+$/, '').toLowerCase().replace(/[-_ ]/g, '');
+
+        const isDefaultBadge = nameKey.includes('verified128') || nameKey === 'verified128png';
+
+        if (existingNames.has(displayName.toLowerCase())) {
+          const existing = existingBadges.find(b => b.name.toLowerCase() === displayName.toLowerCase());
+          if (existing) {
+            await storage.updateVerificationBadge(existing.id, {
+              imageUrl: file.publicUrl,
+              availableInStore: !isDefaultBadge,
+              isDefault: isDefaultBadge,
+              gfCost: isDefaultBadge ? 0 : (rarityPrices[existing.rarity] || 100),
+            });
+            synced++;
+          }
+          continue;
+        }
+
+        const rarity = isDefaultBadge ? 'common' : rarities[Math.floor(Math.random() * rarities.length)];
+
+        await storage.createVerificationBadge({
+          name: displayName,
+          imageUrl: file.publicUrl,
+          rarity,
+          gfCost: isDefaultBadge ? 0 : rarityPrices[rarity],
+          isDefault: isDefaultBadge,
+          isActive: true,
+          availableInStore: !isDefaultBadge,
+        });
+        synced++;
+      }
+
+      console.log(`Auto-synced ${synced} verification badges from gamefolio-verification bucket`);
+    } catch (err) {
+      console.error("Error auto-syncing verification badges:", err);
+    }
+  })();
+
   return httpServer;
 }
