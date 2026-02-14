@@ -676,7 +676,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <div className="flex flex-col md:hidden max-h-[95vh] overflow-y-auto rounded-2xl" style={{ scrollbarWidth: "none" }}>
+              <div className="flex flex-col md:hidden h-[95vh] overflow-y-auto rounded-2xl" style={{ scrollbarWidth: "none" }}>
                 <div className="relative w-full flex-shrink-0">
                   <img
                     src={proHeroImage}
@@ -710,7 +710,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
                     <span className="text-[#4ade80]">Gamefolio Pro</span>
                   </h2>
 
-                  <p className="text-[#94a3b8] text-xs text-center leading-relaxed mb-4 max-w-[260px] mx-auto">
+                  <p className="text-[#94a3b8] text-xs text-center leading-relaxed mb-8 max-w-[260px] mx-auto">
                     Elevate your gaming identity with premium features
                   </p>
 
