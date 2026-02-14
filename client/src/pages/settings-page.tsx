@@ -673,10 +673,12 @@ export default function SettingsPage() {
         title: variables.tokenId === null ? 'NFT deactivated' : 'Profile picture updated',
         description: variables.tokenId === null ? 'Your uploaded profile picture is now active.' : 'Your NFT profile picture has been set.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      if (user?.username) {
-        queryClient.invalidateQueries({ queryKey: [`/api/users/${user.username}`] });
-      }
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        if (user?.username) {
+          queryClient.invalidateQueries({ queryKey: [`/api/users/${user.username}`] });
+        }
+      }, 2000);
     },
     onError: (err: any, _variables, context) => {
       if (context?.previousUser) {
