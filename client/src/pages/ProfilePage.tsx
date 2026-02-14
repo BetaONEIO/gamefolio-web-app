@@ -1479,7 +1479,7 @@ const ProfilePage = () => {
           </div>
 
           {/* Name Tag - Mobile view for own profile (absolute positioned) */}
-          {isOwnProfile && nameTagSignedUrl && (
+          {isOwnProfile && nameTagData?.nameTag && nameTagSignedUrl && (
             <div 
               className="absolute right-2 flex md:hidden flex-col items-end gap-2 cursor-pointer"
               style={{ top: '88px' }}
@@ -1563,7 +1563,7 @@ const ProfilePage = () => {
                 </Button>
               </div>
               {/* Name Tag - Mobile view for other users (below follow buttons) */}
-              {nameTagSignedUrl && (
+              {nameTagData?.nameTag && nameTagSignedUrl && (
                 <div 
                   className="flex flex-col items-center mt-2 cursor-pointer"
                   onClick={() => setNameTagPreviewOpen(true)}
@@ -2137,8 +2137,8 @@ const ProfilePage = () => {
               </div>
             )}
 
-            {/* Name Tag - positioned absolutely below banner and follow/message buttons, only show if imageUrl exists */}
-            {nameTagSignedUrl && (
+            {/* Name Tag - positioned absolutely below banner and follow/message buttons, only show if nameTag exists and imageUrl is valid */}
+            {nameTagData?.nameTag && nameTagSignedUrl && (
               <div 
                 className="absolute flex-col items-center hidden md:flex"
                 style={{
