@@ -92,7 +92,7 @@ export default function NFTDetailsPage() {
         className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md"
         style={{ background: 'rgba(2, 6, 23, 0.8)' }}
       >
-        <div className="flex items-center justify-between px-4 pt-20 pb-4">
+        <div className="flex items-center justify-between px-4 pt-28 pb-4">
           <div className="flex items-center gap-4">
             <button
               onClick={handleBack}
