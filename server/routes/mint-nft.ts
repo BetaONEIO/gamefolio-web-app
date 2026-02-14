@@ -592,6 +592,89 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/api/nfts/user/:userId', async (req: Request, res: Response) => {
+  try {
+    const targetUserId = parseInt(req.params.userId);
+    if (isNaN(targetUserId)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    const dbNfts = await db.execute(
+      sql`SELECT token_id, tx_hash, minted_at, sold, sold_at, listed_price, listing_active FROM user_nfts WHERE user_id = ${targetUserId} AND sold = false ORDER BY minted_at DESC`
+    );
+
+    const rows = (dbNfts as any).rows || dbNfts;
+    if (!rows || rows.length === 0) {
+      return res.json({ nfts: [], count: 0 });
+    }
+
+    const rowMap = new Map<number, { txHash: string; mintedAt: string; listedPrice: number | null; listingActive: boolean }>();
+    for (const r of rows) {
+      rowMap.set(Number(r.token_id), {
+        txHash: r.tx_hash,
+        mintedAt: r.minted_at,
+        listedPrice: r.listed_price ? Number(r.listed_price) : null,
+        listingActive: r.listing_active === true || r.listing_active === 't',
+      });
+    }
+    const ownedTokenIds = rows.map((r: any) => Number(r.token_id));
+
+    const metadataResults = await Promise.allSettled(
+      ownedTokenIds.slice(0, 50).map(async (tokenId: number) => {
+        const dbRow = rowMap.get(tokenId);
+        const tokenURI = await publicClient.readContract({
+          address: NFT_CONTRACT_ADDRESS as `0x${string}`,
+          abi: NFT_ABI,
+          functionName: 'tokenURI',
+          args: [BigInt(tokenId)],
+        });
+
+        for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
+          try {
+            const url = ipfsToHttp(tokenURI as string, i) + '.json';
+            const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+            if (response.ok) {
+              const metadata = await response.json();
+              if (metadata.image) {
+                metadata.image = ipfsToProxyUrl(metadata.image);
+              }
+              return {
+                tokenId,
+                name: metadata.name || `Gamefolio Genesis #${tokenId}`,
+                image: metadata.image || null,
+                attributes: metadata.attributes || [],
+                mintedAt: dbRow?.mintedAt || '',
+                listedPrice: dbRow?.listedPrice || null,
+                listingActive: dbRow?.listingActive || false,
+              };
+            }
+          } catch {
+            continue;
+          }
+        }
+        return {
+          tokenId,
+          name: `Gamefolio Genesis #${tokenId}`,
+          image: null,
+          attributes: [],
+          mintedAt: dbRow?.mintedAt || '',
+          listedPrice: dbRow?.listedPrice || null,
+          listingActive: dbRow?.listingActive || false,
+        };
+      })
+    );
+
+    const nfts = metadataResults
+      .filter((r) => r.status === 'fulfilled')
+      .map((r) => (r as PromiseFulfilledResult<any>).value);
+
+    return res.json({ nfts, count: ownedTokenIds.length });
+  } catch (error: any) {
+    console.error('User NFTs fetch error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch user NFTs' });
+  }
+});
+
 router.post('/api/admin/nfts/backfill', async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.id;
