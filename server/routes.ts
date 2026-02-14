@@ -8221,6 +8221,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mark all notifications as read (must come before :id route)
+  app.post("/api/notifications/mark-all-read", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id ?? 0;
+      const success = await storage.markAllNotificationsAsRead(userId);
+
+      if (!success) {
+        return res.status(500).json({ message: "Failed to mark all notifications as read" });
+      }
+
+      res.json({ message: "All notifications marked as read" });
+    } catch (err) {
+      console.error("Error marking all notifications as read:", err);
+      return res.status(500).json({ message: "Error marking all notifications as read" });
+    }
+  });
+
   // Mark notification as read
   app.post("/api/notifications/:id/mark-read", authMiddleware, async (req, res) => {
     try {
@@ -8235,23 +8252,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Error marking notification as read:", err);
       return res.status(500).json({ message: "Error marking notification as read" });
-    }
-  });
-
-  // Mark all notifications as read
-  app.post("/api/notifications/mark-all-read", authMiddleware, async (req, res) => {
-    try {
-      const userId = req.user?.id ?? 0;
-      const success = await storage.markAllNotificationsAsRead(userId);
-
-      if (!success) {
-        return res.status(500).json({ message: "Failed to mark all notifications as read" });
-      }
-
-      res.json({ message: "All notifications marked as read" });
-    } catch (err) {
-      console.error("Error marking all notifications as read:", err);
-      return res.status(500).json({ message: "Error marking all notifications as read" });
     }
   });
 
