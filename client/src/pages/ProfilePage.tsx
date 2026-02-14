@@ -2511,10 +2511,9 @@ const ProfilePage = () => {
                       className={`relative group ${isHighlighted ? 'ring-4 ring-primary ring-offset-2 rounded-lg' : ''}`}
                       id={isHighlighted ? `clip-${clip.id}` : undefined}
                     >
-                      {isPinned && (
-                        <div className="absolute top-2 left-2 z-10 bg-primary/90 text-primary-foreground px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1">
-                          <Pin className="w-3 h-3" />
-                          Pinned
+                      {isPinned && !isOwnProfile && (
+                        <div className="absolute top-1.5 left-1.5 z-10 bg-primary/90 text-primary-foreground p-1 rounded-md">
+                          <Pin className="w-2.5 h-2.5" />
                         </div>
                       )}
                       {isOwnProfile && (
@@ -2524,14 +2523,14 @@ const ProfilePage = () => {
                             pinClipMutation.mutate(clip.id);
                           }}
                           disabled={pinClipMutation.isPending}
-                          className={`absolute top-2 right-2 z-10 p-2 rounded-full transition-all ${
+                          className={`absolute top-1.5 left-1.5 z-10 p-1 rounded-full transition-all ${
                             isPinned 
                               ? 'bg-primary text-primary-foreground' 
                               : 'bg-black/50 text-white opacity-0 group-hover:opacity-100'
                           } hover:scale-110`}
                           title={isPinned ? 'Unpin from profile' : 'Pin to profile'}
                         >
-                          <Pin className="w-4 h-4" />
+                          <Pin className="w-3 h-3" />
                         </button>
                       )}
                       <VideoClipGridItem 
@@ -2650,10 +2649,9 @@ const ProfilePage = () => {
                       className={`relative group ${isHighlighted ? 'ring-4 ring-primary ring-offset-2 rounded-lg' : ''}`}
                       id={isHighlighted ? `reel-${reel.id}` : undefined}
                     >
-                      {isPinned && (
-                        <div className="absolute top-2 left-2 z-10 bg-primary/90 text-primary-foreground px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1">
-                          <Pin className="w-3 h-3" />
-                          Pinned
+                      {isPinned && !isOwnProfile && (
+                        <div className="absolute top-1.5 left-1.5 z-10 bg-primary/90 text-primary-foreground p-1 rounded-md">
+                          <Pin className="w-2.5 h-2.5" />
                         </div>
                       )}
                       {isOwnProfile && (
@@ -2663,14 +2661,14 @@ const ProfilePage = () => {
                             pinClipMutation.mutate(reel.id);
                           }}
                           disabled={pinClipMutation.isPending}
-                          className={`absolute top-2 right-2 z-10 p-2 rounded-full transition-all ${
+                          className={`absolute top-1.5 left-1.5 z-10 p-1 rounded-full transition-all ${
                             isPinned 
                               ? 'bg-primary text-primary-foreground' 
                               : 'bg-black/50 text-white opacity-0 group-hover:opacity-100'
                           } hover:scale-110`}
                           title={isPinned ? 'Unpin from profile' : 'Pin to profile'}
                         >
-                          <Pin className="w-4 h-4" />
+                          <Pin className="w-3 h-3" />
                         </button>
                       )}
                       <VideoClipGridItem 
@@ -2789,10 +2787,9 @@ const ProfilePage = () => {
                       key={`screenshot-${screenshot.id}`}
                       className="relative group"
                     >
-                      {isPinned && (
-                        <div className="absolute top-2 left-2 z-10 bg-primary/90 text-primary-foreground px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1">
-                          <Pin className="w-3 h-3" />
-                          Pinned
+                      {isPinned && !isOwnProfile && (
+                        <div className="absolute top-1.5 left-1.5 z-10 bg-primary/90 text-primary-foreground p-1 rounded-md">
+                          <Pin className="w-2.5 h-2.5" />
                         </div>
                       )}
                       {isOwnProfile && (
@@ -2802,14 +2799,14 @@ const ProfilePage = () => {
                             pinScreenshotMutation.mutate(screenshot.id);
                           }}
                           disabled={pinScreenshotMutation.isPending}
-                          className={`absolute top-2 right-2 z-10 p-2 rounded-full transition-all ${
+                          className={`absolute top-1.5 left-1.5 z-10 p-1 rounded-full transition-all ${
                             isPinned 
                               ? 'bg-primary text-primary-foreground' 
                               : 'bg-black/50 text-white opacity-0 group-hover:opacity-100'
                           } hover:scale-110`}
                           title={isPinned ? 'Unpin from profile' : 'Pin to profile'}
                         >
-                          <Pin className="w-4 h-4" />
+                          <Pin className="w-3 h-3" />
                         </button>
                       )}
                       <ScreenshotCard
