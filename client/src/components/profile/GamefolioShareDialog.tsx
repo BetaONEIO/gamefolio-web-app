@@ -62,12 +62,20 @@ interface GamefolioShareDialogProps {
     isPro?: boolean | null;
     userType?: string | null;
     showUserType?: boolean | null;
+    accentColor?: string | null;
+    backgroundColor?: string | null;
+    cardColor?: string | null;
   };
   userStats?: {
     clips?: number;
     followers?: number;
     following?: number;
   };
+  favoriteGames?: Array<{
+    id: number;
+    name: string;
+    imageUrl?: string | null;
+  }>;
 }
 
 export function GamefolioShareDialog({ 
@@ -76,7 +84,8 @@ export function GamefolioShareDialog({
   open: controlledOpen, 
   onOpenChange: controlledOnOpenChange,
   userProfile,
-  userStats
+  userStats,
+  favoriteGames
 }: GamefolioShareDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [shareData, setShareData] = useState<GamefolioShareData | null>(null);
@@ -160,6 +169,9 @@ export function GamefolioShareDialog({
   ];
 
   const bannerUrl = bannerSignedUrl || userProfile?.bannerUrl;
+  const themeAccent = userProfile?.accentColor || '#4ADE80';
+  const themeBg = userProfile?.backgroundColor || '#0f172a';
+  const themeCard = userProfile?.cardColor || '#1e293b';
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -176,11 +188,14 @@ export function GamefolioShareDialog({
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="p-0 border-[#1e293b] bg-[#0f172a] w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh]">
+      <DialogContent 
+        className="p-0 w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh]"
+        style={{ backgroundColor: themeBg, borderColor: `${themeAccent}30` }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-5 py-4 sm:py-5 border-b border-[#1e293b]/50">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-4 sm:py-5" style={{ borderBottom: `1px solid ${themeAccent}20` }}>
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <Share2 className="w-5 h-5 sm:w-6 sm:h-6 text-[#4ADE80] shrink-0" />
+            <Share2 className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" style={{ color: themeAccent }} />
             <span className="text-[#f8fafc] text-base sm:text-xl font-bold truncate">Share Gamefolio Profile</span>
           </div>
           <button
@@ -200,14 +215,14 @@ export function GamefolioShareDialog({
           ) : shareData ? (
             <>
               {/* Profile Preview Card */}
-              <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl overflow-hidden">
+              <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: themeCard, border: `1px solid ${themeAccent}20` }}>
                 {/* Banner */}
                 <div 
                   className="h-20 bg-cover bg-center"
                   style={{
                     backgroundImage: bannerUrl
                       ? `url(${bannerUrl})`
-                      : `linear-gradient(270deg, #fe9a00 0%, #d08700 100%)`,
+                      : `linear-gradient(270deg, ${themeAccent}, ${themeBg})`,
                   }}
                 />
 
@@ -215,7 +230,7 @@ export function GamefolioShareDialog({
                 <div className="relative px-4 pb-4">
                   {/* Avatar - overlapping banner */}
                   <div className="relative -mt-10 mb-2 w-20 h-20">
-                    <div className="w-20 h-20 rounded-full border-4 border-[#0f172a] overflow-hidden bg-[#0f172a]">
+                    <div className="w-20 h-20 rounded-full border-4 overflow-hidden" style={{ borderColor: themeBg, backgroundColor: themeBg }}>
                       {userProfile?.nftProfileTokenId && userProfile?.nftProfileImageUrl ? (
                         <img 
                           src={userProfile.nftProfileImageUrl} 
@@ -277,8 +292,32 @@ export function GamefolioShareDialog({
                     </p>
                   )}
 
+                  {/* Favorite Games */}
+                  {favoriteGames && favoriteGames.length > 0 && (
+                    <div className="flex items-center gap-2 mt-2">
+                      {favoriteGames.slice(0, 5).map((game) => (
+                        <div 
+                          key={game.id} 
+                          className="w-10 h-[53px] rounded-md overflow-hidden flex-shrink-0"
+                          style={{ border: `1px solid ${themeAccent}30` }}
+                          title={game.name}
+                        >
+                          <img 
+                            src={game.imageUrl 
+                              ? (game.imageUrl.includes('{width}') 
+                                  ? game.imageUrl.replace('{width}', '80').replace('{height}', '107')
+                                  : game.imageUrl)
+                              : "/placeholder-game.png"} 
+                            alt={game.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Stats */}
-                  <div className="flex items-center border-t border-[#1e293b]/30 mt-3 pt-3">
+                  <div className="flex items-center mt-3 pt-3" style={{ borderTop: `1px solid ${themeAccent}15` }}>
                     <div className="flex-1 flex flex-col items-center">
                       <span className="text-[#f8fafc] text-lg font-bold leading-7">{userStats?.clips || 0}</span>
                       <span className="text-[#94a3b8] text-xs leading-4">Clips</span>
@@ -299,7 +338,7 @@ export function GamefolioShareDialog({
               <div className="flex flex-col gap-2.5">
                 <span className="text-[#94a3b8] text-sm">Profile Link</span>
                 <div className="flex gap-2">
-                  <div className="flex-1 min-w-0 bg-[#1e293b] border border-[#1e293b] rounded-2xl px-3 sm:px-4 py-3 overflow-hidden">
+                  <div className="flex-1 min-w-0 rounded-2xl px-3 sm:px-4 py-3 overflow-hidden" style={{ backgroundColor: themeCard, border: `1px solid ${themeAccent}20` }}>
                     <span className="text-[#94a3b8] text-xs sm:text-sm font-mono truncate block">
                       {shareData.profileUrl}
                     </span>
@@ -314,8 +353,8 @@ export function GamefolioShareDialog({
                 </div>
               </div>
 
-              {/* Social Media Section */}
-              <div className="flex flex-col gap-3">
+              {/* Social Media Section - hidden on mobile */}
+              <div className="hidden sm:flex flex-col gap-3">
                 <span className="text-[#94a3b8] text-sm">Share on Social Media</span>
                 <div className="flex flex-wrap gap-2 sm:gap-2.5">
                   {socialPlatforms.map((platform) => {
@@ -326,10 +365,11 @@ export function GamefolioShareDialog({
                         key={platform.name}
                         onClick={() => shareUrl && handleSocialShare(shareUrl)}
                         disabled={!shareUrl}
-                        className="w-11 h-11 sm:w-14 sm:h-14 rounded-full border-2 border-[#4ADE80] bg-transparent hover:bg-[#4ADE80]/10 text-[#f8fafc] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        className="w-14 h-14 rounded-full border-2 bg-transparent text-[#f8fafc] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        style={{ borderColor: themeAccent }}
                         title={platform.name}
                       >
-                        <IconComponent className="w-5 h-5 sm:w-6 sm:h-6" />
+                        <IconComponent className="w-6 h-6" />
                       </button>
                     );
                   })}
