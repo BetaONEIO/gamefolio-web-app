@@ -80,7 +80,7 @@ export default function AuthPage() {
   };
 
   return (
-    <KeyboardAvoidingWrapper className="min-h-screen w-full relative flex items-center justify-center p-4 overflow-hidden">
+    <KeyboardAvoidingWrapper className="min-h-screen w-full relative flex items-center justify-center p-4 sm:p-4 overflow-hidden">
       {/* Video Background */}
       <video
         className="fixed inset-0 w-full h-full object-cover z-0"
@@ -104,15 +104,15 @@ export default function AuthPage() {
       <div className="absolute inset-0 bg-navy-900/40 z-15"></div>
 
       {/* Content */}
-      <div className="relative z-20 w-full max-w-md min-h-[600px] flex flex-col justify-center">
-        <div className="mb-10 text-center">
+      <div className="relative z-20 w-full max-w-md flex flex-col justify-center">
+        <div className="mb-5 sm:mb-10 text-center">
           <div className="flex flex-col items-center">
             <img
               src="/attached_assets/Gamefolio logo.png"
               alt="Gamefolio"
-              className="h-36 w-auto drop-shadow-lg"
+              className="h-20 sm:h-36 w-auto drop-shadow-lg"
             />
-            <div className="mt-3 px-3 py-1 bg-orange-500 text-white text-sm font-bold rounded-full shadow-lg">
+            <div className="mt-2 sm:mt-3 px-3 py-1 bg-orange-500 text-white text-xs sm:text-sm font-bold rounded-full shadow-lg">
               Alpha 1.4 • Nov 6, 2025
             </div>
           </div>
@@ -124,7 +124,7 @@ export default function AuthPage() {
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-2 mb-8">
+          <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-8">
             <TabsTrigger
               value="login"
               className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-none"

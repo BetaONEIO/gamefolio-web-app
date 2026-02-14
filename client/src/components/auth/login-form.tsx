@@ -68,7 +68,7 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 backdrop-blur-md p-6 rounded-lg border border-white/10">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 backdrop-blur-md p-4 sm:p-6 rounded-lg border border-white/10">
       <div className="space-y-2">
         <Label htmlFor="usernameOrEmail" className="text-gray-300">Username or Email</Label>
         <Input
@@ -119,7 +119,7 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
       
       <Button 
         type="submit" 
-        className="w-full py-6 text-base bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all border-0 shadow-md shadow-primary/20"
+        className="w-full py-4 sm:py-6 text-base bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all border-0 shadow-md shadow-primary/20"
         disabled={isLoading}
       >
         {isLoading ? "Signing in..." : "Sign In"}
