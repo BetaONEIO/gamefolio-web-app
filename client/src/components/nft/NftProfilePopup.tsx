@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 interface NftAttribute {
   trait_type: string;
@@ -43,6 +43,43 @@ function getTraitRarity(traitType: string, value: string): keyof typeof RARITY_M
 
 export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, anchorRect, username }: NftProfilePopupProps) {
   const popupRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+
+  const calculatePosition = useCallback(() => {
+    if (!anchorRect || !popupRef.current) return;
+    const popup = popupRef.current;
+    const popupWidth = popup.offsetWidth || 340;
+    const popupHeight = popup.offsetHeight || 500;
+    const gap = 12;
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+
+    let left = anchorRect.right + gap;
+    let top = anchorRect.top + (anchorRect.height / 2) - (popupHeight / 2);
+
+    if (left + popupWidth > viewportW - 16) {
+      left = anchorRect.left - popupWidth - gap;
+    }
+
+    if (left < 16) {
+      left = Math.max(16, (viewportW - popupWidth) / 2);
+    }
+
+    if (top + popupHeight > viewportH - 16) {
+      top = viewportH - popupHeight - 16;
+    }
+    if (top < 16) {
+      top = 16;
+    }
+
+    setPosition({ top, left });
+  }, [anchorRect]);
+
+  useEffect(() => {
+    if (anchorRect) {
+      requestAnimationFrame(calculatePosition);
+    }
+  }, [anchorRect, calculatePosition]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -74,9 +111,11 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
 
   const allAttributes = metadata?.attributes || [];
 
+  const hasAnchor = !!anchorRect;
+
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center"
+      className="fixed inset-0 z-[9999]"
       onClick={(e) => {
         e.stopPropagation();
         onClose();
@@ -86,7 +125,8 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
 
       <div
         ref={popupRef}
-        className="relative z-10 w-[340px] max-w-[95vw] max-h-[85vh] bg-[#0f172a] rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6)] border border-[#1e293b] flex flex-col animate-in fade-in zoom-in-95 duration-150"
+        className={`${hasAnchor ? 'absolute' : 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'} z-10 w-[340px] max-w-[95vw] max-h-[85vh] bg-[#0f172a] rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6)] border border-[#1e293b] flex flex-col animate-in fade-in zoom-in-95 duration-150`}
+        style={hasAnchor && position ? { top: position.top, left: position.left } : hasAnchor ? { visibility: 'hidden' } : undefined}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative w-full flex-shrink-0">
