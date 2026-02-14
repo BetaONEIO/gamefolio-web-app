@@ -36,7 +36,7 @@ export function ProBadge({ isPro, size = "md" }: ProBadgeProps) {
           />
         </TooltipTrigger>
         <TooltipContent>
-          <p className="text-xs">Gamefolio Pro</p>
+          <p className="text-xs">Gamefolio Pro user</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
