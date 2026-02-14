@@ -375,6 +375,13 @@ const ProfilePage = () => {
   // Get signed URL for profile avatar (private bucket)
   const { signedUrl: profileAvatarSignedUrl } = useSignedUrl(profile?.avatarUrl);
 
+  // Fetch user's selected verification badge
+  const { data: verificationBadgeData } = useQuery<{ badge: { id: number; name: string; imageUrl: string } | null }>({
+    queryKey: [`/api/user/${profile?.id}/verification-badge`],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!profile?.id,
+  });
+
   // Follow state management with localStorage persistence for demo users
   const getStorageKey = () => `follow_${currentUser?.id}_${profile?.id}`;
   const getFollowerCountKey = () => `follower_count_${profile?.id}`;
@@ -1607,6 +1614,12 @@ const ProfilePage = () => {
           <div className="flex flex-col items-start gap-0.5 mb-2 mt-8 pl-4">
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold">{profile.displayName}</h1>
+              <VerificationBadge
+                isVerified={!!verificationBadgeData?.badge}
+                badgeImageUrl={verificationBadgeData?.badge?.imageUrl}
+                badgeName={verificationBadgeData?.badge?.name}
+                size="lg"
+              />
               <ModeratorBadge 
                 isModerator={profile.role === "moderator" || profile.role === "admin"} 
                 size="lg" 
@@ -1895,6 +1908,12 @@ const ProfilePage = () => {
             {/* Display Name and Badges */}
             <div className="flex items-center gap-2 flex-wrap mt-8">
               <h1 className="text-2xl font-bold">{profile.displayName}</h1>
+              <VerificationBadge
+                isVerified={!!verificationBadgeData?.badge}
+                badgeImageUrl={verificationBadgeData?.badge?.imageUrl}
+                badgeName={verificationBadgeData?.badge?.name}
+                size="xl"
+              />
               <ModeratorBadge 
                 isModerator={profile.role === "moderator" || profile.role === "admin"} 
                 size="xl" 
