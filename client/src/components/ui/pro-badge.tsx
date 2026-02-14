@@ -1,4 +1,4 @@
-import proBadgeIcon from "@assets/Pro_badge_1767730160876.png";
+import proBadgeIcon from "@assets/Gamefolio_pro_button_final_c_1771055092628.png";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ProBadgeProps {
@@ -10,10 +10,10 @@ export function ProBadge({ isPro, size = "md" }: ProBadgeProps) {
   if (!isPro) return null;
 
   const sizeClasses = {
-    sm: "w-4 h-4",
-    md: "w-5 h-5", 
-    lg: "w-6 h-6",
-    xl: "w-8 h-8"
+    sm: "h-4 w-auto",
+    md: "h-5 w-auto", 
+    lg: "h-6 w-auto",
+    xl: "h-8 w-auto"
   };
 
   return (
@@ -22,7 +22,7 @@ export function ProBadge({ isPro, size = "md" }: ProBadgeProps) {
         <TooltipTrigger>
           <img 
             src={proBadgeIcon} 
-            alt="Pro" 
+            alt="Gamefolio Pro" 
             className={`${sizeClasses[size]} ml-1`}
             loading="eager"
             decoding="async"
@@ -36,7 +36,7 @@ export function ProBadge({ isPro, size = "md" }: ProBadgeProps) {
           />
         </TooltipTrigger>
         <TooltipContent>
-          <p className="text-xs">Pro</p>
+          <p className="text-xs">Gamefolio Pro</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
