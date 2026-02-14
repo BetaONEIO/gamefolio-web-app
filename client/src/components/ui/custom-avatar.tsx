@@ -298,7 +298,7 @@ export const CustomAvatar = ({
   showAvatarBorderOverlay = true,
   onNftClick
 }: CustomAvatarProps) => {
-  const borderColor = user?.avatarBorderColor || '#ffffff';
+  const borderColor = 'hsl(var(--primary))';
   const safeDisplayName = user?.displayName || user?.username || "?";
   const clipId = useMemo(() => `avatar-clip-${user?.id || 'default'}-${Math.random().toString(36).substr(2, 6)}`, [user?.id]);
   
