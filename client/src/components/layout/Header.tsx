@@ -300,7 +300,7 @@ const Header = () => {
                               isModerator={searchUser.role === "moderator" || searchUser.role === "admin"} 
                               size="sm" 
                             />
-                            <ProBadge isPro={searchUser.isPro === true} size="sm" />
+                            <ProBadge selectedVerificationBadgeId={searchUser.selectedVerificationBadgeId} size="sm" />
                           </div>
                           <div className="text-sm text-muted-foreground">@{searchUser.username}</div>
                         </div>
@@ -629,7 +629,7 @@ const Header = () => {
                                   isModerator={searchUser.role === "moderator" || searchUser.role === "admin"} 
                                   size="sm" 
                                 />
-                                <ProBadge isPro={searchUser.isPro === true} size="sm" />
+                                <ProBadge selectedVerificationBadgeId={searchUser.selectedVerificationBadgeId} size="sm" />
                               </div>
                               <div className="text-sm text-muted-foreground">@{searchUser.username}</div>
                             </div>

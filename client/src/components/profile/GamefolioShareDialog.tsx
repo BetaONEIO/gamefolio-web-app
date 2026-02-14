@@ -276,7 +276,7 @@ export function GamefolioShareDialog({
                       {userProfile?.displayName || username}
                     </span>
                     <VerificationBadge isVerified={!!userProfile?.emailVerified} size="sm" />
-                    <ProBadge isPro={userProfile?.isPro === true} size="sm" />
+                    <ProBadge selectedVerificationBadgeId={userProfile?.selectedVerificationBadgeId} size="sm" />
                   </div>
                   <span className="text-[#94a3b8] text-sm leading-5">@{username}</span>
 

@@ -1,19 +1,20 @@
-import proBadgeIcon from "@assets/Gamefolio_pro_button_final_c_1771055092628.png";
+import greenBadgeIcon from "@assets/green_badge_128_1758978841463.png";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ProBadgeProps {
-  isPro: boolean;
+  isPro?: boolean;
+  selectedVerificationBadgeId?: number | null;
   size?: "sm" | "md" | "lg" | "xl";
 }
 
-export function ProBadge({ isPro, size = "md" }: ProBadgeProps) {
-  if (!isPro) return null;
+export function ProBadge({ selectedVerificationBadgeId, size = "md" }: ProBadgeProps) {
+  if (!selectedVerificationBadgeId) return null;
 
   const sizeClasses = {
-    sm: "h-4 w-auto",
-    md: "h-5 w-auto", 
-    lg: "h-6 w-auto",
-    xl: "h-8 w-auto"
+    sm: "w-4 h-4",
+    md: "w-5 h-5", 
+    lg: "w-6 h-6",
+    xl: "w-8 h-8"
   };
 
   return (
@@ -21,8 +22,8 @@ export function ProBadge({ isPro, size = "md" }: ProBadgeProps) {
       <Tooltip>
         <TooltipTrigger>
           <img 
-            src={proBadgeIcon} 
-            alt="Gamefolio Pro" 
+            src={greenBadgeIcon} 
+            alt="Verified" 
             className={`${sizeClasses[size]} ml-1`}
             loading="eager"
             decoding="async"
@@ -36,7 +37,7 @@ export function ProBadge({ isPro, size = "md" }: ProBadgeProps) {
           />
         </TooltipTrigger>
         <TooltipContent>
-          <p className="text-xs">Gamefolio Pro user</p>
+          <p className="text-xs">Verified Gamefolio member</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

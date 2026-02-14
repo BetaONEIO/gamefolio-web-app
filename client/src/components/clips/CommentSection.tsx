@@ -226,7 +226,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                     >
                       {comment.user.username}
                       <ModeratorBadge isModerator={(comment.user as any).role === "moderator" || (comment.user as any).role === "admin"} size="sm" />
-                      <ProBadge isPro={(comment.user as any).isPro === true} size="sm" />
+                      <ProBadge selectedVerificationBadgeId={(comment.user as any).selectedVerificationBadgeId} size="sm" />
                     </span>
                   </Link>
                   <MentionText text={comment.content} className="inline text-sm break-words" onLinkClick={onUsernameClick} />

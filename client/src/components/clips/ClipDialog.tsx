@@ -897,7 +897,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         <div className="font-medium flex items-center gap-1 hover:text-primary transition-colors cursor-pointer">
                           @{clip.user.username}
                           <ModeratorBadge isModerator={(clip.user as any).role === "moderator" || (clip.user as any).role === "admin"} size="sm" />
-                          <ProBadge isPro={(clip.user as any).isPro === true} size="sm" />
+                          <ProBadge selectedVerificationBadgeId={(clip.user as any).selectedVerificationBadgeId} size="sm" />
                         </div>
                       </Link>
                     ) : (
