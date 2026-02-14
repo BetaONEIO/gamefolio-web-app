@@ -1443,40 +1443,56 @@ export default function SettingsPage() {
 
                   {/* Current Border Preview */}
                   <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg border">
-                    <div className="relative h-48 w-48 flex items-center justify-center">
-                      <div 
-                        className="h-32 w-32 rounded-full overflow-hidden z-10"
-                      >
-                        <img 
-                          src={avatarPreview || signedAvatarUrl || ""} 
-                          alt="Preview" 
-                          className="w-full h-full object-cover rounded-full"
-                        />
-                        {!(avatarPreview || signedAvatarUrl) && (
-                          <div className="w-full h-full flex items-center justify-center bg-primary/20 text-foreground font-semibold text-xl rounded-full">
-                            {user?.username?.substring(0, 2).toUpperCase() || "U"}
-                          </div>
-                        )}
-                      </div>
-                      {/* SVG Border Overlay with color replacement */}
-                      {selectedBorderId && avatarBorders && (() => {
-                        const border = (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId);
-                        return border ? (
-                          <InlineSvgBorder
-                            svgUrl={border.imageUrl}
-                            color={avatarBorderColor}
-                            className="absolute inset-0 pointer-events-none [&>svg]:w-full [&>svg]:h-full"
-                            style={{ zIndex: 5 }}
+                    {user?.activeProfilePicType === 'nft' && user?.nftProfileImageUrl ? (
+                      <div className="relative flex items-center justify-center">
+                        <div
+                          className="h-32 w-32 rounded-xl overflow-hidden border-4"
+                          style={{ borderColor: avatarBorderColor, boxShadow: `0 0 20px ${avatarBorderColor}40` }}
+                        >
+                          <img
+                            src={user.nftProfileImageUrl}
+                            alt="NFT Preview"
+                            className="w-full h-full object-cover"
                           />
-                        ) : null;
-                      })()}
-                    </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative h-48 w-48 flex items-center justify-center">
+                        <div 
+                          className="h-32 w-32 rounded-full overflow-hidden z-10"
+                        >
+                          <img 
+                            src={avatarPreview || signedAvatarUrl || ""} 
+                            alt="Preview" 
+                            className="w-full h-full object-cover rounded-full"
+                          />
+                          {!(avatarPreview || signedAvatarUrl) && (
+                            <div className="w-full h-full flex items-center justify-center bg-primary/20 text-foreground font-semibold text-xl rounded-full">
+                              {user?.username?.substring(0, 2).toUpperCase() || "U"}
+                            </div>
+                          )}
+                        </div>
+                        {selectedBorderId && avatarBorders && (() => {
+                          const border = (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId);
+                          return border ? (
+                            <InlineSvgBorder
+                              svgUrl={border.imageUrl}
+                              color={avatarBorderColor}
+                              className="absolute inset-0 pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+                              style={{ zIndex: 5 }}
+                            />
+                          ) : null;
+                        })()}
+                      </div>
+                    )}
                     <div>
                       <p className="text-sm font-medium">Preview</p>
                       <p className="text-xs text-muted-foreground">
-                        {selectedBorderId && avatarBorders 
-                          ? (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId)?.name || "Selected"
-                          : "No border selected"}
+                        {user?.activeProfilePicType === 'nft'
+                          ? 'NFT Profile Picture'
+                          : selectedBorderId && avatarBorders 
+                            ? (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId)?.name || "Selected"
+                            : "No border selected"}
                       </p>
                     </div>
                   </div>
