@@ -66,27 +66,52 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
   const query = currentQuery;
 
   const { data: clipResults, isLoading: isLoadingClips } = useQuery<ClipWithUser[]>({
-    queryKey: [`/api/search/clips?q=${encodeURIComponent(query)}`],
+    queryKey: ['/api/search/clips', query],
+    queryFn: async () => {
+      const res = await fetch(`/api/search/clips?q=${encodeURIComponent(query)}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to search clips');
+      return res.json();
+    },
     enabled: !!query && query.trim().length > 0,
   });
 
   const { data: reelResults, isLoading: isLoadingReels } = useQuery<ClipWithUser[]>({
-    queryKey: [`/api/search/reels?q=${encodeURIComponent(query)}`],
+    queryKey: ['/api/search/reels', query],
+    queryFn: async () => {
+      const res = await fetch(`/api/search/reels?q=${encodeURIComponent(query)}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to search reels');
+      return res.json();
+    },
     enabled: !!query && query.trim().length > 0,
   });
 
   const { data: screenshotResults, isLoading: isLoadingScreenshots } = useQuery<Screenshot[]>({
-    queryKey: [`/api/search/screenshots?q=${encodeURIComponent(query)}`],
+    queryKey: ['/api/search/screenshots', query],
+    queryFn: async () => {
+      const res = await fetch(`/api/search/screenshots?q=${encodeURIComponent(query)}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to search screenshots');
+      return res.json();
+    },
     enabled: !!query && query.trim().length > 0,
   });
 
   const { data: userResults, isLoading: isLoadingUsers } = useQuery<User[]>({
-    queryKey: [`/api/search/users?q=${encodeURIComponent(query)}`],
+    queryKey: ['/api/search/users', query],
+    queryFn: async () => {
+      const res = await fetch(`/api/search/users?q=${encodeURIComponent(query)}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to search users');
+      return res.json();
+    },
     enabled: !!query && query.trim().length > 0,
   });
 
   const { data: gameResults, isLoading: isLoadingGames } = useQuery<Game[]>({
-    queryKey: [`/api/search/games?q=${encodeURIComponent(query)}`],
+    queryKey: ['/api/search/games', query],
+    queryFn: async () => {
+      const res = await fetch(`/api/search/games?q=${encodeURIComponent(query)}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to search games');
+      return res.json();
+    },
     enabled: !!query && query.trim().length > 0,
   });
 
