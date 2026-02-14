@@ -251,14 +251,6 @@ const ProfilePage = () => {
   const [profileSectionTab, setProfileSectionTab] = useState<'stats' | 'collection'>('stats');
   const [selectedProfileNft, setSelectedProfileNft] = useState<OwnedNft | null>(null);
 
-  const profileNftQueryKey = isOwnProfile ? "/api/nfts/owned" : `/api/nfts/user/${profile?.id}`;
-  const { data: profileNftData, isLoading: profileNftsLoading, refetch: refetchProfileNfts } = useQuery<OwnedNftsData>({
-    queryKey: [profileNftQueryKey],
-    queryFn: getQueryFn({ on401: isOwnProfile ? "throw" : "returnNull" }),
-    enabled: isOwnProfile ? !!currentUser : !!profile?.id,
-    staleTime: 60_000,
-  });
-
   // Screenshot action handlers
   const handleScreenshotLike = () => {
     if (!currentUser) {
@@ -379,6 +371,14 @@ const ProfilePage = () => {
     queryKey: [`/api/user/${profile?.id}/verification-badge`],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!profile?.id,
+  });
+
+  const profileNftQueryKey = isOwnProfile ? "/api/nfts/owned" : `/api/nfts/user/${profile?.id}`;
+  const { data: profileNftData, isLoading: profileNftsLoading, refetch: refetchProfileNfts } = useQuery<OwnedNftsData>({
+    queryKey: [profileNftQueryKey],
+    queryFn: getQueryFn({ on401: isOwnProfile ? "throw" : "returnNull" }),
+    enabled: isOwnProfile ? !!currentUser : !!profile?.id,
+    staleTime: 60_000,
   });
 
   // Follow state management with localStorage persistence for demo users
