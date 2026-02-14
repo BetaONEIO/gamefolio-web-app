@@ -15,6 +15,7 @@ import { useLocation, Link } from "wouter";
 import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
 import { LatestReelsCarousel } from "@/components/clips/LatestReelsCarousel";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
+import { ProUpgradeDialog } from "@/components/ProUpgradeDialog";
 
 interface TrendingContentCarouselProps {
   clips: ClipWithUser[] | undefined;
