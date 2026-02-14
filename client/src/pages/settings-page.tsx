@@ -1325,11 +1325,13 @@ export default function SettingsPage() {
                         <div className="flex flex-col items-center space-y-3 shrink-0">
                           {hasPreview ? (
                             <div
-                              className={`w-52 h-52 rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
-                                user?.activeProfilePicType === 'nft'
-                                  ? 'border-green-500/40 shadow-[0_0_20px_rgba(74,222,128,0.15)] hover:shadow-[0_0_25px_rgba(74,222,128,0.25)]'
-                                  : 'border-slate-600 opacity-60 hover:opacity-80'
+                              className={`w-52 h-52 rounded-xl overflow-hidden border-4 cursor-pointer transition-all ${
+                                user?.activeProfilePicType !== 'nft' ? 'opacity-60 hover:opacity-80' : ''
                               }`}
+                              style={{
+                                borderColor: avatarBorderColor,
+                                boxShadow: user?.activeProfilePicType === 'nft' ? `0 0 20px ${avatarBorderColor}40` : 'none'
+                              }}
                               onClick={(e) => {
                                 if (user?.activeProfilePicType === 'nft') {
                                   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
