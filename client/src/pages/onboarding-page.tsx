@@ -90,7 +90,7 @@ export default function OnboardingPage() {
         ></div>
         
         {/* Content overlay */}
-        <div className="relative z-10 w-full max-w-lg">
+        <div className="relative z-10 w-full max-w-lg md:max-w-5xl">
           <OnboardingFlow
             userId={user.id}
             username={user.username}
