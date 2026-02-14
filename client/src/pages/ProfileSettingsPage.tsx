@@ -71,7 +71,7 @@ const ProfileSettingsPage: React.FC = () => {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
-  const [profilePicTab, setProfilePicTab] = useState<'upload' | 'nft'>('upload');
+  const [profilePicTab, setProfilePicTab] = useState<'upload' | 'nft'>(user?.activeProfilePicType === 'nft' ? 'nft' : 'upload');
   const [showNftSelector, setShowNftSelector] = useState(false);
   
   // Get signed URL for avatar (handles private Supabase bucket)
@@ -393,6 +393,7 @@ const ProfileSettingsPage: React.FC = () => {
                       >
                         <ImageIcon className="h-4 w-4" />
                         Profile Picture
+                        {user?.activeProfilePicType !== 'nft' && <Check className="h-3 w-3 text-green-400" />}
                       </button>
                       <button
                         type="button"
@@ -405,6 +406,7 @@ const ProfileSettingsPage: React.FC = () => {
                       >
                         <Hexagon className="h-4 w-4" />
                         NFT
+                        {user?.activeProfilePicType === 'nft' && <Check className="h-3 w-3 text-green-400" />}
                       </button>
                     </div>
 
@@ -471,6 +473,17 @@ const ProfileSettingsPage: React.FC = () => {
                             >
                               Upload Custom
                             </Button>
+                            {user?.activeProfilePicType === 'nft' && user?.avatarUrl && (
+                              <Button
+                                variant="outline"
+                                type="button"
+                                onClick={() => setNftProfileMutation.mutate({ tokenId: null })}
+                                disabled={setNftProfileMutation.isPending}
+                                className="text-green-400 border-green-500/30 hover:bg-green-500/10"
+                              >
+                                {setNftProfileMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Use as Active'}
+                              </Button>
+                            )}
                             <input
                               id="avatar-upload-input"
                               type="file"
@@ -508,32 +521,43 @@ const ProfileSettingsPage: React.FC = () => {
 
                     {profilePicTab === 'nft' && (
                       <div className="space-y-4">
-                        {(user as any)?.nftProfileTokenId ? (
-                          <div className="flex items-center gap-4 p-4 rounded-lg border border-green-500/30 bg-green-500/5">
-                            {(user as any)?.nftProfileImageUrl && (
+                        {user?.nftProfileTokenId ? (
+                          <div className={`flex items-center gap-4 p-4 rounded-lg border ${user?.activeProfilePicType === 'nft' ? 'border-green-500/30 bg-green-500/5' : 'border-border bg-muted/30'}`}>
+                            {user?.nftProfileImageUrl && (
                               <img
-                                src={(user as any).nftProfileImageUrl}
+                                src={user.nftProfileImageUrl}
                                 alt="Current NFT"
                                 className="w-16 h-16 rounded-lg object-cover border-2 border-green-500/40"
                               />
                             )}
                             <div className="flex-1">
-                              <p className="text-sm font-medium text-green-400">NFT Profile Picture Active</p>
-                              <p className="text-xs text-muted-foreground">Token #{(user as any).nftProfileTokenId}</p>
+                              {user?.activeProfilePicType === 'nft' ? (
+                                <>
+                                  <p className="text-sm font-medium text-green-400 flex items-center gap-1"><Check className="h-3.5 w-3.5" /> Active</p>
+                                  <p className="text-xs text-muted-foreground">Token #{user.nftProfileTokenId}</p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="text-sm font-medium text-muted-foreground">NFT Saved</p>
+                                  <p className="text-xs text-muted-foreground">Token #{user.nftProfileTokenId}</p>
+                                </>
+                              )}
                             </div>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="text-red-400 border-red-500/30 hover:bg-red-500/10"
-                              onClick={() => setNftProfileMutation.mutate({ tokenId: null })}
-                              disabled={setNftProfileMutation.isPending}
-                            >
-                              {setNftProfileMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Remove'}
-                            </Button>
+                            {user?.activeProfilePicType !== 'nft' && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="text-green-400 border-green-500/30 hover:bg-green-500/10"
+                                onClick={() => setNftProfileMutation.mutate({ tokenId: user.nftProfileTokenId!, imageUrl: user.nftProfileImageUrl || '' })}
+                                disabled={setNftProfileMutation.isPending}
+                              >
+                                {setNftProfileMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Use as Active'}
+                              </Button>
+                            )}
                           </div>
                         ) : (
-                          <p className="text-sm text-muted-foreground">No NFT profile picture set. Select one from your collection below.</p>
+                          <p className="text-sm text-muted-foreground">No NFT selected yet. Choose one from your collection below.</p>
                         )}
                         <Button
                           type="button"
@@ -542,7 +566,7 @@ const ProfileSettingsPage: React.FC = () => {
                           className="border-green-500/30 text-green-400 hover:bg-green-500/10"
                         >
                           <Hexagon className="h-4 w-4 mr-2" />
-                          Select NFT to use as Profile Picture
+                          {user?.nftProfileTokenId ? 'Change NFT' : 'Select NFT to use as Profile Picture'}
                         </Button>
                       </div>
                     )}

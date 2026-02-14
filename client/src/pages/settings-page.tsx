@@ -373,7 +373,7 @@ export default function SettingsPage() {
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [profilePicTab, setProfilePicTab] = useState<'upload' | 'nft'>(
-    (user as any)?.nftProfileTokenId ? 'nft' : 'upload'
+    user?.activeProfilePicType === 'nft' ? 'nft' : 'upload'
   );
   const [showNftSelector, setShowNftSelector] = useState(false);
   const [showNftPopup, setShowNftPopup] = useState(false);
@@ -649,13 +649,14 @@ export default function SettingsPage() {
         if (variables.tokenId === null) {
           return {
             ...oldData,
-            nftProfileTokenId: null,
+            activeProfilePicType: 'upload',
             nftProfileImageUrl: null,
             avatarUrl: data.restoredAvatarUrl || oldData.avatarUrl,
           };
         } else {
           return {
             ...oldData,
+            activeProfilePicType: 'nft',
             nftProfileTokenId: variables.tokenId,
             nftProfileImageUrl: variables.imageUrl || null,
           };
@@ -864,9 +865,9 @@ export default function SettingsPage() {
         updatedData.avatarUrl = selectedPreviousAvatar;
       }
 
-      // If a new regular avatar is being set, clear the NFT profile picture (either/or)
+      // If a new regular avatar is being set, switch to upload mode (either/or)
       if (newAvatarUrl) {
-        updatedData.nftProfileTokenId = null;
+        updatedData.activeProfilePicType = 'upload';
         updatedData.nftProfileImageUrl = null;
         setNftPreview(null);
       }
@@ -1030,7 +1031,7 @@ export default function SettingsPage() {
 
                   <div className="flex gap-0 border-b border-border mb-2">
                     {(() => {
-                      const isNftActive = !!(user as any)?.nftProfileTokenId;
+                      const isNftActive = user?.activeProfilePicType === 'nft';
                       const isUploadedActive = !isNftActive && !!user?.avatarUrl;
                       return (
                         <>
@@ -1074,7 +1075,7 @@ export default function SettingsPage() {
                       <div className="flex flex-col md:flex-row md:items-start space-y-4 md:space-y-0 md:space-x-6">
                         <div className="flex flex-col items-center space-y-3">
                           <div 
-                            className={`relative h-48 w-48 flex items-center justify-center ${(user as any)?.nftProfileTokenId ? 'opacity-60' : (!user?.avatarUrl && deactivatedAvatarUrl) ? 'opacity-40 grayscale' : ''} transition-all`}
+                            className={`relative h-48 w-48 flex items-center justify-center ${user?.activeProfilePicType === 'nft' ? 'opacity-60' : (!user?.avatarUrl && deactivatedAvatarUrl) ? 'opacity-40 grayscale' : ''} transition-all`}
                           >
                             <div 
                               className="h-32 w-32 rounded-full overflow-hidden z-10"
@@ -1108,8 +1109,8 @@ export default function SettingsPage() {
                             <span className="text-sm font-medium">
                               {avatarFile ? 'New Preview' : selectedPreviousAvatar ? 'Selected' : 'Current'}
                             </span>
-                            {!avatarFile && !selectedPreviousAvatar && !!(user as any)?.avatarUrl && (() => {
-                              const isUploadActive = !(user as any)?.nftProfileTokenId;
+                            {!avatarFile && !selectedPreviousAvatar && !!user?.avatarUrl && (() => {
+                              const isUploadActive = user?.activeProfilePicType !== 'nft';
                               if (isUploadActive) {
                                 return (
                                   <button
@@ -1219,7 +1220,7 @@ export default function SettingsPage() {
                           <div className="flex flex-wrap gap-3">
                             {previousAvatarsData.avatars.map((prev) => {
                               const isSelected = selectedPreviousAvatar === prev.avatarUrl;
-                              const isCurrent = user?.avatarUrl === prev.avatarUrl && !(user as any)?.nftProfileTokenId;
+                              const isCurrent = user?.avatarUrl === prev.avatarUrl && user?.activeProfilePicType !== 'nft';
                               return (
                                 <div key={prev.id} className="flex flex-col items-center gap-1.5">
                                   <button
@@ -1292,8 +1293,8 @@ export default function SettingsPage() {
                   )}
 
                   {profilePicTab === 'nft' && (() => {
-                    const previewImage = nftPreview?.image || (user as any)?.nftProfileImageUrl;
-                    const previewTokenId = nftPreview?.tokenId || (user as any)?.nftProfileTokenId;
+                    const previewImage = nftPreview?.image || user?.nftProfileImageUrl;
+                    const previewTokenId = nftPreview?.tokenId || user?.nftProfileTokenId;
                     const previewName = nftPreview?.name || (previewTokenId ? `Token #${previewTokenId}` : null);
                     const hasPreview = !!previewImage;
 
@@ -1303,12 +1304,12 @@ export default function SettingsPage() {
                           {hasPreview ? (
                             <div
                               className={`w-52 h-52 rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
-                                (user as any)?.nftProfileTokenId
+                                user?.activeProfilePicType === 'nft'
                                   ? 'border-green-500/40 shadow-[0_0_20px_rgba(74,222,128,0.15)] hover:shadow-[0_0_25px_rgba(74,222,128,0.25)]'
                                   : 'border-slate-600 opacity-60 hover:opacity-80'
                               }`}
                               onClick={(e) => {
-                                if ((user as any)?.nftProfileTokenId) {
+                                if (user?.activeProfilePicType === 'nft') {
                                   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                                   setNftAnchorRect(rect);
                                   setShowNftPopup(true);
@@ -1338,7 +1339,7 @@ export default function SettingsPage() {
                             </span>
                           </div>
                           {(() => {
-                            const isNftActive = !!(user as any)?.nftProfileTokenId;
+                            const isNftActive = user?.activeProfilePicType === 'nft';
                             if (isNftActive) {
                               return (
                                 <button
@@ -1383,7 +1384,7 @@ export default function SettingsPage() {
                         </div>
 
                         <div className="flex-1 space-y-3">
-                          {!(user as any)?.nftProfileTokenId && (
+                          {user?.activeProfilePicType !== 'nft' && (
                             <p className="text-sm text-muted-foreground">Select an NFT from your collection to use as your profile picture. Your NFT will be displayed as a square image with rounded corners.</p>
                           )}
                           <Button
@@ -1393,7 +1394,7 @@ export default function SettingsPage() {
                             className="border-green-500/30 text-green-400 hover:bg-green-500/10"
                           >
                             <Hexagon className="h-4 w-4 mr-2" />
-                            {(user as any)?.nftProfileTokenId ? 'Change NFT' : 'Select NFT to use as Profile Picture'}
+                            {user?.activeProfilePicType === 'nft' ? 'Change NFT' : 'Select NFT to use as Profile Picture'}
                           </Button>
                           <div className="text-xs text-muted-foreground space-y-1">
                             <div>• NFT profile pictures appear as square with rounded corners</div>
@@ -2250,11 +2251,11 @@ export default function SettingsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {showNftPopup && user && (user as any)?.nftProfileTokenId && (
+      {showNftPopup && user && user?.activeProfilePicType === 'nft' && user?.nftProfileTokenId && (
         <NftProfilePopup
           userId={user.id}
-          tokenId={(user as any).nftProfileTokenId}
-          imageUrl={(user as any)?.nftProfileImageUrl}
+          tokenId={user.nftProfileTokenId}
+          imageUrl={user?.nftProfileImageUrl}
           onClose={() => { setShowNftPopup(false); setNftAnchorRect(null); }}
           anchorRect={nftAnchorRect}
           username={user.username}
@@ -2292,7 +2293,7 @@ export default function SettingsPage() {
                   {ownedNftsData.nfts
                     .filter((nft: any) => !nft.sold)
                     .map((nft: any) => {
-                      const isSelected = (user as any)?.nftProfileTokenId === nft.tokenId;
+                      const isSelected = user?.activeProfilePicType === 'nft' && user?.nftProfileTokenId === nft.tokenId;
                       const attrs = nft.attributes || [];
                       const rarityAttr = attrs.find((a: any) => a.trait_type?.toLowerCase() === "rarity");
                       let rarityLabel = "common";
