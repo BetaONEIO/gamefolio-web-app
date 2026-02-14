@@ -678,18 +678,24 @@ export default function SettingsPage() {
     onSuccess: (data, variables) => {
       if (variables.tokenId === null && data.restoredAvatarUrl) {
         setProfileData(prev => ({ ...prev, avatarUrl: data.restoredAvatarUrl }));
+        const restoreUpdater = (oldData: any) => {
+          if (!oldData) return oldData;
+          return { ...oldData, avatarUrl: data.restoredAvatarUrl, activeProfilePicType: 'upload' };
+        };
+        queryClient.setQueryData(['/api/user'], restoreUpdater);
+        if (user?.username) {
+          queryClient.setQueryData([`/api/users/${user.username}`], restoreUpdater);
+        }
       }
       setShowNftSelector(false);
       toast({
         title: variables.tokenId === null ? 'NFT deactivated' : 'Profile picture updated',
         description: variables.tokenId === null ? 'Your uploaded profile picture is now active.' : 'Your NFT profile picture has been set.',
       });
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-        if (user?.username) {
-          queryClient.invalidateQueries({ queryKey: [`/api/users/${user.username}`] });
-        }
-      }, 2000);
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      if (user?.username) {
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${user.username}`] });
+      }
     },
     onError: (err: any, _variables, context) => {
       if (context?.previousUser) {
