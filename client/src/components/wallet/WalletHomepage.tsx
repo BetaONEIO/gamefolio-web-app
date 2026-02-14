@@ -174,19 +174,12 @@ export default function WalletHomepage({
           {/* Left Column - NFTs Card (order-3 on mobile to appear above wallet status) */}
           <div className="lg:col-span-1 flex flex-col gap-6 order-3 lg:order-1">
             <div 
-              className="rounded-2xl p-5 flex flex-col gap-4 h-full relative overflow-hidden"
+              className="rounded-2xl p-5 flex flex-col gap-4 h-full"
               style={{ 
                 background: '#0f172a',
                 border: '1px solid rgba(30, 41, 59, 0.5)'
               }}
             >
-              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center backdrop-blur-sm rounded-2xl" style={{ background: 'rgba(15, 23, 42, 0.7)' }}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 15V17M6 21H18C19.1046 21 20 20.1046 20 19V13C20 11.8954 19.1046 11 18 11H6C4.89543 11 4 11.8954 4 13V19C4 20.1046 4.89543 21 6 21ZM16 11V7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7V11H16Z" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <span className="mt-2 text-sm font-semibold" style={{ color: '#f8fafc' }}>Coming Soon</span>
-                <span className="text-xs mt-1" style={{ color: '#94a3b8' }}>NFT marketplace is under development</span>
-              </div>
               <div className="flex items-center justify-between">
                 <span className="text-lg font-bold" style={{ color: '#f8fafc' }}>NFTs</span>
                 <button 
