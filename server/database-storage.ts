@@ -1272,14 +1272,7 @@ export class DatabaseStorage implements IStorage {
   // Search operations
   async searchUsers(query: string): Promise<User[]> {
     const searchResults = await db
-      .select({
-        id: users.id,
-        username: users.username,
-        displayName: users.displayName,
-        avatarUrl: users.avatarUrl,
-        emailVerified: users.emailVerified,
-        role: users.role,
-      })
+      .select()
       .from(users)
       .where(
         or(

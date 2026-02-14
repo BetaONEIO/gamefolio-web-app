@@ -10,7 +10,6 @@ import { useQuery } from "@tanstack/react-query";
 import { User, Game } from "@shared/schema";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
 
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import {
   DropdownMenu,
@@ -283,36 +282,27 @@ const Header = () => {
                   <>
                     {((gameResults && gameResults.length > 0) || searchQuery.startsWith('#')) && <div className="border-t border-border my-2"></div>}
                     <div className="text-xs text-muted-foreground px-3 py-2 font-medium">Users</div>
-                    {userResults.slice(0, 3).map((user) => (
+                    {userResults.slice(0, 3).map((searchUser) => (
                       <button
-                        key={user.id}
-                        onClick={() => handleUserSelect(user.username)}
+                        key={searchUser.id}
+                        onClick={() => handleUserSelect(searchUser.username)}
                         className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left"
                       >
-                        {(user as any).nftProfileTokenId && (user as any).nftProfileImageUrl ? (
-                          <div className="w-8 h-8 flex-shrink-0 rounded-lg overflow-hidden border border-[#4ade80]/40">
-                            <img src={(user as any).nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" />
-                          </div>
-                        ) : (
-                          <Avatar className="w-8 h-8 flex-shrink-0">
-                            {user.avatarUrl ? (
-                              <AvatarImage src={user.avatarUrl} alt={user.displayName} className="object-cover" />
-                            ) : null}
-                            <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
-                              {getInitials(user.displayName)}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
+                        <CustomAvatar 
+                          user={searchUser}
+                          size="sm"
+                          borderIntensity="subtle"
+                        />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1">
-                            <span className="font-medium text-foreground">{user.displayName}</span>
+                            <span className="font-medium text-foreground">{searchUser.displayName}</span>
                             <ModeratorBadge 
-                              isModerator={user.role === "moderator" || user.role === "admin"} 
+                              isModerator={searchUser.role === "moderator" || searchUser.role === "admin"} 
                               size="sm" 
                             />
-                            <ProBadge isPro={user.isPro === true} size="sm" />
+                            <ProBadge isPro={searchUser.isPro === true} size="sm" />
                           </div>
-                          <div className="text-sm text-muted-foreground">@{user.username}</div>
+                          <div className="text-sm text-muted-foreground">@{searchUser.username}</div>
                         </div>
                       </button>
                     ))}
@@ -614,36 +604,27 @@ const Header = () => {
                       <>
                         {((gameResults && gameResults.length > 0) || searchQuery.startsWith('#')) && <div className="border-t border-border my-2"></div>}
                         <div className="text-xs text-muted-foreground px-3 py-2 font-medium">Users</div>
-                        {userResults.slice(0, 3).map((user) => (
+                        {userResults.slice(0, 3).map((searchUser) => (
                           <button
-                            key={user.id}
-                            onClick={() => handleUserSelect(user.username)}
+                            key={searchUser.id}
+                            onClick={() => handleUserSelect(searchUser.username)}
                             className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left touch-manipulation active:bg-secondary/50"
                           >
-                            {(user as any).nftProfileTokenId && (user as any).nftProfileImageUrl ? (
-                              <div className="w-8 h-8 flex-shrink-0 rounded-lg overflow-hidden border border-[#4ade80]/40">
-                                <img src={(user as any).nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" />
-                              </div>
-                            ) : (
-                              <Avatar className="w-8 h-8 flex-shrink-0">
-                                {user.avatarUrl ? (
-                                  <AvatarImage src={user.avatarUrl} alt={user.displayName} className="object-cover" />
-                                ) : null}
-                                <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
-                                  {getInitials(user.displayName)}
-                                </AvatarFallback>
-                              </Avatar>
-                            )}
+                            <CustomAvatar 
+                              user={searchUser}
+                              size="sm"
+                              borderIntensity="subtle"
+                            />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1">
-                                <span className="font-medium text-foreground">{user.displayName}</span>
+                                <span className="font-medium text-foreground">{searchUser.displayName}</span>
                                 <ModeratorBadge 
-                                  isModerator={user.role === "moderator" || user.role === "admin"} 
+                                  isModerator={searchUser.role === "moderator" || searchUser.role === "admin"} 
                                   size="sm" 
                                 />
-                                <ProBadge isPro={user.isPro === true} size="sm" />
+                                <ProBadge isPro={searchUser.isPro === true} size="sm" />
                               </div>
-                              <div className="text-sm text-muted-foreground">@{user.username}</div>
+                              <div className="text-sm text-muted-foreground">@{searchUser.username}</div>
                             </div>
                           </button>
                         ))}
