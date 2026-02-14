@@ -1619,6 +1619,7 @@ const ProfilePage = () => {
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
                 badgeName={verificationBadgeData?.verificationBadge?.name}
                 size="lg"
+                isModerator={profile.role === "moderator" || profile.role === "admin"}
               />
               <ModeratorBadge 
                 isModerator={profile.role === "moderator" || profile.role === "admin"} 
@@ -1912,6 +1913,7 @@ const ProfilePage = () => {
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
                 badgeName={verificationBadgeData?.verificationBadge?.name}
                 size="xl"
+                isModerator={profile.role === "moderator" || profile.role === "admin"}
               />
               <ModeratorBadge 
                 isModerator={profile.role === "moderator" || profile.role === "admin"} 

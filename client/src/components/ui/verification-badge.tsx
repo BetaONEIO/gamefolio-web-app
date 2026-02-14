@@ -6,10 +6,11 @@ interface VerificationBadgeProps {
   badgeImageUrl?: string | null;
   badgeName?: string | null;
   size?: "sm" | "md" | "lg" | "xl";
+  isModerator?: boolean;
 }
 
-export function VerificationBadge({ isVerified, badgeImageUrl, badgeName, size = "md" }: VerificationBadgeProps) {
-  if (!isVerified) return null;
+export function VerificationBadge({ isVerified, badgeImageUrl, badgeName, size = "md", isModerator = false }: VerificationBadgeProps) {
+  if (!isVerified || isModerator) return null;
 
   const sizeClasses = {
     sm: "w-4 h-4",

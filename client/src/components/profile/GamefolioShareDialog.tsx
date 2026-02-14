@@ -276,8 +276,8 @@ export function GamefolioShareDialog({
                     <span className="text-[#f8fafc] text-lg font-bold leading-7 truncate">
                       {userProfile?.displayName || username}
                     </span>
-                    <VerificationBadge isVerified={!!userProfile?.emailVerified} size="sm" />
-                    <ProBadge selectedVerificationBadgeId={userProfile?.selectedVerificationBadgeId} size="sm" />
+                    <VerificationBadge isVerified={!!userProfile?.emailVerified} size="sm" isModerator={(userProfile as any)?.role === "moderator" || (userProfile as any)?.role === "admin"} />
+                    <ProBadge selectedVerificationBadgeId={userProfile?.selectedVerificationBadgeId} size="sm" isModerator={(userProfile as any)?.role === "moderator" || (userProfile as any)?.role === "admin"} />
                   </div>
                   <span className="text-[#94a3b8] text-sm leading-5">@{username}</span>
 

@@ -5,10 +5,11 @@ interface ProBadgeProps {
   isPro?: boolean;
   selectedVerificationBadgeId?: number | null;
   size?: "sm" | "md" | "lg" | "xl";
+  isModerator?: boolean;
 }
 
-export function ProBadge({ selectedVerificationBadgeId, size = "md" }: ProBadgeProps) {
-  if (!selectedVerificationBadgeId) return null;
+export function ProBadge({ selectedVerificationBadgeId, size = "md", isModerator = false }: ProBadgeProps) {
+  if (!selectedVerificationBadgeId || isModerator) return null;
 
   const sizeClasses = {
     sm: "w-4 h-4",
