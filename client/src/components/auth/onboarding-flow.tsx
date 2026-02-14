@@ -146,10 +146,10 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser }: OnboardingStepIn
     <div className="mb-8">
       <Progress value={getProgressValue()} className="h-2 mb-4" />
       <div className="flex justify-between">
-        {steps.map((step) => (
+        {steps.map((step, index) => (
           <div key={step.id} className="flex flex-col items-center">
             <div
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium ${
+              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors ${
                 currentStep > step.id
                   ? "bg-primary/20 text-primary"
                   : currentStep === step.id
@@ -157,7 +157,7 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser }: OnboardingStepIn
                   : "bg-gray-700 text-gray-400"
               }`}
             >
-              {currentStep > step.id ? <Check className="h-4 w-4" /> : step.id + 1}
+              {currentStep > step.id ? <Check className="h-4 w-4" /> : index + 1}
             </div>
             <span
               className={`mt-1 text-xs ${
@@ -838,8 +838,8 @@ export default function OnboardingFlow({
       case OnboardingStep.Games:
         return (
           <>
-            <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-2xl font-bold text-white">Select Your Favorite Games</h2>
+            <div className="flex items-center gap-2 mb-2">
+              <h2 className="text-2xl font-bold text-white">Choose Your Favorite Games</h2>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Info className="h-5 w-5 text-gray-400 cursor-help" />
@@ -849,31 +849,12 @@ export default function OnboardingFlow({
                 </TooltipContent>
               </Tooltip>
             </div>
-            <p className="text-gray-300 mb-6">
-              Choose up to 5 games you love to play or watch
-            </p>
-            
+
             <div className="mb-6">
-              {/* Using the Twitch Game Search component */}
-              <h3 className="text-lg font-semibold text-white mb-2">Search for games</h3>
-              
-              <div className="mb-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm font-medium text-white">Search for games</span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Type to search for any game. We pull from a large game database.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                <TwitchGameSearch
-                  onSelectGame={handleTwitchGameSelect}
-                  placeholder="Search for games..."
-                />
-              </div>
+              <TwitchGameSearch
+                onSelectGame={handleTwitchGameSelect}
+                placeholder="Search for games..."
+              />
               
               {/* Top trending games section */}
               <div className="mt-6 mb-6">
