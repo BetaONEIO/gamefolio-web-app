@@ -50,26 +50,28 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
     const popup = popupRef.current;
     const popupWidth = popup.offsetWidth || 340;
     const popupHeight = popup.offsetHeight || 500;
-    const gap = 12;
+    const gap = 8;
     const viewportW = window.innerWidth;
     const viewportH = window.innerHeight;
+    const padding = 12;
 
-    let left = anchorRect.right + gap;
-    let top = anchorRect.top + (anchorRect.height / 2) - (popupHeight / 2);
+    const anchorCenterX = anchorRect.left + anchorRect.width / 2;
+    let left = anchorCenterX - popupWidth / 2;
+    let top = anchorRect.bottom + gap;
 
-    if (left + popupWidth > viewportW - 16) {
-      left = anchorRect.left - popupWidth - gap;
+    if (top + popupHeight > viewportH - padding) {
+      top = anchorRect.top - popupHeight - gap;
     }
 
-    if (left < 16) {
-      left = Math.max(16, (viewportW - popupWidth) / 2);
+    if (top < padding) {
+      top = padding;
     }
 
-    if (top + popupHeight > viewportH - 16) {
-      top = viewportH - popupHeight - 16;
+    if (left + popupWidth > viewportW - padding) {
+      left = viewportW - popupWidth - padding;
     }
-    if (top < 16) {
-      top = 16;
+    if (left < padding) {
+      left = padding;
     }
 
     setPosition({ top, left });
