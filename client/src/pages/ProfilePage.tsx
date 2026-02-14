@@ -70,7 +70,6 @@ import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import { ModeratorIcon } from "@/components/ui/moderator-icon";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
-import { ProBadge } from "@/components/ui/pro-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import { ScreenshotShareDialog } from "@/components/screenshot/ScreenshotShareDialog";
@@ -1624,7 +1623,6 @@ const ProfilePage = () => {
                 isModerator={profile.role === "moderator" || profile.role === "admin"} 
                 size="lg" 
               />
-              <ProBadge isPro={profile.isPro === true} size="lg" />
             </div>
             <span className="text-sm text-white/60 font-normal">@{profile.username}</span>
             {/* User type badges on their own line */}
@@ -1918,7 +1916,6 @@ const ProfilePage = () => {
                 isModerator={profile.role === "moderator" || profile.role === "admin"} 
                 size="xl" 
               />
-              <ProBadge isPro={profile.isPro === true} size="xl" />
               {profile.userType && profile.showUserType !== false && (() => {
                 const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
                 const displayTypes = userTypes.slice(0, 2);
@@ -3185,7 +3182,6 @@ const ProfilePage = () => {
                           isModerator={profile?.role === "moderator" || profile?.role === "admin"} 
                           size="sm" 
                         />
-                        <ProBadge isPro={profile?.isPro === true} size="sm" />
                       </div>
                     </Link>
                   </div>

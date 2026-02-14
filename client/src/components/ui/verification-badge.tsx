@@ -18,7 +18,7 @@ export function VerificationBadge({ isVerified, badgeImageUrl, badgeName, size =
     xl: "w-8 h-8"
   };
 
-  const tooltipText = badgeName || "Verified Gamefolio user";
+  const tooltipText = "Gamefolio Pro member";
   const imgSrc = badgeImageUrl || greenBadgeIcon;
 
   return (
