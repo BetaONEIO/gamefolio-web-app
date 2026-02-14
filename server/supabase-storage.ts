@@ -544,7 +544,8 @@ export class SupabaseStorage {
       // For GIFs, use download option to bypass imgproxy transformation which strips animation
       const options = isGif ? { download: false } : undefined;
 
-      const { data, error } = await this.supabase.storage
+      const client = this.supabaseAdmin || this.supabase;
+      const { data, error } = await client.storage
         .from(bucketName)
         .createSignedUrl(storagePath, expiresIn, options);
 
