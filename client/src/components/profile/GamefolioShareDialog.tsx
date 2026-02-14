@@ -60,6 +60,7 @@ interface GamefolioShareDialogProps {
     emailVerified?: boolean | null;
     role?: string | null;
     isPro?: boolean | null;
+    selectedVerificationBadgeId?: number | null;
     userType?: string | null;
     showUserType?: boolean | null;
     accentColor?: string | null;
