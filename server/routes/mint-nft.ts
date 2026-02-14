@@ -778,20 +778,10 @@ router.post('/api/nft/set-profile-picture', async (req: Request, res: Response) 
     }
 
     if (tokenId === null || tokenId === undefined) {
-      const [mostRecentAvatar] = await db.select()
-        .from(previousAvatars)
-        .where(eq(previousAvatars.userId, userId))
-        .orderBy(desc(previousAvatars.createdAt))
-        .limit(1);
-
-      const restoredAvatarUrl = currentUser.avatarUrl || mostRecentAvatar?.avatarUrl || null;
-
       await db.update(users).set({
-        nftProfileTokenId: null,
-        nftProfileImageUrl: null,
-        avatarUrl: restoredAvatarUrl,
+        activeProfilePicType: 'upload',
       }).where(eq(users.id, userId));
-      return res.json({ success: true, cleared: true, restoredAvatarUrl });
+      return res.json({ success: true, cleared: true, restoredAvatarUrl: currentUser.avatarUrl });
     }
 
     if (typeof tokenId !== 'number' || tokenId < 0) {
@@ -806,22 +796,10 @@ router.post('/api/nft/set-profile-picture', async (req: Request, res: Response) 
       return res.status(403).json({ error: 'You do not own this NFT or it has been sold' });
     }
 
-    if (currentUser.avatarUrl) {
-      const existingHistory = await db.select()
-        .from(previousAvatars)
-        .where(eq(previousAvatars.userId, userId));
-      const alreadySaved = existingHistory.some(pa => pa.avatarUrl === currentUser.avatarUrl);
-      if (!alreadySaved) {
-        await db.insert(previousAvatars).values({
-          userId,
-          avatarUrl: currentUser.avatarUrl,
-        });
-      }
-    }
-
     await db.update(users).set({
       nftProfileTokenId: tokenId,
       nftProfileImageUrl: imageUrl || null,
+      activeProfilePicType: 'nft',
     }).where(eq(users.id, userId));
 
     return res.json({ success: true, tokenId, imageUrl });

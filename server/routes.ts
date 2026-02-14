@@ -3072,11 +3072,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId
       );
 
-      // Update user's avatar in database and clear NFT profile picture (either/or choice)
       const updatedUser = await storage.updateUser(userId, {
         avatarUrl: avatarUrl,
-        nftProfileTokenId: null,
-        nftProfileImageUrl: null,
+        activeProfilePicType: 'upload',
       });
 
       if (!updatedUser) {
