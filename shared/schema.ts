@@ -77,6 +77,7 @@ export const users = pgTable("users", {
   // NFT Profile Picture
   nftProfileTokenId: integer("nft_profile_token_id"),
   nftProfileImageUrl: text("nft_profile_image_url"),
+  activeProfilePicType: text("active_profile_pic_type").default("upload"),
   // Welcome Pack
   welcomePackClaimed: boolean("welcome_pack_claimed").default(false).notNull(), // Whether the user has claimed their welcome pack
   // Two-Factor Authentication
