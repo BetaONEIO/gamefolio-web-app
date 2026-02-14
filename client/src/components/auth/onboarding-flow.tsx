@@ -505,10 +505,7 @@ export default function OnboardingFlow({
         throw new Error('Failed to upload avatar');
       }
       
-      const result = await response.json();
-      if (!avatarUrl || !avatarUrl.startsWith('blob:')) {
-        setAvatarUrl(result.avatarUrl);
-      }
+      await response.json();
       setAvatarFile(file);
       
       toast({
