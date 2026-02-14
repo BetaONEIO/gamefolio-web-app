@@ -671,29 +671,33 @@ export default function OnboardingFlow({
       case OnboardingStep.Welcome:
         return (
           <>
-            <div className="flex flex-col md:flex-row md:gap-10">
-              {/* Left side - Image card + title */}
-              <div className="hidden md:flex md:flex-col md:w-[42%] md:flex-shrink-0">
-                <div className="rounded-2xl overflow-hidden bg-gradient-to-b from-gray-800/40 to-gray-900/90 border border-gray-700/50 relative">
+            <div className="flex flex-col md:grid md:grid-cols-2 md:gap-8">
+              {/* Left side - Full-height image card with overlay text */}
+              <div className="hidden md:block">
+                <div className="rounded-2xl overflow-hidden border border-primary/30 relative h-full min-h-[420px] bg-gradient-to-b from-gray-800/40 to-gray-900/90">
                   <img 
                     src="/attached_assets/Gamefolio logo.png" 
                     alt="Gamefolio" 
-                    className="w-full h-auto object-cover"
+                    className="w-full h-full object-cover absolute inset-0"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-6">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 border border-primary/40 text-primary text-xs font-medium mb-3">
+                      <Gamepad2 className="h-3.5 w-3.5" />
+                      Gaming Portfolio
+                    </span>
+                    <h2 className="text-3xl font-bold text-white leading-tight">
+                      Welcome to <span className="text-primary">Gamefolio</span>
+                    </h2>
+                    <p className="text-gray-300 text-sm mt-1">
+                      Elevate your gaming identity with premium features
+                    </p>
+                  </div>
                 </div>
-                <div className="mt-4">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/15 border border-primary/30 text-primary text-xs font-medium">
-                    <Gamepad2 className="h-3.5 w-3.5" />
-                    Gaming Portfolio
-                  </span>
-                </div>
-                <h2 className="text-3xl font-bold text-white mt-3">
-                  Welcome to <span className="text-primary">Gamefolio</span>
-                </h2>
               </div>
 
               {/* Right side - Feature list + CTA */}
-              <div className="md:flex-1 flex flex-col justify-between">
+              <div className="flex flex-col justify-between">
                 {/* Mobile-only header */}
                 <div className="md:hidden mb-6">
                   <h2 className="text-2xl font-bold text-white mb-2">Welcome to <span className="text-primary">Gamefolio</span></h2>
