@@ -643,15 +643,15 @@ export default function SettingsPage() {
       const res = await apiRequest('POST', '/api/nft/set-profile-picture', { tokenId, imageUrl });
       return res.json();
     },
-    onSuccess: (data, variables) => {
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: ['/api/user'] });
+      const previousUser = queryClient.getQueryData(['/api/user']);
       const optimisticUpdate = (oldData: any) => {
         if (!oldData) return oldData;
         if (variables.tokenId === null) {
           return {
             ...oldData,
             activeProfilePicType: 'upload',
-            nftProfileImageUrl: null,
-            avatarUrl: data.restoredAvatarUrl || oldData.avatarUrl,
           };
         } else {
           return {
@@ -666,28 +666,33 @@ export default function SettingsPage() {
       if (user?.username) {
         queryClient.setQueryData([`/api/users/${user.username}`], optimisticUpdate);
       }
-
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/clips'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/comments'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/leaderboard'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/user/previous-avatars'] });
       if (variables.tokenId === null) {
         setProfilePicTab('upload');
+      } else {
+        setProfilePicTab('nft');
+      }
+      return { previousUser };
+    },
+    onSuccess: (data, variables) => {
+      if (variables.tokenId === null) {
         if (data.restoredAvatarUrl) {
           setProfileData(prev => ({ ...prev, avatarUrl: data.restoredAvatarUrl }));
         }
         toast({ title: 'NFT deactivated', description: 'Your uploaded profile picture is now active.' });
       } else {
-        setProfilePicTab('nft');
         toast({ title: 'Profile picture updated', description: 'Your NFT profile picture has been set.' });
       }
       setShowNftSelector(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      if (user?.username) {
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${user.username}`] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['/api/user/previous-avatars'] });
     },
-    onError: (err: any) => {
+    onError: (err: any, _variables, context) => {
+      if (context?.previousUser) {
+        queryClient.setQueryData(['/api/user'], context.previousUser);
+      }
       toast({ title: 'Failed to set NFT', description: err.message || 'Something went wrong', variant: 'destructive' });
     },
   });

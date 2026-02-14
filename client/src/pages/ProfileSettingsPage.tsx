@@ -89,12 +89,49 @@ const ProfileSettingsPage: React.FC = () => {
       const res = await apiRequest('POST', '/api/nft/set-profile-picture', { tokenId, imageUrl });
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      toast({ title: 'Profile picture updated', description: 'Your NFT profile picture has been set.' });
-      setShowNftSelector(false);
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: ['/api/user'] });
+      const previousUser = queryClient.getQueryData(['/api/user']);
+      const optimisticUpdate = (oldData: any) => {
+        if (!oldData) return oldData;
+        if (variables.tokenId === null) {
+          return { ...oldData, activeProfilePicType: 'upload' };
+        } else {
+          return {
+            ...oldData,
+            activeProfilePicType: 'nft',
+            nftProfileTokenId: variables.tokenId,
+            nftProfileImageUrl: variables.imageUrl || null,
+          };
+        }
+      };
+      queryClient.setQueryData(['/api/user'], optimisticUpdate);
+      if (user?.username) {
+        queryClient.setQueryData([`/api/users/${user.username}`], optimisticUpdate);
+      }
+      if (variables.tokenId === null) {
+        setProfilePicTab('upload');
+      } else {
+        setProfilePicTab('nft');
+      }
+      return { previousUser };
     },
-    onError: (err: any) => {
+    onSuccess: (_data, variables) => {
+      if (variables.tokenId === null) {
+        toast({ title: 'NFT deactivated', description: 'Your uploaded profile picture is now active.' });
+      } else {
+        toast({ title: 'Profile picture updated', description: 'Your NFT profile picture has been set.' });
+      }
+      setShowNftSelector(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      if (user?.username) {
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${user.username}`] });
+      }
+    },
+    onError: (err: any, _variables, context) => {
+      if (context?.previousUser) {
+        queryClient.setQueryData(['/api/user'], context.previousUser);
+      }
       toast({ title: 'Failed to set NFT', description: err.message || 'Something went wrong', variant: 'destructive' });
     },
   });
