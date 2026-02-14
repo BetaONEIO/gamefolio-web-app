@@ -1723,7 +1723,7 @@ export default function SettingsPage() {
                               <NameTagImage
                                 imageUrl={tag.imageUrl}
                                 alt={tag.name}
-                                className="w-full h-6 object-contain"
+                                className="w-full h-14 object-contain"
                                 style={{
                                   borderRadius: '2px',
                                   boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.1)'
