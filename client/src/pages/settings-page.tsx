@@ -1461,12 +1461,13 @@ export default function SettingsPage() {
                         <div 
                           className="h-32 w-32 rounded-full overflow-hidden z-10"
                         >
-                          <img 
-                            src={avatarPreview || signedAvatarUrl || ""} 
-                            alt="Preview" 
-                            className="w-full h-full object-cover rounded-full"
-                          />
-                          {!(avatarPreview || signedAvatarUrl) && (
+                          {(avatarPreview || signedSelectedPrevAvatar || signedAvatarUrl || signedDeactivatedAvatarUrl) ? (
+                            <img 
+                              src={avatarPreview || signedSelectedPrevAvatar || signedAvatarUrl || signedDeactivatedAvatarUrl || ""} 
+                              alt="Preview" 
+                              className="w-full h-full object-cover rounded-full"
+                            />
+                          ) : (
                             <div className="w-full h-full flex items-center justify-center bg-primary/20 text-foreground font-semibold text-xl rounded-full">
                               {user?.username?.substring(0, 2).toUpperCase() || "U"}
                             </div>
