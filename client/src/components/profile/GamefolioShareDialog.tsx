@@ -191,13 +191,12 @@ export function GamefolioShareDialog({
         </DialogTrigger>
       )}
       <DialogContent 
-        className="p-0 w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh]"
-        style={{ background: `linear-gradient(180deg, ${themePrimary} 0%, ${themeBg} 60%, ${themeBg} 100%)`, borderColor: `${themeAccent}30` }}
+        className="p-0 border-[#1e293b] bg-[#0f172a] w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-5 py-4 sm:py-5" style={{ borderBottom: `1px solid ${themeAccent}20` }}>
+        <div className="flex items-center justify-between px-4 sm:px-5 py-4 sm:py-5 border-b border-[#1e293b]/50">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <Share2 className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" style={{ color: themeAccent }} />
+            <Share2 className="w-5 h-5 sm:w-6 sm:h-6 text-[#4ADE80] shrink-0" />
             <span className="text-[#f8fafc] text-base sm:text-xl font-bold truncate">Share Gamefolio Profile</span>
           </div>
           <button
@@ -217,7 +216,7 @@ export function GamefolioShareDialog({
           ) : shareData ? (
             <>
               {/* Profile Preview Card */}
-              <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: themeCard, border: `1px solid ${themeAccent}20` }}>
+              <div className="rounded-2xl overflow-hidden" style={{ background: `linear-gradient(180deg, ${themePrimary} 0%, ${themeBg} 60%, ${themeBg} 100%)`, border: `1px solid ${themeAccent}20` }}>
                 {/* Banner */}
                 <div 
                   className="h-20 bg-cover bg-center"
@@ -232,7 +231,7 @@ export function GamefolioShareDialog({
                 <div className="relative px-4 pb-4">
                   {/* Avatar - overlapping banner */}
                   <div className="relative -mt-10 mb-2 w-20 h-20">
-                    <div className="w-20 h-20 rounded-full border-4 overflow-hidden" style={{ borderColor: themeBg, backgroundColor: themeBg }}>
+                    <div className="w-20 h-20 rounded-full border-4 border-[#0f172a] overflow-hidden bg-[#0f172a]">
                       {userProfile?.nftProfileTokenId && userProfile?.nftProfileImageUrl ? (
                         <img 
                           src={userProfile.nftProfileImageUrl} 
@@ -319,7 +318,7 @@ export function GamefolioShareDialog({
                   )}
 
                   {/* Stats */}
-                  <div className="flex items-center mt-3 pt-3" style={{ borderTop: `1px solid ${themeAccent}15` }}>
+                  <div className="flex items-center border-t border-[#1e293b]/30 mt-3 pt-3">
                     <div className="flex-1 flex flex-col items-center">
                       <span className="text-[#f8fafc] text-lg font-bold leading-7">{userStats?.clips || 0}</span>
                       <span className="text-[#94a3b8] text-xs leading-4">Clips</span>
@@ -340,7 +339,7 @@ export function GamefolioShareDialog({
               <div className="flex flex-col gap-2.5">
                 <span className="text-[#94a3b8] text-sm">Profile Link</span>
                 <div className="flex gap-2">
-                  <div className="flex-1 min-w-0 rounded-2xl px-3 sm:px-4 py-3 overflow-hidden" style={{ backgroundColor: themeCard, border: `1px solid ${themeAccent}20` }}>
+                  <div className="flex-1 min-w-0 bg-[#1e293b] border border-[#1e293b] rounded-2xl px-3 sm:px-4 py-3 overflow-hidden">
                     <span className="text-[#94a3b8] text-xs sm:text-sm font-mono truncate block">
                       {shareData.profileUrl}
                     </span>
@@ -367,8 +366,7 @@ export function GamefolioShareDialog({
                         key={platform.name}
                         onClick={() => shareUrl && handleSocialShare(shareUrl)}
                         disabled={!shareUrl}
-                        className="w-14 h-14 rounded-full border-2 bg-transparent text-[#f8fafc] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                        style={{ borderColor: themeAccent }}
+                        className="w-14 h-14 rounded-full border-2 border-[#4ADE80] bg-transparent hover:bg-[#4ADE80]/10 text-[#f8fafc] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                         title={platform.name}
                       >
                         <IconComponent className="w-6 h-6" />
