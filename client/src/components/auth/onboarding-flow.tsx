@@ -56,8 +56,8 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
   }
 
   return (
-    <div className="grid grid-cols-5 md:grid-cols-5 gap-3">
-      {trendingGames.slice(0, 10).map((game: TwitchGame) => {
+    <div className="grid grid-cols-5 gap-3">
+      {trendingGames.slice(0, 5).map((game: TwitchGame) => {
         const isSelected = selectedGames.some(g => g.id === parseInt(game.id));
         
         return (
