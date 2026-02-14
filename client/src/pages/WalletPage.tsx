@@ -24,8 +24,6 @@ interface OwnedNFT {
   name: string;
   image: string | null;
   rarity: string | null;
-  purchaseId: string;
-  purchasedAt: string;
 }
 
 export default function WalletPage() {
@@ -88,11 +86,18 @@ export default function WalletPage() {
   }, [user, refreshBalances]);
 
   const { data: ownedNFTs = [] } = useQuery<OwnedNFT[]>({
-    queryKey: ['/api/store/owned'],
+    queryKey: ['/api/nfts/owned'],
     queryFn: async () => {
-      const res = await fetch('/api/store/owned', { credentials: 'include' });
+      const res = await fetch('/api/nfts/owned', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch owned NFTs');
-      return res.json();
+      const data = await res.json();
+      const nfts = data.nfts || [];
+      return nfts.filter((n: any) => !n.sold).map((n: any) => ({
+        id: n.tokenId,
+        name: n.name || `Gamefolio Genesis #${n.tokenId}`,
+        image: n.image || null,
+        rarity: n.rarity || null,
+      }));
     },
     enabled: !!user,
   });
