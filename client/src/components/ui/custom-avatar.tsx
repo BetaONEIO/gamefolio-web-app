@@ -338,7 +338,7 @@ export const CustomAvatar = ({
         onClick={handleNftAvatarClick}
       >
         <div
-          className="w-full h-full rounded-lg overflow-hidden border-4"
+          className="w-full h-full rounded-lg overflow-hidden border-2"
           style={{ borderColor: borderColor }}
         >
           <img
