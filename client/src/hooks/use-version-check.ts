@@ -1,51 +1,52 @@
 import { useEffect, useState } from 'react';
-import { useToast } from '@/hooks/use-toast';
 
 interface VersionData {
   version: string;
   buildTime: string;
+  buildHash: string;
 }
 
 export function useVersionCheck() {
   const [currentVersion, setCurrentVersion] = useState<string>('');
   const [isUpdateAvailable, setIsUpdateAvailable] = useState(false);
-  const { toast } = useToast();
 
   useEffect(() => {
-    // Get current version from package.json via meta endpoint
     const checkVersion = async () => {
       try {
-        const response = await fetch('/api/version');
+        const response = await fetch('/api/version', {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' }
+        });
         const data: VersionData = await response.json();
         
-        const storedVersion = localStorage.getItem('app_version');
+        const storedHash = localStorage.getItem('app_build_hash');
         
-        if (storedVersion && storedVersion !== data.version) {
+        if (storedHash && storedHash !== data.buildHash) {
           setIsUpdateAvailable(true);
-          showUpdateNotification();
+          localStorage.setItem('app_build_hash', data.buildHash);
+          
+          if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map(name => caches.delete(name)));
+          }
+          window.location.reload();
+          return;
+        }
+        
+        if (!storedHash) {
+          localStorage.setItem('app_build_hash', data.buildHash);
         }
         
         setCurrentVersion(data.version);
-        localStorage.setItem('app_version', data.version);
       } catch (error) {
         console.log('Version check failed:', error);
       }
     };
 
-    const showUpdateNotification = () => {
-      toast({
-        title: "New Update Available",
-        description: "A new version of Gamefolio is available. Refresh to get the latest features!",
-        duration: 10000,
-      });
-    };
-
     checkVersion();
 
-    // Check for updates every 30 minutes
-    const interval = setInterval(checkVersion, 30 * 60 * 1000);
+    const interval = setInterval(checkVersion, 5 * 60 * 1000);
 
-    // Check when user returns to tab
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         checkVersion();
@@ -58,10 +59,10 @@ export function useVersionCheck() {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [toast]);
+  }, []);
 
   const forceRefresh = () => {
-    // Clear all caches and force reload
+    localStorage.removeItem('app_build_hash');
     if ('caches' in window) {
       caches.keys().then((cacheNames) => {
         cacheNames.forEach((cacheName) => {
@@ -71,7 +72,7 @@ export function useVersionCheck() {
         window.location.reload();
       });
     } else {
-      (window as any).location.reload();
+      (window as Window).location.reload();
     }
   };
 

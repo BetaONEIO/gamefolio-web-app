@@ -271,6 +271,13 @@ const unblockedUsers = new Map<string, Set<number>>();
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   
+  app.use('/api', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+  });
+  
   // Initialize WebSocket notification service
   const realtimeNotificationService = initializeRealtimeNotificationService(httpServer);
 
@@ -1544,17 +1551,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get app version for cache busting
+  const SERVER_START_TIME = new Date().toISOString();
+  const SERVER_BUILD_HASH = Date.now().toString(36);
+  
   app.get("/api/version", (req, res) => {
     try {
       const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
       res.json({
         version: packageJson.version,
-        buildTime: new Date().toISOString()
+        buildTime: SERVER_START_TIME,
+        buildHash: SERVER_BUILD_HASH
       });
     } catch (error) {
       res.json({
         version: "1.0.0",
-        buildTime: new Date().toISOString()
+        buildTime: SERVER_START_TIME,
+        buildHash: SERVER_BUILD_HASH
       });
     }
   });
