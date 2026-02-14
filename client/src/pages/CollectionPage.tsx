@@ -307,8 +307,8 @@ export default function CollectionPage() {
     );
   }
 
-  const ownedNfts = nftData?.nfts.filter((n: OwnedNft) => !n.sold) || [];
-  const soldNfts = nftData?.nfts.filter((n: OwnedNft) => n.sold) || [];
+  const ownedNfts = nftData?.nfts?.filter((n: OwnedNft) => !n.sold) || [];
+  const soldNfts = nftData?.nfts?.filter((n: OwnedNft) => n.sold) || [];
   const displayNfts = nftTab === "owned" ? ownedNfts : soldNfts;
 
   const collectionTabs: { key: CollectionTab; label: string; icon: typeof Hexagon }[] = [
