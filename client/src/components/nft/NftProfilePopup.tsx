@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { X } from "lucide-react";
@@ -115,7 +116,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
 
   const hasAnchor = !!anchorRect;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[9999]"
       onClick={(e) => {
@@ -247,6 +248,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
