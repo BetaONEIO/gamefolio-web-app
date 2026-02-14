@@ -1405,7 +1405,8 @@ const ProfilePage = () => {
             showUserType: profile.showUserType,
             accentColor: profile.accentColor,
             backgroundColor: profile.backgroundColor,
-            cardColor: profile.cardColor
+            cardColor: profile.cardColor,
+            primaryColor: profile.primaryColor
           }}
           userStats={{
             clips: profile._count?.clips || 0,
@@ -2266,7 +2267,8 @@ const ProfilePage = () => {
                       showUserType: profile.showUserType,
                       accentColor: profile.accentColor,
                       backgroundColor: profile.backgroundColor,
-                      cardColor: profile.cardColor
+                      cardColor: profile.cardColor,
+                      primaryColor: profile.primaryColor
                     }}
                     userStats={{
                       clips: profile._count?.clips || 0,

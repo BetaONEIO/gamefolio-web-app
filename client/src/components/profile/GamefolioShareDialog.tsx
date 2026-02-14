@@ -65,6 +65,7 @@ interface GamefolioShareDialogProps {
     accentColor?: string | null;
     backgroundColor?: string | null;
     cardColor?: string | null;
+    primaryColor?: string | null;
   };
   userStats?: {
     clips?: number;
@@ -170,8 +171,9 @@ export function GamefolioShareDialog({
 
   const bannerUrl = bannerSignedUrl || userProfile?.bannerUrl;
   const themeAccent = userProfile?.accentColor || '#4ADE80';
-  const themeBg = userProfile?.backgroundColor || '#0f172a';
-  const themeCard = userProfile?.cardColor || '#1e293b';
+  const themeBg = userProfile?.backgroundColor || '#0B2232';
+  const themeCard = userProfile?.cardColor || '#1E3A8A';
+  const themePrimary = userProfile?.primaryColor || '#02172C';
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -190,7 +192,7 @@ export function GamefolioShareDialog({
       )}
       <DialogContent 
         className="p-0 w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh]"
-        style={{ backgroundColor: themeBg, borderColor: `${themeAccent}30` }}
+        style={{ background: `linear-gradient(180deg, ${themePrimary} 0%, ${themeBg} 60%, ${themeBg} 100%)`, borderColor: `${themeAccent}30` }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-5 py-4 sm:py-5" style={{ borderBottom: `1px solid ${themeAccent}20` }}>
