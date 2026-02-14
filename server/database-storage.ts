@@ -2222,7 +2222,13 @@ export class DatabaseStorage implements IStorage {
           id: users.id,
           username: users.username,
           displayName: users.displayName,
-          avatarUrl: users.avatarUrl
+          avatarUrl: users.avatarUrl,
+          nftProfileTokenId: users.nftProfileTokenId,
+          nftProfileImageUrl: users.nftProfileImageUrl,
+          activeProfilePicType: users.activeProfilePicType,
+          accentColor: users.accentColor,
+          selectedBorderId: users.selectedBorderId,
+          isPro: users.isPro,
         }
       })
       .from(notifications)

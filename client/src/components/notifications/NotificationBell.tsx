@@ -12,13 +12,21 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { CustomAvatar } from "@/components/ui/custom-avatar";
 
 interface NotificationWithUser extends Notification {
   fromUser?: {
+    id: number;
     username: string;
     displayName: string;
-    avatarUrl?: string;
-  };
+    avatarUrl?: string | null;
+    nftProfileTokenId?: string | null;
+    nftProfileImageUrl?: string | null;
+    activeProfilePicType?: string | null;
+    accentColor?: string | null;
+    selectedBorderId?: number | null;
+    isPro?: boolean | null;
+  } | null;
 }
 
 export function NotificationBell() {
@@ -319,16 +327,24 @@ export function NotificationBell() {
                   )}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 mt-1">
-                      {getNotificationIcon(notification.type)}
+                    <div className="flex-shrink-0 mt-0.5 relative">
+                      {notification.fromUser ? (
+                        <div className="relative">
+                          <CustomAvatar 
+                            user={notification.fromUser as any}
+                            size="sm"
+                            borderIntensity="subtle"
+                          />
+                          <div className="absolute -bottom-1 -right-1">
+                            {getNotificationIcon(notification.type)}
+                          </div>
+                        </div>
+                      ) : (
+                        getNotificationIcon(notification.type)
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        {notification.fromUser && (
-                          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-semibold">
-                            {notification.fromUser.displayName.charAt(0).toUpperCase()}
-                          </div>
-                        )}
                         <p className="font-medium text-sm truncate">
                           {notification.title}
                         </p>

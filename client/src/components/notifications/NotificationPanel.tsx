@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { CustomAvatar } from "@/components/ui/custom-avatar";
 
 interface NotificationData {
   id: number;
@@ -19,6 +20,18 @@ interface NotificationData {
   clipId?: number;
   commentId?: number;
   actionUrl?: string;
+  fromUser?: {
+    id: number;
+    username: string;
+    displayName: string;
+    avatarUrl?: string | null;
+    nftProfileTokenId?: string | null;
+    nftProfileImageUrl?: string | null;
+    activeProfilePicType?: string | null;
+    accentColor?: string | null;
+    selectedBorderId?: number | null;
+    isPro?: boolean | null;
+  } | null;
   metadata?: {
     mentionType?: string;
     clipTitle?: string;
@@ -227,8 +240,21 @@ export function NotificationPanel({
                       data-testid={`notification-${notification.id}`}
                     >
                       <div className="flex items-start space-x-3">
-                        <div className="flex-shrink-0 mt-1">
-                          {getNotificationIcon(notification.type)}
+                        <div className="flex-shrink-0 mt-0.5 relative">
+                          {notification.fromUser ? (
+                            <div className="relative">
+                              <CustomAvatar 
+                                user={notification.fromUser as any}
+                                size="sm"
+                                borderIntensity="subtle"
+                              />
+                              <div className="absolute -bottom-1 -right-1">
+                                {getNotificationIcon(notification.type)}
+                              </div>
+                            </div>
+                          ) : (
+                            getNotificationIcon(notification.type)
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
