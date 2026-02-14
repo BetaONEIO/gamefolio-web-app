@@ -157,23 +157,23 @@ export function GamefolioShareDialog({
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="p-0 border-[#1e293b] bg-[#0f172a] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden">
+      <DialogContent className="p-0 border-[#1e293b] bg-[#0f172a] w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-5 border-b border-[#1e293b]/50">
-          <div className="flex items-center gap-3">
-            <Share2 className="w-6 h-6 text-[#4ADE80]" />
-            <span className="text-[#f8fafc] text-xl font-bold">Share Gamefolio Profile</span>
+        <div className="flex items-center justify-between px-4 sm:px-5 py-4 sm:py-5 border-b border-[#1e293b]/50">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <Share2 className="w-5 h-5 sm:w-6 sm:h-6 text-[#4ADE80] shrink-0" />
+            <span className="text-[#f8fafc] text-base sm:text-xl font-bold truncate">Share Gamefolio Profile</span>
           </div>
           <button
             onClick={() => setOpen(false)}
-            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/5 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/5 transition-colors shrink-0 ml-2"
           >
-            <X className="w-6 h-6 text-[#94a3b8]" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6 text-[#94a3b8]" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-5 flex flex-col gap-6">
+        <div className="p-4 sm:p-5 flex flex-col gap-5 sm:gap-6 overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
               <div className="animate-spin w-8 h-8 border-4 border-[#4ADE80] border-t-transparent rounded-full" />
@@ -254,28 +254,28 @@ export function GamefolioShareDialog({
               </div>
 
               {/* Profile Link Section */}
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2.5">
                 <span className="text-[#94a3b8] text-sm">Profile Link</span>
                 <div className="flex gap-2">
-                  <div className="flex-1 bg-[#1e293b] border border-[#1e293b] rounded-2xl px-4 py-3.5 overflow-hidden">
-                    <span className="text-[#94a3b8] text-sm font-mono truncate block">
+                  <div className="flex-1 min-w-0 bg-[#1e293b] border border-[#1e293b] rounded-2xl px-3 sm:px-4 py-3 overflow-hidden">
+                    <span className="text-[#94a3b8] text-xs sm:text-sm font-mono truncate block">
                       {shareData.profileUrl}
                     </span>
                   </div>
                   <button
                     onClick={handleCopyLink}
-                    className="flex items-center gap-2 bg-[#a855f7] hover:bg-[#9333ea] text-white rounded-2xl px-4 py-3 transition-colors shrink-0"
+                    className="flex items-center gap-1.5 sm:gap-2 bg-[#a855f7] hover:bg-[#9333ea] text-white rounded-2xl px-3 sm:px-4 py-3 transition-colors shrink-0"
                   >
-                    <Copy className="w-5 h-5" />
-                    <span className="text-base">{copied ? 'Copied!' : 'Copy Link'}</span>
+                    <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="text-sm sm:text-base whitespace-nowrap">{copied ? 'Copied!' : 'Copy Link'}</span>
                   </button>
                 </div>
               </div>
 
               {/* Social Media Section */}
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3">
                 <span className="text-[#94a3b8] text-sm">Share on Social Media</span>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 sm:gap-2.5">
                   {socialPlatforms.map((platform) => {
                     const IconComponent = platform.icon;
                     const shareUrl = shareData.socialMediaLinks?.[platform.key as keyof typeof shareData.socialMediaLinks];
@@ -284,10 +284,10 @@ export function GamefolioShareDialog({
                         key={platform.name}
                         onClick={() => shareUrl && handleSocialShare(shareUrl)}
                         disabled={!shareUrl}
-                        className="w-14 h-14 rounded-full border-2 border-[#4ADE80] bg-transparent hover:bg-[#4ADE80]/10 text-[#f8fafc] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        className="w-11 h-11 sm:w-14 sm:h-14 rounded-full border-2 border-[#4ADE80] bg-transparent hover:bg-[#4ADE80]/10 text-[#f8fafc] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                         title={platform.name}
                       >
-                        <IconComponent className="w-6 h-6" />
+                        <IconComponent className="w-5 h-5 sm:w-6 sm:h-6" />
                       </button>
                     );
                   })}
