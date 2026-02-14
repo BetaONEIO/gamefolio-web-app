@@ -506,7 +506,9 @@ export default function OnboardingFlow({
       }
       
       const result = await response.json();
-      setAvatarUrl(result.avatarUrl);
+      if (!avatarUrl || !avatarUrl.startsWith('blob:')) {
+        setAvatarUrl(result.avatarUrl);
+      }
       setAvatarFile(file);
       
       toast({
