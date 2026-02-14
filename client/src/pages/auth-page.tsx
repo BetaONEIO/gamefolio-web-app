@@ -80,7 +80,7 @@ export default function AuthPage() {
   };
 
   return (
-    <KeyboardAvoidingWrapper className="min-h-screen w-full relative flex items-center justify-center p-4 sm:p-4 overflow-y-auto overflow-x-hidden">
+    <KeyboardAvoidingWrapper className="min-h-screen w-full relative overflow-x-hidden">
       {/* Video Background */}
       <video
         className="fixed inset-0 w-full h-full object-cover z-0"
@@ -98,19 +98,19 @@ export default function AuthPage() {
       </video>
 
       {/* Faded Black Overlay */}
-      <div className="absolute inset-0 bg-black/60 z-10"></div>
+      <div className="fixed inset-0 bg-black/60 z-10"></div>
 
       {/* Dark Navy Overlay */}
-      <div className="absolute inset-0 bg-navy-900/40 z-15"></div>
+      <div className="fixed inset-0 bg-navy-900/40 z-[15]"></div>
 
-      {/* Content */}
-      <div className="relative z-20 w-full max-w-md flex flex-col justify-center my-auto py-4">
-        <div className="mb-5 sm:mb-10 text-center">
+      {/* Scrollable Content */}
+      <div className="relative z-20 w-full min-h-screen flex flex-col items-center px-4 pt-6 sm:pt-10 pb-8">
+        <div className="mb-4 sm:mb-8 text-center">
           <div className="flex flex-col items-center">
             <img
               src="/attached_assets/Gamefolio logo.png"
               alt="Gamefolio"
-              className="h-20 sm:h-36 w-auto drop-shadow-lg"
+              className="h-16 sm:h-36 w-auto drop-shadow-lg"
             />
             <div className="mt-2 sm:mt-3 px-3 py-1 bg-orange-500 text-white text-xs sm:text-sm font-bold rounded-full shadow-lg">
               Alpha 1.4 • Nov 6, 2025
@@ -118,45 +118,48 @@ export default function AuthPage() {
           </div>
         </div>
 
-        <Tabs
-          defaultValue="login"
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="w-full"
-        >
-          <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-8">
-            <TabsTrigger
-              value="login"
-              className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-none"
-            >
-              Login
-            </TabsTrigger>
-            <TabsTrigger
-              value="register"
-              className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-none"
-            >
-              Register
-            </TabsTrigger>
-          </TabsList>
+        {/* Popup Card Module */}
+        <div className="w-full max-w-md rounded-2xl bg-[#0f172a]/90 backdrop-blur-xl border border-white/10 shadow-2xl p-4 sm:p-6">
+          <Tabs
+            defaultValue="login"
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-6">
+              <TabsTrigger
+                value="login"
+                className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-none"
+              >
+                Login
+              </TabsTrigger>
+              <TabsTrigger
+                value="register"
+                className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-none"
+              >
+                Register
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="login" forceMount className={activeTab === "login" ? "block" : "hidden"}>
-            {showForgotPassword ? (
-              <ForgotPasswordForm onBack={handleBackToLogin} />
-            ) : (
-              <LoginForm
-                onSuccess={handleSuccess}
-                onForgotPassword={handleForgotPassword}
-              />
-            )}
-          </TabsContent>
+            <TabsContent value="login" forceMount className={activeTab === "login" ? "block" : "hidden"}>
+              {showForgotPassword ? (
+                <ForgotPasswordForm onBack={handleBackToLogin} />
+              ) : (
+                <LoginForm
+                  onSuccess={handleSuccess}
+                  onForgotPassword={handleForgotPassword}
+                />
+              )}
+            </TabsContent>
 
-          <TabsContent value="register" forceMount className={activeTab === "register" ? "block" : "hidden"}>
-            <RegisterForm onSuccess={() => setActiveTab("login")} />
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="register" forceMount className={activeTab === "register" ? "block" : "hidden"}>
+              <RegisterForm onSuccess={() => setActiveTab("login")} />
+            </TabsContent>
+          </Tabs>
+        </div>
 
-        {/* Website URL underneath the form */}
-        <div className="mt-6 text-center">
+        {/* Website URL underneath the card */}
+        <div className="mt-4 sm:mt-6 text-center">
           <p className="text-white/60 text-sm font-medium">www.gamefolio.com</p>
         </div>
       </div>

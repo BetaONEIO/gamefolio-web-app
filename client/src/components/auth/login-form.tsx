@@ -68,7 +68,7 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 backdrop-blur-md p-4 sm:p-6 rounded-lg border border-white/10">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
       <div className="space-y-2">
         <Label htmlFor="usernameOrEmail" className="text-gray-300">Username or Email</Label>
         <Input

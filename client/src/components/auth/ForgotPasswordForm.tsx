@@ -96,7 +96,7 @@ const ForgotPasswordForm = ({ onBack }: ForgotPasswordFormProps) => {
   };
   
   return (
-    <Card className="w-full min-h-[500px] backdrop-blur-md border border-white/10">
+    <Card className="w-full min-h-[400px] border-0 bg-transparent shadow-none">
       <CardHeader>
         <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
         <CardDescription>
