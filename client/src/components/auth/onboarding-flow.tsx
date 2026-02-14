@@ -127,7 +127,7 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser }: OnboardingStepIn
     { id: OnboardingStep.Welcome, label: "Welcome" },
     { id: OnboardingStep.Username, label: "Username" },
     { id: OnboardingStep.Games, label: "Games" },
-    { id: OnboardingStep.Avatar, label: "Avatar" },
+    { id: OnboardingStep.Avatar, label: "Profile Pic" },
     { id: OnboardingStep.UserType, label: "User Type" },
     { id: OnboardingStep.Age, label: "Age" },
     { id: OnboardingStep.Wallet, label: "Wallet" },
@@ -672,55 +672,75 @@ export default function OnboardingFlow({
       case OnboardingStep.Welcome:
         return (
           <>
-            {/* Example app image */}
-            <div className="mb-6 overflow-hidden rounded-lg border border-border">
-              <img 
-                src="/uploads/background-preview.jpg" 
-                alt="Gamefolio Preview" 
-                className="w-full h-auto"
-              />
-            </div>
-
-            <h2 className="text-2xl font-bold text-white mb-4">Upload your best gaming clips and build your Gamefolio.</h2>
-            <p className="text-gray-300 mb-2">
-              Your personal gaming portfolio, all in one place.
-            </p>
-            <p className="text-gray-300 mb-6">
-              Earn XP, showcase your achievements, and let your gameplay speak for itself.
-            </p>
-            
-            <div className="mb-8">
-              <h3 className="text-xl font-bold text-white mb-4">How does it work?</h3>
-              
-              {/* Step by step process with icons */}
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-2">
-                    <Gamepad2 className="h-6 w-6 text-primary" />
+            <div className="flex flex-col md:flex-row md:gap-8 md:items-center">
+              <div className="hidden md:block md:w-1/2">
+                <div className="rounded-2xl overflow-hidden border border-primary/20 bg-gray-800/50">
+                  <img 
+                    src="/attached_assets/Gamefolio logo.png" 
+                    alt="Gamefolio" 
+                    className="w-full h-auto p-8"
+                  />
+                  <div className="grid grid-cols-3 gap-3 p-6 pt-0">
+                    <div className="flex flex-col items-center text-center p-3 rounded-xl bg-gray-800/80">
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mb-2">
+                        <Gamepad2 className="h-5 w-5 text-primary" />
+                      </div>
+                      <p className="text-xs text-gray-300">Source your clips</p>
+                    </div>
+                    <div className="flex flex-col items-center text-center p-3 rounded-xl bg-gray-800/80">
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mb-2">
+                        <Upload className="h-5 w-5 text-primary" />
+                      </div>
+                      <p className="text-xs text-gray-300">Upload clips</p>
+                    </div>
+                    <div className="flex flex-col items-center text-center p-3 rounded-xl bg-gray-800/80">
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mb-2">
+                        <Share2 className="h-5 w-5 text-primary" />
+                      </div>
+                      <p className="text-xs text-gray-300">Share online</p>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-300">Source your clips from your favourite games</p>
-                </div>
-                
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-2">
-                    <Upload className="h-6 w-6 text-primary" />
-                  </div>
-                  <p className="text-sm text-gray-300">Upload your clips</p>
-                </div>
-                
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-2">
-                    <Share2 className="h-6 w-6 text-primary" />
-                  </div>
-                  <p className="text-sm text-gray-300">Share online</p>
                 </div>
               </div>
-              
+
+              <div className="md:w-1/2">
+                <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">Upload your best gaming clips and build your Gamefolio.</h2>
+                <p className="text-gray-300 mb-2">
+                  Your personal gaming portfolio, all in one place.
+                </p>
+                <p className="text-gray-300 mb-6">
+                  Earn XP, showcase your achievements, and let your gameplay speak for itself.
+                </p>
+                
+                <div className="mb-6 md:hidden">
+                  <h3 className="text-xl font-bold text-white mb-4">How does it work?</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="flex flex-col items-center text-center">
+                      <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-2">
+                        <Gamepad2 className="h-6 w-6 text-primary" />
+                      </div>
+                      <p className="text-sm text-gray-300">Source your clips</p>
+                    </div>
+                    <div className="flex flex-col items-center text-center">
+                      <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-2">
+                        <Upload className="h-6 w-6 text-primary" />
+                      </div>
+                      <p className="text-sm text-gray-300">Upload your clips</p>
+                    </div>
+                    <div className="flex flex-col items-center text-center">
+                      <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-2">
+                        <Share2 className="h-6 w-6 text-primary" />
+                      </div>
+                      <p className="text-sm text-gray-300">Share online</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <Button onClick={goToNextStep} className="w-full bg-primary hover:bg-primary/90 text-white">
+                  Get Started <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
             </div>
-            
-            <Button onClick={goToNextStep} className="w-full bg-primary hover:bg-primary/90 text-white">
-              Get Started <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
           </>
         );
 
@@ -934,7 +954,7 @@ export default function OnboardingFlow({
         return (
           <>
             <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-2xl font-bold text-white">Upload Your Avatar</h2>
+              <h2 className="text-2xl font-bold text-white">Upload Your Profile Picture</h2>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Info className="h-5 w-5 text-gray-400 cursor-help" />
@@ -1033,7 +1053,7 @@ export default function OnboardingFlow({
                 {avatarUrl ? (
                   <>Next <ArrowRight className="h-4 w-4 ml-2" /></>
                 ) : (
-                  "Skip for now"
+                  <span className="text-white">Skip for now</span>
                 )}
               </Button>
             </div>
@@ -1066,55 +1086,46 @@ export default function OnboardingFlow({
               Select up to 2 that best describe you - this helps us customize your experience on Gamefolio
             </p>
             
-            <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 {
                   id: "streamer",
                   label: "Streamer",
-                  description: "I stream games live to audiences",
                   icon: Video,
-                  tooltip: "Content creators who broadcast live gameplay",
                 },
                 {
                   id: "gamer",
                   label: "Gamer",
-                  description: "I love playing games casually",
                   icon: Gamepad2,
                 },
                 {
                   id: "professional_gamer",
-                  label: "Professional Gamer",
-                  description: "I compete in esports or tournaments",
+                  label: "Pro Gamer",
                   icon: Trophy,
                 },
                 {
                   id: "content_creator",
                   label: "Content Creator",
-                  description: "I create gaming videos and content",
                   icon: Upload,
                 },
                 {
                   id: "indie_developer",
                   label: "Indie Developer",
-                  description: "I develop games independently",
                   icon: Code,
                 },
                 {
                   id: "viewer",
                   label: "Viewer",
-                  description: "I mostly watch gaming content",
                   icon: Eye,
                 },
                 {
                   id: "filthy_casual",
                   label: "Filthy Casual",
-                  description: "I play games when I have time",
                   icon: Coffee,
                 },
                 {
                   id: "doom_scroller",
                   label: "Doom Scroller",
-                  description: "I watch clips all day long",
                   icon: Scroll,
                 },
               ].map((type) => {
@@ -1126,7 +1137,7 @@ export default function OnboardingFlow({
                   <div
                     key={type.id}
                     onClick={() => !isDisabled && toggleUserType(type.id)}
-                    className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                    className={`relative p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all ${
                       isDisabled ? "opacity-50 cursor-not-allowed" : "hover:scale-105"
                     } ${
                       isSelected
@@ -1134,20 +1145,15 @@ export default function OnboardingFlow({
                         : "border-gray-700 hover:border-primary/50 hover:bg-primary/5"
                     }`}
                   >
-                    <div className="flex flex-col items-center text-center space-y-3">
-                      <div className={`p-3 rounded-full ${
+                    <div className="flex flex-col items-center text-center space-y-2">
+                      <div className={`p-2.5 rounded-full ${
                         isSelected 
                           ? "bg-primary text-white" 
                           : "bg-gray-700 text-gray-300"
                       }`}>
-                        <IconComponent className="h-6 w-6" />
+                        <IconComponent className="h-5 w-5" />
                       </div>
-                      <div>
-                        <h3 className="font-medium text-white mb-1">{type.label}</h3>
-                        <p className="text-xs text-gray-400 leading-tight">
-                          {type.description}
-                        </p>
-                      </div>
+                      <h3 className="font-medium text-white text-sm">{type.label}</h3>
                     </div>
                     {isSelected && (
                       <div className="absolute top-2 right-2 rounded-full bg-primary p-1">
@@ -1180,46 +1186,22 @@ export default function OnboardingFlow({
 
       case OnboardingStep.Age:
         const ageRanges = [
-          {
-            id: "13-17",
-            label: "13-17",
-            description: "Teen gamer",
-          },
-          {
-            id: "18-24",
-            label: "18-24",
-            description: "Young adult",
-          },
-          {
-            id: "25-34",
-            label: "25-34",
-            description: "Young professional",
-          },
-          {
-            id: "35-44",
-            label: "35-44",
-            description: "Experienced gamer",
-          },
-          {
-            id: "45-54",
-            label: "45-54",
-            description: "Seasoned player",
-          },
-          {
-            id: "55+",
-            label: "55+",
-            description: "Gaming veteran",
-          },
+          { id: "13-17", label: "13-17" },
+          { id: "18-24", label: "18-24" },
+          { id: "25-34", label: "25-34" },
+          { id: "35-44", label: "35-44" },
+          { id: "45-54", label: "45-54" },
+          { id: "55+", label: "55+" },
         ];
 
         return (
           <>
             <h2 className="text-2xl font-bold text-white mb-4">What's your age range?</h2>
             <p className="text-gray-300 mb-6">
-              This helps us provide age-appropriate content and recommendations
+              Select your age range
             </p>
             
-            <div className="mb-6 grid grid-cols-2 gap-3">
+            <div className="mb-6 grid grid-cols-3 sm:grid-cols-6 gap-3">
               {ageRanges.map((range) => {
                 const isSelected = ageRange === range.id;
                 
@@ -1227,26 +1209,21 @@ export default function OnboardingFlow({
                   <div
                     key={range.id}
                     onClick={() => setAgeRange(range.id as any)}
-                    className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all hover:scale-105 ${
+                    className={`relative p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all hover:scale-105 ${
                       isSelected
                         ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
                         : "border-gray-700 hover:border-gray-600 hover:bg-gray-800/50"
                     }`}
                   >
-                    <div className="flex flex-col items-center text-center space-y-3">
-                      <div className={`p-3 rounded-full ${
+                    <div className="flex flex-col items-center text-center space-y-2">
+                      <div className={`p-2.5 rounded-full ${
                         isSelected 
                           ? "bg-primary text-white" 
                           : "bg-gray-700 text-gray-300"
                       }`}>
-                        <Calendar className="h-6 w-6" />
+                        <Calendar className="h-5 w-5" />
                       </div>
-                      <div>
-                        <h3 className="font-medium text-white mb-1">{range.label}</h3>
-                        <p className="text-xs text-gray-400 leading-tight">
-                          {range.description}
-                        </p>
-                      </div>
+                      <h3 className="font-medium text-white text-sm">{range.label}</h3>
                     </div>
                     {isSelected && (
                       <div className="absolute top-2 right-2 rounded-full bg-primary p-1">
@@ -1393,15 +1370,14 @@ export default function OnboardingFlow({
 
                 <Button
                   onClick={goToNextStep}
-                  variant="ghost"
-                  className="w-full h-auto py-4 px-6 text-gray-400 hover:text-white"
+                  className="w-full h-auto py-4 px-6 bg-primary hover:bg-primary/90 text-white"
                   data-testid="button-skip-wallet"
                 >
                   <div className="flex items-start gap-3 text-left w-full">
                     <ArrowRight className="h-5 w-5 mt-0.5 flex-shrink-0" />
                     <div>
-                      <div className="font-semibold mb-1">Skip for now</div>
-                      <div className="text-sm font-normal">
+                      <div className="font-semibold mb-1 text-white">Skip for now</div>
+                      <div className="text-sm font-normal text-white/80">
                         You can set this up later from your wallet page
                       </div>
                     </div>
@@ -1442,7 +1418,7 @@ export default function OnboardingFlow({
   };
 
   return (
-    <div className="max-w-lg mx-auto p-6 bg-gray-900 rounded-lg shadow-lg">
+    <div className="w-full max-w-lg md:max-w-3xl mx-auto p-4 sm:p-6 bg-gray-900 rounded-lg shadow-lg">
       <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} />
       {renderStepContent()}
     </div>
