@@ -200,34 +200,33 @@ export default function WalletHomepage({
                 {ownedNFTs.length > 0 ? (
                   <div className="flex items-center justify-center p-4 h-full">
                     {ownedNFTs.length === 1 ? (
-                      <button
-                        onClick={() => onNFTClick?.(ownedNFTs[0].id)}
-                        className="relative w-full max-w-[200px] aspect-square rounded-xl overflow-hidden hover:ring-2 hover:ring-[#4ade80] transition-all group"
-                      >
-                        {ownedNFTs[0].image ? (
-                          <img
-                            src={ownedNFTs[0].image}
-                            alt={ownedNFTs[0].name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                            <span className="text-white text-sm font-bold">{ownedNFTs[0].name}</span>
-                          </div>
-                        )}
-                        {ownedNFTs[0].rarity && (
-                          <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase"
-                            style={{
-                              background: ownedNFTs[0].rarity === 'Legendary' ? '#a855f7' : 
-                                         ownedNFTs[0].rarity === 'Epic' ? '#ec4899' : 
-                                         ownedNFTs[0].rarity === 'Rare' ? '#3b82f6' : '#4ade80',
-                              color: '#fff'
-                            }}
-                          >
-                            {ownedNFTs[0].rarity}
-                          </div>
-                        )}
-                      </button>
+                      <Link href="/collection">
+                        <div className="relative w-full max-w-[200px] aspect-square rounded-xl overflow-hidden hover:ring-2 hover:ring-[#4ade80] transition-all group cursor-pointer">
+                          {ownedNFTs[0].image ? (
+                            <img
+                              src={ownedNFTs[0].image}
+                              alt={ownedNFTs[0].name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                              <span className="text-white text-sm font-bold">{ownedNFTs[0].name}</span>
+                            </div>
+                          )}
+                          {ownedNFTs[0].rarity && (
+                            <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase"
+                              style={{
+                                background: ownedNFTs[0].rarity === 'Legendary' ? '#a855f7' : 
+                                           ownedNFTs[0].rarity === 'Epic' ? '#ec4899' : 
+                                           ownedNFTs[0].rarity === 'Rare' ? '#3b82f6' : '#4ade80',
+                                color: '#fff'
+                              }}
+                            >
+                              {ownedNFTs[0].rarity}
+                            </div>
+                          )}
+                        </div>
+                      </Link>
                     ) : (
                       <Link href="/collection">
                         <div className="relative w-full max-w-[200px] aspect-square rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-[#4ade80] transition-all group">
