@@ -32,7 +32,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Slider } from "@/components/ui/slider";
 import DOMPurify from "dompurify";
 import { useSignedUrl, useSignedUrls } from "@/hooks/use-signed-url";
-import type { NameTag } from "@shared/schema";
+import type { NameTag, VerificationBadge } from "@shared/schema";
 import { KeyboardAvoidingWrapper } from "@/components/shared/KeyboardAvoidingWrapper";
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
@@ -385,6 +385,9 @@ export default function SettingsPage() {
   // Name tag state - undefined means no pending change, null means remove tag, number means select tag
   const [pendingNameTagId, setPendingNameTagId] = useState<number | null | undefined>(undefined);
   
+  // Verification badge state - same pattern as name tags
+  const [pendingVerificationBadgeId, setPendingVerificationBadgeId] = useState<number | null | undefined>(undefined);
+  
   // Crop modal state
   const [showCropModal, setShowCropModal] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<string>('');
@@ -488,7 +491,8 @@ export default function SettingsPage() {
     profileData.profileBackgroundAnimation !== ((user as any)?.profileBackgroundAnimation || "none") ||
     avatarFile !== null ||
     selectedPreviousAvatar !== null ||
-    (pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId);
+    (pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId) ||
+    (pendingVerificationBadgeId !== undefined && pendingVerificationBadgeId !== (user as any)?.selectedVerificationBadgeId);
   
   // Debug logging
   console.log('💾 Save button state:', { 
@@ -616,6 +620,13 @@ export default function SettingsPage() {
     enabled: !!user,
   });
   
+  // Fetch user's unlocked verification badges
+  const { data: userVerificationBadges = [], isLoading: isLoadingVerificationBadges } = useQuery<VerificationBadge[]>({
+    queryKey: ['/api/user/verification-badges'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!user,
+  });
+  
   const { data: ownedNftsData, isLoading: nftsLoading } = useQuery<{ nfts: any[]; count: number }>({
     queryKey: ['/api/nfts/owned'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
@@ -709,10 +720,16 @@ export default function SettingsPage() {
   // When the user's selectedNameTagId matches the pending selection, reset the pending state
   useEffect(() => {
     if (pendingNameTagId !== undefined && pendingNameTagId === user?.selectedNameTagId) {
-      // User data has updated to match our pending selection, so we can clear pending
       setPendingNameTagId(undefined);
     }
   }, [user?.selectedNameTagId, pendingNameTagId]);
+
+  // Sync pending verification badge with user data after save completes
+  useEffect(() => {
+    if (pendingVerificationBadgeId !== undefined && pendingVerificationBadgeId === (user as any)?.selectedVerificationBadgeId) {
+      setPendingVerificationBadgeId(undefined);
+    }
+  }, [(user as any)?.selectedVerificationBadgeId, pendingVerificationBadgeId]);
   
   // Mutation to save avatar border selection
   const saveAvatarBorderMutation = useMutation({
@@ -883,6 +900,15 @@ export default function SettingsPage() {
         await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
         if (user?.id) {
           await queryClient.invalidateQueries({ queryKey: ['/api/user', user.id, 'name-tag'] });
+        }
+      }
+
+      // Save verification badge selection if changed
+      if (pendingVerificationBadgeId !== undefined && pendingVerificationBadgeId !== (user as any)?.selectedVerificationBadgeId) {
+        await apiRequest("PUT", "/api/user/verification-badge", { badgeId: pendingVerificationBadgeId });
+        await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        if (user?.id) {
+          await queryClient.invalidateQueries({ queryKey: ['/api/user', user.id, 'verification-badge'] });
         }
       }
 
@@ -1733,6 +1759,124 @@ export default function SettingsPage() {
 
                               {isSelected && (
                                 <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5">
+                                  <Check className="h-2.5 w-2.5" />
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Verified Badge Selection Section */}
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-green-500" />
+                    <Label className="text-base font-medium">Verified Badge</Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Choose a verified badge to display next to your username on your profile.
+                  </p>
+
+                  {isLoadingVerificationBadges ? (
+                    <div className="flex items-center justify-center p-4">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    </div>
+                  ) : userVerificationBadges.length === 0 ? (
+                    <div className="p-4 bg-muted/50 rounded-lg border text-center">
+                      <Shield className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">
+                        No verification badges available yet. Visit the store to get exclusive badges!
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Current Verified Badge Preview */}
+                      {(() => {
+                        const displayBadgeId = pendingVerificationBadgeId !== undefined ? pendingVerificationBadgeId : (user as any)?.selectedVerificationBadgeId;
+                        const selectedBadge = displayBadgeId ? userVerificationBadges.find((b: VerificationBadge) => b.id === displayBadgeId) : null;
+                        
+                        return (
+                          <div className="flex flex-col items-center space-y-3">
+                            <div className="p-3 bg-muted/30 rounded-lg w-full flex flex-col items-center">
+                              {selectedBadge ? (
+                                <>
+                                  <NameTagImage
+                                    imageUrl={selectedBadge.imageUrl}
+                                    alt={selectedBadge.name}
+                                    className="w-16 h-16 object-contain"
+                                  />
+                                  <p className="text-sm font-medium mt-3">{selectedBadge.name}</p>
+                                  {!selectedBadge.isDefault && (
+                                    <div className="flex items-center gap-2 text-xs mt-1">
+                                      <span className={`capitalize font-medium ${
+                                        selectedBadge.rarity === 'legendary' ? 'text-yellow-400' :
+                                        selectedBadge.rarity === 'epic' ? 'text-purple-400' :
+                                        selectedBadge.rarity === 'rare' ? 'text-blue-400' : 'text-gray-400'
+                                      }`}>
+                                        {selectedBadge.rarity}
+                                      </span>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <div className="text-center py-2">
+                                  <Shield className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                                  <p className="text-sm text-muted-foreground">No verified badge selected</p>
+                                </div>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {selectedBadge ? (pendingVerificationBadgeId !== undefined ? 'New Selection' : 'Current') : 'Select a badge below'}
+                            </span>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Remove Verified Badge button */}
+                      {((pendingVerificationBadgeId !== undefined ? pendingVerificationBadgeId : (user as any)?.selectedVerificationBadgeId) !== null) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setPendingVerificationBadgeId(null)}
+                          className="w-full"
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Remove Verified Badge
+                        </Button>
+                      )}
+
+                      {/* Verified Badge Grid */}
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                        {userVerificationBadges.map((badge: VerificationBadge) => {
+                          const displayBadgeId = pendingVerificationBadgeId !== undefined ? pendingVerificationBadgeId : (user as any)?.selectedVerificationBadgeId;
+                          const isSelected = displayBadgeId === badge.id;
+                          return (
+                            <button
+                              key={badge.id}
+                              type="button"
+                              onClick={() => setPendingVerificationBadgeId(badge.id)}
+                              className={`
+                                relative p-2 rounded-lg transition-all transform hover:scale-105 flex flex-col items-center
+                                ${isSelected 
+                                  ? 'ring-2 ring-green-500 bg-green-500/20' 
+                                  : 'border border-border hover:border-green-500/50'}
+                              `}
+                            >
+                              <NameTagImage
+                                imageUrl={badge.imageUrl}
+                                alt={badge.name}
+                                className="w-10 h-10 object-contain"
+                              />
+                              <p className="text-xs text-center mt-1 truncate w-full">{badge.name}</p>
+                              {badge.isDefault && (
+                                <span className="text-[10px] text-green-500 font-medium">Free</span>
+                              )}
+
+                              {isSelected && (
+                                <div className="absolute -top-1 -right-1 bg-green-500 text-white rounded-full p-0.5">
                                   <Check className="h-2.5 w-2.5" />
                                 </div>
                               )}
