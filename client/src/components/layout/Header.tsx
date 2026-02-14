@@ -392,9 +392,16 @@ const Header = () => {
                   <DropdownMenuContent align="end" className="w-56 mt-2">
                     <div className="px-4 py-3 border-b">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium">{user.displayName}</p>
-                          <p className="text-sm text-muted-foreground">@{user.username}</p>
+                        <div className="flex items-center gap-3">
+                          <CustomAvatar 
+                            user={user}
+                            size="sm"
+                            borderIntensity="subtle"
+                          />
+                          <div>
+                            <p className="text-sm font-medium">{user.displayName}</p>
+                            <p className="text-sm text-muted-foreground">@{user.username}</p>
+                          </div>
                         </div>
                         {user.currentStreak && user.currentStreak > 0 && (
                           <div className="flex items-center gap-1 bg-orange-500/10 px-2 py-1 rounded-md">
