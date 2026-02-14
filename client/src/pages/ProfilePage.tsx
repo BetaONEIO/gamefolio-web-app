@@ -3344,13 +3344,25 @@ const ProfilePage = () => {
                 avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
                 bannerUrl: profile.bannerUrl,
                 selectedAvatarBorderId: profile.selectedAvatarBorderId,
-                avatarBorderColor: profile.avatarBorderColor
+                avatarBorderColor: profile.avatarBorderColor,
+                nftProfileTokenId: profile.nftProfileTokenId,
+                nftProfileImageUrl: profile.nftProfileImageUrl,
+                emailVerified: profile.emailVerified,
+                role: profile.role,
+                isPro: profile.isPro,
+                userType: profile.userType,
+                showUserType: profile.showUserType,
+                accentColor: profile.accentColor,
+                backgroundColor: profile.backgroundColor,
+                cardColor: profile.cardColor,
+                primaryColor: profile.primaryColor
               }}
               userStats={{
                 clips: profile._count?.clips || 0,
                 followers: profile._count?.followers || 0,
                 following: profile._count?.following || 0
               }}
+              favoriteGames={favoriteGames?.slice(0, 5).map(g => ({ id: g.id, name: g.name, imageUrl: g.imageUrl }))}
               trigger={
                 <Button variant="outline" className="w-full justify-start" onClick={() => setProfileActionDialogOpen(false)}>
                   <Share2 className="mr-2 h-4 w-4" />
