@@ -9,6 +9,7 @@ import { useMobile } from "@/hooks/use-mobile";
 import { useQuery } from "@tanstack/react-query";
 import { User, Game } from "@shared/schema";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
+import proButtonImg from "@assets/Gamefolio_pro_button_final_c_1771055092628.png";
 
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import {
@@ -434,7 +435,7 @@ const Header = () => {
                         onClick={() => setProUpgradeOpen(true)}
                         data-testid="button-go-pro"
                       >
-                        <Crown className="mr-2 h-4 w-4 text-yellow-500" />
+                        <img src={proButtonImg} alt="Go Pro" className="mr-2 h-4 w-4 object-contain" />
                         <span>Go Pro</span>
                       </DropdownMenuItem>
                     )}
