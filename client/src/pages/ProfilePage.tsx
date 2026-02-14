@@ -376,7 +376,7 @@ const ProfilePage = () => {
   const { signedUrl: profileAvatarSignedUrl } = useSignedUrl(profile?.avatarUrl);
 
   // Fetch user's selected verification badge
-  const { data: verificationBadgeData } = useQuery<{ badge: { id: number; name: string; imageUrl: string } | null }>({
+  const { data: verificationBadgeData } = useQuery<{ verificationBadge: { id: number; name: string; imageUrl: string } | null }>({
     queryKey: [`/api/user/${profile?.id}/verification-badge`],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!profile?.id,
@@ -1615,9 +1615,9 @@ const ProfilePage = () => {
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold">{profile.displayName}</h1>
               <VerificationBadge
-                isVerified={!!verificationBadgeData?.badge}
-                badgeImageUrl={verificationBadgeData?.badge?.imageUrl}
-                badgeName={verificationBadgeData?.badge?.name}
+                isVerified={!!verificationBadgeData?.verificationBadge}
+                badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
+                badgeName={verificationBadgeData?.verificationBadge?.name}
                 size="lg"
               />
               <ModeratorBadge 
@@ -1909,9 +1909,9 @@ const ProfilePage = () => {
             <div className="flex items-center gap-2 flex-wrap mt-8">
               <h1 className="text-2xl font-bold">{profile.displayName}</h1>
               <VerificationBadge
-                isVerified={!!verificationBadgeData?.badge}
-                badgeImageUrl={verificationBadgeData?.badge?.imageUrl}
-                badgeName={verificationBadgeData?.badge?.name}
+                isVerified={!!verificationBadgeData?.verificationBadge}
+                badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
+                badgeName={verificationBadgeData?.verificationBadge?.name}
                 size="xl"
               />
               <ModeratorBadge 
