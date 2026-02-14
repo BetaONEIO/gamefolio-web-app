@@ -275,7 +275,7 @@ const containerSizes = {
 
 const borderStyles = {
   subtle: (color: string) => `0 0 0 1px ${color}66, 0 0 8px ${color}22`,
-  normal: (color: string) => `0 0 0 2px ${color}66, 0 0 15px ${color}33`,
+  normal: (color: string) => `0 0 0 1px ${color}66, 0 0 15px ${color}33`,
   strong: (color: string) => `0 0 0 3px ${color}88, 0 0 20px ${color}44`
 };
 
