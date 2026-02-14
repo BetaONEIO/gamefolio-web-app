@@ -1,19 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useLocation } from "wouter";
 import OnboardingFlow from "@/components/auth/onboarding-flow";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { VerificationGuard } from "@/components/auth/verification-guard";
 
 export default function OnboardingPage() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const { user, isLoading } = useAuth();
 
-  // Prevent browser navigation away from onboarding
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      // Check if user still needs onboarding
       if (user && (!user.userType || !user.ageRange)) {
         const message = "You haven't completed your profile setup. Are you sure you want to leave?";
         event.returnValue = message;
@@ -22,9 +19,7 @@ export default function OnboardingPage() {
     };
 
     const handlePopState = (event: PopStateEvent) => {
-      // Check if user still needs onboarding
       if (user && (!user.userType || !user.ageRange)) {
-        // Prevent navigation by pushing the current state back
         window.history.pushState(null, '', '/onboarding');
         toast({
           title: "Complete your profile",
@@ -37,8 +32,6 @@ export default function OnboardingPage() {
     if (user && (!user.userType || !user.ageRange)) {
       window.addEventListener('beforeunload', handleBeforeUnload);
       window.addEventListener('popstate', handlePopState);
-      
-      // Push current state to prevent back navigation
       window.history.pushState(null, '', '/onboarding');
     }
 
@@ -50,7 +43,6 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     if (!isLoading && !user) {
-      // No authenticated user, redirect to auth
       toast({
         title: "Session expired",
         description: "Please log in again to complete your profile setup",
@@ -61,7 +53,6 @@ export default function OnboardingPage() {
   }, [user, isLoading, setLocation, toast]);
 
   const handleOnboardingComplete = () => {
-    // Navigate to home page after onboarding completion
     setLocation("/");
   };
 
@@ -74,30 +65,24 @@ export default function OnboardingPage() {
   }
 
   if (!user) {
-    return null; // Will redirect to auth in useEffect
+    return null;
   }
 
   return (
-    <VerificationGuard requireEmailVerification={true} requireOnboarding={false}>
-      <div className="relative min-h-screen flex items-center justify-center p-4">
-        {/* Blurred background preview of the app */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center z-0 bg-no-repeat"
-          style={{ 
-            backgroundImage: `url(/uploads/background-preview.jpg)`,
-            filter: 'blur(8px) brightness(0.3)'
-          }}
-        ></div>
-        
-        {/* Content overlay */}
-        <div className="relative z-10 w-full max-w-lg md:max-w-5xl">
-          <OnboardingFlow
-            userId={user.id}
-            username={user.username}
-            onComplete={handleOnboardingComplete}
-          />
-        </div>
+    <div className="relative min-h-screen flex items-center justify-center p-4 bg-gray-950">
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-gray-950 to-purple-900/10" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
       </div>
-    </VerificationGuard>
+
+      <div className="relative z-10 w-full max-w-lg md:max-w-5xl">
+        <OnboardingFlow
+          userId={user.id}
+          username={user.username}
+          onComplete={handleOnboardingComplete}
+        />
+      </div>
+    </div>
   );
 }
