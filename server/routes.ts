@@ -6807,14 +6807,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      // All users get default badges + their unlocked badges
       const allBadges = await storage.getAllVerificationBadges();
       const defaultBadges = allBadges.filter(b => b.isDefault);
       const unlockedBadges = await storage.getUserUnlockedVerificationBadges(req.user.id);
       
-      // Merge default and unlocked badges, avoiding duplicates
+      const isModerator = req.user.role === 'moderator' || req.user.role === 'admin';
+      const moderatorBadges = isModerator 
+        ? allBadges.filter(b => b.name.toLowerCase().includes('moderator'))
+        : [];
+
       const unlockedIds = new Set(unlockedBadges.map(b => b.id));
-      const mergedBadges = [...defaultBadges.filter(b => !unlockedIds.has(b.id)), ...unlockedBadges];
+      const mergedBadges = [
+        ...defaultBadges.filter(b => !unlockedIds.has(b.id)),
+        ...moderatorBadges.filter(b => !unlockedIds.has(b.id) && !b.isDefault),
+        ...unlockedBadges,
+      ];
       
       res.json(mergedBadges);
     } catch (err) {
