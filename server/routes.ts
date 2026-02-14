@@ -20,7 +20,7 @@ import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
 import { eq, sql } from "drizzle-orm";
 import { db } from "./db";
-import { users, nameTags, profileBorders, storeItems, heroSlides, previousAvatars } from "@shared/schema";
+import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars } from "@shared/schema";
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -6793,6 +6793,266 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Error syncing borders from bucket:", err);
       return res.status(500).json({ message: "Error syncing borders from bucket" });
+    }
+  });
+
+  // ==========================================
+  // Verification Badges Routes
+  // ==========================================
+
+  // Get user's unlocked verification badges (includes default badges for all users)
+  app.get("/api/user/verification-badges", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      // All users get default badges + their unlocked badges
+      const allBadges = await storage.getAllVerificationBadges();
+      const defaultBadges = allBadges.filter(b => b.isDefault);
+      const unlockedBadges = await storage.getUserUnlockedVerificationBadges(req.user.id);
+      
+      // Merge default and unlocked badges, avoiding duplicates
+      const unlockedIds = new Set(unlockedBadges.map(b => b.id));
+      const mergedBadges = [...defaultBadges.filter(b => !unlockedIds.has(b.id)), ...unlockedBadges];
+      
+      res.json(mergedBadges);
+    } catch (err) {
+      console.error("Error fetching unlocked verification badges:", err);
+      return res.status(500).json({ message: "Error fetching unlocked verification badges" });
+    }
+  });
+
+  // Update user's selected verification badge
+  app.put("/api/user/verification-badge", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const { badgeId } = req.body;
+      
+      if (badgeId !== null) {
+        const badge = await storage.getVerificationBadge(badgeId);
+        if (!badge) {
+          return res.status(400).json({ message: "Invalid verification badge" });
+        }
+        
+        // Default badges are available to everyone
+        if (!badge.isDefault) {
+          const hasUnlocked = await storage.userHasUnlockedVerificationBadge(req.user.id, badgeId);
+          if (!hasUnlocked) {
+            return res.status(403).json({ message: "You haven't unlocked this verification badge" });
+          }
+        }
+      }
+
+      await storage.updateUserVerificationBadge(req.user.id, badgeId);
+      res.json({ message: "Verification badge updated successfully" });
+    } catch (err) {
+      console.error("Error updating verification badge:", err);
+      return res.status(500).json({ message: "Error updating verification badge" });
+    }
+  });
+
+  // Get user's selected verification badge (for profile display)
+  app.get("/api/user/:userId/verification-badge", async (req, res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
+    try {
+      const userId = parseInt(req.params.userId);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (!user.selectedVerificationBadgeId) {
+        return res.json({ verificationBadge: null });
+      }
+
+      const badge = await storage.getVerificationBadge(user.selectedVerificationBadgeId);
+      if (badge && badge.imageUrl && badge.imageUrl.includes('supabase.co/storage')) {
+        const signed = await supabaseStorage.convertToSignedUrl(badge.imageUrl, 3600);
+        if (signed) {
+          res.json({ verificationBadge: { ...badge, imageUrl: signed } });
+          return;
+        }
+      }
+      res.json({ verificationBadge: badge });
+    } catch (err) {
+      console.error("Error fetching user verification badge:", err);
+      return res.status(500).json({ message: "Error fetching user verification badge" });
+    }
+  });
+
+  // ==========================================
+  // Verification Badges Store Routes
+  // ==========================================
+
+  // Get verification badges available for purchase in the store
+  app.get("/api/store/verification-badges", async (req, res) => {
+    try {
+      const allBadges = await storage.getAllVerificationBadges();
+      const storeBadges = allBadges.filter(b => b.availableInStore && b.isActive && !b.isDefault);
+
+      const badgesWithSignedUrls = await Promise.all(
+        storeBadges.map(async (badge) => {
+          let imageUrl = badge.imageUrl;
+          if (imageUrl && imageUrl.includes('supabase.co/storage')) {
+            const signed = await supabaseStorage.convertToSignedUrl(imageUrl, 3600);
+            if (signed) imageUrl = signed;
+          }
+          return { ...badge, imageUrl };
+        })
+      );
+
+      if (req.isAuthenticated()) {
+        const unlockedBadges = await storage.getUserUnlockedVerificationBadges(req.user.id);
+        const unlockedIds = new Set(unlockedBadges.map(b => b.id));
+
+        const badgesWithStatus = badgesWithSignedUrls.map(badge => ({
+          ...badge,
+          owned: unlockedIds.has(badge.id),
+        }));
+        return res.json(badgesWithStatus);
+      }
+
+      res.json(badgesWithSignedUrls.map(badge => ({ ...badge, owned: false })));
+    } catch (err) {
+      console.error("Error fetching store verification badges:", err);
+      return res.status(500).json({ message: "Error fetching store verification badges" });
+    }
+  });
+
+  // Purchase a verification badge with GF tokens
+  app.post("/api/store/purchase-verification-badge", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const { badgeId } = req.body;
+      if (!badgeId) {
+        return res.status(400).json({ message: "badgeId is required" });
+      }
+
+      const user = await storage.getUserById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const badge = await storage.getVerificationBadge(badgeId);
+      if (!badge) {
+        return res.status(404).json({ message: "Verification badge not found" });
+      }
+
+      if (!badge.availableInStore || !badge.isActive) {
+        return res.status(400).json({ message: "This verification badge is not available for purchase" });
+      }
+
+      if (badge.isDefault) {
+        return res.status(400).json({ message: "This verification badge is free for everyone" });
+      }
+
+      const cost = badge.gfCost || 0;
+      if (cost <= 0) {
+        return res.status(400).json({ message: "This verification badge has no price set" });
+      }
+
+      const hasUnlocked = await storage.userHasUnlockedVerificationBadge(req.user.id, badgeId);
+      if (hasUnlocked) {
+        return res.status(400).json({ message: "You already own this verification badge" });
+      }
+
+      const balance = user.gfTokenBalance || 0;
+      if (balance < cost) {
+        return res.status(400).json({ message: `Insufficient GF tokens. Need ${cost} GF, you have ${balance} GF` });
+      }
+
+      await db.update(users)
+        .set({ gfTokenBalance: sql`COALESCE(${users.gfTokenBalance}, 0) - ${cost}` })
+        .where(eq(users.id, req.user.id));
+
+      await storage.unlockVerificationBadgeForUser(req.user.id, badgeId);
+
+      res.json({
+        success: true,
+        message: `Successfully purchased "${badge.name}"!`,
+        badge,
+        newBalance: balance - cost,
+      });
+    } catch (err) {
+      console.error("Error purchasing verification badge:", err);
+      return res.status(500).json({ message: "Error purchasing verification badge" });
+    }
+  });
+
+  // Admin sync verification badges from the gamefolio-verification Supabase bucket
+  app.post("/api/admin/verification-badges/sync-bucket", adminMiddleware, async (req, res) => {
+    try {
+      const files = await supabaseStorage.listBucketFiles('gamefolio-verification', '');
+
+      if (!files || files.length === 0) {
+        return res.json({ synced: 0, message: "No files found in gamefolio-verification bucket" });
+      }
+
+      const existingBadges = await storage.getAllVerificationBadges();
+      const existingNames = new Set(existingBadges.map(b => b.name.toLowerCase()));
+
+      let synced = 0;
+      const rarities = ['common', 'rare', 'epic', 'legendary'];
+      const rarityPrices: Record<string, number> = {
+        common: 100,
+        rare: 250,
+        epic: 500,
+        legendary: 1000,
+      };
+
+      for (const file of files) {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        if (!ext || !['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) continue;
+
+        const nameBase = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+        const displayName = nameBase.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        const nameKey = file.name.replace(/\.[^.]+$/, '').toLowerCase().replace(/[-_ ]/g, '');
+
+        const isDefaultBadge = nameKey.includes('verified128png') || nameKey === 'verified128' || nameKey === 'verified128png';
+
+        if (existingNames.has(displayName.toLowerCase())) {
+          const existing = existingBadges.find(b => b.name.toLowerCase() === displayName.toLowerCase());
+          if (existing) {
+            await storage.updateVerificationBadge(existing.id, {
+              imageUrl: file.publicUrl,
+              availableInStore: !isDefaultBadge,
+              isDefault: isDefaultBadge,
+              gfCost: isDefaultBadge ? 0 : (rarityPrices[existing.rarity] || 100),
+            });
+            synced++;
+          }
+          continue;
+        }
+
+        const rarity = isDefaultBadge ? 'common' : rarities[Math.floor(Math.random() * rarities.length)];
+
+        await storage.createVerificationBadge({
+          name: displayName,
+          imageUrl: file.publicUrl,
+          rarity,
+          gfCost: isDefaultBadge ? 0 : rarityPrices[rarity],
+          isDefault: isDefaultBadge,
+          isActive: true,
+          availableInStore: !isDefaultBadge,
+        });
+        synced++;
+      }
+
+      res.json({ synced, total: files.length, message: `Synced ${synced} verification badges from bucket` });
+    } catch (err) {
+      console.error("Error syncing verification badges from bucket:", err);
+      return res.status(500).json({ message: "Error syncing verification badges from bucket" });
     }
   });
 

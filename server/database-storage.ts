@@ -44,6 +44,8 @@ import {
   UserUnlockedNameTag, InsertUserUnlockedNameTag,
   ProfileBorder, InsertProfileBorder,
   UserUnlockedBorder, InsertUserUnlockedBorder,
+  VerificationBadge, InsertVerificationBadge,
+  UserUnlockedVerificationBadge, InsertUserUnlockedVerificationBadge,
   ClipWithUser,
   CommentWithUser,
   ScreenshotCommentWithUser,
@@ -91,6 +93,8 @@ import {
   userUnlockedNameTags,
   profileBorders,
   userUnlockedBorders,
+  verificationBadges,
+  userUnlockedVerificationBadges,
   screenshotCommentMentions,
   assetRewards,
   assetRewardClaims,
@@ -5379,6 +5383,113 @@ export class DatabaseStorage implements IStorage {
       .update(users)
       .set({
         selectedBorderId: borderId,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+  }
+
+  // Verification badge operations
+  async getAllVerificationBadges(): Promise<VerificationBadge[]> {
+    return await db
+      .select()
+      .from(verificationBadges)
+      .where(eq(verificationBadges.isActive, true))
+      .orderBy(verificationBadges.name);
+  }
+
+  async getVerificationBadge(id: number): Promise<VerificationBadge | null> {
+    const [badge] = await db
+      .select()
+      .from(verificationBadges)
+      .where(eq(verificationBadges.id, id));
+    return badge || null;
+  }
+
+  async createVerificationBadge(badge: InsertVerificationBadge): Promise<VerificationBadge> {
+    const [created] = await db.insert(verificationBadges).values(badge).returning();
+    return created;
+  }
+
+  async updateVerificationBadge(id: number, updates: Partial<VerificationBadge>): Promise<VerificationBadge | null> {
+    const [updated] = await db
+      .update(verificationBadges)
+      .set(updates)
+      .where(eq(verificationBadges.id, id))
+      .returning();
+    return updated || null;
+  }
+
+  async deleteVerificationBadge(id: number): Promise<boolean> {
+    await db.delete(verificationBadges).where(eq(verificationBadges.id, id));
+    return true;
+  }
+
+  async getUserUnlockedVerificationBadges(userId: number): Promise<VerificationBadge[]> {
+    const unlocked = await db
+      .select({ badge: verificationBadges })
+      .from(userUnlockedVerificationBadges)
+      .innerJoin(verificationBadges, eq(userUnlockedVerificationBadges.badgeId, verificationBadges.id))
+      .where(
+        and(
+          eq(userUnlockedVerificationBadges.userId, userId),
+          eq(verificationBadges.isActive, true)
+        )
+      );
+
+    const defaultBadges = await db
+      .select()
+      .from(verificationBadges)
+      .where(
+        and(
+          eq(verificationBadges.isDefault, true),
+          eq(verificationBadges.isActive, true)
+        )
+      );
+
+    const unlockedBadges = unlocked.map((u) => u.badge);
+    const allBadges = [...unlockedBadges, ...defaultBadges];
+    const uniqueBadges = allBadges.filter(
+      (badge, index, self) => index === self.findIndex((b) => b.id === badge.id)
+    );
+
+    return uniqueBadges;
+  }
+
+  async unlockVerificationBadgeForUser(userId: number, badgeId: number): Promise<UserUnlockedVerificationBadge> {
+    const [unlock] = await db
+      .insert(userUnlockedVerificationBadges)
+      .values({ userId, badgeId })
+      .returning();
+    return unlock;
+  }
+
+  async userHasUnlockedVerificationBadge(userId: number, badgeId: number): Promise<boolean> {
+    const [badge] = await db
+      .select()
+      .from(verificationBadges)
+      .where(eq(verificationBadges.id, badgeId));
+
+    if (badge?.isDefault) {
+      return true;
+    }
+
+    const [unlock] = await db
+      .select()
+      .from(userUnlockedVerificationBadges)
+      .where(
+        and(
+          eq(userUnlockedVerificationBadges.userId, userId),
+          eq(userUnlockedVerificationBadges.badgeId, badgeId)
+        )
+      );
+    return !!unlock;
+  }
+
+  async updateUserVerificationBadge(userId: number, badgeId: number | null): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        selectedVerificationBadgeId: badgeId,
         updatedAt: new Date()
       })
       .where(eq(users.id, userId));

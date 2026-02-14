@@ -74,6 +74,8 @@ export const users = pgTable("users", {
   selectedNameTagId: integer("selected_name_tag_id"), // References name_tags table
   // Selected Profile Border
   selectedBorderId: integer("selected_border_id"), // References profile_borders table
+  // Selected Verification Badge
+  selectedVerificationBadgeId: integer("selected_verification_badge_id"), // References verification_badges table
   // NFT Profile Picture
   nftProfileTokenId: integer("nft_profile_token_id"),
   nftProfileImageUrl: text("nft_profile_image_url"),
@@ -325,6 +327,41 @@ export type ProfileBorder = typeof profileBorders.$inferSelect;
 export type InsertProfileBorder = z.infer<typeof insertProfileBorderSchema>;
 export type UserUnlockedBorder = typeof userUnlockedBorders.$inferSelect;
 export type InsertUserUnlockedBorder = z.infer<typeof insertUserUnlockedBorderSchema>;
+
+// Verification badges for profile customization
+export const verificationBadges = pgTable("verification_badges", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  imageUrl: text("image_url").notNull(),
+  rarity: text("rarity").notNull().default("common"),
+  gfCost: integer("gf_cost").default(0),
+  isDefault: boolean("is_default").default(false).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  availableInStore: boolean("available_in_store").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const userUnlockedVerificationBadges = pgTable("user_unlocked_verification_badges", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  badgeId: integer("badge_id").notNull().references(() => verificationBadges.id, { onDelete: "cascade" }),
+  unlockedAt: timestamp("unlocked_at").defaultNow().notNull(),
+});
+
+export const insertVerificationBadgeSchema = createInsertSchema(verificationBadges).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserUnlockedVerificationBadgeSchema = createInsertSchema(userUnlockedVerificationBadges).omit({
+  id: true,
+  unlockedAt: true,
+});
+
+export type VerificationBadge = typeof verificationBadges.$inferSelect;
+export type InsertVerificationBadge = z.infer<typeof insertVerificationBadgeSchema>;
+export type UserUnlockedVerificationBadge = typeof userUnlockedVerificationBadges.$inferSelect;
+export type InsertUserUnlockedVerificationBadge = z.infer<typeof insertUserUnlockedVerificationBadgeSchema>;
 
 // Notifications table
 export const notifications = pgTable("notifications", {

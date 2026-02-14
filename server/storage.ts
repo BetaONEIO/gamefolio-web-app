@@ -2,7 +2,7 @@ import {
   users, games, clips, likes, comments, userGameFavorites, follows, messages, profileBanners,
   monthlyLeaderboard, weeklyLeaderboard, topContributors, userPointsHistory, userXPHistory, notifications, userBadges, contentFilterSettings, bannedWords,
   heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions, nftWatchlist, assetRewards, assetRewardClaims,
-  userDailyUploads, proLootboxGrants, nameTags, userUnlockedNameTags, userDailyFires, profileBorders, userUnlockedBorders,
+  userDailyUploads, proLootboxGrants, nameTags, userUnlockedNameTags, userDailyFires, profileBorders, userUnlockedBorders, verificationBadges, userUnlockedVerificationBadges,
   type User, type InsertUser,
   type Game, type InsertGame,
   type Clip, type InsertClip,
@@ -41,6 +41,8 @@ import {
   type UserUnlockedNameTag, type InsertUserUnlockedNameTag,
   type ProfileBorder, type InsertProfileBorder,
   type UserUnlockedBorder, type InsertUserUnlockedBorder,
+  type VerificationBadge, type InsertVerificationBadge,
+  type UserUnlockedVerificationBadge, type InsertUserUnlockedVerificationBadge,
   type ClipWithUser,
   type CommentWithUser,
   type UserWithStats,
@@ -460,6 +462,17 @@ export interface IStorage {
   unlockBorderForUser(userId: number, borderId: number): Promise<UserUnlockedBorder>;
   userHasUnlockedBorder(userId: number, borderId: number): Promise<boolean>;
   updateUserBorder(userId: number, borderId: number | null): Promise<void>;
+
+  // Verification badge operations
+  getAllVerificationBadges(): Promise<VerificationBadge[]>;
+  getVerificationBadge(id: number): Promise<VerificationBadge | null>;
+  createVerificationBadge(badge: InsertVerificationBadge): Promise<VerificationBadge>;
+  updateVerificationBadge(id: number, updates: Partial<VerificationBadge>): Promise<VerificationBadge | null>;
+  deleteVerificationBadge(id: number): Promise<boolean>;
+  getUserUnlockedVerificationBadges(userId: number): Promise<VerificationBadge[]>;
+  unlockVerificationBadgeForUser(userId: number, badgeId: number): Promise<UserUnlockedVerificationBadge>;
+  userHasUnlockedVerificationBadge(userId: number, badgeId: number): Promise<boolean>;
+  updateUserVerificationBadge(userId: number, badgeId: number | null): Promise<void>;
 
   // Daily fire limit operations (1/day for regular users, 3/day for Pro users)
   getUserDailyFires(userId: number, date: string): Promise<UserDailyFires | null>;
