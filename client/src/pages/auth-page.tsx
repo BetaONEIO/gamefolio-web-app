@@ -80,7 +80,7 @@ export default function AuthPage() {
   };
 
   return (
-    <KeyboardAvoidingWrapper className="min-h-screen w-full relative flex items-center justify-center p-4 sm:p-4 overflow-hidden">
+    <KeyboardAvoidingWrapper className="min-h-screen w-full relative flex items-center justify-center p-4 sm:p-4 overflow-y-auto overflow-x-hidden">
       {/* Video Background */}
       <video
         className="fixed inset-0 w-full h-full object-cover z-0"
@@ -104,7 +104,7 @@ export default function AuthPage() {
       <div className="absolute inset-0 bg-navy-900/40 z-15"></div>
 
       {/* Content */}
-      <div className="relative z-20 w-full max-w-md flex flex-col justify-center">
+      <div className="relative z-20 w-full max-w-md flex flex-col justify-center my-auto py-4">
         <div className="mb-5 sm:mb-10 text-center">
           <div className="flex flex-col items-center">
             <img
