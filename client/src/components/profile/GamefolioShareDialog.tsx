@@ -5,12 +5,26 @@ import {
   DialogContent,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Share2, X, Copy } from 'lucide-react';
+import { Share2, X, Copy, Video, Gamepad2, Trophy, Upload, Code, Eye, Coffee, Scroll } from 'lucide-react';
 import { FaFacebook, FaReddit, FaLinkedin, FaWhatsapp, FaTelegram, FaDiscord, FaEnvelope } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
 import { toast } from '@/hooks/use-toast';
 import { CustomAvatar } from '@/components/ui/custom-avatar';
+import { VerificationBadge } from '@/components/ui/verification-badge';
+import { ProBadge } from '@/components/ui/pro-badge';
+import { Badge } from '@/components/ui/badge';
 import { useSignedUrl } from '@/hooks/use-signed-url';
+
+const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
+  streamer: { label: "Streamer", icon: Video, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
+  gamer: { label: "Gamer", icon: Gamepad2, color: "bg-green-500/20 text-green-400 border-green-500/30" },
+  professional_gamer: { label: "Professional Gamer", icon: Trophy, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
+  content_creator: { label: "Content Creator", icon: Upload, color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+  indie_developer: { label: "Indie Developer", icon: Code, color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
+  viewer: { label: "Viewer", icon: Eye, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
+  filthy_casual: { label: "Filthy Casual", icon: Coffee, color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
+  doom_scroller: { label: "Doom Scroller", icon: Scroll, color: "bg-red-500/20 text-red-400 border-red-500/30" },
+};
 
 interface GamefolioShareData {
   profileUrl: string;
@@ -43,6 +57,11 @@ interface GamefolioShareDialogProps {
     avatarBorderColor?: string | null;
     nftProfileTokenId?: number | null;
     nftProfileImageUrl?: string | null;
+    emailVerified?: boolean | null;
+    role?: string | null;
+    isPro?: boolean | null;
+    userType?: string | null;
+    showUserType?: boolean | null;
   };
   userStats?: {
     clips?: number;
@@ -220,13 +239,36 @@ export function GamefolioShareDialog({
                     </div>
                   </div>
 
-                  {/* Name & Username */}
-                  <div className="flex items-center gap-1 mb-0.5">
+                  {/* Name & Username with badges */}
+                  <div className="flex items-center gap-1 mb-0.5 flex-wrap">
                     <span className="text-[#f8fafc] text-lg font-bold leading-7 truncate">
                       {userProfile?.displayName || username}
                     </span>
+                    <VerificationBadge isVerified={!!userProfile?.emailVerified} size="sm" />
+                    <ProBadge isPro={userProfile?.isPro === true} size="sm" />
                   </div>
                   <span className="text-[#94a3b8] text-sm leading-5">@{username}</span>
+
+                  {/* User type badges */}
+                  {userProfile?.userType && userProfile?.showUserType !== false && (
+                    <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                      {userProfile.userType.split(',').map(t => t.trim()).filter(Boolean).slice(0, 2).map((type, index) => {
+                        const config = userTypeConfig[type];
+                        if (!config) return null;
+                        const IconComponent = config.icon;
+                        return (
+                          <Badge 
+                            key={`${type}-${index}`}
+                            variant="outline" 
+                            className={`${config.color} border text-[10px] font-medium px-1.5 py-0`}
+                          >
+                            <IconComponent className="w-2.5 h-2.5 mr-0.5" />
+                            {config.label}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   {/* Bio */}
                   {userProfile?.bio && (

@@ -1395,7 +1395,14 @@ const ProfilePage = () => {
             avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
             bannerUrl: profile.bannerUrl,
             selectedAvatarBorderId: profile.selectedAvatarBorderId,
-            avatarBorderColor: profile.avatarBorderColor
+            avatarBorderColor: profile.avatarBorderColor,
+            nftProfileTokenId: profile.nftProfileTokenId,
+            nftProfileImageUrl: profile.nftProfileImageUrl,
+            emailVerified: profile.emailVerified,
+            role: profile.role,
+            isPro: profile.isPro,
+            userType: profile.userType,
+            showUserType: profile.showUserType
           }}
           userStats={{
             clips: profile._count?.clips || 0,
@@ -2245,7 +2252,14 @@ const ProfilePage = () => {
                       avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
                       bannerUrl: profile.bannerUrl,
                       selectedAvatarBorderId: profile.selectedAvatarBorderId,
-                      avatarBorderColor: profile.avatarBorderColor
+                      avatarBorderColor: profile.avatarBorderColor,
+                      nftProfileTokenId: profile.nftProfileTokenId,
+                      nftProfileImageUrl: profile.nftProfileImageUrl,
+                      emailVerified: profile.emailVerified,
+                      role: profile.role,
+                      isPro: profile.isPro,
+                      userType: profile.userType,
+                      showUserType: profile.showUserType
                     }}
                     userStats={{
                       clips: profile._count?.clips || 0,
