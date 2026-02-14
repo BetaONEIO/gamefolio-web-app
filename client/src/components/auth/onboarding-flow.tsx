@@ -672,71 +672,83 @@ export default function OnboardingFlow({
       case OnboardingStep.Welcome:
         return (
           <>
-            <div className="flex flex-col md:flex-row md:gap-8 md:items-center">
-              <div className="hidden md:block md:w-1/2">
-                <div className="rounded-2xl overflow-hidden border border-primary/20 bg-gray-800/50">
+            <div className="flex flex-col md:flex-row md:gap-8">
+              {/* Left side - Image card + title */}
+              <div className="hidden md:flex md:flex-col md:w-[42%] md:flex-shrink-0">
+                <div className="rounded-2xl overflow-hidden border border-primary/20 bg-gradient-to-b from-gray-800/60 to-gray-900/80 aspect-[3/4] flex items-center justify-center">
                   <img 
                     src="/attached_assets/Gamefolio logo.png" 
                     alt="Gamefolio" 
-                    className="w-full h-auto p-8"
+                    className="w-3/4 h-auto"
                   />
-                  <div className="grid grid-cols-3 gap-3 p-6 pt-0">
-                    <div className="flex flex-col items-center text-center p-3 rounded-xl bg-gray-800/80">
-                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mb-2">
-                        <Gamepad2 className="h-5 w-5 text-primary" />
-                      </div>
-                      <p className="text-xs text-gray-300">Source your clips</p>
-                    </div>
-                    <div className="flex flex-col items-center text-center p-3 rounded-xl bg-gray-800/80">
-                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mb-2">
-                        <Upload className="h-5 w-5 text-primary" />
-                      </div>
-                      <p className="text-xs text-gray-300">Upload clips</p>
-                    </div>
-                    <div className="flex flex-col items-center text-center p-3 rounded-xl bg-gray-800/80">
-                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mb-2">
-                        <Share2 className="h-5 w-5 text-primary" />
-                      </div>
-                      <p className="text-xs text-gray-300">Share online</p>
-                    </div>
-                  </div>
                 </div>
-              </div>
-
-              <div className="md:w-1/2">
-                <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">Upload your best gaming clips and build your Gamefolio.</h2>
-                <p className="text-gray-300 mb-2">
+                <h2 className="text-2xl font-bold text-white mt-5">Welcome to Gamefolio</h2>
+                <p className="text-gray-400 text-sm mt-1">
                   Your personal gaming portfolio, all in one place.
                 </p>
-                <p className="text-gray-300 mb-6">
-                  Earn XP, showcase your achievements, and let your gameplay speak for itself.
-                </p>
-                
-                <div className="mb-6 md:hidden">
-                  <h3 className="text-xl font-bold text-white mb-4">How does it work?</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="flex flex-col items-center text-center">
-                      <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-2">
-                        <Gamepad2 className="h-6 w-6 text-primary" />
-                      </div>
-                      <p className="text-sm text-gray-300">Source your clips</p>
+              </div>
+
+              {/* Right side - Feature list + CTA */}
+              <div className="md:flex-1 flex flex-col">
+                {/* Mobile-only header */}
+                <div className="md:hidden mb-6">
+                  <h2 className="text-2xl font-bold text-white mb-2">Welcome to Gamefolio</h2>
+                  <p className="text-gray-300">Your personal gaming portfolio, all in one place.</p>
+                </div>
+
+                <div className="space-y-5 flex-1">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                      <Upload className="h-5 w-5 text-primary" />
                     </div>
-                    <div className="flex flex-col items-center text-center">
-                      <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-2">
-                        <Upload className="h-6 w-6 text-primary" />
-                      </div>
-                      <p className="text-sm text-gray-300">Upload your clips</p>
+                    <div>
+                      <h3 className="font-semibold text-white text-sm">Upload your best clips</h3>
+                      <p className="text-xs text-gray-400 mt-0.5">Share clips without limits or storage restrictions</p>
                     </div>
-                    <div className="flex flex-col items-center text-center">
-                      <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-2">
-                        <Share2 className="h-6 w-6 text-primary" />
-                      </div>
-                      <p className="text-sm text-gray-300">Share online</p>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                      <Gamepad2 className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-white text-sm">Build your gaming portfolio</h3>
+                      <p className="text-xs text-gray-400 mt-0.5">Showcase your achievements and let your gameplay speak for itself</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                      <Trophy className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-white text-sm">Earn XP and level up</h3>
+                      <p className="text-xs text-gray-400 mt-0.5">Climb leaderboards and unlock rewards as you engage</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                      <Share2 className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-white text-sm">Connect and share</h3>
+                      <p className="text-xs text-gray-400 mt-0.5">Follow gamers, share clips and grow your community</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                      <Wallet className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-white text-sm">Collect NFTs and GF Tokens</h3>
+                      <p className="text-xs text-gray-400 mt-0.5">Mint unique NFTs and earn tokens in the Gamefolio economy</p>
                     </div>
                   </div>
                 </div>
-                
-                <Button onClick={goToNextStep} className="w-full bg-primary hover:bg-primary/90 text-white">
+
+                <Button onClick={goToNextStep} className="w-full bg-primary hover:bg-primary/90 text-white mt-8">
                   Get Started <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
