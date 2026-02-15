@@ -126,7 +126,30 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
     setIsDragging(false);
   };
 
-  // Don't render if loading or no clips
+  // Show login prompt for non-authenticated users
+  if (!actualUserId) {
+    return (
+      <section className="px-4 sm:px-6 md:px-8 mb-6 sm:mb-8" data-testid="recommended-for-you-section">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-2">
+          <div className="flex items-center gap-2">
+            <Star className="h-5 w-5 text-primary flex-shrink-0" />
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold">Recommended for You</h2>
+          </div>
+        </div>
+        <div className="border-b border-border/50 mb-4 sm:mb-6 md:mb-8" />
+        <div className="text-center py-8 sm:py-12 bg-card/50 rounded-xl border border-border/50">
+          <Star className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+          <h3 className="text-base sm:text-lg font-semibold mb-2">
+            Log in to see recommended content
+          </h3>
+          <p className="text-sm sm:text-base text-muted-foreground mb-4 px-4">
+            Sign in to get personalised clip and reel recommendations based on your favourite games.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
   if (isLoading) {
     return (
       <section className="px-4 sm:px-6 md:px-8 mb-6 sm:mb-8">
@@ -135,8 +158,6 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
             <Star className="h-5 w-5 text-primary flex-shrink-0" />
             <h2 className="text-lg sm:text-xl md:text-2xl font-bold">Recommended for You</h2>
           </div>
-          
-          {/* Toggle between clips and reels */}
           <div className="flex gap-2">
             <Button
               variant={contentType === 'clips' ? 'default' : 'outline'}
@@ -146,8 +167,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
               data-testid="button-clips-toggle"
             >
               <Video className="h-4 w-4" />
-              <span className="hidden xs:inline">Clips</span>
-              <span className="xs:hidden">Clips</span>
+              <span>Clips</span>
             </Button>
             <Button
               variant={contentType === 'reels' ? 'default' : 'outline'}
@@ -157,13 +177,11 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
               data-testid="button-reels-toggle"
             >
               <Camera className="h-4 w-4" />
-              <span className="hidden xs:inline">Reels</span>
-              <span className="xs:hidden">Reels</span>
+              <span>Reels</span>
             </Button>
           </div>
         </div>
         <div className="border-b border-border/50 mb-4 sm:mb-6 md:mb-8" />
-        
         <div className="relative">
           <div className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide pb-4 px-2 sm:px-8">
             {Array(6).fill(0).map((_, i) => (

@@ -11,7 +11,12 @@ import { GameFilter } from "@/components/filters/GameFilter";
 
 export default function LatestReelsPage() {
   const { data: latestReels, isLoading } = useQuery<ClipWithUser[]>({
-    queryKey: ['/api/reels/latest?limit=50'],
+    queryKey: ['/api/reels/latest', { limit: 50 }],
+    queryFn: async () => {
+      const response = await fetch('/api/reels/latest?limit=50', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch latest reels');
+      return response.json();
+    },
   });
   const { openClipDialog } = useClipDialog();
   const isMobile = useMobile();
