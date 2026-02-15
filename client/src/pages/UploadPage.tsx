@@ -1056,10 +1056,20 @@ const UploadPage = () => {
                                 min={0}
                                 max={100}
                                 step={0.1}
-                                minStepsBetweenThumbs={1}
+                                minStepsBetweenThumbs={Math.ceil((0.5 / videoDuration) * 100 / 0.1)}
                                 onValueChange={(values: number[]) => {
-                                  const newStart = (values[0] / 100) * videoDuration;
-                                  const newEnd = (values[1] / 100) * videoDuration;
+                                  let newStart = (values[0] / 100) * videoDuration;
+                                  let newEnd = (values[1] / 100) * videoDuration;
+                                  if (newEnd - newStart < 0.5) {
+                                    const startMoved = Math.abs(newStart - trimStart) > 0.05;
+                                    if (startMoved) {
+                                      newStart = Math.min(newStart, newEnd - 0.5);
+                                    } else {
+                                      newEnd = Math.max(newEnd, newStart + 0.5);
+                                    }
+                                  }
+                                  newStart = Math.max(0, newStart);
+                                  newEnd = Math.min(videoDuration, newEnd);
                                   const startChanged = Math.abs(newStart - trimStart) > 0.05;
                                   const endChanged = Math.abs(newEnd - trimEnd) > 0.05;
                                   setTrimStart(newStart);
@@ -1604,10 +1614,20 @@ const UploadPage = () => {
                                 min={0}
                                 max={100}
                                 step={0.1}
-                                minStepsBetweenThumbs={1}
+                                minStepsBetweenThumbs={Math.ceil((0.5 / videoDuration) * 100 / 0.1)}
                                 onValueChange={(values: number[]) => {
-                                  const newStart = (values[0] / 100) * videoDuration;
-                                  const newEnd = (values[1] / 100) * videoDuration;
+                                  let newStart = (values[0] / 100) * videoDuration;
+                                  let newEnd = (values[1] / 100) * videoDuration;
+                                  if (newEnd - newStart < 0.5) {
+                                    const startMoved = Math.abs(newStart - trimStart) > 0.05;
+                                    if (startMoved) {
+                                      newStart = Math.min(newStart, newEnd - 0.5);
+                                    } else {
+                                      newEnd = Math.max(newEnd, newStart + 0.5);
+                                    }
+                                  }
+                                  newStart = Math.max(0, newStart);
+                                  newEnd = Math.min(videoDuration, newEnd);
                                   const startChanged = Math.abs(newStart - trimStart) > 0.05;
                                   const endChanged = Math.abs(newEnd - trimEnd) > 0.05;
                                   setTrimStart(newStart);
