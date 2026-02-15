@@ -22,6 +22,8 @@ interface VideoPlayerProps {
   hideControls?: boolean;
   onPlayingChange?: (isPlaying: boolean) => void;
   onMutedChange?: (isMuted: boolean) => void;
+  externalPaused?: boolean;
+  externalMuted?: boolean;
 }
 
 const VideoPlayer = ({ 
@@ -37,7 +39,9 @@ const VideoPlayer = ({
   disableAspectRatio = false,
   hideControls = false,
   onPlayingChange,
-  onMutedChange
+  onMutedChange,
+  externalPaused,
+  externalMuted
 }: VideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
@@ -225,6 +229,30 @@ const VideoPlayer = ({
       setIsPlaying(false);
     }
   }, [autoPlay]);
+
+  // Effect to handle external pause/play control
+  useEffect(() => {
+    if (externalPaused === undefined) return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (externalPaused && !video.paused) {
+      video.pause();
+      setIsPlaying(false);
+      setShowControls(true);
+    } else if (!externalPaused && video.paused && autoPlay) {
+      video.play().catch(err => {
+        console.error("Video play() was interrupted:", err);
+      });
+      setIsPlaying(true);
+    }
+  }, [externalPaused]);
+
+  // Effect to handle external mute control
+  useEffect(() => {
+    if (externalMuted === undefined) return;
+    setMuted(externalMuted);
+  }, [externalMuted]);
 
   useEffect(() => {
     const video = videoRef.current;

@@ -170,10 +170,11 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
     }
   }, [ageRestrictionAccepted, showAgeRestrictionDialog, currentReel]);
 
-  // Reset comments when switching reels
+  // Reset state when switching reels
   useEffect(() => {
     setShowComments(false);
     setShowShare(false);
+    setIsPaused(false);
   }, [currentIndex]);
 
   if (!currentReel) return null;
@@ -267,6 +268,11 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                     objectFit="cover"
                     clipId={reel.id}
                     disableAspectRatio={true}
+                    hideControls={true}
+                    externalPaused={index === currentIndex ? isPaused : undefined}
+                    externalMuted={index === currentIndex ? isMuted : undefined}
+                    onPlayingChange={index === currentIndex ? (playing) => setIsPaused(!playing) : undefined}
+                    onMutedChange={index === currentIndex ? (muted) => setIsMuted(muted) : undefined}
                     onEnded={() => {
                       if (index < reels.length - 1 && containerRef.current) {
                         containerRef.current.scrollTo({ top: (index + 1) * window.innerHeight, behavior: 'smooth' });
