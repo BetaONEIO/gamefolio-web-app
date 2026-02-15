@@ -138,7 +138,7 @@ const GameCategoriesPage = () => {
                 <Link key={game.id} href={`/explore?game=${game.id}`}>
                   <Card className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow">
                     <div className="aspect-video overflow-hidden bg-muted">
-                      <img src={game.imageUrl} alt={game.name} className="w-full h-full object-cover" />
+                      <img src={game.imageUrl} alt={game.name} className="w-full h-full object-cover" loading="lazy" />
                     </div>
                     <CardContent className="p-2">
                       <h3 className="font-medium text-sm truncate">{game.name}</h3>

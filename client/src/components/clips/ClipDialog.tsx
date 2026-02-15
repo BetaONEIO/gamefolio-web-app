@@ -634,6 +634,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                               <img 
                                 src={clip.user.avatarUrl} 
                                 alt={clip.user?.displayName || clip.user?.username || 'User'} 
+                                loading="lazy"
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
                                   const target = e.target as HTMLImageElement;
@@ -690,7 +691,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       {clip.game && (
                         <div className="mt-2 flex items-center gap-1.5">
                           {signedGameIconUrl && (
-                            <img src={signedGameIconUrl} alt="" className="w-4 h-4 rounded" />
+                            <img src={signedGameIconUrl} alt="" loading="lazy" className="w-4 h-4 rounded" />
                           )}
                           <span className="text-green-400 text-sm font-medium drop-shadow-lg">
                             {clip.game.name}
@@ -780,6 +781,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       <img 
                         src={signedThumbnailUrl || "/assets/video-placeholder.svg"} 
                         alt={clip.title}
+                        loading="lazy"
                         className="max-w-full max-h-full object-contain opacity-50"
                       />
                     </div>
@@ -878,6 +880,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       <img 
                         src={clip.user.avatarUrl} 
                         alt={clip.user?.displayName || clip.user?.username || 'User'} 
+                        loading="lazy"
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;

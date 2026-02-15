@@ -143,6 +143,7 @@ export default function StoragePage() {
                     src={category.image} 
                     alt={category.name}
                     className="w-full h-full object-cover"
+                    loading="lazy"
                   />
                   <div className={`absolute inset-0 bg-gradient-to-br ${category.color} opacity-30`} />
                 </div>
@@ -221,6 +222,7 @@ export default function StoragePage() {
                     src={nft.image} 
                     alt={nft.name}
                     className="w-full h-full object-cover"
+                    loading="lazy"
                   />
                 </div>
                 <div className="p-4 space-y-2">
@@ -269,6 +271,7 @@ export default function StoragePage() {
                     src={collection.image} 
                     alt={collection.name}
                     className="w-full h-full object-cover"
+                    loading="lazy"
                   />
                 </div>
                 <div className="p-4">

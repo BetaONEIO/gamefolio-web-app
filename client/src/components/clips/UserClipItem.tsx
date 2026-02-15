@@ -64,7 +64,7 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
           ref={videoRef}
           src={clip.videoUrl || ""}
           {...(clip.thumbnailUrl ? { poster: clip.thumbnailUrl } : {})}
-          preload="metadata"
+          preload="none"
           muted
           loop
           className={cn(
@@ -77,6 +77,7 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
         <img 
           src={clip.thumbnailUrl || "/assets/video-placeholder.svg"} 
           alt={clip.title} 
+          loading="lazy"
           className={cn(
             "w-full h-full object-cover object-center absolute inset-0 transition-opacity duration-200",
             isHovered ? "opacity-0" : "opacity-100"
@@ -117,6 +118,7 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
               <img 
                 src={clip.user.avatarUrl || `https://ui-avatars.com/api/?name=${clip.user.displayName}`} 
                 alt={clip.user.displayName} 
+                loading="lazy"
                 className="w-5 h-5 rounded-full mr-2"
               />
               <span className="text-sm text-white">{clip.user.displayName}</span>

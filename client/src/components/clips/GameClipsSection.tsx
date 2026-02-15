@@ -28,6 +28,7 @@ const GameClipsSection = ({ game, userId }: GameClipsSectionProps) => {
           <img 
             src={(game.box_art_url || game.imageUrl || "/attached_assets/game-controller-5619105_1920.jpg") as string} 
             alt={game.name || "Game"}
+            loading="lazy"
             className="w-12 h-12 rounded-md object-cover border-2 border-primary"
             onError={(e) => {
               e.currentTarget.src = "/attached_assets/game-controller-5619105_1920.jpg";

@@ -120,6 +120,7 @@ const GameSelector = ({ games, selectedGame, onSelect }: GameSelectorProps) => {
                     <img 
                       src={selectedGame.imageUrl}
                       alt={selectedGame.name}
+                      loading="lazy"
                       className="h-full w-full object-cover"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = 'https://placehold.co/24x24/gray/white?text=G';
@@ -181,6 +182,7 @@ const GameSelector = ({ games, selectedGame, onSelect }: GameSelectorProps) => {
                           <img 
                             src={game.imageUrl} 
                             alt={game.name}
+                            loading="lazy"
                             className="h-full w-full object-cover"
                             onError={(e) => {
                               // Handle image load errors

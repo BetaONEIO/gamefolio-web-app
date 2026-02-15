@@ -213,7 +213,7 @@ const LeaderboardPage = () => {
           {/* Avatar */}
           {entry.user.nftProfileTokenId && entry.user.nftProfileImageUrl ? (
             <div className="w-12 h-12 rounded-lg border border-[#4ade80]/40 overflow-hidden flex-shrink-0">
-              <img src={entry.user.nftProfileImageUrl} alt={entry.user.displayName} className="w-full h-full object-cover" />
+              <img src={entry.user.nftProfileImageUrl} alt={entry.user.displayName} className="w-full h-full object-cover" loading="lazy" />
             </div>
           ) : (
             <div className={`w-12 h-12 rounded-2xl border ${styles.avatarBorder} bg-[#0f172a] overflow-hidden flex-shrink-0`}>
@@ -294,7 +294,7 @@ const LeaderboardPage = () => {
         
         {contributor.user.nftProfileTokenId && contributor.user.nftProfileImageUrl ? (
           <div className="w-10 h-10 rounded-lg border border-[#4ade80]/40 overflow-hidden flex-shrink-0">
-            <img src={contributor.user.nftProfileImageUrl} alt={contributor.user.displayName} className="w-full h-full object-cover" />
+            <img src={contributor.user.nftProfileImageUrl} alt={contributor.user.displayName} className="w-full h-full object-cover" loading="lazy" />
           </div>
         ) : (
           <div className="w-10 h-10 rounded-xl border border-[#f0b100]/30 bg-[#0f172a] overflow-hidden flex-shrink-0">

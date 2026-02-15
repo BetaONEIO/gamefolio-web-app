@@ -113,7 +113,7 @@ const LeaderboardEmbedPage = () => {
                   
                   {entry.user.nftProfileTokenId && entry.user.nftProfileImageUrl ? (
                     <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
-                      <img src={entry.user.nftProfileImageUrl} alt={entry.user.displayName} className="w-full h-full object-cover" />
+                      <img src={entry.user.nftProfileImageUrl} alt={entry.user.displayName} className="w-full h-full object-cover" loading="lazy" />
                     </div>
                   ) : (
                     <Avatar className="h-10 w-10 border-2 border-primary/20">

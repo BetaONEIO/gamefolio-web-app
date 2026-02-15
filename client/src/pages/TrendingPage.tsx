@@ -89,6 +89,7 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
           src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
           alt={reel.title}
           className="w-full h-full object-cover"
+          loading="lazy"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
             target.src = "/placeholder-game.png";
@@ -421,6 +422,7 @@ const TrendingPage: React.FC = () => {
                       src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
                       alt={reel.title}
                       className="w-full h-full object-cover"
+                      loading="lazy"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.src = "/placeholder-game.png";
@@ -633,6 +635,7 @@ const TrendingPage: React.FC = () => {
                     src={selectedScreenshot.imageUrl}
                     alt={selectedScreenshot.title}
                     className="max-w-full max-h-full object-contain"
+                    loading="lazy"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-white">
