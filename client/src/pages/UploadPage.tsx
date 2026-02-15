@@ -978,12 +978,16 @@ const UploadPage = () => {
                               onTimeUpdate={() => {
                                 if (videoRef.current) {
                                   const currentTime = videoRef.current.currentTime;
-                                  const duration = videoRef.current.duration;
                                   setCurrentTime(currentTime);
-                                  
-                                  // Only log every 0.5 seconds to reduce console spam
-                                  if (Math.floor(currentTime * 2) !== Math.floor((currentTime - 0.1) * 2)) {
-                                    console.log('Video playing at:', currentTime.toFixed(2), '/', duration?.toFixed(2));
+
+                                  if (trimEnd > 0 && trimEnd < videoDuration) {
+                                    if (currentTime >= trimEnd) {
+                                      videoRef.current.pause();
+                                      videoRef.current.currentTime = trimStart;
+                                    }
+                                  }
+                                  if (currentTime < trimStart - 0.1) {
+                                    videoRef.current.currentTime = trimStart;
                                   }
                                 }
                               }}
@@ -1002,7 +1006,11 @@ const UploadPage = () => {
                                 console.log('Video preview paused at:', videoRef.current?.currentTime);
                               }}
                               onPlay={() => {
-                                console.log('Video preview started playing');
+                                if (videoRef.current) {
+                                  if (videoRef.current.currentTime < trimStart || videoRef.current.currentTime >= trimEnd) {
+                                    videoRef.current.currentTime = trimStart;
+                                  }
+                                }
                               }}
                               onStalled={() => {
                                 console.log('Video preview stalled');
@@ -1471,6 +1479,29 @@ const UploadPage = () => {
                                   setTimeout(() => {
                                     generateThumbnails();
                                   }, 1000);
+                                }
+                              }}
+                              onTimeUpdate={() => {
+                                if (videoRef.current) {
+                                  const currentTime = videoRef.current.currentTime;
+                                  setCurrentTime(currentTime);
+
+                                  if (trimEnd > 0 && trimEnd < videoDuration) {
+                                    if (currentTime >= trimEnd) {
+                                      videoRef.current.pause();
+                                      videoRef.current.currentTime = trimStart;
+                                    }
+                                  }
+                                  if (currentTime < trimStart - 0.1) {
+                                    videoRef.current.currentTime = trimStart;
+                                  }
+                                }
+                              }}
+                              onPlay={() => {
+                                if (videoRef.current) {
+                                  if (videoRef.current.currentTime < trimStart || videoRef.current.currentTime >= trimEnd) {
+                                    videoRef.current.currentTime = trimStart;
+                                  }
                                 }
                               }}
                             />
