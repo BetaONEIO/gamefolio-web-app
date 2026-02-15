@@ -566,7 +566,9 @@ const UploadPage = () => {
             gameId: selectedGame ? parseInt(selectedGame.id.toString()) : null,
             tags,
             videoType,
-            ageRestricted
+            ageRestricted,
+            trimStart: Math.round(trimStart),
+            trimEnd: Math.round(trimEnd),
           };
           
           console.log('🔞 Age Restriction Debug - Sending to backend:', {

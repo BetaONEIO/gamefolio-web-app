@@ -551,7 +551,7 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
 // Video/Reel processing endpoint (called after TUS upload completes)
 router.post('/process-video', hybridFullAccess, async (req, res) => {
   try {
-    const { uploadResult, title, description, gameId, tags, videoType = 'clip', ageRestricted } = req.body;
+    const { uploadResult, title, description, gameId, tags, videoType = 'clip', ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd } = req.body;
 
     console.log('🔞 Age Restriction Backend Debug:', {
       ageRestricted,
@@ -740,25 +740,42 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
         // Create a temporary clip ID for processing
         const tempClipId = Date.now();
 
+        const requestedTrimStart = rawTrimStart !== undefined && rawTrimStart !== null ? parseInt(rawTrimStart) : 0;
+        const requestedTrimEnd = rawTrimEnd !== undefined && rawTrimEnd !== null ? parseInt(rawTrimEnd) : actualDuration;
+        const hasTrimming = requestedTrimStart > 0 || requestedTrimEnd < actualDuration;
+
         if (videoType === 'reel') {
-          // For reels: Process video with 9:16 cropping, using actual duration
-          console.log('🎬 Processing reel with 9:16 aspect ratio cropping');
+          console.log(`🎬 Processing reel with 9:16 aspect ratio cropping (trim: ${requestedTrimStart}s - ${requestedTrimEnd}s)`);
           const { videoUrl: croppedVideoUrl, thumbnailUrl: reelThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
             tempVideoPath,
             tempClipId,
-            0, // trimStart
-            actualDuration, // Use actual duration instead of hardcoded 60
-            true, // generateThumbnail
+            requestedTrimStart,
+            requestedTrimEnd,
+            true,
             req.user!.id,
             'reel'
           );
           processedVideoUrl = croppedVideoUrl;
           thumbnailUrl = reelThumbnailUrl || '';
-          actualDuration = processedDuration; // Use the duration from processed video
+          actualDuration = processedDuration;
           console.log(`✅ Reel processed successfully. Thumbnail: ${thumbnailUrl ? thumbnailUrl.substring(0, 60) + '...' : 'NONE'}`);
+        } else if (hasTrimming) {
+          console.log(`✂️ Trimming clip: ${requestedTrimStart}s - ${requestedTrimEnd}s`);
+          const { videoUrl: trimmedVideoUrl, thumbnailUrl: clipThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
+            tempVideoPath,
+            tempClipId,
+            requestedTrimStart,
+            requestedTrimEnd,
+            true,
+            req.user!.id,
+            'clip'
+          );
+          processedVideoUrl = trimmedVideoUrl;
+          thumbnailUrl = clipThumbnailUrl || '';
+          actualDuration = processedDuration;
+          console.log(`✅ Clip trimmed successfully. Duration: ${actualDuration}s`);
         } else {
-          // For clips: Just generate thumbnail, keep original video
-          console.log('🖼️ Generating clip thumbnail...');
+          console.log('🖼️ Generating clip thumbnail (no trimming needed)...');
           thumbnailUrl = await VideoProcessor.generateAutoThumbnail(
             tempVideoPath, 
             req.user!.id, 
@@ -876,8 +893,8 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
       videoType,
       thumbnailUrl: thumbnailUrl,
       duration: actualDuration || 60, // Use actual duration or fallback to 60
-      trimStart: req.body.trimStart ? parseInt(req.body.trimStart) : 0,
-      trimEnd: req.body.trimEnd ? parseInt(req.body.trimEnd) : 30,
+      trimStart: rawTrimStart !== undefined && rawTrimStart !== null ? parseInt(rawTrimStart) : 0,
+      trimEnd: rawTrimEnd !== undefined && rawTrimEnd !== null ? parseInt(rawTrimEnd) : actualDuration,
       ageRestricted: ageRestricted === true || ageRestricted === 'true',
       shareCode: shareCode,
     };
