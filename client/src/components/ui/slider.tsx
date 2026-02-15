@@ -71,13 +71,14 @@ const DualRangeSlider: React.FC<DualRangeSliderProps> = ({
   };
 
   return (
-    <div className={cn("relative w-full", className)}>
-      <div ref={trackRef} className="relative h-2 w-full rounded-full bg-secondary">
+    <div className={cn("relative w-full h-6 flex items-center", className)}>
+      <div ref={trackRef} className="relative h-2 w-full rounded-full bg-zinc-700">
         <div
-          className="absolute h-full bg-primary rounded-full"
+          className="absolute h-full rounded-full"
           style={{
             left: `${startPercent}%`,
             width: `${endPercent - startPercent}%`,
+            background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
           }}
         />
       </div>
@@ -89,18 +90,19 @@ const DualRangeSlider: React.FC<DualRangeSliderProps> = ({
         step={step}
         value={value[0]}
         onChange={handleStartChange}
-        className="absolute top-0 left-0 w-full h-2 appearance-none bg-transparent pointer-events-none z-10
+        className="absolute top-0 left-0 w-full h-6 appearance-none bg-transparent pointer-events-none z-10
           [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:pointer-events-auto
           [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full
-          [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary
-          [&::-webkit-slider-thumb]:bg-background [&::-webkit-slider-thumb]:cursor-grab
-          [&::-webkit-slider-thumb]:active:cursor-grabbing [&::-webkit-slider-thumb]:shadow-sm
-          [&::-webkit-slider-thumb]:ring-offset-background
-          [&::-webkit-slider-thumb]:hover:scale-110 [&::-webkit-slider-thumb]:transition-transform
+          [&::-webkit-slider-thumb]:border-[3px] [&::-webkit-slider-thumb]:border-indigo-500
+          [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:cursor-grab
+          [&::-webkit-slider-thumb]:active:cursor-grabbing
+          [&::-webkit-slider-thumb]:shadow-[0_0_6px_rgba(99,102,241,0.6)]
+          [&::-webkit-slider-thumb]:hover:scale-125 [&::-webkit-slider-thumb]:transition-transform
+          [&::-webkit-slider-thumb]:hover:shadow-[0_0_10px_rgba(99,102,241,0.8)]
           [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:pointer-events-auto
           [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
-          [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-primary
-          [&::-moz-range-thumb]:bg-background [&::-moz-range-thumb]:cursor-grab"
+          [&::-moz-range-thumb]:border-[3px] [&::-moz-range-thumb]:border-indigo-500
+          [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:cursor-grab"
       />
 
       <input
@@ -110,18 +112,19 @@ const DualRangeSlider: React.FC<DualRangeSliderProps> = ({
         step={step}
         value={value[1]}
         onChange={handleEndChange}
-        className="absolute top-0 left-0 w-full h-2 appearance-none bg-transparent pointer-events-none z-20
+        className="absolute top-0 left-0 w-full h-6 appearance-none bg-transparent pointer-events-none z-20
           [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:pointer-events-auto
           [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full
-          [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary
-          [&::-webkit-slider-thumb]:bg-background [&::-webkit-slider-thumb]:cursor-grab
-          [&::-webkit-slider-thumb]:active:cursor-grabbing [&::-webkit-slider-thumb]:shadow-sm
-          [&::-webkit-slider-thumb]:ring-offset-background
-          [&::-webkit-slider-thumb]:hover:scale-110 [&::-webkit-slider-thumb]:transition-transform
+          [&::-webkit-slider-thumb]:border-[3px] [&::-webkit-slider-thumb]:border-violet-500
+          [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:cursor-grab
+          [&::-webkit-slider-thumb]:active:cursor-grabbing
+          [&::-webkit-slider-thumb]:shadow-[0_0_6px_rgba(139,92,246,0.6)]
+          [&::-webkit-slider-thumb]:hover:scale-125 [&::-webkit-slider-thumb]:transition-transform
+          [&::-webkit-slider-thumb]:hover:shadow-[0_0_10px_rgba(139,92,246,0.8)]
           [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:pointer-events-auto
           [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
-          [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-primary
-          [&::-moz-range-thumb]:bg-background [&::-moz-range-thumb]:cursor-grab"
+          [&::-moz-range-thumb]:border-[3px] [&::-moz-range-thumb]:border-violet-500
+          [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:cursor-grab"
       />
     </div>
   );
