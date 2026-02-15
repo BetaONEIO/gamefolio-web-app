@@ -1056,20 +1056,23 @@ const UploadPage = () => {
                                 min={0}
                                 max={100}
                                 step={0.1}
-                                minStepsBetweenThumbs={Math.ceil((0.5 / videoDuration) * 100 / 0.1)}
+                                minStepsBetweenThumbs={Math.max(5, Math.ceil((0.5 / videoDuration) * 100 / 0.1))}
                                 onValueChange={(values: number[]) => {
-                                  let newStart = (values[0] / 100) * videoDuration;
-                                  let newEnd = (values[1] / 100) * videoDuration;
-                                  if (newEnd - newStart < 0.5) {
-                                    const startMoved = Math.abs(newStart - trimStart) > 0.05;
+                                  const sorted = [...values].sort((a, b) => a - b);
+                                  let newStart = (sorted[0] / 100) * videoDuration;
+                                  let newEnd = (sorted[1] / 100) * videoDuration;
+                                  const minGap = 0.5;
+                                  if (newEnd - newStart < minGap) {
+                                    const startMoved = Math.abs(newStart - trimStart) > Math.abs(newEnd - trimEnd);
                                     if (startMoved) {
-                                      newStart = Math.min(newStart, newEnd - 0.5);
+                                      newStart = newEnd - minGap;
                                     } else {
-                                      newEnd = Math.max(newEnd, newStart + 0.5);
+                                      newEnd = newStart + minGap;
                                     }
                                   }
-                                  newStart = Math.max(0, newStart);
-                                  newEnd = Math.min(videoDuration, newEnd);
+                                  newStart = Math.max(0, Math.min(newStart, videoDuration - minGap));
+                                  newEnd = Math.min(videoDuration, Math.max(newEnd, minGap));
+                                  if (newStart >= newEnd) return;
                                   const startChanged = Math.abs(newStart - trimStart) > 0.05;
                                   const endChanged = Math.abs(newEnd - trimEnd) > 0.05;
                                   setTrimStart(newStart);
@@ -1614,20 +1617,23 @@ const UploadPage = () => {
                                 min={0}
                                 max={100}
                                 step={0.1}
-                                minStepsBetweenThumbs={Math.ceil((0.5 / videoDuration) * 100 / 0.1)}
+                                minStepsBetweenThumbs={Math.max(5, Math.ceil((0.5 / videoDuration) * 100 / 0.1))}
                                 onValueChange={(values: number[]) => {
-                                  let newStart = (values[0] / 100) * videoDuration;
-                                  let newEnd = (values[1] / 100) * videoDuration;
-                                  if (newEnd - newStart < 0.5) {
-                                    const startMoved = Math.abs(newStart - trimStart) > 0.05;
+                                  const sorted = [...values].sort((a, b) => a - b);
+                                  let newStart = (sorted[0] / 100) * videoDuration;
+                                  let newEnd = (sorted[1] / 100) * videoDuration;
+                                  const minGap = 0.5;
+                                  if (newEnd - newStart < minGap) {
+                                    const startMoved = Math.abs(newStart - trimStart) > Math.abs(newEnd - trimEnd);
                                     if (startMoved) {
-                                      newStart = Math.min(newStart, newEnd - 0.5);
+                                      newStart = newEnd - minGap;
                                     } else {
-                                      newEnd = Math.max(newEnd, newStart + 0.5);
+                                      newEnd = newStart + minGap;
                                     }
                                   }
-                                  newStart = Math.max(0, newStart);
-                                  newEnd = Math.min(videoDuration, newEnd);
+                                  newStart = Math.max(0, Math.min(newStart, videoDuration - minGap));
+                                  newEnd = Math.min(videoDuration, Math.max(newEnd, minGap));
+                                  if (newStart >= newEnd) return;
                                   const startChanged = Math.abs(newStart - trimStart) > 0.05;
                                   const endChanged = Math.abs(newEnd - trimEnd) > 0.05;
                                   setTrimStart(newStart);
