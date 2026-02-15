@@ -81,12 +81,21 @@ const ExplorePage = () => {
 
   // Remove fallback - only use Twitch API data
 
-  // Get trending clips
+  // Get trending clips with time range filtering
   const { 
     data: trendingClips, 
     isLoading: isLoadingClips 
   } = useQuery<ClipWithUser[]>({
-    queryKey: ["/api/clips?period=week", 8],
+    queryKey: ['/api/clips/trending', timeRange],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        period: timeRange,
+        limit: '20',
+      });
+      const response = await fetch(`/api/clips/trending?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch trending clips');
+      return response.json();
+    },
   });
   
   // Always use Twitch trending games - no fallback to local games

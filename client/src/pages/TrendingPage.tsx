@@ -272,14 +272,15 @@ const TrendingPage: React.FC = () => {
     enabled: activeTab === 'clips' || (isMobile && showMobileViewer),
   });
 
-  // Fetch trending reels using the latest reels endpoint (working)
+  // Fetch trending reels using the trending reels endpoint with period support
   const { data: trendingReels, isLoading: isLoadingReels } = useQuery<ClipWithUser[]>({
-    queryKey: ['/api/reels/latest', timePeriod],
+    queryKey: ['/api/reels/trending', timePeriod],
     queryFn: async () => {
       const params = new URLSearchParams({
+        period: timePeriod,
         limit: '20',
       });
-      const response = await fetch(`/api/reels/latest?${params}`);
+      const response = await fetch(`/api/reels/trending?${params}`);
       if (!response.ok) throw new Error('Failed to fetch trending reels');
       return response.json();
     },
