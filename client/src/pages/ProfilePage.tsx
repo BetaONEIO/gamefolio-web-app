@@ -368,6 +368,7 @@ const ProfilePage = () => {
   // Get signed URL for profile avatar (private bucket)
   const { signedUrl: profileAvatarSignedUrl } = useSignedUrl(profile?.avatarUrl);
   const { signedUrl: screenshotSignedUrl } = useSignedUrl(selectedScreenshot?.imageUrl);
+  const { signedUrl: bannerSignedUrl } = useSignedUrl(profile?.bannerUrl);
 
   // Fetch user's selected verification badge
   const { data: verificationBadgeData } = useQuery<{ verificationBadge: { id: number; name: string; imageUrl: string } | null }>({
@@ -1019,15 +1020,16 @@ const ProfilePage = () => {
   }, [activeTab]);
 
   // Memoize banner style to prevent unnecessary re-renders
+  const resolvedBannerUrl = bannerSignedUrl || profile?.bannerUrl;
   const bannerStyle = useMemo(() => ({
-    backgroundImage: profile?.bannerUrl 
-      ? `url(${profile.bannerUrl})` 
+    backgroundImage: resolvedBannerUrl 
+      ? `url(${resolvedBannerUrl})` 
       : `linear-gradient(135deg, ${profile?.primaryColor || '#0f172a'}, ${profile?.accentColor || '#4ADE80'}, transparent)`,
-    backgroundColor: profile?.bannerUrl ? 'transparent' : (profile?.primaryColor || '#0f172a'),
+    backgroundColor: resolvedBannerUrl ? 'transparent' : (profile?.primaryColor || '#0f172a'),
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     boxShadow: 'inset 0 -10px 20px rgba(0, 0, 0, 0.2)',
-  }), [profile?.bannerUrl, profile?.primaryColor, profile?.accentColor]);
+  }), [resolvedBannerUrl, profile?.primaryColor, profile?.accentColor]);
 
   // DISABLED: Profile-scoped theme colors - now using global theme system
   // useEffect(() => {
@@ -1307,13 +1309,13 @@ const ProfilePage = () => {
     >
       {/* Enhanced Banner with global theme colors */}
       <div 
-        className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-1 md:-mx-8 border-b-4 border-primary ${profile?.bannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
+        className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-1 md:-mx-8 border-b-4 border-primary ${resolvedBannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
         style={{
           ...bannerStyle,
         }}
         onClick={() => {
-          if (profile?.bannerUrl && profile?.displayName && profile?.username) {
-            openBannerLightbox(profile.bannerUrl, profile.displayName, profile.username);
+          if (resolvedBannerUrl && profile?.displayName && profile?.username) {
+            openBannerLightbox(resolvedBannerUrl, profile.displayName, profile.username);
           }
         }}
         data-testid="banner-image"
@@ -1337,7 +1339,7 @@ const ProfilePage = () => {
         />
 
         {/* Enhanced particle system with theme colors - only show when no custom banner */}
-        {!profile?.bannerUrl && (
+        {!resolvedBannerUrl && (
         <div className="absolute inset-0 overflow-hidden opacity-25">
           <div 
             className="absolute w-4 h-4 rounded-full animate-float-1 bg-primary" 
@@ -1375,7 +1377,7 @@ const ProfilePage = () => {
         )}
 
         {/* Theme accent corner decorations - only show when no custom banner */}
-        {!profile?.bannerUrl && (
+        {!resolvedBannerUrl && (
         <>
         <div 
           className="absolute top-4 left-4 w-16 h-16 rounded-full opacity-20 animate-pulse"
