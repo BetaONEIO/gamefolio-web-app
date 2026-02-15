@@ -1065,7 +1065,7 @@ router.get('/limits', fullAccessMiddleware, async (req, res) => {
 });
 
 // Avatar upload endpoint
-router.post('/avatar', fullAccessMiddleware, avatarUpload.single('file'), async (req, res) => {
+router.post('/avatar', fullAccessMiddleware, avatarUpload.single('avatar'), async (req, res) => {
   try {
     console.log('Avatar upload request received');
     console.log('File received:', req.file);
@@ -1098,6 +1098,9 @@ router.post('/avatar', fullAccessMiddleware, avatarUpload.single('file'), async 
     fs.unlink(req.file.path, (err) => {
       if (err) console.warn('Could not delete temp avatar file:', err);
     });
+
+    // Save avatar URL to user's profile in the database
+    await storage.updateUser(req.user!.id, { avatarUrl: uploadResult.url });
 
     res.json({
       success: true,

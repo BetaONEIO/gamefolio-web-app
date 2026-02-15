@@ -505,8 +505,10 @@ export default function OnboardingFlow({
         throw new Error('Failed to upload avatar');
       }
       
-      await response.json();
+      const data = await response.json();
       setAvatarFile(file);
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       
       toast({
         title: "Avatar uploaded!",
