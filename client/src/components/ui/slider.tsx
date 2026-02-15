@@ -34,4 +34,97 @@ const Slider = React.forwardRef<
 })
 Slider.displayName = SliderPrimitive.Root.displayName
 
-export { Slider }
+interface DualRangeSliderProps {
+  value: [number, number];
+  min: number;
+  max: number;
+  step?: number;
+  minGap?: number;
+  onValueChange: (values: [number, number]) => void;
+  className?: string;
+}
+
+const DualRangeSlider: React.FC<DualRangeSliderProps> = ({
+  value,
+  min,
+  max,
+  step = 0.1,
+  minGap = 0.5,
+  onValueChange,
+  className,
+}) => {
+  const trackRef = React.useRef<HTMLDivElement>(null);
+
+  const startPercent = ((value[0] - min) / (max - min)) * 100;
+  const endPercent = ((value[1] - min) / (max - min)) * 100;
+
+  const handleStartChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newStart = parseFloat(e.target.value);
+    const clamped = Math.min(newStart, value[1] - minGap);
+    onValueChange([Math.max(min, clamped), value[1]]);
+  };
+
+  const handleEndChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newEnd = parseFloat(e.target.value);
+    const clamped = Math.max(newEnd, value[0] + minGap);
+    onValueChange([value[0], Math.min(max, clamped)]);
+  };
+
+  return (
+    <div className={cn("relative w-full", className)}>
+      <div ref={trackRef} className="relative h-2 w-full rounded-full bg-secondary">
+        <div
+          className="absolute h-full bg-primary rounded-full"
+          style={{
+            left: `${startPercent}%`,
+            width: `${endPercent - startPercent}%`,
+          }}
+        />
+      </div>
+
+      <input
+        type="range"
+        min={min}
+        max={value[1] - minGap}
+        step={step}
+        value={value[0]}
+        onChange={handleStartChange}
+        className="absolute top-0 left-0 w-full h-2 appearance-none bg-transparent pointer-events-none z-10
+          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:pointer-events-auto
+          [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full
+          [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary
+          [&::-webkit-slider-thumb]:bg-background [&::-webkit-slider-thumb]:cursor-grab
+          [&::-webkit-slider-thumb]:active:cursor-grabbing [&::-webkit-slider-thumb]:shadow-sm
+          [&::-webkit-slider-thumb]:ring-offset-background
+          [&::-webkit-slider-thumb]:hover:scale-110 [&::-webkit-slider-thumb]:transition-transform
+          [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:pointer-events-auto
+          [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
+          [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-primary
+          [&::-moz-range-thumb]:bg-background [&::-moz-range-thumb]:cursor-grab"
+      />
+
+      <input
+        type="range"
+        min={value[0] + minGap}
+        max={max}
+        step={step}
+        value={value[1]}
+        onChange={handleEndChange}
+        className="absolute top-0 left-0 w-full h-2 appearance-none bg-transparent pointer-events-none z-20
+          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:pointer-events-auto
+          [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full
+          [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary
+          [&::-webkit-slider-thumb]:bg-background [&::-webkit-slider-thumb]:cursor-grab
+          [&::-webkit-slider-thumb]:active:cursor-grabbing [&::-webkit-slider-thumb]:shadow-sm
+          [&::-webkit-slider-thumb]:ring-offset-background
+          [&::-webkit-slider-thumb]:hover:scale-110 [&::-webkit-slider-thumb]:transition-transform
+          [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:pointer-events-auto
+          [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
+          [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-primary
+          [&::-moz-range-thumb]:bg-background [&::-moz-range-thumb]:cursor-grab"
+      />
+    </div>
+  );
+};
+
+export { Slider, DualRangeSlider }

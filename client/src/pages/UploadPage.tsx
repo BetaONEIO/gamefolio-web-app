@@ -45,7 +45,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
-import { Slider } from "@/components/ui/slider";
+import { DualRangeSlider } from "@/components/ui/slider";
 import SimpleVideoPlayer from "@/components/shared/SimpleVideoPlayer";
 import { ShareDialog } from "@/components/shared/ShareDialog";
 import { XPGainedDialog } from "@/components/gamification/XPGainedDialog";
@@ -1048,31 +1048,13 @@ const UploadPage = () => {
                                 <span>{formatDuration(trimStart)}</span>
                                 <span>{formatDuration(trimEnd)}</span>
                               </div>
-                              <Slider
-                                value={[
-                                  (trimStart / videoDuration) * 100,
-                                  (trimEnd / videoDuration) * 100,
-                                ]}
+                              <DualRangeSlider
+                                value={[trimStart, trimEnd]}
                                 min={0}
-                                max={100}
+                                max={videoDuration}
                                 step={0.1}
-                                minStepsBetweenThumbs={Math.max(5, Math.ceil((0.5 / videoDuration) * 100 / 0.1))}
-                                onValueChange={(values: number[]) => {
-                                  const sorted = [...values].sort((a, b) => a - b);
-                                  let newStart = (sorted[0] / 100) * videoDuration;
-                                  let newEnd = (sorted[1] / 100) * videoDuration;
-                                  const minGap = 0.5;
-                                  if (newEnd - newStart < minGap) {
-                                    const startMoved = Math.abs(newStart - trimStart) > Math.abs(newEnd - trimEnd);
-                                    if (startMoved) {
-                                      newStart = newEnd - minGap;
-                                    } else {
-                                      newEnd = newStart + minGap;
-                                    }
-                                  }
-                                  newStart = Math.max(0, Math.min(newStart, videoDuration - minGap));
-                                  newEnd = Math.min(videoDuration, Math.max(newEnd, minGap));
-                                  if (newStart >= newEnd) return;
+                                minGap={0.5}
+                                onValueChange={([newStart, newEnd]) => {
                                   const startChanged = Math.abs(newStart - trimStart) > 0.05;
                                   const endChanged = Math.abs(newEnd - trimEnd) > 0.05;
                                   setTrimStart(newStart);
@@ -1609,31 +1591,13 @@ const UploadPage = () => {
                                 <span>{formatDuration(trimStart)}</span>
                                 <span>{formatDuration(trimEnd)}</span>
                               </div>
-                              <Slider
-                                value={[
-                                  (trimStart / videoDuration) * 100,
-                                  (trimEnd / videoDuration) * 100,
-                                ]}
+                              <DualRangeSlider
+                                value={[trimStart, trimEnd]}
                                 min={0}
-                                max={100}
+                                max={videoDuration}
                                 step={0.1}
-                                minStepsBetweenThumbs={Math.max(5, Math.ceil((0.5 / videoDuration) * 100 / 0.1))}
-                                onValueChange={(values: number[]) => {
-                                  const sorted = [...values].sort((a, b) => a - b);
-                                  let newStart = (sorted[0] / 100) * videoDuration;
-                                  let newEnd = (sorted[1] / 100) * videoDuration;
-                                  const minGap = 0.5;
-                                  if (newEnd - newStart < minGap) {
-                                    const startMoved = Math.abs(newStart - trimStart) > Math.abs(newEnd - trimEnd);
-                                    if (startMoved) {
-                                      newStart = newEnd - minGap;
-                                    } else {
-                                      newEnd = newStart + minGap;
-                                    }
-                                  }
-                                  newStart = Math.max(0, Math.min(newStart, videoDuration - minGap));
-                                  newEnd = Math.min(videoDuration, Math.max(newEnd, minGap));
-                                  if (newStart >= newEnd) return;
+                                minGap={0.5}
+                                onValueChange={([newStart, newEnd]) => {
                                   const startChanged = Math.abs(newStart - trimStart) > 0.05;
                                   const endChanged = Math.abs(newEnd - trimEnd) > 0.05;
                                   setTrimStart(newStart);
