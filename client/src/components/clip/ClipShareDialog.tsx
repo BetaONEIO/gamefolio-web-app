@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,16 +56,18 @@ const SOCIAL_PLATFORMS = [
   { name: "Discord", icon: FaDiscord, key: "discord", color: "text-indigo-500" },
 ];
 
-// Component to handle clip thumbnail display
+// Component to handle clip thumbnail display with signed URLs
 function ClipThumbnail({ thumbnailUrl, videoUrl }: { thumbnailUrl?: string | null; videoUrl?: string | null }) {
-  if (thumbnailUrl) {
+  const { signedUrl: signedThumbUrl } = useSignedUrl(thumbnailUrl);
+  const { signedUrl: signedVideoUrl } = useSignedUrl(videoUrl);
+
+  if (signedThumbUrl) {
     return (
       <img
-        src={thumbnailUrl}
+        src={signedThumbUrl}
         alt="Video thumbnail"
         className="w-full h-full object-cover"
         onError={(e) => {
-          // Fallback to video element if thumbnail fails to load
           const target = e.target as HTMLImageElement;
           target.style.display = 'none';
           const videoElement = target.nextElementSibling as HTMLVideoElement;
@@ -76,19 +79,25 @@ function ClipThumbnail({ thumbnailUrl, videoUrl }: { thumbnailUrl?: string | nul
     );
   }
 
-  // Fallback to video preview if no thumbnail
-  if (videoUrl) {
+  if (signedVideoUrl) {
     return (
       <video
         className="w-full h-full object-cover"
-        src={videoUrl}
+        src={signedVideoUrl}
         preload="metadata"
         muted
       />
     );
   }
 
-  // No thumbnail or video available
+  if (thumbnailUrl || videoUrl) {
+    return (
+      <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+        <div className="animate-spin w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full h-full bg-gray-700 flex items-center justify-center">
       <span className="text-gray-400 text-sm">No preview available</span>
@@ -229,7 +238,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
             </Button>
           </div>
         ) : shareData ? (
-          <div className="flex-1 overflow-y-auto space-y-4 sm:space-y-6 px-2 pb-4">
+          <div className="flex-1 overflow-y-auto space-y-4 sm:space-y-6 px-2 pb-4 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
             {/* Clip Thumbnail - Responsive sizing */}
             <div className="flex justify-center">
               <div className="relative w-full max-w-sm sm:max-w-md h-48 sm:h-56 bg-gray-800 rounded-lg overflow-hidden border border-gray-600">
