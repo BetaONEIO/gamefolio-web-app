@@ -124,9 +124,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
     }
   }, [highlightCommentId, comments]);
 
-  const handleSubmitComment = (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const submitComment = () => {
     if (!newComment.trim()) return;
     
     if (!user) {
@@ -134,7 +132,6 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
       return;
     }
 
-    // Check email verification (except for demo user)
     if (!user.emailVerified && user.username !== "demo") {
       toast({
         title: "Email verification required",
@@ -152,6 +149,11 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
         setNewComment("");
       }
     });
+  };
+
+  const handleSubmitComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    submitComment();
   };
 
   const handleDeleteComment = (commentId: number) => {
@@ -311,6 +313,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
               <StyledMentionInput
                 value={newComment}
                 onChange={setNewComment}
+                onSubmit={submitComment}
                 placeholder="Add a comment... Use @username to mention other users!"
                 className="min-h-[60px] text-sm resize-none"
                 data-testid="input-comment"

@@ -102,9 +102,7 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
   const createCommentMutation = useCreateScreenshotComment();
   const deleteCommentMutation = useDeleteScreenshotComment();
 
-  const handleSubmitComment = (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const submitComment = () => {
     if (!newComment.trim()) return;
     
     if (!user) {
@@ -145,6 +143,11 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
         });
       }
     });
+  };
+
+  const handleSubmitComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    submitComment();
   };
 
   const handleDeleteComment = (commentId: number) => {
@@ -276,6 +279,7 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
               <StyledMentionInput
                 value={newComment}
                 onChange={setNewComment}
+                onSubmit={submitComment}
                 placeholder="Add a comment... Use @username to mention other users!"
                 className="min-h-[60px] resize-none text-sm"
                 data-testid="input-comment"

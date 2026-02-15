@@ -30,10 +30,11 @@ interface MentionInputProps extends Omit<React.ComponentProps<"textarea">, "onCh
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  onSubmit?: () => void;
 }
 
 const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
-  ({ className, value, onChange, placeholder, ...props }, ref) => {
+  ({ className, value, onChange, placeholder, onSubmit, ...props }, ref) => {
     const [showSuggestions, setShowSuggestions] = React.useState(false);
     const [currentQuery, setCurrentQuery] = React.useState("");
     const [mentionStart, setMentionStart] = React.useState(0);
@@ -186,6 +187,10 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
           setCurrentQuery("");
           e.preventDefault();
         }
+      }
+      if (e.key === "Enter" && !e.shiftKey && !showSuggestions && onSubmit) {
+        e.preventDefault();
+        onSubmit();
       }
     };
 
@@ -394,7 +399,7 @@ function renderStyledText(text: string): React.ReactNode[] {
 
 // Styled mention input with live preview
 const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
-  ({ className, value, onChange, placeholder, ...props }, ref) => {
+  ({ className, value, onChange, placeholder, onSubmit, ...props }, ref) => {
     const [showSuggestions, setShowSuggestions] = React.useState(false);
     const [currentQuery, setCurrentQuery] = React.useState("");
     const [mentionStart, setMentionStart] = React.useState(0);
@@ -553,6 +558,10 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
           setCurrentQuery("");
           e.preventDefault();
         }
+      }
+      if (e.key === "Enter" && !e.shiftKey && !showSuggestions && onSubmit) {
+        e.preventDefault();
+        onSubmit();
       }
     };
 
