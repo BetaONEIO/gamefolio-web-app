@@ -4646,11 +4646,11 @@ export class DatabaseStorage implements IStorage {
       return { reward: nameTagReward, isDuplicate: alreadyHas, consumed: false };
     }
 
-    // 3% chance to win a profile border from the lootbox
+    // 3% chance to win a profile border from the lootbox (only circle-shape borders for regular profile pics)
     const lootboxBorders = await db
       .select()
       .from(profileBorders)
-      .where(and(eq(profileBorders.isActive, true), eq(profileBorders.availableInLootbox, true)));
+      .where(and(eq(profileBorders.isActive, true), eq(profileBorders.availableInLootbox, true), eq(profileBorders.shape, 'circle')));
 
     if (lootboxBorders.length > 0 && Math.random() < 0.03) {
       const randomBorder = lootboxBorders[Math.floor(Math.random() * lootboxBorders.length)];

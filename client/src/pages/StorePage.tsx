@@ -274,12 +274,16 @@ export default function StorePage() {
     owned: boolean;
     isPro: boolean;
     proOnly: boolean;
+    shape?: string;
   }
 
+  const hasNftProfile = !!(user?.nftProfileTokenId && user?.nftProfileImageUrl);
+  const borderShapeFilter = hasNftProfile ? 'square' : 'circle';
+
   const { data: storeBorders = [], isLoading: isLoadingBorders } = useQuery<StoreBorder[]>({
-    queryKey: ["/api/store/borders"],
+    queryKey: ["/api/store/borders", borderShapeFilter],
     queryFn: async () => {
-      const response = await fetch('/api/store/borders', { credentials: 'include' });
+      const response = await fetch(`/api/store/borders?shape=${borderShapeFilter}`, { credentials: 'include' });
       if (!response.ok) throw new Error('Failed to fetch store borders');
       return response.json();
     },
@@ -1548,14 +1552,16 @@ export default function StorePage() {
               <>
               <h3 className="text-base font-semibold text-gray-300 mb-3 mt-8 flex items-center gap-2">
                 <Circle className="h-4 w-4 text-amber-400" />
-                Profile Picture Borders
+                {hasNftProfile ? 'NFT Profile Borders' : 'Profile Picture Borders'}
                 <Badge className="bg-gradient-to-r from-amber-500 to-yellow-600 text-[10px] px-1.5 py-0.5 text-white ml-1">
                   <Crown className="w-2.5 h-2.5 mr-0.5" />
                   PRO EXCLUSIVE
                 </Badge>
               </h3>
               <p className="text-xs text-gray-500 mb-3">
-                Add stunning borders around your profile picture. Requires an active Pro subscription to purchase and use.
+                {hasNftProfile
+                  ? 'Square borders designed for your NFT profile picture. Requires an active Pro subscription to purchase and use.'
+                  : 'Add stunning borders around your profile picture. Requires an active Pro subscription to purchase and use.'}
               </p>
               {isLoadingBorders ? (
                 <div className="flex justify-center py-12">

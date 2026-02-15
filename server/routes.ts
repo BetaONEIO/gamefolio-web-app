@@ -6644,8 +6644,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/store/borders", async (req, res) => {
     try {
+      const shapeFilter = req.query.shape as string | undefined;
       const allBorders = await storage.getAllProfileBordersFromTable();
-      const storeBorders = allBorders.filter(b => b.availableInStore && b.isActive && !b.isDefault);
+      const storeBorders = allBorders.filter(b => {
+        if (!b.availableInStore || !b.isActive || b.isDefault) return false;
+        if (shapeFilter && b.shape !== shapeFilter) return false;
+        return true;
+      });
 
       const bordersWithSignedUrls = await Promise.all(
         storeBorders.map(async (border) => {
@@ -6786,6 +6791,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const rarity = rarities[Math.floor(Math.random() * rarities.length)];
+        const isNftBorder = file.name.toLowerCase().includes('nft') || file.name.toLowerCase().includes('square');
+        const borderShape = isNftBorder ? 'square' : 'circle';
 
         await storage.createProfileBorder({
           name: displayName,
@@ -6797,6 +6804,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           availableInStore: true,
           availableInLootbox: true,
           proOnly: true,
+          shape: borderShape,
         });
         synced++;
       }
@@ -7126,6 +7134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isActive: border.isActive,
           availableInStore: border.availableInStore,
           availableInLootbox: border.availableInLootbox,
+          shape: border.shape || 'circle',
           isDefault: border.isDefault,
           proDiscount: false,
         });

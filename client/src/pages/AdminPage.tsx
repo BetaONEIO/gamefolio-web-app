@@ -389,6 +389,7 @@ interface AdminStoreItem {
   availableInLootbox: boolean;
   isDefault: boolean;
   proDiscount: boolean;
+  shape?: string;
 }
 
 function StoreManagement() {
@@ -572,9 +573,16 @@ function StoreManagement() {
                       </td>
                       <td className="p-2 font-medium">{item.name}</td>
                       <td className="p-2">
-                        <Badge variant="outline" className="text-xs capitalize">
-                          {typeLabels[item.type] || item.type}
-                        </Badge>
+                        <div className="flex flex-col gap-1">
+                          <Badge variant="outline" className="text-xs capitalize w-fit">
+                            {typeLabels[item.type] || item.type}
+                          </Badge>
+                          {item.type === 'profile_border' && item.shape && (
+                            <Badge variant="outline" className={`text-[10px] w-fit ${item.shape === 'square' ? 'text-purple-400 border-purple-400/50' : 'text-blue-400 border-blue-400/50'}`}>
+                              {item.shape === 'square' ? 'NFT/Square' : 'Circle'}
+                            </Badge>
+                          )}
+                        </div>
                       </td>
                       <td className="p-2">
                         <Badge className={`text-xs text-white capitalize ${rarityColors[item.rarity] || "bg-gray-600"}`}>
