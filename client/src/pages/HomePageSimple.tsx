@@ -16,6 +16,7 @@ import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBann
 import { LatestReelsCarousel } from "@/components/clips/LatestReelsCarousel";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
 import { ProUpgradeDialog } from "@/components/ProUpgradeDialog";
+import { LazySection } from "@/components/ui/lazy-section";
 
 interface TrendingContentCarouselProps {
   clips: ClipWithUser[] | undefined;
@@ -435,56 +436,62 @@ const HomePage = () => {
       />
       
       {/* Recommended for You Section */}
-      <RecommendedForYou userId={userId} />
+      <LazySection minHeight="300px" rootMargin="300px">
+        <RecommendedForYou userId={userId} />
+      </LazySection>
       
       {/* Latest Clips Section */}
-      <section className="px-4 sm:px-6 md:px-8">
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-xl sm:text-2xl font-bold">Latest Clips</h2>
-          <Link href="/latest-clips" className="text-primary text-sm font-medium hover:underline flex items-center">
-            View all <ChevronRight className="h-4 w-4 ml-1" />
-          </Link>
-        </div>
-        <div className="border-b border-border/50 mb-4 sm:mb-6 md:mb-8" />
-
-        <TrendingContentCarousel 
-          clips={trendingClips} 
-          isLoading={isLoadingTrendingClips}
-          userId={userId}
-        />
-        
-        {(!trendingClips || trendingClips.length === 0) && !isLoadingTrendingClips && (
-          <div className="text-center py-8 sm:py-12 bg-card/50 rounded-xl border border-border/50 mx-2">
-            <Video className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
-            <h3 className="text-base sm:text-lg font-semibold mb-2">No clips yet</h3>
-            <p className="text-sm sm:text-base text-muted-foreground mb-4 px-4">Upload your first gaming clip to get started!</p>
-            <Button 
-              className="w-auto px-6"
-              onClick={() => setLocation('/upload')}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Upload Clip
-            </Button>
+      <LazySection minHeight="400px" rootMargin="200px">
+        <section className="px-4 sm:px-6 md:px-8">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-xl sm:text-2xl font-bold">Latest Clips</h2>
+            <Link href="/latest-clips" className="text-primary text-sm font-medium hover:underline flex items-center">
+              View all <ChevronRight className="h-4 w-4 ml-1" />
+            </Link>
           </div>
-        )}
-      </section>
+          <div className="border-b border-border/50 mb-4 sm:mb-6 md:mb-8" />
+
+          <TrendingContentCarousel 
+            clips={trendingClips} 
+            isLoading={isLoadingTrendingClips}
+            userId={userId}
+          />
+          
+          {(!trendingClips || trendingClips.length === 0) && !isLoadingTrendingClips && (
+            <div className="text-center py-8 sm:py-12 bg-card/50 rounded-xl border border-border/50 mx-2">
+              <Video className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+              <h3 className="text-base sm:text-lg font-semibold mb-2">No clips yet</h3>
+              <p className="text-sm sm:text-base text-muted-foreground mb-4 px-4">Upload your first gaming clip to get started!</p>
+              <Button 
+                className="w-auto px-6"
+                onClick={() => setLocation('/upload')}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Upload Clip
+              </Button>
+            </div>
+          )}
+        </section>
+      </LazySection>
 
       {/* Latest Reels Section (9:16 aspect ratio) */}
-      <section className="px-4 sm:px-6 md:px-8 pt-6 sm:pt-8">
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-xl sm:text-2xl font-bold">Latest Reels</h2>
-          <Link href="/latest-reels" className="text-primary text-sm font-medium hover:underline flex items-center">
-            View all <ChevronRight className="h-4 w-4 ml-1" />
-          </Link>
-        </div>
-        <div className="border-b border-border/50 mb-4 sm:mb-6 md:mb-8" />
+      <LazySection minHeight="500px" rootMargin="200px">
+        <section className="px-4 sm:px-6 md:px-8 pt-6 sm:pt-8">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-xl sm:text-2xl font-bold">Latest Reels</h2>
+            <Link href="/latest-reels" className="text-primary text-sm font-medium hover:underline flex items-center">
+              View all <ChevronRight className="h-4 w-4 ml-1" />
+            </Link>
+          </div>
+          <div className="border-b border-border/50 mb-4 sm:mb-6 md:mb-8" />
 
-        <LatestReelsCarousel 
-          reels={latestReels}
-          isLoading={isLoadingReels}
-          userId={userId}
-        />
-      </section>
+          <LatestReelsCarousel 
+            reels={latestReels}
+            isLoading={isLoadingReels}
+            userId={userId}
+          />
+        </section>
+      </LazySection>
 
     </div>
   );

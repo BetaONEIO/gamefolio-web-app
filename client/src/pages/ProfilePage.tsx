@@ -12,7 +12,6 @@ import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import GameSelectionDialog from "@/components/games/GameSelectionDialog";
 import { LevelBadgeWithProgress } from "@/components/profile/LevelBadgeWithProgress";
 import { 
   Heart, 
@@ -63,21 +62,14 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
-import CommentSection from "@/components/clips/CommentSection";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
-import { ScreenshotCommentSection } from "@/components/screenshots/ScreenshotCommentSection";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import { ModeratorIcon } from "@/components/ui/moderator-icon";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
-import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
-import { ScreenshotShareDialog } from "@/components/screenshot/ScreenshotShareDialog";
-import { GamefolioShareDialog } from "@/components/profile/GamefolioShareDialog";
-import { MessageDialog } from "@/components/messages/MessageDialog";
-import { ReportDialog } from "@/components/content/ReportDialog";
 import { ReportButton } from "@/components/reporting/ReportButton";
-import { ProfilePictureLightbox, useProfilePictureLightbox } from "@/components/ui/profile-picture-lightbox";
+import { useProfilePictureLightbox } from "@/components/ui/profile-picture-lightbox";
 import { BannerLightbox, useBannerLightbox } from "@/components/ui/banner-lightbox";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { useSignedUrl } from "@/hooks/use-signed-url";
@@ -88,6 +80,16 @@ import { cn } from "@/lib/utils";
 import NotFound from "./not-found";
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET, NFT_CONTRACT_ADDRESS } from "@shared/contracts";
+
+const GameSelectionDialog = React.lazy(() => import("@/components/games/GameSelectionDialog"));
+const CommentSection = React.lazy(() => import("@/components/clips/CommentSection"));
+const ClipShareDialog = React.lazy(() => import("@/components/clip/ClipShareDialog").then(m => ({ default: m.ClipShareDialog })));
+const ScreenshotShareDialog = React.lazy(() => import("@/components/screenshot/ScreenshotShareDialog").then(m => ({ default: m.ScreenshotShareDialog })));
+const GamefolioShareDialog = React.lazy(() => import("@/components/profile/GamefolioShareDialog").then(m => ({ default: m.GamefolioShareDialog })));
+const MessageDialog = React.lazy(() => import("@/components/messages/MessageDialog").then(m => ({ default: m.MessageDialog })));
+const ReportDialog = React.lazy(() => import("@/components/content/ReportDialog").then(m => ({ default: m.ReportDialog })));
+const ProfilePictureLightbox = React.lazy(() => import("@/components/ui/profile-picture-lightbox").then(m => ({ default: m.ProfilePictureLightbox })));
+const ScreenshotCommentSection = React.lazy(() => import("@/components/screenshots/ScreenshotCommentSection").then(m => ({ default: m.ScreenshotCommentSection })));
 
 interface OwnedNft {
   tokenId: number;
@@ -1394,44 +1396,46 @@ const ProfilePage = () => {
 
       {/* Share button - positioned on banner top right for mobile */}
       <div className="block md:hidden absolute top-4 right-4 z-30">
-        <GamefolioShareDialog 
-          username={profile.username}
-          userProfile={{
-            displayName: profile.displayName,
-            bio: profile.bio,
-            avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
-            bannerUrl: profile.bannerUrl,
-            selectedAvatarBorderId: profile.selectedAvatarBorderId,
-            avatarBorderColor: profile.avatarBorderColor,
-            nftProfileTokenId: profile.nftProfileTokenId,
-            nftProfileImageUrl: profile.nftProfileImageUrl,
-            emailVerified: profile.emailVerified,
-            role: profile.role,
-            isPro: profile.isPro,
-            selectedVerificationBadgeId: profile.selectedVerificationBadgeId,
-            userType: profile.userType,
-            showUserType: profile.showUserType,
-            accentColor: profile.accentColor,
-            backgroundColor: profile.backgroundColor,
-            cardColor: profile.cardColor,
-            primaryColor: profile.primaryColor
-          }}
-          userStats={{
-            clips: profile._count?.clips || 0,
-            followers: profile._count?.followers || 0,
-            following: profile._count?.following || 0
-          }}
-          favoriteGames={favoriteGames?.slice(0, 5).map(g => ({ id: g.id, name: g.name, imageUrl: g.imageUrl }))}
-          trigger={
-            <Button
-              variant="ghost"
-              size="sm"
-              className="p-2 h-10 w-10 rounded-full hover:bg-primary/10 bg-background/80 backdrop-blur-sm"
-            >
-              <Share2 className="w-5 h-5" />
-            </Button>
-          }
-        />
+        <React.Suspense fallback={null}>
+          <GamefolioShareDialog 
+            username={profile.username}
+            userProfile={{
+              displayName: profile.displayName,
+              bio: profile.bio,
+              avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
+              bannerUrl: profile.bannerUrl,
+              selectedAvatarBorderId: profile.selectedAvatarBorderId,
+              avatarBorderColor: profile.avatarBorderColor,
+              nftProfileTokenId: profile.nftProfileTokenId,
+              nftProfileImageUrl: profile.nftProfileImageUrl,
+              emailVerified: profile.emailVerified,
+              role: profile.role,
+              isPro: profile.isPro,
+              selectedVerificationBadgeId: profile.selectedVerificationBadgeId,
+              userType: profile.userType,
+              showUserType: profile.showUserType,
+              accentColor: profile.accentColor,
+              backgroundColor: profile.backgroundColor,
+              cardColor: profile.cardColor,
+              primaryColor: profile.primaryColor
+            }}
+            userStats={{
+              clips: profile._count?.clips || 0,
+              followers: profile._count?.followers || 0,
+              following: profile._count?.following || 0
+            }}
+            favoriteGames={favoriteGames?.slice(0, 5).map(g => ({ id: g.id, name: g.name, imageUrl: g.imageUrl }))}
+            trigger={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-2 h-10 w-10 rounded-full hover:bg-primary/10 bg-background/80 backdrop-blur-sm"
+              >
+                <Share2 className="w-5 h-5" />
+              </Button>
+            }
+          />
+        </React.Suspense>
       </div>
 
       {/* Profile Info - positioned below banner with overlapping profile picture */}
@@ -2265,75 +2269,79 @@ const ProfilePage = () => {
                     <MessageSquare className="mr-2 h-5 w-5" /> Message
                   </Button>
 
-                  <GamefolioShareDialog 
-                    username={profile.username}
-                    userProfile={{
-                      displayName: profile.displayName,
-                      bio: profile.bio,
-                      avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
-                      bannerUrl: profile.bannerUrl,
-                      selectedAvatarBorderId: profile.selectedAvatarBorderId,
-                      avatarBorderColor: profile.avatarBorderColor,
-                      nftProfileTokenId: profile.nftProfileTokenId,
-                      nftProfileImageUrl: profile.nftProfileImageUrl,
-                      emailVerified: profile.emailVerified,
-                      role: profile.role,
-                      isPro: profile.isPro,
-                      selectedVerificationBadgeId: profile.selectedVerificationBadgeId,
-                      userType: profile.userType,
-                      showUserType: profile.showUserType,
-                      accentColor: profile.accentColor,
-                      backgroundColor: profile.backgroundColor,
-                      cardColor: profile.cardColor,
-                      primaryColor: profile.primaryColor
-                    }}
-                    userStats={{
-                      clips: profile._count?.clips || 0,
-                      followers: profile._count?.followers || 0,
-                      following: profile._count?.following || 0
-                    }}
-                    favoriteGames={favoriteGames?.slice(0, 5).map(g => ({ id: g.id, name: g.name, imageUrl: g.imageUrl }))}
-                    trigger={
-                      <Button
-                        variant="outline"
-                        size="default"
-                        className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20 px-4 py-3"
-                      >
-                        <Share2 className="h-5 w-5" />
-                      </Button>
-                    }
-                  />
+                  <React.Suspense fallback={null}>
+                    <GamefolioShareDialog 
+                      username={profile.username}
+                      userProfile={{
+                        displayName: profile.displayName,
+                        bio: profile.bio,
+                        avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
+                        bannerUrl: profile.bannerUrl,
+                        selectedAvatarBorderId: profile.selectedAvatarBorderId,
+                        avatarBorderColor: profile.avatarBorderColor,
+                        nftProfileTokenId: profile.nftProfileTokenId,
+                        nftProfileImageUrl: profile.nftProfileImageUrl,
+                        emailVerified: profile.emailVerified,
+                        role: profile.role,
+                        isPro: profile.isPro,
+                        selectedVerificationBadgeId: profile.selectedVerificationBadgeId,
+                        userType: profile.userType,
+                        showUserType: profile.showUserType,
+                        accentColor: profile.accentColor,
+                        backgroundColor: profile.backgroundColor,
+                        cardColor: profile.cardColor,
+                        primaryColor: profile.primaryColor
+                      }}
+                      userStats={{
+                        clips: profile._count?.clips || 0,
+                        followers: profile._count?.followers || 0,
+                        following: profile._count?.following || 0
+                      }}
+                      favoriteGames={favoriteGames?.slice(0, 5).map(g => ({ id: g.id, name: g.name, imageUrl: g.imageUrl }))}
+                      trigger={
+                        <Button
+                          variant="outline"
+                          size="default"
+                          className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20 px-4 py-3"
+                        >
+                          <Share2 className="h-5 w-5" />
+                        </Button>
+                      }
+                    />
+                  </React.Suspense>
                 </div>
               )}
 
             {/* Share button for own profile */}
             {isOwnProfile && (
               <div className="flex gap-2">
-                  <GamefolioShareDialog 
-                    username={profile.username}
-                    userProfile={{
-                      displayName: profile.displayName,
-                      bio: profile.bio,
-                      avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
-                      bannerUrl: profile.bannerUrl,
-                      selectedAvatarBorderId: profile.selectedAvatarBorderId,
-                      avatarBorderColor: profile.avatarBorderColor
-                    }}
-                    userStats={{
-                      clips: profile._count?.clips || 0,
-                      followers: profile._count?.followers || 0,
-                      following: profile._count?.following || 0
-                    }}
-                    trigger={
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
-                      >
-                        <Share2 className="h-4 w-4" />
-                      </Button>
-                    }
-                  />
+                  <React.Suspense fallback={null}>
+                    <GamefolioShareDialog 
+                      username={profile.username}
+                      userProfile={{
+                        displayName: profile.displayName,
+                        bio: profile.bio,
+                        avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
+                        bannerUrl: profile.bannerUrl,
+                        selectedAvatarBorderId: profile.selectedAvatarBorderId,
+                        avatarBorderColor: profile.avatarBorderColor
+                      }}
+                      userStats={{
+                        clips: profile._count?.clips || 0,
+                        followers: profile._count?.followers || 0,
+                        following: profile._count?.following || 0
+                      }}
+                      trigger={
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
+                        >
+                          <Share2 className="h-4 w-4" />
+                        </Button>
+                      }
+                    />
+                  </React.Suspense>
                 </div>
               )}
             </div>
@@ -3134,13 +3142,15 @@ const ProfilePage = () => {
 
         {/* Game Selection Dialog */}
         {isOwnProfile && profile && (
-          <GameSelectionDialog
-            isOpen={showGameSelection}
-            onClose={() => setShowGameSelection(false)}
-            userId={profile.id}
-            username={username}
-            existingFavorites={favoriteGames?.map(game => ({ id: game.id, name: game.name })) || []}
-          />
+          <React.Suspense fallback={null}>
+            <GameSelectionDialog
+              isOpen={showGameSelection}
+              onClose={() => setShowGameSelection(false)}
+              userId={profile.id}
+              username={username}
+              existingFavorites={favoriteGames?.map(game => ({ id: game.id, name: game.name })) || []}
+            />
+          </React.Suspense>
         )}
 
         {/* Screenshot Lightbox Modal - Enhanced to match ClipDialog */}
@@ -3252,15 +3262,17 @@ const ProfilePage = () => {
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <ScreenshotShareDialog 
-                            screenshotId={selectedScreenshot.id.toString()} 
-                            isOwnContent={isOwnProfile}
-                            trigger={
-                              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                                <Share2 className="h-4 w-4" />
-                              </Button>
-                            } 
-                          />
+                          <React.Suspense fallback={null}>
+                            <ScreenshotShareDialog 
+                              screenshotId={selectedScreenshot.id.toString()} 
+                              isOwnContent={isOwnProfile}
+                              trigger={
+                                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                                  <Share2 className="h-4 w-4" />
+                                </Button>
+                              } 
+                            />
+                          </React.Suspense>
 
                           <ReportButton
                             contentType="screenshot"
@@ -3275,9 +3287,11 @@ const ProfilePage = () => {
                   </div>
 
                   {/* Comments section */}
-                  <ScreenshotCommentSection 
-                    screenshotId={selectedScreenshot.id}
-                  />
+                  <React.Suspense fallback={null}>
+                    <ScreenshotCommentSection 
+                      screenshotId={selectedScreenshot.id}
+                    />
+                  </React.Suspense>
                 </div>
               </div>
             </div>
@@ -3286,48 +3300,48 @@ const ProfilePage = () => {
       </Dialog>
 
       {/* Share Dialogs for newly uploaded content */}
-      {shareDialogType === 'clip' && shareDialogId && (
-        <ClipShareDialog
-          clipId={shareDialogId}
-          isOwnContent={true}
-          open={shareDialogOpen}
-          onOpenChange={(open) => {
-            setShareDialogOpen(open);
-            if (!open) {
-              setShareDialogType(null);
-              setShareDialogId(null);
-              // Clear the URL hash after sharing dialog is closed
-              window.location.hash = '';
-            }
-          }}
-        />
-      )}
+      <React.Suspense fallback={null}>
+        {shareDialogType === 'clip' && shareDialogId && (
+          <ClipShareDialog
+            clipId={shareDialogId}
+            isOwnContent={true}
+            open={shareDialogOpen}
+            onOpenChange={(open) => {
+              setShareDialogOpen(open);
+              if (!open) {
+                setShareDialogType(null);
+                setShareDialogId(null);
+                window.location.hash = '';
+              }
+            }}
+          />
+        )}
 
-      {shareDialogType === 'screenshot' && shareDialogId && (
-        <ScreenshotShareDialog
-          screenshotId={shareDialogId.toString()}
-          isOwnContent={true}
-          open={shareDialogOpen}
-          onOpenChange={(open) => {
-            setShareDialogOpen(open);
-            if (!open) {
-              setShareDialogType(null);
-              setShareDialogId(null);
-              // Clear the URL hash after sharing dialog is closed
-              window.location.hash = '';
-            }
-          }}
-        />
-      )}
+        {shareDialogType === 'screenshot' && shareDialogId && (
+          <ScreenshotShareDialog
+            screenshotId={shareDialogId.toString()}
+            isOwnContent={true}
+            open={shareDialogOpen}
+            onOpenChange={(open) => {
+              setShareDialogOpen(open);
+              if (!open) {
+                setShareDialogType(null);
+                setShareDialogId(null);
+                window.location.hash = '';
+              }
+            }}
+          />
+        )}
 
-      {/* Profile Picture Lightbox */}
-      <ProfilePictureLightbox
-        isOpen={lightboxData.isOpen}
-        onClose={closeLightbox}
-        avatarUrl={lightboxData.avatarUrl}
-        displayName={lightboxData.displayName}
-        username={lightboxData.username}
-      />
+        {/* Profile Picture Lightbox */}
+        <ProfilePictureLightbox
+          isOpen={lightboxData.isOpen}
+          onClose={closeLightbox}
+          avatarUrl={lightboxData.avatarUrl}
+          displayName={lightboxData.displayName}
+          username={lightboxData.username}
+        />
+      </React.Suspense>
 
       {/* Banner Lightbox */}
       <BannerLightbox
@@ -3352,41 +3366,43 @@ const ProfilePage = () => {
             <DialogTitle>Profile Options</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-3">
-            <GamefolioShareDialog 
-              username={profile.username}
-              userProfile={{
-                displayName: profile.displayName,
-                bio: profile.bio,
-                avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
-                bannerUrl: profile.bannerUrl,
-                selectedAvatarBorderId: profile.selectedAvatarBorderId,
-                avatarBorderColor: profile.avatarBorderColor,
-                nftProfileTokenId: profile.nftProfileTokenId,
-                nftProfileImageUrl: profile.nftProfileImageUrl,
-                emailVerified: profile.emailVerified,
-                role: profile.role,
-                isPro: profile.isPro,
-                selectedVerificationBadgeId: profile.selectedVerificationBadgeId,
-                userType: profile.userType,
-                showUserType: profile.showUserType,
-                accentColor: profile.accentColor,
-                backgroundColor: profile.backgroundColor,
-                cardColor: profile.cardColor,
-                primaryColor: profile.primaryColor
-              }}
-              userStats={{
-                clips: profile._count?.clips || 0,
-                followers: profile._count?.followers || 0,
-                following: profile._count?.following || 0
-              }}
-              favoriteGames={favoriteGames?.slice(0, 5).map(g => ({ id: g.id, name: g.name, imageUrl: g.imageUrl }))}
-              trigger={
-                <Button variant="outline" className="w-full justify-start" onClick={() => setProfileActionDialogOpen(false)}>
-                  <Share2 className="mr-2 h-4 w-4" />
-                  Share Profile
-                </Button>
-              }
-            />
+            <React.Suspense fallback={null}>
+              <GamefolioShareDialog 
+                username={profile.username}
+                userProfile={{
+                  displayName: profile.displayName,
+                  bio: profile.bio,
+                  avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
+                  bannerUrl: profile.bannerUrl,
+                  selectedAvatarBorderId: profile.selectedAvatarBorderId,
+                  avatarBorderColor: profile.avatarBorderColor,
+                  nftProfileTokenId: profile.nftProfileTokenId,
+                  nftProfileImageUrl: profile.nftProfileImageUrl,
+                  emailVerified: profile.emailVerified,
+                  role: profile.role,
+                  isPro: profile.isPro,
+                  selectedVerificationBadgeId: profile.selectedVerificationBadgeId,
+                  userType: profile.userType,
+                  showUserType: profile.showUserType,
+                  accentColor: profile.accentColor,
+                  backgroundColor: profile.backgroundColor,
+                  cardColor: profile.cardColor,
+                  primaryColor: profile.primaryColor
+                }}
+                userStats={{
+                  clips: profile._count?.clips || 0,
+                  followers: profile._count?.followers || 0,
+                  following: profile._count?.following || 0
+                }}
+                favoriteGames={favoriteGames?.slice(0, 5).map(g => ({ id: g.id, name: g.name, imageUrl: g.imageUrl }))}
+                trigger={
+                  <Button variant="outline" className="w-full justify-start" onClick={() => setProfileActionDialogOpen(false)}>
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Share Profile
+                  </Button>
+                }
+              />
+            </React.Suspense>
             {!isOwnProfile && (
               <Button 
                 variant="outline" 
@@ -3410,16 +3426,18 @@ const ProfilePage = () => {
 
       {/* Message Dialog */}
       {profile && (
-        <MessageDialog
-          open={messageDialogOpen}
-          onOpenChange={setMessageDialogOpen}
-          targetUser={{
-            id: profile.id,
-            username: profile.username,
-            displayName: profile.displayName,
-            avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
-          }}
-        />
+        <React.Suspense fallback={null}>
+          <MessageDialog
+            open={messageDialogOpen}
+            onOpenChange={setMessageDialogOpen}
+            targetUser={{
+              id: profile.id,
+              username: profile.username,
+              displayName: profile.displayName,
+              avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
+            }}
+          />
+        </React.Suspense>
       )}
 
       {/* Name Tag Preview Dialog */}
