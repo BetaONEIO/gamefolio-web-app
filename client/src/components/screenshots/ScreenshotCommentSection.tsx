@@ -44,6 +44,11 @@ function ScreenshotCommentLikeButton({ commentId, isLoggedIn }: ScreenshotCommen
   
   const { data: likeStatus } = useQuery<{ hasLiked: boolean; likeCount: number }>({
     queryKey: [`/api/screenshot-comments/${commentId}/like`],
+    queryFn: async () => {
+      const res = await fetch(`/api/screenshot-comments/${commentId}/like`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to get like status');
+      return res.json();
+    },
   });
   
   const likeMutation = useMutation({

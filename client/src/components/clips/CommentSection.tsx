@@ -49,6 +49,11 @@ function CommentLikeButton({ commentId, isLoggedIn, onNotLoggedIn }: CommentLike
   
   const { data: likeStatus } = useQuery<{ hasLiked: boolean; likeCount: number }>({
     queryKey: [`/api/comments/${commentId}/like`],
+    queryFn: async () => {
+      const res = await fetch(`/api/comments/${commentId}/like`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to get like status');
+      return res.json();
+    },
   });
   
   const likeMutation = useMutation({
