@@ -367,6 +367,7 @@ const ProfilePage = () => {
 
   // Get signed URL for profile avatar (private bucket)
   const { signedUrl: profileAvatarSignedUrl } = useSignedUrl(profile?.avatarUrl);
+  const { signedUrl: screenshotSignedUrl } = useSignedUrl(selectedScreenshot?.imageUrl);
 
   // Fetch user's selected verification badge
   const { data: verificationBadgeData } = useQuery<{ verificationBadge: { id: number; name: string; imageUrl: string } | null }>({
@@ -3164,7 +3165,7 @@ const ProfilePage = () => {
               {/* Left side - Image display */}
               <div className="bg-black flex items-center justify-center w-full lg:w-[75%] h-[50vh] lg:h-full flex-shrink-0">
                 <img
-                  src={selectedScreenshot.imageUrl}
+                  src={screenshotSignedUrl || selectedScreenshot.imageUrl}
                   alt={selectedScreenshot.title}
                   className="max-w-full max-h-full object-contain"
                 />

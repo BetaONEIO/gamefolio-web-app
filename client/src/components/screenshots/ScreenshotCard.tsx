@@ -11,6 +11,7 @@ import { useLikeScreenshot } from '@/hooks/use-clips';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { LazyImage } from '@/components/ui/lazy-image';
+import { useSignedUrl } from '@/hooks/use-signed-url';
 
 interface ScreenshotCardProps {
   screenshot: any;
@@ -31,6 +32,7 @@ export function ScreenshotCard({
 }: ScreenshotCardProps) {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
+  const { signedUrl: screenshotSignedUrl } = useSignedUrl(screenshot.imageUrl);
   
   // Screenshot like functionality
   const likeMutation = useLikeScreenshot();
@@ -132,7 +134,7 @@ export function ScreenshotCard({
         onClick={() => onSelect?.(screenshot)}
       >
         <LazyImage 
-          src={screenshot.imageUrl || ''} 
+          src={screenshotSignedUrl || screenshot.imageUrl || ''} 
           alt={screenshot.title}
           className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${screenshot.ageRestricted ? 'blur-2xl' : ''}`}
           placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"

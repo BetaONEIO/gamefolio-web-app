@@ -16,6 +16,7 @@ import VideoClipGridItem from '@/components/clips/VideoClipGridItem';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
 import { useMobile } from '@/hooks/use-mobile';
+import { useSignedUrl } from '@/hooks/use-signed-url';
 import { LikeButton } from '@/components/engagement/LikeButton';
 import { FireButton } from '@/components/engagement/FireButton';
 import { ReportButton } from '@/components/reporting/ReportButton';
@@ -157,6 +158,7 @@ const TrendingPage: React.FC = () => {
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('recent');
   const [showMobileViewer, setShowMobileViewer] = useState(false);
   const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotWithUser | null>(null);
+  const { signedUrl: screenshotSignedUrl } = useSignedUrl(selectedScreenshot?.imageUrl);
   const [ageRestrictionAccepted, setAgeRestrictionAccepted] = useState(false);
   const [showAgeRestrictionDialog, setShowAgeRestrictionDialog] = useState(false);
   const [isFollowingAuthor, setIsFollowingAuthor] = useState(false);
@@ -632,7 +634,7 @@ const TrendingPage: React.FC = () => {
               <div className="bg-black flex items-center justify-center w-full lg:w-[75%] h-[60vh] lg:h-full relative">
                 {(!selectedScreenshot.ageRestricted || ageRestrictionAccepted) ? (
                   <img
-                    src={selectedScreenshot.imageUrl}
+                    src={screenshotSignedUrl || selectedScreenshot.imageUrl}
                     alt={selectedScreenshot.title}
                     className="max-w-full max-h-full object-contain"
                     loading="lazy"
