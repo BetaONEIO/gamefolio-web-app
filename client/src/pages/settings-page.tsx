@@ -643,6 +643,7 @@ export default function SettingsPage() {
   const { signedUrl: signedAvatarUrl } = useSignedUrl(user?.avatarUrl);
   const { signedUrl: signedDeactivatedAvatarUrl } = useSignedUrl(deactivatedAvatarUrl);
   const { signedUrl: signedSelectedPrevAvatar } = useSignedUrl(selectedPreviousAvatar);
+  const { signedUrl: signedBannerUrl } = useSignedUrl(profileData.bannerUrl || null);
   const previousAvatarUrls = React.useMemo(
     () => (previousAvatarsData?.avatars || []).map(a => a.avatarUrl),
     [previousAvatarsData]
@@ -2122,7 +2123,7 @@ export default function SettingsPage() {
                         <Label className="text-sm font-medium">Current Banner Preview</Label>
                         <div className="mt-2 aspect-[16/9] max-w-md rounded-lg border overflow-hidden">
                           <img
-                            src={profileData.bannerUrl}
+                            src={signedBannerUrl || profileData.bannerUrl}
                             alt="Selected banner"
                             className="w-full h-full object-cover"
                           />
