@@ -41,8 +41,13 @@ export function LikeButton({
   // Check current like status when user is authenticated
   const { data: likeStatus } = useQuery({
     queryKey: [`/api/${contentType}s/${contentId}/likes/status`],
+    queryFn: async () => {
+      const res = await fetch(`/api/${contentType}s/${contentId}/likes/status`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch like status");
+      return res.json();
+    },
     enabled: !!user,
-    staleTime: 30000, // Cache for 30 seconds
+    staleTime: 30000,
   });
 
   // Update local state when like status is fetched

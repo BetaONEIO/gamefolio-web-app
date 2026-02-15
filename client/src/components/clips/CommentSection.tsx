@@ -103,6 +103,11 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
   
   const { data: comments, isLoading } = useQuery<CommentWithUser[]>({
     queryKey: [`/api/clips/${clipId}/comments`],
+    queryFn: async () => {
+      const res = await fetch(`/api/clips/${clipId}/comments`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch comments");
+      return res.json();
+    },
   });
   
   const createCommentMutation = useCreateComment();

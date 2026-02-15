@@ -106,6 +106,11 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
 
   const { data: shareData, isLoading, error, refetch } = useQuery<ShareData>({
     queryKey: [`/api/clips/${clipId}/share`],
+    queryFn: async () => {
+      const res = await fetch(`/api/clips/${clipId}/share`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch share data");
+      return res.json();
+    },
     enabled: isOpen,
     retry: 2,
     retryDelay: 1000,

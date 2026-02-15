@@ -5,6 +5,11 @@ import { apiRequest } from "@/lib/queryClient";
 export function useClip(clipId: string | number) {
   return useQuery<ClipWithUser>({
     queryKey: [`/api/clips/${clipId}`],
+    queryFn: async () => {
+      const res = await fetch(`/api/clips/${clipId}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch clip");
+      return res.json();
+    },
     enabled: !!clipId,
   });
 }
@@ -13,15 +18,26 @@ export function useFeedClips(period: 'day' | 'week' | 'month' = 'day', limit?: n
   const queryParams = new URLSearchParams();
   queryParams.append('period', period);
   if (limit) queryParams.append('limit', limit.toString());
+  const url = `/api/clips?${queryParams.toString()}`;
   
   return useQuery<ClipWithUser[]>({
-    queryKey: [`/api/clips?${queryParams.toString()}`],
+    queryKey: [url],
+    queryFn: async () => {
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch clips");
+      return res.json();
+    },
   });
 }
 
 export function useUserClips(username: string) {
   return useQuery<ClipWithUser[]>({
     queryKey: [`/api/users/${username}/clips`],
+    queryFn: async () => {
+      const res = await fetch(`/api/users/${username}/clips`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch user clips");
+      return res.json();
+    },
     enabled: !!username,
   });
 }
@@ -29,6 +45,11 @@ export function useUserClips(username: string) {
 export function useClipComments(clipId: string | number) {
   return useQuery<CommentWithUser[]>({
     queryKey: [`/api/clips/${clipId}/comments`],
+    queryFn: async () => {
+      const res = await fetch(`/api/clips/${clipId}/comments`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch comments");
+      return res.json();
+    },
     enabled: !!clipId,
   });
 }
@@ -105,6 +126,11 @@ export function useLikeScreenshot() {
 export function useScreenshotComments(screenshotId: string | number) {
   return useQuery<CommentWithUser[]>({
     queryKey: [`/api/screenshots/${screenshotId}/comments`],
+    queryFn: async () => {
+      const res = await fetch(`/api/screenshots/${screenshotId}/comments`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch comments");
+      return res.json();
+    },
     enabled: !!screenshotId,
   });
 }
