@@ -27,6 +27,7 @@ interface ClipShareDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   isOwnContent?: boolean;
+  contentType?: 'clip' | 'reel';
 }
 
 interface ShareData {
@@ -105,7 +106,8 @@ function ClipThumbnail({ thumbnailUrl, videoUrl }: { thumbnailUrl?: string | nul
   );
 }
 
-export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnContent = false }: ClipShareDialogProps) {
+export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnContent = false, contentType = 'clip' }: ClipShareDialogProps) {
+  const label = contentType === 'reel' ? 'reel' : 'clip';
   const [internalOpen, setInternalOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const { toast } = useToast();
@@ -157,7 +159,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
     if (navigator.share) {
       try {
         await navigator.share({
-          title: shareData.title || 'Check out this gaming clip!',
+          title: shareData.title || `Check out this gaming ${label}!`,
           text: shareData.description || 'Amazing gaming content from Gamefolio',
           url: shareData.clipUrl
         });
@@ -179,7 +181,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
     window.open(url, '_blank', 'noopener,noreferrer');
     toast({
       title: `Sharing on ${platform}`,
-      description: isOwnContent ? `🎮 Sharing your gaming clip from your Gamefolio! Your followers will see your epic gameplay and can visit your profile to see more content.` : `🎮 Sharing this gaming clip! Check out this epic gameplay on Gamefolio.`,
+      description: isOwnContent ? `🎮 Sharing your gaming ${label} from your Gamefolio! Your followers will see your epic gameplay and can visit your profile to see more content.` : `🎮 Sharing this gaming ${label}! Check out this epic gameplay on Gamefolio.`,
       duration: 4000,
     });
   };
@@ -207,12 +209,12 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
             <Share2 className="w-5 h-5 text-white" />
-            {isOwnContent ? 'Share your clip' : 'Share clip'}
+            {isOwnContent ? `Share your ${label}` : `Share ${label}`}
           </DialogTitle>
         </DialogHeader>
 
         <div id="clip-share-description" className="sr-only">
-          Share your gaming clip with friends through social media, copy the link, or download a QR code
+          Share your gaming {label} with friends through social media, copy the link, or download a QR code
         </div>
 
         {isLoading ? (

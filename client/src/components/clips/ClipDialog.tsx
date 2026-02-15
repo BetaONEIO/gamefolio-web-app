@@ -753,6 +753,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         <ClipShareDialog 
                           clipId={clip.id} 
                           isOwnContent={user?.id === clip.userId}
+                          contentType={clip.videoType === 'reel' ? 'reel' : 'clip'}
                           trigger={
                             <button className="w-11 h-11 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors flex items-center justify-center">
                               <Share2 className="h-6 w-6 text-white" />
@@ -1046,6 +1047,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         <ClipShareDialog 
                           clipId={clip.id} 
                           isOwnContent={user?.id === clip.userId}
+                          contentType={clip.videoType === 'reel' ? 'reel' : 'clip'}
                           trigger={
                             <button className="focus:outline-none">
                               <Share2 className="h-6 w-6" />
