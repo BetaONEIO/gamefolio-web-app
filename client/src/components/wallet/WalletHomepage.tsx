@@ -416,7 +416,7 @@ export default function WalletHomepage({
           </div>
 
           {/* Wallet Status Section (order-4 on mobile to appear after NFTs) */}
-          <div className="flex flex-col gap-6 order-4 lg:order-3 w-full overflow-hidden">
+          <div className="flex flex-col gap-6 order-4 lg:order-3 w-full">
             <div 
               className="rounded-2xl p-5 flex flex-col gap-4"
               style={{ 
@@ -465,14 +465,14 @@ export default function WalletHomepage({
 
             {/* Wallet Address Card */}
             <div 
-              className="rounded-2xl p-4 w-full overflow-hidden"
+              className="rounded-2xl p-4 w-full"
               style={{ 
                 background: '#0f172a',
                 border: '1px solid rgba(30, 41, 59, 0.5)'
               }}
             >
-              <div className="flex items-center justify-between gap-2 w-full">
-                <div className="flex flex-col gap-0.5 min-w-0 flex-1 overflow-hidden">
+              <div className="flex items-center justify-between gap-3 w-full">
+                <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                   <span 
                     className="text-xs uppercase"
                     style={{ color: '#94a3b8', fontSize: '10px' }}
@@ -480,10 +480,10 @@ export default function WalletHomepage({
                     Wallet Address
                   </span>
                   <span 
-                    className="font-mono text-xs sm:text-sm font-medium"
+                    className="font-mono text-xs sm:text-sm font-medium break-all"
                     style={{ color: '#f8fafc', fontFamily: 'JetBrains Mono, monospace' }}
                   >
-                    {shortenAddress(walletAddress)}
+                    {walletAddress || "0x86d2...a4cf"}
                   </span>
                 </div>
                 <button
