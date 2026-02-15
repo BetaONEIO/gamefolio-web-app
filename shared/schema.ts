@@ -302,6 +302,7 @@ export const profileBorders = pgTable("profile_borders", {
   availableInStore: boolean("available_in_store").default(false).notNull(), // If true, can be purchased in store
   availableInLootbox: boolean("available_in_lootbox").default(false).notNull(), // If true, can be won from lootbox
   proOnly: boolean("pro_only").default(true).notNull(), // Borders are Pro-only
+  shape: text("shape").notNull().default("circle"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
