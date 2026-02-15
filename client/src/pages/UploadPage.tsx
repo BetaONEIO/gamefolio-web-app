@@ -1033,64 +1033,48 @@ const UploadPage = () => {
                           </div>
                         </div>
                         
-                        {/* Video Editing Tools */}
+                        {/* Video Trimmer */}
                         {showEditingTools && videoDuration > 0 && (
-                          <div className="space-y-4 mt-4">
+                          <div className="space-y-3 mt-4">
                             <div className="flex items-center justify-between">
                               <h4 className="font-medium text-sm">Trim Clip</h4>
                               <span className="text-xs text-muted-foreground font-mono">
-                                {formatDuration(trimEnd - trimStart)}
+                                {formatDuration(trimEnd - trimStart)} / {formatDuration(videoDuration)}
                               </span>
                             </div>
-                            
-                            {/* Simple Range Inputs */}
-                            <div className="space-y-3">
-                              <div className="flex items-center gap-3">
-                                <span className="text-xs text-muted-foreground w-10">Start</span>
-                                <input
-                                  type="range"
-                                  min="0"
-                                  max={videoDuration}
-                                  step="0.1"
-                                  value={trimStart}
-                                  onChange={(e) => {
-                                    const newStart = Math.min(parseFloat(e.target.value), trimEnd - 0.5);
-                                    setTrimStart(newStart);
-                                    if (videoRef.current) {
+
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[10px] text-muted-foreground font-mono px-0.5">
+                                <span>{formatDuration(trimStart)}</span>
+                                <span>{formatDuration(trimEnd)}</span>
+                              </div>
+                              <Slider
+                                value={[
+                                  (trimStart / videoDuration) * 100,
+                                  (trimEnd / videoDuration) * 100,
+                                ]}
+                                min={0}
+                                max={100}
+                                step={0.1}
+                                minStepsBetweenThumbs={1}
+                                onValueChange={(values: number[]) => {
+                                  const newStart = (values[0] / 100) * videoDuration;
+                                  const newEnd = (values[1] / 100) * videoDuration;
+                                  const startChanged = Math.abs(newStart - trimStart) > 0.05;
+                                  const endChanged = Math.abs(newEnd - trimEnd) > 0.05;
+                                  setTrimStart(newStart);
+                                  setTrimEnd(newEnd);
+                                  if (videoRef.current) {
+                                    if (startChanged) {
                                       videoRef.current.currentTime = newStart;
+                                    } else if (endChanged) {
+                                      videoRef.current.currentTime = Math.max(newEnd - 0.1, newStart);
                                     }
-                                  }}
-                                  className="flex-1 h-1 bg-muted rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-foreground [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing"
-                                />
-                                <span className="text-xs font-mono text-muted-foreground w-10 text-right">
-                                  {formatDuration(trimStart)}
-                                </span>
-                              </div>
-                              
-                              <div className="flex items-center gap-3">
-                                <span className="text-xs text-muted-foreground w-10">End</span>
-                                <input
-                                  type="range"
-                                  min="0"
-                                  max={videoDuration}
-                                  step="0.1"
-                                  value={trimEnd}
-                                  onChange={(e) => {
-                                    const newEnd = Math.max(parseFloat(e.target.value), trimStart + 0.5);
-                                    setTrimEnd(newEnd);
-                                    if (videoRef.current) {
-                                      videoRef.current.currentTime = Math.max(newEnd - 0.1, trimStart);
-                                    }
-                                  }}
-                                  className="flex-1 h-1 bg-muted rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-foreground [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing"
-                                />
-                                <span className="text-xs font-mono text-muted-foreground w-10 text-right">
-                                  {formatDuration(trimEnd)}
-                                </span>
-                              </div>
+                                  }
+                                }}
+                              />
                             </div>
 
-                            {/* Quick Actions */}
                             <div className="flex gap-2">
                               <Button
                                 type="button"
@@ -1099,9 +1083,7 @@ const UploadPage = () => {
                                 onClick={() => {
                                   setTrimStart(0);
                                   setTrimEnd(videoDuration);
-                                  if (videoRef.current) {
-                                    videoRef.current.currentTime = 0;
-                                  }
+                                  if (videoRef.current) videoRef.current.currentTime = 0;
                                 }}
                                 className="text-xs"
                               >
@@ -1599,64 +1581,48 @@ const UploadPage = () => {
                           </div>
                         </div>
                         
-                        {/* Video Editing Tools for Reels */}
+                        {/* Video Trimmer for Reels */}
                         {showEditingTools && videoDuration > 0 && (
-                          <div className="space-y-4 mt-4">
+                          <div className="space-y-3 mt-4">
                             <div className="flex items-center justify-between">
                               <h4 className="font-medium text-sm">Trim Reel</h4>
                               <span className="text-xs text-muted-foreground font-mono">
-                                {formatDuration(trimEnd - trimStart)}
+                                {formatDuration(trimEnd - trimStart)} / {formatDuration(videoDuration)}
                               </span>
                             </div>
-                            
-                            {/* Simple Range Inputs */}
-                            <div className="space-y-3">
-                              <div className="flex items-center gap-3">
-                                <span className="text-xs text-muted-foreground w-10">Start</span>
-                                <input
-                                  type="range"
-                                  min="0"
-                                  max={videoDuration}
-                                  step="0.1"
-                                  value={trimStart}
-                                  onChange={(e) => {
-                                    const newStart = Math.min(parseFloat(e.target.value), trimEnd - 0.5);
-                                    setTrimStart(newStart);
-                                    if (videoRef.current) {
+
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[10px] text-muted-foreground font-mono px-0.5">
+                                <span>{formatDuration(trimStart)}</span>
+                                <span>{formatDuration(trimEnd)}</span>
+                              </div>
+                              <Slider
+                                value={[
+                                  (trimStart / videoDuration) * 100,
+                                  (trimEnd / videoDuration) * 100,
+                                ]}
+                                min={0}
+                                max={100}
+                                step={0.1}
+                                minStepsBetweenThumbs={1}
+                                onValueChange={(values: number[]) => {
+                                  const newStart = (values[0] / 100) * videoDuration;
+                                  const newEnd = (values[1] / 100) * videoDuration;
+                                  const startChanged = Math.abs(newStart - trimStart) > 0.05;
+                                  const endChanged = Math.abs(newEnd - trimEnd) > 0.05;
+                                  setTrimStart(newStart);
+                                  setTrimEnd(newEnd);
+                                  if (videoRef.current) {
+                                    if (startChanged) {
                                       videoRef.current.currentTime = newStart;
+                                    } else if (endChanged) {
+                                      videoRef.current.currentTime = Math.max(newEnd - 0.1, newStart);
                                     }
-                                  }}
-                                  className="flex-1 h-1 bg-muted rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-foreground [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing"
-                                />
-                                <span className="text-xs font-mono text-muted-foreground w-10 text-right">
-                                  {formatDuration(trimStart)}
-                                </span>
-                              </div>
-                              
-                              <div className="flex items-center gap-3">
-                                <span className="text-xs text-muted-foreground w-10">End</span>
-                                <input
-                                  type="range"
-                                  min="0"
-                                  max={videoDuration}
-                                  step="0.1"
-                                  value={trimEnd}
-                                  onChange={(e) => {
-                                    const newEnd = Math.max(parseFloat(e.target.value), trimStart + 0.5);
-                                    setTrimEnd(newEnd);
-                                    if (videoRef.current) {
-                                      videoRef.current.currentTime = Math.max(newEnd - 0.1, trimStart);
-                                    }
-                                  }}
-                                  className="flex-1 h-1 bg-muted rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-foreground [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing"
-                                />
-                                <span className="text-xs font-mono text-muted-foreground w-10 text-right">
-                                  {formatDuration(trimEnd)}
-                                </span>
-                              </div>
+                                  }
+                                }}
+                              />
                             </div>
 
-                            {/* Quick Actions */}
                             <div className="flex gap-2">
                               <Button
                                 type="button"
@@ -1665,9 +1631,7 @@ const UploadPage = () => {
                                 onClick={() => {
                                   setTrimStart(0);
                                   setTrimEnd(videoDuration);
-                                  if (videoRef.current) {
-                                    videoRef.current.currentTime = 0;
-                                  }
+                                  if (videoRef.current) videoRef.current.currentTime = 0;
                                 }}
                                 className="text-xs"
                               >
