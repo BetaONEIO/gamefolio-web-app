@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import VideoClipGridItem from "./VideoClipGridItem";
 import { ClipWithUser } from "@shared/schema";
-import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface LatestReelsCarouselProps {
   reels: ClipWithUser[] | undefined;
@@ -11,20 +11,69 @@ interface LatestReelsCarouselProps {
 }
 
 export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCarouselProps) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState(0);
+  const [scrollStart, setScrollStart] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (!scrollRef.current) return;
+
+    const container = scrollRef.current;
+    const itemWidth = window.innerWidth < 640 ? 144 : 180;
+    const scrollAmount = itemWidth * (window.innerWidth < 640 ? 2 : 3);
+
+    if (direction === 'left') {
+      container.scrollLeft -= scrollAmount;
+    } else {
+      container.scrollLeft += scrollAmount;
+    }
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (!scrollRef.current) return;
+    if (Math.abs(e.deltaX) > 0) return;
+    if (Math.abs(e.deltaY) > 0 && e.deltaX === 0) {
+      e.preventDefault();
+      scrollRef.current.scrollLeft += e.deltaY;
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!scrollRef.current) return;
+    setIsDragging(true);
+    setDragStart(e.clientX);
+    setScrollStart(scrollRef.current.scrollLeft);
+    e.preventDefault();
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !scrollRef.current) return;
+    e.preventDefault();
+    const dragDistance = e.clientX - dragStart;
+    scrollRef.current.scrollLeft = scrollStart - dragDistance;
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
   if (isLoading) {
     return (
-      <div className="pt-6">
-        {/* Single row skeleton */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 gap-4 md:gap-6">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="aspect-[9/16] bg-muted rounded-xl animate-pulse" />
-          ))}
-        </div>
+      <div className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide pb-4 px-2 sm:px-8">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="w-36 sm:w-40 lg:w-44 xl:w-48 flex-shrink-0">
+            <Skeleton className="aspect-[9/16] rounded-xl" />
+          </div>
+        ))}
       </div>
     );
   }
 
-  // Ensure reels is always an array to prevent slice errors
   const reelsArray = Array.isArray(reels) ? reels : [];
 
   if (reelsArray.length === 0) {
@@ -39,35 +88,47 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
     );
   }
 
-  // Simple approach: show only 1 row with responsive columns - max 5 per row
-  const getItemsPerRow = () => {
-    if (typeof window !== 'undefined') {
-      if (window.innerWidth >= 1536) return 5; // 2xl
-      if (window.innerWidth >= 1280) return 5; // xl
-      if (window.innerWidth >= 1024) return 4; // lg
-      if (window.innerWidth >= 640) return 3; // sm
-      return 2; // default
-    }
-    return 3; // fallback for SSR
-  };
-
-  const itemsPerRow = getItemsPerRow();
-
-  // Take first set of reels for display (1 row only)
-  const reelsToShow = reelsArray.slice(0, itemsPerRow);
-
   return (
-    <div className="pt-4">
-      {/* Single Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 gap-4 md:gap-6">
-        {reelsToShow.map((reel) => (
-          <VideoClipGridItem
-            key={reel.id}
-            clip={reel}
-            userId={userId}
-            compact={false}
-            reelsList={reelsArray}
-          />
+    <div className="relative">
+      <button
+        onClick={() => scroll('left')}
+        className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors hidden sm:block"
+      >
+        <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+      </button>
+
+      <button
+        onClick={() => scroll('right')}
+        className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors hidden sm:block"
+      >
+        <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
+      </button>
+
+      <div
+        ref={scrollRef}
+        className={`flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide pb-4 px-2 sm:px-8 py-2 select-none ${
+          isDragging ? 'cursor-grabbing' : 'cursor-grab'
+        }`}
+        style={{ scrollBehavior: isDragging ? 'auto' : 'smooth' }}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        data-testid="reels-carousel-container"
+      >
+        {reelsArray.map((reel) => (
+          <div
+            key={`latest-reel-${reel.id}`}
+            className="w-36 sm:w-40 lg:w-44 xl:w-48 flex-shrink-0"
+          >
+            <VideoClipGridItem
+              clip={reel}
+              userId={userId}
+              compact={false}
+              reelsList={reelsArray}
+            />
+          </div>
         ))}
       </div>
     </div>
