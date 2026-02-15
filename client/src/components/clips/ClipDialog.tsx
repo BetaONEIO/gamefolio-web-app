@@ -118,6 +118,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   // Get signed URLs for private bucket assets
   const { signedUrl: signedThumbnailUrl } = useSignedUrl(clip?.thumbnailUrl);
   const { signedUrl: signedGameIconUrl } = useSignedUrl(clip?.game?.iconUrl);
+  const { signedUrl: signedAvatarUrl } = useSignedUrl(clip?.user?.avatarUrl);
 
   // Fetch comments for mobile overlay
   const { data: comments } = useQuery<CommentWithUser[]>({
@@ -630,9 +631,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                                 : '0 0 0 2px rgba(255,255,255,0.3)'
                             }}
                           >
-                            {clip.user?.avatarUrl ? (
+                            {signedAvatarUrl ? (
                               <img 
-                                src={clip.user.avatarUrl} 
+                                src={signedAvatarUrl} 
                                 alt={clip.user?.displayName || clip.user?.username || 'User'} 
                                 loading="lazy"
                                 className="w-full h-full object-cover"
@@ -876,9 +877,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       boxShadow: clip.user?.avatarBorderColor ? `0 0 0 2px ${clip.user.avatarBorderColor}` : undefined
                     }}
                   >
-                    {clip.user?.avatarUrl ? (
+                    {signedAvatarUrl ? (
                       <img 
-                        src={clip.user.avatarUrl} 
+                        src={signedAvatarUrl} 
                         alt={clip.user?.displayName || clip.user?.username || 'User'} 
                         loading="lazy"
                         className="w-full h-full object-cover"

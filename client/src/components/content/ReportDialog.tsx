@@ -92,15 +92,12 @@ export function ReportDialog({
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-muted-foreground hover:text-destructive transition-colors"
+          <button 
+            className="focus:outline-none"
             data-testid={`button-report-${contentType}`}
           >
-            <Flag className="h-4 w-4 mr-1" />
-            Report
-          </Button>
+            <Flag className="h-5 w-5 text-red-500 hover:text-red-400 transition-colors" />
+          </button>
         )}
       </DialogTrigger>
       <DialogContent className="max-w-md mx-4 my-8 sm:m-6 max-h-[90vh] overflow-y-auto">

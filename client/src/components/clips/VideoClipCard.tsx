@@ -19,6 +19,7 @@ import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import { useLikeClip } from "@/hooks/use-clips";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { LazyImage } from "@/components/ui/lazy-image";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 
 interface VideoClipCardProps {
   clip: ClipWithUser;
@@ -34,6 +35,7 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
   const { user } = useAuth();
   const { isOpen: joinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
   const likeMutation = useLikeClip();
+  const { signedUrl: signedAvatarUrl } = useSignedUrl(clip.user?.avatarUrl);
   // Fire functionality now handled by FireButton component
   const [isAnimating, setIsAnimating] = useState(false);
   const [likeCount, setLikeCount] = useState(() => {
@@ -203,7 +205,7 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
                   </div>
                 ) : (
                   <Avatar className="h-8 w-8 mr-3 hover:opacity-80 transition-opacity cursor-pointer">
-                    <AvatarImage src={clip.user.avatarUrl || `/uploaded_assets/gamefolio social logo 3d circle web.png`} />
+                    <AvatarImage src={signedAvatarUrl || `/uploaded_assets/gamefolio social logo 3d circle web.png`} />
                     <AvatarFallback className="text-sm">{clip.user.displayName.charAt(0)}</AvatarFallback>
                   </Avatar>
                 )}
