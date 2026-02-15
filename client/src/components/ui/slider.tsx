@@ -53,26 +53,67 @@ const DualRangeSlider: React.FC<DualRangeSliderProps> = ({
   onValueChange,
   className,
 }) => {
-  const trackRef = React.useRef<HTMLDivElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [activeThumb, setActiveThumb] = React.useState<'start' | 'end' | null>(null);
+  const valuesRef = React.useRef(value);
+  valuesRef.current = value;
 
   const startPercent = ((value[0] - min) / (max - min)) * 100;
   const endPercent = ((value[1] - min) / (max - min)) * 100;
 
-  const handleStartChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newStart = parseFloat(e.target.value);
-    const clamped = Math.min(newStart, value[1] - minGap);
-    onValueChange([Math.max(min, clamped), value[1]]);
-  };
+  const getValueFromPosition = React.useCallback((clientX: number) => {
+    const container = containerRef.current;
+    if (!container) return min;
+    const rect = container.getBoundingClientRect();
+    const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const raw = min + percent * (max - min);
+    return Math.round(raw / step) * step;
+  }, [min, max, step]);
 
-  const handleEndChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newEnd = parseFloat(e.target.value);
-    const clamped = Math.max(newEnd, value[0] + minGap);
-    onValueChange([value[0], Math.min(max, clamped)]);
-  };
+  const handlePointerDown = React.useCallback((e: React.PointerEvent) => {
+    const clickValue = getValueFromPosition(e.clientX);
+    const distToStart = Math.abs(clickValue - valuesRef.current[0]);
+    const distToEnd = Math.abs(clickValue - valuesRef.current[1]);
+    const thumb = distToStart <= distToEnd ? 'start' : 'end';
+    setActiveThumb(thumb);
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+
+    if (thumb === 'start') {
+      const clamped = Math.max(min, Math.min(clickValue, valuesRef.current[1] - minGap));
+      onValueChange([clamped, valuesRef.current[1]]);
+    } else {
+      const clamped = Math.min(max, Math.max(clickValue, valuesRef.current[0] + minGap));
+      onValueChange([valuesRef.current[0], clamped]);
+    }
+  }, [getValueFromPosition, min, max, minGap, onValueChange]);
+
+  const handlePointerMove = React.useCallback((e: React.PointerEvent) => {
+    if (!activeThumb) return;
+    const newVal = getValueFromPosition(e.clientX);
+
+    if (activeThumb === 'start') {
+      const clamped = Math.max(min, Math.min(newVal, valuesRef.current[1] - minGap));
+      onValueChange([clamped, valuesRef.current[1]]);
+    } else {
+      const clamped = Math.min(max, Math.max(newVal, valuesRef.current[0] + minGap));
+      onValueChange([valuesRef.current[0], clamped]);
+    }
+  }, [activeThumb, getValueFromPosition, min, max, minGap, onValueChange]);
+
+  const handlePointerUp = React.useCallback(() => {
+    setActiveThumb(null);
+  }, []);
 
   return (
-    <div className={cn("relative w-full h-6 flex items-center", className)}>
-      <div ref={trackRef} className="relative h-2 w-full rounded-full bg-zinc-700">
+    <div
+      ref={containerRef}
+      className={cn("relative w-full h-8 flex items-center cursor-pointer select-none touch-none", className)}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+    >
+      <div className="relative h-2 w-full rounded-full bg-zinc-700">
         <div
           className="absolute h-full rounded-full"
           style={{
@@ -83,48 +124,20 @@ const DualRangeSlider: React.FC<DualRangeSliderProps> = ({
         />
       </div>
 
-      <input
-        type="range"
-        min={min}
-        max={value[1] - minGap}
-        step={step}
-        value={value[0]}
-        onChange={handleStartChange}
-        className="absolute top-0 left-0 w-full h-6 appearance-none bg-transparent pointer-events-none z-10
-          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:pointer-events-auto
-          [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full
-          [&::-webkit-slider-thumb]:border-[3px] [&::-webkit-slider-thumb]:border-indigo-500
-          [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:cursor-grab
-          [&::-webkit-slider-thumb]:active:cursor-grabbing
-          [&::-webkit-slider-thumb]:shadow-[0_0_6px_rgba(99,102,241,0.6)]
-          [&::-webkit-slider-thumb]:hover:scale-125 [&::-webkit-slider-thumb]:transition-transform
-          [&::-webkit-slider-thumb]:hover:shadow-[0_0_10px_rgba(99,102,241,0.8)]
-          [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:pointer-events-auto
-          [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
-          [&::-moz-range-thumb]:border-[3px] [&::-moz-range-thumb]:border-indigo-500
-          [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:cursor-grab"
+      <div
+        className={cn(
+          "absolute w-5 h-5 rounded-full border-[3px] border-indigo-500 bg-white -translate-x-1/2 transition-transform",
+          activeThumb === 'start' ? 'scale-125 shadow-[0_0_10px_rgba(99,102,241,0.8)]' : 'shadow-[0_0_6px_rgba(99,102,241,0.6)] hover:scale-110'
+        )}
+        style={{ left: `${startPercent}%` }}
       />
 
-      <input
-        type="range"
-        min={value[0] + minGap}
-        max={max}
-        step={step}
-        value={value[1]}
-        onChange={handleEndChange}
-        className="absolute top-0 left-0 w-full h-6 appearance-none bg-transparent pointer-events-none z-20
-          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:pointer-events-auto
-          [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full
-          [&::-webkit-slider-thumb]:border-[3px] [&::-webkit-slider-thumb]:border-violet-500
-          [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:cursor-grab
-          [&::-webkit-slider-thumb]:active:cursor-grabbing
-          [&::-webkit-slider-thumb]:shadow-[0_0_6px_rgba(139,92,246,0.6)]
-          [&::-webkit-slider-thumb]:hover:scale-125 [&::-webkit-slider-thumb]:transition-transform
-          [&::-webkit-slider-thumb]:hover:shadow-[0_0_10px_rgba(139,92,246,0.8)]
-          [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:pointer-events-auto
-          [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
-          [&::-moz-range-thumb]:border-[3px] [&::-moz-range-thumb]:border-violet-500
-          [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:cursor-grab"
+      <div
+        className={cn(
+          "absolute w-5 h-5 rounded-full border-[3px] border-violet-500 bg-white -translate-x-1/2 transition-transform",
+          activeThumb === 'end' ? 'scale-125 shadow-[0_0_10px_rgba(139,92,246,0.8)]' : 'shadow-[0_0_6px_rgba(139,92,246,0.6)] hover:scale-110'
+        )}
+        style={{ left: `${endPercent}%` }}
       />
     </div>
   );
