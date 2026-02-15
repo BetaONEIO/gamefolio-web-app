@@ -1165,6 +1165,15 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   if (response.ok) {
                     toast({ title: "Clip deleted successfully" });
                     queryClient.invalidateQueries({ queryKey: ['/api/clips'] });
+                    if (clip.user?.username) {
+                      queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/clips`] });
+                      queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}`] });
+                    }
+                    queryClient.invalidateQueries({ queryKey: ['/api/clips/trending'] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/clips/reels/trending'] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/reels/latest'] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/reels/trending'] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/reels'] });
                     setShowDeleteConfirm(false);
                     onClose();
                   } else {
