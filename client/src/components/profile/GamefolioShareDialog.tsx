@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -45,6 +46,7 @@ interface GamefolioShareData {
 
 interface GamefolioShareDialogProps {
   username: string;
+  userId?: number | null;
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -82,6 +84,7 @@ interface GamefolioShareDialogProps {
 
 export function GamefolioShareDialog({ 
   username, 
+  userId,
   trigger, 
   open: controlledOpen, 
   onOpenChange: controlledOnOpenChange,
@@ -98,6 +101,16 @@ export function GamefolioShareDialog({
   const setOpen = controlledOnOpenChange || setIsOpen;
 
   const { signedUrl: bannerSignedUrl } = useSignedUrl(userProfile?.bannerUrl);
+
+  const { data: verificationBadgeData } = useQuery<{ verificationBadge: { id: number; name: string; imageUrl: string } | null }>({
+    queryKey: [`/api/user/${userId}/verification-badge`],
+    queryFn: async () => {
+      const response = await fetch(`/api/user/${userId}/verification-badge`, { credentials: 'include' });
+      if (!response.ok) return { verificationBadge: null };
+      return response.json();
+    },
+    enabled: !!userId && !!userProfile?.selectedVerificationBadgeId,
+  });
 
   useEffect(() => {
     if (open && !shareData) {
@@ -276,7 +289,13 @@ export function GamefolioShareDialog({
                     <span className="text-[#f8fafc] text-lg font-bold leading-7 truncate">
                       {userProfile?.displayName || username}
                     </span>
-                    <VerificationBadge isVerified={!!userProfile?.emailVerified} size="sm" isModerator={(userProfile as any)?.role === "moderator" || (userProfile as any)?.role === "admin"} />
+                    <VerificationBadge 
+                      isVerified={!!verificationBadgeData?.verificationBadge} 
+                      badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
+                      badgeName={verificationBadgeData?.verificationBadge?.name}
+                      size="sm" 
+                      isModerator={(userProfile as any)?.role === "moderator" || (userProfile as any)?.role === "admin"} 
+                    />
                     <ProBadge selectedVerificationBadgeId={userProfile?.selectedVerificationBadgeId} size="sm" isModerator={(userProfile as any)?.role === "moderator" || (userProfile as any)?.role === "admin"} />
                   </div>
                   <span className="text-[#94a3b8] text-sm leading-5">@{username}</span>

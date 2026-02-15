@@ -1400,6 +1400,7 @@ const ProfilePage = () => {
         <React.Suspense fallback={null}>
           <GamefolioShareDialog 
             username={profile.username}
+            userId={profile.id}
             userProfile={{
               displayName: profile.displayName,
               bio: profile.bio,
@@ -2273,6 +2274,7 @@ const ProfilePage = () => {
                   <React.Suspense fallback={null}>
                     <GamefolioShareDialog 
                       username={profile.username}
+                      userId={profile.id}
                       userProfile={{
                         displayName: profile.displayName,
                         bio: profile.bio,
@@ -2319,13 +2321,15 @@ const ProfilePage = () => {
                   <React.Suspense fallback={null}>
                     <GamefolioShareDialog 
                       username={profile.username}
+                      userId={profile.id}
                       userProfile={{
                         displayName: profile.displayName,
                         bio: profile.bio,
                         avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
                         bannerUrl: profile.bannerUrl,
                         selectedAvatarBorderId: profile.selectedAvatarBorderId,
-                        avatarBorderColor: profile.avatarBorderColor
+                        avatarBorderColor: profile.avatarBorderColor,
+                        selectedVerificationBadgeId: profile.selectedVerificationBadgeId,
                       }}
                       userStats={{
                         clips: profile._count?.clips || 0,
@@ -3370,6 +3374,7 @@ const ProfilePage = () => {
             <React.Suspense fallback={null}>
               <GamefolioShareDialog 
                 username={profile.username}
+                userId={profile.id}
                 userProfile={{
                   displayName: profile.displayName,
                   bio: profile.bio,
