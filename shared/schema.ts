@@ -80,6 +80,8 @@ export const users = pgTable("users", {
   nftProfileTokenId: integer("nft_profile_token_id"),
   nftProfileImageUrl: text("nft_profile_image_url"),
   activeProfilePicType: text("active_profile_pic_type").default("upload"),
+  // Date of Birth (full date for age verification)
+  dateOfBirth: text("date_of_birth"), // Stored as YYYY-MM-DD format for age verification
   // Birthday
   birthday: text("birthday"), // Stored as MM-DD format for annual birthday checks
   lastBirthdayNotificationYear: integer("last_birthday_notification_year"), // Year when last birthday notification was sent
