@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { GoogleAuthButton } from "./GoogleAuthButton";
+import { DiscordAuthButton } from "./DiscordAuthButton";
 import { PasswordRequirementsDisplay } from "@/components/ui/password-requirements";
 import { FieldError, FieldStatus } from "@/components/ui/field-error";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -459,7 +460,10 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
         </div>
       </div>
 
-      <GoogleAuthButton disabled={isLoading} />
+      <div className="space-y-3">
+        <GoogleAuthButton disabled={isLoading} />
+        <DiscordAuthButton disabled={isLoading} />
+      </div>
     </form>
   );
 }
