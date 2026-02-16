@@ -132,7 +132,12 @@ const GamePage = () => {
                      contentType === 'reels' ? trendingReels : screenshots;
   const isLoadingCurrent = contentType === 'clips' ? isLoadingClips : 
                           contentType === 'reels' ? isLoadingReels : isLoadingScreenshots;
-  const fallbackData = contentType === 'screenshots' ? [] : clips;
+  const fallbackData = contentType === 'screenshots' ? [] : 
+    clips?.filter((c: any) => {
+      if (contentType === 'clips') return !c.videoType || c.videoType === 'clip';
+      if (contentType === 'reels') return c.videoType === 'reel';
+      return true;
+    });
   const rawDisplayData = currentData?.length ? currentData : fallbackData;
   
   // Extract unique users from current content for the filter dropdown
@@ -168,7 +173,7 @@ const GamePage = () => {
 
   if (gameLoading) {
     return (
-      <div className="py-6">
+      <div className="py-6 px-4 sm:px-6">
         <div className="flex items-center gap-4 mb-6">
           <Button variant="ghost" size="sm" onClick={() => navigate("/explore")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -185,7 +190,7 @@ const GamePage = () => {
 
   if (!game) {
     return (
-      <div className="py-6">
+      <div className="py-6 px-4 sm:px-6">
         <div className="flex items-center gap-4 mb-6">
           <Button variant="ghost" size="sm" onClick={() => navigate("/explore")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -201,7 +206,7 @@ const GamePage = () => {
   }
 
   return (
-    <div className="py-6">
+    <div className="py-6 px-4 sm:px-6">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="sm" onClick={() => navigate("/explore")}>

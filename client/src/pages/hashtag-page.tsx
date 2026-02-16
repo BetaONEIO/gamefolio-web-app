@@ -47,7 +47,7 @@ const HashtagPage = () => {
   };
 
   return (
-    <div className="py-6">
+    <div className="py-6 px-4 sm:px-6">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="sm" onClick={handleBackToExplore}>
