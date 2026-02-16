@@ -136,6 +136,45 @@
   }
 }
 
+@keyframes auth-green-flash {
+  0% { color: #4ade80; }
+  100% { color: white; }
+}
+
+.auth-input {
+  transition: color 0.3s ease;
+}
+
+.auth-input:focus {
+  animation: auth-green-flash 0.4s ease forwards;
+}
+
+.auth-input.typing {
+  color: #4ade80;
+}
+
+.auth-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(74, 222, 128, 0.4) transparent;
+}
+
+.auth-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.auth-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.auth-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(74, 222, 128, 0.4);
+  border-radius: 4px;
+}
+
+.auth-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(74, 222, 128, 0.6);
+}
+
 /* Zoom removed to prevent horizontal scroll bar issues */
 
 /* Remove focus outline from video elements */

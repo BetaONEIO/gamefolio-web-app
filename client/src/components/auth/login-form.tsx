@@ -70,20 +70,25 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
   return (
     <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
       <div className="space-y-2">
-        <Label htmlFor="usernameOrEmail" className="text-gray-300">Username or Email</Label>
+        <Label htmlFor="usernameOrEmail" className="text-foreground">Username or Email</Label>
         <Input
           id="usernameOrEmail"
           placeholder="Enter your username or email"
           value={usernameOrEmail}
-          onChange={(e) => setUsernameOrEmail(e.target.value)}
+          onChange={(e) => {
+            const el = e.target;
+            el.classList.add("typing");
+            setTimeout(() => el.classList.remove("typing"), 150);
+            setUsernameOrEmail(e.target.value);
+          }}
           disabled={isLoading}
-          className="bg-slate-800 border-slate-700 focus-visible:ring-primary/50 placeholder:text-slate-500"
+          className="auth-input"
         />
         <FieldError error={fieldErrors.usernameOrEmail} />
       </div>
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="login-password" className="text-gray-300">Password</Label>
+          <Label htmlFor="login-password" className="text-foreground">Password</Label>
           <button 
             type="button" 
             onClick={onForgotPassword}
@@ -98,10 +103,15 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
             type={showPassword ? "text" : "password"}
             placeholder="Enter your password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              const el = e.target;
+              el.classList.add("typing");
+              setTimeout(() => el.classList.remove("typing"), 150);
+              setPassword(e.target.value);
+            }}
             disabled={isLoading}
             autoComplete="current-password"
-            className="bg-slate-800 border-slate-700 focus-visible:ring-primary/50 placeholder:text-slate-500 pr-10"
+            className="auth-input pr-10"
             data-testid="input-password"
           />
           <button

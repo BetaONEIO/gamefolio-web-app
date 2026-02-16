@@ -140,6 +140,9 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    const el = e.target;
+    el.classList.add("typing");
+    setTimeout(() => el.classList.remove("typing"), 150);
     setFormData((prev) => ({ ...prev, [name]: value }));
 
     // Email validation
@@ -314,6 +317,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
           value={formData.username}
           onChange={handleChange}
           disabled={isLoading}
+          className="auth-input"
         />
         <FieldStatus status={usernameStatus} />
         <FieldError error={fieldErrors.username} />
@@ -329,6 +333,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
           value={formData.email}
           onChange={handleChange}
           disabled={isLoading}
+          className="auth-input"
         />
         <FieldError 
           error={emailValid === false ? "Please enter a valid email address" : undefined}
@@ -348,6 +353,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
           onChange={handleChange}
           disabled={isLoading}
           autoComplete="new-password"
+          className="auth-input"
         />
         <PasswordRequirementsDisplay 
           requirements={passwordRequirements} 
@@ -367,6 +373,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
           onChange={handleChange}
           disabled={isLoading}
           autoComplete="new-password"
+          className="auth-input"
         />
         <FieldError 
           error={passwordsMatch === false ? "Passwords do not match" : undefined}

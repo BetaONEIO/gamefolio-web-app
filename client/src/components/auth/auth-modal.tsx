@@ -54,7 +54,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md p-0 gap-0 bg-black/95 border-white/10 max-h-[90vh] overflow-y-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties} aria-describedby="auth-description">
+      <DialogContent className="sm:max-w-md p-0 gap-0 bg-black/95 border-white/10 max-h-[90vh] overflow-y-auto auth-scrollbar" aria-describedby="auth-description">
         <DialogHeader className="sr-only">
           <DialogTitle>Authentication</DialogTitle>
           <DialogDescription id="auth-description">Login or register to access Gamefolio</DialogDescription>
