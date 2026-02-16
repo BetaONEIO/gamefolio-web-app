@@ -211,7 +211,7 @@ export function GamefolioShareDialog({
         <div className="flex items-center justify-between px-4 sm:px-5 py-4 sm:py-5 border-b border-[#1e293b]/50">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <Share2 className="w-5 h-5 sm:w-6 sm:h-6 text-[#4ADE80] shrink-0" />
-            <span className="text-[#f8fafc] text-base sm:text-xl font-bold truncate">Share Gamefolio Profile</span>
+            <span className="text-[#f8fafc] text-base sm:text-xl font-bold truncate">Share Gamefolio</span>
           </div>
           <button
             onClick={() => setOpen(false)}
