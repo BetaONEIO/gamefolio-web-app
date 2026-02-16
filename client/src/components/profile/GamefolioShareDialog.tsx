@@ -289,14 +289,16 @@ export function GamefolioShareDialog({
                     <span className="text-[#f8fafc] text-lg font-bold leading-7 truncate">
                       {userProfile?.displayName || username}
                     </span>
-                    <VerificationBadge 
-                      isVerified={!!verificationBadgeData?.verificationBadge} 
-                      badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
-                      badgeName={verificationBadgeData?.verificationBadge?.name}
-                      size="sm" 
-                      isModerator={(userProfile as any)?.role === "moderator" || (userProfile as any)?.role === "admin"} 
-                    />
-                    <ProBadge selectedVerificationBadgeId={userProfile?.selectedVerificationBadgeId} size="sm" isModerator={(userProfile as any)?.role === "moderator" || (userProfile as any)?.role === "admin"} />
+                    {verificationBadgeData?.verificationBadge ? (
+                      <VerificationBadge 
+                        isVerified={true} 
+                        badgeImageUrl={verificationBadgeData.verificationBadge.imageUrl}
+                        badgeName={verificationBadgeData.verificationBadge.name}
+                        size="sm" 
+                      />
+                    ) : userProfile?.selectedVerificationBadgeId ? (
+                      <ProBadge selectedVerificationBadgeId={userProfile.selectedVerificationBadgeId} size="sm" />
+                    ) : null}
                   </div>
                   <span className="text-[#94a3b8] text-sm leading-5">@{username}</span>
 
