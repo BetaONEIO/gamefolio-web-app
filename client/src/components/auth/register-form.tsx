@@ -18,6 +18,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     email: "",
     password: "",
     confirmPassword: "",
+    dateOfBirth: "",
   });
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [usernameTimer, setUsernameTimer] = useState<NodeJS.Timeout | null>(null);
@@ -35,6 +36,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     email?: string;
     password?: string;
     confirmPassword?: string;
+    dateOfBirth?: string;
   }>({});
   const { toast } = useToast();
   const { registerMutation } = useAuth();
@@ -186,7 +188,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     e.preventDefault();
 
     // Validate form
-    if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword) {
+    if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword || !formData.dateOfBirth) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -234,6 +236,24 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       return;
     }
 
+    // Date of birth age validation (must be 13 or older)
+    const dob = new Date(formData.dateOfBirth);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+    if (age < 13) {
+      setFieldErrors({ dateOfBirth: "You must be at least 13 years old to create an account" });
+      toast({
+        title: "Error",
+        description: "You must be at least 13 years old to create an account",
+        variant: "gamefolioError",
+      });
+      return;
+    }
+
     // Password requirements validation
     const passwordReqs = validatePasswordRequirements(formData.password);
     if (!passwordReqs.length || !passwordReqs.uppercase || !passwordReqs.number || !passwordReqs.special) {
@@ -249,7 +269,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     const { confirmPassword, ...userData } = formData;
     const registrationData = {
       ...userData,
-      displayName: userData.username, // Use username as display name
+      displayName: userData.username,
     };
 
     // Clear previous errors
@@ -347,6 +367,21 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
           success={passwordsMatch === true ? "Passwords match" : undefined}
         />
         <FieldError error={fieldErrors.confirmPassword} />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="dateOfBirth" className="text-foreground">Date of Birth</Label>
+        <Input
+          id="dateOfBirth"
+          name="dateOfBirth"
+          type="date"
+          value={formData.dateOfBirth}
+          onChange={handleChange}
+          disabled={isLoading}
+          max={new Date().toISOString().split("T")[0]}
+        />
+        <p className="text-xs text-muted-foreground">You must be at least 13 years old to sign up</p>
+        <FieldError error={fieldErrors.dateOfBirth} />
       </div>
 
       <div className="text-xs text-muted-foreground text-center space-y-2">

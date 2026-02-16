@@ -31,6 +31,7 @@ type RegisterData = {
   username: string;
   displayName: string;
   password: string;
+  dateOfBirth: string;
 };
 
 export const AuthContext = createContext<AuthContextType | null>(null);

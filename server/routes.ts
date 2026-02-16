@@ -1148,6 +1148,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Validate date of birth - must be at least 13 years old
+      if (userData.dateOfBirth) {
+        const dob = new Date(userData.dateOfBirth);
+        const today = new Date();
+        let age = today.getFullYear() - dob.getFullYear();
+        const monthDiff = today.getMonth() - dob.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+          age--;
+        }
+        if (age < 13) {
+          return res.status(400).json({ message: "You must be at least 13 years old to create an account" });
+        }
+      }
+
       // Check if username already exists (normalize to lowercase)
       const existingUser = await storage.getUserByUsername(userData.username.toLowerCase());
       if (existingUser) {
