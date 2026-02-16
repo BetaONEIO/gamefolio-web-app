@@ -1130,9 +1130,6 @@ export default function StorePage() {
               <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-[#4ade80]" />
                 NFT Avatars
-                <Badge className="bg-gray-600 text-[10px] px-1.5 py-0.5 text-gray-200 ml-1">
-                  All Users
-                </Badge>
               </h3>
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 mb-8">
                 {availableNFTs
