@@ -2361,13 +2361,25 @@ const ProfilePage = () => {
                         bannerUrl: profile.bannerUrl,
                         selectedAvatarBorderId: profile.selectedAvatarBorderId,
                         avatarBorderColor: profile.avatarBorderColor,
+                        nftProfileTokenId: profile.nftProfileTokenId,
+                        nftProfileImageUrl: profile.nftProfileImageUrl,
+                        emailVerified: profile.emailVerified,
+                        role: profile.role,
+                        isPro: profile.isPro,
                         selectedVerificationBadgeId: profile.selectedVerificationBadgeId,
+                        userType: profile.userType,
+                        showUserType: profile.showUserType,
+                        accentColor: profile.accentColor,
+                        backgroundColor: profile.backgroundColor,
+                        cardColor: profile.cardColor,
+                        primaryColor: profile.primaryColor
                       }}
                       userStats={{
                         clips: profile._count?.clips || 0,
                         followers: profile._count?.followers || 0,
                         following: profile._count?.following || 0
                       }}
+                      favoriteGames={favoriteGames?.slice(0, 5).map(g => ({ id: g.id, name: g.name, imageUrl: g.imageUrl }))}
                       trigger={
                         <Button
                           variant="outline"

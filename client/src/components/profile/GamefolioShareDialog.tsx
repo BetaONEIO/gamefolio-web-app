@@ -391,8 +391,8 @@ export function GamefolioShareDialog({
                 </div>
               </div>
 
-              {/* Social Media Section - hidden on mobile */}
-              <div className="hidden sm:flex flex-col gap-3">
+              {/* Social Media Section */}
+              <div className="flex flex-col gap-3">
                 <span className="text-[#94a3b8] text-sm">Share on Social Media</span>
                 <div className="flex flex-wrap gap-2 sm:gap-2.5">
                   {socialPlatforms.map((platform) => {
