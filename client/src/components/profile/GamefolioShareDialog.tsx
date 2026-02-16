@@ -355,16 +355,16 @@ export function GamefolioShareDialog({
                   )}
 
                   {/* Stats */}
-                  <div className="flex items-center border-t border-[#1e293b]/30 mt-3 pt-3">
-                    <div className="flex-1 flex flex-col items-center">
+                  <div className="flex items-center gap-4 border-t border-[#1e293b]/30 mt-3 pt-3">
+                    <div className="flex items-center gap-1">
                       <span className="text-[#f8fafc] text-lg font-bold leading-7">{userStats?.clips || 0}</span>
                       <span className="text-[#94a3b8] text-xs leading-4">Clips</span>
                     </div>
-                    <div className="flex-1 flex flex-col items-center">
+                    <div className="flex items-center gap-1">
                       <span className="text-[#f8fafc] text-lg font-bold leading-7">{userStats?.followers || 0}</span>
                       <span className="text-[#94a3b8] text-xs leading-4">Followers</span>
                     </div>
-                    <div className="flex-1 flex flex-col items-center">
+                    <div className="flex items-center gap-1">
                       <span className="text-[#f8fafc] text-lg font-bold leading-7">{userStats?.following || 0}</span>
                       <span className="text-[#94a3b8] text-xs leading-4">Following</span>
                     </div>
@@ -374,7 +374,7 @@ export function GamefolioShareDialog({
 
               {/* Profile Link Section */}
               <div className="flex flex-col gap-2.5">
-                <span className="text-[#94a3b8] text-sm">Profile Link</span>
+                <span className="text-[#94a3b8] text-sm">Gamefolio Link</span>
                 <div className="flex gap-2">
                   <div className="flex-1 min-w-0 bg-[#1e293b] border border-[#1e293b] rounded-2xl px-3 sm:px-4 py-3 overflow-hidden">
                     <span className="text-[#94a3b8] text-xs sm:text-sm font-mono truncate block">
@@ -391,8 +391,8 @@ export function GamefolioShareDialog({
                 </div>
               </div>
 
-              {/* Social Media Section */}
-              <div className="flex flex-col gap-3">
+              {/* Social Media Section - desktop only */}
+              <div className="hidden sm:flex flex-col gap-3">
                 <span className="text-[#94a3b8] text-sm">Share on Social Media</span>
                 <div className="flex flex-wrap gap-2 sm:gap-2.5">
                   {socialPlatforms.map((platform) => {
