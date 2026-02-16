@@ -924,9 +924,19 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/user/previous-avatars'] });
     } catch (error) {
       setUploadingAvatar(false);
+      let errorMsg = "Failed to save changes. Please try again.";
+      if (error instanceof Error) {
+        try {
+          const jsonPart = error.message.replace(/^\d+:\s*/, '');
+          const parsed = JSON.parse(jsonPart);
+          errorMsg = parsed.message || error.message;
+        } catch {
+          errorMsg = error.message;
+        }
+      }
       toast({
-        title: "Upload failed",
-        description: "Failed to upload profile picture. Please try again.",
+        title: "Save failed",
+        description: errorMsg,
         variant: "destructive",
       });
     }
