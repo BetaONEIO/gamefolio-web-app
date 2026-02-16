@@ -6627,12 +6627,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let synced = 0;
       const rarities = ['common', 'rare', 'epic', 'legendary'];
-      const rarityPrices: Record<string, number> = {
-        common: 50,
-        rare: 150,
-        epic: 350,
-        legendary: 750,
-      };
+      const NAME_TAG_PRICE = 1000;
 
       for (const file of files) {
         const ext = file.name.split('.').pop()?.toLowerCase();
@@ -6642,14 +6637,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const displayName = nameBase.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 
         if (existingNames.has(displayName.toLowerCase())) {
-          // Update the existing tag's image URL to use the correct bucket
           const existing = existingTags.find(t => t.name.toLowerCase() === displayName.toLowerCase());
           if (existing) {
             await storage.updateNameTag(existing.id, {
               imageUrl: file.publicUrl,
               availableInStore: true,
               availableInLootbox: true,
-              gfCost: rarityPrices[existing.rarity] || 50,
+              gfCost: NAME_TAG_PRICE,
             });
             synced++;
           }
@@ -6662,7 +6656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: displayName,
           imageUrl: file.publicUrl,
           rarity,
-          gfCost: rarityPrices[rarity],
+          gfCost: NAME_TAG_PRICE,
           isDefault: false,
           isActive: true,
           availableInStore: true,
