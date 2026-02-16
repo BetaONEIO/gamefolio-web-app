@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Progress } from "@/components/ui/progress";
-import { Check, Gamepad2, Upload, Share2, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Calendar, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet } from "lucide-react";
+import { Check, Gamepad2, Upload, Share2, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet } from "lucide-react";
 import { Game } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -112,9 +112,8 @@ enum OnboardingStep {
   Games = 2,
   Avatar = 3,
   UserType = 4,
-  Age = 5,
-  Wallet = 6,
-  Complete = 7,
+  Wallet = 5,
+  Complete = 6,
 }
 
 interface OnboardingStepIndicatorProps {
@@ -129,7 +128,6 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser }: OnboardingStepIn
     { id: OnboardingStep.Games, label: "Games" },
     { id: OnboardingStep.Avatar, label: "Profile Pic" },
     { id: OnboardingStep.UserType, label: "User Type" },
-    { id: OnboardingStep.Age, label: "Age" },
     { id: OnboardingStep.Wallet, label: "Wallet" },
     { id: OnboardingStep.Complete, label: "Complete" },
   ];
@@ -207,7 +205,6 @@ export default function OnboardingFlow({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [ageRange, setAgeRange] = useState<"13-17" | "18-24" | "25-34" | "35-44" | "45-54" | "55+" | null>(null);
   
   const { walletAddress: sequenceWalletAddress, isReady: isWalletReady, isConnecting: isCreatingWallet, connect: connectWallet } = useWallet();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
@@ -586,8 +583,7 @@ export default function OnboardingFlow({
         username: formUsername,
         displayName: formUsername,
         bio: "Just joined Gamefolio!",
-        userType: userTypes.length > 0 ? userTypes.join(",") : "viewer",
-        ageRange: ageRange
+        userType: userTypes.length > 0 ? userTypes.join(",") : "viewer"
       };
       
       // Update user profile using the authenticated API request
@@ -1175,72 +1171,6 @@ export default function OnboardingFlow({
               <Button
                 onClick={goToNextStep}
                 disabled={userTypes.length === 0}
-                className="flex-1"
-              >
-                Next
-              </Button>
-            </div>
-          </>
-        );
-
-      case OnboardingStep.Age:
-        const ageRanges = [
-          { id: "13-17", label: "13-17" },
-          { id: "18-24", label: "18-24" },
-          { id: "25-34", label: "25-34" },
-          { id: "35-44", label: "35-44" },
-          { id: "45-54", label: "45-54" },
-          { id: "55+", label: "55+" },
-        ];
-
-        return (
-          <>
-            <h2 className="text-2xl font-bold text-white mb-4">What's your age range?</h2>
-            <p className="text-gray-300 mb-6">
-              Select your age range
-            </p>
-            
-            <div className="mb-6 grid grid-cols-3 sm:grid-cols-6 gap-3">
-              {ageRanges.map((range) => {
-                const isSelected = ageRange === range.id;
-                
-                return (
-                  <div
-                    key={range.id}
-                    onClick={() => setAgeRange(range.id as any)}
-                    className={`relative p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all hover:scale-105 ${
-                      isSelected
-                        ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
-                        : "border-gray-700 hover:border-gray-600 hover:bg-gray-800/50"
-                    }`}
-                  >
-                    <div className="flex flex-col items-center text-center space-y-2">
-                      <div className={`p-2.5 rounded-full ${
-                        isSelected 
-                          ? "bg-primary text-white" 
-                          : "bg-gray-700 text-gray-300"
-                      }`}>
-                        <Calendar className="h-5 w-5" />
-                      </div>
-                      <h3 className="font-medium text-white text-sm">{range.label}</h3>
-                    </div>
-                    {isSelected && (
-                      <div className="absolute top-2 right-2 rounded-full bg-primary p-1">
-                        <Check className="h-3 w-3 text-white" />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={goToPrevStep}>
-                Back
-              </Button>
-              <Button
-                onClick={goToNextStep}
-                disabled={!ageRange}
                 className="flex-1"
               >
                 Next
