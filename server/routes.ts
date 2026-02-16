@@ -6892,7 +6892,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Default badges are available to everyone
-        if (!badge.isDefault) {
+        // Moderator badges are available to moderators and admins
+        const isModeratorBadge = badge.name?.toLowerCase().includes('moderator');
+        const userIsModerator = req.user.role === 'moderator' || req.user.role === 'admin';
+        
+        if (!badge.isDefault && !(isModeratorBadge && userIsModerator)) {
           const hasUnlocked = await storage.userHasUnlockedVerificationBadge(req.user.id, badgeId);
           if (!hasUnlocked) {
             return res.status(403).json({ message: "You haven't unlocked this verification badge" });
