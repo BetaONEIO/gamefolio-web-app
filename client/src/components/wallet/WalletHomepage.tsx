@@ -115,7 +115,7 @@ export default function WalletHomepage({
   };
 
   return (
-    <div className="w-full min-h-screen font-['Plus_Jakarta_Sans']" style={{ background: '#020617' }}>
+    <div className="w-full min-h-screen pb-24 font-['Plus_Jakarta_Sans']" style={{ background: '#020617' }}>
       {/* Header Section with Gradient */}
       <div 
         className="w-full"
