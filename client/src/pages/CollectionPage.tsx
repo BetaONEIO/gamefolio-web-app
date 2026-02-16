@@ -366,28 +366,25 @@ export default function CollectionPage() {
           <>
             <div className="bg-gradient-to-b from-green-900/10 to-transparent py-6 md:py-8 px-6 md:px-12 lg:px-16">
               <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-                <div className="flex items-start gap-6 md:gap-10">
-                  <div>
-                    <p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-1">My NFTs</p>
-                    <div className="flex items-end gap-2">
-                      <span className="text-4xl md:text-5xl font-black text-slate-50 leading-none">
-                        {nftsLoading ? "—" : nftData?.count || 0}
-                      </span>
-                      <span className="text-sm text-slate-400 pb-1">Items Total</span>
-                    </div>
-                  </div>
-
+                <div>
                   {nftData && nftData.count > 0 && (
                     <a
                       href={`${SKALE_EXPLORER_BASE_URL}/address/${NFT_CONTRACT_ADDRESS}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-sm text-green-400 hover:text-green-300 transition-colors mt-1"
+                      className="flex items-center gap-1 text-[10px] text-green-400 hover:text-green-300 transition-colors mb-1.5"
                     >
-                      <ExternalLink className="w-4 h-4" />
+                      <ExternalLink className="w-3 h-3" />
                       <span>View Contract</span>
                     </a>
                   )}
+                  <p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-1">My NFTs</p>
+                  <div className="flex items-end gap-2">
+                    <span className="text-4xl md:text-5xl font-black text-slate-50 leading-none">
+                      {nftsLoading ? "—" : nftData?.count || 0}
+                    </span>
+                    <span className="text-sm text-slate-400 pb-1">Items Total</span>
+                  </div>
                 </div>
 
                 <div className="bg-slate-800 border border-slate-800 rounded-2xl p-1.5 flex w-full md:w-auto">
