@@ -435,7 +435,7 @@ const HomePage = () => {
         setLocation={setLocation}
       />
       
-      <div className="space-y-4 sm:space-y-6 md:space-y-8">
+      <div className="space-y-4 sm:space-y-6 md:space-y-8 mt-4 sm:mt-6 md:mt-8">
       {/* Recommended for You Section */}
       <LazySection minHeight="300px" rootMargin="300px">
         <RecommendedForYou userId={userId} />
