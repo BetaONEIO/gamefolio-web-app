@@ -720,6 +720,11 @@ export default function StorePage() {
 
   const { data: availableCatalog } = useQuery<{ id: number }[]>({
     queryKey: ['/api/nft/store-catalog'],
+    queryFn: async () => {
+      const response = await fetch('/api/nft/store-catalog', { credentials: 'include' });
+      if (!response.ok) return [];
+      return response.json();
+    },
   });
 
   const availableIds = new Set(availableCatalog?.map((n: { id: number }) => n.id) || gamefolioNFTs.map(n => n.id));
