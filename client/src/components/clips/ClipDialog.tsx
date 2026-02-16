@@ -970,9 +970,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   {/* Game name above views/time */}
                   {clip.game && (
                     <div className="mt-2">
-                      <Link href={`/games/${clip.game.id}/clips`} onClick={(e) => {
+                      <Link href={`/games/${clip.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`} onClick={(e) => {
                         e.stopPropagation();
-                        onClose(); // Close the dialog when navigating to game clips
+                        onClose();
                       }}>
                         <span className="bg-green-600 text-white px-3 py-1.5 rounded text-sm font-bold hover:bg-green-500 cursor-pointer transition-colors">
                           {clip.game.name}

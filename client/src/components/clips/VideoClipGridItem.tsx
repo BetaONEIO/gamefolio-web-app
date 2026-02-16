@@ -121,7 +121,7 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         {/* Game name below username */}
         {clip.gameId && clip.game && (
           <Link 
-            href={`/games/${clip.gameId}/clips`}
+            href={`/games/${clip.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
             onClick={(e) => e.stopPropagation()}
             className={`inline-block mt-1 bg-green-600 text-white rounded font-bold hover:bg-green-500 transition-all duration-300 ${
               isReel ? 'text-[8px] px-1 py-0.5 md:text-[9px] md:px-1.5' : compact ? 'text-[9px] px-1.5 py-0.5 md:text-[10px] md:px-2' : 'text-[10px] px-1.5 py-0.5 md:text-xs md:px-2 md:py-1'

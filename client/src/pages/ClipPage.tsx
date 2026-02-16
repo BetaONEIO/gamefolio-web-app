@@ -477,7 +477,7 @@ const ClipPage = () => {
             {/* Game Badge */}
             {(clip as any).game && (
               <Link 
-                href={`/games/${(clip as any).game.id}/clips`} 
+                href={`/games/${(clip as any).game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`} 
                 className="inline-block bg-primary text-white px-3 py-1 rounded-md text-sm font-medium hover:bg-primary/90 transition-colors mb-3"
               >
                 {(clip as any).game.name}

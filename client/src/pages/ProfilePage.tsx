@@ -3262,7 +3262,7 @@ const ProfilePage = () => {
                     {/* Game name above views/time */}
                     {selectedScreenshot.gameId && games?.find(g => g.id === selectedScreenshot.gameId) && (
                       <div className="mt-2">
-                        <Link href={`/games/${selectedScreenshot.gameId}/clips`} onClick={(e) => e.stopPropagation()}>
+                        <Link href={`/games/${(games.find(g => g.id === selectedScreenshot.gameId)?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')}`} onClick={(e) => e.stopPropagation()}>
                           <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold hover:bg-green-500 cursor-pointer transition-colors">
                             {games.find(g => g.id === selectedScreenshot.gameId)?.name}
                           </span>

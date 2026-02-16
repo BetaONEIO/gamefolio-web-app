@@ -9,7 +9,7 @@ interface TrendingGameItemProps {
 
 const TrendingGameItem = ({ game, className }: TrendingGameItemProps) => {
   return (
-    <Link href={`/games/${game.id}`}>
+    <Link href={`/games/${game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}>
       <div className={cn(
         "relative overflow-hidden rounded-lg cursor-pointer transition-all duration-300 hover:shadow-lg group h-32 md:h-40",
         className
