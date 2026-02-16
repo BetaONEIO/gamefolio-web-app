@@ -119,12 +119,29 @@ const MobileMenu = () => {
           {user && (
             <div className="p-4 border-b border-border">
               <div className="flex items-center">
-                <CustomAvatar 
-                  user={user}
-                  size="md"
-                  borderIntensity="normal"
-                  showAvatarBorderOverlay={true}
-                />
+                <div 
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setLocation(`/profile/${user.username}`);
+                    close();
+                  }}
+                >
+                  {user.nftProfileTokenId && user.nftProfileImageUrl && user.activeProfilePicType === 'nft' ? (
+                    <Avatar className="h-12 w-12 rounded-lg border-2" style={{ borderColor: 'hsl(var(--primary))' }}>
+                      <AvatarImage src={user.nftProfileImageUrl} alt={user.displayName || user.username} className="rounded-lg object-cover" />
+                      <AvatarFallback className="bg-primary/20 text-foreground font-semibold rounded-lg">
+                        {(user.displayName || user.username || "?").substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <CustomAvatar 
+                      user={user}
+                      size="md"
+                      borderIntensity="normal"
+                      showAvatarBorderOverlay={true}
+                    />
+                  )}
+                </div>
                 <div className="ml-3">
                   <p className="font-medium">{user.displayName}</p>
                   <p className="text-xs text-muted-foreground">@{user.username}</p>
