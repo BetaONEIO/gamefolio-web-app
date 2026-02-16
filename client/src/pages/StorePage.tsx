@@ -48,14 +48,14 @@ import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 const rarityGradients: Record<string, string> = {
   legendary: "from-amber-500 via-yellow-400 to-amber-600",
   epic: "from-purple-500 via-fuchsia-400 to-purple-600",
-  rare: "from-blue-500 via-cyan-400 to-blue-600",
+  rare: "from-green-500 via-emerald-400 to-green-600",
   common: "from-gray-500 via-gray-400 to-gray-500",
 };
 
 const rarityBorderColors: Record<string, string> = {
   legendary: "border-amber-400",
   epic: "border-purple-400",
-  rare: "border-blue-400",
+  rare: "border-green-400",
   common: "border-gray-400",
 };
 
@@ -730,7 +730,7 @@ export default function StorePage() {
         variant={activeTab === "buy" ? "default" : "ghost"}
         className={`w-full justify-start gap-3 ${
           activeTab === "buy" 
-            ? "bg-blue-600 hover:bg-blue-700" 
+            ? "bg-green-600 hover:bg-green-700" 
             : "hover:bg-gray-800"
         }`}
         onClick={() => {
@@ -747,7 +747,7 @@ export default function StorePage() {
         variant={activeTab === "sell" ? "default" : "ghost"}
         className={`w-full justify-start gap-3 ${
           activeTab === "sell" 
-            ? "bg-blue-600 hover:bg-blue-700" 
+            ? "bg-green-600 hover:bg-green-700" 
             : "hover:bg-gray-800"
         }`}
         onClick={() => {
@@ -764,7 +764,7 @@ export default function StorePage() {
         variant={activeTab === "mint" ? "default" : "ghost"}
         className={`w-full justify-start gap-3 ${
           activeTab === "mint" 
-            ? "bg-blue-600 hover:bg-blue-700" 
+            ? "bg-green-600 hover:bg-green-700" 
             : "hover:bg-gray-800"
         }`}
         onClick={() => {
@@ -852,7 +852,7 @@ export default function StorePage() {
                   variant={activeTab === "buy" ? "default" : "ghost"}
                   className={`w-full justify-start gap-3 ${
                     activeTab === "buy" 
-                      ? "bg-blue-600 hover:bg-blue-700" 
+                      ? "bg-green-600 hover:bg-green-700" 
                       : "hover:bg-gray-800"
                   }`}
                   onClick={() => {
@@ -869,7 +869,7 @@ export default function StorePage() {
                   variant={activeTab === "sell" ? "default" : "ghost"}
                   className={`w-full justify-start gap-3 ${
                     activeTab === "sell" 
-                      ? "bg-blue-600 hover:bg-blue-700" 
+                      ? "bg-green-600 hover:bg-green-700" 
                       : "hover:bg-gray-800"
                   }`}
                   onClick={() => {
@@ -886,7 +886,7 @@ export default function StorePage() {
                   variant={activeTab === "mint" ? "default" : "ghost"}
                   className={`w-full justify-start gap-3 ${
                     activeTab === "mint" 
-                      ? "bg-blue-600 hover:bg-blue-700" 
+                      ? "bg-green-600 hover:bg-green-700" 
                       : "hover:bg-gray-800"
                   }`}
                   onClick={() => {
@@ -960,7 +960,7 @@ export default function StorePage() {
               onClick={() => setActiveTab("buy")}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
                 activeTab === "buy"
-                  ? "bg-blue-600 text-white"
+                  ? "bg-green-600 text-white"
                   : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
               }`}
               data-testid="tab-buy-mobile"
@@ -972,7 +972,7 @@ export default function StorePage() {
               onClick={() => setActiveTab("sell")}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
                 activeTab === "sell"
-                  ? "bg-blue-600 text-white"
+                  ? "bg-green-600 text-white"
                   : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
               }`}
               data-testid="tab-sell-mobile"
@@ -984,7 +984,7 @@ export default function StorePage() {
               onClick={() => setActiveTab("mint")}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
                 activeTab === "mint"
-                  ? "bg-blue-600 text-white"
+                  ? "bg-green-600 text-white"
                   : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
               }`}
               data-testid="tab-mint-mobile"
@@ -1194,7 +1194,7 @@ export default function StorePage() {
                         <Badge className={`mt-1 text-[10px] px-1.5 py-0.5 text-white capitalize ${
                           nft.rarity === "legendary" ? "bg-gradient-to-r from-yellow-500 to-amber-600" :
                           nft.rarity === "epic" ? "bg-gradient-to-r from-purple-500 to-pink-600" :
-                          nft.rarity === "rare" ? "bg-gradient-to-r from-blue-500 to-cyan-600" : "bg-gray-600"
+                          nft.rarity === "rare" ? "bg-gradient-to-r from-green-500 to-emerald-600" : "bg-gray-600"
                         }`}>
                           {nft.rarity}
                         </Badge>
@@ -1290,7 +1290,7 @@ export default function StorePage() {
               {accessFilter !== "pro" && (
               <>
               <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
-                <ShoppingCart className="h-4 w-4 text-blue-400" />
+                <ShoppingCart className="h-4 w-4 text-green-400" />
                 Digital Items
                 <Badge className="bg-gray-600 text-[10px] px-1.5 py-0.5 text-gray-200 ml-1">
                   All Users
@@ -1309,7 +1309,7 @@ export default function StorePage() {
                   return (
                   <Card
                     key={item.id}
-                    className={`bg-gray-800/50 border-gray-700 overflow-hidden transition-all hover:shadow-lg ${isOwned ? "border-green-500 hover:border-green-400 hover:shadow-green-500/20" : "hover:border-blue-500 hover:shadow-blue-500/20"}`}
+                    className={`bg-gray-800/50 border-gray-700 overflow-hidden transition-all hover:shadow-lg ${isOwned ? "border-green-500 hover:border-green-400 hover:shadow-green-500/20" : "hover:border-green-500 hover:shadow-green-500/20"}`}
                     data-testid={`card-item-${item.id}`}
                   >
                     <div 
@@ -1327,7 +1327,7 @@ export default function StorePage() {
                           Unlocked
                         </Badge>
                       ) : (
-                        <Badge className="absolute top-2 right-2 bg-blue-600 text-xs">
+                        <Badge className="absolute top-2 right-2 bg-green-600 text-xs">
                           For Sale
                         </Badge>
                       )}
@@ -1345,7 +1345,7 @@ export default function StorePage() {
                           <Badge className={`mt-1 text-[10px] px-1.5 py-0.5 text-white capitalize ${
                             item.rarity === "legendary" ? "bg-gradient-to-r from-yellow-500 to-amber-600" :
                             item.rarity === "epic" ? "bg-gradient-to-r from-purple-500 to-pink-600" :
-                            item.rarity === "rare" ? "bg-gradient-to-r from-blue-500 to-cyan-600" : "bg-gray-600"
+                            item.rarity === "rare" ? "bg-gradient-to-r from-green-500 to-emerald-600" : "bg-gray-600"
                           }`}>
                             {item.rarity}
                           </Badge>
@@ -1365,7 +1365,7 @@ export default function StorePage() {
                                 </p>
                               </div>
                             ) : (
-                              <p className="text-xs font-bold text-blue-400" data-testid={`text-item-price-${item.id}`}>
+                              <p className="text-xs font-bold text-green-400" data-testid={`text-item-price-${item.id}`}>
                                 {item.gfCost} GF
                               </p>
                             )}
@@ -1389,7 +1389,7 @@ export default function StorePage() {
                         ) : (
                           <Button
                             size="sm"
-                            className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white text-[10px] h-6 px-2"
+                            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-[10px] h-6 px-2"
                             onClick={() => handlePurchaseWithGF(item)}
                             disabled={isPurchasing}
                             data-testid={`button-buy-item-${item.id}`}
@@ -1453,7 +1453,7 @@ export default function StorePage() {
                         ? "border-green-500/50 hover:border-green-400 hover:shadow-green-500/20" 
                         : tag.rarity === 'legendary' ? "hover:border-amber-500 hover:shadow-amber-500/20"
                         : tag.rarity === 'epic' ? "hover:border-purple-500 hover:shadow-purple-500/20"
-                        : tag.rarity === 'rare' ? "hover:border-blue-500 hover:shadow-blue-500/20"
+                        : tag.rarity === 'rare' ? "hover:border-green-500 hover:shadow-green-500/20"
                         : "hover:border-gray-500 hover:shadow-gray-500/20"
                     }`}
                   >
@@ -1482,7 +1482,7 @@ export default function StorePage() {
                         <Badge className={`mt-1 text-[10px] px-1.5 py-0.5 text-white capitalize ${
                           tag.rarity === "legendary" ? "bg-gradient-to-r from-yellow-500 to-amber-600" :
                           tag.rarity === "epic" ? "bg-gradient-to-r from-purple-500 to-pink-600" :
-                          tag.rarity === "rare" ? "bg-gradient-to-r from-blue-500 to-cyan-600" : "bg-gray-600"
+                          tag.rarity === "rare" ? "bg-gradient-to-r from-green-500 to-emerald-600" : "bg-gray-600"
                         }`}>
                           {tag.rarity}
                         </Badge>
@@ -1596,7 +1596,7 @@ export default function StorePage() {
                         ? "border-green-500/50 hover:border-green-400 hover:shadow-green-500/20 hover:shadow-lg" 
                         : border.rarity === 'legendary' ? "hover:border-amber-500 hover:shadow-amber-500/20 hover:shadow-lg"
                         : border.rarity === 'epic' ? "hover:border-purple-500 hover:shadow-purple-500/20 hover:shadow-lg"
-                        : border.rarity === 'rare' ? "hover:border-blue-500 hover:shadow-blue-500/20 hover:shadow-lg"
+                        : border.rarity === 'rare' ? "hover:border-green-500 hover:shadow-green-500/20 hover:shadow-lg"
                         : "hover:border-gray-500 hover:shadow-gray-500/20 hover:shadow-lg"
                     }`}
                     onClick={!isUserPro ? () => setProUpgradeOpen(true) : undefined}
@@ -1639,7 +1639,7 @@ export default function StorePage() {
                           <Badge className={`text-[10px] px-1.5 py-0.5 text-white capitalize ${
                             border.rarity === "legendary" ? "bg-gradient-to-r from-yellow-500 to-amber-600" :
                             border.rarity === "epic" ? "bg-gradient-to-r from-purple-500 to-pink-600" :
-                            border.rarity === "rare" ? "bg-gradient-to-r from-blue-500 to-cyan-600" : "bg-gray-600"
+                            border.rarity === "rare" ? "bg-gradient-to-r from-green-500 to-emerald-600" : "bg-gray-600"
                           }`}>
                             {border.rarity}
                           </Badge>
@@ -1775,7 +1775,7 @@ export default function StorePage() {
                     Start adding NFTs to your watchlist to track price changes and never miss out on your favorite items.
                   </p>
                   <Button 
-                    className="mt-6 bg-blue-600 hover:bg-blue-700" 
+                    className="mt-6 bg-green-600 hover:bg-green-700" 
                     onClick={() => setActiveTab("buy")}
                     data-testid="button-browse-nfts"
                   >
@@ -1832,7 +1832,7 @@ export default function StorePage() {
                             <p className="text-[9px] text-gray-500">Price</p>
                             <div className="flex items-center gap-0.5">
                               <img src={gfTokenLogo} alt="GF Token" className="w-3 h-3" />
-                              <p className="text-xs font-bold text-blue-400" data-testid={`text-price-${item.nftId}`}>
+                              <p className="text-xs font-bold text-green-400" data-testid={`text-price-${item.nftId}`}>
                                 {item.nftPrice} GF
                               </p>
                             </div>
@@ -1840,7 +1840,7 @@ export default function StorePage() {
 
                           <Button
                             size="sm"
-                            className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white text-[10px] h-6 px-2"
+                            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-[10px] h-6 px-2"
                             onClick={() => {
                               const nft: NFT = {
                                 id: item.nftId,
