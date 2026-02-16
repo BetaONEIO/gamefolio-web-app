@@ -16,6 +16,7 @@ export default function VerifyCodePage() {
   const [isResending, setIsResending] = useState(false);
   const [canResend, setCanResend] = useState(true);
   const [cooldownTime, setCooldownTime] = useState(0);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Redirect if user is already verified or not logged in
   useEffect(() => {
@@ -46,12 +47,10 @@ export default function VerifyCodePage() {
   }, [cooldownTime, canResend]);
 
   const handleVerifyCode = async () => {
+    setErrorMessage('');
+
     if (code.length !== 6 || !/^\d{6}$/.test(code)) {
-      toast({
-        title: "Invalid Code",
-        description: "Please enter a 6-digit verification code.",
-        variant: "gamefolioError",
-      });
+      setErrorMessage('Please enter a 6-digit verification code.');
       return;
     }
 
@@ -72,29 +71,21 @@ export default function VerifyCodePage() {
       const data = await response.json();
 
       if (response.ok) {
+        setErrorMessage('');
         toast({
           title: "Email Verified!",
           description: "Your email has been successfully verified.",
           variant: "gamefolioSuccess",
         });
         
-        // Refetch user to get updated emailVerified status
-        // The useEffect will handle the redirect automatically when user data updates
         await refreshUser();
       } else {
-        toast({
-          title: "Verification Failed",
-          description: data.message || "Invalid or expired verification code.",
-          variant: "gamefolioError",
-        });
+        const msg = data.message || "Invalid or expired verification code. Please try again.";
+        setErrorMessage(msg);
       }
     } catch (error) {
       console.error('Verification error:', error);
-      toast({
-        title: "Error",
-        description: "Network error. Please check your connection and try again.",
-        variant: "gamefolioError",
-      });
+      setErrorMessage('Network error. Please check your connection and try again.');
     } finally {
       setIsVerifying(false);
     }
@@ -158,9 +149,10 @@ export default function VerifyCodePage() {
   };
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+    const value = e.target.value.replace(/\D/g, '');
     if (value.length <= 6) {
       setCode(value);
+      if (errorMessage) setErrorMessage('');
     }
   };
 
@@ -200,14 +192,20 @@ export default function VerifyCodePage() {
               value={code}
               onChange={handleCodeChange}
               onKeyPress={handleKeyPress}
-              className="text-center text-2xl tracking-widest font-mono"
+              className={`text-center text-2xl tracking-widest font-mono ${errorMessage ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
               maxLength={6}
               autoComplete="one-time-code"
               autoFocus
             />
-            <p className="text-xs text-muted-foreground text-center">
-              Enter the 6-digit code from your email
-            </p>
+            {errorMessage ? (
+              <p className="text-sm text-red-500 text-center font-medium" data-testid="verification-error">
+                {errorMessage}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground text-center">
+                Enter the 6-digit code from your email
+              </p>
+            )}
           </div>
 
           <Button
