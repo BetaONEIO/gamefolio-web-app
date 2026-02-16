@@ -1299,6 +1299,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Don't fail the login if streak update fails
         }
 
+        // Check for birthday and send notification if applicable
+        try {
+          const now = new Date();
+          const todayMMDD = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+          const currentYear = now.getFullYear();
+          
+          if (user.birthday && user.birthday === todayMMDD && user.lastBirthdayNotificationYear !== currentYear) {
+            await storage.createNotification({
+              userId: user.id,
+              type: "birthday",
+              title: "🎂 Happy Birthday!",
+              message: `Happy Birthday, ${user.displayName}! 🎉 Wishing you an amazing day from the Gamefolio team!`,
+              fromUserId: null,
+              clipId: null,
+              screenshotId: null,
+              commentId: null,
+              metadata: null,
+              actionUrl: `/profile/${user.username}`,
+            });
+            await db.update(users).set({ lastBirthdayNotificationYear: currentYear }).where(eq(users.id, user.id));
+            console.log(`🎂 Birthday notification sent for ${user.username}`);
+          }
+        } catch (error) {
+          console.error("Error checking birthday:", error);
+        }
+
         // Fetch updated user data to get the latest streak information
         const updatedUser = await storage.getUserById(user.id);
         const userToReturn = updatedUser || user;

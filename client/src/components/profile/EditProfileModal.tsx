@@ -31,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { FaSteam, FaXbox, FaPlaystation, FaYoutube } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
+import { Cake } from 'lucide-react';
 
 interface EditProfileModalProps {
   profile: UserWithStats;
@@ -42,6 +43,7 @@ type FormValues = {
   bio: string;
   avatarUrl: string;
   bannerUrl: string;
+  birthday: string;
   steamUsername: string;
   xboxUsername: string;
   playstationUsername: string;
@@ -59,6 +61,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ profile, trigger })
       bio: profile.bio || '',
       avatarUrl: profile.avatarUrl || '',
       bannerUrl: profile.bannerUrl || '',
+      birthday: profile.birthday ? `2000-${profile.birthday}` : '',
       steamUsername: profile.steamUsername || '',
       xboxUsername: profile.xboxUsername || '',
       playstationUsername: profile.playstationUsername || '',
@@ -68,9 +71,16 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ profile, trigger })
   });
   
   const onSubmit = async (values: FormValues) => {
+    const submitData: any = { ...values };
+    if (submitData.birthday) {
+      const parts = submitData.birthday.split('-');
+      if (parts.length === 3) {
+        submitData.birthday = `${parts[1]}-${parts[2]}`;
+      }
+    }
     await updateProfile.mutateAsync({
       userId: profile.id,
-      userData: values
+      userData: submitData
     });
     setIsOpen(false);
   };
@@ -124,6 +134,30 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ profile, trigger })
                           className="h-24"
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="birthday"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1.5">
+                        <Cake className="h-4 w-4" />
+                        Birthday
+                      </FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          {...field}
+                          max={new Date().toISOString().split('T')[0]}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Set your birthday to get a special banner on your profile
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

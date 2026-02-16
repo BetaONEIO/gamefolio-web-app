@@ -1307,6 +1307,36 @@ const ProfilePage = () => {
         zIndex: 1
       }}
     >
+      {/* Birthday Banner */}
+      {(() => {
+        if (!profile?.birthday) return null;
+        const now = new Date();
+        const todayMMDD = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        if (profile.birthday !== todayMMDD) return null;
+        return (
+          <div className="relative overflow-hidden rounded-xl mx-1 md:mx-0 mb-3" style={{
+            background: 'linear-gradient(135deg, #7c3aed 0%, #ec4899 50%, #f59e0b 100%)',
+            padding: '1px',
+          }}>
+            <div className="relative rounded-xl px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-center gap-3 text-center" style={{
+              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(236, 72, 153, 0.15) 50%, rgba(245, 158, 11, 0.15) 100%)',
+              backdropFilter: 'blur(10px)',
+            }}>
+              <span className="text-2xl sm:text-3xl animate-bounce" style={{ animationDuration: '2s' }}>🎂</span>
+              <div>
+                <p className="text-sm sm:text-base font-bold text-white">
+                  {isOwnProfile ? "Happy Birthday! 🎉" : `It's ${profile.displayName}'s Birthday! 🎉`}
+                </p>
+                <p className="text-xs sm:text-sm text-white/70">
+                  {isOwnProfile ? "Wishing you an amazing day from Gamefolio!" : "Wish them a happy birthday!"}
+                </p>
+              </div>
+              <span className="text-2xl sm:text-3xl animate-bounce" style={{ animationDuration: '2.5s' }}>🎈</span>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Enhanced Banner with global theme colors */}
       <div 
         className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-1 md:-mx-8 border-b-4 border-primary ${resolvedBannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
