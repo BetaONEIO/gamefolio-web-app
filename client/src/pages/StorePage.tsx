@@ -1152,7 +1152,7 @@ export default function StorePage() {
                   .map((nft) => (
                   <Card
                     key={nft.id}
-                    className="bg-gray-800/50 border-gray-700 overflow-hidden transition-all hover:shadow-lg hover:border-[#4ade80] hover:shadow-[#4ade80]/20 cursor-pointer"
+                    className="bg-gray-800/50 border-0 overflow-hidden transition-all hover:shadow-lg hover:shadow-[#4ade80]/20 cursor-pointer"
                     onClick={() => handleBuyNFT(nft)}
                   >
                     <div className="relative aspect-[3/4] overflow-hidden">
