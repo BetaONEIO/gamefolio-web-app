@@ -20,9 +20,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { NFTPurchaseDialog } from "@/components/store/NFTPurchaseDialog";
+import { NameTagDetailDialog } from "@/components/store/NameTagDetailDialog";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import { useAccount, useWalletClient, usePublicClient, useChainId } from "wagmi";
-import { useOpenConnectModal } from "@0xsequence/connect";
+import { useLocation } from "wouter";
+import {
+  Dialog as WalletDialog,
+  DialogContent as WalletDialogContent,
+  DialogDescription as WalletDialogDescription,
+  DialogFooter as WalletDialogFooter,
+  DialogHeader as WalletDialogHeader,
+  DialogTitle as WalletDialogTitle,
+} from "@/components/ui/dialog";
 import { parseUnits, type Address } from "viem";
 import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } from "@shared/contracts";
 import nft1 from "@assets/1_1762777399632.png";
@@ -185,12 +194,15 @@ export default function StorePage() {
   const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null);
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
   const [purchasingItemId, setPurchasingItemId] = useState<number | null>(null);
+  const [selectedNameTag, setSelectedNameTag] = useState<any>(null);
+  const [nameTagDialogOpen, setNameTagDialogOpen] = useState(false);
+  const [walletRedirectOpen, setWalletRedirectOpen] = useState(false);
+  const [, navigate] = useLocation();
 
   const { address, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
   const chainId = useChainId();
-  const { setOpenConnectModal } = useOpenConnectModal();
 
   const { data: storeItems = [], isLoading: isLoadingItems } = useQuery<StoreItem[]>({
     queryKey: ["/api/store/items"],
@@ -363,7 +375,7 @@ export default function StorePage() {
 
     if (!isConnected || !walletClient || !publicClient) {
       toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
-      setOpenConnectModal(true);
+      setWalletRedirectOpen(true);
       return;
     }
 
@@ -1445,7 +1457,7 @@ export default function StorePage() {
                   return (
                   <Card
                     key={tag.id}
-                    className={`bg-gray-800/50 border-gray-700 overflow-hidden transition-all hover:shadow-lg ${
+                    className={`bg-gray-800/50 border-gray-700 overflow-hidden transition-all hover:shadow-lg cursor-pointer ${
                       tag.owned 
                         ? "border-green-500/50 hover:border-green-400 hover:shadow-green-500/20" 
                         : tag.rarity === 'legendary' ? "hover:border-amber-500 hover:shadow-amber-500/20"
@@ -1453,6 +1465,10 @@ export default function StorePage() {
                         : tag.rarity === 'rare' ? "hover:border-green-500 hover:shadow-green-500/20"
                         : "hover:border-gray-500 hover:shadow-gray-500/20"
                     }`}
+                    onClick={() => {
+                      setSelectedNameTag(tag);
+                      setNameTagDialogOpen(true);
+                    }}
                   >
                     <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-3">
                       {brokenNameTagImages.has(tag.id) ? (
@@ -1519,7 +1535,8 @@ export default function StorePage() {
                           <Button
                             size="sm"
                             className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white text-[10px] h-6 px-2"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               if (!user) {
                                 toast({ title: "Login required", description: "Please log in to purchase name tags", variant: "destructive" });
                                 return;
@@ -1880,6 +1897,53 @@ export default function StorePage() {
           queryClient.invalidateQueries({ queryKey: ['/api/user'] });
         }}
       />
+
+      {/* Name Tag Detail Dialog */}
+      <NameTagDetailDialog
+        nameTag={selectedNameTag}
+        open={nameTagDialogOpen}
+        onOpenChange={setNameTagDialogOpen}
+        onPurchase={(id) => {
+          if (!user) {
+            toast({ title: "Login required", description: "Please log in to purchase name tags", variant: "destructive" });
+            return;
+          }
+          setPurchasingNameTagId(id);
+          purchaseNameTagMutation.mutate(id);
+        }}
+        isPurchasing={purchasingNameTagId === selectedNameTag?.id}
+        brokenImage={selectedNameTag ? brokenNameTagImages.has(selectedNameTag.id) : false}
+      />
+
+      {/* Wallet Redirect Dialog */}
+      <WalletDialog open={walletRedirectOpen} onOpenChange={setWalletRedirectOpen}>
+        <WalletDialogContent className="bg-[#0f172a] border-gray-700 text-white max-w-sm">
+          <WalletDialogHeader>
+            <WalletDialogTitle className="text-white text-lg">Wallet Required</WalletDialogTitle>
+            <WalletDialogDescription className="text-gray-400">
+              You need to create a wallet before making purchases. Would you like to go to the wallet page to set one up?
+            </WalletDialogDescription>
+          </WalletDialogHeader>
+          <WalletDialogFooter>
+            <Button
+              variant="outline"
+              className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+              onClick={() => setWalletRedirectOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#4ade80] hover:bg-[#22c55e] text-black font-bold"
+              onClick={() => {
+                setWalletRedirectOpen(false);
+                navigate("/wallet");
+              }}
+            >
+              Go to Wallet
+            </Button>
+          </WalletDialogFooter>
+        </WalletDialogContent>
+      </WalletDialog>
 
       {/* Pro Upgrade Dialog for borders */}
       <ProUpgradeDialog
