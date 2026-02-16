@@ -80,6 +80,9 @@ export const users = pgTable("users", {
   nftProfileTokenId: integer("nft_profile_token_id"),
   nftProfileImageUrl: text("nft_profile_image_url"),
   activeProfilePicType: text("active_profile_pic_type").default("upload"),
+  // Birthday
+  birthday: text("birthday"), // Stored as MM-DD format for annual birthday checks
+  lastBirthdayNotificationYear: integer("last_birthday_notification_year"), // Year when last birthday notification was sent
   // Welcome Pack
   welcomePackClaimed: boolean("welcome_pack_claimed").default(false).notNull(), // Whether the user has claimed their welcome pack
   // Two-Factor Authentication
