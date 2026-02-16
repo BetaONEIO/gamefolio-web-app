@@ -419,10 +419,10 @@ const HomePage = () => {
 
 
   return (
-    <div className="space-y-4 sm:space-y-6 md:space-y-8 pb-16 md:pb-8">
+    <div className="pb-16 md:pb-8">
       {/* Email Verification Banner - Only for authenticated users */}
       {user && (
-        <div className="mx-2 sm:mx-4 md:mx-6">
+        <div className="mx-2 sm:mx-4 md:mx-6 mb-0">
           <EmailVerificationBanner />
         </div>
       )}
@@ -435,6 +435,7 @@ const HomePage = () => {
         setLocation={setLocation}
       />
       
+      <div className="space-y-4 sm:space-y-6 md:space-y-8">
       {/* Recommended for You Section */}
       <LazySection minHeight="300px" rootMargin="300px">
         <RecommendedForYou userId={userId} />
@@ -492,6 +493,7 @@ const HomePage = () => {
           />
         </section>
       </LazySection>
+      </div>
 
     </div>
   );
