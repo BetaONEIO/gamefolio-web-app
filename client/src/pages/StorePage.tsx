@@ -706,6 +706,13 @@ export default function StorePage() {
     },
   ];
 
+  const { data: availableCatalog } = useQuery<{ id: number }[]>({
+    queryKey: ['/api/nft/store-catalog'],
+  });
+
+  const availableIds = new Set(availableCatalog?.map((n: { id: number }) => n.id) || gamefolioNFTs.map(n => n.id));
+  const availableNFTs = gamefolioNFTs.filter(nft => availableIds.has(nft.id));
+
   const gfBalance = user?.gfTokenBalance || 0;
 
   const handleBuyNFT = (nft: NFT) => {
@@ -1128,7 +1135,7 @@ export default function StorePage() {
                 </Badge>
               </h3>
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 mb-8">
-                {gamefolioNFTs
+                {availableNFTs
                   .filter((nft) => {
                     if (rarityFilter !== "all" && nft.rarity.toLowerCase() !== rarityFilter.toLowerCase()) {
                       return false;
@@ -1872,7 +1879,8 @@ export default function StorePage() {
         open={purchaseDialogOpen}
         onOpenChange={setPurchaseDialogOpen}
         onPurchaseComplete={() => {
-          // Refresh user data or show success message
+          queryClient.invalidateQueries({ queryKey: ['/api/nft/store-catalog'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/user'] });
         }}
       />
 
