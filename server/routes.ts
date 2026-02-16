@@ -9322,6 +9322,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     { id: 15, name: "Royal Outlaw #015", price: 900, priceUSD: 45.00, forSale: true },
   ];
 
+  // Get available NFTs from the store catalog (filters out already-purchased ones)
+  app.get("/api/nft/store-catalog", async (req, res) => {
+    try {
+      const purchasedResult = await db.execute(
+        sql`SELECT nft_catalog_id FROM store_nft_purchases`
+      );
+      const purchasedRows = (purchasedResult as any).rows || purchasedResult || [];
+      const purchasedIds = new Set(purchasedRows.map((r: any) => Number(r.nft_catalog_id)));
+
+      const available = NFT_CATALOG.filter(nft => !purchasedIds.has(nft.id));
+      res.json(available);
+    } catch (error) {
+      console.error("Error fetching store catalog:", error);
+      res.status(500).json({ error: "Failed to fetch store catalog" });
+    }
+  });
+
   // Purchase NFT with GF tokens
   app.post("/api/nft/purchase", authMiddleware, async (req, res) => {
     try {
@@ -9340,6 +9357,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!nft.forSale) {
         return res.status(400).json({ message: "NFT is not for sale" });
+      }
+
+      // Check if this NFT has already been purchased by someone
+      const existingPurchase = await db.execute(
+        sql`SELECT id FROM store_nft_purchases WHERE nft_catalog_id = ${nftId} LIMIT 1`
+      );
+      const existingRows = (existingPurchase as any).rows || existingPurchase || [];
+      if (existingRows.length > 0) {
+        return res.status(400).json({ message: "This NFT has already been sold" });
       }
 
       const user = await storage.getUser(userId);
@@ -9368,10 +9394,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gfTokenBalance: newBalance
       });
 
-      // TODO: In a real implementation, we would:
-      // 1. Save the NFT purchase record to database
-      // 2. Transfer the NFT to user's wallet via Crossmint API
-      // 3. Update NFT ownership in database
+      // Record the store NFT purchase (marks it as sold/unavailable)
+      await db.execute(
+        sql`INSERT INTO store_nft_purchases (nft_catalog_id, buyer_user_id, price_paid) VALUES (${nftId}, ${userId}, ${nft.price})`
+      );
+
+      // Add the NFT to the buyer's wallet (user_nfts table)
+      await db.execute(
+        sql`INSERT INTO user_nfts (user_id, token_id, tx_hash) VALUES (${userId}, ${nftId}, ${'store_purchase_' + Date.now()}) ON CONFLICT (user_id, token_id) DO NOTHING`
+      );
 
       res.json({
         success: true,
@@ -9380,7 +9411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         nftName: nft.name,
         pricePaid: nft.price,
         newBalance,
-        transactionId: `txn_${Date.now()}_${nftId}` // Mock transaction ID
+        transactionId: `store_purchase_${Date.now()}_${nftId}`
       });
     } catch (error) {
       console.error("Error purchasing NFT:", error);
