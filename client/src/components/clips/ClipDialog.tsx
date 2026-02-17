@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { ClipWithUser, CommentWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { useSignedUrl } from "@/hooks/use-signed-url";
+import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { 
   Dialog,
   DialogDescription,
@@ -623,27 +623,13 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           e.stopPropagation();
                           onClose();
                         }}>
-                          <div 
-                            className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden"
-                            style={{ 
-                              boxShadow: clip.user?.avatarBorderColor 
-                                ? `0 0 0 2px ${clip.user.avatarBorderColor}` 
-                                : '0 0 0 2px rgba(255,255,255,0.3)'
-                            }}
-                          >
-                            {signedAvatarUrl ? (
-                              <img 
-                                src={signedAvatarUrl} 
-                                alt={clip.user?.displayName || clip.user?.username || 'User'} 
-                                loading="lazy"
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                }}
+                          <div className="flex-shrink-0">
+                            {clip?.user && (
+                              <CustomAvatar 
+                                user={clip.user} 
+                                size="sm" 
+                                showBorder={true}
                               />
-                            ) : (
-                              <UserIcon className="h-5 w-5 text-white" />
                             )}
                           </div>
                         </Link>
@@ -710,6 +696,15 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     
                     {/* Right side action buttons */}
                     <div className="absolute right-3 bottom-8 flex flex-col items-center space-y-5 z-50 pointer-events-auto">
+                      <div className="flex flex-col items-center mb-2">
+                        {clip?.user && (
+                          <CustomAvatar 
+                            user={clip.user} 
+                            size="md" 
+                            showBorder={true}
+                          />
+                        )}
+                      </div>
                       <FireButton 
                         contentId={clip.id}
                         contentType="clip"
@@ -871,26 +866,13 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   </div>
                 )}
                 <div className="flex items-center gap-3">
-                  <div 
-                    className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden ring-2 flex-shrink-0"
-                    style={{ 
-                      borderColor: clip.user?.avatarBorderColor || 'transparent',
-                      boxShadow: clip.user?.avatarBorderColor ? `0 0 0 2px ${clip.user.avatarBorderColor}` : undefined
-                    }}
-                  >
-                    {signedAvatarUrl ? (
-                      <img 
-                        src={signedAvatarUrl} 
-                        alt={clip.user?.displayName || clip.user?.username || 'User'} 
-                        loading="lazy"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                        }}
+                  <div className="flex-shrink-0">
+                    {clip?.user && (
+                      <CustomAvatar 
+                        user={clip.user} 
+                        size="sm" 
+                        showBorder={true}
                       />
-                    ) : (
-                      <UserIcon className="h-5 w-5 text-muted-foreground" />
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
