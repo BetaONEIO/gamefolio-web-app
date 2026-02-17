@@ -206,25 +206,6 @@ export function NameTagDetailDialog({
                 </div>
               </div>
 
-              {/* Attributes */}
-              <div className="flex flex-col gap-4 mb-6">
-                <span className="text-xs font-black text-[#94a3b8] uppercase" style={{ letterSpacing: '2.4px' }}>Attributes</span>
-                <div className="bg-[#1e293b]/20 border border-[#1e293b]/30 rounded-2xl p-4 flex items-center gap-3">
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="w-10 h-10 rounded-2xl bg-[#2b7fff]/10 border border-[#2b7fff]/20 flex items-center justify-center">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path fillRule="evenodd" clipRule="evenodd" d="M10 6V18C10 19.4 10 20.1 9.728 20.635C9.48811 21.1053 9.10549 21.4875 8.635 21.727C8.1 22 7.4 22 6 22C4.6 22 3.9 22 3.365 21.727C2.89451 21.1053 2.5119 21.1053 2.272 20.635C2 20.1 2 19.4 2 18V6C2 4.6 2 3.9 2.272 3.365C2.51173 2.89435 2.89435 2.51173 3.365 2.272C3.9 2 4.6 2 6 2C7.4 2 8.1 2 8.635 2.272C9.10565 2.51173 9.48828 2.89435 9.728 3.365C10 3.9 10 4.6 10 6Z" fill="#2B7FFF" />
-                        <path d="M14 6V18C14 19.4 14 20.1 14.272 20.635C14.5119 21.1053 14.8945 21.4875 15.365 21.727C15.9 22 16.6 22 18 22C19.4 22 20.1 22 20.635 21.727C21.1053 21.4875 21.4875 21.1053 21.728 20.635C22 20.1 22 19.4 22 18V6C22 4.6 22 3.9 21.728 3.365C21.4881 2.89435 21.1055 2.51173 20.635 2.272C20.1 2 19.4 2 18 2C16.6 2 15.9 2 15.365 2.272C14.8943 2.51173 14.5117 2.89435 14.272 3.365C14 3.9 14 4.6 14 6Z" fill="#2B7FFF" opacity="0.4" />
-                      </svg>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-xs font-bold text-[#f8fafc]">Midnight Frost</span>
-                      <span className="text-[10px] text-[#94a3b8] uppercase" style={{ letterSpacing: '0.25px' }}>Color Theme</span>
-                    </div>
-                  </div>
-                  <span className="text-xs font-black uppercase" style={{ color: '#2b7fff' }}>Rare</span>
-                </div>
-              </div>
             </div>
 
             {/* Sticky Bottom: Equip/Buy Button */}
