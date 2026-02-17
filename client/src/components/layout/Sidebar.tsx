@@ -239,7 +239,7 @@ const Sidebar = () => {
     // Only show Messages link if user has messaging enabled - default to true for demo user
     ...(user && user.messagingEnabled !== false ? [{ icon: GamefolioMessagesIcon, label: "Messages", href: "/messages" }] : []),
 
-    { icon: GamefolioProfileIcon, label: "My Gamefolio", href: user ? `/profile/${user.username}` : "/auth" },
+    { icon: GamefolioProfileIcon, label: "My Gamefolio", href: user ? `/profile/${user.username}` : "/auth", themed: true },
     { icon: HelpCircle, label: "Help & Support", href: "/help" },
 
     // Only show admin panel link for users with admin role
@@ -258,7 +258,9 @@ const Sidebar = () => {
                   "flex items-center p-3 rounded-lg transition-all cursor-pointer",
                   location === item.href
                     ? "text-white bg-primary"
-                    : "text-muted-foreground hover:bg-primary hover:text-white"
+                    : (item as any).themed
+                      ? "text-primary hover:bg-primary hover:text-white"
+                      : "text-muted-foreground hover:bg-primary hover:text-white"
                 )}
               >
                 <item.icon className="w-6 h-6" />
