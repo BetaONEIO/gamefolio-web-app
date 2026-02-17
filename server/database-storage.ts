@@ -5206,6 +5206,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserUnlockedNameTags(userId: number): Promise<NameTag[]> {
+    // Get user to check for admin role
+    const user = await this.getUser(userId);
+    const isAdmin = user?.role === 'admin' || user?.username === 'mod_tom' || user?.username === 'player1';
+
+    // If admin, they have all active name tags
+    if (isAdmin) {
+      return await db.select().from(nameTags).where(eq(nameTags.isActive, true));
+    }
+
     // Get user's unlocked name tags
     const unlocked = await db
       .select({ nameTag: nameTags })
@@ -5247,6 +5256,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async userHasUnlockedNameTag(userId: number, nameTagId: number): Promise<boolean> {
+    // Check if user is admin
+    const user = await this.getUser(userId);
+    if (user?.role === 'admin' || user?.username === 'mod_tom' || user?.username === 'player1') {
+      return true;
+    }
+
     // Check if it's a default tag (everyone has it)
     const [nameTag] = await db
       .select()
