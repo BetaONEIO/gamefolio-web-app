@@ -20,12 +20,12 @@ async function sync() {
     const existing = await db.select().from(nameTags).where(eq(nameTags.name, name));
     
     if (existing.length > 0) {
-      console.log(\`Updating existing nametag: \${name}\`);
+      console.log("Updating existing nametag: " + name);
       await db.update(nameTags)
         .set({ imageUrl: file.publicUrl })
         .where(eq(nameTags.id, existing[0].id));
     } else {
-      console.log(\`Creating new nametag: \${name}\`);
+      console.log("Creating new nametag: " + name);
       await db.insert(nameTags).values({
         name,
         imageUrl: file.publicUrl,
