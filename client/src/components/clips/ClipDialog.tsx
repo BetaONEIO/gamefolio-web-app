@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { ClipWithUser, CommentWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { 
   Dialog,
