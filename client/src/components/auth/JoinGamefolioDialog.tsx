@@ -214,9 +214,9 @@ export function JoinGamefolioDialog({
             <X className="h-4 w-4" />
           </button>
 
-          <div className="p-8 text-center">
+          <div className="px-10 pb-10 text-center">
             {/* Logo */}
-            <div className="flex justify-center mb-6">
+            <div className="flex justify-center mb-6 pt-10">
               <div className="w-16 h-16 rounded-2xl overflow-hidden">
                 <img 
                   src={gamefolioLogo} 
@@ -315,7 +315,7 @@ export function JoinGamefolioDialog({
               </button>
             </div>
 
-            <p className="text-xs text-gray-500 mt-6">
+            <p className="text-xs text-gray-500 mt-6 pb-0 mb-0">
               By registering, you agree to Gamefolio's Terms of Service and Privacy Policy
             </p>
           </div>
@@ -342,9 +342,9 @@ export function JoinGamefolioDialog({
             <X className="h-4 w-4" />
           </button>
 
-          <div className="p-8 text-center">
+          <div className="px-10 pb-10 text-center">
             {/* Logo */}
-            <div className="flex justify-center mb-6">
+            <div className="flex justify-center mb-6 pt-10">
               <div className="w-16 h-16 rounded-2xl overflow-hidden">
                 <img 
                   src={gamefolioLogo} 
@@ -433,9 +433,9 @@ export function JoinGamefolioDialog({
           <X className="h-4 w-4" />
         </button>
 
-        <div className="p-8 text-center">
+        <div className="px-10 pb-10 text-center">
           {/* Logo */}
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-6 pt-10">
             <div className="w-16 h-16 rounded-2xl overflow-hidden">
               <img 
                 src={gamefolioLogo} 
@@ -495,15 +495,14 @@ export function JoinGamefolioDialog({
             </button>
           </div>
 
-          {/* Terms */}
-          <p className="text-xs text-gray-500 mt-6">
-            By registering, you agree to Gamefolio's{' '}
-            <span className="text-green-400 cursor-pointer hover:underline">Terms of Service</span>{' '}
-            and{' '}
-            <span className="text-green-400 cursor-pointer hover:underline">Privacy Policy</span>
-          </p>
-        </div>
-      </DialogContent>
+            <p className="text-xs text-gray-500 mt-6 pb-0 mb-0">
+              By registering, you agree to Gamefolio's{' '}
+              <span className="text-green-400 cursor-pointer hover:underline">Terms of Service</span>{' '}
+              and{' '}
+              <span className="text-green-400 cursor-pointer hover:underline">Privacy Policy</span>
+            </p>
+          </div>
+        </DialogContent>
     </Dialog>
   );
 }
