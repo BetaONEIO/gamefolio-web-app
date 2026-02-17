@@ -1720,6 +1720,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User Routes
   // ==========================================
 
+  // Change Password Route
+  // ==========================================
+  app.post("/api/users/change-password", authMiddleware, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current password and new password are required" });
+      }
+
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: "New password must be at least 8 characters" });
+      }
+
+      const fullUser = await storage.getUser(user.id);
+      if (!fullUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (fullUser.authProvider === 'google') {
+        return res.status(400).json({ message: "Cannot change password for Google-linked accounts" });
+      }
+
+      const isMatch = await comparePasswords(currentPassword, fullUser.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+
+      const hashedNewPassword = await hashPassword(newPassword);
+      await db.update(users).set({ password: hashedNewPassword }).where(eq(users.id, user.id));
+
+      console.log(`✅ Password changed successfully for user ${user.id} (${user.username})`);
+      res.json({ message: "Password changed successfully" });
+    } catch (err) {
+      console.error("Error changing password:", err);
+      res.status(500).json({ message: "Failed to change password" });
+    }
+  });
+
   // Delete Account Routes - Self-service account deletion
   // ==========================================
   
