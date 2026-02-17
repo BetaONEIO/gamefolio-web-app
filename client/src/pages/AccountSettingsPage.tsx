@@ -412,6 +412,13 @@ const AccountSettingsPage: React.FC = () => {
                       );
                     }}
                   />
+                  <Button 
+                    type="submit" 
+                    disabled={!securityForm.formState.isDirty}
+                    className="w-full sm:w-auto"
+                  >
+                    Change Password
+                  </Button>
                 </form>
               </Form>
 
@@ -452,16 +459,6 @@ const AccountSettingsPage: React.FC = () => {
                 </div>
               </div>
             </CardContent>
-            
-            <CardFooter>
-              <Button 
-                type="submit" 
-                form="security-form"
-                disabled={!securityForm.formState.isDirty}
-              >
-                Change Password
-              </Button>
-            </CardFooter>
           </Card>
           
           <div className="mt-6">
