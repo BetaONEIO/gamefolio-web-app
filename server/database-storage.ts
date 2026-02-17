@@ -5231,8 +5231,7 @@ export class DatabaseStorage implements IStorage {
 
     // Combine and deduplicate
     const unlockedTags = unlocked.map((u) => u.nameTag);
-    const allTags = [...unlockedTags, ...defaultTags];
-    const uniqueTags = allTags.filter(
+    const uniqueTags = [...unlockedTags, ...defaultTags].filter(
       (tag, index, self) => index === self.findIndex((t) => t.id === tag.id)
     );
 
