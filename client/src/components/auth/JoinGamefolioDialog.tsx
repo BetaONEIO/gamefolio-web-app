@@ -214,9 +214,9 @@ export function JoinGamefolioDialog({
             <X className="h-4 w-4" />
           </button>
 
-          <div className="px-10 pb-10 text-center">
+          <div className="px-6 sm:px-10 pb-6 sm:pb-10 text-center">
             {/* Logo */}
-            <div className="flex justify-center mb-6 pt-10">
+            <div className="flex justify-center mb-6 pt-6 sm:pt-10">
               <div className="w-16 h-16 rounded-2xl overflow-hidden">
                 <img 
                   src={gamefolioLogo} 
@@ -342,9 +342,9 @@ export function JoinGamefolioDialog({
             <X className="h-4 w-4" />
           </button>
 
-          <div className="px-10 pb-10 text-center">
+          <div className="px-6 sm:px-10 pb-6 sm:pb-10 text-center">
             {/* Logo */}
-            <div className="flex justify-center mb-6 pt-10">
+            <div className="flex justify-center mb-6 pt-6 sm:pt-10">
               <div className="w-16 h-16 rounded-2xl overflow-hidden">
                 <img 
                   src={gamefolioLogo} 
@@ -433,9 +433,9 @@ export function JoinGamefolioDialog({
           <X className="h-4 w-4" />
         </button>
 
-        <div className="px-10 pb-10 text-center">
+        <div className="px-6 sm:px-10 pb-6 sm:pb-10 text-center">
           {/* Logo */}
-          <div className="flex justify-center mb-6 pt-10">
+          <div className="flex justify-center mb-6 pt-6 sm:pt-10">
             <div className="w-16 h-16 rounded-2xl overflow-hidden">
               <img 
                 src={gamefolioLogo} 
