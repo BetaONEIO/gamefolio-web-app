@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Star, Video, Camera, ChevronLeft, ChevronRight } from "lucide-react";
+import { Star, Video, Film, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
@@ -27,7 +27,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
   const { data: recommendedClips, isLoading } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/recommended-clips'],
     queryFn: async () => {
-      const response = await fetch('/api/recommended-clips', {
+      const response = await fetch('/api/recommended-clips?limit=20', {
         credentials: 'include',
       });
       if (!response.ok) {
@@ -176,7 +176,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
               className="flex items-center gap-1.5"
               data-testid="button-reels-toggle"
             >
-              <Camera className="h-4 w-4" />
+              <Film className="h-4 w-4" />
               <span>Reels</span>
             </Button>
           </div>
@@ -255,7 +255,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
             className="flex items-center gap-1.5"
             data-testid="button-reels-toggle"
           >
-            <Camera className="h-4 w-4" />
+            <Film className="h-4 w-4" />
             <span className="hidden xs:inline">Reels</span>
             <span className="xs:hidden">Reels</span>
           </Button>
