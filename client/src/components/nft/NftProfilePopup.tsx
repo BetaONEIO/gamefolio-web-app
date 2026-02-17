@@ -49,30 +49,32 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
   const calculatePosition = useCallback(() => {
     if (!anchorRect || !popupRef.current) return;
     const popup = popupRef.current;
-    const popupWidth = popup.offsetWidth || 340;
-    const popupHeight = popup.offsetHeight || 500;
-    const gap = 12;
+    const popupWidth = window.innerWidth >= 768 ? 680 : 340;
+    const popupHeight = popupRef.current?.offsetHeight || 500;
+    const gap = 16;
     const viewportW = window.innerWidth;
     const viewportH = window.innerHeight;
-    const padding = 12;
+    const padding = 20;
 
+    // Default: try to place to the right of the avatar
     let left = anchorRect.right + gap;
+    // Align top of popup with top of avatar
     let top = anchorRect.top;
 
+    // If it doesn't fit on the right, try the left side
     if (left + popupWidth > viewportW - padding) {
       left = anchorRect.left - popupWidth - gap;
     }
 
-    if (left < padding) {
-      left = padding;
-    }
+    // Ensure it doesn't go off screen horizontally
+    if (left < padding) left = padding;
+    if (left + popupWidth > viewportW - padding) left = viewportW - popupWidth - padding;
 
+    // Ensure it doesn't go off screen vertically
     if (top + popupHeight > viewportH - padding) {
       top = viewportH - popupHeight - padding;
     }
-    if (top < padding) {
-      top = padding;
-    }
+    if (top < padding) top = padding;
 
     setPosition({ top, left });
   }, [anchorRect]);
@@ -127,8 +129,8 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
 
       <div
         ref={popupRef}
-        className={`${hasAnchor ? 'absolute' : 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'} z-10 w-[340px] md:w-[680px] max-w-[95vw] max-h-[85vh] bg-[#0f172a] rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6)] border border-[#1e293b] flex flex-col md:flex-row animate-in fade-in zoom-in-95 duration-150`}
-        style={hasAnchor && position ? { top: position.top, left: position.left } : hasAnchor ? { visibility: 'hidden' } : undefined}
+        className={`${hasAnchor ? 'absolute' : 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'} z-10 w-[340px] md:w-[680px] max-w-[95vw] max-h-[85vh] bg-[#0f172a] rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] border border-[#1e293b] flex flex-col md:flex-row animate-in fade-in slide-in-from-left-2 duration-200`}
+        style={hasAnchor && position ? { top: `${position.top}px`, left: `${position.left}px` } : hasAnchor ? { visibility: 'hidden' } : undefined}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative w-full md:w-[340px] flex-shrink-0">
