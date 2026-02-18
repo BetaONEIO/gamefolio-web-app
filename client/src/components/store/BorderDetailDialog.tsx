@@ -5,6 +5,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, CheckCircle, Loader2, Crown, Lock } from "lucide-react";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
+import { useState } from "react";
+import { BorderCheckoutDialog } from "./BorderCheckoutDialog";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ProfileBorder {
   id: number;
@@ -49,9 +52,23 @@ export function BorderDetailDialog({
   isUserPro,
   onUpgradePro,
 }: BorderDetailDialogProps) {
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const { user } = useAuth();
+
   if (!border) return null;
 
-  const handleClose = () => onOpenChange(false);
+  const handleClose = () => {
+    onOpenChange(false);
+    setCheckoutOpen(false);
+  };
+
+  const handleBuyClick = () => {
+    setCheckoutOpen(true);
+  };
+
+  const handleConfirmPurchase = (id: number) => {
+    onPurchase(id);
+  };
 
   const rarityColor = border.rarity?.toLowerCase() === 'legendary' ? '#f0b100'
     : border.rarity?.toLowerCase() === 'epic' ? '#a855f7'
@@ -220,7 +237,7 @@ export function BorderDetailDialog({
                 </Button>
               ) : (
                 <Button
-                  onClick={() => onPurchase(border.id)}
+                  onClick={handleBuyClick}
                   disabled={isPurchasing}
                   className="w-full h-[68px] rounded-2xl text-black text-lg font-black uppercase"
                   style={{
@@ -249,6 +266,15 @@ export function BorderDetailDialog({
           </div>
         </div>
       </DialogContent>
+
+      <BorderCheckoutDialog
+        border={border}
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
+        onConfirm={handleConfirmPurchase}
+        isPurchasing={isPurchasing}
+        gfBalance={user?.gfTokenBalance || 0}
+      />
     </Dialog>
   );
 }
