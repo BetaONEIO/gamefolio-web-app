@@ -1,0 +1,719 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/SuccessVanguardBorder.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,900;0,700&display=swap";
+@import "https://fonts.googleapis.com/css?family=JetBrains+Mono:0,700&display=swap";
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,900;0,700&display=swap";
+.SuccessVanguardBorder_166_858 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_166_859 {
+  background: #020617;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 100%;
+  padding-bottom: 356px;
+  display: flex;
+}
+.Container_166_860 {
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 24px 24px 0;
+  display: flex;
+}
+.Container_166_861 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 382px;
+  height: 941px;
+  display: flex;
+}
+.Container_166_862 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+  width: 280px;
+  display: flex;
+}
+.Container_166_863 {
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 0 4.766px 0 5.234px;
+  display: flex;
+}
+.EliteUpgrade_166_864 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.8px;
+  text-transform: uppercase;
+  width: 270px;
+  height: 46px;
+  font-family: Plus Jakarta Sans;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 40px;
+  display: inline-block;
+}
+.Container_166_865 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 46px;
+  display: flex;
+}
+.The_166_866 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.35px;
+  text-transform: uppercase;
+  width: 31px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 22.75px;
+  display: inline-block;
+}
+.Container_166_867 {
+  justify-content: center;
+  align-items: center;
+  width: 79px;
+  height: 18px;
+  display: flex;
+}
+.Vanguard_166_868 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.35px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 84px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 22.75px;
+  display: inline-block;
+}
+.BorderHasBeenAddedToYourProfile_166_869 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.35px;
+  text-transform: uppercase;
+  width: 206px;
+  height: 41px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 22.75px;
+  display: inline-block;
+}
+.Container_166_870 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px;
+  width: 382px;
+  height: 607px;
+  display: flex;
+}
+.Container_166_871 {
+  backdrop-filter: blur(4px);
+  box-sizing: border-box;
+  background: #0f172a4d;
+  border: 1px solid #1e293b4d;
+  border-radius: 24px;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 21px;
+  display: flex;
+}
+.Container_166_872 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 161.797px;
+  height: 28px;
+  display: flex;
+}
+.Container_166_873 {
+  justify-content: center;
+  align-items: center;
+  width: 99px;
+  height: 15px;
+  padding: 1px 0;
+  display: flex;
+}
+.TransactionId_166_874 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 104px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_166_875 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 28px;
+  display: flex;
+}
+.x2aC91d_166_876 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 83px;
+  height: 16px;
+  font-family: JetBrains Mono;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_166_877 {
+  width: 12px;
+  height: 12px;
+  overflow: hidden;
+}
+.Container_166_880 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 191.57px;
+  height: 20px;
+  display: flex;
+}
+.Container_166_881 {
+  justify-content: center;
+  align-items: center;
+  width: 72px;
+  height: 15px;
+  padding: 1px 0;
+  display: flex;
+}
+.TotalCost_166_882 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 77px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_166_883 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+._75Gft_166_884 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 82px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_166_885 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #4ade804d;
+  border-radius: 40px;
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  height: 477px;
+  padding: 1px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px #4ade801a;
+}
+.Container_166_886 {
+  background: #0f172b;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 380px;
+  height: 380px;
+  padding: 94px;
+  display: flex;
+}
+.Image_166_887 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  flex-shrink: 0;
+  width: 192px;
+  height: 192px;
+}
+.Container_166_888 {
+  background: linear-gradient(#0f172a 0%, #020617 100%);
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 86.0391px;
+  height: 95px;
+  padding: 24px 23.961px 24px 24px;
+  display: flex;
+}
+.Container_166_889 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 130px;
+  height: 47px;
+  display: flex;
+}
+.Container_166_890 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 84px;
+  height: 15px;
+  padding: 1px 0;
+  display: flex;
+}
+.AssetName_166_891 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 89px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_166_892 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.Vanguard_166_893 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.2px;
+  text-transform: uppercase;
+  width: 135px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_166_894 {
+  box-sizing: border-box;
+  background: #4ade801a;
+  border: 1px solid #4ade804d;
+  border-radius: 16px;
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+  width: 116px;
+  height: 34px;
+  padding: 9px 17px;
+  display: flex;
+}
+.Container_166_895 {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+}
+.Container_166_897 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 58px;
+  height: 16px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.Border_166_898 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 63px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_166_899 {
+  width: 160px;
+  height: 160px;
+}
+.Container_166_900 {
+  filter: blur(50px);
+  background: #4ade804d;
+  border-radius: 16777200px;
+  width: 160px;
+  height: 160px;
+}
+.Container_166_901 {
+  width: 160px;
+  height: 160px;
+}
+.Container_166_902 {
+  background: #4ade80;
+  border-radius: 16777200px;
+  justify-content: center;
+  align-items: center;
+  width: 112px;
+  height: 112px;
+  padding: 24px;
+  display: flex;
+  box-shadow: 0 25px 50px -12px #4ade8080;
+}
+.Container_166_903 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_166_906 {
+  box-sizing: border-box;
+  border: 4px solid #4ade8033;
+  border-radius: 16777200px;
+  width: 160px;
+  height: 160px;
+}
+.Container_166_907 {
+  box-sizing: border-box;
+  border: 4px solid #4ade80;
+  border-radius: 16777200px;
+  width: 210px;
+  height: 210px;
+}
+.Container_166_908 {
+  box-sizing: border-box;
+  background: #020617;
+  border-top: 1px solid #1e293b80;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 33px 24px 32px;
+  display: flex;
+}
+.Button_166_909 {
+  background: #4ade80;
+  border-radius: 16px;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 9.5px;
+  height: 68px;
+  padding: 20px 120.906px 20px 123.594px;
+  display: flex;
+  box-shadow:
+    0 8px 10px -6px #4ade8033,
+    0 20px 25px -5px #4ade8033;
+}
+.Container_166_910 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.EquipNow_166_912 {
+  color: #022c22;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.9px;
+  text-transform: uppercase;
+  width: 104px;
+  height: 28px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 28px;
+  display: inline-block;
+}
+.Button_166_913 {
+  box-sizing: border-box;
+  background: #1e293b80;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 382px;
+  height: 50px;
+  padding: 17px 0;
+  display: flex;
+}
+.Done_166_914 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 46px;
+  height: 16px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 16px;
+  display: inline-block;
+}
+.Header_166_915 {
+  backdrop-filter: blur(6px);
+  background: #020617cc;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 193px;
+  height: 104px;
+  padding: 48px 16px 16px;
+  display: flex;
+}
+.Container_166_916 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  width: 165px;
+  height: 40px;
+  display: flex;
+}
+.Container_166_917 {
+  flex: 1 0 0;
+  height: 40px;
+}
+.Container_166_918 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 109px;
+  height: 28px;
+  padding: 1px 0;
+  display: flex;
+}
+.Unlocked_166_919 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.5px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 112px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Button_166_920 {
+  box-sizing: border-box;
+  background: #1e293bcc;
+  border: 1px solid #1e293b80;
+  border-radius: 16777200px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+  display: flex;
+}
+.Container_166_921 {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+
+```
+
+---
+
+```src/components/SuccessVanguardBorder.tsx
+import React from 'react';
+import styles from '../styles/SuccessVanguardBorder.module.css';
+
+
+export default function SuccessVanguardBorder() {
+  return (
+    <div className={styles.SuccessVanguardBorder_166_858}>
+      <div className={styles.Container_166_859}>
+        <div className={styles.Container_166_860}>
+          <div className={styles.Container_166_861}>
+            <div className={styles.Container_166_862}>
+              <div className={styles.Container_166_863}><span className={styles.EliteUpgrade_166_864}>Elite Upgrade!</span></div>
+              <div className={styles.Container_166_865}><span className={styles.The_166_866}>The</span>
+                <div className={styles.Container_166_867}><span className={styles.Vanguard_166_868}>Vanguard</span></div><span className={styles.BorderHasBeenAddedToYourProfile_166_869}>border has been added to your profile.</span>
+              </div>
+            </div>
+            <div className={styles.Container_166_870}>
+              <div className={styles.Container_166_871}>
+                <div className={styles.Container_166_872}>
+                  <div className={styles.Container_166_873}><span className={styles.TransactionId_166_874}>Transaction ID</span></div>
+                  <div className={styles.Container_166_875}><span className={styles.x2aC91d_166_876}>0x2a...c91d</span>
+                    <div className={styles.Container_166_877}><svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M7.61999 1H5.67299C4.79099 1 4.09199 1 3.5455 1.074C2.9825 1.15 2.527 1.31 2.168 1.6705C1.8085 2.031 1.649 2.4885 1.5735 3.0535C1.5 3.60249 1.5 4.30399 1.5 5.18949V8.10848C1.5 8.86248 1.96 9.50848 2.6135 9.77948C2.58 9.32448 2.58 8.68698 2.58 8.15598V5.65099C2.58 5.01049 2.58 4.45799 2.639 4.01599C2.7025 3.54199 2.8455 3.088 3.2125 2.7195C3.5795 2.351 4.03199 2.2075 4.50399 2.1435C4.94399 2.0845 5.49399 2.0845 6.13249 2.0845H7.66749C8.30548 2.0845 8.85448 2.0845 9.29498 2.1435C9.02495 1.45413 8.36035 1.00042 7.61999 1Z" fill="#94A3B8" />
+                        <path fillRule="evenodd" clipRule="evenodd" d="M3.2998 5.69863C3.2998 4.33563 3.2998 3.65413 3.7218 3.23063C4.1433 2.80713 4.8218 2.80713 6.1798 2.80713H7.6198C8.9773 2.80713 9.6563 2.80713 10.0783 3.23063C10.5003 3.65413 10.4998 4.33563 10.4998 5.69863V8.10862C10.4998 9.47162 10.4998 10.1531 10.0783 10.5766C9.6563 11.0001 8.9773 11.0001 7.6198 11.0001H6.1798C4.8223 11.0001 4.1433 11.0001 3.7218 10.5766C3.2998 10.1531 3.2998 9.47162 3.2998 8.10862L3.2998 5.69863Z" fill="#94A3B8" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.Container_166_880}>
+                  <div className={styles.Container_166_881}><span className={styles.TotalCost_166_882}>Total Cost</span></div>
+                  <div className={styles.Container_166_883}><span className={styles._75Gft_166_884}>753.75 GFT</span></div>
+                </div>
+              </div>
+              <div className={styles.Container_166_885}>
+                <div className={styles.Container_166_886}>
+                  <div className={styles.Image_166_887}></div>
+                </div>
+                <div className={styles.Container_166_888}>
+                  <div className={styles.Container_166_889}>
+                    <div className={styles.Container_166_890}><span className={styles.AssetName_166_891}>Asset Name</span></div>
+                    <div className={styles.Container_166_892}><span className={styles.Vanguard_166_893}>Vanguard</span></div>
+                  </div>
+                  <div className={styles.Container_166_894}>
+                    <div className={styles.Container_166_895}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M7.99968 14.6668C7.07746 14.6668 6.21079 14.4917 5.39968 14.1415C4.58857 13.7913 3.88301 13.3164 3.28301 12.7168C2.68301 12.1173 2.20812 11.4117 1.85834 10.6002C1.50856 9.78861 1.33345 8.92195 1.33301 8.00017C1.33256 7.07839 1.50767 6.21172 1.85834 5.40017C2.20901 4.58861 2.6839 3.88305 3.28301 3.2835C3.88212 2.68394 4.58768 2.20905 5.39968 1.85883C6.21168 1.50861 7.07835 1.3335 7.99968 1.3335C8.92101 1.3335 9.78768 1.50861 10.5997 1.85883C11.4117 2.20905 12.1172 2.68394 12.7163 3.2835C13.3155 3.88305 13.7906 4.58861 14.1417 5.40017C14.4928 6.21172 14.6677 7.07839 14.6664 8.00017C14.665 8.92195 14.4899 9.78861 14.141 10.6002C13.7921 11.4117 13.3172 12.1173 12.7163 12.7168C12.1155 13.3164 11.4099 13.7915 10.5997 14.1422C9.78946 14.4928 8.92279 14.6677 7.99968 14.6668Z" fill="#4ADE80" />
+                      </svg>
+                    </div>
+                    <div className={styles.Container_166_897}><span className={styles.Border_166_898}>Border</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_166_899}>
+              <div className={styles.Container_166_900}></div>
+              <div className={styles.Container_166_901}>
+                <div className={styles.Container_166_902}>
+                  <div className={styles.Container_166_903}><svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M31.9997 42.6668C42.309 42.6668 50.6664 34.3095 50.6664 24.0002C50.6664 13.6908 42.309 5.3335 31.9997 5.3335C21.6904 5.3335 13.333 13.6908 13.333 24.0002C13.333 34.3095 21.6904 42.6668 31.9997 42.6668ZM31.9997 16.0002C31.2423 16.0002 30.7357 16.9068 29.7223 18.7282L29.461 19.1975C29.173 19.7148 29.029 19.9708 28.805 20.1415C28.5783 20.3122 28.2983 20.3762 27.7383 20.5015L27.2317 20.6188C25.2637 21.0642 24.2797 21.2855 24.045 22.0375C23.8103 22.7895 24.4823 23.5762 25.8237 25.1442L26.1703 25.5495C26.5517 25.9948 26.7437 26.2162 26.829 26.4935C26.9143 26.7708 26.885 27.0668 26.829 27.6615L26.7757 28.2028C26.573 30.2962 26.4717 31.3442 27.0823 31.8082C27.6957 32.2722 28.6183 31.8482 30.461 31.0002L30.9357 30.7815C31.461 30.5415 31.7223 30.4215 31.9997 30.4215C32.277 30.4215 32.5383 30.5415 33.0637 30.7815L33.5383 31.0002C35.381 31.8508 36.3037 32.2722 36.917 31.8082C37.5303 31.3442 37.4263 30.2962 37.2237 28.2028L37.1703 27.6615C37.1143 27.0668 37.085 26.7708 37.1703 26.4935C37.2557 26.2162 37.4477 25.9948 37.829 25.5495L38.1757 25.1442C39.517 23.5762 40.189 22.7922 39.9543 22.0375C39.7197 21.2855 38.7357 21.0642 36.7677 20.6188L36.261 20.5015C35.701 20.3762 35.421 20.3148 35.1943 20.1415C34.9703 19.9708 34.8263 19.7148 34.5383 19.1975L34.277 18.7282C33.2637 16.9068 32.757 16.0002 31.9997 16.0002Z" fill="#022C22" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M11.8079 34.6536L7.76418 38.8372C6.31135 40.3438 5.58493 41.0945 5.33203 41.7321C4.75897 43.1849 5.25132 44.7938 6.49699 45.5579C7.04584 45.8915 8.03053 45.9964 10.008 46.2036C11.1218 46.322 11.6814 46.3812 12.1469 46.5614C13.1935 46.9623 14.0033 47.8044 14.3934 48.8859C14.5656 49.3702 14.6221 49.946 14.7351 51.1002C14.9369 53.1449 15.0391 54.1673 15.362 54.7349C16.0991 56.0263 17.6569 56.5348 19.0586 55.9403C19.672 55.682 20.3984 54.9287 21.854 53.4247L28.5316 46.5103C21.398 45.4174 15.1989 41.0214 11.8079 34.6509" fill="#022C22" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M35.4702 46.513L42.1479 53.4274C43.6007 54.934 44.3271 55.6847 44.9405 55.9456C46.3423 56.5375 47.9 56.029 48.6372 54.7376C48.96 54.1726 49.0596 53.1503 49.2614 51.1055C49.3771 49.9487 49.4336 49.3729 49.6057 48.8886C49.9932 47.8071 50.8057 46.965 51.8523 46.5641C52.3177 46.3838 52.8746 46.3273 53.9911 46.209C55.9659 45.9991 56.9533 45.8942 57.5022 45.5606C58.7478 44.7965 59.2402 43.1849 58.6671 41.7348C58.4142 41.0971 57.6878 40.3438 56.235 38.8399L52.1912 34.6536C48.8002 41.0241 42.6011 45.4201 35.4675 46.513" fill="#022C22" />
+                    </svg>
+                  </div>
+                </div>
+                <div className={styles.Container_166_906}></div>
+                <div className={styles.Container_166_907}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_166_908}>
+          <div className={styles.Button_166_909}>
+            <div className={styles.Container_166_910}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" clipRule="evenodd" d="M3.00098 3.9274C1.82497 5.10351 1.82497 7.01024 3.00098 8.18635L4.6588 9.84521L4.69849 9.80343L8.877 5.62492L8.91879 5.58523L7.25992 3.9274C6.08381 2.7514 4.17708 2.7514 3.00098 3.9274Z" fill="#022C22" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M10.024 6.69044L9.98431 6.73223L5.8058 10.9107L5.76401 10.9504L15.7799 20.9663C16.9619 22.1087 18.8415 22.0927 20.0039 20.9303C21.1663 19.7679 21.1823 17.8883 20.0399 16.7063L10.024 6.69044Z" fill="#022C22" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M15.8029 2.32077C15.8784 2.12705 16.065 1.99951 16.273 1.99951C16.4809 1.99951 16.6675 2.12705 16.743 2.32077L17.1922 3.46463C17.2427 3.59561 17.3458 3.69943 17.4764 3.75086L18.6161 4.20214C18.8092 4.27906 18.9359 4.46593 18.9359 4.67379C18.9359 4.88165 18.8092 5.06852 18.6161 5.14544L17.4774 5.59672C17.348 5.64976 17.2453 5.75249 17.1922 5.8819L16.743 7.02472C16.6675 7.21843 16.4809 7.34598 16.273 7.34598C16.065 7.34598 15.8784 7.21843 15.8029 7.02472L15.3537 5.88086C15.3006 5.75145 15.1979 5.64872 15.0685 5.59567L13.9299 5.14439C13.7368 5.06747 13.61 4.88061 13.61 4.67274C13.61 4.46488 13.7368 4.27802 13.9299 4.2011L15.0685 3.74982C15.1981 3.69653 15.3009 3.59339 15.3537 3.46359L15.8029 2.32077Z" fill="#022C22" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M19.8424 9.44826C19.918 9.25454 20.1046 9.127 20.3125 9.127C20.5204 9.127 20.7071 9.25454 20.7826 9.44826L20.9456 9.86506C20.9978 9.99564 21.1002 10.0991 21.2308 10.1502L21.6465 10.3153C21.8389 10.3926 21.965 10.5791 21.965 10.7864C21.965 10.9938 21.8389 11.1803 21.6465 11.2575L21.2308 11.4226C21.1013 11.4756 20.9986 11.5784 20.9456 11.7078L20.7826 12.1256C20.7071 12.3193 20.5204 12.4469 20.3125 12.4469C20.1046 12.4469 19.918 12.3193 19.8424 12.1256L19.6784 11.7078C19.6256 11.5786 19.5233 11.4759 19.3943 11.4226L18.9785 11.2575C18.7861 11.1803 18.66 10.9938 18.66 10.7864C18.66 10.5791 18.7861 10.3926 18.9785 10.3153L19.3943 10.1502C19.5233 10.097 19.6256 9.99427 19.6784 9.86506L19.8424 9.44826Z" fill="#022C22" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M4.34646 15.9009C4.42199 15.7072 4.60862 15.5797 4.81654 15.5797C5.02446 15.5797 5.21109 15.7072 5.28662 15.9009L5.45063 16.3188C5.50134 16.4493 5.60437 16.5527 5.73476 16.6039L6.15053 16.768C6.34363 16.8449 6.47034 17.0317 6.47034 17.2396C6.47034 17.4475 6.34363 17.6343 6.15053 17.7113L5.73476 17.8763C5.60437 17.9275 5.50134 18.0309 5.45063 18.1615L5.28662 18.5793C5.21109 18.773 5.02446 18.9006 4.81654 18.9006C4.60862 18.9006 4.42199 18.773 4.34646 18.5793L4.18245 18.1615C4.13173 18.0309 4.0287 17.9275 3.89831 17.8763L3.48255 17.7113C3.28944 17.6343 3.16273 17.4475 3.16273 17.2396C3.16273 17.0317 3.28944 16.8449 3.48255 16.768L3.89831 16.6039C4.02891 16.5525 4.13197 16.4487 4.18245 16.3177L4.34646 15.9009Z" fill="#022C22" />
+              </svg>
+            </div><span className={styles.EquipNow_166_912}>Equip Now</span>
+          </div>
+          <div className={styles.Button_166_913}><span className={styles.Done_166_914}>Done</span></div>
+        </div>
+        <div className={styles.Header_166_915}>
+          <div className={styles.Container_166_916}>
+            <div className={styles.Container_166_917}></div>
+            <div className={styles.Container_166_918}><span className={styles.Unlocked_166_919}>Unlocked</span></div>
+          </div>
+          <div className={styles.Button_166_920}>
+            <div className={styles.Container_166_921}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" clipRule="evenodd" d="M11.5028 4.44401C11.5028 2.91067 12.7528 1.6665 14.2928 1.6665C15.0313 1.66451 15.7403 1.95608 16.2637 2.47701C16.7872 2.99794 17.0821 3.70553 17.0837 4.44401C17.0837 5.97818 15.8337 7.22234 14.2928 7.22234C13.5465 7.22289 12.831 6.92458 12.3062 6.39401L8.44367 9.02401C8.55104 9.55986 8.49829 10.1155 8.292 10.6215L12.527 13.4049C13.026 12.9983 13.6501 12.7766 14.2937 12.7774C15.0321 12.7756 15.7411 13.0674 16.2643 13.5884C16.7876 14.1095 17.0824 14.8172 17.0837 15.5557C17.0837 17.089 15.8337 18.3332 14.2928 18.3332C13.5545 18.335 12.8457 18.0433 12.3225 17.5224C11.7992 17.0015 11.5044 16.294 11.5028 15.5557C11.5022 15.1662 11.5843 14.781 11.7437 14.4257L7.542 11.6665C7.03302 12.1087 6.38121 12.3517 5.707 12.3507C4.96852 12.3525 4.25961 12.0607 3.73634 11.5396C3.21306 11.0185 2.91832 10.3108 2.91699 9.57235C2.91854 8.83401 3.21338 8.12655 3.73663 7.60564C4.25988 7.08474 4.96866 6.79307 5.707 6.79484C6.59366 6.79484 7.382 7.20568 7.89283 7.84568L11.637 5.29651C11.5477 5.02117 11.5024 4.73346 11.5028 4.44401Z" fill="#F8FAFC" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+

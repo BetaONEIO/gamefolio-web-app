@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, Info } from "lucide-react";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import AssetPurchaseProcessing from "./AssetPurchaseProcessing";
+import { SuccessDashBorder } from "./SuccessDashBorder";
+import { useState } from "react";
 
 interface Border {
   id: number;
@@ -32,11 +34,33 @@ export function BorderCheckoutDialog({
   isPurchasing,
   gfBalance,
 }: BorderCheckoutDialogProps) {
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
   if (!border) return null;
 
   const networkFee = 25;
   const totalCost = border.gfCost + networkFee;
   const canAfford = gfBalance >= totalCost;
+
+  const handleConfirm = () => {
+    setIsProcessing(true);
+    onConfirm(border.id);
+  };
+
+  const handleProcessingComplete = () => {
+    setIsProcessing(false);
+    setShowSuccess(true);
+  };
+
+  const handleClose = () => {
+    onOpenChange(false);
+    // Reset state after dialog animation completes
+    setTimeout(() => {
+      setShowSuccess(false);
+      setIsProcessing(false);
+    }, 300);
+  };
 
   const rarityColor = border.rarity?.toLowerCase() === 'legendary' ? '#f0b100'
     : border.rarity?.toLowerCase() === 'epic' ? '#a855f7'
@@ -46,8 +70,17 @@ export function BorderCheckoutDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-[#020617] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden">
-        {isPurchasing ? (
-          <AssetPurchaseProcessing />
+        {showSuccess ? (
+          <SuccessDashBorder
+            assetName={border.name}
+            rarity={border.rarity}
+            imageUrl={border.imageUrl}
+            transactionId="0x9aE42c...3d1f"
+            totalCost={totalCost}
+            onClose={handleClose}
+          />
+        ) : isProcessing || isPurchasing ? (
+          <AssetPurchaseProcessing onComplete={handleProcessingComplete} />
         ) : (
           <div className="flex-1 flex flex-col">
             {/* Header */}
@@ -132,8 +165,8 @@ export function BorderCheckoutDialog({
             {/* Bottom Action */}
             <div className="p-6 bg-[#020617] space-y-4">
               <Button
-                onClick={() => onConfirm(border.id)}
-                disabled={isPurchasing || !canAfford}
+                onClick={handleConfirm}
+                disabled={isPurchasing || isProcessing || !canAfford}
                 className="w-full h-[68px] rounded-[24px] text-black text-lg font-black uppercase transition-all active:scale-95"
                 style={{
                   background: canAfford ? '#4ade80' : '#1e293b',
@@ -142,7 +175,7 @@ export function BorderCheckoutDialog({
                   letterSpacing: '-0.9px',
                 }}
               >
-                {isPurchasing ? (
+                {isPurchasing || isProcessing ? (
                   <>
                     <Loader2 className="h-6 w-6 mr-2 animate-spin" />
                     Processing...

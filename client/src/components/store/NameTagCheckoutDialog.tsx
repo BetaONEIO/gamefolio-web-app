@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, Info } from "lucide-react";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import AssetPurchaseProcessing from "./AssetPurchaseProcessing";
+import { SuccessDashNameTag } from "./SuccessDashNameTag";
+import { useState } from "react";
 
 interface NameTag {
   id: number;
@@ -32,11 +34,33 @@ export function NameTagCheckoutDialog({
   isPurchasing,
   gfBalance,
 }: NameTagCheckoutDialogProps) {
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
   if (!nameTag) return null;
 
   const networkFee = 25;
   const totalCost = nameTag.gfCost + networkFee;
   const canAfford = gfBalance >= totalCost;
+
+  const handleConfirm = () => {
+    setIsProcessing(true);
+    onConfirm(nameTag.id);
+  };
+
+  const handleProcessingComplete = () => {
+    setIsProcessing(false);
+    setShowSuccess(true);
+  };
+
+  const handleClose = () => {
+    onOpenChange(false);
+    // Reset state after dialog animation completes
+    setTimeout(() => {
+      setShowSuccess(false);
+      setIsProcessing(false);
+    }, 300);
+  };
 
   const rarityColor = nameTag.rarity?.toLowerCase() === 'legendary' ? '#f0b100'
     : nameTag.rarity?.toLowerCase() === 'epic' ? '#a855f7'
@@ -46,8 +70,17 @@ export function NameTagCheckoutDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-[#020617] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden">
-        {isPurchasing ? (
-          <AssetPurchaseProcessing />
+        {showSuccess ? (
+          <SuccessDashNameTag
+            assetName={nameTag.name}
+            rarity={nameTag.rarity}
+            imageUrl={nameTag.imageUrl}
+            transactionId="0x7dF39e...4a2b"
+            totalCost={totalCost}
+            onClose={handleClose}
+          />
+        ) : isProcessing || isPurchasing ? (
+          <AssetPurchaseProcessing onComplete={handleProcessingComplete} />
         ) : (
           <div className="flex-1 flex flex-col">
             {/* Header */}
@@ -132,8 +165,8 @@ export function NameTagCheckoutDialog({
             {/* Bottom Action */}
             <div className="p-6 bg-[#020617] space-y-4">
               <Button
-                onClick={() => onConfirm(nameTag.id)}
-                disabled={isPurchasing || !canAfford}
+                onClick={handleConfirm}
+                disabled={isPurchasing || isProcessing || !canAfford}
                 className="w-full h-[68px] rounded-[24px] text-black text-lg font-black uppercase transition-all active:scale-95"
                 style={{
                   background: canAfford ? '#f0b100' : '#1e293b',
@@ -142,7 +175,7 @@ export function NameTagCheckoutDialog({
                   letterSpacing: '-0.9px',
                 }}
               >
-                {isPurchasing ? (
+                {isPurchasing || isProcessing ? (
                   <>
                     <Loader2 className="h-6 w-6 mr-2 animate-spin" />
                     Processing...

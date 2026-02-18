@@ -1,13 +1,32 @@
 import { Loader2, CheckCircle2, ShieldAlert } from "lucide-react";
+import { useEffect, useState } from "react";
 
-export default function AssetPurchaseProcessing() {
+interface AssetPurchaseProcessingProps {
+  onComplete?: () => void;
+}
+
+export default function AssetPurchaseProcessing({ onComplete }: AssetPurchaseProcessingProps) {
+  const [step, setStep] = useState(1);
+
+  useEffect(() => {
+    const timer1 = setTimeout(() => setStep(2), 2000);
+    const timer2 = setTimeout(() => {
+      if (onComplete) onComplete();
+    }, 4500);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [onComplete]);
+
   return (
     <div className="flex flex-col items-center justify-center flex-1 w-full bg-[#020617] text-white p-6 animate-in fade-in duration-500">
       <div className="flex flex-col items-center gap-12 max-w-[382px] w-full">
         {/* Text Header */}
         <div className="flex flex-col items-center gap-3 text-center">
           <h2 className="text-[30px] font-black uppercase tracking-[-1.5px] leading-[36px] text-[#f8fafc]">
-            Finalizing...
+            {step === 1 ? "Finalizing..." : "Minting..."}
           </h2>
           <p className="text-sm font-medium uppercase tracking-[-0.35px] leading-[22.75px] text-[#94a3b8]">
             Securing your new asset on the blockchain. This will only take a moment.
@@ -18,14 +37,14 @@ export default function AssetPurchaseProcessing() {
         <div className="w-full flex flex-col p-1 bg-[#0f172a80] backdrop-blur-[4px] border border-[#1e293b4d] rounded-[24px]">
           {/* Payment Confirmed */}
           <div className="flex items-center gap-4 p-4">
-            <div className="flex items-center justify-center w-8 h-8 rounded-[16px] bg-[#00c9501a] border border-[#00c95033] flex-shrink-0">
-              <CheckCircle2 className="w-5 h-5 text-[#00c950]" />
+            <div className={`flex items-center justify-center w-8 h-8 rounded-[16px] flex-shrink-0 transition-colors duration-500 ${step >= 1 ? 'bg-[#00c9501a] border border-[#00c95033]' : 'bg-white/5 border border-white/10'}`}>
+              <CheckCircle2 className={`w-5 h-5 transition-colors duration-500 ${step >= 1 ? 'text-[#00c950]' : 'text-white/20'}`} />
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-black uppercase tracking-[1.2px] text-[#f8fafc]">
+              <span className={`text-xs font-black uppercase tracking-[1.2px] transition-colors duration-500 ${step >= 1 ? 'text-[#f8fafc]' : 'text-white/20'}`}>
                 Payment Confirmed
               </span>
-              <span className="text-[10px] font-bold text-[#94a3b8]">
+              <span className={`text-[10px] font-bold transition-colors duration-500 ${step >= 1 ? 'text-[#94a3b8]' : 'text-white/10'}`}>
                 Transaction broadcasted
               </span>
             </div>
@@ -35,14 +54,18 @@ export default function AssetPurchaseProcessing() {
 
           {/* Minting Asset */}
           <div className="flex items-center gap-4 p-4">
-            <div className="flex items-center justify-center w-8 h-8 rounded-[16px] bg-[#4ade801a] border border-[#4ade8033] flex-shrink-0">
-              <div className="w-4 h-4 rounded-full bg-[#4ade80] animate-pulse" />
+            <div className={`flex items-center justify-center w-8 h-8 rounded-[16px] flex-shrink-0 transition-colors duration-500 ${step >= 2 ? 'bg-[#4ade801a] border border-[#4ade8033]' : 'bg-white/5 border border-white/10'}`}>
+              {step >= 2 ? (
+                <div className="w-4 h-4 rounded-full bg-[#4ade80] animate-pulse" />
+              ) : (
+                <Loader2 className="w-4 h-4 text-white/20 animate-spin" />
+              )}
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-black uppercase tracking-[1.2px] text-[#4ade80]">
+              <span className={`text-xs font-black uppercase tracking-[1.2px] transition-colors duration-500 ${step >= 2 ? 'text-[#4ade80]' : 'text-white/20'}`}>
                 Minting Asset
               </span>
-              <span className="text-[10px] font-bold text-[#4ade80cc]">
+              <span className={`text-[10px] font-bold transition-colors duration-500 ${step >= 2 ? 'text-[#4ade80cc]' : 'text-white/10'}`}>
                 Awaiting network confirmation
               </span>
             </div>
