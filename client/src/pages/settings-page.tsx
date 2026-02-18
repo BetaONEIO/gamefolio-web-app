@@ -1754,15 +1754,32 @@ export default function SettingsPage() {
 
                       {/* Remove Name Tag button - show if there's a tag currently selected (pending or saved) */}
                       {((pendingNameTagId !== undefined ? pendingNameTagId : user?.selectedNameTagId) !== null) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setPendingNameTagId(null)}
-                          className="w-full"
-                        >
-                          <X className="h-4 w-4 mr-2" />
-                          Remove Name Tag
-                        </Button>
+                        <div className="space-y-3">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPendingNameTagId(null)}
+                            className="w-full"
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Remove Name Tag
+                          </Button>
+
+                          {hasUnsavedChanges && (
+                            <Button
+                              className="w-full bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
+                              onClick={handleSaveProfile}
+                              disabled={updateProfile.isPending || uploadingAvatar || uploadingBanner}
+                            >
+                              {(updateProfile.isPending || uploadingAvatar || uploadingBanner) ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              ) : (
+                                <Save className="h-4 w-4 mr-2" />
+                              )}
+                              Save Changes
+                            </Button>
+                          )}
+                        </div>
                       )}
 
                       {/* Name Tag Grid */}
