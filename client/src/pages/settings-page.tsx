@@ -1819,6 +1819,24 @@ export default function SettingsPage() {
                           );
                         })}
                       </div>
+
+                      {/* Second Save Changes button below the grid for better UX */}
+                      {hasUnsavedChanges && (
+                        <div className="pt-2">
+                          <Button
+                            className="w-full bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
+                            onClick={handleSaveProfile}
+                            disabled={updateProfile.isPending || uploadingAvatar || uploadingBanner}
+                          >
+                            {(updateProfile.isPending || uploadingAvatar || uploadingBanner) ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                              <Save className="h-4 w-4 mr-2" />
+                            )}
+                            Save Changes
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
