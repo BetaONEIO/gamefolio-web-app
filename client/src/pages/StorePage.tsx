@@ -851,9 +851,109 @@ export default function StorePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white">
       <div className="flex flex-col md:flex-row">
-        {/* Desktop Sidebar */}
+      {/* Desktop Sidebar */}
         <aside className="hidden md:block w-64 min-h-screen bg-gray-900/50 backdrop-blur-sm border-r border-gray-800 p-4">
-          <SidebarContent />
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold mb-6 text-white" data-testid="text-store-title">
+              Store
+            </h2>
+            
+            {storeTab === "nft" && (
+              <>
+                <Button
+                  variant={activeTab === "buy" ? "default" : "ghost"}
+                  className={`w-full justify-start gap-3 ${
+                    activeTab === "buy" 
+                      ? "bg-green-600 hover:bg-green-700" 
+                      : "hover:bg-gray-800"
+                  }`}
+                  onClick={() => {
+                    setActiveTab("buy");
+                  }}
+                  data-testid="button-tab-buy"
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  Buy NFT
+                </Button>
+
+                <Button
+                  variant={activeTab === "sell" ? "default" : "ghost"}
+                  className={`w-full justify-start gap-3 ${
+                    activeTab === "sell" 
+                      ? "bg-green-600 hover:bg-green-700" 
+                      : "hover:bg-gray-800"
+                  }`}
+                  onClick={() => {
+                    setActiveTab("sell");
+                  }}
+                  data-testid="button-tab-sell"
+                >
+                  <DollarSign className="h-5 w-5" />
+                  Sell NFT
+                </Button>
+
+                <Button
+                  variant={activeTab === "mint" ? "default" : "ghost"}
+                  className={`w-full justify-start gap-3 ${
+                    activeTab === "mint" 
+                      ? "bg-green-600 hover:bg-green-700" 
+                      : "hover:bg-gray-800"
+                  }`}
+                  onClick={() => {
+                    setActiveTab("mint");
+                  }}
+                  data-testid="button-tab-mint"
+                >
+                  <Sparkles className="h-5 w-5" />
+                  Mint NFT
+                </Button>
+
+                <div className="my-4 border-t border-gray-700" />
+              </>
+            )}
+
+            <Button
+              variant={activeTab === "watchlist" ? "default" : "ghost"}
+              className={`w-full justify-start gap-3 ${
+                activeTab === "watchlist" 
+                  ? "bg-red-600 hover:bg-red-700" 
+                  : "hover:bg-gray-800"
+              }`}
+              onClick={() => {
+                setActiveTab("watchlist");
+              }}
+              data-testid="button-watchlist"
+            >
+              <Heart className="h-5 w-5" />
+              My Watchlist
+              {watchlist.length > 0 && (
+                <Badge variant="secondary" className="ml-auto">
+                  {watchlist.length}
+                </Badge>
+              )}
+            </Button>
+
+            <div className="mt-8 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+              <div className="flex items-center gap-2 mb-2">
+                <img src={gfTokenLogo} alt="GF Token" className="w-5 h-5" />
+                <span className="text-sm text-gray-400">GF Balance</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <p className="text-xl font-bold" data-testid="text-gf-balance">{gfBalance.toLocaleString()}</p>
+                <span className="text-sm text-gray-400">GF</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1" data-testid="text-gf-balance-usd">
+                ≈ £{(gfBalance * 0.01).toFixed(2)} GBP
+              </p>
+              {!wallet?.address && (
+                <Link href="/wallet">
+                  <Button size="sm" variant="outline" className="w-full mt-3" data-testid="button-create-wallet">
+                    Create Wallet
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </div>
         </aside>
 
         {/* Mobile Header */}
@@ -1013,60 +1113,62 @@ export default function StorePage() {
           </div>
 
           {/* Mobile Tab Navigation */}
-          <div 
-            className="md:hidden flex gap-2 overflow-x-auto mb-4 hide-scrollbar"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
-            <button
-              onClick={() => setActiveTab("buy")}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
-                activeTab === "buy"
-                  ? "bg-green-600 text-white"
-                  : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
-              }`}
-              data-testid="tab-buy-mobile"
+          {storeTab === "nft" && (
+            <div 
+              className="md:hidden flex gap-2 overflow-x-auto mb-4 hide-scrollbar"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-              <ShoppingCart className="h-4 w-4" />
-              Buy NFT
-            </button>
-            <button
-              onClick={() => setActiveTab("sell")}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
-                activeTab === "sell"
-                  ? "bg-green-600 text-white"
-                  : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
-              }`}
-              data-testid="tab-sell-mobile"
-            >
-              <DollarSign className="h-4 w-4" />
-              Sell NFT
-            </button>
-            <button
-              onClick={() => setActiveTab("mint")}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
-                activeTab === "mint"
-                  ? "bg-green-600 text-white"
-                  : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
-              }`}
-              data-testid="tab-mint-mobile"
-            >
-              <Sparkles className="h-4 w-4" />
-              Mint NFT
-            </button>
-            <button
-              onClick={() => setActiveTab("watchlist")}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
-                activeTab === "watchlist"
-                  ? "bg-red-600 text-white"
-                  : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
-              }`}
-              data-testid="tab-watchlist-mobile"
-            >
-              <Heart className="h-4 w-4" />
-              Watchlist
-            </button>
-          </div>
+              <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
+              <button
+                onClick={() => setActiveTab("buy")}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
+                  activeTab === "buy"
+                    ? "bg-green-600 text-white"
+                    : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
+                }`}
+                data-testid="tab-buy-mobile"
+              >
+                <ShoppingCart className="h-4 w-4" />
+                Buy NFT
+              </button>
+              <button
+                onClick={() => setActiveTab("sell")}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
+                  activeTab === "sell"
+                    ? "bg-green-600 text-white"
+                    : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
+                }`}
+                data-testid="tab-sell-mobile"
+              >
+                <DollarSign className="h-4 w-4" />
+                Sell NFT
+              </button>
+              <button
+                onClick={() => setActiveTab("mint")}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
+                  activeTab === "mint"
+                    ? "bg-green-600 text-white"
+                    : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
+                }`}
+                data-testid="tab-mint-mobile"
+              >
+                <Sparkles className="h-4 w-4" />
+                Mint NFT
+              </button>
+              <button
+                onClick={() => setActiveTab("watchlist")}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
+                  activeTab === "watchlist"
+                    ? "bg-red-600 text-white"
+                    : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
+                }`}
+                data-testid="tab-watchlist-mobile"
+              >
+                <Heart className="h-4 w-4" />
+                Watchlist
+              </button>
+            </div>
+          )}
 
           {/* Header */}
           <div className="mb-4 md:mb-6">
@@ -1105,10 +1207,9 @@ export default function StorePage() {
             <div className="space-y-6">
               <div className="mb-4 md:mb-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <div className="flex items-center gap-2">
                     <Filter className="h-5 w-5 text-green-400" />
-                    Browse Store
-                  </h2>
+                  </div>
                   <Button
                     variant="outline"
                     size="sm"
