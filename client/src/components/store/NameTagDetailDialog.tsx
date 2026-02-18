@@ -5,6 +5,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
+import { useState } from "react";
+import { NameTagCheckoutDialog } from "./NameTagCheckoutDialog";
+import { useAuth } from "@/hooks/use-auth";
 
 interface NameTag {
   id: number;
@@ -46,9 +49,23 @@ export function NameTagDetailDialog({
   isPurchasing,
   brokenImage,
 }: NameTagDetailDialogProps) {
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const { user } = useAuth();
+  
   if (!nameTag) return null;
 
-  const handleClose = () => onOpenChange(false);
+  const handleClose = () => {
+    onOpenChange(false);
+    setCheckoutOpen(false);
+  };
+
+  const handleBuyClick = () => {
+    setCheckoutOpen(true);
+  };
+
+  const handleConfirmPurchase = (id: number) => {
+    onPurchase(id);
+  };
 
   const rarityColor = nameTag.rarity?.toLowerCase() === 'legendary' ? '#f0b100'
     : nameTag.rarity?.toLowerCase() === 'epic' ? '#a855f7'
@@ -221,7 +238,7 @@ export function NameTagDetailDialog({
                 </Button>
               ) : (
                 <Button
-                  onClick={() => onPurchase(nameTag.id)}
+                  onClick={handleBuyClick}
                   disabled={isPurchasing}
                   className="w-full h-[68px] rounded-2xl text-black text-lg font-black uppercase"
                   style={{
@@ -250,6 +267,15 @@ export function NameTagDetailDialog({
           </div>
         </div>
       </DialogContent>
+
+      <NameTagCheckoutDialog
+        nameTag={nameTag}
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
+        onConfirm={handleConfirmPurchase}
+        isPurchasing={isPurchasing}
+        gfBalance={user?.gfTokenBalance || 0}
+      />
     </Dialog>
   );
 }
