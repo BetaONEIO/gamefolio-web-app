@@ -5,6 +5,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, CheckCircle, ShieldCheck, Star, Users, Info } from "lucide-react";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
+import { useState } from "react";
+import { VerificationBadgeCheckoutDialog } from "./VerificationBadgeCheckoutDialog";
+import { useAuth } from "@/hooks/use-auth";
 
 interface VerificationBadge {
   id: number;
@@ -30,9 +33,23 @@ export function VerificationBadgeDetailDialog({
   onPurchase,
   isPurchasing,
 }: VerificationBadgeDetailDialogProps) {
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const { user } = useAuth();
+
   if (!badge) return null;
 
-  const handleClose = () => onOpenChange(false);
+  const handleClose = () => {
+    onOpenChange(false);
+    setCheckoutOpen(false);
+  };
+
+  const handleBuyClick = () => {
+    setCheckoutOpen(true);
+  };
+
+  const handleConfirmPurchase = (id: number) => {
+    onPurchase(id);
+  };
 
   const rarityColor = badge.rarity?.toLowerCase() === 'legendary' ? '#f0b100'
     : badge.rarity?.toLowerCase() === 'epic' ? '#a855f7'

@@ -2163,6 +2163,23 @@ export default function StorePage() {
           setProUpgradeOpen(true);
         }}
       />
+
+      {/* Verification Badge Detail Dialog */}
+      <VerificationBadgeDetailDialog
+        badge={selectedBadge}
+        open={badgeDialogOpen}
+        onOpenChange={setBadgeDialogOpen}
+        onPurchase={(id) => {
+          if (!user) {
+            toast({ title: "Login required", description: "Please log in to purchase badges", variant: "destructive" });
+            return;
+          }
+          setPurchasingBadgeId(id);
+          const item = storeItems.find(i => i.id === id);
+          if (item) handlePurchaseWithGF(item);
+        }}
+        isPurchasing={purchasingBadgeId === selectedBadge?.id && purchasingItemId !== null}
+      />
     </div>
   );
 }
