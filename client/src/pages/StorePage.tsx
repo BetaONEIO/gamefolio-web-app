@@ -2175,7 +2175,7 @@ export default function StorePage() {
             return;
           }
           setPurchasingBadgeId(id);
-          const item = storeItems.find(i => i.id === id);
+          const item = storeItems.find((i: StoreItem) => i.id === id);
           if (item) handlePurchaseWithGF(item);
         }}
         isPurchasing={purchasingBadgeId === selectedBadge?.id && purchasingItemId !== null}
