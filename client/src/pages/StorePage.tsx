@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { NFTPurchaseDialog } from "@/components/store/NFTPurchaseDialog";
 import { NameTagDetailDialog } from "@/components/store/NameTagDetailDialog";
+import { BorderDetailDialog } from "@/components/store/BorderDetailDialog";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import { useAccount, useWalletClient, usePublicClient, useChainId } from "wagmi";
 import { useLocation } from "wouter";
@@ -197,6 +198,8 @@ export default function StorePage() {
   const [purchasingItemId, setPurchasingItemId] = useState<number | null>(null);
   const [selectedNameTag, setSelectedNameTag] = useState<any>(null);
   const [nameTagDialogOpen, setNameTagDialogOpen] = useState(false);
+  const [selectedBorder, setSelectedBorder] = useState<any>(null);
+  const [borderDialogOpen, setBorderDialogOpen] = useState(false);
   const [walletRedirectOpen, setWalletRedirectOpen] = useState(false);
   const [, navigate] = useLocation();
 
@@ -205,7 +208,10 @@ export default function StorePage() {
   const publicClient = usePublicClient();
   const chainId = useChainId();
 
-  const { data: storeItems = [], isLoading: isLoadingItems } = useQuery<StoreItem[]>({
+  const [brokenNameTagImages, setBrokenNameTagImages] = useState<Set<number>>(new Set());
+  const [brokenBorderImages, setBrokenBorderImages] = useState<Set<number>>(new Set());
+  const [purchasingNameTagId, setPurchasingNameTagId] = useState<number | null>(null);
+  const [purchasingBorderId, setPurchasingBorderId] = useState<number | null>(null);
     queryKey: ["/api/store/items"],
     queryFn: async () => {
       const response = await fetch('/api/store/items', {
@@ -1617,7 +1623,10 @@ export default function StorePage() {
                         : border.rarity === 'rare' ? "hover:border-green-500 hover:shadow-green-500/20 hover:shadow-lg"
                         : "hover:border-gray-500 hover:shadow-gray-500/20 hover:shadow-lg"
                     }`}
-                    onClick={!isUserPro ? () => setProUpgradeOpen(true) : undefined}
+                    onClick={!isUserPro ? () => setProUpgradeOpen(true) : () => {
+                      setSelectedBorder(border);
+                      setBorderDialogOpen(true);
+                    }}
                   >
                     <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-3">
                       {brokenBorderImages.has(border.id) ? (
@@ -1695,14 +1704,11 @@ export default function StorePage() {
                           <Button
                             size="sm"
                             className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white text-[10px] h-6 px-2"
-                            onClick={() => {
-                              if (!user) {
-                                toast({ title: "Login required", description: "Please log in to purchase borders", variant: "destructive" });
-                                return;
-                              }
-                              setPurchasingBorderId(border.id);
-                              purchaseBorderMutation.mutate(border.id);
-                            }}
+                            onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedBorder(border);
+                            setBorderDialogOpen(true);
+                          }}
                             disabled={isPurchasing}
                           >
                             {isPurchasing ? (
@@ -1953,6 +1959,28 @@ export default function StorePage() {
       <ProUpgradeDialog
         open={proUpgradeOpen}
         onOpenChange={setProUpgradeOpen}
+      />
+
+      {/* Border Detail Dialog */}
+      <BorderDetailDialog
+        border={selectedBorder}
+        open={borderDialogOpen}
+        onOpenChange={setBorderDialogOpen}
+        onPurchase={(id) => {
+          if (!user) {
+            toast({ title: "Login required", description: "Please log in to purchase borders", variant: "destructive" });
+            return;
+          }
+          setPurchasingBorderId(id);
+          purchaseBorderMutation.mutate(id);
+        }}
+        isPurchasing={purchasingBorderId === selectedBorder?.id}
+        brokenImage={selectedBorder ? brokenBorderImages.has(selectedBorder.id) : false}
+        isUserPro={user?.isPro === true}
+        onUpgradePro={() => {
+          setBorderDialogOpen(false);
+          setProUpgradeOpen(true);
+        }}
       />
     </div>
   );
