@@ -1614,8 +1614,8 @@ export default function StorePage() {
                   return (
                   <Card
                     key={border.id}
-                    className={`bg-gray-800/50 border-gray-700 overflow-hidden transition-all ${
-                      !isUserPro ? "opacity-70 cursor-pointer hover:opacity-80" :
+                    className={`bg-gray-800/50 border-gray-700 overflow-hidden transition-all cursor-pointer ${
+                      !isUserPro ? "opacity-70 hover:opacity-80" :
                       border.owned 
                         ? "border-green-500/50 hover:border-green-400 hover:shadow-green-500/20 hover:shadow-lg" 
                         : border.rarity === 'legendary' ? "hover:border-amber-500 hover:shadow-amber-500/20 hover:shadow-lg"
@@ -1623,7 +1623,7 @@ export default function StorePage() {
                         : border.rarity === 'rare' ? "hover:border-green-500 hover:shadow-green-500/20 hover:shadow-lg"
                         : "hover:border-gray-500 hover:shadow-gray-500/20 hover:shadow-lg"
                     }`}
-                    onClick={!isUserPro ? () => setProUpgradeOpen(true) : () => {
+                    onClick={() => {
                       setSelectedBorder(border);
                       setBorderDialogOpen(true);
                     }}
