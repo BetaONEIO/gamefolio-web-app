@@ -741,6 +741,8 @@ export default function StorePage() {
     setPurchaseDialogOpen(true);
   };
 
+  const [storeTab, setStoreTab] = useState<"nft" | "nametags" | "borders" | "badges">("nft");
+
   const SidebarContent = () => (
     <div className="space-y-2">
       <h2 className="text-2xl font-bold mb-6 text-white" data-testid="text-store-title">
@@ -1061,7 +1063,39 @@ export default function StorePage() {
 
           {/* Buy NFT Section */}
           {activeTab === "buy" && (
-            <div>
+            <div className="space-y-6">
+              {/* Store Category Tabs */}
+              <div className="flex flex-wrap gap-2 border-b border-gray-800 pb-4 mb-2">
+                <Button 
+                  variant={storeTab === "nft" ? "default" : "ghost"}
+                  onClick={() => setStoreTab("nft")}
+                  className={`rounded-xl px-6 transition-all ${storeTab === "nft" ? "bg-green-600 hover:bg-green-700 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}
+                >
+                  NFTs
+                </Button>
+                <Button 
+                  variant={storeTab === "nametags" ? "default" : "ghost"}
+                  onClick={() => setStoreTab("nametags")}
+                  className={`rounded-xl px-6 transition-all ${storeTab === "nametags" ? "bg-green-600 hover:bg-green-700 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}
+                >
+                  Name Tags
+                </Button>
+                <Button 
+                  variant={storeTab === "borders" ? "default" : "ghost"}
+                  onClick={() => setStoreTab("borders")}
+                  className={`rounded-xl px-6 transition-all ${storeTab === "borders" ? "bg-green-600 hover:bg-green-700 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}
+                >
+                  Profile Borders
+                </Button>
+                <Button 
+                  variant={storeTab === "badges" ? "default" : "ghost"}
+                  onClick={() => setStoreTab("badges")}
+                  className={`rounded-xl px-6 transition-all ${storeTab === "badges" ? "bg-green-600 hover:bg-green-700 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}
+                >
+                  Verification Badges
+                </Button>
+              </div>
+
               <div className="mb-4 md:mb-6">
                 {/* Category Filters */}
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
@@ -1146,7 +1180,7 @@ export default function StorePage() {
               </div>
 
               {/* NFT Collection Grid */}
-              {accessFilter !== "pro" && (
+              {storeTab === "nft" && accessFilter !== "pro" && (
               <>
               <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-[#4ade80]" />
@@ -1242,7 +1276,7 @@ export default function StorePage() {
               )}
 
               {/* Marketplace Listings */}
-              {marketplaceData && marketplaceData.listings.length > 0 && accessFilter !== "pro" && (
+              {storeTab === "nft" && marketplaceData && marketplaceData.listings.length > 0 && accessFilter !== "pro" && (
               <>
               <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
                 <Tag className="h-4 w-4 text-orange-400" />
@@ -1305,7 +1339,7 @@ export default function StorePage() {
               )}
 
               {/* Store Items */}
-              {accessFilter !== "pro" && (
+              {storeTab === "badges" && accessFilter !== "pro" && (
               <>
               <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
                 <ShoppingCart className="h-4 w-4 text-green-400" />
@@ -1435,7 +1469,7 @@ export default function StorePage() {
               )}
 
               {/* Name Tags Section */}
-              {accessFilter !== "pro" && (
+              {storeTab === "nametags" && accessFilter !== "pro" && (
               <>
               <h3 className="text-base font-semibold text-gray-300 mb-3 mt-8 flex items-center gap-2">
                 <Tag className="h-4 w-4 text-purple-400" />
@@ -1578,7 +1612,7 @@ export default function StorePage() {
               )}
 
               {/* Profile Borders Section - Pro Only */}
-              {accessFilter !== "free" && (
+              {storeTab === "borders" && accessFilter !== "free" && (
               <>
               <h3 className="text-base font-semibold text-gray-300 mb-3 mt-8 flex items-center gap-2">
                 <Circle className="h-4 w-4 text-amber-400" />
@@ -1730,6 +1764,24 @@ export default function StorePage() {
               </div>
               )}
               </>
+              )}
+
+              {/* Verification Badges Section */}
+              {storeTab === "badges" && (
+                <div className="mt-8">
+                  <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-blue-400" />
+                    Verification Badges
+                    <Badge className="bg-blue-600/30 text-[10px] px-1.5 py-0.5 text-blue-300 ml-1">
+                      Official
+                    </Badge>
+                  </h3>
+                  <div className="bg-gray-800/30 rounded-2xl border border-dashed border-gray-700 p-12 text-center">
+                    <CheckCircle className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                    <p className="text-gray-400 text-sm">Verification badges are awarded to notable community members and partners.</p>
+                    <p className="text-gray-500 text-xs mt-2">Check back soon for application details.</p>
+                  </div>
+                </div>
               )}
             </div>
           )}
