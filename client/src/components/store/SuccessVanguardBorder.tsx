@@ -3,7 +3,7 @@ import { Check, Copy, ExternalLink, PartyPopper } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
-interface SuccessDashBorderProps {
+interface SuccessVanguardBorderProps {
   assetName: string;
   rarity: string;
   imageUrl: string;
@@ -12,14 +12,14 @@ interface SuccessDashBorderProps {
   onClose: () => void;
 }
 
-export function SuccessDashBorder({
+export function SuccessVanguardBorder({
   assetName,
   rarity,
   imageUrl,
   transactionId,
   totalCost,
   onClose,
-}: SuccessDashBorderProps) {
+}: SuccessVanguardBorderProps) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
@@ -31,11 +31,6 @@ export function SuccessDashBorder({
     });
     setTimeout(() => setCopied(false), 2000);
   };
-
-  const rarityColor = rarity?.toLowerCase() === 'legendary' ? '#f0b100'
-    : rarity?.toLowerCase() === 'epic' ? '#a855f7'
-    : rarity?.toLowerCase() === 'rare' ? '#4ade80'
-    : '#94a3b8';
 
   return (
     <div className="flex flex-col items-center justify-center flex-1 w-full bg-[#020617] text-white p-6 animate-in zoom-in-95 duration-500">
@@ -54,10 +49,10 @@ export function SuccessDashBorder({
         {/* Success Message */}
         <div className="flex flex-col items-center gap-2 text-center">
           <h2 className="text-[36px] font-black uppercase tracking-[-1.8px] leading-[40px] text-[#f8fafc]">
-            Tactical Series!
+            Elite Upgrade!
           </h2>
           <p className="text-sm font-bold uppercase tracking-[-0.35px] leading-[22.75px] text-[#94a3b8]">
-            The <span className="text-[#4ade80]">{assetName}</span> Profile Border has been added to your inventory
+            The <span className="text-[#4ade80]">{assetName}</span> Border has been added to your profile
           </p>
         </div>
 
@@ -84,8 +79,8 @@ export function SuccessDashBorder({
 
         {/* Asset Preview Card */}
         <div className="w-full bg-[#0f172a] border border-[#4ade804d] rounded-[40px] overflow-hidden shadow-[0_25px_50px_-12px_rgba(74,222,128,0.1)]">
-          <div className="h-[200px] bg-black flex items-center justify-center p-8">
-            <img src={imageUrl} alt={assetName} className="w-full h-full object-contain" />
+          <div className="h-[200px] bg-[#0f172b] flex items-center justify-center p-8">
+            <img src={imageUrl} alt={assetName} className="w-48 h-48 object-contain" />
           </div>
           <div className="p-6 bg-gradient-to-b from-[#0f172a] to-[#020617] flex items-center justify-between">
             <div className="flex flex-col">
@@ -93,7 +88,7 @@ export function SuccessDashBorder({
               <span className="text-2xl font-black uppercase tracking-[-1.2px] text-[#f8fafc]">{assetName}</span>
             </div>
             <div className="bg-[#4ade801a] border border-[#4ade804d] rounded-2xl px-4 py-2 flex items-center gap-2">
-              <span className="text-[12px] font-black uppercase tracking-[1.2px] text-[#4ade80]">{rarity}</span>
+              <span className="text-[12px] font-black uppercase tracking-[1.2px] text-[#4ade80]">Border</span>
             </div>
           </div>
         </div>

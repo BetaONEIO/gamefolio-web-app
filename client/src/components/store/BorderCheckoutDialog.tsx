@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, Info } from "lucide-react";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import AssetPurchaseProcessing from "./AssetPurchaseProcessing";
-import { SuccessDashBorder } from "./SuccessDashBorder";
+import { SuccessVanguardBorder } from "./SuccessVanguardBorder";
 import { useState } from "react";
 
 interface Border {
@@ -67,19 +67,6 @@ export function BorderCheckoutDialog({
     : border.rarity?.toLowerCase() === 'rare' ? '#4ade80'
     : '#94a3b8';
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#020617] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden">
-        {showSuccess ? (
-          <SuccessDashBorder
-            assetName={border.name}
-            rarity={border.rarity}
-            imageUrl={border.imageUrl}
-            transactionId="0x9aE42c...3d1f"
-            totalCost={totalCost}
-            onClose={handleClose}
-          />
-        ) : isProcessing || isPurchasing ? (
           <AssetPurchaseProcessing onComplete={handleProcessingComplete} />
         ) : (
           <div className="flex-1 flex flex-col">
