@@ -1,0 +1,544 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/AssetPurchaseProcessing.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,900;0,500;0,700&display=swap";
+.AssetPurchaseProcessing_166_740 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_166_741 {
+  background: #020617;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 100%;
+  display: flex;
+}
+.Container_166_742 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 48px;
+  height: 705px;
+  padding: 61.125px 24px 61.625px;
+  display: flex;
+}
+.Container_166_743 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  width: 280px;
+  display: flex;
+}
+.Container_166_744 {
+  justify-content: center;
+  align-items: center;
+  height: 36px;
+  padding: 0 44.844px 0 45.156px;
+  display: flex;
+}
+.Finalizing_166_745 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.5px;
+  text-transform: uppercase;
+  width: 190px;
+  height: 38px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 36px;
+  display: inline-block;
+}
+.Container_166_746 {
+  justify-content: center;
+  align-items: center;
+  height: 69px;
+  padding: 2.5px 17.203px 3.5px 17.797px;
+  display: flex;
+}
+.SecuringYourNewAssetOnTheBlockchainThisWillOnlyTakeAMoment_166_747 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.35px;
+  text-transform: uppercase;
+  width: 245px;
+  height: 63px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 22.75px;
+  display: inline-block;
+}
+.Container_166_748 {
+  backdrop-filter: blur(4px);
+  box-sizing: border-box;
+  background: #0f172a80;
+  border: 1px solid #1e293b4d;
+  border-radius: 24px;
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 382px;
+  height: 146px;
+  display: flex;
+}
+.Container_166_749 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+  height: 32px;
+  padding-right: 130px;
+  display: flex;
+}
+.Container_166_750 {
+  box-sizing: border-box;
+  background: #00c9501a;
+  border: 1px solid #00c95033;
+  border-radius: 16px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 6px;
+  display: flex;
+}
+.Container_166_751 {
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_166_753 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 154px;
+  height: 31px;
+  display: flex;
+}
+.Container_166_754 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.PaymentConfirmed_166_755 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  width: 159px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_166_756 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 122px;
+  height: 15px;
+  padding: 1px 0;
+  display: flex;
+}
+.TransactionBroadcasted_166_757 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 125px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_166_758 {
+  background: #1e293b80;
+  width: 1px;
+  height: 16px;
+}
+.Container_166_759 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+  height: 32px;
+  padding-right: 134px;
+  display: flex;
+}
+.Container_166_760 {
+  box-sizing: border-box;
+  background: #4ade801a;
+  border: 1px solid #4ade8033;
+  border-radius: 16px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 8.007px 7.993px 7.993px 8.007px;
+  display: flex;
+}
+.Container_166_761 {
+  background: #4ade80;
+  border-radius: 16777200px;
+  width: 16px;
+  height: 16px;
+}
+.Container_166_762 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 150px;
+  height: 31px;
+  display: flex;
+}
+.Container_166_763 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 108px;
+  height: 16px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.MintingAsset_166_764 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 113px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_166_765 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0;
+  display: flex;
+}
+.AwaitingNetworkConfirmation_166_766 {
+  color: #4ade80cc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 153px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_166_767 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 224px;
+  height: 224px;
+  display: flex;
+}
+.Container_166_768 {
+  filter: blur(40px);
+  background: #4ade8033;
+  border-radius: 16777200px;
+  width: 224px;
+  height: 224px;
+}
+.Container_166_769 {
+  width: 224px;
+  height: 224px;
+}
+.Container_166_770 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b80;
+  border-radius: 16777200px;
+  justify-content: center;
+  align-items: center;
+  width: 160px;
+  height: 160px;
+  padding: 40px;
+  display: flex;
+  box-shadow: 0 25px 50px -12px #4ade8033;
+}
+.Container_166_771 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 80px;
+  height: 80px;
+  display: flex;
+}
+.Container_166_772 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 80px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_166_775 {
+  box-sizing: border-box;
+  border: 4px solid #4ade800d;
+  border-radius: 16777200px;
+  width: 224px;
+  height: 224px;
+}
+.Container_166_776 {
+  box-sizing: border-box;
+  border: 4px solid #4ade80;
+  border-radius: 16777200px;
+  width: 261px;
+  height: 261px;
+}
+.Container_166_777 {
+  box-sizing: border-box;
+  background: #020617;
+  border-top: 1px solid #1e293b80;
+  justify-content: center;
+  align-items: center;
+  height: 124px;
+  padding: 41px 24px 40px;
+  display: flex;
+}
+.Container_166_778 {
+  box-sizing: border-box;
+  background: #1e293b4d;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+  width: 382px;
+  height: 43px;
+  padding: 13px 83.602px 13px 84.398px;
+  display: flex;
+}
+.Container_166_779 {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+}
+.Container_166_781 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 190px;
+  height: 17px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.DoNotCloseThisWindow_166_782 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 195px;
+  height: 14px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Header_166_783 {
+  backdrop-filter: blur(6px);
+  background: #020617cc;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 200px;
+  height: 104px;
+  padding: 48px 16px 16px;
+  display: flex;
+}
+.Container_166_784 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  width: 158px;
+  height: 40px;
+  display: flex;
+}
+.Button_166_785 {
+  background: #1e293b4d;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_166_786 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_166_788 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 102px;
+  height: 28px;
+  padding: 1px 0;
+  display: flex;
+}
+.Verifying_166_789 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.5px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 105px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_166_790 {
+  width: 40px;
+  height: 40px;
+}
+
+```
+
+---
+
+```src/components/AssetPurchaseProcessing.tsx
+import React from 'react';
+import styles from '../styles/AssetPurchaseProcessing.module.css';
+
+
+export default function AssetPurchaseProcessing() {
+  return (
+    <div className={styles.AssetPurchaseProcessing_166_740}>
+      <div className={styles.Container_166_741}>
+        <div className={styles.Container_166_742}>
+          <div className={styles.Container_166_743}>
+            <div className={styles.Container_166_744}><span className={styles.Finalizing_166_745}>Finalizing...</span></div>
+            <div className={styles.Container_166_746}><span className={styles.SecuringYourNewAssetOnTheBlockchainThisWillOnlyTakeAMoment_166_747}>Securing your new asset on the blockchain. This will only take a moment.</span></div>
+          </div>
+          <div className={styles.Container_166_748}>
+            <div className={styles.Container_166_749}>
+              <div className={styles.Container_166_750}>
+                <div className={styles.Container_166_751}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M18.3336 9.99982C18.3336 14.6023 14.6028 18.3331 10.0003 18.3331C5.39782 18.3331 1.66699 14.6023 1.66699 9.99982C1.66699 5.39733 5.39782 1.6665 10.0003 1.6665C14.6028 1.6665 18.3336 5.39733 18.3336 9.99982ZM13.3586 7.47482C13.6023 7.71884 13.6023 8.11414 13.3586 8.35815L9.19197 12.5248C8.94796 12.7685 8.55266 12.7685 8.30864 12.5248L6.64198 10.8581C6.47477 10.7023 6.40594 10.4677 6.46249 10.2462C6.51905 10.0248 6.69196 9.85188 6.91341 9.79533C7.13485 9.73878 7.3695 9.80761 7.52531 9.97482L8.75031 11.1998L10.6128 9.33732L12.4753 7.47482C12.7193 7.23111 13.1146 7.23111 13.3586 7.47482Z" fill="#00C950" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Container_166_753}>
+                <div className={styles.Container_166_754}><span className={styles.PaymentConfirmed_166_755}>Payment Confirmed</span></div>
+                <div className={styles.Container_166_756}><span className={styles.TransactionBroadcasted_166_757}>Transaction broadcasted</span></div>
+              </div>
+            </div>
+            <div className={styles.Container_166_758}></div>
+            <div className={styles.Container_166_759}>
+              <div className={styles.Container_166_760}>
+                <div className={styles.Container_166_761}></div>
+              </div>
+              <div className={styles.Container_166_762}>
+                <div className={styles.Container_166_763}><span className={styles.MintingAsset_166_764}>Minting Asset</span></div>
+                <div className={styles.Container_166_765}><span className={styles.AwaitingNetworkConfirmation_166_766}>Awaiting network confirmation</span></div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_166_767}>
+            <div className={styles.Container_166_768}></div>
+            <div className={styles.Container_166_769}>
+              <div className={styles.Container_166_770}>
+                <div className={styles.Container_166_771}>
+                  <div className={styles.Container_166_772}><svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M6.66699 53.3335C6.66699 43.9068 6.66699 39.1902 9.59699 36.2635C12.5237 33.3335 17.2403 33.3335 26.667 33.3335H53.3337C62.7603 33.3335 67.477 33.3335 70.4037 36.2635C73.3337 39.1902 73.3337 43.9068 73.3337 53.3335C73.3337 62.7602 73.3337 67.4768 70.4037 70.4035C67.477 73.3335 62.7603 73.3335 53.3337 73.3335H26.667C17.2403 73.3335 12.5237 73.3335 9.59699 70.4035C6.66699 67.4768 6.66699 62.7602 6.66699 53.3335Z" fill="#4ADE80" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M42.5 46.6665C42.5 45.2858 41.3807 44.1665 40 44.1665C38.6193 44.1665 37.5 45.2858 37.5 46.6665V59.9998C37.5 61.3805 38.6193 62.4998 40 62.4998C41.3807 62.4998 42.5 61.3805 42.5 59.9998V46.6665Z" fill="#4ADE80" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M22.5 26.6665C22.5 17.0015 30.335 9.1665 40 9.1665C49.665 9.1665 57.5 17.0015 57.5 26.6665V33.3465C59.39 33.3632 61.0467 33.4065 62.5 33.5132V26.6665C62.5 14.2401 52.4264 4.1665 40 4.1665C27.5736 4.1665 17.5 14.2401 17.5 26.6665V33.5165C19.1645 33.4077 20.832 33.351 22.5 33.3465V26.6665Z" fill="#4ADE80" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.Container_166_775}></div>
+              <div className={styles.Container_166_776}></div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_166_777}>
+          <div className={styles.Container_166_778}>
+            <div className={styles.Container_166_779}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" clipRule="evenodd" d="M2 6.94483C2 4.81283 2 3.74683 2.252 3.38816C2.50333 3.03016 3.50533 2.68683 5.51 2.00083L5.892 1.87016C6.93667 1.51216 7.45867 1.3335 8 1.3335C8.54133 1.3335 9.06333 1.51216 10.108 1.87016L10.49 2.00083C12.4947 2.68683 13.4967 3.03016 13.748 3.38816C14 3.74683 14 4.8135 14 6.94483V7.99416C14 11.7528 11.174 13.5775 9.40067 14.3515C8.92 14.5615 8.68 14.6668 8 14.6668C7.32 14.6668 7.08 14.5615 6.59933 14.3515C4.826 13.5768 2 11.7535 2 7.99416V6.94483ZM8 4.8335C8.27614 4.8335 8.5 5.05735 8.5 5.3335V8.00016C8.5 8.2763 8.27614 8.50016 8 8.50016C7.72386 8.50016 7.5 8.2763 7.5 8.00016V5.3335C7.5 5.05735 7.72386 4.8335 8 4.8335ZM8 10.6668C8.36819 10.6668 8.66667 10.3684 8.66667 10.0002C8.66667 9.63197 8.36819 9.3335 8 9.3335C7.63181 9.3335 7.33333 9.63197 7.33333 10.0002C7.33333 10.3684 7.63181 10.6668 8 10.6668Z" fill="#94A3B8" />
+              </svg>
+            </div>
+            <div className={styles.Container_166_781}><span className={styles.DoNotCloseThisWindow_166_782}>Do not close this window</span></div>
+          </div>
+        </div>
+        <div className={styles.Header_166_783}>
+          <div className={styles.Container_166_784}>
+            <div className={styles.Button_166_785}>
+              <div className={styles.Container_166_786}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_166_788}><span className={styles.Verifying_166_789}>Verifying</span></div>
+          </div>
+          <div className={styles.Container_166_790}></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
