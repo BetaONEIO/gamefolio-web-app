@@ -742,6 +742,7 @@ export default function StorePage() {
   };
 
   const [storeTab, setStoreTab] = useState<"nft" | "nametags" | "borders" | "badges">("nft");
+  const [showFilters, setShowFilters] = useState(false);
 
   const SidebarContent = () => (
     <div className="space-y-2">
@@ -1103,84 +1104,102 @@ export default function StorePage() {
           {activeTab === "buy" && (
             <div className="space-y-6">
               <div className="mb-4 md:mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Filter className="h-5 w-5 text-green-400" />
+                    Browse Store
+                  </h2>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowFilters(!showFilters)}
+                    className={`gap-2 border-gray-700 hover:bg-gray-800 transition-all ${showFilters ? 'bg-green-600/20 border-green-500/50 text-green-400' : 'text-gray-400'}`}
+                  >
+                    <Filter className="h-4 w-4" />
+                    {showFilters ? 'Hide Filters' : 'Show Filters'}
+                  </Button>
+                </div>
+
                 {/* Category Filters */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Access</label>
-                    <Select value={accessFilter} onValueChange={setAccessFilter}>
-                      <SelectTrigger className="bg-gray-800 border-gray-700" data-testid="select-access">
-                        <SelectValue placeholder="All Items" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-gray-800 border-gray-700">
-                        <SelectItem value="all">All Items</SelectItem>
-                        <SelectItem value="free">Free User Items</SelectItem>
-                        <SelectItem value="pro">Pro Items Only</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className={`transition-all duration-300 overflow-hidden ${showFilters ? 'max-h-[500px] opacity-100 mb-6' : 'max-h-0 opacity-0 mb-0'}`}>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3 p-4 bg-gray-800/30 rounded-2xl border border-gray-800/50">
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1 block">Access</label>
+                      <Select value={accessFilter} onValueChange={setAccessFilter}>
+                        <SelectTrigger className="bg-gray-900/50 border-gray-700" data-testid="select-access">
+                          <SelectValue placeholder="All Items" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-800 border-gray-700">
+                          <SelectItem value="all">All Items</SelectItem>
+                          <SelectItem value="free">Free User Items</SelectItem>
+                          <SelectItem value="pro">Pro Items Only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Rarity</label>
-                    <Select value={rarityFilter} onValueChange={setRarityFilter}>
-                      <SelectTrigger className="bg-gray-800 border-gray-700" data-testid="select-rarity">
-                        <SelectValue placeholder="All Rarities" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-gray-800 border-gray-700">
-                        <SelectItem value="all">All Rarities</SelectItem>
-                        <SelectItem value="common">Common</SelectItem>
-                        <SelectItem value="rare">Rare</SelectItem>
-                        <SelectItem value="epic">Epic</SelectItem>
-                        <SelectItem value="legendary">Legendary</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1 block">Rarity</label>
+                      <Select value={rarityFilter} onValueChange={setRarityFilter}>
+                        <SelectTrigger className="bg-gray-900/50 border-gray-700" data-testid="select-rarity">
+                          <SelectValue placeholder="All Rarities" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-800 border-gray-700">
+                          <SelectItem value="all">All Rarities</SelectItem>
+                          <SelectItem value="common">Common</SelectItem>
+                          <SelectItem value="rare">Rare</SelectItem>
+                          <SelectItem value="epic">Epic</SelectItem>
+                          <SelectItem value="legendary">Legendary</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Type</label>
-                    <Select value={typeFilter} onValueChange={setTypeFilter}>
-                      <SelectTrigger className="bg-gray-800 border-gray-700" data-testid="select-type">
-                        <SelectValue placeholder="All Types" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-gray-800 border-gray-700">
-                        <SelectItem value="all">All Types</SelectItem>
-                        <SelectItem value="badge">Badge</SelectItem>
-                        <SelectItem value="collectible">Collectible</SelectItem>
-                        <SelectItem value="skin">Skin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1 block">Type</label>
+                      <Select value={typeFilter} onValueChange={setTypeFilter}>
+                        <SelectTrigger className="bg-gray-900/50 border-gray-700" data-testid="select-type">
+                          <SelectValue placeholder="All Types" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-800 border-gray-700">
+                          <SelectItem value="all">All Types</SelectItem>
+                          <SelectItem value="badge">Badge</SelectItem>
+                          <SelectItem value="collectible">Collectible</SelectItem>
+                          <SelectItem value="skin">Skin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Price</label>
-                    <Select value={priceFilter} onValueChange={setPriceFilter}>
-                      <SelectTrigger className="bg-gray-800 border-gray-700" data-testid="select-price">
-                        <SelectValue placeholder="All Prices" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-gray-800 border-gray-700">
-                        <SelectItem value="all">All Prices</SelectItem>
-                        <SelectItem value="low">Low to High</SelectItem>
-                        <SelectItem value="high">High to Low</SelectItem>
-                        <SelectItem value="under-0.05">Under 0.05 ETH</SelectItem>
-                        <SelectItem value="0.05-0.1">0.05 - 0.1 ETH</SelectItem>
-                        <SelectItem value="over-0.1">Over 0.1 ETH</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1 block">Price</label>
+                      <Select value={priceFilter} onValueChange={setPriceFilter}>
+                        <SelectTrigger className="bg-gray-900/50 border-gray-700" data-testid="select-price">
+                          <SelectValue placeholder="All Prices" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-800 border-gray-700">
+                          <SelectItem value="all">All Prices</SelectItem>
+                          <SelectItem value="low">Low to High</SelectItem>
+                          <SelectItem value="high">High to Low</SelectItem>
+                          <SelectItem value="under-0.05">Under 0.05 ETH</SelectItem>
+                          <SelectItem value="0.05-0.1">0.05 - 0.1 ETH</SelectItem>
+                          <SelectItem value="over-0.1">Over 0.1 ETH</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Mint Number</label>
-                    <Select value={mintFilter} onValueChange={setMintFilter}>
-                      <SelectTrigger className="bg-gray-800 border-gray-700" data-testid="select-mint">
-                        <SelectValue placeholder="All Numbers" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-gray-800 border-gray-700">
-                        <SelectItem value="all">All Numbers</SelectItem>
-                        <SelectItem value="1-100">1 - 100</SelectItem>
-                        <SelectItem value="101-500">101 - 500</SelectItem>
-                        <SelectItem value="501-1000">501 - 1000</SelectItem>
-                        <SelectItem value="1000+">1000+</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1 block">Mint Number</label>
+                      <Select value={mintFilter} onValueChange={setMintFilter}>
+                        <SelectTrigger className="bg-gray-900/50 border-gray-700" data-testid="select-mint">
+                          <SelectValue placeholder="All Numbers" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-800 border-gray-700">
+                          <SelectItem value="all">All Numbers</SelectItem>
+                          <SelectItem value="1-100">1 - 100</SelectItem>
+                          <SelectItem value="101-500">101 - 500</SelectItem>
+                          <SelectItem value="501-1000">501 - 1000</SelectItem>
+                          <SelectItem value="1000+">1000+</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
               </div>
