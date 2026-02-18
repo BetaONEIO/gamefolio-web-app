@@ -165,7 +165,7 @@ export function VerificationBadgeDetailDialog({
                 </Button>
               ) : (
                 <Button
-                  onClick={() => onPurchase(badge.id)}
+                  onClick={handleBuyClick}
                   disabled={isPurchasing}
                   className="w-full h-[68px] rounded-2xl text-black text-lg font-black uppercase transition-all active:scale-[0.98]"
                   style={{
@@ -181,7 +181,7 @@ export function VerificationBadgeDetailDialog({
                     </span>
                   ) : (
                     <span className="flex items-center gap-2">
-                      <img src={gfTokenLogo} alt="GF" className="w-6 h-6" />
+                      <img src={gfTokenLogo} alt="GF" className="w-6 h-6 mr-2" />
                       Buy Now - {cost} GF
                     </span>
                   )}
@@ -197,6 +197,15 @@ export function VerificationBadgeDetailDialog({
           </div>
         </div>
       </DialogContent>
+
+      <VerificationBadgeCheckoutDialog
+        badge={badge}
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
+        onConfirm={handleConfirmPurchase}
+        isPurchasing={isPurchasing}
+        gfBalance={user?.gfTokenBalance || 0}
+      />
     </Dialog>
   );
 }
