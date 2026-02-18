@@ -212,6 +212,8 @@ export default function StorePage() {
   const [brokenBorderImages, setBrokenBorderImages] = useState<Set<number>>(new Set());
   const [purchasingNameTagId, setPurchasingNameTagId] = useState<number | null>(null);
   const [purchasingBorderId, setPurchasingBorderId] = useState<number | null>(null);
+
+  const { data: storeItems = [], isLoading: isLoadingItems } = useQuery<StoreItem[]>({
     queryKey: ["/api/store/items"],
     queryFn: async () => {
       const response = await fetch('/api/store/items', {
@@ -258,10 +260,6 @@ export default function StorePage() {
     },
   });
 
-  const [purchasingNameTagId, setPurchasingNameTagId] = useState<number | null>(null);
-  const [brokenNameTagImages, setBrokenNameTagImages] = useState<Set<number>>(new Set());
-  const [brokenBorderImages, setBrokenBorderImages] = useState<Set<number>>(new Set());
-
   const purchaseNameTagMutation = useMutation({
     mutationFn: async (nameTagId: number) => {
       const response = await apiRequest("POST", "/api/store/purchase-name-tag", { nameTagId });
@@ -295,6 +293,29 @@ export default function StorePage() {
     proOnly: boolean;
     shape?: string;
   }
+
+  const purchaseBorderMutation = useMutation({
+    mutationFn: async (borderId: number) => {
+      const response = await apiRequest("POST", "/api/store/purchase-border", { borderId });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to purchase border");
+      }
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "Border Purchased!", description: data.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/store/borders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/avatar-borders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      setPurchasingBorderId(null);
+      setBorderDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Purchase Failed", description: error.message, variant: "destructive" });
+      setPurchasingBorderId(null);
+    },
+  });
 
   const hasNftProfile = !!(user?.nftProfileTokenId && user?.nftProfileImageUrl);
   const borderShapeFilter = hasNftProfile ? 'square' : 'circle';
