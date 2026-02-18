@@ -1,0 +1,1086 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/VerificationBadgeDetail.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,900;0,700;0,400;0,undefined&display=swap";
+.VerificationBadgeDetail_168_924 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_168_925 {
+  background: #020617;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 100%;
+  padding-bottom: 173px;
+  display: flex;
+}
+.Container_168_926 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: -0.671875px;
+  display: flex;
+}
+.Container_168_927 {
+  justify-content: center;
+  align-items: center;
+  height: 282px;
+  padding: 8px 16px;
+  display: flex;
+}
+.Container_168_928 {
+  box-sizing: border-box;
+  background: linear-gradient(#00c9500d 0%, #00c95000 100%);
+  border: 1px solid #ffffff1a;
+  border-radius: 24px;
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 398px;
+  height: 266px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px #00c9501a;
+}
+.Image_168_929 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 192px;
+  height: 192px;
+}
+.Container_168_930 {
+  background: linear-gradient(#0000 0%, #0009 100%);
+  width: 396px;
+  height: 264px;
+}
+.Container_168_931 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 7.54688px;
+  width: 210px;
+  height: 25px;
+  display: flex;
+}
+.Container_168_932 {
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+  background: #00c95033;
+  border: 1px solid #00c95080;
+  border-radius: 16777200px;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6px;
+  height: 25px;
+  padding: 5px 13px;
+  display: flex;
+}
+.Container_168_933 {
+  width: 14px;
+  height: 14px;
+  overflow: hidden;
+}
+.Container_168_935 {
+  justify-content: center;
+  align-items: center;
+  width: 41px;
+  height: 15px;
+  padding: 1px 0;
+  display: flex;
+}
+.Badge_168_936 {
+  color: #00c950;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 46px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_168_937 {
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+  background: #f0b10033;
+  border: 1px solid #f0b10080;
+  border-radius: 16777200px;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6px;
+  height: 25px;
+  padding: 5px 13px;
+  display: flex;
+}
+.Container_168_938 {
+  width: 14px;
+  height: 14px;
+  overflow: hidden;
+}
+.Container_168_940 {
+  justify-content: center;
+  align-items: center;
+  width: 70px;
+  height: 15px;
+  padding: 1px 0;
+  display: flex;
+}
+.Legendary_168_941 {
+  color: #f0b100;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 75px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_168_942 {
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+  background: #ffffff1a;
+  border: 1px solid #fff3;
+  border-radius: 16777200px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+  display: flex;
+}
+.Container_168_943 {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_168_945 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 680px;
+  display: flex;
+}
+.Container_168_946 {
+  width: 382px;
+  height: 116px;
+}
+.Container_168_947 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 7.9375px;
+  padding-right: 241.063px;
+  display: flex;
+}
+.Container_168_948 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.IdentitySeries_168_949 {
+  color: #00c950;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+  width: 120px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_168_950 {
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+}
+.Container_168_952 {
+  align-items: center;
+  padding-right: 225.5px;
+  display: inline-flex;
+}
+.Verified_168_953 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.9px;
+  text-transform: uppercase;
+  width: 159px;
+  height: 46px;
+  font-family: Plus Jakarta Sans;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 40px;
+  display: inline-block;
+}
+.Container_168_954 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 11.2031px;
+  padding-right: 93.797px;
+  display: flex;
+}
+.Container_168_955 {
+  background: #1e293b4d;
+  border-radius: 16777200px;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 8px;
+  height: 36px;
+  padding: 4px 16px 4px 4px;
+  display: flex;
+}
+.Image_168_956 {
+  aspect-ratio: 1;
+  box-sizing: border-box;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  border: 2px solid #020617;
+  border-radius: 16777200px;
+  width: 28px;
+  height: 28px;
+}
+.Container_168_957 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 102px;
+  height: 26px;
+  display: flex;
+}
+.Container_168_958 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 10px;
+  padding-right: 64px;
+  display: flex;
+}
+.Creator_168_959 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  width: 39px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 10px;
+  display: inline-block;
+}
+.Container_168_960 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.GamefolioAdmin_168_961 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 105px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_168_962 {
+  box-sizing: border-box;
+  background: #1e293b4d;
+  border: 1px solid #1e293b80;
+  border-radius: 16777200px;
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+  width: 119px;
+  height: 30px;
+  padding: 7px 13px;
+  display: flex;
+}
+.Container_168_963 {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+}
+.G_168_964 {
+  width: 14.667px;
+  height: 12.667px;
+}
+.Container_168_969 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 69px;
+  height: 16px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.Holders_168_970 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 72px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_168_971 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  width: 382px;
+  display: flex;
+}
+.Container_168_972 {
+  align-items: center;
+  height: 16px;
+  padding: 0.5px 270.5px 0.5px 0;
+  display: flex;
+}
+.Description_168_973 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  width: 114px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_168_974 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 69px;
+  display: flex;
+}
+.TheMarkOfAuthenticityThisBadgeSignalsYour_168_975 {
+  color: #94a3b8cc;
+  font-feature-settings: "dlig" on;
+  width: 321px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 22.75px;
+  display: inline-block;
+}
+.Container_168_976 {
+  justify-content: center;
+  align-items: center;
+  width: 53px;
+  height: 18px;
+  display: flex;
+}
+.Verified_168_977 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 55px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 22.75px;
+  display: inline-block;
+}
+.StatusToTheEntireCommunityUnlockingHigherTrustScoresAndExclusiveSocialFeatures_168_978 {
+  color: #94a3b8cc;
+  font-feature-settings: "dlig" on;
+  width: 351px;
+  height: 41px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 22.75px;
+  display: inline-block;
+}
+.Container_168_979 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  width: 382px;
+  height: 94px;
+  display: flex;
+}
+.Container_168_980 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #1e293b80;
+  border-radius: 16px;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 7px;
+  height: 94px;
+  padding: 25px 17px 17px;
+  display: flex;
+}
+.Container_168_981 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 70px;
+  height: 13px;
+  display: flex;
+}
+.RarityTier_168_982 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 75px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_168_983 {
+  flex-shrink: 0;
+  align-items: center;
+  width: 151px;
+  height: 32px;
+  padding-right: 61px;
+  display: flex;
+}
+.Container_168_984 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.Exalted_168_985 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 95px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_168_986 {
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #00c95033;
+  border-radius: 16px;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 94px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_168_987 {
+  justify-content: center;
+  align-items: center;
+  width: 90px;
+  height: 13px;
+  display: flex;
+}
+.StatusRating_168_988 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 95px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_168_989 {
+  width: 151px;
+  height: 32px;
+}
+.Container_168_990 {
+  justify-content: center;
+  align-items: center;
+  width: 44px;
+  height: 32px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.generated_100_168_991 {
+  color: #00c950;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 49px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_168_992 {
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 16px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.generated_100_168_993 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 30px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_168_994 {
+  justify-content: center;
+  align-items: center;
+  width: 64px;
+  height: 64px;
+  padding: 8px;
+  display: flex;
+}
+.Container_168_995 {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+}
+.Container_168_997 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 382px;
+  display: flex;
+}
+.Container_168_998 {
+  align-items: center;
+  height: 16px;
+  padding: 0.5px 283.5px 0.5px 0;
+  display: flex;
+}
+.Attributes_168_999 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  width: 101px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_168_1000 {
+  justify-content: center;
+  align-items: center;
+  height: 74px;
+  display: flex;
+}
+.Container_168_1001 {
+  box-sizing: border-box;
+  background: #1e293b33;
+  border: 1px solid #1e293b4d;
+  border-radius: 16px;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  gap: 139.508px;
+  padding: 17px 16.492px 17px 17px;
+  display: flex;
+}
+.Container_168_1002 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  display: flex;
+}
+.Container_168_1003 {
+  box-sizing: border-box;
+  background: #00c9501a;
+  border: 1px solid #00c95033;
+  border-radius: 16px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_168_1004 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_168_1006 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 84px;
+  height: 31px;
+  display: flex;
+}
+.Container_168_1007 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.OfficialCheck_168_1008 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  width: 87px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_168_1009 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 15px;
+  padding: 1px 10px 1px 0;
+  display: flex;
+}
+.IdentityPerk_168_1010 {
+  color: #94a3b8;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.25px;
+  text-transform: uppercase;
+  width: 75px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_168_1011 {
+  justify-content: center;
+  align-items: center;
+  width: 73px;
+  height: 16px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.Legendary_168_1012 {
+  color: #00c950;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 78px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_168_1013 {
+  background: linear-gradient(#020617 0% 50%, #02061700 100%);
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 16px;
+  width: 382px;
+  padding: 16px 0 8px;
+  display: flex;
+}
+.Button_168_1014 {
+  background: #00c950;
+  border-radius: 16px;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 9.5px;
+  height: 68px;
+  padding: 20px 121.836px 20px 124.664px;
+  display: flex;
+  box-shadow:
+    0 8px 10px -6px #00c95033,
+    0 20px 25px -5px #00c95033;
+}
+.Container_168_1015 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.BuyBadge_168_1017 {
+  color: #032e15;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.9px;
+  text-transform: uppercase;
+  width: 102px;
+  height: 28px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_168_1018 {
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 48.125px 1px 48.875px;
+  display: flex;
+}
+.ThisAssetIsTradeableOnTheMarketplace_168_1019 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 285px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Header_168_1020 {
+  backdrop-filter: blur(6px);
+  background: #020617cc;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 186px;
+  height: 104px;
+  padding: 48px 16px 16px;
+  display: flex;
+}
+.Container_168_1021 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  width: 172px;
+  height: 40px;
+  display: flex;
+}
+.Button_168_1022 {
+  background: #1e293b80;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+}
+.Container_168_1023 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_168_1025 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 116px;
+  height: 28px;
+  padding: 1px 0;
+  display: flex;
+}
+.NftDetails_168_1026 {
+  color: #f8fafc;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.5px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 119px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_168_1027 {
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  display: flex;
+}
+.Button_168_1028 {
+  background: #1e293b80;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  padding: 8px;
+  display: flex;
+}
+.Container_168_1029 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.G_168_1030 {
+  width: 15px;
+  height: 18px;
+}
+
+```
+
+---
+
+```src/components/VerificationBadgeDetail.tsx
+import React from 'react';
+import styles from '../styles/VerificationBadgeDetail.module.css';
+
+
+export default function VerificationBadgeDetail() {
+  return (
+    <div className={styles.VerificationBadgeDetail_168_924}>
+      <div className={styles.Container_168_925}>
+        <div className={styles.Container_168_926}>
+          <div className={styles.Container_168_927}>
+            <div className={styles.Container_168_928}>
+              <div className={styles.Image_168_929}></div>
+              <div className={styles.Container_168_930}></div>
+              <div className={styles.Container_168_931}>
+                <div className={styles.Container_168_932}>
+                  <div className={styles.Container_168_933}><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M5.55731 1.72675C5.46274 1.81163 5.36373 1.89144 5.26071 1.96583C5.08215 2.08567 4.88142 2.16836 4.6705 2.21031C4.57882 2.22828 4.48295 2.23607 4.29181 2.25105C3.81185 2.2894 3.57157 2.30857 3.37144 2.37928C2.90782 2.54269 2.54318 2.90733 2.37977 3.37095C2.30906 3.57108 2.28989 3.81136 2.25154 4.29132C2.24466 4.41818 2.23106 4.54459 2.21079 4.67001C2.16885 4.88093 2.08616 5.08166 1.96632 5.26022C1.91419 5.33812 1.85188 5.41122 1.72724 5.55683C1.41506 5.92353 1.25867 6.10689 1.16699 6.29863C0.955475 6.74204 0.955475 7.25735 1.16699 7.70075C1.25867 7.8925 1.41506 8.07585 1.72724 8.44256C1.85188 8.58817 1.91419 8.66127 1.96632 8.73916C2.08616 8.91772 2.16885 9.11846 2.21079 9.32937C2.22877 9.42105 2.23656 9.51692 2.25154 9.70807C2.28989 10.188 2.30906 10.4283 2.37977 10.6284C2.54318 11.0921 2.90782 11.4567 3.37144 11.6201C3.57157 11.6908 3.81185 11.71 4.29181 11.7483C4.48295 11.7633 4.57882 11.7711 4.6705 11.7891C4.88142 11.831 5.08215 11.9143 5.26071 12.0336C5.33861 12.0857 5.41171 12.148 5.55731 12.2726C5.92402 12.5848 6.10738 12.7412 6.29912 12.8329C6.74253 13.0444 7.25784 13.0444 7.70124 12.8329C7.89299 12.7412 8.07634 12.5848 8.44305 12.2726C8.58865 12.148 8.66176 12.0857 8.73965 12.0336C8.91821 11.9137 9.11894 11.831 9.32986 11.7891C9.42154 11.7711 9.51741 11.7633 9.70855 11.7483C10.1885 11.71 10.4288 11.6908 10.6289 11.6201C11.0925 11.4567 11.4572 11.0921 11.6206 10.6284C11.6913 10.4283 11.7105 10.188 11.7488 9.70807C11.7638 9.51692 11.7716 9.42105 11.7896 9.32937C11.8315 9.11846 11.9148 8.91772 12.034 8.73916C12.0862 8.66127 12.1485 8.58817 12.2731 8.44256C12.5853 8.07585 12.7417 7.8925 12.8334 7.70075C13.0449 7.25735 13.0449 6.74204 12.8334 6.29863C12.7417 6.10689 12.5853 5.92353 12.2731 5.55683C12.1882 5.46225 12.1084 5.36325 12.034 5.26022C11.9141 5.08169 11.831 4.88104 11.7896 4.67001C11.7693 4.54459 11.7557 4.41818 11.7488 4.29132C11.7105 3.81136 11.6913 3.57108 11.6206 3.37095C11.4572 2.90733 11.0925 2.54269 10.6289 2.37928C10.4288 2.30857 10.1885 2.2894 9.70855 2.25105C9.58169 2.24417 9.45528 2.23057 9.32986 2.21031C9.11883 2.16885 8.91818 2.08574 8.73965 1.96583C8.63663 1.89144 8.53762 1.81163 8.44305 1.72675C8.07634 1.41457 7.89299 1.25818 7.70124 1.1665C7.25795 0.954326 6.74241 0.954326 6.29912 1.1665C6.10738 1.25818 5.92402 1.41457 5.55731 1.72675ZM9.62047 5.71921C9.79641 5.52665 9.78971 5.22976 9.60528 5.04532C9.42085 4.86089 9.12395 4.8542 8.9314 5.03013L6.02529 7.93624L5.06897 6.98052C4.87641 6.80459 4.57952 6.81128 4.39508 6.99571C4.21065 7.18015 4.20396 7.47704 4.37989 7.6696L5.68015 8.96985C5.87055 9.15987 6.17883 9.15987 6.36923 8.96985L9.62047 5.71921Z" fill="#00C950" />
+                    </svg>
+                  </div>
+                  <div className={styles.Container_168_935}><span className={styles.Badge_168_936}>Badge</span></div>
+                </div>
+                <div className={styles.Container_168_937}>
+                  <div className={styles.Container_168_938}><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M5.33015 3.16595C6.07349 1.83298 6.44486 1.1665 7.00046 1.1665C7.55605 1.1665 7.92743 1.83298 8.67077 3.16595L8.8632 3.51092C9.07441 3.88992 9.18001 4.07942 9.34429 4.20439C9.50856 4.32935 9.7139 4.3757 10.1246 4.4684L10.4977 4.55288C11.941 4.87967 12.662 5.04277 12.8339 5.59485C13.0052 6.14633 12.5136 6.72188 11.5297 7.87238L11.2751 8.16983C10.9958 8.49662 10.8556 8.6603 10.7928 8.86213C10.7301 9.06453 10.7512 9.28278 10.7934 9.71869L10.8321 10.1159C10.9806 11.6513 11.0551 12.4186 10.6057 12.7595C10.1563 13.1004 9.4804 12.7894 8.12984 12.1675L7.77958 12.0068C7.39589 11.8296 7.20404 11.7416 7.00046 11.7416C6.79688 11.7416 6.60503 11.8296 6.22133 12.0068L5.87167 12.1675C4.52052 12.7894 3.84465 13.1004 3.39583 12.7601C2.94584 12.4186 3.02035 11.6513 3.16878 10.1159L3.2075 9.71928C3.24974 9.28278 3.27086 9.06453 3.2075 8.86271C3.14531 8.6603 3.00509 8.49662 2.72583 8.17042L2.47121 7.87238C1.48733 6.72246 0.995678 6.14692 1.16699 5.59485C1.33831 5.04277 2.06052 4.87908 3.50378 4.55288L3.87692 4.4684C4.28701 4.3757 4.49177 4.32935 4.65663 4.20439C4.82149 4.07942 4.92651 3.88992 5.13771 3.51092L5.33015 3.16595Z" fill="#F0B100" />
+                    </svg>
+                  </div>
+                  <div className={styles.Container_168_940}><span className={styles.Legendary_168_941}>Legendary</span></div>
+                </div>
+              </div>
+              <div className={styles.Container_168_942}>
+                <div className={styles.Container_168_943}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7.50033 12.4999L1.66699 18.3332M1.66699 18.3332H6.54783M1.66699 18.3332V13.4524M12.5003 7.49984L18.3337 1.6665M18.3337 1.6665H13.4528M18.3337 1.6665V6.54734" stroke="white" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_168_945}>
+            <div className={styles.Container_168_946}>
+              <div className={styles.Container_168_947}>
+                <div className={styles.Container_168_948}><span className={styles.IdentitySeries_168_949}>Identity Series</span></div>
+                <div className={styles.Container_168_950}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M6.3515 1.97329C6.24341 2.0703 6.13026 2.1615 6.01252 2.24653C5.80845 2.38349 5.57904 2.47799 5.338 2.52593C5.23322 2.54647 5.12365 2.55537 4.9052 2.57249C4.35668 2.61632 4.08208 2.63823 3.85335 2.71904C3.3235 2.9058 2.90677 3.32253 2.72001 3.85238C2.63921 4.0811 2.61729 4.3557 2.57347 4.90423C2.5656 5.04921 2.55006 5.19368 2.5269 5.33702C2.47897 5.57807 2.38446 5.80748 2.2475 6.01154C2.18793 6.10057 2.11671 6.18411 1.97427 6.35052C1.61749 6.76962 1.43876 6.97916 1.33398 7.1983C1.09225 7.70505 1.09225 8.29397 1.33398 8.80072C1.43876 9.01986 1.61749 9.22941 1.97427 9.6485C2.11671 9.81491 2.18793 9.89846 2.2475 9.98748C2.38446 10.1915 2.47897 10.421 2.5269 10.662C2.54745 10.7668 2.55635 10.8763 2.57347 11.0948C2.61729 11.6433 2.63921 11.9179 2.72001 12.1466C2.90677 12.6765 3.3235 13.0932 3.85335 13.28C4.08208 13.3608 4.35668 13.3827 4.9052 13.4265C5.12365 13.4437 5.23322 13.4526 5.338 13.4731C5.57904 13.521 5.80845 13.6162 6.01252 13.7525C6.10154 13.8121 6.18509 13.8833 6.3515 14.0257C6.77059 14.3825 6.98014 14.5612 7.19928 14.666C7.70603 14.9077 8.29495 14.9077 8.8017 14.666C9.02084 14.5612 9.23038 14.3825 9.64948 14.0257C9.81589 13.8833 9.89943 13.8121 9.98846 13.7525C10.1925 13.6155 10.4219 13.521 10.663 13.4731C10.7678 13.4526 10.8773 13.4437 11.0958 13.4265C11.6443 13.3827 11.9189 13.3608 12.1476 13.28C12.6775 13.0932 13.0942 12.6765 13.281 12.1466C13.3618 11.9179 13.3837 11.6433 13.4275 11.0948C13.4446 10.8763 13.4535 10.7668 13.4741 10.662C13.522 10.421 13.6172 10.1915 13.7535 9.98748C13.813 9.89846 13.8843 9.81491 14.0267 9.6485C14.3835 9.22941 14.5622 9.01986 14.667 8.80072C14.9087 8.29397 14.9087 7.70505 14.667 7.1983C14.5622 6.97916 14.3835 6.76962 14.0267 6.35052C13.9297 6.24244 13.8385 6.12929 13.7535 6.01154C13.6164 5.80751 13.5214 5.5782 13.4741 5.33702C13.4509 5.19368 13.4354 5.04921 13.4275 4.90423C13.3837 4.3557 13.3618 4.0811 13.281 3.85238C13.0942 3.32253 12.6775 2.9058 12.1476 2.71904C11.9189 2.63823 11.6443 2.61632 11.0958 2.57249C10.9508 2.56463 10.8063 2.54908 10.663 2.52593C10.4218 2.47855 10.1925 2.38357 9.98846 2.24653C9.87071 2.1615 9.75756 2.0703 9.64948 1.97329C9.23038 1.61651 9.02084 1.43778 8.8017 1.33301C8.29508 1.09052 7.7059 1.09052 7.19928 1.33301C6.98014 1.43778 6.77059 1.61651 6.3515 1.97329ZM10.9951 6.5361C11.1962 6.31603 11.1885 5.97673 10.9777 5.76595C10.767 5.55517 10.4277 5.54752 10.2076 5.74858L6.88632 9.06985L5.79339 7.9776C5.57332 7.77653 5.23401 7.78418 5.02323 7.99496C4.81245 8.20574 4.8048 8.54505 5.00587 8.76512L6.49188 10.2511C6.70948 10.4683 7.0618 10.4683 7.2794 10.2511L10.9951 6.5361Z" fill="#00C950" />
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.Container_168_952}><span className={styles.Verified_168_953}>Verified</span></div>
+              <div className={styles.Container_168_954}>
+                <div className={styles.Container_168_955}>
+                  <div className={styles.Image_168_956}></div>
+                  <div className={styles.Container_168_957}>
+                    <div className={styles.Container_168_958}><span className={styles.Creator_168_959}>Creator</span></div>
+                    <div className={styles.Container_168_960}><span className={styles.GamefolioAdmin_168_961}>Gamefolio Admin</span></div>
+                  </div>
+                </div>
+                <div className={styles.Container_168_962}>
+                  <div className={styles.Container_168_963}>
+                    <div className={styles.G_168_964}><svg width="15" height="13" viewBox="0 0 15 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M4.66699 2.66666C4.66699 1.1939 5.86089 0 7.33365 0C8.8064 0 10.0003 1.1939 10.0003 2.66666C10.0003 4.13941 8.8064 5.33331 7.33365 5.33331C5.86089 5.33331 4.66699 4.13941 4.66699 2.66666Z" stroke="#94A3B8" strokeWidth="0.999996" />
+                        <path d="M11.333 4.66683C12.4377 4.66683 13.333 3.92016 13.333 3.00016C13.333 2.08016 12.4377 1.3335 11.333 1.3335M3.33301 4.66683C2.22834 4.66683 1.33301 3.92016 1.33301 3.00016C1.33301 2.08016 2.22834 1.3335 3.33301 1.3335" stroke="#94A3B8" strokeLinecap="round" />
+                        <path fillRule="evenodd" clipRule="evenodd" d="M3.33301 10.0002C3.33301 8.5274 5.12387 7.3335 7.33301 7.3335C9.54215 7.3335 11.333 8.5274 11.333 10.0002C11.333 11.4729 9.54215 12.6668 7.33301 12.6668C5.12387 12.6668 3.33301 11.4729 3.33301 10.0002Z" stroke="#94A3B8" />
+                        <path d="M12.6666 11.3333C13.8359 11.0766 14.6666 10.4273 14.6666 9.66666C14.6666 8.90599 13.8359 8.25667 12.6666 8M1.99999 11.3333C0.830662 11.0766 0 10.4273 0 9.66666C0 8.90599 0.830662 8.25667 1.99999 8" stroke="#94A3B8" strokeWidth="0.999994" strokeLinecap="round" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className={styles.Container_168_969}><span className={styles.Holders_168_970}>842 holders</span></div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_168_971}>
+              <div className={styles.Container_168_972}><span className={styles.Description_168_973}>Description</span></div>
+              <div className={styles.Container_168_974}><span className={styles.TheMarkOfAuthenticityThisBadgeSignalsYour_168_975}>The mark of authenticity. This badge signals your</span>
+                <div className={styles.Container_168_976}><span className={styles.Verified_168_977}>Verified</span></div><span className={styles.StatusToTheEntireCommunityUnlockingHigherTrustScoresAndExclusiveSocialFeatures_168_978}>status to the entire community, unlocking higher trust scores and exclusive social features.</span>
+              </div>
+            </div>
+            <div className={styles.Container_168_979}>
+              <div className={styles.Container_168_980}>
+                <div className={styles.Container_168_981}><span className={styles.RarityTier_168_982}>Rarity Tier</span></div>
+                <div className={styles.Container_168_983}>
+                  <div className={styles.Container_168_984}><span className={styles.Exalted_168_985}>Exalted</span></div>
+                </div>
+              </div>
+              <div className={styles.Container_168_986}>
+                <div className={styles.Container_168_987}><span className={styles.StatusRating_168_988}>Status Rating</span></div>
+                <div className={styles.Container_168_989}>
+                  <div className={styles.Container_168_990}><span className={styles.generated_100_168_991}>100</span></div>
+                  <div className={styles.Container_168_992}><span className={styles.generated_100_168_993}>/100</span></div>
+                </div>
+                <div className={styles.Container_168_994}>
+                  <div className={styles.Container_168_995}><svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M6.756 10.164C6 11.24 6 14.44 6 20.834V23.982C6 35.258 14.478 40.732 19.798 43.054C21.24 43.684 21.962 44 24 44C26.04 44 26.76 43.684 28.202 43.054C33.522 40.73 42 35.26 42 23.982V20.834C42 14.438 42 11.24 41.244 10.164C40.49 9.09 37.484 8.06 31.47 6.002L30.324 5.61C27.19 4.536 25.624 4 24 4C22.376 4 20.81 4.536 17.676 5.61L16.53 6C10.516 8.06 7.51 9.09 6.756 10.164ZM30.12 21C30.4769 20.5999 30.5932 20.0397 30.4252 19.5306C30.2571 19.0214 29.8301 18.6406 29.3052 18.5316C28.7802 18.4225 28.2369 18.6019 27.88 19.002L21.858 25.75L20.118 23.802C19.5644 23.1903 18.6207 23.1405 18.0058 23.6905C17.3909 24.2405 17.3356 25.1839 17.882 25.802L20.738 29.002C21.0226 29.3208 21.4297 29.5031 21.857 29.5031C22.2843 29.5031 22.6914 29.3208 22.976 29.002L30.12 21Z" fill="#00C950" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_168_997}>
+              <div className={styles.Container_168_998}><span className={styles.Attributes_168_999}>Attributes</span></div>
+              <div className={styles.Container_168_1000}>
+                <div className={styles.Container_168_1001}>
+                  <div className={styles.Container_168_1002}>
+                    <div className={styles.Container_168_1003}>
+                      <div className={styles.Container_168_1004}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path fillRule="evenodd" clipRule="evenodd" d="M12 22C7.286 22 4.929 22 3.464 20.535C2 19.072 2 16.714 2 12C2 7.286 2 4.929 3.464 3.464C4.93 2 7.286 2 12 2C16.714 2 19.071 2 20.535 3.464C22 4.93 22 7.286 22 12C22 16.714 22 19.071 20.535 20.535C19.072 22 16.714 22 12 22ZM14.474 8.419C14.7948 8.68083 14.8427 9.15309 14.581 9.474L8.867 16.474C8.72456 16.6485 8.51124 16.7497 8.286 16.7497C8.06076 16.7497 7.84744 16.6485 7.705 16.474L5.419 13.674C5.16805 13.3524 5.22009 12.8893 5.53614 12.6314C5.8522 12.3736 6.31638 12.4156 6.581 12.726L8.286 14.814L13.419 8.526C13.6808 8.20521 14.1531 8.15732 14.474 8.419ZM18.474 8.419C18.7948 8.68083 18.8427 9.15309 18.581 9.474L12.867 16.474C12.7158 16.6598 12.4849 16.7621 12.2457 16.7495C12.0065 16.7368 11.7878 16.6107 11.657 16.41L11.372 15.972C11.1963 15.7024 11.2122 15.3508 11.4114 15.0981C11.6107 14.8455 11.9489 14.748 12.252 14.856L17.419 8.526C17.6808 8.20521 18.1531 8.15732 18.474 8.419Z" fill="#00C950" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className={styles.Container_168_1006}>
+                      <div className={styles.Container_168_1007}><span className={styles.OfficialCheck_168_1008}>Official Check</span></div>
+                      <div className={styles.Container_168_1009}><span className={styles.IdentityPerk_168_1010}>Identity Perk</span></div>
+                    </div>
+                  </div>
+                  <div className={styles.Container_168_1011}><span className={styles.Legendary_168_1012}>LEGENDARY</span></div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_168_1013}>
+              <div className={styles.Button_168_1014}>
+                <div className={styles.Container_168_1015}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M2.22292 2.24609C1.96704 2.15708 1.68305 2.21264 1.4796 2.39154C1.27614 2.57043 1.18469 2.84497 1.24023 3.11013C1.29578 3.3753 1.48971 3.59006 1.74786 3.67226L2.01345 3.76146C2.69095 3.98696 3.13995 4.1383 3.46968 4.29164C3.78238 4.43696 3.91768 4.55422 4.00387 4.67449C4.09006 4.79476 4.15922 4.95912 4.1983 5.30188C4.23939 5.66369 4.2404 6.13674 4.2404 6.85132V9.52927C4.2404 10.8993 4.2404 12.0048 4.35766 12.8737C4.47792 13.7757 4.7385 14.5354 5.34184 15.1387C5.94418 15.7421 6.70487 16.0007 7.60688 16.1219C8.4748 16.2392 9.58026 16.2392 10.9503 16.2392H18.021C18.4361 16.2392 18.7727 15.9026 18.7727 15.4875C18.7727 15.0724 18.4361 14.7358 18.021 14.7358H11.0054C9.56723 14.7358 8.564 14.7338 7.80632 14.6326C7.07169 14.5334 6.68182 14.352 6.4042 14.0754C6.16868 13.8398 6.00331 13.5231 5.89708 12.9819H16.0396C17.0007 12.9819 17.4808 12.9819 17.8576 12.7334C18.2345 12.4848 18.4239 12.0439 18.8027 11.1599L19.2317 10.1577C20.0435 8.26346 20.4494 7.31736 20.0034 6.64186C19.5574 5.96636 18.5281 5.96636 16.4676 5.96636H5.73873C5.73594 5.68749 5.72022 5.40891 5.69162 5.1315C5.6365 4.64542 5.51523 4.19943 5.22358 3.79554C4.93193 3.39064 4.54708 3.13407 4.10409 2.92861C3.68617 2.73418 3.15599 2.55779 2.52859 2.34732L2.22292 2.24609Z" fill="#032E15" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M7.49763 17.9931C8.3279 17.9931 9.00097 18.6661 9.00097 19.4964C9.00097 20.3267 8.3279 20.9998 7.49763 20.9998C6.66736 20.9998 5.99429 20.3267 5.99429 19.4964C5.99429 18.6661 6.66736 17.9931 7.49763 17.9931Z" fill="#032E15" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M16.5177 17.9931C17.3479 17.9931 18.021 18.6661 18.021 19.4964C18.021 20.3267 17.3479 20.9998 16.5177 20.9998C15.6874 20.9998 15.0143 20.3267 15.0143 19.4964C15.0143 18.6661 15.6874 17.9931 16.5177 17.9931Z" fill="#032E15" />
+                  </svg>
+                </div><span className={styles.BuyBadge_168_1017}>Buy Badge</span>
+              </div>
+              <div className={styles.Container_168_1018}><span className={styles.ThisAssetIsTradeableOnTheMarketplace_168_1019}>This asset is tradeable on the marketplace</span></div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Header_168_1020}>
+          <div className={styles.Container_168_1021}>
+            <div className={styles.Button_168_1022}>
+              <div className={styles.Container_168_1023}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+            <div className={styles.Container_168_1025}><span className={styles.NftDetails_168_1026}>NFT Details</span></div>
+          </div>
+          <div className={styles.Container_168_1027}>
+            <div className={styles.Button_168_1028}>
+              <div className={styles.Container_168_1029}>
+                <div className={styles.G_168_1030}><svg width="15" height="18" viewBox="0 0 15 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M5 9C5 10.3807 3.88071 11.5 2.5 11.5C1.11929 11.5 0 10.3807 0 9C0 7.61929 1.11929 6.5 2.5 6.5C3.88071 6.5 5 7.61929 5 9Z" stroke="#94A3B8" strokeWidth="1.5" />
+                    <path d="M10 3.5L5 7M10 14.5L5 11" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M15 15.5C15 16.8807 13.8807 18 12.5 18C11.1193 18 10 16.8807 10 15.5C10 14.1193 11.1193 13 12.5 13C13.8807 13 15 14.1193 15 15.5Z" stroke="#94A3B8" strokeWidth="1.5" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M15 2.5C15 3.88071 13.8807 5 12.5 5C11.1193 5 10 3.88071 10 2.5C10 1.11929 11.1193 0 12.5 0C13.8807 0 15 1.11929 15 2.5Z" stroke="#94A3B8" strokeWidth="1.5" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+

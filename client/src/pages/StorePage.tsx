@@ -23,6 +23,7 @@ import {
 import { NFTPurchaseDialog } from "@/components/store/NFTPurchaseDialog";
 import { NameTagDetailDialog } from "@/components/store/NameTagDetailDialog";
 import { BorderDetailDialog } from "@/components/store/BorderDetailDialog";
+import { VerificationBadgeDetailDialog } from "@/components/store/VerificationBadgeDetailDialog";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import { useAccount, useWalletClient, usePublicClient, useChainId } from "wagmi";
 import { useLocation } from "wouter";
@@ -200,6 +201,8 @@ export default function StorePage() {
   const [nameTagDialogOpen, setNameTagDialogOpen] = useState(false);
   const [selectedBorder, setSelectedBorder] = useState<any>(null);
   const [borderDialogOpen, setBorderDialogOpen] = useState(false);
+  const [selectedBadge, setSelectedBadge] = useState<any>(null);
+  const [badgeDialogOpen, setBadgeDialogOpen] = useState(false);
   const [walletRedirectOpen, setWalletRedirectOpen] = useState(false);
   const [, navigate] = useLocation();
 
@@ -212,6 +215,7 @@ export default function StorePage() {
   const [brokenBorderImages, setBrokenBorderImages] = useState<Set<number>>(new Set());
   const [purchasingNameTagId, setPurchasingNameTagId] = useState<number | null>(null);
   const [purchasingBorderId, setPurchasingBorderId] = useState<number | null>(null);
+  const [purchasingBadgeId, setPurchasingBadgeId] = useState<number | null>(null);
 
   const { data: storeItems = [], isLoading: isLoadingItems } = useQuery<StoreItem[]>({
     queryKey: ["/api/store/items"],
