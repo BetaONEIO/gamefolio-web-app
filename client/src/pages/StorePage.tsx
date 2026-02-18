@@ -973,6 +973,44 @@ export default function StorePage() {
 
         {/* Main Content Area */}
         <main className="flex-1 p-4 md:p-6">
+          {/* Store Category Tabs - Desktop & Mobile */}
+          <div className="mb-6">
+            <div 
+              className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar border-b border-gray-800"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
+              <Button 
+                variant={storeTab === "nft" ? "default" : "ghost"}
+                onClick={() => setStoreTab("nft")}
+                className={`rounded-xl px-6 py-2 h-auto whitespace-nowrap transition-all ${storeTab === "nft" ? "bg-green-600 hover:bg-green-700 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}
+              >
+                NFTs
+              </Button>
+              <Button 
+                variant={storeTab === "nametags" ? "default" : "ghost"}
+                onClick={() => setStoreTab("nametags")}
+                className={`rounded-xl px-6 py-2 h-auto whitespace-nowrap transition-all ${storeTab === "nametags" ? "bg-green-600 hover:bg-green-700 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}
+              >
+                Name Tags
+              </Button>
+              <Button 
+                variant={storeTab === "borders" ? "default" : "ghost"}
+                onClick={() => setStoreTab("borders")}
+                className={`rounded-xl px-6 py-2 h-auto whitespace-nowrap transition-all ${storeTab === "borders" ? "bg-green-600 hover:bg-green-700 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}
+              >
+                Profile Borders
+              </Button>
+              <Button 
+                variant={storeTab === "badges" ? "default" : "ghost"}
+                onClick={() => setStoreTab("badges")}
+                className={`rounded-xl px-6 py-2 h-auto whitespace-nowrap transition-all ${storeTab === "badges" ? "bg-green-600 hover:bg-green-700 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}
+              >
+                Verification Badges
+              </Button>
+            </div>
+          </div>
+
           {/* Mobile Tab Navigation */}
           <div 
             className="md:hidden flex gap-2 overflow-x-auto mb-4 hide-scrollbar"
@@ -1064,38 +1102,6 @@ export default function StorePage() {
           {/* Buy NFT Section */}
           {activeTab === "buy" && (
             <div className="space-y-6">
-              {/* Store Category Tabs */}
-              <div className="flex flex-wrap gap-2 border-b border-gray-800 pb-4 mb-2">
-                <Button 
-                  variant={storeTab === "nft" ? "default" : "ghost"}
-                  onClick={() => setStoreTab("nft")}
-                  className={`rounded-xl px-6 transition-all ${storeTab === "nft" ? "bg-green-600 hover:bg-green-700 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}
-                >
-                  NFTs
-                </Button>
-                <Button 
-                  variant={storeTab === "nametags" ? "default" : "ghost"}
-                  onClick={() => setStoreTab("nametags")}
-                  className={`rounded-xl px-6 transition-all ${storeTab === "nametags" ? "bg-green-600 hover:bg-green-700 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}
-                >
-                  Name Tags
-                </Button>
-                <Button 
-                  variant={storeTab === "borders" ? "default" : "ghost"}
-                  onClick={() => setStoreTab("borders")}
-                  className={`rounded-xl px-6 transition-all ${storeTab === "borders" ? "bg-green-600 hover:bg-green-700 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}
-                >
-                  Profile Borders
-                </Button>
-                <Button 
-                  variant={storeTab === "badges" ? "default" : "ghost"}
-                  onClick={() => setStoreTab("badges")}
-                  className={`rounded-xl px-6 transition-all ${storeTab === "badges" ? "bg-green-600 hover:bg-green-700 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}
-                >
-                  Verification Badges
-                </Button>
-              </div>
-
               <div className="mb-4 md:mb-6">
                 {/* Category Filters */}
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
