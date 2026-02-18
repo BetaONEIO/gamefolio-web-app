@@ -26,8 +26,11 @@ interface OwnedNFT {
   rarity: string | null;
 }
 
+import { useAuthModal } from "@/hooks/use-auth-modal";
+
 export default function WalletPage() {
   const { user } = useAuth();
+  const { openModal } = useAuthModal();
   const [, setLocation] = useLocation();
   const { walletAddress: connectedWalletAddress, isReady, isConnecting, connect } = useWallet();
   const [showBuyDialog, setShowBuyDialog] = useState(false);
@@ -176,9 +179,17 @@ export default function WalletPage() {
           </div>
           <Card>
             <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">
-                Please log in to access your wallet
-              </p>
+              <div className="flex flex-col items-center justify-center space-y-4">
+                <p className="text-center text-muted-foreground">
+                  Please log in to access your wallet
+                </p>
+                <Button 
+                  onClick={() => openModal()}
+                  className="bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
+                >
+                  Log In
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

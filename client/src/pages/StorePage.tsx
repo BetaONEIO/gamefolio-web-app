@@ -1,3 +1,4 @@
+import { useAuthModal } from "@/hooks/use-auth-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { useCrossmint } from "@/hooks/use-crossmint";
 import { Link } from "wouter";
@@ -367,9 +368,11 @@ export default function StorePage() {
     },
   });
 
+  const { openModal } = useAuthModal();
+
   const handlePurchaseWithGF = async (item: StoreItem) => {
     if (!user) {
-      toast({ title: "Login required", description: "Please log in to purchase items", variant: "destructive" });
+      openModal();
       return;
     }
 
@@ -519,11 +522,7 @@ export default function StorePage() {
   // Toggle watchlist
   const toggleWatchlist = (nft: NFT) => {
     if (!user) {
-      toast({
-        title: "Login Required",
-        description: "Please login to add NFTs to your watchlist",
-        variant: "destructive",
-      });
+      openModal();
       return;
     }
 

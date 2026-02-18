@@ -235,8 +235,11 @@ function NameTagCard({ tag }: { tag: NameTag }) {
 
 type CollectionTab = "nfts" | "borders" | "nametags";
 
+import { useAuthModal } from "@/hooks/use-auth-modal";
+
 export default function CollectionPage() {
   const { user } = useAuth();
+  const { openModal } = useAuthModal();
   const [selectedNft, setSelectedNft] = useState<OwnedNft | null>(null);
   const [nftTab, setNftTab] = useState<"owned" | "sold">("owned");
   const [collectionTab, setCollectionTab] = useState<CollectionTab>("nfts");
@@ -299,9 +302,12 @@ export default function CollectionPage() {
       <div className="min-h-screen bg-[#020617] flex items-center justify-center">
         <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 text-center">
           <p className="text-slate-400 mb-4">Please log in to view your collection</p>
-          <Link href="/auth">
-            <Button className="bg-green-400 hover:bg-green-500 text-slate-900 font-bold">Log In</Button>
-          </Link>
+          <Button 
+            onClick={() => openModal()}
+            className="bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
+          >
+            Log In
+          </Button>
         </div>
       </div>
     );
