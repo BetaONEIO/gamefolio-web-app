@@ -329,29 +329,7 @@ export default function StorePage() {
     },
   });
 
-  const [purchasingBorderId, setPurchasingBorderId] = useState<number | null>(null);
   const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
-
-  const purchaseBorderMutation = useMutation({
-    mutationFn: async (borderId: number) => {
-      const response = await apiRequest("POST", "/api/store/purchase-border", { borderId });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to purchase border");
-      }
-      return response.json();
-    },
-    onSuccess: (data: any) => {
-      toast({ title: "Border Purchased!", description: data.message });
-      queryClient.invalidateQueries({ queryKey: ["/api/store/borders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      setPurchasingBorderId(null);
-    },
-    onError: (error: Error) => {
-      toast({ title: "Purchase Failed", description: error.message, variant: "destructive" });
-      setPurchasingBorderId(null);
-    },
-  });
 
   interface MarketplaceListing {
     token_id: number;
