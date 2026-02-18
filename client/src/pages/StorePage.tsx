@@ -240,7 +240,7 @@ export default function StorePage() {
     enabled: !!user,
   });
 
-  const ownedItemIds = new Set(ownedItems.map(item => item.id));
+  const ownedItemIds = new Set(ownedItems.map((item: any) => item.id));
 
   interface StoreNameTag {
     id: number;
@@ -1354,7 +1354,7 @@ export default function StorePage() {
                 </div>
               ) : (
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
-                {storeItems.map((item) => {
+                {storeItems.map((item: any) => {
                   const isOwned = ownedItemIds.has(item.id);
                   const isPurchasing = purchasingItemId === item.id;
                   
@@ -1492,8 +1492,8 @@ export default function StorePage() {
               ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                 {storeNameTags
-                  .filter((tag) => rarityFilter === "all" || tag.rarity === rarityFilter)
-                  .map((tag) => {
+                  .filter((tag: any) => rarityFilter === "all" || tag.rarity === rarityFilter)
+                  .map((tag: any) => {
                   const isPurchasing = purchasingNameTagId === tag.id;
                   const cost = tag.gfCost || 0;
                   
@@ -1638,8 +1638,8 @@ export default function StorePage() {
               ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                 {storeBorders
-                  .filter((border) => rarityFilter === "all" || border.rarity === rarityFilter)
-                  .map((border) => {
+                  .filter((border: any) => rarityFilter === "all" || border.rarity === rarityFilter)
+                  .map((border: any) => {
                   const isPurchasing = purchasingBorderId === border.id;
                   const cost = border.gfCost || 0;
                   const isUserPro = user?.isPro === true;
