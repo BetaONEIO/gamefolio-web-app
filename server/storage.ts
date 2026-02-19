@@ -67,6 +67,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | null>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<User>): Promise<User | null>;
+  updateUserType(id: number, userType: string): Promise<User | null>;
   deleteUser(id: number): Promise<boolean>;
   getUserWithStats(id: number): Promise<UserWithStats | null>;
   getFeaturedUsers(limit?: number): Promise<User[]>;

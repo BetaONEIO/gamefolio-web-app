@@ -241,6 +241,20 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async updateUserType(id: number, userType: string): Promise<User | null> {
+    try {
+      const [updatedUser] = await db
+        .update(users)
+        .set({ userType, updatedAt: new Date() })
+        .where(eq(users.id, id))
+        .returning();
+      return updatedUser;
+    } catch (error) {
+      console.error("Error updating user type:", error);
+      return null;
+    }
+  }
+
   async updateUserStreak(data: {
     userId: number;
     currentStreak: number;

@@ -205,6 +205,15 @@ export default function OnboardingFlow({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+
+  // Function to toggle user type selection
+  const toggleUserType = (type: string) => {
+    if (userTypes.includes(type)) {
+      setUserTypes(userTypes.filter(t => t !== type));
+    } else {
+      setUserTypes([...userTypes, type]);
+    }
+  };
   
   const { walletAddress: sequenceWalletAddress, isReady: isWalletReady, isConnecting: isCreatingWallet, connect: connectWallet } = useWallet();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
@@ -585,7 +594,9 @@ export default function OnboardingFlow({
         bio: "Just joined Gamefolio!",
         userType: userTypes.length > 0 ? userTypes.join(",") : "viewer"
       };
-      
+
+      console.log("Saving user onboarding data:", userData);
+
       // Update user profile using the authenticated API request
       await apiRequest("PATCH", `/api/users/${userId}`, userData);
       
