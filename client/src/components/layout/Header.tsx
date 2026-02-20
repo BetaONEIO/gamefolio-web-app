@@ -391,10 +391,10 @@ const Header = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 mt-2">
-                    <div className="px-4 py-3 border-b">
+                    <div className="px-3 py-4 border-b">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 flex-shrink-0">
+                          <div className="w-10 h-10 flex-shrink-0 -ml-0.5">
                             <CustomAvatar 
                               user={user}
                               size="md"
