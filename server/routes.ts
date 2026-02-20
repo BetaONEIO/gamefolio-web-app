@@ -1667,6 +1667,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           nftProfileTokenId: userWithoutPassword.nftProfileTokenId || null,
           nftProfileImageUrl: userWithoutPassword.nftProfileImageUrl || null,
           activeProfilePicType: userWithoutPassword.activeProfilePicType || 'upload',
+          proSubscriptionType: userWithoutPassword.proSubscriptionType || null,
+          proSubscriptionEndDate: userWithoutPassword.proSubscriptionEndDate || null,
         });
       }
     } catch (error) {
@@ -1713,6 +1715,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       nftProfileTokenId: userWithoutPassword.nftProfileTokenId || null,
       nftProfileImageUrl: userWithoutPassword.nftProfileImageUrl || null,
       activeProfilePicType: userWithoutPassword.activeProfilePicType || 'upload',
+      proSubscriptionType: userWithoutPassword.proSubscriptionType || null,
+      proSubscriptionEndDate: userWithoutPassword.proSubscriptionEndDate || null,
     });
   });
 

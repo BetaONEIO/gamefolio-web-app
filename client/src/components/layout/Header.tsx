@@ -432,7 +432,7 @@ const Header = () => {
                       <span>Level Tracker</span>
                     </DropdownMenuItem>
                     
-                    {!(isPro || user?.isPro) && (
+                    {!(isPro || user?.isPro || (user?.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date())) && (
                       <DropdownMenuItem
                         className="cursor-pointer"
                         onClick={() => setProUpgradeOpen(true)}
