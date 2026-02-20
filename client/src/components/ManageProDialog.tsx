@@ -40,7 +40,7 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
       if (!res.ok) throw new Error("Failed to fetch subscription status");
       return res.json();
     },
-    enabled: open && !!user?.isPro,
+    enabled: open && !!(user?.isPro || (user?.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date())),
   });
 
   const isCancelled = subscriptionStatus?.isCancelled || false;

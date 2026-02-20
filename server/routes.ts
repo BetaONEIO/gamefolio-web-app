@@ -10151,7 +10151,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       let isCancelled = false;
-      if (user.isPro && user.proSubscriptionEndDate) {
+      const hasActiveEndDate = user.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date();
+
+      if (!user.isPro && hasActiveEndDate) {
+        isCancelled = true;
+      } else if (user.isPro && user.proSubscriptionEndDate) {
         try {
           const { getUncachableStripeClient } = await import('./stripeClient');
           const stripe = await getUncachableStripeClient();
