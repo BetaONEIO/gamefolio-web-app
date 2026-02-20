@@ -194,7 +194,7 @@ export default function MintedNftDetailScreen({
 
           <div className="md:flex-1 md:sticky md:top-0 md:self-start">
             <div className="flex justify-center items-center px-4 py-2">
-              <div className="relative w-[398px] md:w-full max-w-full aspect-square rounded-3xl overflow-hidden bg-white/[0.01] shadow-[0_25px_50px_-12px_rgba(74,222,128,0.05)]">
+              <div className="relative w-full max-w-[398px] md:max-w-full aspect-square rounded-3xl overflow-hidden bg-white/[0.01] shadow-[0_25px_50px_-12px_rgba(74,222,128,0.05)]">
                 {nft.imageUrl ? (
                   <img
                     src={nft.imageUrl}
