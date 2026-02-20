@@ -390,15 +390,16 @@ const Header = () => {
                       />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 mt-2">
+                  <DropdownMenuContent align="end" className="w-64 mt-2">
                     <div className="px-3 py-4 border-b">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 flex-shrink-0 -ml-0.5">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 flex-shrink-0">
                             <CustomAvatar 
                               user={user}
-                              size="md"
-                              borderIntensity="subtle"
+                              size="lg"
+                              borderIntensity="normal"
+                              showAvatarBorderOverlay={true}
                             />
                           </div>
                           <div>
