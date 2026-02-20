@@ -390,7 +390,7 @@ const Header = () => {
                       />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-64 mt-2">
+                  <DropdownMenuContent align="end" className="w-56 mt-2">
                     <div className="px-3 py-4 border-b">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
