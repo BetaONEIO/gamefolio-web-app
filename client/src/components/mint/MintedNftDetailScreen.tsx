@@ -25,7 +25,7 @@ interface MintedNftDetailScreenProps {
   walletAddress?: string;
   ownerUsername?: string;
   onClose: () => void;
-  onViewExplorer: () => void;
+  onViewExplorer?: () => void;
   initialSold?: boolean;
   onSold?: () => void;
   mintedAt?: string;
@@ -462,20 +462,6 @@ export default function MintedNftDetailScreen({
                 )}
               </div>
 
-              <button
-                onClick={onViewExplorer}
-                className="w-full flex items-center justify-center gap-2 py-3 hover:text-[#f8fafc] transition-colors"
-              >
-                <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M16.6675 8.33374C16.6675 12.9363 12.9363 16.6675 8.33374 16.6675C3.73114 16.6675 0 12.9363 0 8.33374C0 3.73114 3.73114 0 8.33374 0C12.9363 0 16.6675 3.73114 16.6675 8.33374Z" stroke="#94A3B8" strokeWidth="1.25" />
-                  <path fillRule="evenodd" clipRule="evenodd" d="M11.6677 8.33386C11.6677 9.42803 11.581 10.5122 11.4135 11.523C11.2468 12.5339 11.001 13.4522 10.691 14.2264C10.3818 15.0006 10.0143 15.6139 9.61017 16.0331C9.20516 16.4514 8.77183 16.6672 8.33433 16.6672C7.89682 16.6672 7.46349 16.4514 7.05932 16.0331C6.65432 15.6139 6.28682 14.9997 5.97765 14.2264C5.66765 13.4522 5.42181 12.5347 5.25431 11.523C5.0834 10.4686 4.99867 9.40204 5.00098 8.33386C5.00098 7.23969 5.08681 6.15552 5.25431 5.14468C5.42181 4.13384 5.66765 3.2155 5.97765 2.44133C6.28682 1.66716 6.65432 1.05383 7.05849 0.634658C7.46349 0.217156 7.89682 0.000488281 8.33433 0.000488281C8.77183 0.000488281 9.20516 0.216323 9.60933 0.634658C10.0143 1.05383 10.3818 1.668 10.691 2.44133C11.001 3.2155 11.2468 4.13301 11.4135 5.14468C11.5818 6.15552 11.6677 7.23969 11.6677 8.33386Z" stroke="#94A3B8" strokeWidth="1.25001" />
-                  <path d="M0.000976562 8.33398H16.6676" stroke="#94A3B8" strokeWidth="1.25" strokeLinecap="round" />
-                </svg>
-                <span className="text-sm font-normal text-[#94a3b8] leading-5">View on Explorer</span>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M4 12L12 4M12 4H6M12 4V10" stroke="#94A3B8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
             </div>
 
           </div>
