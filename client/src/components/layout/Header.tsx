@@ -91,18 +91,18 @@ const Header = () => {
 
   // Handle clicks outside search to close dropdown
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent | TouchEvent) {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+      const isInsideDesktopSearch = searchRef.current && searchRef.current.contains(target);
+      const isInsideMobileSearch = mobileSearchRef.current && mobileSearchRef.current.contains(target);
+      if (!isInsideDesktopSearch && !isInsideMobileSearch) {
         setShowDropdown(false);
       }
-      // Don't auto-close mobile search on outside clicks - user must use Cancel button
     }
 
-    document.addEventListener('click', handleClickOutside);
-    document.addEventListener('touchend', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
-      document.removeEventListener('click', handleClickOutside);
-      document.removeEventListener('touchend', handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
 
