@@ -120,6 +120,23 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   
   // Version checking for cache busting
   useVersionCheck();
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("pro_payment") === "success") {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      params.delete("pro_payment");
+      params.delete("pi");
+      params.delete("plan");
+      params.delete("payment_intent");
+      params.delete("payment_intent_client_secret");
+      params.delete("redirect_status");
+      const cleanUrl = params.toString()
+        ? `${window.location.pathname}?${params.toString()}`
+        : window.location.pathname;
+      window.history.replaceState({}, "", cleanUrl);
+    }
+  }, []);
   
   // Banner state
   const [isBannerDismissed, setIsBannerDismissed] = React.useState(false);
