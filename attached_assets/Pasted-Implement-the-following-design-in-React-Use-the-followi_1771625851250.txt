@@ -1,0 +1,240 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/ProSuccessPremium.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,900;0,500;0,undefined&display=swap";
+.ProSuccessPremium_178_2 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_178_3 {
+  background: #020617;
+  flex: 1 0 0;
+  width: 100%;
+  height: 932px;
+  overflow: hidden;
+}
+.Container_178_4 {
+  filter: blur(60px);
+  background: #4ade8033;
+  border-radius: 37282700px;
+  width: 344px;
+  height: 746px;
+}
+.Container_178_5 {
+  filter: blur(60px);
+  background: #2b7fff1a;
+  border-radius: 37282700px;
+  width: 344px;
+  height: 746px;
+}
+.Container_178_6 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 47.9757px;
+  padding: 150.538px 56px 150.486px 55px;
+  display: flex;
+}
+.Container_178_7 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 320px;
+  height: 188px;
+  display: flex;
+}
+.Container_178_8 {
+  box-sizing: border-box;
+  background: #4ade801a;
+  border: 1.111px solid #4ade804d;
+  border-radius: 37282700px;
+  justify-content: center;
+  align-items: center;
+  width: 186px;
+  height: 30px;
+  padding: 7.101px 16.899px 6.899px 17.101px;
+  display: flex;
+}
+.Container_178_9 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 152px;
+  height: 16px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.SubscriptionActive_178_10 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 157px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_178_11 {
+  justify-content: center;
+  align-items: center;
+  width: 320px;
+  padding: 0 17.632px 0 18.368px;
+  display: flex;
+}
+.ProUnlocked_178_12 {
+  color: #f8fafc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.9px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 284px;
+  height: 46px;
+  font-family: Plus Jakarta Sans;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 40px;
+  display: inline-block;
+}
+.Container_178_13 {
+  justify-content: center;
+  align-items: center;
+  width: 320px;
+  height: 79px;
+  padding: 2.222px 13.191px 3.778px 13.809px;
+  display: flex;
+}
+.TheUltimateGamingExperienceStartsNowAllPremiumFeaturesAssetsAndPerksAreNowAtYourFingertips_178_14 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 293px;
+  height: 73px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 26px;
+  display: inline-block;
+}
+.Container_178_15 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 256px;
+  height: 256px;
+  display: flex;
+}
+.Container_178_16 {
+  filter: blur(30px);
+  background: #4ade804d;
+  border-radius: 37282700px;
+  width: 384px;
+  height: 384px;
+}
+.Container_178_17 {
+  justify-content: center;
+  align-items: center;
+  width: 256px;
+  height: 256px;
+  padding: 15.99px 15.01px 15.01px 15.99px;
+  display: flex;
+}
+.Image_178_18 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  flex-shrink: 0;
+  width: 225px;
+  height: 225px;
+}
+.Container_178_19 {
+  justify-content: center;
+  align-items: center;
+  width: 431px;
+  padding: 31.997px 32.003px 48.003px 31.997px;
+  display: flex;
+}
+.Button_178_20 {
+  background: #4ade80;
+  border-radius: 28px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 367px;
+  height: 60px;
+  padding: 18.212px 0 17.788px;
+  display: flex;
+  box-shadow: 0 10px 20px -5px #4ade804d;
+}
+.Continue_178_21 {
+  color: #000;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 82px;
+  height: 24px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 28px;
+  display: inline-block;
+}
+
+```
+
+---
+
+```src/components/ProSuccessPremium.tsx
+import React from 'react';
+import styles from '../styles/ProSuccessPremium.module.css';
+
+
+export default function ProSuccessPremium() {
+  return (
+    <div className={styles.ProSuccessPremium_178_2}>
+      <div className={styles.Container_178_3}>
+        <div className={styles.Container_178_4}></div>
+        <div className={styles.Container_178_5}></div>
+        <div className={styles.Container_178_6}>
+          <div className={styles.Container_178_7}>
+            <div className={styles.Container_178_8}>
+              <div className={styles.Container_178_9}><span className={styles.SubscriptionActive_178_10}>Subscription Active</span></div>
+            </div>
+            <div className={styles.Container_178_11}><span className={styles.ProUnlocked_178_12}>Pro Unlocked</span></div>
+            <div className={styles.Container_178_13}><span className={styles.TheUltimateGamingExperienceStartsNowAllPremiumFeaturesAssetsAndPerksAreNowAtYourFingertips_178_14}>The ultimate gaming experience starts now. All premium features, assets, and perks are now at your fingertips.</span></div>
+          </div>
+          <div className={styles.Container_178_15}>
+            <div className={styles.Container_178_16}></div>
+            <div className={styles.Container_178_17}>
+              <div className={styles.Image_178_18}></div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_178_19}>
+          <div className={styles.Button_178_20}><span className={styles.Continue_178_21}>Continue</span></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+

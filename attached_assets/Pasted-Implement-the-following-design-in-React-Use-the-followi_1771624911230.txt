@@ -1,0 +1,288 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/ProOnboarding.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,500;0,700;0,400&display=swap";
+.ProOnboarding_4875_3692 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_4875_3693 {
+  background: #020617;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 100%;
+  height: 932px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_4875_3694 {
+  justify-content: flex-end;
+  align-items: center;
+  height: 92px;
+  padding: 48px 23.531px 8px 344.469px;
+  display: flex;
+}
+.Button_4875_3695 {
+  justify-content: center;
+  align-items: center;
+  width: 62px;
+  height: 36px;
+  padding: 9px 15px;
+  display: flex;
+}
+.Skip_4875_3696 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 32px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_4875_3697 {
+  flex-flow: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 80px;
+  height: 660px;
+  padding: 138px 75px 110px;
+  display: flex;
+}
+.Container_4875_3698 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 280px;
+  display: flex;
+}
+.Container_4875_3699 {
+  justify-content: center;
+  align-items: center;
+  height: 36px;
+  padding: 0 23.555px 0 24.445px;
+  display: flex;
+}
+.ExclusiveAssets_4875_3700 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.75px;
+  width: 232px;
+  height: 38px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 36px;
+  display: inline-block;
+}
+.Container_4875_3701 {
+  justify-content: center;
+  align-items: center;
+  height: 88px;
+  padding: 3px 9.586px 4px 10.414px;
+  display: flex;
+}
+.UnlockPremiumAestheticsToElevateYourGamefolioAndStandOutFromTheCrowd_4875_3702 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 260px;
+  height: 81px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 29.25px;
+  display: inline-block;
+}
+.Container_4875_3703 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 192px;
+  height: 192px;
+  display: flex;
+}
+.Container_4875_3704 {
+  filter: blur(40px);
+  background: #4ade8033;
+  border-radius: 16777200px;
+  width: 288px;
+  height: 288px;
+}
+.Container_4875_3705 {
+  filter: blur(20px);
+  background: #14532d4d;
+  border-radius: 16777200px;
+  width: 192px;
+  height: 192px;
+}
+.Container_4875_3706 {
+  backdrop-filter: blur(4px);
+  box-sizing: border-box;
+  background: #1e293b80;
+  border: 1px solid #1e293b80;
+  border-radius: 40px;
+  justify-content: flex-end;
+  align-items: center;
+  display: inline-flex;
+  box-shadow: 0 25px 50px -12px #00000040;
+}
+.Pro1_1_4884_3732 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 400px;
+  height: 400px;
+}
+.Container_4875_3718 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 32px;
+  padding: 32px;
+  display: flex;
+}
+.Container_4875_3719 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+  width: 366px;
+  height: 8px;
+  display: flex;
+}
+.Container_4875_3720 {
+  background: #4ade80;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  height: 8px;
+}
+.Container_4875_3721,
+.Container_4875_3722,
+.Container_4875_3723 {
+  background: #1e293b;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  height: 8px;
+}
+.Container_4875_3724 {
+  justify-content: center;
+  align-items: center;
+  height: 76px;
+  padding-bottom: 16px;
+  display: flex;
+}
+.Button_4875_3725 {
+  background: #4ade80;
+  border-radius: 16px;
+  flex-flow: row;
+  justify-content: center;
+  align-items: center;
+  gap: 7.64844px;
+  width: 366px;
+  padding: 16px 0;
+  display: flex;
+  box-shadow: 0 0 25px -5px #4ade8066;
+}
+.Container_4875_3726 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 42px;
+  height: 28px;
+  padding: 2.5px 0;
+  display: flex;
+}
+.Next_4875_3727 {
+  color: #022c22;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 45px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_4875_3728 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+
+```
+
+---
+
+```src/components/ProOnboarding.tsx
+import React from 'react';
+import styles from '../styles/ProOnboarding.module.css';
+
+
+export default function ProOnboarding() {
+  return (
+    <div className={styles.ProOnboarding_4875_3692}>
+      <div className={styles.Container_4875_3693}>
+        <div className={styles.Container_4875_3694}>
+          <div className={styles.Button_4875_3695}><span className={styles.Skip_4875_3696}>Skip</span></div>
+        </div>
+        <div className={styles.Container_4875_3697}>
+          <div className={styles.Container_4875_3698}>
+            <div className={styles.Container_4875_3699}><span className={styles.ExclusiveAssets_4875_3700}>Exclusive Assets</span></div>
+            <div className={styles.Container_4875_3701}><span className={styles.UnlockPremiumAestheticsToElevateYourGamefolioAndStandOutFromTheCrowd_4875_3702}>Unlock premium aesthetics to elevate your Gamefolio and stand out from the crowd.</span></div>
+          </div>
+          <div className={styles.Container_4875_3703}>
+            <div className={styles.Container_4875_3704}></div>
+            <div className={styles.Container_4875_3705}></div>
+            <div className={styles.Container_4875_3706}>
+              <div className={styles.Pro1_1_4884_3732}></div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_4875_3718}>
+          <div className={styles.Container_4875_3719}>
+            <div className={styles.Container_4875_3720}></div>
+            <div className={styles.Container_4875_3721}></div>
+            <div className={styles.Container_4875_3722}></div>
+            <div className={styles.Container_4875_3723}></div>
+          </div>
+          <div className={styles.Container_4875_3724}>
+            <div className={styles.Button_4875_3725}>
+              <div className={styles.Container_4875_3726}><span className={styles.Next_4875_3727}>Next</span></div>
+              <div className={styles.Container_4875_3728}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M4 12H20M20 12L14 6M20 12L14 18" stroke="#022C22" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
