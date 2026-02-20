@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
+import { NameTagDetailDialog } from "@/components/store/NameTagDetailDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -3491,123 +3492,22 @@ const ProfilePage = () => {
         </React.Suspense>
       )}
 
-      {/* Name Tag Details Full Screen */}
-      {nameTagData?.nameTag && nameTagPreviewOpen && (
-        <div className="fixed inset-0 z-[110] bg-[#020617] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
-          <div className="w-full max-w-[430px] md:max-w-3xl mx-auto px-6 pt-16 md:pt-20 pb-1">
-            <span className="text-sm font-medium text-[#64748b] tracking-wide">Name Tag Detail</span>
-          </div>
-
-          <header className="z-40 flex-shrink-0">
-            <div className="w-full max-w-[430px] md:max-w-3xl mx-auto px-4 pb-4">
-              <div className="flex items-center justify-between w-full rounded-2xl bg-[#0f172a] border border-[#1e293b80] px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setNameTagPreviewOpen(false)}
-                    className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#1e293b] transition-colors"
-                  >
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path fillRule="evenodd" clipRule="evenodd" d="M0 10C0 4.47715 4.47715 0 10 0C15.5228 0 20 4.47715 20 10C20 15.5228 15.5228 20 10 20C4.47715 20 0 15.5228 0 10Z" stroke="#F8FAFC" strokeWidth="1.5" />
-                      <path d="M12.5 7.5L7.5 12.5M7.5 7.5L12.5 12.5" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" />
-                    </svg>
-                  </button>
-                  <span className="text-base font-bold text-[#f8fafc] leading-6">Name Tag</span>
-                </div>
-              </div>
-            </div>
-          </header>
-
-          <div className="flex-1 overflow-y-auto">
-            <div className="w-full max-w-[430px] md:max-w-3xl mx-auto flex flex-col md:flex-row md:gap-10 md:px-4">
-              <div className="md:flex-1 md:sticky md:top-0 md:self-start">
-                <div className="flex justify-center items-center px-4 py-2">
-                  <div className="relative w-full max-w-[398px] md:max-w-full rounded-3xl overflow-hidden bg-gradient-to-b from-[#0f172a] to-[#020617] border border-[#1e293b80] p-8 flex items-center justify-center"
-                    style={{ aspectRatio: '16/7' }}
-                  >
-                    <img
-                      src={nameTagSignedUrl || ''}
-                      alt={nameTagData.nameTag.name || 'Name Tag'}
-                      className="w-full h-auto max-h-full object-contain"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="md:flex-1 flex flex-col gap-6 px-6 py-6">
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                      nameTagData.nameTag.rarity === 'legendary' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
-                      nameTagData.nameTag.rarity === 'epic' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
-                      nameTagData.nameTag.rarity === 'rare' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                      nameTagData.nameTag.rarity === 'uncommon' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                      'bg-gray-500/20 text-gray-400 border border-gray-500/30'
-                    }`}>
-                      {nameTagData.nameTag.rarity}
-                    </span>
-                  </div>
-
-                  <h1 className="text-[28px] md:text-3xl font-bold text-[#f8fafc] leading-9">
-                    {nameTagData.nameTag.name}
-                  </h1>
-
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
-                      <CustomAvatar user={profile} size="xs" borderIntensity="subtle" />
-                    </div>
-                    <span className="text-sm text-[#94a3b8]">Owned by</span>
-                    <span className="text-sm text-[#f8fafc] font-medium">
-                      {isOwnProfile ? 'You' : `@${profile?.username || username}`}
-                    </span>
-                  </div>
-                </div>
-
-                {nameTagData.nameTag.description && (
-                  <div className="w-full rounded-2xl bg-[#0f172a] border border-[#1e293b80] p-5">
-                    <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-[1.2px] leading-4">
-                      Description
-                    </span>
-                    <p className="text-sm text-[#cbd5e1] mt-2 leading-relaxed">
-                      {nameTagData.nameTag.description}
-                    </p>
-                  </div>
-                )}
-
-                <div className="flex flex-col gap-3">
-                  <span className="text-sm font-bold text-[#94a3b8] uppercase tracking-[0.7px] leading-5">
-                    Details
-                  </span>
-                  <div className="rounded-2xl bg-[#0f172a] border border-[#1e293b80] overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-4 border-b border-[#1e293b4d]">
-                      <span className="text-sm text-[#94a3b8]">Type</span>
-                      <span className="text-sm text-[#f8fafc]">Name Tag</span>
-                    </div>
-                    <div className="flex items-center justify-between px-4 py-4 border-b border-[#1e293b4d]">
-                      <span className="text-sm text-[#94a3b8]">Rarity</span>
-                      <span className={`text-sm font-semibold ${
-                        nameTagData.nameTag.rarity === 'legendary' ? 'text-yellow-400' :
-                        nameTagData.nameTag.rarity === 'epic' ? 'text-purple-400' :
-                        nameTagData.nameTag.rarity === 'rare' ? 'text-blue-400' :
-                        nameTagData.nameTag.rarity === 'uncommon' ? 'text-green-400' :
-                        'text-gray-400'
-                      }`}>
-                        {nameTagData.nameTag.rarity.charAt(0).toUpperCase() + nameTagData.nameTag.rarity.slice(1)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between px-4 py-4">
-                      <span className="text-sm text-[#94a3b8]">Status</span>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full bg-[#4ade80]" />
-                        <span className="text-sm text-[#4ade80] font-medium">Equipped</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Name Tag Detail Dialog - matches Store page design */}
+      <NameTagDetailDialog
+        nameTag={nameTagData?.nameTag ? {
+          id: nameTagData.nameTag.id,
+          name: nameTagData.nameTag.name,
+          imageUrl: nameTagSignedUrl || nameTagData.nameTag.imageUrl,
+          rarity: nameTagData.nameTag.rarity,
+          gfCost: 0,
+          owned: true,
+        } : null}
+        open={nameTagPreviewOpen}
+        onOpenChange={setNameTagPreviewOpen}
+        onPurchase={() => {}}
+        isPurchasing={false}
+        brokenImage={false}
+      />
     </div>
     </>
   );
