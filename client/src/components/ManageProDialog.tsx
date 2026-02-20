@@ -379,12 +379,6 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
               {!isCancelled && (
                 <>
                   <button
-                    onClick={() => onOpenChange(false)}
-                    className="w-full py-4 rounded-2xl bg-[#1e293b] text-slate-50 font-bold text-lg hover:bg-slate-700 transition-colors"
-                  >
-                    Change Billing Cycle
-                  </button>
-                  <button
                     onClick={() => {
                       resetCancelState();
                       setShowCancelConfirm(true);
