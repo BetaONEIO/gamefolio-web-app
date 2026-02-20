@@ -66,7 +66,19 @@ export function BorderCheckoutDialog({
     : border.rarity?.toLowerCase() === 'epic' ? '#a855f7'
     : border.rarity?.toLowerCase() === 'rare' ? '#4ade80'
     : '#94a3b8';
-
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-[#020617] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden">
+        {showSuccess ? (
+          <SuccessVanguardBorder
+            assetName={border.name}
+            rarity={border.rarity}
+            imageUrl={border.imageUrl}
+            transactionId="0x7dF39e...4a2b"
+            totalCost={totalCost}
+            onClose={handleClose}
+          />
+        ) : isProcessing || isPurchasing ? (
           <AssetPurchaseProcessing onComplete={handleProcessingComplete} />
         ) : (
           <div className="flex-1 flex flex-col">
