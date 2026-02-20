@@ -4,6 +4,7 @@ import QuickSellScreen from "./QuickSellScreen";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 
 interface NftAttribute {
   trait_type: string;
@@ -70,8 +71,10 @@ export default function MintedNftDetailScreen({
   const [showQuickSell, setShowQuickSell] = useState(false);
   const [sold, setSold] = useState(initialSold);
   const { toast } = useToast();
+  const { user } = useAuth();
   const displayName = nft.name || `Gamefolio Genesis ${getTokenIdPadded(nft.id)}`;
-  const ownerDisplay = walletAddress ? `You (${formatAddress(walletAddress)})` : "You";
+  const isOwner = walletAddress && user?.walletAddress && walletAddress.toLowerCase() === user.walletAddress.toLowerCase();
+  const ownerDisplay = isOwner ? `You (${formatAddress(walletAddress)})` : formatAddress(walletAddress || "");
   const mintDate = formatDate(mintedAt);
   const soldDate = soldAt ? formatDate(soldAt) : null;
   const isListedOnMarketplace = sold && (listingActive === true);
