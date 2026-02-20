@@ -3507,6 +3507,8 @@ const ProfilePage = () => {
         onPurchase={() => {}}
         isPurchasing={false}
         brokenImage={false}
+        ownerName={`@${profile?.username || username}`}
+        ownerAvatarUrl={profileAvatarSignedUrl || profile?.avatarUrl || undefined}
       />
     </div>
     </>

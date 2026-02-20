@@ -27,6 +27,8 @@ interface NameTagDetailDialogProps {
   onPurchase: (id: number) => void;
   isPurchasing: boolean;
   brokenImage: boolean;
+  ownerName?: string;
+  ownerAvatarUrl?: string;
 }
 
 function NameTagFallback({ name, rarity }: { name: string; rarity: string }) {
@@ -48,6 +50,8 @@ export function NameTagDetailDialog({
   onPurchase,
   isPurchasing,
   brokenImage,
+  ownerName,
+  ownerAvatarUrl,
 }: NameTagDetailDialogProps) {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const { user } = useAuth();
@@ -178,10 +182,14 @@ export function NameTagDetailDialog({
               {/* Owner & Viewers */}
               <div className="flex items-center gap-3 mb-6">
                 <div className="bg-[#1e293b]/30 rounded-full flex items-center gap-2 pr-4 pl-1 py-1">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 border-2 border-[#020617]" />
+                  {ownerAvatarUrl ? (
+                    <img src={ownerAvatarUrl} alt={ownerName || 'Owner'} className="w-7 h-7 rounded-full border-2 border-[#020617] object-cover" />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 border-2 border-[#020617]" />
+                  )}
                   <div className="flex flex-col">
                     <span className="text-[10px] text-[#94a3b8] leading-[10px]">Owner</span>
-                    <span className="text-xs font-bold text-[#f8fafc] leading-4">Gamefolio</span>
+                    <span className="text-xs font-bold text-[#f8fafc] leading-4">{ownerName || 'Gamefolio'}</span>
                   </div>
                 </div>
                 <div className="bg-[#1e293b]/30 border border-[#1e293b]/50 rounded-full flex items-center gap-2 px-3 py-1.5">
