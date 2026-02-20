@@ -233,8 +233,8 @@ export function NameTagDetailDialog({
 
             </div>
 
-            {/* Sticky Bottom: Equip/Buy Button */}
-            <div className="sticky bottom-0 bg-gradient-to-t from-[#020617] via-[#020617] to-transparent px-6 pt-4 pb-6 flex flex-col gap-4 items-center">
+            {/* Bottom: Equip/Buy Button */}
+            <div className="px-6 pt-4 pb-6 flex flex-col gap-4 items-center">
               {nameTag.owned ? (
                 <Button
                   className="w-full h-[68px] rounded-2xl text-white text-lg font-black uppercase bg-gradient-to-r from-green-500 to-emerald-600 cursor-default"
