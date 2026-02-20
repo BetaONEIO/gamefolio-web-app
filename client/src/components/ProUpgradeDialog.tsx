@@ -14,6 +14,7 @@ import {
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import proHeroImage from "@assets/gamefolio_pro_banner_1770379359049.png";
+import ProOnboardingScreen from "@/components/pro/ProOnboardingScreen";
 
 interface ProUpgradeDialogProps {
   open: boolean;
@@ -556,42 +557,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   );
 
   const successScreen = (
-    <div className="flex flex-col items-center justify-center min-h-[500px] bg-[#020617] p-8 text-center">
-      <motion.div
-        initial={{ scale: 0, rotate: -180 }}
-        animate={{ scale: 1, rotate: 0 }}
-        transition={{ type: "spring", duration: 0.8 }}
-        className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-[#4ade80] to-[#22c55e] mb-8"
-      >
-        <Crown className="w-12 h-12 text-white" />
-      </motion.div>
-      <motion.h2
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="text-3xl font-bold text-white mb-3"
-      >
-        Welcome to Gamefolio Pro!
-      </motion.h2>
-      <motion.p
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="text-[#94a3b8] text-base mb-8 max-w-[320px]"
-      >
-        You now have access to all premium features. Elevate your gaming identity and stand out from the crowd!
-      </motion.p>
-      <motion.button
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7 }}
-        onClick={() => onOpenChange(false)}
-        className="w-full max-w-[320px] py-4 bg-[#4ade80] hover:bg-[#3bce71] text-[#022c22] font-black text-lg rounded-2xl transition-colors"
-        style={{ boxShadow: "0 12px 40px -10px #4ade8080" }}
-      >
-        Continue
-      </motion.button>
-    </div>
+    <ProOnboardingScreen onComplete={() => onOpenChange(false)} />
   );
 
   const checkoutScreen = stripePromise && checkoutClientSecret && checkoutPaymentIntentId ? (
@@ -800,6 +766,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
+              className="max-w-[500px] mx-auto w-full"
             >
               {successScreen}
             </motion.div>
