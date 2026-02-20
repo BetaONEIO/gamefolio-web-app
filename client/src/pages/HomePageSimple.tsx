@@ -227,7 +227,7 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation }: He
                   </h2>
                   <Button 
                     className="w-fit px-8 py-3 sm:py-4 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
-                    onClick={() => setLocation('/lootbox')}
+                    onClick={() => setLocation(user ? '/lootbox' : '/auth')}
                   >
                     Claim
                   </Button>
