@@ -1934,21 +1934,19 @@ export default function StorePage() {
             </div>
           )}
 
-          {/* Mint NFT Section - Redirects to dedicated page */}
+          {/* Mint NFT Section - Currently Disabled */}
           {activeTab === "mint" && (
             <div className="flex flex-col items-center justify-center min-h-[50vh] md:min-h-[60vh] px-4">
-              <Sparkles className="h-16 w-16 md:h-20 md:w-20 text-[#4ade80] mb-4" />
-              <h3 className="text-xl md:text-2xl font-semibold mb-2 text-center" data-testid="heading-mint-coming-soon">
+              <Sparkles className="h-16 w-16 md:h-20 md:w-20 text-[#94a3b8] mb-4 opacity-50" />
+              <h3 className="text-xl md:text-2xl font-semibold mb-2 text-center text-[#94a3b8]" data-testid="heading-mint-coming-soon">
                 Mint Your Own NFT
               </h3>
-              <p className="text-sm md:text-base text-gray-400 text-center max-w-md" data-testid="text-mint-description">
-                Create and mint custom NFT avatars for your profile. Upload your gaming clips or artwork to mint as NFTs!
+              <p className="text-sm md:text-base text-amber-400 text-center max-w-md" data-testid="text-mint-description">
+                Minting currently disabled on Beta! We will be on Mainnet soon!
               </p>
-              <Link href="/mint-nft">
-                <Button className="mt-6 bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22]" size="sm" data-testid="button-start-minting">
-                  Start Minting
-                </Button>
-              </Link>
+              <Button className="mt-6 bg-[#1e293b] text-[#94a3b8] cursor-not-allowed opacity-50" size="sm" disabled data-testid="button-start-minting">
+                Start Minting
+              </Button>
             </div>
           )}
 

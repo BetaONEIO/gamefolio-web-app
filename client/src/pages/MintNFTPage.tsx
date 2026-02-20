@@ -786,70 +786,28 @@ export default function MintNFTPage() {
               </div>
             </div>
 
-            {/* Allowance Warning */}
-            {!allowanceApproved && (
-              <div className="bg-[#ef4444]/10 border border-[#ef4444]/20 rounded-2xl p-5 flex gap-3">
-                <AlertTriangle className="h-5 w-5 text-[#ef4444] flex-shrink-0 mt-0.5" />
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-bold text-[#f8fafc]">Allowance Required</span>
-                  <span className="text-xs text-[#94a3b8] leading-[19.5px]">
-                    To mint your NFT, you first need to authorize the mint contract to spend GFT from your wallet.
-                  </span>
-                </div>
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 flex gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-bold text-[#f8fafc]">Minting Disabled</span>
+                <span className="text-xs text-[#94a3b8] leading-[19.5px]">
+                  Minting currently disabled on Beta! We will be on Mainnet soon!
+                </span>
               </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex flex-col gap-4">
-              {!allowanceApproved ? (
-                <>
-                  <button
-                    onClick={handleEnableAllowance}
-                    disabled={isApproving}
-                    className="w-full h-[68px] rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] disabled:opacity-70 text-[#022c22] text-xl font-bold flex items-center justify-center gap-2.5 transition-colors"
-                    style={{ boxShadow: '0 8px 10px -6px rgba(74, 222, 128, 0.2), 0 20px 25px -5px rgba(74, 222, 128, 0.2)' }}
-                  >
-                    {isApproving ? (
-                      <>
-                        <Loader2 className="h-6 w-6 animate-spin" />
-                        Approving...
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="h-6 w-6" />
-                        Enable GFT Spending
-                      </>
-                    )}
-                  </button>
-                  <button
-                    disabled
-                    className="w-full h-[68px] rounded-2xl bg-[#1e293b] text-[#94a3b8] text-xl font-bold flex items-center justify-center gap-2.5 cursor-not-allowed"
-                  >
-                    <Sparkles className="h-6 w-6" />
-                    Mint NFT
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="w-full h-[68px] rounded-2xl bg-[#1e293b] text-[#4ade80] text-xl font-bold flex items-center justify-center gap-2.5">
-                    <Check className="h-6 w-6" />
-                    GFT Spending Enabled
-                  </div>
-                  <Button
-                    onClick={handleMint}
-                    disabled={!canMint || mintState !== "idle"}
-                    className="w-full h-[68px] rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] disabled:bg-[#4ade80]/50 text-[#022c22] text-xl font-bold flex items-center justify-center gap-2.5"
-                    style={{ boxShadow: '0 8px 10px -6px rgba(74, 222, 128, 0.2), 0 20px 25px -5px rgba(74, 222, 128, 0.2)' }}
-                  >
-                    <Sparkles className="h-6 w-6" />
-                    Mint NFT
-                  </Button>
-                </>
-              )}
             </div>
 
-            <p className="text-[10px] text-[#94a3b8] text-center px-4 leading-[16.25px]">
-              Enabling GFT spending is a one-time transaction per contract. This will call GFT.approve(mintContract, maxUint256) to save you gas on future mints.
+            <div className="flex flex-col gap-4">
+              <button
+                disabled
+                className="w-full h-[68px] rounded-2xl bg-[#1e293b] text-[#94a3b8] text-xl font-bold flex items-center justify-center gap-2.5 cursor-not-allowed opacity-50"
+              >
+                <Sparkles className="h-6 w-6" />
+                Mint NFT
+              </button>
+            </div>
+
+            <p className="text-[10px] text-amber-400/70 text-center px-4 leading-[16.25px]">
+              Minting currently disabled on Beta! We will be on Mainnet soon!
             </p>
           </div>
         </div>
