@@ -196,16 +196,73 @@ interface HeroBannerSlideshowProps {
 
 const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation }: HeroBannerSlideshowProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+  const autoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sectionRef = useRef<HTMLElement>(null);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
+  const goToSlide = useCallback((index: number) => {
+    setCurrentSlide(index);
+    if (autoTimerRef.current) clearInterval(autoTimerRef.current);
+    autoTimerRef.current = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
     }, SLIDE_INTERVAL);
-    return () => clearInterval(timer);
   }, []);
 
+  const goNext = useCallback(() => {
+    goToSlide((currentSlide + 1) % HERO_SLIDES.length);
+  }, [currentSlide, goToSlide]);
+
+  const goPrev = useCallback(() => {
+    goToSlide((currentSlide - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
+  }, [currentSlide, goToSlide]);
+
+  useEffect(() => {
+    autoTimerRef.current = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+    }, SLIDE_INTERVAL);
+    return () => { if (autoTimerRef.current) clearInterval(autoTimerRef.current); };
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') goPrev();
+      else if (e.key === 'ArrowRight') goNext();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [goNext, goPrev]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchEndX.current = null;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartX.current === null || touchEndX.current === null) return;
+    const diff = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 50;
+    if (Math.abs(diff) >= minSwipeDistance) {
+      if (diff > 0) goNext();
+      else goPrev();
+    }
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
+
   return (
-    <section className="relative overflow-hidden -mx-2 md:-mx-6 -mt-2 md:-mt-4">
+    <section
+      ref={sectionRef}
+      className="relative overflow-hidden -mx-2 md:-mx-6 -mt-2 md:-mt-4"
+      tabIndex={0}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="relative h-[300px] sm:h-[350px] md:h-[500px]">
         {HERO_SLIDES.map((slide, index) => (
           <div
