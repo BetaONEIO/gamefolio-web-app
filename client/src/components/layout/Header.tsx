@@ -394,10 +394,10 @@ const Header = () => {
                     <div className="px-4 py-3 border-b">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 flex-shrink-0">
+                          <div className="w-10 h-10 flex-shrink-0">
                             <CustomAvatar 
                               user={user}
-                              size="lg"
+                              size="md"
                               borderIntensity="subtle"
                             />
                           </div>
