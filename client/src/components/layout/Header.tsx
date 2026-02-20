@@ -394,18 +394,20 @@ const Header = () => {
                     <div className="px-4 py-3 border-b">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <CustomAvatar 
-                            user={user}
-                            size="sm"
-                            borderIntensity="subtle"
-                          />
+                          <div className="w-12 h-12 flex-shrink-0">
+                            <CustomAvatar 
+                              user={user}
+                              size="lg"
+                              borderIntensity="subtle"
+                            />
+                          </div>
                           <div>
                             <p className="text-sm font-medium">{user.displayName}</p>
                             <p className="text-sm text-muted-foreground">@{user.username}</p>
                           </div>
                         </div>
                         {user.currentStreak && user.currentStreak > 0 && (
-                          <div className="flex items-center gap-1 bg-orange-500/10 px-2 py-1 rounded-md">
+                          <div className="flex items-center gap-1 bg-orange-500/10 px-2 py-1 rounded-md" title="Daily login streak">
                             <Flame className="h-4 w-4 text-orange-500" />
                             <span className="text-sm font-semibold text-orange-500">{user.currentStreak}</span>
                           </div>
