@@ -23,6 +23,7 @@ interface MintedNftDetailScreenProps {
   nft: NftDetailData;
   txHash: string;
   walletAddress?: string;
+  ownerUsername?: string;
   onClose: () => void;
   onViewExplorer: () => void;
   initialSold?: boolean;
@@ -59,6 +60,7 @@ export default function MintedNftDetailScreen({
   nft,
   txHash,
   walletAddress,
+  ownerUsername,
   onClose,
   onViewExplorer,
   initialSold = false,
@@ -74,7 +76,7 @@ export default function MintedNftDetailScreen({
   const { user } = useAuth();
   const displayName = nft.name || `Gamefolio Genesis ${getTokenIdPadded(nft.id)}`;
   const isOwner = walletAddress && user?.walletAddress && walletAddress.toLowerCase() === user.walletAddress.toLowerCase();
-  const ownerDisplay = isOwner ? `You (${formatAddress(walletAddress)})` : formatAddress(walletAddress || "");
+  const ownerDisplay = isOwner ? `You (${formatAddress(walletAddress)})` : ownerUsername ? `@${ownerUsername}` : formatAddress(walletAddress || "");
   const mintDate = formatDate(mintedAt);
   const soldDate = soldAt ? formatDate(soldAt) : null;
   const isListedOnMarketplace = sold && (listingActive === true);
@@ -340,7 +342,7 @@ export default function MintedNftDetailScreen({
               </div>
             </div>
 
-            {!sold && (
+            {!sold && isOwner && (
               <button
                 onClick={() => setProfilePictureMutation.mutate()}
                 disabled={setProfilePictureMutation.isPending}
@@ -353,8 +355,8 @@ export default function MintedNftDetailScreen({
               </button>
             )}
 
-            <div className={`grid ${sold ? 'grid-cols-1' : 'grid-cols-2'} gap-3 pt-1`}>
-              {!sold && (
+            <div className={`grid ${sold || !isOwner ? 'grid-cols-1' : 'grid-cols-2'} gap-3 pt-1`}>
+              {!sold && isOwner && (
                 <button
                   onClick={onClose}
                   className="h-[52px] rounded-xl bg-[#4ade80] flex items-center justify-center gap-2 shadow-[0_4px_6px_-4px_rgba(74,222,128,0.2),0_10px_15px_-3px_rgba(74,222,128,0.2)] hover:bg-[#22c55e] transition-colors"
@@ -377,7 +379,7 @@ export default function MintedNftDetailScreen({
                     {isListedOnMarketplace ? 'Listed on Marketplace' : 'Sold'}
                   </span>
                 </button>
-              ) : (
+              ) : isOwner ? (
                 <button
                   onClick={() => setShowQuickSell(true)}
                   className="h-[52px] rounded-xl bg-[#1e293b] hover:bg-[#ef4444] group flex items-center justify-center gap-2 transition-colors"
@@ -387,7 +389,7 @@ export default function MintedNftDetailScreen({
                   </svg>
                   <span className="text-sm font-bold text-[#f8fafc] leading-5">Quick Sell</span>
                 </button>
-              )}
+              ) : null}
             </div>
 
             <div className="flex flex-col gap-4 pt-2">

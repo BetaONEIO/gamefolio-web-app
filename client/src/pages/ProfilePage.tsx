@@ -1276,7 +1276,8 @@ const ProfilePage = () => {
             })),
           }}
           txHash={selectedProfileNft.txHash || ''}
-          walletAddress={currentUser?.walletAddress || undefined}
+          walletAddress={profile?.walletAddress || undefined}
+          ownerUsername={profile?.username || username}
           onClose={() => setSelectedProfileNft(null)}
           onViewExplorer={() => {
             if (selectedProfileNft.txHash) {
