@@ -113,11 +113,6 @@ export function NameTagDetailDialog({
                   NFT Details
                 </span>
               </div>
-              <button className="w-10 h-10 rounded-full bg-[#1e293b]/50 flex items-center justify-center transition-colors hover:bg-[#1e293b]/80">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M7 17L17 7M17 7H7M17 7V17" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
             </div>
 
             {/* Name Tag Image with overlay badges */}
