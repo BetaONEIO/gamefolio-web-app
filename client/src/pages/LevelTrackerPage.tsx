@@ -215,18 +215,17 @@ export default function LevelTrackerPage() {
                 return (
                   <div 
                     key={item.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-card/50 border border-border/30 hover:border-border/50 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-lg bg-card/50 border border-border/30 hover:border-border/50 transition-colors overflow-hidden"
                   >
                     <div className="p-2 rounded-full bg-background text-primary shrink-0">
                       <Icon className="w-4 h-4" />
                     </div>
-                    <span className="font-medium text-sm whitespace-nowrap">{label}</span>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
-                    </span>
-                    <span className="flex-1 text-xs text-muted-foreground truncate">
-                      {item.description || ""}
-                    </span>
+                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                      <span className="font-medium text-sm truncate">{label}</span>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
+                      </span>
+                    </div>
                     <span className="font-bold text-primary whitespace-nowrap shrink-0">+{item.xpAmount} XP</span>
                   </div>
                 );
