@@ -29,6 +29,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { ScreenshotCard } from '@/components/screenshots/ScreenshotCard';
 import { ScreenshotCommentSection } from '@/components/screenshots/ScreenshotCommentSection';
 import { ScreenshotShareDialog } from '@/components/screenshot/ScreenshotShareDialog';
+import { FullscreenReelsViewer } from '@/components/clips/FullscreenReelsViewer';
 
 type ContentType = 'clips' | 'reels' | 'screenshots';
 type FilterType = 'likes' | 'comments';
@@ -156,6 +157,7 @@ const TrendingPage: React.FC = () => {
   const [filter, setFilter] = useState<FilterType>('likes');
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('recent');
   const [showMobileViewer, setShowMobileViewer] = useState(false);
+  const [fullscreenReelIndex, setFullscreenReelIndex] = useState<number | null>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotWithUser | null>(null);
   const { signedUrl: screenshotSignedUrl } = useSignedUrl(selectedScreenshot?.imageUrl);
   const [ageRestrictionAccepted, setAgeRestrictionAccepted] = useState(false);
@@ -396,9 +398,8 @@ const TrendingPage: React.FC = () => {
         );
       }
 
-      // Mobile: Instagram/TikTok style 2-column masonry grid using CSS columns
+      // Mobile: Instagram/TikTok style 2-column masonry grid - tapping opens fullscreen vertical swipe viewer
       if (isMobile) {
-        // Create varying aspect ratios for masonry effect
         const aspectRatios = ['aspect-[9/16]', 'aspect-[3/4]', 'aspect-[2/3]', 'aspect-[9/14]', 'aspect-[3/5]', 'aspect-[4/5]'];
         
         const formatNumber = (num: number) => {
@@ -408,72 +409,71 @@ const TrendingPage: React.FC = () => {
         };
         
         return (
-          <div className="columns-2 gap-1 space-y-1">
-            {trendingReels.map((reel, index) => {
-              const aspectRatio = aspectRatios[index % aspectRatios.length];
-              
-              return (
-                <div
-                  key={reel.id}
-                  onClick={() => openClipDialog(reel.id, trendingReels)}
-                  className="break-inside-avoid mb-1"
-                >
-                  <div className={`relative ${aspectRatio} w-full rounded-sm overflow-hidden cursor-pointer group`}>
-                    {/* Thumbnail */}
-                    <img
-                      src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
-                      alt={reel.title}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = "/placeholder-game.png";
-                      }}
-                    />
-                    
-                    {/* Gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
-                    
-                    {/* Duration badge - top left */}
-                    <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold">
-                      {(() => {
-                        const actualDuration = reel.trimEnd && reel.trimEnd > 0 
-                          ? reel.trimEnd - (reel.trimStart || 0)
-                          : reel.duration || 0;
-                        return formatDuration(actualDuration);
-                      })()}
-                    </div>
-                    
-                    {/* View count - top right */}
-                    <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold flex items-center gap-1">
-                      <Eye className="h-3 w-3" />
-                      {formatNumber(reel.views || 0)}
-                    </div>
-                    
-                    {/* Content overlay - left aligned bottom */}
-                    <div className="absolute bottom-0 left-0 right-0 p-2">
-                      {/* Title */}
-                      <h3 className="text-white font-bold text-xs mb-0.5 drop-shadow-lg line-clamp-2">
-                        {reel.title}
-                      </h3>
-
-                      {/* Username */}
-                      <p className="text-white text-[10px] mb-1 drop-shadow-lg">
-                        @{reel.user.username}
-                      </p>
-
-                      {/* Game badge underneath username */}
-                      {reel.game && (
-                        <div className="inline-block bg-green-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis">
-                          {reel.game.name}
-                        </div>
-                      )}
+          <>
+            <div className="columns-2 gap-1 space-y-1">
+              {trendingReels.map((reel, index) => {
+                const aspectRatio = aspectRatios[index % aspectRatios.length];
+                
+                return (
+                  <div
+                    key={reel.id}
+                    onClick={() => setFullscreenReelIndex(index)}
+                    className="break-inside-avoid mb-1"
+                  >
+                    <div className={`relative ${aspectRatio} w-full rounded-sm overflow-hidden cursor-pointer group`}>
+                      <img
+                        src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
+                        alt={reel.title}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = "/placeholder-game.png";
+                        }}
+                      />
+                      
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
+                      
+                      <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold">
+                        {(() => {
+                          const actualDuration = reel.trimEnd && reel.trimEnd > 0 
+                            ? reel.trimEnd - (reel.trimStart || 0)
+                            : reel.duration || 0;
+                          return formatDuration(actualDuration);
+                        })()}
+                      </div>
+                      
+                      <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold flex items-center gap-1">
+                        <Eye className="h-3 w-3" />
+                        {formatNumber(reel.views || 0)}
+                      </div>
+                      
+                      <div className="absolute bottom-0 left-0 right-0 p-2">
+                        <h3 className="text-white font-bold text-xs mb-0.5 drop-shadow-lg line-clamp-2">
+                          {reel.title}
+                        </h3>
+                        <p className="text-white text-[10px] mb-1 drop-shadow-lg">
+                          @{reel.user.username}
+                        </p>
+                        {reel.game && (
+                          <div className="inline-block bg-green-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis">
+                            {reel.game.name}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+            {fullscreenReelIndex !== null && trendingReels && (
+              <FullscreenReelsViewer
+                reels={trendingReels}
+                initialIndex={fullscreenReelIndex}
+                onClose={() => setFullscreenReelIndex(null)}
+              />
+            )}
+          </>
         );
       }
 
