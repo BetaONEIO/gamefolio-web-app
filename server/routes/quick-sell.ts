@@ -26,6 +26,10 @@ router.post('/api/nft/quick-sell', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    if (user.activeProfilePicType === 'nft' && user.nftProfileTokenId === tokenId) {
+      return res.status(400).json({ error: 'This NFT is currently set as your profile picture. Please remove it as your profile picture before selling.' });
+    }
+
     const platformFee = QUICK_SELL_PRICE * (PLATFORM_FEE_PERCENT / 100);
     const totalDeductions = platformFee + QUICK_LIST_FEE;
     const receivedAmount = QUICK_SELL_PRICE - totalDeductions;

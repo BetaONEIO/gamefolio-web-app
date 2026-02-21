@@ -80,6 +80,7 @@ export default function MintedNftDetailScreen({
   const mintDate = formatDate(mintedAt);
   const soldDate = soldAt ? formatDate(soldAt) : null;
   const isListedOnMarketplace = sold && (listingActive === true);
+  const isNftProfilePic = user?.activeProfilePicType === 'nft' && user?.nftProfileTokenId === nft.id;
 
   const setProfilePictureMutation = useMutation({
     mutationFn: async () => {
@@ -381,7 +382,17 @@ export default function MintedNftDetailScreen({
                 </button>
               ) : isOwner ? (
                 <button
-                  onClick={() => setShowQuickSell(true)}
+                  onClick={() => {
+                    if (isNftProfilePic) {
+                      toast({
+                        title: "Cannot Sell Profile Picture",
+                        description: "This NFT is currently set as your profile picture. Please remove it as your profile picture before selling.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    setShowQuickSell(true);
+                  }}
                   className="h-[52px] rounded-xl bg-[#1e293b] hover:bg-[#ef4444] group flex items-center justify-center gap-2 transition-colors"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
