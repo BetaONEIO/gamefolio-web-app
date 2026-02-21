@@ -305,6 +305,8 @@ export const CustomAvatar = ({
   const hasNftProfile = !!(user?.nftProfileTokenId && user?.nftProfileImageUrl && (user?.activeProfilePicType === 'nft' || !user?.activeProfilePicType));
   const [showNftPopup, setShowNftPopup] = useState(false);
   const [nftAnchorRect, setNftAnchorRect] = useState<DOMRect | null>(null);
+  const [nftImageLoaded, setNftImageLoaded] = useState(false);
+  const [nftImageError, setNftImageError] = useState(false);
   
   // Get signed URL for avatar (private bucket)
   const { signedUrl: avatarSignedUrl } = useSignedUrl(user?.avatarUrl);
@@ -341,17 +343,29 @@ export const CustomAvatar = ({
         onClick={handleNftAvatarClick}
       >
         <div
-          className="w-full h-full rounded-lg overflow-hidden border-2 bg-[#1e293b]"
+          className="w-full h-full rounded-lg overflow-hidden border-2 bg-[#1e293b] relative"
           style={{ borderColor: borderColor }}
         >
-          <img
-            src={nftSignedUrl || user.nftProfileImageUrl || ''}
-            alt={safeDisplayName}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-            }}
+          {!nftImageError && (
+            <img
+              src={nftSignedUrl || user.nftProfileImageUrl || ''}
+              alt={safeDisplayName}
+              className="w-full h-full object-cover"
+              onLoad={() => setNftImageLoaded(true)}
+              onError={() => setNftImageError(true)}
+            />
+          )}
+          {nftImageError && (
+            <div
+              className="w-full h-full flex items-center justify-center text-xs font-bold text-primary-foreground"
+              style={{ backgroundColor: user.accentColor || borderColor }}
+            >
+              {safeDisplayName.substring(0, 2).toUpperCase()}
+            </div>
+          )}
+          <div
+            className="absolute inset-0 rounded-lg pointer-events-none"
+            style={{ boxShadow: 'inset 0 0 8px 2px rgba(0,0,0,0.35)' }}
           />
         </div>
         <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center shadow-sm" style={{ backgroundColor: borderColor }}>
