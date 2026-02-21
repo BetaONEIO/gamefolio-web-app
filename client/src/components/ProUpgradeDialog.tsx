@@ -686,7 +686,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
                     Elevate your gaming identity with premium features
                   </p>
 
-                  <div className="flex flex-col gap-3 mb-4 pt-2">
+                  <div className="flex flex-col gap-3 mb-4 pt-4">
                     {premiumBenefits.map((benefit, index) => (
                       <motion.div
                         key={benefit.title}
