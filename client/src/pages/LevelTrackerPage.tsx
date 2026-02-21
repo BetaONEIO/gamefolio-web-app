@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { getQueryFn } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { ArrowLeft, Zap, Gift, Eye, Heart, Flame, Upload, LogIn, Star, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import badgeIcon from "@assets/yellow_circle_transparent_1771658854718.png";
+import badgeIcon from "@assets/yellow_circle_transparent_1771659993513.png";
 import { formatDistanceToNow } from "date-fns";
 
 interface LevelProgress {
@@ -72,17 +73,19 @@ export default function LevelTrackerPage() {
 
   const { data: progress, isLoading: progressLoading } = useQuery<LevelProgress>({
     queryKey: [`/api/user/${user?.id}/level-progress`],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!user?.id,
   });
 
   const { data: xpHistory, isLoading: historyLoading } = useQuery<XPHistoryItem[]>({
     queryKey: [`/api/user/${user?.id}/xp-history`],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!user?.id,
   });
 
-  const svgSize = 200;
-  const radius = 80;
-  const strokeWidth = 12;
+  const svgSize = 220;
+  const radius = 95;
+  const strokeWidth = 10;
   const circumference = 2 * Math.PI * radius;
   const progressPercent = progress?.progressPercent || 0;
   const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
@@ -143,7 +146,7 @@ export default function LevelTrackerPage() {
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
-                    <div className="relative w-[170px] h-[170px] md:w-[185px] md:h-[185px] mx-auto">
+                    <div className="relative w-[185px] h-[185px] md:w-[200px] md:h-[200px] mx-auto">
                       <img 
                         src={badgeIcon} 
                         alt="Level Badge"
