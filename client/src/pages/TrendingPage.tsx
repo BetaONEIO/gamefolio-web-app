@@ -29,7 +29,6 @@ import { apiRequest } from '@/lib/queryClient';
 import { ScreenshotCard } from '@/components/screenshots/ScreenshotCard';
 import { ScreenshotCommentSection } from '@/components/screenshots/ScreenshotCommentSection';
 import { ScreenshotShareDialog } from '@/components/screenshot/ScreenshotShareDialog';
-import { FullscreenReelsViewer } from '@/components/clips/FullscreenReelsViewer';
 
 type ContentType = 'clips' | 'reels' | 'screenshots';
 type FilterType = 'likes' | 'comments';
@@ -157,7 +156,6 @@ const TrendingPage: React.FC = () => {
   const [filter, setFilter] = useState<FilterType>('likes');
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('recent');
   const [showMobileViewer, setShowMobileViewer] = useState(false);
-  const [fullscreenReelIndex, setFullscreenReelIndex] = useState<number | null>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotWithUser | null>(null);
   const { signedUrl: screenshotSignedUrl } = useSignedUrl(selectedScreenshot?.imageUrl);
   const [ageRestrictionAccepted, setAgeRestrictionAccepted] = useState(false);
@@ -417,7 +415,7 @@ const TrendingPage: React.FC = () => {
                 return (
                   <div
                     key={reel.id}
-                    onClick={() => setFullscreenReelIndex(index)}
+                    onClick={() => openClipDialog(reel.id, trendingReels)}
                     className="break-inside-avoid mb-1"
                   >
                     <div className={`relative ${aspectRatio} w-full rounded-sm overflow-hidden cursor-pointer group`}>
@@ -466,13 +464,6 @@ const TrendingPage: React.FC = () => {
                 );
               })}
             </div>
-            {fullscreenReelIndex !== null && trendingReels && (
-              <FullscreenReelsViewer
-                reels={trendingReels}
-                initialIndex={fullscreenReelIndex}
-                onClose={() => setFullscreenReelIndex(null)}
-              />
-            )}
           </>
         );
       }
