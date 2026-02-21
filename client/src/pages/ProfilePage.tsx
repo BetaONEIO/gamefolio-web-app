@@ -3267,10 +3267,6 @@ const ProfilePage = () => {
                     }}>
                       <div className="text-muted-foreground flex items-center hover:text-primary transition-colors cursor-pointer">
                         @{profile?.username}
-                        <ModeratorBadge 
-                          isModerator={profile?.role === "moderator" || profile?.role === "admin"} 
-                          size="sm" 
-                        />
                       </div>
                     </Link>
                   </div>
