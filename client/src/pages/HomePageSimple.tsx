@@ -577,15 +577,17 @@ const HomePage = () => {
         </div>
       )}
       
-      {/* Hero Slideshow Section */}
-      <HeroBannerSlideshow 
-        heroText={heroText}
-        user={user}
-        userHasContent={userHasContent}
-        setLocation={setLocation}
-        dbSlides={dbHeroSlides}
-        slideIntervalMs={slideIntervalMs}
-      />
+      {/* Hero Slideshow Section - hidden when all DB slides are disabled */}
+      {(!dbHeroSlides || dbHeroSlides.length > 0) && (
+        <HeroBannerSlideshow 
+          heroText={heroText}
+          user={user}
+          userHasContent={userHasContent}
+          setLocation={setLocation}
+          dbSlides={dbHeroSlides}
+          slideIntervalMs={slideIntervalMs}
+        />
+      )}
       
       <div className="space-y-4 sm:space-y-6 md:space-y-8 mt-4 sm:mt-6 md:mt-8">
       {/* Recommended for You Section */}
