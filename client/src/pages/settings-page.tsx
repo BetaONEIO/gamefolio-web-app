@@ -142,7 +142,9 @@ const createImage = (url: string): Promise<HTMLImageElement> =>
     const image = new Image();
     image.addEventListener('load', () => resolve(image));
     image.addEventListener('error', (error) => reject(error));
-    image.setAttribute('crossOrigin', 'anonymous');
+    if (!url.startsWith('data:')) {
+      image.setAttribute('crossOrigin', 'anonymous');
+    }
     image.src = url;
   });
 
@@ -2361,7 +2363,7 @@ export default function SettingsPage() {
 
       {/* Avatar Crop Modal */}
       <Dialog open={showCropModal} onOpenChange={setShowCropModal}>
-        <DialogContent className="sm:max-w-lg bg-slate-900 border-slate-700">
+        <DialogContent className="sm:max-w-lg max-w-[95vw] max-h-[90vh] bg-slate-900 border-slate-700 overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               <Crop className="h-5 w-5" />
@@ -2374,7 +2376,7 @@ export default function SettingsPage() {
           
           <div className="space-y-4">
             {/* Crop Area */}
-            <div className="relative h-80 w-full bg-slate-800 rounded-lg overflow-hidden">
+            <div className="relative h-64 sm:h-80 w-full bg-slate-800 rounded-lg overflow-hidden touch-none">
               {imageToCrop && (
                 <Cropper
                   image={imageToCrop}
@@ -2386,6 +2388,7 @@ export default function SettingsPage() {
                   onCropChange={setCrop}
                   onCropComplete={onCropComplete}
                   onZoomChange={setZoom}
+                  objectFit="contain"
                 />
               )}
             </div>
