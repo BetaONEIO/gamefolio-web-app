@@ -293,9 +293,15 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
       setCheckoutError(null);
     }
     if (open) {
-      setTimeout(() => {
-        scrollContainerRef.current?.scrollTo(0, 0);
-      }, 50);
+      const scrollToTop = () => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = 0;
+        }
+      };
+      scrollToTop();
+      setTimeout(scrollToTop, 50);
+      setTimeout(scrollToTop, 150);
+      setTimeout(scrollToTop, 300);
     }
   }, [open]);
 
@@ -639,6 +645,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
       <DialogContent
         className="max-w-[430px] md:max-w-[860px] w-full bg-[#020617] border-none text-white p-0 overflow-hidden [&>button]:hidden max-h-[100dvh] h-[100dvh] md:h-auto md:max-h-[95vh] gap-0 rounded-none sm:rounded-none top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
         data-testid="dialog-pro-upgrade"
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <AnimatePresence mode="wait">
           {step === "plans" && (
