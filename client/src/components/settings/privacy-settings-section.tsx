@@ -1,4 +1,5 @@
 
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -6,13 +7,21 @@ import { Label } from "@/components/ui/label";
 import { Lock, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import type { User } from "@shared/schema";
 
 export function PrivacySettingsSection() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Update privacy preferences mutation
+  const [localIsPrivate, setLocalIsPrivate] = useState(user?.isPrivate || false);
+
+  useEffect(() => {
+    if (user) {
+      setLocalIsPrivate(user.isPrivate || false);
+    }
+  }, [user?.isPrivate]);
+
   const updatePrivacyMutation = useMutation({
     mutationFn: async (isPrivate: boolean) => {
       const response = await fetch("/api/users/privacy-preferences", {
@@ -26,6 +35,15 @@ export function PrivacySettingsSection() {
       if (!response.ok) throw new Error("Failed to update privacy settings");
       return response.json();
     },
+    onMutate: async (isPrivate: boolean) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/user"] });
+      const previousUser = queryClient.getQueryData<User>(["/api/user"]);
+      if (previousUser) {
+        queryClient.setQueryData(["/api/user"], { ...previousUser, isPrivate });
+      }
+      setLocalIsPrivate(isPrivate);
+      return { previousUser };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       toast({
@@ -33,7 +51,11 @@ export function PrivacySettingsSection() {
         variant: "gamefolioSuccess",
       });
     },
-    onError: () => {
+    onError: (_err: Error, _isPrivate: boolean, context: { previousUser?: User } | undefined) => {
+      if (context?.previousUser) {
+        queryClient.setQueryData(["/api/user"], context.previousUser);
+        setLocalIsPrivate(context.previousUser.isPrivate || false);
+      }
       toast({
         description: "Failed to update privacy settings",
         variant: "destructive",
@@ -49,7 +71,7 @@ export function PrivacySettingsSection() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          {user?.isPrivate ? (
+          {localIsPrivate ? (
             <Lock className="h-5 w-5" />
           ) : (
             <Globe className="h-5 w-5" />
@@ -72,13 +94,13 @@ export function PrivacySettingsSection() {
           </div>
           <Switch
             id="private-profile"
-            checked={user?.isPrivate || false}
+            checked={localIsPrivate}
             onCheckedChange={handlePrivacyToggle}
             disabled={updatePrivacyMutation.isPending}
           />
         </div>
 
-        {user?.isPrivate && (
+        {localIsPrivate && (
           <div className="p-4 border rounded-lg bg-muted/50">
             <div className="flex items-center gap-2 mb-2">
               <Lock className="h-4 w-4" />
