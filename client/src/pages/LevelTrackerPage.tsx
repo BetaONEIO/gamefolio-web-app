@@ -173,14 +173,14 @@ export default function LevelTrackerPage() {
                   {Math.round(progress.pointsRemaining).toLocaleString()} XP to Level {progress.level + 1}
                 </p>
                 <div className="flex items-center gap-2 justify-center text-xs text-muted-foreground">
-                  <span>{Math.round(progress.pointsForCurrentLevel).toLocaleString()}</span>
+                  <span>Lvl {progress.level}</span>
                   <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-yellow-500 rounded-full transition-all duration-500"
                       style={{ width: `${progressPercent}%` }}
                     />
                   </div>
-                  <span>{Math.round(progress.pointsForNextLevel).toLocaleString()}</span>
+                  <span>Lvl {progress.level + 1}</span>
                 </div>
               </div>
             )}
