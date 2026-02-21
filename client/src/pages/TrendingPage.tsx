@@ -623,23 +623,22 @@ const TrendingPage: React.FC = () => {
         <DialogContent className="max-w-[95%] w-[95%] p-0 bg-background text-foreground max-h-[95vh] h-auto lg:h-[95vh] overflow-y-auto lg:overflow-hidden screenshot-dialog-close">
           <style>{`
             .screenshot-dialog-close > button[type="button"] {
-              background: rgba(0,0,0,0.8) !important;
+              background: rgba(0,0,0,0.4) !important;
               color: white !important;
-              border-radius: 9999px !important;
-              padding: 8px !important;
+              border-radius: 0.5rem !important;
+              padding: 0 !important;
               opacity: 1 !important;
               right: 12px !important;
               top: 12px !important;
-              width: 36px !important;
-              height: 36px !important;
+              width: 40px !important;
+              height: 40px !important;
               display: flex !important;
               align-items: center !important;
               justify-content: center !important;
-              box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
               z-index: 100 !important;
             }
             .screenshot-dialog-close > button[type="button"]:hover {
-              background: rgba(0,0,0,1) !important;
+              background: rgba(0,0,0,0.6) !important;
             }
             .screenshot-dialog-close > button[type="button"] svg {
               width: 20px !important;
