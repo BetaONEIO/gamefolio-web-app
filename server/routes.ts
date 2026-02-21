@@ -9018,6 +9018,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const report = await storage.createCommentReport(reportData);
+
+      const comment = await storage.getComment(commentId);
+      const emailData = {
+        contentType: 'comment' as const,
+        contentId: commentId,
+        contentTitle: comment ? comment.content.substring(0, 100) : `Comment #${commentId}`,
+        contentUrl: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/comments/${commentId}`,
+        reporterUsername: req.user!.username,
+        reporterEmail: req.user!.email!,
+        reason: reason.trim(),
+        reportId: report.id
+      };
+      await EmailService.sendContentReportEmail(emailData);
+
       res.status(201).json({ message: "Comment reported successfully", report });
     } catch (err) {
       return handleValidationError(err, res);
@@ -9041,6 +9055,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const report = await storage.createCommentReport(reportData);
+
+      const emailData = {
+        contentType: 'comment' as const,
+        contentId: screenshotCommentId,
+        contentTitle: `Screenshot Comment #${screenshotCommentId}`,
+        contentUrl: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/screenshot-comments/${screenshotCommentId}`,
+        reporterUsername: req.user!.username,
+        reporterEmail: req.user!.email!,
+        reason: reason.trim(),
+        reportId: report.id
+      };
+      await EmailService.sendContentReportEmail(emailData);
+
       res.status(201).json({ message: "Comment reported successfully", report });
     } catch (err) {
       return handleValidationError(err, res);
