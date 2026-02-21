@@ -84,10 +84,6 @@ const MessagesPage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Wrap entire page with verification guard
-  if (!user) {
-    return <div>Loading...</div>;
-  }
   const [selectedConversation, setSelectedConversation] = useState<number | null>(null);
   const [selectedUserInfo, setSelectedUserInfo] = useState<any>(null);
   const [newMessage, setNewMessage] = useState("");
@@ -100,16 +96,14 @@ const MessagesPage: React.FC = () => {
   const [showMobileConversationList, setShowMobileConversationList] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch conversations with auto-refresh
   const conversationsQuery = useQuery({
     queryKey: ["/api/messages/conversations"],
     enabled: !!user,
-    refetchInterval: 5000, // Refresh conversations every 5 seconds
+    refetchInterval: 5000,
     refetchOnWindowFocus: true,
   });
   const { data: conversations = [], isLoading: loadingConversations } = conversationsQuery;
 
-  // Fetch messages for selected conversation with auto-refresh
   const { data: messages = [], isLoading: loadingMessages } = useQuery({
     queryKey: ["/api/messages", selectedConversation],
     queryFn: async () => {
@@ -118,30 +112,14 @@ const MessagesPage: React.FC = () => {
       return response.json();
     },
     enabled: !!selectedConversation && !!user,
-    refetchInterval: 3000, // Refresh every 3 seconds for real-time feel
+    refetchInterval: 3000,
     refetchOnWindowFocus: true,
   });
 
-  // Fetch blocked users
   const { data: blockedUsers = [] } = useQuery({
     queryKey: ["/api/users/blocked"],
     enabled: !!user,
-    refetchInterval: 5000, // Refresh every 5 seconds to detect changes
-    onSuccess: (data) => {
-      console.log('🎯 Blocked users query success:', {
-        currentUser: {
-          id: user?.id,
-          username: user?.username,
-          displayName: user?.displayName
-        },
-        dataReceived: data,
-        dataLength: Array.isArray(data) ? data.length : 'not array',
-        selectedConversation: selectedConversation
-      });
-    },
-    onError: (error) => {
-      console.error('💥 Blocked users query error:', error);
-    }
+    refetchInterval: 5000,
   });
 
   // Search users mutation
