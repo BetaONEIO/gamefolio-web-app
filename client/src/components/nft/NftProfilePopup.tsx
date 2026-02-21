@@ -168,7 +168,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col p-4 overflow-y-auto scrollbar-hide font-['Plus_Jakarta_Sans',sans-serif] relative" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div className="flex-1 flex flex-col p-4 pb-8 overflow-y-auto scrollbar-hide font-['Plus_Jakarta_Sans',sans-serif] relative" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           <button
             onClick={(e) => {
               e.stopPropagation();
