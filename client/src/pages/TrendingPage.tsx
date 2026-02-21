@@ -379,6 +379,7 @@ const TrendingPage: React.FC = () => {
               profile={screenshot.user}
               onDelete={(id) => deleteScreenshotMutation.mutate(id)}
               onSelect={setSelectedScreenshot}
+              showUserInfo={true}
             />
           ))}
         </div>

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Heart, MessageSquare, Share2, Eye, Flag, X, ImageOff } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Heart, MessageSquare, Share2, Eye, Flag, X, ImageOff, UserPlus, UserCheck } from 'lucide-react';
 import { Card, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { FireButton } from '@/components/engagement/FireButton';
 import { ScreenshotShareDialog } from '@/components/screenshot/ScreenshotShareDialog';
 import { ReportButton } from '@/components/reporting/ReportButton';
@@ -12,6 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { LazyImage } from '@/components/ui/lazy-image';
 import { useSignedUrl } from '@/hooks/use-signed-url';
+import { apiRequest } from '@/lib/queryClient';
+import { Link } from 'wouter';
 
 interface ScreenshotCardProps {
   screenshot: any;
@@ -20,6 +23,7 @@ interface ScreenshotCardProps {
   profile: any;
   onDelete?: (id: number) => void;
   onSelect?: (screenshot: any) => void;
+  showUserInfo?: boolean;
 }
 
 export function ScreenshotCard({ 
@@ -28,11 +32,35 @@ export function ScreenshotCard({
   isOwnProfile, 
   profile, 
   onDelete, 
-  onSelect 
+  onSelect,
+  showUserInfo = false
 }: ScreenshotCardProps) {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { signedUrl: screenshotSignedUrl } = useSignedUrl(screenshot.imageUrl);
+  const screenshotUser = (screenshot as any).user;
+  const { signedUrl: signedAvatarUrl } = useSignedUrl(showUserInfo ? screenshotUser?.avatarUrl : null);
+
+  const { data: followStatus } = useQuery({
+    queryKey: ['/api/follow/status', screenshotUser?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/follow/status/${screenshotUser?.id}`, { credentials: 'include' });
+      if (!response.ok) return { isFollowing: false };
+      return response.json();
+    },
+    enabled: showUserInfo && !!currentUser && !!screenshotUser?.id && currentUser.id !== screenshotUser?.id,
+  });
+
+  const followMutation = useMutation({
+    mutationFn: async (targetUserId: number) => {
+      const response = await apiRequest('POST', `/api/follow/${targetUserId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/follow/status', screenshotUser?.id] });
+    },
+  });
   
   // Screenshot like functionality
   const likeMutation = useLikeScreenshot();
@@ -204,8 +232,52 @@ export function ScreenshotCard({
         )}
       </div>
 
-      {/* Info Section - Title, Game, Stats */}
+      {/* Info Section - User, Title, Game, Stats */}
       <div className="p-3 space-y-1">
+        {showUserInfo && screenshotUser && (
+          <div className="flex items-center justify-between mb-2">
+            <Link href={`/profile/${screenshotUser.username}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+              <div className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
+                {screenshotUser.nftProfileTokenId && screenshotUser.nftProfileImageUrl ? (
+                  <div className="h-7 w-7 rounded-lg overflow-hidden border border-[#4ade80]/40 flex-shrink-0">
+                    <img src={screenshotUser.nftProfileImageUrl} alt={screenshotUser.displayName} loading="lazy" className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <Avatar className="h-7 w-7 flex-shrink-0">
+                    <AvatarImage src={signedAvatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'} />
+                    <AvatarFallback className="text-xs">{screenshotUser.displayName?.charAt(0) || '?'}</AvatarFallback>
+                  </Avatar>
+                )}
+                <span className="text-sm font-medium text-foreground truncate max-w-[120px]">{screenshotUser.displayName || screenshotUser.username}</span>
+              </div>
+            </Link>
+            {currentUser && currentUser.id !== screenshotUser.id && (
+              <Button
+                size="sm"
+                variant={followStatus?.isFollowing ? "secondary" : "default"}
+                className="h-7 text-xs px-3"
+                onClick={(e: React.MouseEvent) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  followMutation.mutate(screenshotUser.id);
+                }}
+                disabled={followMutation.isPending}
+              >
+                {followStatus?.isFollowing ? (
+                  <>
+                    <UserCheck className="h-3 w-3 mr-1" />
+                    Following
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-3 w-3 mr-1" />
+                    Follow
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        )}
         {/* Title */}
         <h3 className="font-semibold text-sm line-clamp-1 leading-tight">{screenshot.title}</h3>
         
