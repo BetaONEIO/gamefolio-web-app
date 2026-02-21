@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, User, MessageCircle, Video, X } from "lucide-react";
+import { Bell, User, MessageCircle, Video, X, Flame } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -132,6 +132,8 @@ export function NotificationPanel({
         return <User className="h-4 w-4 text-purple-500" />;
       case 'comment':
         return <MessageCircle className="h-4 w-4 text-gray-500" />;
+      case 'streak':
+        return <Flame className="h-4 w-4 text-orange-500" />;
       default:
         return <Bell className="h-4 w-4 text-gray-500" />;
     }

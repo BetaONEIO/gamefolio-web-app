@@ -821,6 +821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               streakInfo: {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
+                dailyXP: streakInfo.dailyXP,
                 message: streakInfo.message,
                 isNewMilestone: streakInfo.isNewMilestone
               }
@@ -873,6 +874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               streakInfo: {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
+                dailyXP: streakInfo.dailyXP,
                 message: streakInfo.message,
                 isNewMilestone: streakInfo.isNewMilestone
               }
@@ -1048,6 +1050,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               streakInfo: {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
+                dailyXP: streakInfo.dailyXP,
                 message: streakInfo.message,
                 isNewMilestone: streakInfo.isNewMilestone
               }
@@ -1098,6 +1101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               streakInfo: {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
+                dailyXP: streakInfo.dailyXP,
                 message: streakInfo.message,
                 isNewMilestone: streakInfo.isNewMilestone
               }
@@ -1621,8 +1625,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Update streak when user accesses the app (daily check-in)
     try {
       const streakInfo = await StreakService.updateLoginStreak((req.user as any).id);
-      if (streakInfo.bonusAwarded > 0) {
-        console.log(`🎉 Daily check-in streak bonus for ${(req.user as any).username}: ${streakInfo.message}`);
+      if (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0) {
+        console.log(`🎉 Daily check-in for ${(req.user as any).username}: ${streakInfo.message}`);
       }
       
       // Fetch fresh user data after streak update

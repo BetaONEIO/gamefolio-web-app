@@ -105,11 +105,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               variant: "gamefolioSuccess",
             });
             
-            // Show streak bonus notification if earned
-            if (streakInfo && streakInfo.bonusAwarded > 0) {
+            if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
               setTimeout(() => {
                 toast({
-                  title: "🔥 Login Streak Bonus!",
+                  title: streakInfo.isNewMilestone ? "🔥 Streak Milestone!" : `🔥 Day ${streakInfo.currentStreak} Streak!`,
                   description: streakInfo.message,
                   variant: "gamefolioSuccess",
                   duration: 5000,
@@ -185,11 +184,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "gamefolioSuccess",
       });
 
-      // Show streak bonus notification if earned
-      if (streakInfo && streakInfo.bonusAwarded > 0) {
+      if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
         setTimeout(() => {
           toast({
-            title: "🔥 Login Streak Bonus!",
+            title: streakInfo.isNewMilestone ? "🔥 Streak Milestone!" : `🔥 Day ${streakInfo.currentStreak} Streak!`,
             description: streakInfo.message,
             variant: "gamefolioSuccess",
             duration: 5000,
