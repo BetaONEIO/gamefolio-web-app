@@ -420,10 +420,15 @@ router.get('/api/nft/thumb/:cid/*', async (req: Request, res: Response) => {
     const ipfsPath = rest ? `${cid}/${rest}` : cid;
     const size = parseInt(req.query.s as string) || 128;
     const clampedSize = Math.min(Math.max(size, 32), 512);
+    const fmt = req.query.fmt as string;
     const cacheKey = `${ipfsPath}_${clampedSize}`;
 
     const cached = nftThumbnailCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < NFT_THUMB_CACHE_TTL) {
+      if (fmt === 'dataurl') {
+        const dataUrl = `data:image/png;base64,${cached.buffer.toString('base64')}`;
+        return res.json({ dataUrl });
+      }
       res.setHeader('Content-Type', 'image/png');
       res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
       return res.send(cached.buffer);
@@ -445,6 +450,10 @@ router.get('/api/nft/thumb/:cid/*', async (req: Request, res: Response) => {
           
           nftThumbnailCache.set(cacheKey, { buffer: thumbnail, timestamp: Date.now() });
           
+          if (fmt === 'dataurl') {
+            const dataUrl = `data:image/png;base64,${thumbnail.toString('base64')}`;
+            return res.json({ dataUrl });
+          }
           res.setHeader('Content-Type', 'image/png');
           res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
           return res.send(thumbnail);
@@ -458,6 +467,44 @@ router.get('/api/nft/thumb/:cid/*', async (req: Request, res: Response) => {
     console.error('IPFS thumbnail proxy error:', error);
     return res.status(500).json({ error: 'Thumbnail proxy error' });
   }
+});
+
+router.get('/api/nft/test-render', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/html');
+  res.send(`<!DOCTYPE html>
+<html><head><title>NFT Test</title></head>
+<body style="background:#222;color:#fff;padding:20px;font-family:sans-serif">
+<h2>NFT Image Rendering Test</h2>
+<p>Token 68 (mod_tom) - Direct img src:</p>
+<div style="display:flex;gap:20px;align-items:center">
+  <div style="width:96px;height:96px;background:black;border:2px solid red">
+    <img src="/api/nft/thumb/bafybeihcjav5e6ivjqolmja3wwtbmajf743bmn3larf354edzrr25g7lym/68.png?s=96" 
+         style="width:100%;height:100%;object-fit:cover" 
+         onerror="this.nextElementSibling.textContent='FAILED'" />
+    <span></span>
+  </div>
+  <div style="width:48px;height:48px;background:black;border:2px solid blue">
+    <img src="/api/nft/thumb/bafybeihcjav5e6ivjqolmja3wwtbmajf743bmn3larf354edzrr25g7lym/68.png?s=64" 
+         style="width:100%;height:100%;object-fit:cover" />
+  </div>
+  <div style="width:200px;height:200px;background:black;border:2px solid green">
+    <img src="/api/nft/thumb/bafybeihcjav5e6ivjqolmja3wwtbmajf743bmn3larf354edzrr25g7lym/68.png?s=256" 
+         style="width:100%;height:100%;object-fit:cover" />
+  </div>
+</div>
+<p style="margin-top:20px">Token 73 (Player1):</p>
+<div style="display:flex;gap:20px;align-items:center">
+  <div style="width:96px;height:96px;background:black;border:2px solid red">
+    <img src="/api/nft/thumb/bafybeihcjav5e6ivjqolmja3wwtbmajf743bmn3larf354edzrr25g7lym/73.png?s=96" 
+         style="width:100%;height:100%;object-fit:cover" />
+  </div>
+</div>
+<p style="margin-top:20px">Original full-size image (direct IPFS proxy):</p>
+<div style="width:200px;height:200px;background:black;border:2px solid yellow">
+  <img src="/api/nft/image/bafybeihcjav5e6ivjqolmja3wwtbmajf743bmn3larf354edzrr25g7lym/68.png" 
+       style="width:100%;height:100%;object-fit:cover" />
+</div>
+</body></html>`);
 });
 
 router.get('/api/nft/metadata/:tokenId', async (req: Request, res: Response) => {

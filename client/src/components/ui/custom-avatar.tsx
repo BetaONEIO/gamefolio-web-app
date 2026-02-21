@@ -305,32 +305,12 @@ export const CustomAvatar = ({
   const hasNftProfile = !!(user?.nftProfileTokenId && user?.nftProfileImageUrl && (user?.activeProfilePicType === 'nft' || !user?.activeProfilePicType));
   const [showNftPopup, setShowNftPopup] = useState(false);
   const [nftAnchorRect, setNftAnchorRect] = useState<DOMRect | null>(null);
-  const [nftBlobUrl, setNftBlobUrl] = useState<string | null>(null);
   const [nftImageError, setNftImageError] = useState(false);
 
-  useEffect(() => {
-    if (!hasNftProfile || !user?.nftProfileImageUrl) return;
-    let cancelled = false;
+  const nftThumbUrl = useMemo(() => {
+    if (!hasNftProfile || !user?.nftProfileImageUrl) return null;
     const thumbSize = size === 'sm' ? 64 : size === 'md' ? 96 : size === 'lg' ? 128 : 256;
-    const thumbUrl = user.nftProfileImageUrl.replace('/api/nft/image/', '/api/nft/thumb/') + `?s=${thumbSize}`;
-    fetch(thumbUrl, { cache: 'no-cache' })
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.blob();
-      })
-      .then(blob => {
-        if (!cancelled) {
-          const blobUrl = URL.createObjectURL(blob);
-          setNftBlobUrl(blobUrl);
-        }
-      })
-      .catch(err => {
-        console.error('NFT thumb fetch failed:', err);
-        if (!cancelled) setNftImageError(true);
-      });
-    return () => {
-      cancelled = true;
-    };
+    return user.nftProfileImageUrl.replace('/api/nft/image/', '/api/nft/thumb/') + `?s=${thumbSize}`;
   }, [hasNftProfile, user?.nftProfileImageUrl, size]);
   
   // Get signed URL for avatar (private bucket)
@@ -371,11 +351,13 @@ export const CustomAvatar = ({
           className="w-full h-full rounded-lg overflow-hidden border-2 bg-black"
           style={{ borderColor: borderColor }}
         >
-          {nftBlobUrl ? (
+          {nftThumbUrl && !nftImageError ? (
             <img
-              src={nftBlobUrl}
+              src={nftThumbUrl}
               alt={safeDisplayName}
               className="w-full h-full object-cover"
+              onError={() => setNftImageError(true)}
+              crossOrigin="anonymous"
             />
           ) : nftImageError ? (
             <div
