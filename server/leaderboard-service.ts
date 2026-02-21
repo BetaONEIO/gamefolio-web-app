@@ -11,6 +11,8 @@ export const POINT_VALUES = {
   comment: 1,             // 1 point for commenting
   fire: 5,                // 5 points for fire reactions (permanent, limited daily)
   view: 0.01,             // 0.01 points per view (1 point per 100 views)
+  daily_login: 10,        // 10 points for daily consecutive login
+  streak_milestone: 0,    // Variable points for streak milestones (set dynamically)
 } as const;
 
 export class LeaderboardService {
@@ -63,6 +65,31 @@ export class LeaderboardService {
     await Promise.all([
       this.updateMonthlyLeaderboard(userId, action, points, timestamp),
       this.updateWeeklyLeaderboard(userId, action, points, timestamp)
+    ]);
+  }
+
+  static async awardCustomPoints(
+    userId: number,
+    action: string,
+    points: number,
+    description?: string,
+    timestamp?: Date
+  ): Promise<void> {
+    const pointsHistory: InsertUserPointsHistory = {
+      userId,
+      action,
+      points,
+      description: description || `Points awarded for ${action}`,
+      createdAt: timestamp,
+    };
+    
+    await storage.addUserPointsHistory(pointsHistory);
+    await storage.incrementUserPoints(userId, points);
+    await this.updateUserLevel(userId);
+    
+    await Promise.all([
+      this.updateMonthlyLeaderboard(userId, action as any, points, timestamp),
+      this.updateWeeklyLeaderboard(userId, action as any, points, timestamp)
     ]);
   }
 

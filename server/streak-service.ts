@@ -1,27 +1,28 @@
 import { storage } from "./storage";
-import { LeaderboardService } from "./leaderboard-service";
+import { LeaderboardService, POINT_VALUES } from "./leaderboard-service";
 
-// Streak bonus rewards at different milestones
-const STREAK_BONUSES = {
-  3: 10,   // 3 days: 10 bonus points
-  7: 25,   // 7 days: 25 bonus points
-  14: 50,  // 14 days: 50 bonus points
-  30: 100, // 30 days: 100 bonus points
-  60: 200, // 60 days: 200 bonus points
-  90: 300, // 90 days: 300 bonus points
-  180: 500, // 180 days: 500 bonus points
-  365: 1000, // 365 days: 1000 bonus points
-};
+const DAILY_LOGIN_XP = POINT_VALUES.daily_login;
+
+const MILESTONE_INTERVAL = 5;
+
+function getMilestoneBonus(streak: number): number {
+  if (streak <= 0 || streak % MILESTONE_INTERVAL !== 0) return 0;
+  const tier = streak / MILESTONE_INTERVAL;
+  if (tier <= 2) return 25;
+  if (tier <= 4) return 50;
+  if (tier <= 6) return 100;
+  if (tier <= 10) return 200;
+  if (tier <= 20) return 500;
+  return 1000;
+}
 
 export class StreakService {
-  // Get calendar date (normalized to midnight) for comparison
   private static getCalendarDate(date: Date): Date {
     const normalized = new Date(date);
     normalized.setHours(0, 0, 0, 0);
     return normalized;
   }
 
-  // Check if two dates are on consecutive calendar days
   private static areConsecutiveDays(date1: Date, date2: Date): boolean {
     const cal1 = this.getCalendarDate(date1);
     const cal2 = this.getCalendarDate(date2);
@@ -31,7 +32,6 @@ export class StreakService {
     return diffDays === 1;
   }
 
-  // Check if two dates are on the same calendar day
   private static isSameDay(date1: Date, date2: Date): boolean {
     return (
       date1.getFullYear() === date2.getFullYear() &&
@@ -40,15 +40,14 @@ export class StreakService {
     );
   }
 
-  // Update user's login streak and award bonus points
   static async updateLoginStreak(userId: number): Promise<{
     currentStreak: number;
     bonusAwarded: number;
+    dailyXP: number;
     isNewMilestone: boolean;
     message: string;
   }> {
     try {
-      // Get current user data
       const user = await storage.getUserById(userId);
       if (!user) {
         throw new Error("User not found");
@@ -60,49 +59,79 @@ export class StreakService {
       let currentStreak = user.currentStreak || 0;
       let longestStreak = user.longestStreak || 0;
       let bonusAwarded = 0;
+      let dailyXP = 0;
       let isNewMilestone = false;
       let message = "";
 
-      // If this is the first time tracking streak
       if (!lastStreakUpdate) {
         currentStreak = 1;
-        message = "Welcome! Your login streak has started!";
-      } 
-      // If user already logged in today, don't update
-      else if (this.isSameDay(lastStreakUpdate, now)) {
+        dailyXP = DAILY_LOGIN_XP;
+        message = `Welcome! Your login streak has started! +${DAILY_LOGIN_XP} XP`;
+      } else if (this.isSameDay(lastStreakUpdate, now)) {
         return {
           currentStreak,
           bonusAwarded: 0,
+          dailyXP: 0,
           isNewMilestone: false,
           message: "Already logged in today"
         };
-      }
-      // Any login on a different day increments the streak (no reset for gaps)
-      else {
+      } else if (this.areConsecutiveDays(lastStreakUpdate, now)) {
         currentStreak++;
-        message = `${currentStreak} day streak! Keep going!`;
+        dailyXP = DAILY_LOGIN_XP;
 
-        // Check if this is a milestone and award bonus points
-        if (STREAK_BONUSES[currentStreak as keyof typeof STREAK_BONUSES]) {
-          bonusAwarded = STREAK_BONUSES[currentStreak as keyof typeof STREAK_BONUSES];
+        const milestoneBonus = getMilestoneBonus(currentStreak);
+        if (milestoneBonus > 0) {
+          bonusAwarded = milestoneBonus;
           isNewMilestone = true;
-          message = `🎉 ${currentStreak} day streak milestone! Bonus: ${bonusAwarded} points!`;
-
-          // Award the bonus points
-          await LeaderboardService.awardPoints(
-            userId,
-            'upload', // Using 'upload' action type for bonus points tracking
-            `Login streak milestone: ${currentStreak} days (${bonusAwarded} bonus points)`
-          );
+          message = `🎉 ${currentStreak} day streak milestone! +${DAILY_LOGIN_XP} daily XP + ${bonusAwarded} bonus XP!`;
+        } else {
+          message = `${currentStreak} day streak! +${DAILY_LOGIN_XP} XP. Keep going!`;
         }
+      } else {
+        currentStreak = 1;
+        dailyXP = DAILY_LOGIN_XP;
+        message = `Streak reset! Starting fresh at day 1. +${DAILY_LOGIN_XP} XP`;
       }
 
-      // Update longest streak if current is higher
+      await LeaderboardService.awardPoints(
+        userId,
+        'daily_login',
+        `Daily login streak (day ${currentStreak})`
+      );
+
+      if (bonusAwarded > 0) {
+        await LeaderboardService.awardCustomPoints(
+          userId,
+          'streak_milestone',
+          bonusAwarded,
+          `Login streak milestone: ${currentStreak} days (${bonusAwarded} bonus XP)`
+        );
+      }
+
+      try {
+        await storage.createNotification({
+          userId,
+          type: 'streak',
+          title: isNewMilestone ? `🔥 ${currentStreak}-Day Streak Milestone!` : `🔥 Day ${currentStreak} Streak!`,
+          message: isNewMilestone
+            ? `You earned ${DAILY_LOGIN_XP} daily XP + ${bonusAwarded} milestone bonus XP for your ${currentStreak}-day streak!`
+            : `You earned ${DAILY_LOGIN_XP} XP for logging in ${currentStreak} day${currentStreak > 1 ? 's' : ''} in a row.`,
+          isRead: false,
+          fromUserId: null,
+          clipId: null,
+          screenshotId: null,
+          commentId: null,
+          metadata: { streakDay: currentStreak, dailyXP, milestoneBonus: bonusAwarded },
+          actionUrl: '/profile',
+        });
+      } catch (notifError) {
+        console.error("Error creating streak notification:", notifError);
+      }
+
       if (currentStreak > longestStreak) {
         longestStreak = currentStreak;
       }
 
-      // Update user's streak data
       await storage.updateUserStreak?.({
         userId,
         currentStreak,
@@ -113,6 +142,7 @@ export class StreakService {
       return {
         currentStreak,
         bonusAwarded,
+        dailyXP,
         isNewMilestone,
         message
       };
@@ -121,13 +151,13 @@ export class StreakService {
       return {
         currentStreak: 0,
         bonusAwarded: 0,
+        dailyXP: 0,
         isNewMilestone: false,
         message: "Error updating streak"
       };
     }
   }
 
-  // Get user's current streak information
   static async getUserStreak(userId: number): Promise<{
     currentStreak: number;
     longestStreak: number;
@@ -148,21 +178,15 @@ export class StreakService {
       const currentStreak = user.currentStreak || 0;
       const longestStreak = user.longestStreak || 0;
 
-      // Find next milestone
-      const milestones = Object.keys(STREAK_BONUSES)
-        .map(Number)
-        .sort((a, b) => a - b);
-      
-      const nextMilestone = milestones.find(m => m > currentStreak) || null;
-      const nextMilestoneBonus = nextMilestone 
-        ? STREAK_BONUSES[nextMilestone as keyof typeof STREAK_BONUSES]
-        : null;
+      const remainder = currentStreak % MILESTONE_INTERVAL;
+      const nextMilestone = currentStreak + (MILESTONE_INTERVAL - remainder);
+      const nextMilestoneBonus = getMilestoneBonus(nextMilestone);
 
       return {
         currentStreak,
         longestStreak,
         nextMilestone,
-        nextMilestoneBonus
+        nextMilestoneBonus: nextMilestoneBonus > 0 ? nextMilestoneBonus : null
       };
     } catch (error) {
       console.error("Error getting user streak:", error);
