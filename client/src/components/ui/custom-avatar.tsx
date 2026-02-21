@@ -351,6 +351,8 @@ export const CustomAvatar = ({
               src={nftSignedUrl || user.nftProfileImageUrl || ''}
               alt={safeDisplayName}
               className="w-full h-full object-cover"
+              loading="eager"
+              style={{ filter: size === 'sm' || size === 'md' ? 'contrast(1.3) saturate(1.5)' : size === 'lg' ? 'contrast(1.15) saturate(1.25)' : undefined }}
               onLoad={() => setNftImageLoaded(true)}
               onError={() => setNftImageError(true)}
             />
@@ -365,7 +367,7 @@ export const CustomAvatar = ({
           )}
           <div
             className="absolute inset-0 rounded-lg pointer-events-none"
-            style={{ boxShadow: 'inset 0 0 8px 2px rgba(0,0,0,0.35)' }}
+            style={{ boxShadow: 'inset 0 0 6px 2px rgba(0,0,0,0.3)' }}
           />
         </div>
         <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center shadow-sm" style={{ backgroundColor: borderColor }}>
