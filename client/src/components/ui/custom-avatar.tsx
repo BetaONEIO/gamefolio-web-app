@@ -352,7 +352,7 @@ export const CustomAvatar = ({
               alt={safeDisplayName}
               className="w-full h-full object-cover"
               loading="eager"
-              style={{ filter: size === 'sm' || size === 'md' ? 'contrast(1.3) saturate(1.5)' : size === 'lg' ? 'contrast(1.15) saturate(1.25)' : undefined }}
+              style={{ filter: size === 'sm' || size === 'md' ? 'brightness(0.75) contrast(1.8) saturate(2.0)' : size === 'lg' ? 'brightness(0.85) contrast(1.4) saturate(1.6)' : 'brightness(0.9) contrast(1.2) saturate(1.3)' }}
               onLoad={() => setNftImageLoaded(true)}
               onError={() => setNftImageError(true)}
             />
