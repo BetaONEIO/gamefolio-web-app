@@ -4123,9 +4123,6 @@ const AdminPage = () => {
                                   <span>{slideUploading ? "Uploading..." : "Upload Image"}</span>
                                 </Button>
                               </label>
-                              <Button variant="outline" size="sm" onClick={() => { setSlideBucketBrowser(true); setSlideBucketSearch(""); fetchSlideBucketImages(slideBucketName); }}>
-                                <FolderOpen className="h-4 w-4 mr-1" /> Browse Bucket
-                              </Button>
                             </div>
                           </div>
                         )}
@@ -4296,9 +4293,6 @@ const AdminPage = () => {
                                 <span>{slideUploading ? "Uploading..." : "Upload Image"}</span>
                               </Button>
                             </label>
-                            <Button variant="outline" size="sm" onClick={() => { setSlideBucketBrowser(true); setSlideBucketSearch(""); fetchSlideBucketImages(slideBucketName); }}>
-                              <FolderOpen className="h-4 w-4 mr-1" /> Browse Bucket
-                            </Button>
                           </div>
                         </div>
                       )}
