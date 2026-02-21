@@ -129,7 +129,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
 
       <div
         ref={popupRef}
-        className={`${hasAnchor ? 'absolute' : 'fixed top-0 left-0 w-full h-full md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[680px] md:h-auto'} z-10 ${hasAnchor ? 'w-[340px] md:w-[680px]' : ''} max-w-full md:max-w-[95vw] max-h-full md:max-h-[85vh] bg-[#0f172a] md:rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] border-0 md:border border-[#1e293b] flex flex-col md:flex-row animate-in fade-in slide-in-from-left-2 duration-200`}
+        className={`${hasAnchor ? 'absolute' : 'fixed top-4 left-2 right-2 bottom-4 md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[680px] md:h-auto md:bottom-auto md:right-auto'} z-10 ${hasAnchor ? 'w-[340px] md:w-[680px]' : ''} max-w-full md:max-w-[95vw] max-h-full md:max-h-[85vh] bg-[#0f172a] rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] border border-[#1e293b] flex flex-col md:flex-row animate-in fade-in slide-in-from-left-2 duration-200`}
         style={hasAnchor && position ? { top: `${position.top}px`, left: `${position.left}px` } : hasAnchor ? { visibility: 'hidden' } : undefined}
         onClick={(e) => e.stopPropagation()}
       >
