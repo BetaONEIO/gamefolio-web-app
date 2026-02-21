@@ -1679,7 +1679,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating daily check-in streak:", error);
     }
 
-    // Fallback to session user data if streak update fails
+    // Fallback: always try to fetch fresh user data from DB even if streak failed
+    try {
+      const fallbackUser = await storage.getUserById((req.user as any).id);
+      if (fallbackUser) {
+        const { password: pw, ...fallbackWithoutPassword } = fallbackUser as any;
+        return res.json({
+          id: fallbackWithoutPassword.id,
+          username: fallbackWithoutPassword.username,
+          email: fallbackWithoutPassword.email,
+          emailVerified: fallbackWithoutPassword.emailVerified || false,
+          profilePictureUrl: fallbackWithoutPassword.profilePictureUrl,
+          bio: fallbackWithoutPassword.bio,
+          bannerUrl: fallbackWithoutPassword.bannerUrl,
+          displayName: fallbackWithoutPassword.displayName,
+          backgroundColor: fallbackWithoutPassword.backgroundColor,
+          accentColor: fallbackWithoutPassword.accentColor,
+          avatarUrl: fallbackWithoutPassword.avatarUrl,
+          createdAt: fallbackWithoutPassword.createdAt,
+          userType: fallbackWithoutPassword.userType,
+          ageRange: fallbackWithoutPassword.ageRange,
+          role: fallbackWithoutPassword.role,
+          isAdmin: fallbackWithoutPassword.isAdmin || false,
+          messagingEnabled: fallbackWithoutPassword.messagingEnabled || false,
+          isPrivate: fallbackWithoutPassword.isPrivate || false,
+          currentStreak: fallbackWithoutPassword.currentStreak || 0,
+          longestStreak: fallbackWithoutPassword.longestStreak || 0,
+          level: fallbackWithoutPassword.level || 1,
+          totalXP: fallbackWithoutPassword.totalXP || 0,
+          isPro: fallbackWithoutPassword.isPro || false,
+          walletAddress: fallbackWithoutPassword.walletAddress || null,
+          walletChain: fallbackWithoutPassword.walletChain || null,
+          gfTokenBalance: fallbackWithoutPassword.gfTokenBalance || 0,
+          steamUsername: fallbackWithoutPassword.steamUsername || null,
+          xboxUsername: fallbackWithoutPassword.xboxUsername || null,
+          playstationUsername: fallbackWithoutPassword.playstationUsername || null,
+          discordUsername: fallbackWithoutPassword.discordUsername || null,
+          epicUsername: fallbackWithoutPassword.epicUsername || null,
+          nintendoUsername: fallbackWithoutPassword.nintendoUsername || null,
+          twitterUsername: fallbackWithoutPassword.twitterUsername || null,
+          youtubeUsername: fallbackWithoutPassword.youtubeUsername || null,
+          nftProfileTokenId: fallbackWithoutPassword.nftProfileTokenId || null,
+          nftProfileImageUrl: fallbackWithoutPassword.nftProfileImageUrl || null,
+          activeProfilePicType: fallbackWithoutPassword.activeProfilePicType || 'upload',
+          proSubscriptionType: fallbackWithoutPassword.proSubscriptionType || null,
+          proSubscriptionEndDate: fallbackWithoutPassword.proSubscriptionEndDate || null,
+        });
+      }
+    } catch (fallbackError) {
+      console.error("Error fetching fresh user data in fallback:", fallbackError);
+    }
+
+    // Last resort: use session data
     const { password, ...userWithoutPassword } = req.user as any;
     return res.json({
       id: userWithoutPassword.id,

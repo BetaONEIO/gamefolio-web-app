@@ -44,14 +44,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Remove localStorage dependency - rely on session only
   const [firebaseAuthChecked, setFirebaseAuthChecked] = useState(false);
 
-  // Define refreshUser function first so it can be used in mutations
   const refreshUser = async () => {
     try {
-      const userData = await apiRequest("GET", "/api/user");
+      const response = await apiRequest("GET", "/api/user");
+      const userData = await response.json();
       queryClient.setQueryData(["/api/user"], userData);
-      
-      // Also invalidate to trigger a fresh fetch
-      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     } catch (error) {
       console.error("Failed to refresh user data:", error);
       queryClient.setQueryData(["/api/user"], null);
