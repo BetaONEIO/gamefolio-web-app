@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import TrendingVideoCard from '@/components/clips/TrendingVideoCard';
+import VideoClipCard from '@/components/clips/VideoClipCard';
 import VideoClipGridItem from '@/components/clips/VideoClipGridItem';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
@@ -505,9 +505,11 @@ const TrendingPage: React.FC = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {trendingClips.map((clip) => (
-          <TrendingVideoCard
+          <VideoClipCard
             key={clip.id}
             clip={clip}
+            userId={user?.id}
+            clipsList={trendingClips}
           />
         ))}
       </div>
