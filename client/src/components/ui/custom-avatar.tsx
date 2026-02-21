@@ -305,8 +305,33 @@ export const CustomAvatar = ({
   const hasNftProfile = !!(user?.nftProfileTokenId && user?.nftProfileImageUrl && (user?.activeProfilePicType === 'nft' || !user?.activeProfilePicType));
   const [showNftPopup, setShowNftPopup] = useState(false);
   const [nftAnchorRect, setNftAnchorRect] = useState<DOMRect | null>(null);
-  const [nftImageLoaded, setNftImageLoaded] = useState(false);
+  const [nftBlobUrl, setNftBlobUrl] = useState<string | null>(null);
   const [nftImageError, setNftImageError] = useState(false);
+
+  useEffect(() => {
+    if (!hasNftProfile || !user?.nftProfileImageUrl) return;
+    let cancelled = false;
+    const thumbSize = size === 'sm' ? 64 : size === 'md' ? 96 : size === 'lg' ? 128 : 256;
+    const thumbUrl = user.nftProfileImageUrl.replace('/api/nft/image/', '/api/nft/thumb/') + `?s=${thumbSize}`;
+    fetch(thumbUrl, { cache: 'no-cache' })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.blob();
+      })
+      .then(blob => {
+        if (!cancelled) {
+          const blobUrl = URL.createObjectURL(blob);
+          setNftBlobUrl(blobUrl);
+        }
+      })
+      .catch(err => {
+        console.error('NFT thumb fetch failed:', err);
+        if (!cancelled) setNftImageError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hasNftProfile, user?.nftProfileImageUrl, size]);
   
   // Get signed URL for avatar (private bucket)
   const { signedUrl: avatarSignedUrl } = useSignedUrl(user?.avatarUrl);
@@ -343,32 +368,27 @@ export const CustomAvatar = ({
         onClick={handleNftAvatarClick}
       >
         <div
-          className="w-full h-full rounded-lg overflow-hidden border-2 bg-[#1e293b] relative"
+          className="w-full h-full rounded-lg overflow-hidden border-2 bg-black"
           style={{ borderColor: borderColor }}
         >
-          {!nftImageError && (
+          {nftBlobUrl ? (
             <img
-              src={nftSignedUrl || user.nftProfileImageUrl || ''}
+              src={nftBlobUrl}
               alt={safeDisplayName}
               className="w-full h-full object-cover"
-              loading="eager"
-              style={{ filter: size === 'sm' || size === 'md' ? 'brightness(0.75) contrast(1.8) saturate(2.0)' : size === 'lg' ? 'brightness(0.85) contrast(1.4) saturate(1.6)' : 'brightness(0.9) contrast(1.2) saturate(1.3)' }}
-              onLoad={() => setNftImageLoaded(true)}
-              onError={() => setNftImageError(true)}
             />
-          )}
-          {nftImageError && (
+          ) : nftImageError ? (
             <div
               className="w-full h-full flex items-center justify-center text-xs font-bold text-primary-foreground"
               style={{ backgroundColor: user.accentColor || borderColor }}
             >
               {safeDisplayName.substring(0, 2).toUpperCase()}
             </div>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
           )}
-          <div
-            className="absolute inset-0 rounded-lg pointer-events-none"
-            style={{ boxShadow: 'inset 0 0 6px 2px rgba(0,0,0,0.3)' }}
-          />
         </div>
         <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center shadow-sm" style={{ backgroundColor: borderColor }}>
           <svg width="8" height="8" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">

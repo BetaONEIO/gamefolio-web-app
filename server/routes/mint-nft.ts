@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import sharp from 'sharp';
 import { db } from '../db';
 import { users, previousAvatars } from '@shared/schema';
 import { eq, sql, desc } from 'drizzle-orm';
@@ -406,6 +407,56 @@ router.get('/api/nft/image/:cid/*', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('IPFS image proxy error:', error);
     return res.status(500).json({ error: 'Image proxy error' });
+  }
+});
+
+const nftThumbnailCache = new Map<string, { buffer: Buffer; timestamp: number }>();
+const NFT_THUMB_CACHE_TTL = 3600000;
+
+router.get('/api/nft/thumb/:cid/*', async (req: Request, res: Response) => {
+  try {
+    const cid = req.params.cid;
+    const rest = req.params[0] || '';
+    const ipfsPath = rest ? `${cid}/${rest}` : cid;
+    const size = parseInt(req.query.s as string) || 128;
+    const clampedSize = Math.min(Math.max(size, 32), 512);
+    const cacheKey = `${ipfsPath}_${clampedSize}`;
+
+    const cached = nftThumbnailCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < NFT_THUMB_CACHE_TTL) {
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+      return res.send(cached.buffer);
+    }
+
+    for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
+      try {
+        const url = `${IPFS_GATEWAYS[i]}${ipfsPath}`;
+        const response = await fetch(url, {
+          signal: AbortSignal.timeout(15000),
+          redirect: 'follow',
+        });
+        if (response.ok && response.body) {
+          const rawBuffer = Buffer.from(await response.arrayBuffer());
+          const thumbnail = await sharp(rawBuffer)
+            .resize(clampedSize, clampedSize, { fit: 'cover' })
+            .png({ quality: 90 })
+            .toBuffer();
+          
+          nftThumbnailCache.set(cacheKey, { buffer: thumbnail, timestamp: Date.now() });
+          
+          res.setHeader('Content-Type', 'image/png');
+          res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+          return res.send(thumbnail);
+        }
+      } catch {
+        continue;
+      }
+    }
+    return res.status(502).json({ error: 'Failed to fetch image from IPFS' });
+  } catch (error: any) {
+    console.error('IPFS thumbnail proxy error:', error);
+    return res.status(500).json({ error: 'Thumbnail proxy error' });
   }
 });
 
