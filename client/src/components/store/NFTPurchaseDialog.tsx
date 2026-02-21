@@ -272,13 +272,13 @@ export function NFTPurchaseDialog({
               {/* Action Buttons - inside scrollable content */}
               <div className="flex flex-col gap-3 pt-4">
                 <Button
-                  onClick={handleConfirmPurchase}
-                  disabled={!hasEnoughBalance || purchaseMutation.isPending}
-                  className="w-full h-[60px] rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22] text-lg font-bold shadow-[0_4px_6px_-4px_rgba(74,222,128,0.2),0_10px_15px_-3px_rgba(74,222,128,0.2)]"
+                  disabled
+                  className="w-full h-[60px] rounded-2xl bg-[#4ade80] text-[#022c22] text-lg font-bold cursor-not-allowed opacity-50"
                   data-testid="button-confirm-purchase"
                 >
-                  {purchaseMutation.isPending ? "Processing..." : "Confirm Purchase"}
+                  Confirm Purchase
                 </Button>
+                <p className="text-sm md:text-base text-amber-400 text-center max-w-md mt-3">Currently disabled on Beta! We will be on Mainnet soon!</p>
                 <button
                   onClick={() => setStep('details')}
                   className="w-full h-[52px] text-sm font-bold text-[#94a3b8] hover:text-[#f8fafc] transition-colors"
@@ -383,25 +383,21 @@ export function NFTPurchaseDialog({
                   {/* Action Buttons */}
                   <div className="flex flex-col gap-3">
                     <Button
-                      onClick={handleProceedToCheckout}
-                      className="w-full h-[60px] rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22] text-lg font-bold shadow-[0_4px_6px_-4px_rgba(74,222,128,0.2),0_10px_15px_-3px_rgba(74,222,128,0.2)]"
+                      disabled
+                      className="w-full h-[60px] rounded-2xl bg-[#4ade80] text-[#022c22] text-lg font-bold cursor-not-allowed opacity-50"
                       data-testid="button-buy-nft"
                     >
                       Buy NFT Now
                     </Button>
                     <Button
                       variant="outline"
-                      className="w-full h-[58px] rounded-2xl bg-[#1e293b] hover:bg-[#334155] border border-[#1e293b]/50 text-[#f8fafc] text-base font-bold flex items-center justify-center gap-2"
-                      onClick={() => {
-                        if (!user) {
-                          setShowLoginPrompt(true);
-                          return;
-                        }
-                      }}
+                      disabled
+                      className="w-full h-[58px] rounded-2xl bg-[#1e293b] border border-[#1e293b]/50 text-[#f8fafc] text-base font-bold flex items-center justify-center gap-2 cursor-not-allowed opacity-50"
                     >
                       <img src={gfTokenLogo} alt="GF" className="w-5 h-5" />
                       Sell To Gamefolio
                     </Button>
+                    <p className="text-sm md:text-base text-amber-400 text-center max-w-md mt-3">Currently disabled on Beta! We will be on Mainnet soon!</p>
                   </div>
                 </div>
 

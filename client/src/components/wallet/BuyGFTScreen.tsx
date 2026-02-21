@@ -247,11 +247,10 @@ export default function BuyGFTScreen({
 
           {/* Continue Button */}
           <button
-            onClick={() => onContinue(displayAmount, gftReceived)}
-            className="w-full flex items-center justify-center gap-2 py-5 rounded-2xl font-bold text-lg transition-all hover:opacity-90"
+            disabled
+            className="w-full flex items-center justify-center gap-2 py-5 rounded-2xl font-bold text-lg cursor-not-allowed opacity-50"
             style={{ 
               background: '#4ade80',
-              boxShadow: '0 0 30px -10px #4ade80'
             }}
           >
             <span style={{ color: '#022c22' }}>Continue to Payment</span>
@@ -259,6 +258,7 @@ export default function BuyGFTScreen({
               <path d="M3.33325 9.99999H16.6666M16.6666 9.99999L11.6666 5M16.6666 9.99999L11.6666 15" stroke="#022C22" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
+          <p className="text-sm md:text-base text-amber-400 text-center max-w-md mt-3 mx-auto">Currently disabled on Beta! We will be on Mainnet soon!</p>
         </div>
       </div>
     </div>

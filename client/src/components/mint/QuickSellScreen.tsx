@@ -169,22 +169,14 @@ export default function QuickSellScreen({
       <div className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md bg-[#020617cc] border-t border-[#1e293b4d]">
         <div className="w-full max-w-[430px] md:max-w-3xl mx-auto flex flex-col md:flex-row-reverse gap-3 px-6 py-6 pb-8 md:pb-6">
           <button
-            onClick={handleConfirmSell}
-            disabled={isProcessing}
-            className="w-full md:flex-1 h-[60px] rounded-2xl bg-[#4ade80] flex items-center justify-center gap-2 shadow-[0_4px_6px_-4px_rgba(74,222,128,0.2),0_10px_15px_-3px_rgba(74,222,128,0.2)] disabled:opacity-60 hover:bg-[#22c55e] transition-colors"
+            disabled
+            className="w-full md:flex-1 h-[60px] rounded-2xl bg-[#4ade80] flex items-center justify-center gap-2 cursor-not-allowed opacity-50"
           >
-            {isProcessing ? (
-              <>
-                <Loader2 className="w-5 h-5 text-[#022c22] animate-spin" />
-                <span className="text-lg font-bold text-[#022c22] leading-7">Processing...</span>
-              </>
-            ) : (
-              <span className="text-lg font-bold text-[#022c22] leading-7">Confirm Quick Sell</span>
-            )}
+            <span className="text-lg font-bold text-[#022c22] leading-7">Confirm Quick Sell</span>
           </button>
+          <p className="text-sm md:text-base text-amber-400 text-center max-w-md mt-3 mx-auto">Currently disabled on Beta! We will be on Mainnet soon!</p>
           <button
             onClick={onClose}
-            disabled={isProcessing}
             className="w-full md:flex-1 h-[60px] rounded-2xl flex items-center justify-center hover:bg-[#1e293b] transition-colors"
           >
             <span className="text-lg font-bold text-[#94a3b8] leading-7">Go Back</span>

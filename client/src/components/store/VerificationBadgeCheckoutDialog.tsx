@@ -161,25 +161,17 @@ export function VerificationBadgeCheckoutDialog({
               {/* Bottom Action */}
               <div className="p-6 bg-[#020617] space-y-4">
                 <Button
-                  onClick={handleConfirm}
-                  disabled={isPurchasing || isProcessing || !canAfford}
-                  className="w-full h-[68px] rounded-[16px] text-black text-lg font-black uppercase transition-all active:scale-95"
+                  disabled
+                  className="w-full h-[68px] rounded-[16px] text-black text-lg font-black uppercase cursor-not-allowed opacity-50"
                   style={{
-                    background: canAfford ? '#4ade80' : '#1e293b',
-                    color: canAfford ? '#000' : '#475569',
-                    boxShadow: canAfford ? '0 8px 20px -6px rgba(74,222,128,0.4)' : 'none',
+                    background: '#1e293b',
+                    color: '#475569',
                     letterSpacing: '-0.9px',
                   }}
                 >
-                  {isPurchasing || isProcessing ? (
-                    <>
-                      <Loader2 className="h-6 w-6 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    'Confirm Purchase'
-                  )}
+                  Confirm Purchase
                 </Button>
+                <p className="text-sm md:text-base text-amber-400 text-center max-w-md mx-auto mt-3">Currently disabled on Beta! We will be on Mainnet soon!</p>
                 <div className="flex items-center justify-center gap-2">
                   <Info className="w-3 h-3 text-[#94a3b8]" />
                   <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-[1px]">

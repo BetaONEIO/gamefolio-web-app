@@ -1571,22 +1571,12 @@ export default function StorePage() {
                         ) : (
                           <Button
                             size="sm"
-                            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-[10px] h-6 px-2"
-                            onClick={() => handlePurchaseWithGF(item)}
-                            disabled={isPurchasing}
+                            className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-[10px] h-6 px-2 cursor-not-allowed opacity-50"
+                            disabled
                             data-testid={`button-buy-item-${item.id}`}
                           >
-                            {isPurchasing ? (
-                              <>
-                                <Loader2 className="h-2.5 w-2.5 mr-0.5 animate-spin" />
-                                Buying...
-                              </>
-                            ) : (
-                              <>
-                                <ShoppingCart className="h-2.5 w-2.5 mr-0.5" />
-                                Buy
-                              </>
-                            )}
+                            <ShoppingCart className="h-2.5 w-2.5 mr-0.5" />
+                            Buy
                           </Button>
                         )}
                       </div>
@@ -1923,8 +1913,8 @@ export default function StorePage() {
               <h3 className="text-xl md:text-2xl font-semibold mb-2 text-center" data-testid="heading-sell-coming-soon">
                 Sell Your NFTs
               </h3>
-              <p className="text-sm md:text-base text-gray-400 text-center max-w-md" data-testid="text-sell-description">
-                List your owned NFTs for sale in the Gamefolio marketplace. This feature is coming soon!
+              <p className="text-sm md:text-base text-amber-400 text-center max-w-md" data-testid="text-sell-description">
+                Selling currently disabled on Beta! We will be on Mainnet soon!
               </p>
               <Link href="/collection">
                 <Button className="mt-6" variant="outline" size="sm" data-testid="button-view-inventory">
@@ -2043,23 +2033,8 @@ export default function StorePage() {
 
                           <Button
                             size="sm"
-                            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-[10px] h-6 px-2"
-                            onClick={() => {
-                              const nft: NFT = {
-                                id: item.nftId,
-                                name: item.nftName,
-                                image: item.nftImage,
-                                price: item.nftPrice,
-                                priceGBP: item.nftPrice * 0.01,
-                                description: "",
-                                forSale: true,
-                                rarity: "Epic",
-                                currentBid: item.nftPrice,
-                                owner: "Gamefolio",
-                              };
-                              setSelectedNFT(nft);
-                              setPurchaseDialogOpen(true);
-                            }}
+                            className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-[10px] h-6 px-2 cursor-not-allowed opacity-50"
+                            disabled
                             data-testid={`button-buy-${item.nftId}`}
                           >
                             <ShoppingCart className="h-2.5 w-2.5 mr-0.5" />
