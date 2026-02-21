@@ -235,21 +235,42 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
       // Only handle navigation if dialog is open and we have navigation functions
       if (!isOpen || !showNavigation || isTransitioning) return;
       
-      switch (e.key) {
-        case 'ArrowLeft':
-          e.preventDefault();
-          e.stopPropagation();
-          handlePreviousWithTransition();
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          e.stopPropagation();
-          handleNextWithTransition();
-          break;
-        case 'Escape':
-          e.preventDefault();
-          onClose();
-          break;
+      const isReel = clip?.videoType === 'reel';
+      
+      if (isReel) {
+        switch (e.key) {
+          case 'ArrowUp':
+            e.preventDefault();
+            e.stopPropagation();
+            handlePreviousWithTransition();
+            break;
+          case 'ArrowDown':
+            e.preventDefault();
+            e.stopPropagation();
+            handleNextWithTransition();
+            break;
+          case 'Escape':
+            e.preventDefault();
+            onClose();
+            break;
+        }
+      } else {
+        switch (e.key) {
+          case 'ArrowLeft':
+            e.preventDefault();
+            e.stopPropagation();
+            handlePreviousWithTransition();
+            break;
+          case 'ArrowRight':
+            e.preventDefault();
+            e.stopPropagation();
+            handleNextWithTransition();
+            break;
+          case 'Escape':
+            e.preventDefault();
+            onClose();
+            break;
+        }
       }
     };
 
@@ -405,10 +426,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
     const deltaY = touchEnd.y - touchStart.y;
     const minSwipeDistance = 50;
 
-    // For reels on mobile, prioritize vertical navigation (Instagram-like)
-    if (clip?.videoType === 'reel' && isMobile) {
-      // Vertical swipe for reels (Instagram-like behavior)
-      if (Math.abs(deltaY) > minSwipeDistance) {
+    if (clip?.videoType === 'reel') {
+      // Reels always use vertical swipe (up/down)
+      if (Math.abs(deltaY) > minSwipeDistance && Math.abs(deltaY) > Math.abs(deltaX)) {
         if (deltaY < 0 && onNext) {
           handleNextWithTransition(); // Swipe up = next reel
         } else if (deltaY > 0 && onPrevious) {
@@ -416,24 +436,12 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
         }
       }
     } else {
-      // Check if it's a horizontal or vertical swipe for regular clips
-      if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        // Horizontal swipe
-        if (Math.abs(deltaX) > minSwipeDistance) {
-          if (deltaX > 0 && onPrevious) {
-            handlePreviousWithTransition(); // Swipe right = previous
-          } else if (deltaX < 0 && onNext) {
-            handleNextWithTransition(); // Swipe left = next
-          }
-        }
-      } else {
-        // Vertical swipe
-        if (Math.abs(deltaY) > minSwipeDistance) {
-          if (deltaY < 0 && onNext) {
-            handleNextWithTransition(); // Swipe up = next
-          } else if (deltaY > 0 && onPrevious) {
-            handlePreviousWithTransition(); // Swipe down = previous
-          }
+      // Regular clips use horizontal swipe (left/right)
+      if (Math.abs(deltaX) > minSwipeDistance && Math.abs(deltaX) > Math.abs(deltaY)) {
+        if (deltaX > 0 && onPrevious) {
+          handlePreviousWithTransition(); // Swipe right = previous
+        } else if (deltaX < 0 && onNext) {
+          handleNextWithTransition(); // Swipe left = next
         }
       }
     }
