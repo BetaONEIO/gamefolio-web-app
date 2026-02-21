@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Crown, Loader2, X, Check, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -238,6 +238,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   const [checkoutPaymentIntentId, setCheckoutPaymentIntentId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const packages = getCurrentOffering();
 
@@ -290,6 +291,11 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
       setCheckoutClientSecret(null);
       setCheckoutPaymentIntentId(null);
       setCheckoutError(null);
+    }
+    if (open) {
+      setTimeout(() => {
+        scrollContainerRef.current?.scrollTo(0, 0);
+      }, 50);
     }
   }, [open]);
 
@@ -642,7 +648,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <div className="flex flex-col md:hidden h-[95vh] overflow-y-auto" style={{ scrollbarWidth: "none" }}>
+              <div ref={scrollContainerRef} className="flex flex-col md:hidden h-[95vh] overflow-y-auto" style={{ scrollbarWidth: "none" }}>
                 <div className="relative w-full flex-shrink-0">
                   <img
                     src={proHeroImage}
