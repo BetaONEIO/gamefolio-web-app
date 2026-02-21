@@ -8110,6 +8110,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updatedUser = await storage.updateUser(req.user.id, { isPrivate });
       if (updatedUser) {
+        if (req.user) {
+          (req.user as any).isPrivate = isPrivate;
+        }
+        if (req.session) {
+          req.session.save?.(() => {});
+        }
         const { password, ...userWithoutPassword } = updatedUser;
         res.json(userWithoutPassword);
       } else {
