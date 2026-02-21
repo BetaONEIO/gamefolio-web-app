@@ -854,17 +854,15 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   ? "relative" // Add relative positioning for mobile comments header
                   : ""
               )}>                
-                {/* Close button for mobile comments - larger grab area */}
+                {/* Close button for mobile comments - grab handle */}
                 {clip.videoType === 'reel' && isMobile && showComments && (
-                  <div className="absolute -top-4 left-0 right-0 h-8 flex justify-center items-center">
-                    <button 
-                      onClick={() => setShowComments(false)}
-                      className="p-3 bg-muted rounded-full hover:bg-muted/80 transition-colors"
-                      data-testid="button-close-comments"
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <button 
+                    onClick={() => setShowComments(false)}
+                    className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full p-2 bg-muted rounded-t-lg hover:bg-muted/80 transition-colors z-[60]"
+                    data-testid="button-close-comments"
+                  >
+                    <ChevronDown className="h-5 w-5" />
+                  </button>
                 )}
                 <div className="flex items-center gap-3">
                   <div className="flex-shrink-0">
