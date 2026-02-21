@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { getQueryFn } from "@/lib/queryClient";
@@ -68,8 +69,11 @@ const sourceColors: Record<string, string> = {
   other: "text-gray-400",
 };
 
+const INITIAL_DISPLAY_COUNT = 10;
+
 export default function LevelTrackerPage() {
   const { user } = useAuth();
+  const [showAll, setShowAll] = useState(false);
 
   const { data: progress, isLoading: progressLoading } = useQuery<LevelProgress>({
     queryKey: [`/api/user/${user?.id}/level-progress`],
@@ -166,7 +170,7 @@ export default function LevelTrackerPage() {
 
             {!progressLoading && progress && (
               <div className="text-center space-y-2">
-                <p className="text-2xl font-bold text-yellow-500">
+                <p className="text-2xl font-bold text-primary">
                   {Math.round(progress.currentPoints).toLocaleString()} XP
                 </p>
                 <p className="text-sm text-muted-foreground">
@@ -176,7 +180,7 @@ export default function LevelTrackerPage() {
                   <span>Lvl {progress.level}</span>
                   <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-yellow-500 rounded-full transition-all duration-500"
+                      className="h-full bg-primary rounded-full transition-all duration-500"
                       style={{ width: `${progressPercent}%` }}
                     />
                   </div>
@@ -191,55 +195,64 @@ export default function LevelTrackerPage() {
       <Card className="bg-background/50 border-border/50">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Zap className="w-5 h-5 text-yellow-500" />
-            XP History
+            <Zap className="w-5 h-5 text-primary" />
+            <span className="text-primary">XP History</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {historyLoading ? (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full" />
+                <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
           ) : xpHistory && xpHistory.length > 0 ? (
-            <div className="space-y-3">
-              {xpHistory.map((item: XPHistoryItem) => {
+            <div className="space-y-2">
+              {(showAll ? xpHistory : xpHistory.slice(0, INITIAL_DISPLAY_COUNT)).map((item: XPHistoryItem) => {
                 const Icon = sourceIcons[item.source] || Zap;
                 const label = sourceLabels[item.source] || item.source;
-                const colorClass = sourceColors[item.source] || "text-primary";
                 
                 return (
                   <div 
                     key={item.id}
-                    className="flex items-center gap-4 p-3 rounded-lg bg-card/50 border border-border/30 hover:border-border/50 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-lg bg-card/50 border border-border/30 hover:border-border/50 transition-colors"
                   >
-                    <div className={`p-2 rounded-full bg-background ${colorClass}`}>
-                      <Icon className="w-5 h-5" />
+                    <div className="p-2 rounded-full bg-background text-primary shrink-0">
+                      <Icon className="w-4 h-4" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">{label}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
-                        </span>
-                      </div>
-                      {item.description && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          {item.description}
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <span className="font-bold text-yellow-500">+{item.xpAmount} XP</span>
-                    </div>
+                    <span className="font-medium text-sm whitespace-nowrap">{label}</span>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
+                    </span>
+                    <span className="flex-1 text-xs text-muted-foreground truncate">
+                      {item.description || ""}
+                    </span>
+                    <span className="font-bold text-primary whitespace-nowrap shrink-0">+{item.xpAmount} XP</span>
                   </div>
                 );
               })}
+              {!showAll && xpHistory.length > INITIAL_DISPLAY_COUNT && (
+                <Button
+                  variant="outline"
+                  className="w-full mt-3 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+                  onClick={() => setShowAll(true)}
+                >
+                  See More
+                </Button>
+              )}
+              {showAll && xpHistory.length > INITIAL_DISPLAY_COUNT && (
+                <Button
+                  variant="outline"
+                  className="w-full mt-3 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+                  onClick={() => setShowAll(false)}
+                >
+                  Show Less
+                </Button>
+              )}
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              <Zap className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <Zap className="w-12 h-12 mx-auto mb-3 opacity-30 text-primary" />
               <p>No XP history yet.</p>
               <p className="text-sm">Start earning XP by watching videos, opening lootboxes, and more!</p>
             </div>
