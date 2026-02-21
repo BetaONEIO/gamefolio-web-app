@@ -187,14 +187,32 @@ const HERO_SLIDES = [
 
 const SLIDE_INTERVAL = 5000;
 
+interface DbHeroSlide {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  buttonText: string | null;
+  buttonLink: string | null;
+  imageUrl: string;
+  displayOrder: number;
+  isActive: boolean;
+  visibility: string;
+}
+
 interface HeroBannerSlideshowProps {
   heroText: { title: string; subtitle: string; buttonText?: string; buttonUrl?: string } | null;
   user: any;
   userHasContent: boolean | undefined;
   setLocation: (path: string) => void;
+  dbSlides?: DbHeroSlide[];
+  slideIntervalMs?: number;
 }
 
-const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation }: HeroBannerSlideshowProps) => {
+const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSlides, slideIntervalMs }: HeroBannerSlideshowProps) => {
+  const useDbSlides = dbSlides && dbSlides.length > 0;
+  const slidesCount = useDbSlides ? dbSlides.length : HERO_SLIDES.length;
+  const interval = slideIntervalMs || SLIDE_INTERVAL;
+
   const [currentSlide, setCurrentSlide] = useState(0);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
@@ -205,24 +223,26 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation }: He
     setCurrentSlide(index);
     if (autoTimerRef.current) clearInterval(autoTimerRef.current);
     autoTimerRef.current = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
-    }, SLIDE_INTERVAL);
-  }, []);
+      setCurrentSlide((prev) => (prev + 1) % slidesCount);
+    }, interval);
+  }, [slidesCount, interval]);
 
   const goNext = useCallback(() => {
-    goToSlide((currentSlide + 1) % HERO_SLIDES.length);
-  }, [currentSlide, goToSlide]);
+    goToSlide((currentSlide + 1) % slidesCount);
+  }, [currentSlide, goToSlide, slidesCount]);
 
   const goPrev = useCallback(() => {
-    goToSlide((currentSlide - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
-  }, [currentSlide, goToSlide]);
+    goToSlide((currentSlide - 1 + slidesCount) % slidesCount);
+  }, [currentSlide, goToSlide, slidesCount]);
 
   useEffect(() => {
+    setCurrentSlide(0);
+    if (autoTimerRef.current) clearInterval(autoTimerRef.current);
     autoTimerRef.current = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
-    }, SLIDE_INTERVAL);
+      setCurrentSlide((prev) => (prev + 1) % slidesCount);
+    }, interval);
     return () => { if (autoTimerRef.current) clearInterval(autoTimerRef.current); };
-  }, []);
+  }, [slidesCount, interval]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -264,100 +284,146 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation }: He
       onTouchEnd={handleTouchEnd}
     >
       <div className="relative h-[300px] sm:h-[350px] md:h-[500px]">
-        {HERO_SLIDES.map((slide, index) => (
-          <div
-            key={index}
-            className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
-            style={{
-              backgroundImage: slide.overlay
-                ? `${slide.overlay}, url(${slide.backgroundImage})`
-                : `url(${slide.backgroundImage})`,
-              opacity: currentSlide === index ? 1 : 0,
-              zIndex: currentSlide === index ? 1 : 0,
-            }}
-          >
-            {slide.type === 'lootbox' && (
-              <div className="flex items-start justify-start h-full">
-                <div className="text-left text-white px-6 sm:px-10 md:px-16 flex flex-col justify-center h-full max-w-lg">
-                  <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-4 sm:mb-6 leading-tight drop-shadow-lg">
-                    Claim your<br />Daily Lootbox
-                  </h2>
-                  <Button 
-                    className="w-fit px-8 py-3 sm:py-4 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
-                    onClick={() => setLocation(user ? '/lootbox' : '/auth')}
-                  >
-                    Claim
-                  </Button>
-                </div>
-              </div>
-            )}
-            {slide.showContent && slide.type !== 'lootbox' && (
+        {useDbSlides ? (
+          dbSlides.map((slide, index) => (
+            <div
+              key={slide.id}
+              className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
+              style={{
+                backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7)), url(${slide.imageUrl})`,
+                opacity: currentSlide === index ? 1 : 0,
+                zIndex: currentSlide === index ? 1 : 0,
+              }}
+            >
               <div className="flex items-center justify-center h-full">
                 <div className="text-center text-white px-4 sm:px-6 max-w-4xl">
-                  {heroText ? (
-                    <>
-                      <h1 className="text-2xl sm:text-3xl md:text-6xl font-bold mb-3 sm:mb-4 leading-tight">
-                        {heroText.title.split('\n').map((line, idx) => (
-                          <span key={idx}>
-                            {idx > 0 && <span className="block text-primary">{line}</span>}
-                            {idx === 0 && line}
-                          </span>
-                        ))}
-                      </h1>
-                      <p className="text-sm sm:text-base md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-2">
-                        {heroText.subtitle}
-                      </p>
-                      {heroText.buttonText && heroText.buttonUrl ? (
-                        <Button 
-                          className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
-                          onClick={() => {
-                            if (heroText.buttonUrl?.startsWith('http')) {
-                              window.open(heroText.buttonUrl, '_blank');
-                            } else {
-                              setLocation(heroText.buttonUrl || '/');
-                            }
-                          }}
-                          data-testid="button-custom-hero"
-                        >
-                          {heroText.buttonText}
-                        </Button>
-                      ) : !user ? (
-                        <Button 
-                          className="w-fit px-8 py-3 sm:py-4 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
-                          onClick={() => setLocation('/auth')}
-                          data-testid="button-join-community"
-                        >
-                          Join Community
-                        </Button>
-                      ) : !userHasContent && (
-                        <Button 
-                          className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
-                          onClick={() => setLocation('/upload')}
-                          data-testid="button-start-building"
-                        >
-                          Start Building Now
-                        </Button>
-                      )}
-                    </>
-                  ) : (
-                    <div className="space-y-4">
-                      <Skeleton className="h-12 sm:h-16 md:h-24 w-full max-w-2xl mx-auto bg-white/10" />
-                      <Skeleton className="h-6 sm:h-8 w-3/4 max-w-xl mx-auto bg-white/10" />
-                      <Skeleton className="h-12 w-40 mx-auto bg-white/10" />
-                    </div>
+                  <h1 className="text-2xl sm:text-3xl md:text-6xl font-bold mb-3 sm:mb-4 leading-tight">
+                    {slide.title.split('\n').map((line, idx) => (
+                      <span key={idx}>
+                        {idx > 0 && <span className="block text-primary">{line}</span>}
+                        {idx === 0 && line}
+                      </span>
+                    ))}
+                  </h1>
+                  {slide.subtitle && (
+                    <p className="text-sm sm:text-base md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-2">
+                      {slide.subtitle}
+                    </p>
+                  )}
+                  {slide.buttonText && slide.buttonLink && (
+                    <Button 
+                      className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                      onClick={() => {
+                        if (slide.buttonLink?.startsWith('http')) {
+                          window.open(slide.buttonLink, '_blank');
+                        } else {
+                          setLocation(slide.buttonLink || '/');
+                        }
+                      }}
+                    >
+                      {slide.buttonText}
+                    </Button>
                   )}
                 </div>
               </div>
-            )}
-          </div>
-        ))}
+            </div>
+          ))
+        ) : (
+          HERO_SLIDES.map((slide, index) => (
+            <div
+              key={index}
+              className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
+              style={{
+                backgroundImage: slide.overlay
+                  ? `${slide.overlay}, url(${slide.backgroundImage})`
+                  : `url(${slide.backgroundImage})`,
+                opacity: currentSlide === index ? 1 : 0,
+                zIndex: currentSlide === index ? 1 : 0,
+              }}
+            >
+              {slide.type === 'lootbox' && (
+                <div className="flex items-start justify-start h-full">
+                  <div className="text-left text-white px-6 sm:px-10 md:px-16 flex flex-col justify-center h-full max-w-lg">
+                    <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-4 sm:mb-6 leading-tight drop-shadow-lg">
+                      Claim your<br />Daily Lootbox
+                    </h2>
+                    <Button 
+                      className="w-fit px-8 py-3 sm:py-4 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
+                      onClick={() => setLocation(user ? '/lootbox' : '/auth')}
+                    >
+                      Claim
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {slide.showContent && slide.type !== 'lootbox' && (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center text-white px-4 sm:px-6 max-w-4xl">
+                    {heroText ? (
+                      <>
+                        <h1 className="text-2xl sm:text-3xl md:text-6xl font-bold mb-3 sm:mb-4 leading-tight">
+                          {heroText.title.split('\n').map((line, idx) => (
+                            <span key={idx}>
+                              {idx > 0 && <span className="block text-primary">{line}</span>}
+                              {idx === 0 && line}
+                            </span>
+                          ))}
+                        </h1>
+                        <p className="text-sm sm:text-base md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-2">
+                          {heroText.subtitle}
+                        </p>
+                        {heroText.buttonText && heroText.buttonUrl ? (
+                          <Button 
+                            className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                            onClick={() => {
+                              if (heroText.buttonUrl?.startsWith('http')) {
+                                window.open(heroText.buttonUrl, '_blank');
+                              } else {
+                                setLocation(heroText.buttonUrl || '/');
+                              }
+                            }}
+                            data-testid="button-custom-hero"
+                          >
+                            {heroText.buttonText}
+                          </Button>
+                        ) : !user ? (
+                          <Button 
+                            className="w-fit px-8 py-3 sm:py-4 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
+                            onClick={() => setLocation('/auth')}
+                            data-testid="button-join-community"
+                          >
+                            Join Community
+                          </Button>
+                        ) : !userHasContent && (
+                          <Button 
+                            className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                            onClick={() => setLocation('/upload')}
+                            data-testid="button-start-building"
+                          >
+                            Start Building Now
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      <div className="space-y-4">
+                        <Skeleton className="h-12 sm:h-16 md:h-24 w-full max-w-2xl mx-auto bg-white/10" />
+                        <Skeleton className="h-6 sm:h-8 w-3/4 max-w-xl mx-auto bg-white/10" />
+                        <Skeleton className="h-12 w-40 mx-auto bg-white/10" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))
+        )}
 
         {/* Slide Indicators */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-          {HERO_SLIDES.map((_, index) => (
+          {Array.from({ length: slidesCount }).map((_, index) => (
             <button
               key={index}
-              onClick={() => setCurrentSlide(index)}
+              onClick={() => goToSlide(index)}
               className={`h-2 rounded-full transition-all duration-300 ${
                 currentSlide === index
                   ? 'w-6 bg-primary'
@@ -423,6 +489,19 @@ const HomePage = () => {
     },
     enabled: !!userId, // Only run query if user is logged in
   });
+
+  const { data: dbHeroSlides } = useQuery<DbHeroSlide[]>({
+    queryKey: ["/api/hero-slides"],
+    staleTime: 10000,
+    refetchOnWindowFocus: true,
+  });
+
+  const { data: heroSlideSettings } = useQuery<{ intervalSeconds: number }>({
+    queryKey: ["/api/hero-slides/settings"],
+    staleTime: 30000,
+  });
+
+  const slideIntervalMs = (heroSlideSettings?.intervalSeconds || 6) * 1000;
 
   // Query to get custom hero text
   const { data: experiencedHeroText, isLoading: isLoadingExperiencedText } = useQuery<{ 
@@ -490,6 +569,8 @@ const HomePage = () => {
         user={user}
         userHasContent={userHasContent}
         setLocation={setLocation}
+        dbSlides={dbHeroSlides}
+        slideIntervalMs={slideIntervalMs}
       />
       
       <div className="space-y-4 sm:space-y-6 md:space-y-8 mt-4 sm:mt-6 md:mt-8">
