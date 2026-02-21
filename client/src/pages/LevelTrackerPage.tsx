@@ -8,7 +8,13 @@ import { Link } from "wouter";
 import { ArrowLeft, Zap, Gift, Eye, Heart, Flame, Upload, LogIn, Star, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import badgeIcon from "@assets/yellow_circle_transparent_1771659993513.png";
-import { formatDistanceToNow } from "date-fns";
+import { isToday, isYesterday, format } from "date-fns";
+
+function formatSimpleDate(date: Date): string {
+  if (isToday(date)) return "Today";
+  if (isYesterday(date)) return "Yesterday";
+  return format(date, "dd MMM");
+}
 
 interface LevelProgress {
   level: number;
@@ -220,12 +226,11 @@ export default function LevelTrackerPage() {
                     <div className="p-2 rounded-full bg-background text-primary shrink-0">
                       <Icon className="w-4 h-4" />
                     </div>
-                    <div className="flex-1 min-w-0 flex items-center gap-2">
-                      <span className="font-medium text-sm truncate">{label}</span>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
-                      </span>
-                    </div>
+                    <span className="font-medium text-sm whitespace-nowrap shrink-0">{label}</span>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {formatSimpleDate(new Date(item.createdAt))}
+                    </span>
+                    <span className="flex-1" />
                     <span className="font-bold text-primary whitespace-nowrap shrink-0">+{item.xpAmount} XP</span>
                   </div>
                 );
@@ -242,7 +247,7 @@ export default function LevelTrackerPage() {
               {showAll && xpHistory.length > INITIAL_DISPLAY_COUNT && (
                 <Button
                   variant="outline"
-                  className="w-full mt-3 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+                  className="w-full mt-3 mb-4 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
                   onClick={() => setShowAll(false)}
                 >
                   Show Less
