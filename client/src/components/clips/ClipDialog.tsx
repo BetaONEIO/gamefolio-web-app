@@ -846,14 +846,14 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     : "w-full lg:flex-1 lg:min-w-0 overflow-hidden" // Clips: take remaining space, allow internal scroll
             )}
             style={{ maxHeight: '100%' }}>
-              {/* Grab handle to close mobile comments */}
+              {/* Arrow down to close mobile comments */}
               {clip.videoType === 'reel' && isMobile && showComments && (
                 <button 
                   onClick={() => setShowComments(false)}
                   className="w-full flex justify-center py-2 flex-shrink-0 bg-background"
                   data-testid="button-close-comments"
                 >
-                  <div className="w-10 h-1.5 bg-muted-foreground/40 rounded-full" />
+                  <ChevronDown className="h-6 w-6 text-muted-foreground" />
                 </button>
               )}
               {/* Header with username (mobile comments header or regular header) - FIXED */}
