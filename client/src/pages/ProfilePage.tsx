@@ -3209,14 +3209,32 @@ const ProfilePage = () => {
         setSelectedScreenshot(null);
         // Dialog closes without navigation - stays on same page
       }}>
-        <DialogContent className="max-w-[95%] w-[95%] p-0 bg-background text-foreground max-h-[95vh] h-[95vh] overflow-y-auto lg:overflow-hidden [&>button]:hidden">
-          <button
-            onClick={() => setSelectedScreenshot(null)}
-            className="sticky top-0 right-0 z-[100] rounded-full bg-black/80 hover:bg-black p-2.5 text-white transition-colors ml-auto mr-3 mt-3 -mb-10 shadow-lg"
-            data-testid="button-close-screenshot-modal"
-          >
-            <X className="h-5 w-5" />
-          </button>
+        <DialogContent className="max-w-[95%] w-[95%] p-0 bg-background text-foreground max-h-[95vh] h-[95vh] overflow-y-auto lg:overflow-hidden screenshot-dialog-close">
+          <style>{`
+            .screenshot-dialog-close > button[type="button"] {
+              background: rgba(0,0,0,0.8) !important;
+              color: white !important;
+              border-radius: 9999px !important;
+              padding: 8px !important;
+              opacity: 1 !important;
+              right: 12px !important;
+              top: 12px !important;
+              width: 36px !important;
+              height: 36px !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+              z-index: 100 !important;
+            }
+            .screenshot-dialog-close > button[type="button"]:hover {
+              background: rgba(0,0,0,1) !important;
+            }
+            .screenshot-dialog-close > button[type="button"] svg {
+              width: 20px !important;
+              height: 20px !important;
+            }
+          `}</style>
           {selectedScreenshot && (
             <div className="flex flex-col lg:flex-row h-auto lg:h-full min-h-full">
               {/* Left side - Image display */}
