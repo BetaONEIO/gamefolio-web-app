@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Crown, Loader2, X, Check, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -238,7 +238,11 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   const [checkoutPaymentIntentId, setCheckoutPaymentIntentId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useCallback((node: HTMLDivElement | null) => {
+    if (node) {
+      node.scrollTop = 0;
+    }
+  }, [step, open]);
 
   const packages = getCurrentOffering();
 
@@ -291,17 +295,6 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
       setCheckoutClientSecret(null);
       setCheckoutPaymentIntentId(null);
       setCheckoutError(null);
-    }
-    if (open) {
-      const scrollToTop = () => {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop = 0;
-        }
-      };
-      scrollToTop();
-      setTimeout(scrollToTop, 50);
-      setTimeout(scrollToTop, 150);
-      setTimeout(scrollToTop, 300);
     }
   }, [open]);
 
