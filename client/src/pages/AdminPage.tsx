@@ -1422,6 +1422,14 @@ const AdminPage = () => {
     placeholderData: keepPreviousData,
   });
 
+  // Fetch users for streak assignment search
+  const { data: streakUsersData, isLoading: streakUsersLoading } = useQuery<UsersData>({
+    queryKey: ["/api/admin/users", { page: 1, search: streakUserSearch, limit: 10 }],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: streakUserSearch.length >= 2,
+    placeholderData: keepPreviousData,
+  });
+
   // Fetch clips with pagination
   const { data: clipsData, isLoading: clipsLoading } = useQuery<ClipsData>({
     queryKey: ["/api/admin/clips", { page: clipPage }],
@@ -3471,7 +3479,7 @@ const AdminPage = () => {
                 {streakUserSearch.length >= 2 && (
                   <div className="border rounded-lg p-4 max-h-60 overflow-y-auto">
                     <h4 className="font-medium mb-2">Search Results</h4>
-                    {badgeUsersData?.users.filter(u => 
+                    {streakUsersData?.users.filter(u => 
                       u.username.toLowerCase().includes(streakUserSearch.toLowerCase())
                     ).map(user => (
                       <div
@@ -3588,8 +3596,7 @@ const AdminPage = () => {
 
                   <div className="border-t pt-4">
                     <p className="text-xs text-muted-foreground">
-                      <strong>Note:</strong> Streak milestones - 3, 7, 14, 30, 60, 90, 180, and 365 days award bonus points.
-                      Users now earn streak increments every time they use the application, regardless of gaps.
+                      <strong>Note:</strong> Streak milestones - 5, 10, 15, 20, etc. (every 5 days) award scaled bonus XP. Users earn 10 XP daily for consecutive logins.
                     </p>
                   </div>
                 </div>
