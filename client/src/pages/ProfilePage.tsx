@@ -3212,7 +3212,7 @@ const ProfilePage = () => {
         <DialogContent className="max-w-[95%] w-[95%] p-0 bg-background text-foreground max-h-[95vh] h-[95vh] overflow-y-auto lg:overflow-hidden [&>button]:hidden">
           <button
             onClick={() => setSelectedScreenshot(null)}
-            className="absolute top-3 right-3 z-50 rounded-full bg-black/70 hover:bg-black/90 p-2 text-white transition-colors"
+            className="sticky top-0 right-0 z-[100] rounded-full bg-black/80 hover:bg-black p-2.5 text-white transition-colors ml-auto mr-3 mt-3 -mb-10 shadow-lg"
             data-testid="button-close-screenshot-modal"
           >
             <X className="h-5 w-5" />
