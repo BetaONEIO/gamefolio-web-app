@@ -37,12 +37,15 @@ const ReelCard: React.FC<{ reel: any; reelsList?: any[] }> = ({ reel, reelsList 
       className="group relative overflow-hidden rounded-xl cursor-pointer aspect-[9/16] border border-border/50 hover:border-primary/50 transition-all duration-300"
     >
       {/* Thumbnail */}
+      <div className="absolute inset-0 bg-gray-800" />
       <LazyImage
         src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
         alt={reel.title}
         className="w-full h-full object-cover"
         placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
         showLoadingSpinner={true}
+        rootMargin="50px"
+        containerClassName="absolute inset-0"
         fallback={
           <div className="w-full h-full flex items-center justify-center bg-gray-800">
             <Play className="h-12 w-12 text-gray-500" />
