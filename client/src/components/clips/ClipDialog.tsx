@@ -132,6 +132,19 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
     enabled: isOpen && clipId !== null,
   });
 
+  // Prevent native scroll during vertical swipe on reels (passive: false required)
+  useEffect(() => {
+    const el = dialogRef.current;
+    if (!el || !isOpen) return;
+    const handler = (e: TouchEvent) => {
+      if (clip?.videoType === 'reel' && showNavigation) {
+        e.preventDefault();
+      }
+    };
+    el.addEventListener('touchmove', handler, { passive: false });
+    return () => el.removeEventListener('touchmove', handler);
+  }, [isOpen, clip?.videoType, showNavigation]);
+
   // Detect mobile device - use same breakpoint as useMobile hook
   useEffect(() => {
     const checkMobile = () => {
@@ -417,6 +430,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
     if (!showNavigation || !touchStart || (clip?.videoType === 'reel' && isMobile && showComments)) return;
     const touch = e.touches[0];
     setTouchEnd({ x: touch.clientX, y: touch.clientY });
+    if (clip?.videoType === 'reel') {
+      e.preventDefault();
+    }
   };
 
   const handleTouchEnd = () => {
