@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
 import { useMobile } from '@/hooks/use-mobile';
 import { useSignedUrl } from '@/hooks/use-signed-url';
+import { LazyImage } from '@/components/ui/lazy-image';
 import { LikeButton } from '@/components/engagement/LikeButton';
 import { FireButton } from '@/components/engagement/FireButton';
 import { ReportButton } from '@/components/reporting/ReportButton';
@@ -85,15 +86,20 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
     >
       {/* Thumbnail/Video */}
       <div className="relative w-full h-full">
-        <img
+        <div className="absolute inset-0 bg-gray-800" />
+        <LazyImage
           src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
           alt={reel.title}
           className="w-full h-full object-cover"
-          loading="lazy"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.src = "/placeholder-game.png";
-          }}
+          placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
+          showLoadingSpinner={true}
+          rootMargin="50px"
+          containerClassName="absolute inset-0"
+          fallback={
+            <div className="w-full h-full flex items-center justify-center bg-gray-800">
+              <Play className="h-12 w-12 text-gray-500" />
+            </div>
+          }
         />
 
         {/* Gradient overlay */}
@@ -419,15 +425,20 @@ const TrendingPage: React.FC = () => {
                     className="break-inside-avoid mb-1"
                   >
                     <div className={`relative ${aspectRatio} w-full rounded-sm overflow-hidden cursor-pointer group`}>
-                      <img
+                      <div className="absolute inset-0 bg-gray-800" />
+                      <LazyImage
                         src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
                         alt={reel.title}
                         className="w-full h-full object-cover"
-                        loading="lazy"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = "/placeholder-game.png";
-                        }}
+                        placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
+                        showLoadingSpinner={true}
+                        rootMargin="50px"
+                        containerClassName="absolute inset-0"
+                        fallback={
+                          <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                            <Play className="h-8 w-8 text-gray-500" />
+                          </div>
+                        }
                       />
                       
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
