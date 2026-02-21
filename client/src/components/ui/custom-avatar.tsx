@@ -338,13 +338,17 @@ export const CustomAvatar = ({
         onClick={handleNftAvatarClick}
       >
         <div
-          className="w-full h-full rounded-lg overflow-hidden border-2"
+          className="w-full h-full rounded-lg overflow-hidden border-2 bg-[#1e293b]"
           style={{ borderColor: borderColor }}
         >
           <img
             src={user.nftProfileImageUrl || ''}
             alt={safeDisplayName}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+            }}
           />
         </div>
         <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center shadow-sm" style={{ backgroundColor: borderColor }}>
