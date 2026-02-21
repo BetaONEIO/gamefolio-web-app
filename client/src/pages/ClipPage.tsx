@@ -182,13 +182,23 @@ const ClipPage = () => {
   // Fetch clips based on context
   const { data: trendingClips } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/clips/trending'],
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: !isFromLatestClips, // Don't fetch if we know we're from latest clips
+    queryFn: async () => {
+      const res = await fetch('/api/clips/trending', { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch trending clips");
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: !isFromLatestClips,
   });
 
   const { data: latestClips } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/clips'],
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryFn: async () => {
+      const res = await fetch('/api/clips', { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch clips");
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
   });
 
   // Use the appropriate navigation source based on context
@@ -211,10 +221,15 @@ const ClipPage = () => {
 
   const { data: clip, isLoading, error } = useQuery<ClipWithUser>({
     queryKey: [apiEndpoint],
+    queryFn: async () => {
+      const res = await fetch(apiEndpoint, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch clip");
+      return res.json();
+    },
     enabled: !!clipId && clipId.toString().length > 0,
     retry: 2,
     retryDelay: 1000,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
   // Log errors when they occur
