@@ -492,12 +492,26 @@ const HomePage = () => {
 
   const { data: dbHeroSlides } = useQuery<DbHeroSlide[]>({
     queryKey: ["/api/hero-slides"],
+    queryFn: async () => {
+      const response = await fetch('/api/hero-slides');
+      if (!response.ok) {
+        throw new Error('Failed to fetch hero slides');
+      }
+      return response.json();
+    },
     staleTime: 10000,
     refetchOnWindowFocus: true,
   });
 
   const { data: heroSlideSettings } = useQuery<{ intervalSeconds: number }>({
     queryKey: ["/api/hero-slides/settings"],
+    queryFn: async () => {
+      const response = await fetch('/api/hero-slides/settings');
+      if (!response.ok) {
+        throw new Error('Failed to fetch hero slide settings');
+      }
+      return response.json();
+    },
     staleTime: 30000,
   });
 
