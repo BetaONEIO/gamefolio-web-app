@@ -1770,10 +1770,10 @@ export default function SettingsPage() {
                           {hasUnsavedChanges && (
                             <Button
                               className="w-full bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
-                              onClick={handleSaveProfile}
-                              disabled={updateProfile.isPending || uploadingAvatar || uploadingBanner}
+                              onClick={handleSave}
+                              disabled={updateProfileMutation.isPending || uploadingAvatar || uploadingBanner}
                             >
-                              {(updateProfile.isPending || uploadingAvatar || uploadingBanner) ? (
+                              {(updateProfileMutation.isPending || uploadingAvatar || uploadingBanner) ? (
                                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                               ) : (
                                 <Save className="h-4 w-4 mr-2" />
@@ -1827,10 +1827,10 @@ export default function SettingsPage() {
                         <div className="pt-2">
                           <Button
                             className="w-full bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
-                            onClick={handleSaveProfile}
-                            disabled={updateProfile.isPending || uploadingAvatar || uploadingBanner}
+                            onClick={handleSave}
+                            disabled={updateProfileMutation.isPending || uploadingAvatar || uploadingBanner}
                           >
-                            {(updateProfile.isPending || uploadingAvatar || uploadingBanner) ? (
+                            {(updateProfileMutation.isPending || uploadingAvatar || uploadingBanner) ? (
                               <Loader2 className="h-4 w-4 animate-spin mr-2" />
                             ) : (
                               <Save className="h-4 w-4 mr-2" />
