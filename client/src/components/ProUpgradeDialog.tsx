@@ -637,7 +637,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-[430px] md:max-w-[860px] w-full bg-[#020617] border-none text-white p-0 overflow-hidden [&>button]:hidden max-h-[95vh] gap-0 rounded-none sm:rounded-none"
+        className="max-w-[430px] md:max-w-[860px] w-full bg-[#020617] border-none text-white p-0 overflow-hidden [&>button]:hidden max-h-[100dvh] h-[100dvh] md:h-auto md:max-h-[95vh] gap-0 rounded-none sm:rounded-none top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
         data-testid="dialog-pro-upgrade"
       >
         <AnimatePresence mode="wait">
@@ -648,7 +648,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <div ref={scrollContainerRef} className="flex flex-col md:hidden h-[95vh] overflow-y-auto" style={{ scrollbarWidth: "none" }}>
+              <div ref={scrollContainerRef} className="flex flex-col md:hidden h-[100dvh] overflow-y-auto" style={{ scrollbarWidth: "none" }}>
                 <div className="relative w-full flex-shrink-0">
                   <img
                     src={proHeroImage}
