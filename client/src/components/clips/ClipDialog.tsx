@@ -846,24 +846,21 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     : "w-full lg:flex-1 lg:min-w-0 overflow-hidden" // Clips: take remaining space, allow internal scroll
             )}
             style={{ maxHeight: '100%' }}>
+              {/* Grab handle to close mobile comments */}
+              {clip.videoType === 'reel' && isMobile && showComments && (
+                <button 
+                  onClick={() => setShowComments(false)}
+                  className="w-full flex justify-center py-2 flex-shrink-0 bg-background"
+                  data-testid="button-close-comments"
+                >
+                  <div className="w-10 h-1.5 bg-muted-foreground/40 rounded-full" />
+                </button>
+              )}
               {/* Header with username (mobile comments header or regular header) - FIXED */}
               <div className={cn(
                 "border-b border-border flex items-center justify-between flex-shrink-0",
-                isMobile ? "p-3" : "p-4", // Better mobile padding
-                clip.videoType === 'reel' && isMobile && showComments 
-                  ? "relative" // Add relative positioning for mobile comments header
-                  : ""
-              )}>                
-                {/* Close button for mobile comments - grab handle */}
-                {clip.videoType === 'reel' && isMobile && showComments && (
-                  <button 
-                    onClick={() => setShowComments(false)}
-                    className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full p-2 bg-muted rounded-t-lg hover:bg-muted/80 transition-colors z-[60]"
-                    data-testid="button-close-comments"
-                  >
-                    <ChevronDown className="h-5 w-5" />
-                  </button>
-                )}
+                isMobile ? "p-3" : "p-4"
+              )}>
                 <div className="flex items-center gap-3">
                   <div className="flex-shrink-0">
                     {clip?.user && (
