@@ -299,7 +299,7 @@ export function NFTPurchaseDialog({
     <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent 
-        className="bg-[#020617] border-none text-white p-0 max-w-[430px] md:max-w-[860px] w-full md:h-auto h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
+        className="bg-[#020617] border-none text-white p-0 max-w-[430px] md:max-w-[860px] w-full md:h-auto h-[100dvh] md:max-h-[90vh] overflow-hidden flex flex-col [&>button]:hidden rounded-none sm:rounded-none md:rounded-lg top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
         data-testid="dialog-nft-purchase"
       >
         <div 
