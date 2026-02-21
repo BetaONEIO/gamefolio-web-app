@@ -143,7 +143,7 @@ export default function LevelTrackerPage() {
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
-                    <div className="relative w-40 h-40 md:w-44 md:h-44 mx-auto">
+                    <div className="relative w-[170px] h-[170px] md:w-[185px] md:h-[185px] mx-auto">
                       <img 
                         src={badgeIcon} 
                         alt="Level Badge"
