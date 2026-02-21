@@ -71,6 +71,13 @@ const HomePage = () => {
     refetchOnWindowFocus: true,
   });
 
+  const { data: heroSettings } = useQuery<{ intervalSeconds: number }>({
+    queryKey: ["/api/hero-slides/settings"],
+    staleTime: 30000,
+  });
+
+  const slideIntervalMs = (heroSettings?.intervalSeconds || 6) * 1000;
+
   const activeSlides = useMemo(() => {
     if (!heroSlides || heroSlides.length === 0) return null;
     return heroSlides;
@@ -81,9 +88,9 @@ const HomePage = () => {
     if (activeSlides && activeSlides.length > 1) {
       slideTimerRef.current = setInterval(() => {
         setCurrentSlide((prev) => (prev + 1) % activeSlides.length);
-      }, 6000);
+      }, slideIntervalMs);
     }
-  }, [activeSlides]);
+  }, [activeSlides, slideIntervalMs]);
 
   useEffect(() => {
     resetSlideTimer();

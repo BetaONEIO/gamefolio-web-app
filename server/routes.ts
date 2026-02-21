@@ -2015,12 +2015,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { asc, and, inArray } = await import('drizzle-orm');
       const isLoggedIn = !!(req.user as any);
       const isPro = !!(req.user as any)?.isPro;
+      const isNewUser = isLoggedIn && (req.user as any)?.createdAt &&
+        (Date.now() - new Date((req.user as any).createdAt).getTime()) < 7 * 24 * 60 * 60 * 1000;
 
       const allowedVisibilities = ["everyone"];
       if (isLoggedIn) {
         allowedVisibilities.push("logged_in");
         if (isPro) {
           allowedVisibilities.push("pro_only");
+        }
+        if (isNewUser) {
+          allowedVisibilities.push("new_users");
         }
       } else {
         allowedVisibilities.push("logged_out");
@@ -2032,10 +2037,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           inArray(heroSlides.visibility, allowedVisibilities)
         ))
         .orderBy(asc(heroSlides.displayOrder));
+
       res.json(slides);
     } catch (err) {
       console.error("Error fetching hero slides:", err);
       res.status(500).json({ message: "Error fetching hero slides" });
+    }
+  });
+
+  // GET /api/hero-slides/settings - Public endpoint for slide interval
+  app.get("/api/hero-slides/settings", async (req, res) => {
+    try {
+      const { heroTextSettings } = await import('@shared/schema');
+      const [config] = await db.select().from(heroTextSettings).where(eq(heroTextSettings.textType, "slide_config"));
+      res.json({ intervalSeconds: config ? parseInt(config.title) || 6 : 6 });
+    } catch (err) {
+      console.error("Error fetching hero slide settings:", err);
+      res.status(500).json({ message: "Error fetching settings" });
     }
   });
 

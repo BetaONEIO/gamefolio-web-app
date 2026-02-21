@@ -1467,6 +1467,13 @@ const AdminPage = () => {
     queryFn: getQueryFn({ on401: "throw" }),
   });
 
+  // Hero slide settings (interval)
+  const { data: heroSlideSettings, refetch: refetchHeroSlideSettings } = useQuery<{ intervalSeconds: number }>({
+    queryKey: ["/api/admin/hero-slides/settings"],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+  const [slideIntervalSeconds, setSlideIntervalSeconds] = useState<number>(6);
+
   const { data: assetBucketList, isLoading: assetBucketsLoading } = useQuery<{ id: string; name: string; public: boolean; createdAt: string }[]>({
     queryKey: ["/api/admin/storage/buckets"],
     queryFn: getQueryFn({ on401: "throw" }),
@@ -1592,6 +1599,12 @@ const AdminPage = () => {
       setHeroTargetAudience(currentHeroText.targetAudience || "experienced_users");
     }
   }, [currentHeroText]);
+
+  React.useEffect(() => {
+    if (heroSlideSettings) {
+      setSlideIntervalSeconds(heroSlideSettings.intervalSeconds || 6);
+    }
+  }, [heroSlideSettings]);
 
   // Handle user search
   const handleUserSearch = (e: React.FormEvent) => {
@@ -1958,6 +1971,17 @@ const AdminPage = () => {
       value: item.count,
       fill: COLORS[index % COLORS.length]
     }));
+  };
+
+  // Hero slide interval handler
+  const handleSaveSlideInterval = async () => {
+    try {
+      await apiRequest("PATCH", "/api/admin/hero-slides/settings", { intervalSeconds: slideIntervalSeconds });
+      toast({ title: "Interval updated", description: `Slides will now rotate every ${slideIntervalSeconds} seconds.` });
+      refetchHeroSlideSettings();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to update interval", variant: "destructive" });
+    }
   };
 
   // Hero slides handlers
@@ -3970,6 +3994,35 @@ const AdminPage = () => {
                   </div>
 
                   <TabsContent value="overview" className="space-y-4">
+                    <div className="border rounded-lg p-4 bg-muted/30 space-y-3">
+                      <h4 className="text-sm font-medium flex items-center gap-2">Slide Rotation Speed</h4>
+                      <p className="text-xs text-muted-foreground">How many seconds each slide is shown before moving to the next one.</p>
+                      <div className="flex items-center gap-3">
+                        <Select value={String(slideIntervalSeconds)} onValueChange={(val) => setSlideIntervalSeconds(parseInt(val))}>
+                          <SelectTrigger className="w-[200px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="3">3 seconds</SelectItem>
+                            <SelectItem value="4">4 seconds</SelectItem>
+                            <SelectItem value="5">5 seconds</SelectItem>
+                            <SelectItem value="6">6 seconds (default)</SelectItem>
+                            <SelectItem value="8">8 seconds</SelectItem>
+                            <SelectItem value="10">10 seconds</SelectItem>
+                            <SelectItem value="12">12 seconds</SelectItem>
+                            <SelectItem value="15">15 seconds</SelectItem>
+                            <SelectItem value="20">20 seconds</SelectItem>
+                            <SelectItem value="30">30 seconds</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" onClick={handleSaveSlideInterval} disabled={slideIntervalSeconds === (heroSlideSettings?.intervalSeconds || 6)}>
+                          Save
+                        </Button>
+                        {slideIntervalSeconds !== (heroSlideSettings?.intervalSeconds || 6) && (
+                          <span className="text-xs text-orange-500">Unsaved change</span>
+                        )}
+                      </div>
+                    </div>
                     {!heroSlides?.length ? (
                       <div className="text-center py-12 text-muted-foreground">
                         <Type className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -4007,11 +4060,13 @@ const AdminPage = () => {
                                   slide.visibility === 'everyone' ? 'border-green-500 text-green-600' :
                                   slide.visibility === 'logged_in' ? 'border-blue-500 text-blue-600' :
                                   slide.visibility === 'logged_out' ? 'border-orange-500 text-orange-600' :
+                                  slide.visibility === 'new_users' ? 'border-cyan-500 text-cyan-600' :
                                   slide.visibility === 'pro_only' ? 'border-purple-500 text-purple-600' : ''
                                 }`}>
                                   {slide.visibility === 'everyone' ? 'Everyone' :
                                    slide.visibility === 'logged_in' ? 'Logged In' :
                                    slide.visibility === 'logged_out' ? 'Logged Out' :
+                                   slide.visibility === 'new_users' ? 'New Users' :
                                    slide.visibility === 'pro_only' ? 'Pro Only' : slide.visibility}
                                 </Badge>
                               </div>
@@ -4159,10 +4214,18 @@ const AdminPage = () => {
                             <SelectContent>
                               <SelectItem value="everyone">Everyone</SelectItem>
                               <SelectItem value="logged_in">Logged In Users</SelectItem>
-                              <SelectItem value="logged_out">Logged Out Users</SelectItem>
+                              <SelectItem value="logged_out">Non-Logged In Users</SelectItem>
+                              <SelectItem value="new_users">New Users Only</SelectItem>
                               <SelectItem value="pro_only">Pro Users Only</SelectItem>
                             </SelectContent>
                           </Select>
+                          <p className="text-xs text-muted-foreground">
+                            {slideVisibility === 'new_users' && 'Shown to users who signed up within the last 7 days.'}
+                            {slideVisibility === 'logged_out' && 'Shown to visitors who are not signed in.'}
+                            {slideVisibility === 'logged_in' && 'Shown to all signed-in users.'}
+                            {slideVisibility === 'everyone' && 'Shown to all visitors and users.'}
+                            {slideVisibility === 'pro_only' && 'Shown to Pro subscribers only.'}
+                          </p>
                         </div>
                       </div>
 
@@ -4324,10 +4387,18 @@ const AdminPage = () => {
                           <SelectContent>
                             <SelectItem value="everyone">Everyone</SelectItem>
                             <SelectItem value="logged_in">Logged In Users</SelectItem>
-                            <SelectItem value="logged_out">Logged Out Users</SelectItem>
+                            <SelectItem value="logged_out">Non-Logged In Users</SelectItem>
+                            <SelectItem value="new_users">New Users Only</SelectItem>
                             <SelectItem value="pro_only">Pro Users Only</SelectItem>
                           </SelectContent>
                         </Select>
+                        <p className="text-xs text-muted-foreground">
+                          {slideVisibility === 'new_users' && 'Shown to users who signed up within the last 7 days.'}
+                          {slideVisibility === 'logged_out' && 'Shown to visitors who are not signed in.'}
+                          {slideVisibility === 'logged_in' && 'Shown to all signed-in users.'}
+                          {slideVisibility === 'everyone' && 'Shown to all visitors and users.'}
+                          {slideVisibility === 'pro_only' && 'Shown to Pro subscribers only.'}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2 pt-6">
                         <Switch checked={slideIsActive} onCheckedChange={setSlideIsActive} />

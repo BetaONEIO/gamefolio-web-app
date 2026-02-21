@@ -1755,6 +1755,56 @@ adminRouter.get("/hero-slides", async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/admin/hero-slides/settings - Get hero slide settings (interval etc.)
+adminRouter.get("/hero-slides/settings", async (req: Request, res: Response) => {
+  try {
+    const { db } = await import('../db');
+    const { eq } = await import('drizzle-orm');
+    const { heroTextSettings } = await import('@shared/schema');
+    const [config] = await db.select().from(heroTextSettings).where(eq(heroTextSettings.textType, "slide_config"));
+    res.json({
+      intervalSeconds: config ? parseInt(config.title) || 6 : 6,
+    });
+  } catch (err) {
+    console.error("Error fetching hero slide settings:", err);
+    res.status(500).json({ message: "Error fetching hero slide settings" });
+  }
+});
+
+// PATCH /api/admin/hero-slides/settings - Update hero slide settings (interval etc.)
+adminRouter.patch("/hero-slides/settings", async (req: Request, res: Response) => {
+  try {
+    const { intervalSeconds } = req.body;
+    if (typeof intervalSeconds !== 'number' || intervalSeconds < 2 || intervalSeconds > 30) {
+      return res.status(400).json({ message: "Interval must be between 2 and 30 seconds" });
+    }
+
+    const { db } = await import('../db');
+    const { eq } = await import('drizzle-orm');
+    const { heroTextSettings } = await import('@shared/schema');
+    const [existing] = await db.select().from(heroTextSettings).where(eq(heroTextSettings.textType, "slide_config"));
+
+    if (existing) {
+      await db.update(heroTextSettings)
+        .set({ title: String(intervalSeconds), updatedAt: new Date() })
+        .where(eq(heroTextSettings.textType, "slide_config"));
+    } else {
+      await db.insert(heroTextSettings).values({
+        textType: "slide_config",
+        title: String(intervalSeconds),
+        subtitle: "",
+        targetAudience: "all_users",
+        isActive: true,
+      });
+    }
+
+    res.json({ intervalSeconds });
+  } catch (err) {
+    console.error("Error updating hero slide settings:", err);
+    res.status(500).json({ message: "Error updating hero slide settings" });
+  }
+});
+
 const convertToPublicUrl = (url: string): string => {
   if (!url) return url;
   const signedMatch = url.match(/(.+\/storage\/v1\/object\/)sign\/(.+?)(\?.*)?$/);
