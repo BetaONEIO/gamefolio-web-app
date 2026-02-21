@@ -730,7 +730,7 @@ const TrendingPage: React.FC = () => {
                       <span>{selectedScreenshot.createdAt ? formatDistance(new Date(selectedScreenshot.createdAt), new Date(), { addSuffix: true }) : 'Unknown'}</span>
                     </div>
 
-                    {/* Action bar with engagement buttons */}
+                    {/* Action bar with reaction buttons */}
                     <div className="border-t border-b border-border py-3 mt-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
@@ -750,19 +750,33 @@ const TrendingPage: React.FC = () => {
                             initialCount={selectedScreenshot._count?.reactions || 0}
                             size="lg"
                           />
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-muted-foreground hover:text-foreground flex items-center gap-1"
+                            data-testid="button-comment"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                            <span>{selectedScreenshot._count?.comments || 0}</span>
+                          </Button>
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <button 
-                            className="focus:outline-none hover:text-primary transition-colors"
-                            onClick={() => setShowShareDialog(true)}
-                            data-testid="button-share-screenshot"
-                          >
-                            <Share2 className="h-6 w-6" />
-                          </button>
+                          <ScreenshotShareDialog 
+                            screenshotId={selectedScreenshot.id.toString()} 
+                            isOwnContent={user?.id === selectedScreenshot.userId}
+                            trigger={
+                              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                                <Share2 className="h-4 w-4" />
+                              </Button>
+                            } 
+                          />
                           <ReportButton
                             contentType="screenshot"
                             contentId={selectedScreenshot.id}
+                            contentTitle={selectedScreenshot.title}
+                            variant="ghost"
+                            size="sm"
                           />
                         </div>
                       </div>
@@ -800,14 +814,6 @@ const TrendingPage: React.FC = () => {
         />
       )}
 
-      {/* Screenshot Share Dialog */}
-      {selectedScreenshot && (
-        <ScreenshotShareDialog
-          screenshotId={selectedScreenshot.id.toString()}
-          open={showShareDialog}
-          onOpenChange={setShowShareDialog}
-        />
-      )}
     </div>
   );
 };
