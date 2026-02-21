@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
+import { LoginPromptModal } from "@/components/auth/LoginPromptModal";
 
 interface NFT {
   id: number;
@@ -44,6 +45,7 @@ export function NFTPurchaseDialog({
   const queryClient = useQueryClient();
   const [step, setStep] = useState<'details' | 'checkout'>('details');
   const [transactionHash, setTransactionHash] = useState<string>('');
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   const purchaseMutation = useMutation({
     mutationFn: async (data: { nftId: number }) => {
@@ -84,6 +86,10 @@ export function NFTPurchaseDialog({
   const remainingBalance = userBalance - totalAmount;
 
   const handleProceedToCheckout = () => {
+    if (!user) {
+      setShowLoginPrompt(true);
+      return;
+    }
     if (!wallet?.address) {
       toast({
         title: "Wallet Required",
@@ -290,6 +296,7 @@ export function NFTPurchaseDialog({
 
   // Details Screen (default)
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent 
         className="bg-[#020617] border-none text-white p-0 max-w-[430px] md:max-w-[860px] w-full md:h-auto h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
@@ -385,6 +392,12 @@ export function NFTPurchaseDialog({
                     <Button
                       variant="outline"
                       className="w-full h-[58px] rounded-2xl bg-[#1e293b] hover:bg-[#334155] border border-[#1e293b]/50 text-[#f8fafc] text-base font-bold flex items-center justify-center gap-2"
+                      onClick={() => {
+                        if (!user) {
+                          setShowLoginPrompt(true);
+                          return;
+                        }
+                      }}
                     >
                       <img src={gfTokenLogo} alt="GF" className="w-5 h-5" />
                       Sell To Gamefolio
@@ -460,5 +473,12 @@ export function NFTPurchaseDialog({
         </div>
       </DialogContent>
     </Dialog>
+    <LoginPromptModal
+      isOpen={showLoginPrompt}
+      onOpenChange={setShowLoginPrompt}
+      title="Sign in to continue"
+      description="Create an account or log in to buy and sell NFTs on Gamefolio."
+    />
+    </>
   );
 }
