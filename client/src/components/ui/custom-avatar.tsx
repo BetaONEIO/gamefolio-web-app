@@ -309,6 +309,9 @@ export const CustomAvatar = ({
   // Get signed URL for avatar (private bucket)
   const { signedUrl: avatarSignedUrl } = useSignedUrl(user?.avatarUrl);
   
+  // Get signed URL for NFT profile image (may also be in private bucket)
+  const { signedUrl: nftSignedUrl } = useSignedUrl(user?.nftProfileImageUrl);
+  
   const { data: borderData } = useQuery<{ avatarBorder: AssetReward | null }>({
     queryKey: [`/api/user/${user?.id}/avatar-border`],
     queryFn: getQueryFn({ on401: 'returnNull' }),
@@ -342,7 +345,7 @@ export const CustomAvatar = ({
           style={{ borderColor: borderColor }}
         >
           <img
-            src={user.nftProfileImageUrl || ''}
+            src={nftSignedUrl || user.nftProfileImageUrl || ''}
             alt={safeDisplayName}
             className="w-full h-full object-cover"
             onError={(e) => {

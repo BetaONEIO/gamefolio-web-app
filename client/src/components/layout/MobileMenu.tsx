@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import { X, Home, Compass, Flame, User, Settings, LogOut, MessageSquare, Trophy, ShoppingBag, Wallet, Gift } from "lucide-react";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import gamefolioLogo from '@assets/gamefolio social logo 3d circle web.png';
 
@@ -126,21 +125,12 @@ const MobileMenu = () => {
                     close();
                   }}
                 >
-                  {user.nftProfileTokenId && user.nftProfileImageUrl && user.activeProfilePicType === 'nft' ? (
-                    <Avatar className="h-12 w-12 rounded-lg border-2" style={{ borderColor: 'hsl(var(--primary))' }}>
-                      <AvatarImage src={user.nftProfileImageUrl} alt={user.displayName || user.username} className="rounded-lg object-cover" />
-                      <AvatarFallback className="bg-primary/20 text-foreground font-semibold rounded-lg">
-                        {(user.displayName || user.username || "?").substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  ) : (
-                    <CustomAvatar 
-                      user={user}
-                      size="md"
-                      borderIntensity="normal"
-                      showAvatarBorderOverlay={true}
-                    />
-                  )}
+                  <CustomAvatar 
+                    user={user}
+                    size="md"
+                    borderIntensity="normal"
+                    showAvatarBorderOverlay={true}
+                  />
                 </div>
                 <div className="ml-3">
                   <p className="font-medium">{user.displayName}</p>
