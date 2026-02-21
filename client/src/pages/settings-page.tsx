@@ -2474,7 +2474,7 @@ export default function SettingsPage() {
           tokenId={user.nftProfileTokenId}
           imageUrl={user?.nftProfileImageUrl}
           onClose={() => { setShowNftPopup(false); setNftAnchorRect(null); }}
-          anchorRect={nftAnchorRect}
+          anchorRect={null}
           username={user.username}
         />
       )}

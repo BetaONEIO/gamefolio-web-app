@@ -357,13 +357,13 @@ export const CustomAvatar = ({
           </svg>
         </div>
       </div>
-      {showNftPopup && user?.id && user?.nftProfileTokenId && (
+      {!onNftClick && showNftPopup && user?.id && user?.nftProfileTokenId && (
         <NftProfilePopup
           userId={user.id}
           tokenId={user.nftProfileTokenId}
           imageUrl={user.nftProfileImageUrl || ''}
           onClose={() => { setShowNftPopup(false); setNftAnchorRect(null); }}
-          anchorRect={nftAnchorRect}
+          anchorRect={null}
           username={user?.username || user?.displayName}
         />
       )}

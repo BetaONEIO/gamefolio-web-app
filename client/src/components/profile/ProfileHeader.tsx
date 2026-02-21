@@ -369,7 +369,7 @@ const ProfileHeader = ({
           tokenId={nftPopup.tokenId}
           imageUrl={nftPopup.imageUrl}
           onClose={() => setNftPopup(null)}
-          anchorRect={nftPopup.anchorRect}
+          anchorRect={null}
           username={profile.username}
         />
       )}
