@@ -323,7 +323,7 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation }: He
                         </Button>
                       ) : !user ? (
                         <Button 
-                          className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                          className="w-fit px-8 py-3 sm:py-4 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
                           onClick={() => setLocation('/auth')}
                           data-testid="button-join-community"
                         >
