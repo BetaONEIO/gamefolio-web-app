@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gift, Sparkles, Timer, Star, Crown, Gem, Package, Zap, Coins, X, RotateCcw, TrendingUp, Lock } from "lucide-react";
+import { Gift, Sparkles, Timer, Star, Crown, Gem, Package, Zap, Coins, X, TrendingUp, Lock } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { AssetReward } from "@shared/schema";
@@ -90,23 +90,6 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
     setPhase("reveal");
   };
 
-  const resetMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/lootbox/reset");
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message);
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/lootbox/status"] });
-    },
-  });
-
-  const handleReset = () => {
-    resetMutation.mutate();
-  };
 
   const handleOpen = () => {
     if (!status?.canOpen || openMutation.isPending) return;
@@ -231,17 +214,6 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                     <p className="text-3xl font-bold text-purple-400">
                       {status?.nextOpenAt ? formatTimeRemaining(status.nextOpenAt) : "Loading..."}
                     </p>
-                    
-                    {/* Reset button for testing */}
-                    <Button
-                      onClick={handleReset}
-                      disabled={resetMutation.isPending}
-                      variant="outline"
-                      className="mt-2 gap-2 border-gray-600 text-gray-300 hover:bg-gray-800"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                      {resetMutation.isPending ? "Resetting..." : "Reset for Testing"}
-                    </Button>
                   </div>
                 )}
               </motion.div>
