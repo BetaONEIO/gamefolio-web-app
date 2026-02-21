@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { ArrowLeft, Zap, Gift, Eye, Heart, Flame, Upload, LogIn, Star, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import badgeIcon from "@assets/yellow_badge_56x56_1759744373125.png";
+import badgeIcon from "@assets/yellow_circle_transparent_1771658854718.png";
 import { formatDistanceToNow } from "date-fns";
 
 interface LevelProgress {
