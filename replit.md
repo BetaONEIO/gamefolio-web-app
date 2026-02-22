@@ -9,6 +9,19 @@ Gamefolio is a comprehensive gaming portfolio and social platform for gamers to 
 - Prioritize data integrity and security
 - Prefer comprehensive solutions over quick fixes
 
+## Recent Changes (Feb 2026 - CodeRabbit Review Fixes)
+- **Error Boundaries**: Added `ErrorBoundary` component (`client/src/components/ErrorBoundary.tsx`) wrapping App root and Router for crash resilience
+- **Firebase Auth Race Condition**: Added mounted flag to `use-auth.tsx` to prevent state updates on unmounted components; added `setLocation` to deps
+- **Theme Hook Fix**: Removed stale closure in `use-theme.tsx` by applying CSS vars directly in useEffect with `accentColor` dependency
+- **Upload Cancellation**: Added `AbortController` to upload mutations in `UploadPage.tsx`; `beforeunload` warning during active uploads
+- **localStorage Safety**: Wrapped all localStorage access in try/catch across `App.tsx` and `use-theme.tsx`
+- **Cache Invalidation**: Removed broad `/api/clips` and `/api/screenshots` invalidation from like mutations in `use-clips.ts`
+- **Wallet Sync Guard**: Added `isUpdatingWallet` ref to prevent concurrent wallet address updates in `use-wallet.tsx`
+- **Signed URL AbortController**: Replaced cancelled flag with proper `AbortController` in `use-signed-url.ts`
+- **ClipDialog Improvements**: Memoized navigation handlers with `useCallback`; added `clip?.videoType` to keyboard listener deps
+- **ARIA Accessibility**: Added `role`, `tabIndex`, `aria-label`, and keyboard handlers to `VideoClipCard` and `VideoPlayer` controls
+- **Scroll Memoization**: Wrapped `TrendingContentCarousel` scroll handler in `useCallback` in `HomePageSimple.tsx`
+
 ## System Architecture
 
 ### UI/UX
