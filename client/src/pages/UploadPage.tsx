@@ -126,6 +126,7 @@ const UploadPage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const uploadAbortRef = useRef<AbortController | null>(null);
   
   // XP Dialog state
   const [xpDialogOpen, setXpDialogOpen] = useState(false);
@@ -485,6 +486,24 @@ const UploadPage = () => {
     },
   });
 
+  // Warn user before leaving page during active upload
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isUploading) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (uploadAbortRef.current) {
+        uploadAbortRef.current.abort();
+        uploadAbortRef.current = null;
+      }
+    };
+  }, [isUploading]);
+
   // Upload mutation for clips
   const uploadMutation = useMutation({
     mutationFn: async () => {
@@ -499,21 +518,21 @@ const UploadPage = () => {
       
       console.log('Starting upload with user:', user.username);
 
-      // Determine video type based on user's selected tab (clips or reels)
-      // Don't auto-detect based on aspect ratio - respect user's explicit selection
       const videoType: 'clip' | 'reel' = contentType === 'clips' ? 'clip' : 'reel';
       
       console.log('Video type for upload (based on user selection):', videoType);
 
-      // Direct Supabase upload (bypasses all backend size limits)
       setIsUploading(true);
       setUploadProgress(0);
+
+      const abortController = new AbortController();
+      uploadAbortRef.current = abortController;
+      const { signal } = abortController;
 
       return new Promise(async (resolve, reject) => {
         try {
           console.log('Starting direct Supabase upload from client');
           
-          // Step 1: Get upload URL from backend
           const timestamp = Date.now();
           const randomId = Math.random().toString(36).substring(2, 15);
           const extension = file.name.split('.').pop();
@@ -523,11 +542,11 @@ const UploadPage = () => {
           
           setUploadProgress(10);
           
-          // Step 2: Get Supabase upload credentials
           const credsResponse = await fetch('/api/upload/supabase-creds', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filePath, contentType: file.type })
+            body: JSON.stringify({ filePath, contentType: file.type }),
+            signal,
           });
           
           if (!credsResponse.ok) {
@@ -539,14 +558,14 @@ const UploadPage = () => {
           console.log('Got upload URL for direct upload');
           setUploadProgress(20);
           
-          // Step 3: Upload directly to Supabase (client-side, bypasses all backend limits)
           const uploadResponse = await fetch(uploadUrl, {
             method: 'PUT',
             body: file,
             headers: {
               'Content-Type': file.type,
               'x-upsert': 'false'
-            }
+            },
+            signal,
           });
           
           if (!uploadResponse.ok) {
@@ -558,7 +577,6 @@ const UploadPage = () => {
           console.log('Direct Supabase upload complete');
           setUploadProgress(70);
           
-          // Step 4: Process the uploaded video
           const processData = {
             uploadResult: { url: publicUrl, path: filePath },
             title: titleRef.current || title,
@@ -581,6 +599,7 @@ const UploadPage = () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(processData),
+            signal,
           });
           
           if (!processResponse.ok) {
@@ -592,11 +611,18 @@ const UploadPage = () => {
           setUploadProgress(100);
           console.log('Video processing successful:', processResult);
           
+          uploadAbortRef.current = null;
           resolve(processResult);
           
-        } catch (error) {
-          console.error('Upload error:', error);
-          reject(error);
+        } catch (error: any) {
+          uploadAbortRef.current = null;
+          if (error?.name === 'AbortError') {
+            console.log('Upload was cancelled');
+            reject(new Error('Upload cancelled'));
+          } else {
+            console.error('Upload error:', error);
+            reject(error);
+          }
         }
       });
     },
