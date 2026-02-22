@@ -1456,6 +1456,18 @@ export default function SettingsPage() {
                     <Sparkles className="h-5 w-5 text-primary" />
                     <Label className="text-base font-medium">Profile Picture Border</Label>
                   </div>
+                  {user?.activeProfilePicType === 'nft' ? (
+                    <div className="p-4 bg-muted/30 rounded-lg border flex items-center gap-3">
+                      <Lock className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium">Borders unavailable with NFT profile</p>
+                        <p className="text-xs text-muted-foreground">
+                          Profile picture borders cannot be used while an NFT is set as your profile picture. Switch to an uploaded photo to use borders.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                  <>
                   <p className="text-sm text-muted-foreground">
                     Select a border from your unlocked rewards to customize your profile picture.
                   </p>
@@ -1688,6 +1700,8 @@ export default function SettingsPage() {
                         </div>
                       )}
                     </div>
+                  )}
+                  </>
                   )}
                 </div>
 
