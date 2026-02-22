@@ -413,7 +413,20 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                   setFieldErrors((prev) => ({ ...prev, dateOfBirth: undefined }));
                 }
               }}
+              onMonthChange={(newMonth) => {
+                if (formData.dateOfBirth) {
+                  const currentDate = new Date(formData.dateOfBirth + "T00:00:00");
+                  const day = currentDate.getDate();
+                  const daysInNewMonth = new Date(newMonth.getFullYear(), newMonth.getMonth() + 1, 0).getDate();
+                  const clampedDay = Math.min(day, daysInNewMonth);
+                  const yyyy = newMonth.getFullYear();
+                  const mm = String(newMonth.getMonth() + 1).padStart(2, "0");
+                  const dd = String(clampedDay).padStart(2, "0");
+                  setFormData((prev) => ({ ...prev, dateOfBirth: `${yyyy}-${mm}-${dd}` }));
+                }
+              }}
               disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+              month={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : undefined}
               defaultMonth={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : new Date(new Date().getFullYear() - 18, 0, 1)}
               captionLayout="dropdown-buttons"
               fromYear={1900}
