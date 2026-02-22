@@ -69,7 +69,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-0 sm:p-4 bg-gray-950">
+    <div className="relative min-h-screen flex items-start sm:items-center justify-center p-0 sm:p-4 bg-gray-950">
       <div className="absolute inset-0 z-0 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-gray-950 to-purple-900/10" />
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />

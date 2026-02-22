@@ -1278,43 +1278,40 @@ export default function OnboardingFlow({
                 </Card>
               </div>
             ) : (
-              <div className="mb-6 space-y-3">
-                <p className="text-gray-300 mb-4">
+              <div className="mb-6">
+                <p className="text-gray-300 mb-6">
                   Get a blockchain wallet to store GF Tokens, collect NFTs, and unlock exclusive features.
                 </p>
                 
                 <Button
                   onClick={handleCreateWalletClick}
                   disabled={isCreatingAnyWallet}
-                  className="w-full h-auto py-4 px-6 bg-primary hover:bg-primary/90 text-gray-900"
+                  className="w-full h-auto py-4 px-6 bg-primary/15 border border-primary/30 hover:bg-primary/25 text-white"
                   data-testid="button-create-wallet"
                 >
                   <div className="flex items-start gap-3 text-left w-full">
-                    <Wallet className="h-5 w-5 mt-0.5 flex-shrink-0 text-gray-900" />
+                    <Wallet className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary" />
                     <div>
-                      <div className="font-semibold mb-1 text-gray-900">Create Wallet</div>
-                      <div className="text-sm text-gray-800 font-normal">
+                      <div className="font-semibold mb-1">Create Wallet</div>
+                      <div className="text-sm text-gray-400 font-normal">
                         Get a secure blockchain wallet for NFTs and rewards
                       </div>
                     </div>
                   </div>
                 </Button>
 
-                <Button
-                  onClick={goToNextStep}
-                  className="w-full h-auto py-4 px-6 bg-primary hover:bg-primary/90 text-white"
-                  data-testid="button-skip-wallet"
-                >
-                  <div className="flex items-start gap-3 text-left w-full">
-                    <ArrowRight className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <div className="font-semibold mb-1 text-white">Skip for now</div>
-                      <div className="text-sm font-normal text-white/80">
-                        You can set this up later from your wallet page
-                      </div>
-                    </div>
-                  </div>
-                </Button>
+                <div className="flex gap-3 mt-8">
+                  <Button variant="outline" onClick={goToPrevStep} className="border-border hover:bg-secondary">
+                    Back
+                  </Button>
+                  <Button
+                    onClick={goToNextStep}
+                    className="flex-1 bg-primary hover:bg-primary/90 text-white"
+                    data-testid="button-skip-wallet"
+                  >
+                    <span>Skip for now</span>
+                  </Button>
+                </div>
               </div>
             )}
           </>
