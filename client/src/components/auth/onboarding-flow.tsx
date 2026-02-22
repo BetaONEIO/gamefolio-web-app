@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Progress } from "@/components/ui/progress";
 import { Check, Gamepad2, Upload, Share2, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet } from "lucide-react";
 import { Game } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
@@ -128,44 +127,49 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser }: OnboardingStepIn
     { id: OnboardingStep.Welcome, label: "Welcome" },
     { id: OnboardingStep.Username, label: "Username" },
     { id: OnboardingStep.Games, label: "Games" },
-    { id: OnboardingStep.Avatar, label: "Profile Pic" },
+    { id: OnboardingStep.Avatar, label: "Profile" },
     { id: OnboardingStep.UserType, label: "User Type" },
     { id: OnboardingStep.Wallet, label: "Wallet" },
     { id: OnboardingStep.Complete, label: "Complete" },
   ];
 
-  // Filter out Username step for non-Google users
   const steps = isGoogleUser ? allSteps : allSteps.filter(step => step.id !== OnboardingStep.Username);
-
-  const getProgressValue = () => {
-    const stepPercentage = 100 / (steps.length - 1);
-    return Math.min(currentStep * stepPercentage, 100);
-  };
 
   return (
     <div className="mb-8">
-      <Progress value={getProgressValue()} className="h-2 mb-4" />
-      <div className="flex justify-between gap-1">
+      <div className="flex items-center justify-between">
         {steps.map((step, index) => (
-          <div key={step.id} className="flex flex-col items-center min-w-0">
-            <div
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors ${
-                currentStep > step.id
-                  ? "bg-primary/20 text-primary"
-                  : currentStep === step.id
-                  ? "bg-primary text-white"
-                  : "bg-gray-700 text-gray-400"
-              }`}
-            >
-              {currentStep > step.id ? <Check className="h-4 w-4" /> : index + 1}
+          <div key={step.id} className="flex items-center flex-1 last:flex-none">
+            <div className="flex flex-col items-center">
+              <div
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors border-2 ${
+                  currentStep > step.id
+                    ? "bg-primary/20 border-primary text-primary"
+                    : currentStep === step.id
+                    ? "bg-primary border-primary text-white"
+                    : "bg-gray-800 border-gray-600 text-gray-400"
+                }`}
+              >
+                {currentStep > step.id ? <Check className="h-4 w-4" /> : index + 1}
+              </div>
+              <span
+                className={`mt-1.5 text-[10px] sm:text-xs text-center whitespace-nowrap ${
+                  currentStep >= step.id ? "text-white font-medium" : "text-gray-500"
+                }`}
+              >
+                {step.label}
+              </span>
             </div>
-            <span
-              className={`mt-1.5 text-[10px] sm:text-xs truncate max-w-[60px] text-center ${
-                currentStep >= step.id ? "text-white" : "text-gray-400"
-              }`}
-            >
-              {step.label}
-            </span>
+            {index < steps.length - 1 && (
+              <div className="flex-1 h-0.5 mx-1 sm:mx-2 mb-5 relative">
+                <div className="absolute inset-0 bg-gray-700 rounded-full" />
+                <div
+                  className={`absolute inset-y-0 left-0 rounded-full transition-all duration-300 ${
+                    currentStep > step.id ? "bg-primary w-full" : "bg-gray-700 w-0"
+                  }`}
+                />
+              </div>
+            )}
           </div>
         ))}
       </div>
