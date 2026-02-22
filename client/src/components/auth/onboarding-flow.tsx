@@ -143,9 +143,9 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser }: OnboardingStepIn
   return (
     <div className="mb-8">
       <Progress value={getProgressValue()} className="h-2 mb-4" />
-      <div className="flex justify-between">
+      <div className="flex justify-between gap-1">
         {steps.map((step, index) => (
-          <div key={step.id} className="flex flex-col items-center">
+          <div key={step.id} className="flex flex-col items-center min-w-0">
             <div
               className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors ${
                 currentStep > step.id
@@ -158,7 +158,7 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser }: OnboardingStepIn
               {currentStep > step.id ? <Check className="h-4 w-4" /> : index + 1}
             </div>
             <span
-              className={`mt-1 text-xs ${
+              className={`mt-1.5 text-[10px] sm:text-xs truncate max-w-[60px] text-center ${
                 currentStep >= step.id ? "text-white" : "text-gray-400"
               }`}
             >
@@ -713,24 +713,14 @@ export default function OnboardingFlow({
                   <p className="text-gray-300">Your personal gaming portfolio, all in one place.</p>
                 </div>
 
-                <div className="space-y-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
-                      <Upload className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-white text-[15px]">Unlimited upload space</h3>
-                      <p className="text-sm text-gray-400 mt-0.5">Share clips without limits or storage restrictions</p>
-                    </div>
-                  </div>
-
+                <div className="space-y-5">
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
                       <Gamepad2 className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <h3 className="font-bold text-white text-[15px]">Build your gaming portfolio</h3>
-                      <p className="text-sm text-gray-400 mt-0.5">Showcase your achievements and let your gameplay speak for itself</p>
+                      <p className="text-sm text-gray-400 mt-0.5">Showcase your best clips, reels, screenshots</p>
                     </div>
                   </div>
 
@@ -1358,7 +1348,7 @@ export default function OnboardingFlow({
   };
 
   return (
-    <div className="w-full mx-auto p-4 sm:p-6 md:p-8 bg-gray-900 rounded-lg shadow-lg">
+    <div className="w-full mx-auto px-3 py-4 sm:p-6 md:p-8 bg-gray-900 rounded-lg shadow-lg">
       <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} />
       {renderStepContent()}
     </div>
