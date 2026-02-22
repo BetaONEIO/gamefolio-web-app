@@ -400,8 +400,7 @@ export const CustomAvatar = ({
           className={`${sizeClasses[size]} transition-all duration-300 rounded-full`}
           style={{
             border: `4px solid ${borderColor}`,
-            boxShadow: `0 0 12px ${borderColor}50`,
-            padding: '1px'
+            boxShadow: `0 0 12px ${borderColor}50`
           }}
         >
           <AvatarImage 
