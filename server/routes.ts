@@ -6427,19 +6427,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Allow null to remove the border
       if (avatarBorderId !== null) {
-        // Verify it's actually an avatar border type
-        const reward = await storage.getAssetReward(avatarBorderId);
-        if (!reward || reward.assetType !== "avatar_border") {
-          return res.status(400).json({ message: "Invalid avatar border" });
-        }
-        
-        // Pro users can select ANY border
-        const user = await storage.getUserById(req.user.id);
-        if (!user?.isPro) {
-          // Non-Pro users must have unlocked the border
-          const hasUnlocked = await storage.userHasUnlockedReward(req.user.id, avatarBorderId);
-          if (!hasUnlocked) {
-            return res.status(403).json({ message: "You haven't unlocked this avatar border" });
+        // Special built-in border: -1 = solid border (always available)
+        if (avatarBorderId === -1) {
+          // Solid border is a built-in option, no verification needed
+        } else {
+          // Verify it's actually an avatar border type
+          const reward = await storage.getAssetReward(avatarBorderId);
+          if (!reward || reward.assetType !== "avatar_border") {
+            return res.status(400).json({ message: "Invalid avatar border" });
+          }
+          
+          // Pro users can select ANY border
+          const user = await storage.getUserById(req.user.id);
+          if (!user?.isPro) {
+            // Non-Pro users must have unlocked the border
+            const hasUnlocked = await storage.userHasUnlockedReward(req.user.id, avatarBorderId);
+            if (!hasUnlocked) {
+              return res.status(403).json({ message: "You haven't unlocked this avatar border" });
+            }
           }
         }
       }
