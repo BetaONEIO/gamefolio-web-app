@@ -39,6 +39,12 @@ const Header = () => {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [lootboxOpen, setLootboxOpen] = useState(false);
   const [levelTrackerOpen, setLevelTrackerOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenLootbox = () => setLootboxOpen(true);
+    window.addEventListener('open-lootbox', handleOpenLootbox);
+    return () => window.removeEventListener('open-lootbox', handleOpenLootbox);
+  }, []);
   const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
   const [manageProOpen, setManageProOpen] = useState(false);
   const { user, logoutMutation } = useAuth();

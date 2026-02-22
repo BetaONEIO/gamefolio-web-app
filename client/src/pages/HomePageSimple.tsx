@@ -314,7 +314,9 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
                     <Button 
                       className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
                       onClick={() => {
-                        if (slide.buttonLink?.startsWith('http')) {
+                        if (slide.buttonLink === '/lootbox') {
+                          window.dispatchEvent(new CustomEvent('open-lootbox'));
+                        } else if (slide.buttonLink?.startsWith('http')) {
                           window.open(slide.buttonLink, '_blank');
                         } else {
                           setLocation(slide.buttonLink || '/');
@@ -349,7 +351,13 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
                     </h2>
                     <Button 
                       className="w-fit px-8 py-3 sm:py-4 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
-                      onClick={() => setLocation(user ? '/lootbox' : '/auth')}
+                      onClick={() => {
+                        if (user) {
+                          window.dispatchEvent(new CustomEvent('open-lootbox'));
+                        } else {
+                          setLocation('/auth');
+                        }
+                      }}
                     >
                       Claim
                     </Button>
