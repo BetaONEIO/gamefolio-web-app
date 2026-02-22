@@ -1148,10 +1148,14 @@ export default function SettingsPage() {
                           </div>
                           <div className="text-center flex flex-col items-center gap-1">
                             <span className="text-sm font-medium">
-                              {avatarFile ? 'New Preview' : selectedPreviousAvatar ? 'Selected' : 'Current'}
+                              {avatarFile ? 'New Preview' : selectedPreviousAvatar ? 'Selected' : (!user?.avatarUrl && deactivatedAvatarUrl) ? 'Deactivated' : 'Current'}
                             </span>
-                            {!avatarFile && !selectedPreviousAvatar && !!user?.avatarUrl && (() => {
-                              const isUploadActive = user?.activeProfilePicType !== 'nft';
+                            {!avatarFile && !selectedPreviousAvatar && (() => {
+                              const hasAvatar = !!user?.avatarUrl;
+                              const hasDeactivatedAvatar = !hasAvatar && !!deactivatedAvatarUrl;
+                              const isUploadActive = hasAvatar && user?.activeProfilePicType !== 'nft';
+                              const isNftActive = user?.activeProfilePicType === 'nft';
+                              
                               if (isUploadActive) {
                                 return (
                                   <button
@@ -1186,7 +1190,7 @@ export default function SettingsPage() {
                                     <span className="hidden group-hover:inline">Deactivate</span>
                                   </button>
                                 );
-                              } else {
+                              } else if (hasAvatar && isNftActive) {
                                 return (
                                   <button
                                     type="button"
@@ -1203,7 +1207,42 @@ export default function SettingsPage() {
                                     )}
                                   </button>
                                 );
+                              } else if (hasDeactivatedAvatar) {
+                                return (
+                                  <button
+                                    type="button"
+                                    className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-slate-500/20 text-slate-400 hover:bg-green-500/20 hover:text-green-400 transition-colors"
+                                    onClick={async () => {
+                                      try {
+                                        const reactivateUrl = deactivatedAvatarUrl;
+                                        const reactivateUpdate = (oldData: any) => {
+                                          if (!oldData) return oldData;
+                                          return { ...oldData, avatarUrl: reactivateUrl, activeProfilePicType: 'upload' };
+                                        };
+                                        queryClient.setQueryData(['/api/user'], reactivateUpdate);
+                                        if (user?.username) {
+                                          queryClient.setQueryData([`/api/users/${user.username}`], reactivateUpdate);
+                                        }
+                                        await apiRequest("PATCH", `/api/users/${user?.id}`, { avatarUrl: reactivateUrl, activeProfilePicType: 'upload' });
+                                        setDeactivatedAvatarUrl(null);
+                                        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+                                        queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
+                                        queryClient.invalidateQueries({ queryKey: ["/api/comments"] });
+                                        queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+                                        queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+                                        queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
+                                        queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+                                        toast({ title: "Profile picture reactivated", description: "Your uploaded profile picture is now active again." });
+                                      } catch (e: any) {
+                                        toast({ title: "Failed", description: e.message || "Something went wrong", variant: "destructive" });
+                                      }
+                                    }}
+                                  >
+                                    Reactivate
+                                  </button>
+                                );
                               }
+                              return null;
                             })()}
                           </div>
                         </div>
