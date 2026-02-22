@@ -736,9 +736,9 @@ export default function OnboardingFlow({
     switch (currentStep) {
       case OnboardingStep.Welcome:
         return (
-          <>
-            <div className="flex flex-col h-full">
-              <div className="flex flex-col md:grid md:grid-cols-2 md:gap-8 flex-1">
+          <div className="flex flex-col flex-1">
+            <div className="flex-1">
+              <div className="flex flex-col md:grid md:grid-cols-2 md:gap-8">
                 {/* Left side - Full-height image card with overlay text */}
                 <div className="hidden md:block">
                   <div className="rounded-2xl overflow-hidden border border-primary/30 relative h-full min-h-[420px] bg-gradient-to-b from-gray-800/40 to-gray-900/90">
@@ -814,12 +814,12 @@ export default function OnboardingFlow({
                   </div>
                 </div>
               </div>
-
-              <Button onClick={goToNextStep} className="w-full bg-primary hover:bg-primary/90 text-white text-base font-semibold py-6 mt-8 rounded-xl shadow-[0_0_20px_rgba(74,222,128,0.3)]">
-                Get Started <ArrowRight className="h-5 w-5 ml-2" />
-              </Button>
             </div>
-          </>
+
+            <Button onClick={goToNextStep} className="w-full bg-primary hover:bg-primary/90 text-white text-base font-semibold py-6 mt-auto pt-8 rounded-xl shadow-[0_0_20px_rgba(74,222,128,0.3)]">
+              Get Started <ArrowRight className="h-5 w-5 ml-2" />
+            </Button>
+          </div>
         );
 
       case OnboardingStep.Username:
@@ -830,7 +830,7 @@ export default function OnboardingFlow({
         }
         
         return (
-          <>
+          <div className="flex flex-col flex-1">
             <div className="flex items-center gap-2 mb-4">
               <h2 className="text-2xl font-bold text-white">Choose Your Username</h2>
               <Tooltip>
@@ -879,7 +879,7 @@ export default function OnboardingFlow({
               </p>
             </div>
             
-            <div className="flex gap-3">
+            <div className="flex gap-3 mt-auto">
               <Button variant="outline" onClick={goToPrevStep} className="border-border hover:bg-secondary">
                 Back
               </Button>
@@ -898,12 +898,12 @@ export default function OnboardingFlow({
                 )}
               </Button>
             </div>
-          </>
+          </div>
         );
 
       case OnboardingStep.Games:
         return (
-          <>
+          <div className="flex flex-col flex-1">
             <div className="flex items-center gap-2 mb-2">
               <h2 className="text-2xl font-bold text-white">Choose Your Favorite Games</h2>
               <Tooltip>
@@ -990,7 +990,7 @@ export default function OnboardingFlow({
               </div>
             </div>
             
-            <div className="flex gap-3 mt-8">
+            <div className="flex gap-3 mt-auto pt-8">
               <Button variant="outline" onClick={goToPrevStep} className="border-border hover:bg-secondary">
                 Back
               </Button>
@@ -1002,12 +1002,12 @@ export default function OnboardingFlow({
                 Next <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
-          </>
+          </div>
         );
 
       case OnboardingStep.Avatar:
         return (
-          <>
+          <div className="flex flex-col flex-1">
             <div className="flex items-center gap-2 mb-4">
               <h2 className="text-2xl font-bold text-white">Profile Picture</h2>
               <Tooltip>
@@ -1096,7 +1096,7 @@ export default function OnboardingFlow({
               </div>
             </div>
             
-            <div className="flex gap-3">
+            <div className="flex gap-3 mt-auto">
               <Button variant="outline" onClick={goToPrevStep} className="border-border hover:bg-secondary">
                 Back
               </Button>
@@ -1184,7 +1184,7 @@ export default function OnboardingFlow({
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-          </>
+          </div>
         );
 
       case OnboardingStep.UserType:
@@ -1197,7 +1197,7 @@ export default function OnboardingFlow({
         };
         
         return (
-          <>
+          <div className="flex flex-col flex-1">
             <div className="flex items-center gap-2 mb-4">
               <h2 className="text-2xl font-bold text-white">What type of user are you?</h2>
               <Tooltip>
@@ -1296,7 +1296,7 @@ export default function OnboardingFlow({
               {userTypes.length}/2 selected
             </p>
             
-            <div className="flex gap-3">
+            <div className="flex gap-3 mt-auto">
               <Button variant="outline" onClick={goToPrevStep}>
                 Back
               </Button>
@@ -1308,14 +1308,14 @@ export default function OnboardingFlow({
                 Next
               </Button>
             </div>
-          </>
+          </div>
         );
 
       case OnboardingStep.Wallet:
         const isCreatingAnyWallet = isCreatingAutoWallet || isCreatingWallet;
         
         return (
-          <>
+          <div className="flex flex-col flex-1">
             <div className="flex items-center gap-2 mb-4">
               <h2 className="text-2xl font-bold text-white">Your Wallet</h2>
               <Tooltip>
@@ -1348,7 +1348,7 @@ export default function OnboardingFlow({
                   </CardContent>
                 </Card>
                 
-                <div className="flex gap-3 mt-6">
+                <div className="flex gap-3 mt-auto">
                   <Button variant="outline" onClick={goToPrevStep}>
                     Back
                   </Button>
@@ -1429,7 +1429,7 @@ export default function OnboardingFlow({
                   </div>
                 </Button>
 
-                <div className="flex gap-3 mt-8">
+                <div className="flex gap-3 mt-auto">
                   <Button variant="outline" onClick={goToPrevStep} className="border-border hover:bg-secondary">
                     Back
                   </Button>
@@ -1443,12 +1443,12 @@ export default function OnboardingFlow({
                 </div>
               </div>
             )}
-          </>
+          </div>
         );
 
       case OnboardingStep.Complete:
         return (
-          <>
+          <div className="flex flex-col flex-1">
             <div className="flex flex-col items-center text-center mb-6">
               <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center mb-4">
                 <Check className="h-8 w-8 text-white" />
@@ -1463,11 +1463,11 @@ export default function OnboardingFlow({
             <Button
               onClick={completeOnboarding}
               disabled={isLoading}
-              className="w-full"
+              className="w-full mt-auto"
             >
               {isLoading ? "Finalizing..." : "Take me to Gamefolio"}
             </Button>
-          </>
+          </div>
         );
 
       default:
@@ -1478,7 +1478,9 @@ export default function OnboardingFlow({
   return (
     <div className="w-full mx-auto px-5 pt-8 pb-6 sm:p-6 md:p-8 min-h-screen sm:min-h-0 bg-gray-900 sm:rounded-lg shadow-lg flex flex-col">
       <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} />
-      {renderStepContent()}
+      <div className="flex-1 flex flex-col">
+        {renderStepContent()}
+      </div>
     </div>
   );
 }
