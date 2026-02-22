@@ -63,9 +63,11 @@ export function ThemeProvider({
   ...props
 }: ThemeProviderProps) {
   const [accentColor, setAccentColorState] = useState<string>(() => {
-    // Load from localStorage or use default
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("gf.theme.accent") || "#4ADE80";
+    try {
+      if (typeof window !== "undefined") {
+        return localStorage.getItem("gf.theme.accent") || "#4ADE80";
+      }
+    } catch {
     }
     return "#4ADE80";
   });
@@ -73,9 +75,11 @@ export function ThemeProvider({
   const setAccentColor = (color: string) => {
     setAccentColorState(color);
     
-    // Persist to localStorage
-    if (typeof window !== "undefined") {
-      localStorage.setItem("gf.theme.accent", color);
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("gf.theme.accent", color);
+      }
+    } catch {
     }
     
     // Convert hex to HSL and update CSS variables

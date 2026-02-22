@@ -98,8 +98,6 @@ export function useLikeClip() {
       queryClient.invalidateQueries({ queryKey: ['clipLikeStatus', variables.clipId] });
       queryClient.invalidateQueries({ queryKey: [`/api/clips/${variables.clipId}/likes`] });
       queryClient.invalidateQueries({ queryKey: [`/api/clips/${variables.clipId}/likes/status`] });
-      // Also invalidate feed clips and user clips
-      queryClient.invalidateQueries({ queryKey: ['/api/clips'] });
     },
   });
 }
@@ -117,8 +115,6 @@ export function useLikeScreenshot() {
       queryClient.invalidateQueries({ queryKey: ['screenshotLikeStatus', variables.screenshotId] });
       queryClient.invalidateQueries({ queryKey: [`/api/screenshots/${variables.screenshotId}/likes`] });
       queryClient.invalidateQueries({ queryKey: [`/api/screenshots/${variables.screenshotId}/likes/status`] });
-      // Also invalidate feed screenshots
-      queryClient.invalidateQueries({ queryKey: ['/api/screenshots'] });
     },
   });
 }

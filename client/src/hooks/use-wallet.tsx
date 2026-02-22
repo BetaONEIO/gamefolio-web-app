@@ -67,12 +67,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [isReady, userInitiatedConnect]);
 
+  const isUpdatingWallet = useRef(false);
+
   useEffect(() => {
-    if (isReady && walletAddress && user && walletAddress !== lastSavedAddress.current) {
+    if (isReady && walletAddress && user && walletAddress !== lastSavedAddress.current && !isUpdatingWallet.current) {
+      isUpdatingWallet.current = true;
       lastSavedAddress.current = walletAddress;
-      updateWalletAddressOnServer(walletAddress).then(() => {
-        refreshUser();
-      });
+      updateWalletAddressOnServer(walletAddress)
+        .then(() => refreshUser())
+        .finally(() => { isUpdatingWallet.current = false; });
     }
   }, [isReady, walletAddress, user?.id, refreshUser]);
 

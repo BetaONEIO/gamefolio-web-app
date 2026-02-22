@@ -53,31 +53,35 @@ export function useSignedUrl(publicUrl: string | undefined | null) {
       return;
     }
 
-    let cancelled = false;
+    const abortController = new AbortController();
     setIsLoading(true);
     setError(null);
 
-    apiRequest('POST', '/api/media/signed-url', { url: publicUrl })
+    fetch('/api/media/signed-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: publicUrl }),
+      credentials: 'include',
+      signal: abortController.signal,
+    })
       .then(async (res) => {
         if (!res.ok) throw new Error('Failed to get signed URL');
         const data = await res.json();
-        if (!cancelled && data.signedUrl) {
+        if (data.signedUrl) {
           setCachedSignedUrl(publicUrl, data.signedUrl);
           setSignedUrl(data.signedUrl);
         }
       })
       .catch((err) => {
-        if (!cancelled) {
-          setError(err);
-          // Fall back to original URL on error
-          setSignedUrl(publicUrl);
-        }
+        if (err?.name === 'AbortError') return;
+        setError(err);
+        setSignedUrl(publicUrl);
       })
       .finally(() => {
-        if (!cancelled) setIsLoading(false);
+        if (!abortController.signal.aborted) setIsLoading(false);
       });
 
-    return () => { cancelled = true; };
+    return () => { abortController.abort(); };
   }, [publicUrl]);
 
   // For non-Supabase URLs, return directly; for Supabase URLs, use signed URL from state
