@@ -737,85 +737,87 @@ export default function OnboardingFlow({
       case OnboardingStep.Welcome:
         return (
           <>
-            <div className="flex flex-col md:grid md:grid-cols-2 md:gap-8">
-              {/* Left side - Full-height image card with overlay text */}
-              <div className="hidden md:block">
-                <div className="rounded-2xl overflow-hidden border border-primary/30 relative h-full min-h-[420px] bg-gradient-to-b from-gray-800/40 to-gray-900/90">
-                  <img 
-                    src="/attached_assets/Gamefolio logo.png" 
-                    alt="Gamefolio" 
-                    className="w-full h-full object-cover absolute inset-0"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 border border-primary/40 text-primary text-xs font-medium mb-3">
-                      <Gamepad2 className="h-3.5 w-3.5" />
-                      Gaming Portfolio
-                    </span>
-                    <h2 className="text-3xl font-bold text-white leading-tight">
-                      Welcome to <span className="text-primary">Gamefolio</span>
-                    </h2>
-                    <p className="text-gray-300 text-sm mt-1">
-                      Elevate your gaming identity with premium features
-                    </p>
+            <div className="flex flex-col h-full">
+              <div className="flex flex-col md:grid md:grid-cols-2 md:gap-8 flex-1">
+                {/* Left side - Full-height image card with overlay text */}
+                <div className="hidden md:block">
+                  <div className="rounded-2xl overflow-hidden border border-primary/30 relative h-full min-h-[420px] bg-gradient-to-b from-gray-800/40 to-gray-900/90">
+                    <img 
+                      src="/attached_assets/Gamefolio logo.png" 
+                      alt="Gamefolio" 
+                      className="w-full h-full object-cover absolute inset-0"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-6">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 border border-primary/40 text-primary text-xs font-medium mb-3">
+                        <Gamepad2 className="h-3.5 w-3.5" />
+                        Gaming Portfolio
+                      </span>
+                      <h2 className="text-3xl font-bold text-white leading-tight">
+                        Welcome to <span className="text-primary">Gamefolio</span>
+                      </h2>
+                      <p className="text-gray-300 text-sm mt-1">
+                        Elevate your gaming identity with premium features
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right side - Feature list */}
+                <div className="flex flex-col">
+                  {/* Mobile-only header */}
+                  <div className="md:hidden mb-6">
+                    <h2 className="text-2xl font-bold text-white mb-2">Welcome to <span className="text-primary">Gamefolio</span></h2>
+                    <p className="text-gray-300">Your personal gaming portfolio, all in one place.</p>
+                  </div>
+
+                  <div className="space-y-5">
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
+                        <Gamepad2 className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-white text-[15px]">Build your gaming portfolio</h3>
+                        <p className="text-sm text-gray-400 mt-0.5">Showcase your best clips, reels, screenshots</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
+                        <Trophy className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-white text-[15px]">Earn XP and level up</h3>
+                        <p className="text-sm text-gray-400 mt-0.5">Climb leaderboards and unlock rewards as you engage</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
+                        <Share2 className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-white text-[15px]">Connect and share</h3>
+                        <p className="text-sm text-gray-400 mt-0.5">Follow gamers, share clips and grow your community</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
+                        <Wallet className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-white text-[15px]">Collect NFTs & GF Tokens</h3>
+                        <p className="text-sm text-gray-400 mt-0.5">Mint unique NFTs and earn tokens in the Gamefolio economy</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Right side - Feature list + CTA */}
-              <div className="flex flex-col justify-between">
-                {/* Mobile-only header */}
-                <div className="md:hidden mb-6">
-                  <h2 className="text-2xl font-bold text-white mb-2">Welcome to <span className="text-primary">Gamefolio</span></h2>
-                  <p className="text-gray-300">Your personal gaming portfolio, all in one place.</p>
-                </div>
-
-                <div className="space-y-5">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
-                      <Gamepad2 className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-white text-[15px]">Build your gaming portfolio</h3>
-                      <p className="text-sm text-gray-400 mt-0.5">Showcase your best clips, reels, screenshots</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
-                      <Trophy className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-white text-[15px]">Earn XP and level up</h3>
-                      <p className="text-sm text-gray-400 mt-0.5">Climb leaderboards and unlock rewards as you engage</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
-                      <Share2 className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-white text-[15px]">Connect and share</h3>
-                      <p className="text-sm text-gray-400 mt-0.5">Follow gamers, share clips and grow your community</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
-                      <Wallet className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-white text-[15px]">Collect NFTs & GF Tokens</h3>
-                      <p className="text-sm text-gray-400 mt-0.5">Mint unique NFTs and earn tokens in the Gamefolio economy</p>
-                    </div>
-                  </div>
-                </div>
-
-                <Button onClick={goToNextStep} className="w-full bg-primary hover:bg-primary/90 text-white text-base font-semibold py-6 mt-8 rounded-xl shadow-[0_0_20px_rgba(74,222,128,0.3)]">
-                  Get Started <ArrowRight className="h-5 w-5 ml-2" />
-                </Button>
-              </div>
+              <Button onClick={goToNextStep} className="w-full bg-primary hover:bg-primary/90 text-white text-base font-semibold py-6 mt-8 rounded-xl shadow-[0_0_20px_rgba(74,222,128,0.3)]">
+                Get Started <ArrowRight className="h-5 w-5 ml-2" />
+              </Button>
             </div>
           </>
         );
