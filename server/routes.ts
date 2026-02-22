@@ -2082,6 +2082,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (isNewUser) {
           allowedVisibilities.push("new_users");
         }
+        try {
+          const lootboxStatus = await storage.getDailyLootboxStatus((req.user as any).id);
+          if (lootboxStatus.canOpen) {
+            allowedVisibilities.push("has_lootbox");
+          }
+        } catch (e) {
+        }
       } else {
         allowedVisibilities.push("logged_out");
       }

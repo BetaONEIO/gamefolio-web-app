@@ -4072,13 +4072,15 @@ const AdminPage = () => {
                                   slide.visibility === 'logged_in' ? 'border-blue-500 text-blue-600' :
                                   slide.visibility === 'logged_out' ? 'border-orange-500 text-orange-600' :
                                   slide.visibility === 'new_users' ? 'border-cyan-500 text-cyan-600' :
-                                  slide.visibility === 'pro_only' ? 'border-purple-500 text-purple-600' : ''
+                                  slide.visibility === 'pro_only' ? 'border-purple-500 text-purple-600' :
+                                  slide.visibility === 'has_lootbox' ? 'border-yellow-500 text-yellow-600' : ''
                                 }`}>
                                   {slide.visibility === 'everyone' ? 'Everyone' :
                                    slide.visibility === 'logged_in' ? 'Logged In' :
                                    slide.visibility === 'logged_out' ? 'Logged Out' :
                                    slide.visibility === 'new_users' ? 'New Users' :
-                                   slide.visibility === 'pro_only' ? 'Pro Only' : slide.visibility}
+                                   slide.visibility === 'pro_only' ? 'Pro Only' :
+                                   slide.visibility === 'has_lootbox' ? 'Has Lootbox' : slide.visibility}
                                 </Badge>
                               </div>
                               {slide.subtitle && <p className="text-sm text-muted-foreground truncate">{slide.subtitle}</p>}
@@ -4225,6 +4227,7 @@ const AdminPage = () => {
                               <SelectItem value="logged_out">Non-Logged In Users</SelectItem>
                               <SelectItem value="new_users">New Users Only</SelectItem>
                               <SelectItem value="pro_only">Pro Users Only</SelectItem>
+                              <SelectItem value="has_lootbox">Users with Unopened Lootbox</SelectItem>
                             </SelectContent>
                           </Select>
                           <p className="text-xs text-muted-foreground">
@@ -4233,6 +4236,7 @@ const AdminPage = () => {
                             {slideVisibility === 'logged_in' && 'Shown to all signed-in users.'}
                             {slideVisibility === 'everyone' && 'Shown to all visitors and users.'}
                             {slideVisibility === 'pro_only' && 'Shown to Pro subscribers only.'}
+                            {slideVisibility === 'has_lootbox' && 'Shown to users who have an unopened daily lootbox.'}
                           </p>
                         </div>
                       </div>
@@ -4395,6 +4399,7 @@ const AdminPage = () => {
                             <SelectItem value="logged_out">Non-Logged In Users</SelectItem>
                             <SelectItem value="new_users">New Users Only</SelectItem>
                             <SelectItem value="pro_only">Pro Users Only</SelectItem>
+                            <SelectItem value="has_lootbox">Users with Unopened Lootbox</SelectItem>
                           </SelectContent>
                         </Select>
                         <p className="text-xs text-muted-foreground">
@@ -4403,6 +4408,7 @@ const AdminPage = () => {
                           {slideVisibility === 'logged_in' && 'Shown to all signed-in users.'}
                           {slideVisibility === 'everyone' && 'Shown to all visitors and users.'}
                           {slideVisibility === 'pro_only' && 'Shown to Pro subscribers only.'}
+                          {slideVisibility === 'has_lootbox' && 'Shown to users who have an unopened daily lootbox.'}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 pt-6">
