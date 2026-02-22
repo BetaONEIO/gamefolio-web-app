@@ -1476,7 +1476,7 @@ export default function OnboardingFlow({
   };
 
   return (
-    <div className="w-full mx-auto px-5 py-5 sm:p-6 md:p-8 bg-gray-900 rounded-lg shadow-lg">
+    <div className="w-full mx-auto px-5 pt-8 pb-6 sm:p-6 md:p-8 min-h-screen sm:min-h-0 bg-gray-900 sm:rounded-lg shadow-lg flex flex-col">
       <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} />
       {renderStepContent()}
     </div>
