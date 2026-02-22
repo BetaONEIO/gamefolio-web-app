@@ -1,0 +1,312 @@
+P0 Tasks (Critical - Fix First)
+P0-1: Add Application Error Boundaries
+Files:
+
+client/src/components/ErrorBoundary.tsx (new file)
+client/src/App.tsx
+client/src/pages/HomePage.tsx (and other major pages)
+What's wrong: No error boundaries exist anywhere in the app. A single component error will crash the entire application with a white screen.
+
+Fix approach:
+
+Create a class-based ErrorBoundary component with componentDidCatch and getDerivedStateFromError
+Wrap the root App component in App.tsx
+Add error boundaries around major features (video player, upload, profile)
+Log errors to console (add Sentry/error tracking integration point for future)
+Display user-friendly fallback UI with reload option
+Acceptance criteria:
+
+Throwing an error in any component shows fallback UI instead of crashing
+Error is logged to console
+User can click "Reload" to recover
+App continues working after component error is fixed
+Gotchas/Risks:
+
+Error boundaries must be class components (React limitation)
+Don't catch errors in event handlers (those need try/catch)
+Don't over-nest boundaries (performance impact)
+P0-2: Fix Firebase Auth Race Condition
+Files: client/src/hooks/use-auth.tsx (lines 28-88)
+
+What's wrong: The onAuthStateChanged listener can update state after component unmount, and parallel auth flows (session + Firebase) can conflict causing auth failures.
+
+Fix approach:
+
+Add mounted flag to track component lifecycle
+Check mounted flag before all state updates in async callback
+Add proper cleanup function that sets mounted = false and calls unsubscribe()
+Add all dependencies to useEffect array (queryClient, toast, setLocation)
+Add try/catch around the Google auth API call
+Acceptance criteria:
+
+No React warnings about state updates on unmounted components
+Firebase auth flow completes reliably on login
+No console errors during rapid navigation during auth
+Google sign-in works consistently without timing-dependent failures
+Gotchas/Risks:
+
+Must check mounted flag after EVERY async operation (after apiRequest, after json())
+Don't block Firebase unsubscribe in cleanup (always call it)
+Test with slow network to catch race conditions
+P0-3: Fix Stale Closure in Theme Hook
+Files: client/src/hooks/use-theme.tsx (lines 72-80)
+
+What's wrong: useEffect has empty dependency array but uses accentColor and calls setAccentColor, creating stale closure that uses outdated values.
+
+Fix approach:
+
+Remove the setAccentColor(accentColor) call from useEffect (it's redundant)
+OR add accentColor to dependency array if the effect should re-run on color changes
+Verify the initial theme setup only needs to run once
+If CSS variable setting is needed, directly set them instead of calling setAccentColor
+Acceptance criteria:
+
+No ESLint warnings about missing dependencies
+Theme initializes correctly on app load
+Accent color changes work without console errors
+Dark mode persists after refresh
+Gotchas/Risks:
+
+Changing deps might cause unwanted re-runs (verify effect should only run once)
+Ensure CSS variables are set before any component renders
+P0-4: Add Upload Cancellation
+Files: client/src/pages/UploadPage.tsx
+
+What's wrong: TUS upload continues after user navigates away or unmounts component, wasting bandwidth and potentially corrupting upload state.
+
+Fix approach:
+
+Store TUS upload instance in a ref
+Create AbortController for each upload
+Add cleanup function to mutation that calls upload.abort()
+Add useEffect with cleanup that aborts upload on unmount
+Check abort signal before state updates in callbacks
+Show confirmation dialog if user tries to leave during active upload
+Acceptance criteria:
+
+Navigating away during upload stops the upload (check network tab)
+No state updates after component unmounts
+Upload progress resets if user returns to upload page
+Browser doesn't show "page has unsaved changes" warning unnecessarily
+Gotchas/Risks:
+
+TUS library may not support abort cleanly - test thoroughly
+Need to clean up temporary files on server after abort
+Consider storing partial upload state for resume functionality (future)
+P1 Tasks (High Priority)
+P1-1: Fix localStorage SSR Safety Issues
+Files:
+
+client/src/App.tsx (banner dismissed state)
+client/src/hooks/use-theme.tsx (accent color persistence)
+Any component initializing state with localStorage.getItem()
+What's wrong: Accessing localStorage in useState initial value will crash if SSR is added. Also creates hydration mismatches.
+
+Fix approach:
+
+Initialize state with safe default value (false, null, default theme)
+Use useEffect to read from localStorage after mount
+Wrap all localStorage access in try/catch
+Consider creating a useLocalStorage hook for consistency
+Add typeof window !== 'undefined' checks
+Acceptance criteria:
+
+No localStorage access during initial render
+Values load from localStorage after mount (may see brief flash)
+No console errors if localStorage is blocked/unavailable
+Code is SSR-ready (even if not using SSR now)
+Gotchas/Risks:
+
+Users might see brief "flash" of default state before localStorage loads
+Private browsing mode blocks localStorage - must handle gracefully
+Test in incognito mode to verify fallback behavior
+P1-2: Add Cleanup to Event Listeners
+Files: client/src/components/clips/ClipDialog.tsx (lines 142-170)
+
+What's wrong: Some keyboard and touch event listeners have incomplete dependency arrays, potentially creating stale closures or memory leaks.
+
+Fix approach:
+
+Audit all addEventListener calls for proper cleanup
+Add missing dependencies to useEffect arrays (e.g., clip, showNavigation, handleLike, handleFollow)
+Use useCallback for event handlers to stabilize references
+Verify removal uses same function reference as addition
+Consider using useEventListener custom hook for consistency
+Acceptance criteria:
+
+ESLint shows no missing dependency warnings
+Event listeners don't fire after ClipDialog closes (test in React DevTools)
+Keyboard shortcuts work correctly after opening/closing dialog multiple times
+No memory leaks in Chrome DevTools Memory profiler
+Gotchas/Risks:
+
+Adding deps might cause listeners to re-register too often (use useCallback)
+Touch event options (passive: false) needed for preventDefault - don't remove
+Test keyboard navigation thoroughly after changes
+P1-3: Optimize Query Cache Invalidation
+Files: client/src/hooks/use-clips.ts
+
+What's wrong: Mutations like useLikeClip invalidate all clips queries instead of specific ones, causing unnecessary refetches of entire feeds.
+
+Fix approach:
+
+Change from queryKey: ['/api/clips'] to specific clip: ['/api/clips', clipId]
+Use queryClient.setQueryData() for optimistic updates instead of invalidate
+Only invalidate list queries if like count affects sort order
+Add exact: true flag to invalidate calls when appropriate
+Document query key structure in comments
+Acceptance criteria:
+
+Liking a clip only refetches that specific clip's data
+Feed doesn't scroll to top or re-fetch on like/unlike
+Optimistic updates show immediately
+Network tab shows fewer requests after like/comment actions
+Gotchas/Risks:
+
+Optimistic updates need rollback on error
+Query key structure must be consistent across hooks
+Cache timing might cause stale data if not careful with invalidation
+P1-4: Add ARIA Labels and Keyboard Navigation
+Files:
+
+client/src/components/clips/VideoClipCard.tsx
+client/src/components/clips/ClipDialog.tsx
+client/src/components/shared/VideoPlayer.tsx
+All UI components with onClick but no role/aria-label
+What's wrong: Interactive elements lack ARIA labels and keyboard support, making the app unusable for screen reader users and keyboard-only users.
+
+Fix approach:
+
+Add role="button" and tabIndex={0} to clickable divs
+Add aria-label with descriptive text (e.g., "Play video: [title]")
+Implement onKeyDown handlers for Enter and Space keys
+Add focus management in ClipDialog (trap focus, restore on close)
+Add skip links for keyboard navigation
+Test with VoiceOver (Mac) or NVDA (Windows)
+Acceptance criteria:
+
+Can navigate entire app using only Tab and Enter keys
+Screen reader announces all interactive elements with meaningful names
+Focus outline visible on all interactive elements
+ESLint a11y plugin shows no violations
+Can play/pause video, like clips, and navigate without mouse
+Gotchas/Risks:
+
+Focus trapping in modal must allow Escape key to close
+Don't break existing click handlers when adding keyboard support
+Test across browsers (Firefox handles focus differently)
+Video player controls need custom ARIA for play/pause state
+P2 Tasks (Medium Priority)
+P2-1: Memoize Expensive Callbacks
+Files:
+
+client/src/pages/HomePageSimple.tsx (scroll function)
+client/src/components/shared/VideoPlayer.tsx (all event handlers)
+client/src/components/clips/ClipDialog.tsx (navigation handlers)
+What's wrong: Functions recreated on every render cause child components to re-render unnecessarily, impacting performance on lower-end devices.
+
+Fix approach:
+
+Wrap callbacks in useCallback with correct dependency arrays
+Memoize expensive computations with useMemo
+Add React.memo() to pure child components
+Profile with React DevTools Profiler before and after
+Focus on components rendered in lists or frequently updated
+Acceptance criteria:
+
+React DevTools Profiler shows reduced render counts
+Scrolling through feed is smooth on mobile (60fps)
+Video player controls don't cause full re-renders
+No unnecessary re-renders in DevTools highlight mode
+Gotchas/Risks:
+
+Over-memoization can make code harder to maintain
+useCallback/useMemo have their own overhead - only use where needed
+Must include all dependencies or create stale closures
+P2-2: Improve Wallet Connection State Management
+Files: client/src/hooks/use-wallet.tsx (lines 70-76)
+
+What's wrong: Wallet address sync to server can trigger multiple times concurrently, potentially causing race conditions or redundant API calls.
+
+Fix approach:
+
+Add useRef flag to track if update is in progress
+Check flag before starting new update
+Clear flag in .finally() to handle both success and error
+Use stable dependency (user?.id) instead of full user object
+Add debouncing if wallet address changes rapidly
+Add error handling and retry logic
+Acceptance criteria:
+
+Only one wallet address update request in-flight at a time
+Network tab shows no duplicate wallet sync requests
+Wallet connection works reliably after browser refresh
+No infinite loops if wallet address updates frequently
+Gotchas/Risks:
+
+Ref won't trigger re-renders (intended behavior)
+Must clear flag even on error (use finally)
+Test with wallet that changes addresses frequently (edge case)
+P2-3: Add Focus Management to ClipDialog
+Files: client/src/components/clips/ClipDialog.tsx
+
+What's wrong: When dialog opens, focus is not managed, making keyboard navigation and screen reader UX poor. Focus should trap inside dialog.
+
+Fix approach:
+
+Store previous focused element on open
+Set focus to dialog title or close button on open
+Trap Tab key to cycle only within dialog
+Restore focus to trigger element on close
+Handle Escape key to close dialog
+Use aria-modal="true" and role="dialog"
+Consider using @radix-ui/react-dialog or similar for built-in focus management
+Acceptance criteria:
+
+Opening dialog moves focus into it
+Tab key cycles only through dialog elements
+Escape key closes dialog
+Closing dialog returns focus to card that opened it
+Screen reader announces dialog role and label
+Gotchas/Risks:
+
+Must prevent body scroll when dialog open (already handled?)
+Focus trap must include close button and video controls
+Test with screen reader - might announce too much during video playback
+P2-4: Add Request Cancellation with AbortController
+Files:
+
+client/src/hooks/use-signed-url.ts (lines 37-80)
+Any other hooks using fetch in useEffect
+What's wrong: Fetch requests in useEffect continue after unmount, potentially updating state on unmounted components or wasting network resources.
+
+Fix approach:
+
+Create AbortController in useEffect
+Pass signal to fetch options
+Call controller.abort() in cleanup function
+Check error name for 'AbortError' and ignore those
+Apply to all fetch calls in useEffect hooks
+Acceptance criteria:
+
+Network tab shows requests cancelled when navigating away quickly
+No state update warnings in console
+Aborted requests don't show as errors in error tracking
+Fast navigation doesn't queue up many pending requests
+Gotchas/Risks:
+
+AbortError is normal, don't log it as error
+Must create new controller for each request
+Some older browsers don't support AbortController (check compatibility)
+Summary Statistics
+P0 (Critical): 4 tasks - Estimated 2-3 days
+P1 (High): 4 tasks - Estimated 3-4 days
+P2 (Medium): 4 tasks - Estimated 2-3 days
+Suggested Implementation Order:
+
+P0-1 (Error Boundaries) - Quick win, prevents production crashes
+P0-2 (Firebase Auth) - Highest user impact
+P0-3 (Theme Hook) - Quick fix
+P0-4 (Upload Cancel) - Important for UX
+P1 tasks in parallel (can be split among developers)
+P2 tasks as time allows
