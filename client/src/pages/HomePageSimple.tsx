@@ -298,7 +298,7 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
             >
               <div className={`absolute inset-0 ${slide.textAlign === 'left' ? 'bg-gradient-to-r from-black/80 via-black/40 to-transparent' : slide.textAlign === 'right' ? 'bg-gradient-to-l from-black/80 via-black/40 to-transparent' : 'bg-gradient-to-t from-black/70 via-black/50 to-black/30'}`} />
               <div className={`relative flex ${slide.textAlign === 'right' ? 'items-center justify-end' : slide.textAlign === 'left' ? 'items-center justify-start' : 'items-center justify-center'} h-full`}>
-                <div className={`${slide.textAlign === 'center' ? 'text-center' : slide.textAlign === 'right' ? 'text-right' : 'text-left'} text-white px-6 sm:px-10 md:px-16 ${slide.textAlign === 'center' ? 'max-w-4xl' : 'max-w-lg'}`}>
+                <div className={`${slide.textAlign === 'center' ? 'text-center' : slide.textAlign === 'right' ? 'text-right' : 'text-left'} text-white px-8 sm:px-14 md:px-24 ${slide.textAlign === 'center' ? 'max-w-4xl' : 'max-w-lg'}`}>
                   <h1 className="text-2xl sm:text-3xl md:text-6xl font-bold mb-3 sm:mb-4 leading-tight">
                     {slide.title.split('\n').map((line, idx) => (
                       <span key={idx}>

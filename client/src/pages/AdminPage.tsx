@@ -4271,7 +4271,7 @@ const AdminPage = () => {
                             <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-800" />
                           )}
                           <div className={`absolute inset-0 ${slideTextAlign === 'left' ? 'bg-gradient-to-r from-black/80 via-black/40 to-transparent' : slideTextAlign === 'right' ? 'bg-gradient-to-l from-black/80 via-black/40 to-transparent' : 'bg-black/50'}`}>
-                            <div className={`flex flex-col ${slideTextAlign === 'left' ? 'items-start' : slideTextAlign === 'right' ? 'items-end' : 'items-center'} justify-center h-full ${slideTextAlign === 'center' ? 'max-w-full' : 'max-w-[70%]'} ${slideTextAlign === 'right' ? 'ml-auto' : ''} p-6 md:p-8`}>
+                            <div className={`flex flex-col ${slideTextAlign === 'left' ? 'items-start' : slideTextAlign === 'right' ? 'items-end' : 'items-center'} justify-center h-full ${slideTextAlign === 'center' ? 'max-w-full' : 'max-w-[70%]'} ${slideTextAlign === 'right' ? 'ml-auto' : ''} p-8 md:p-12`}>
                               <h3 className={`text-xl md:text-2xl font-bold text-white mb-2 leading-tight drop-shadow-md ${slideTextAlign === 'center' ? 'text-center' : slideTextAlign === 'right' ? 'text-right' : 'text-left'}`}>
                                 {slideTitle || "Slide Title"}
                               </h3>
@@ -4460,7 +4460,7 @@ const AdminPage = () => {
                           <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-800" />
                         )}
                         <div className={`absolute inset-0 ${slideTextAlign === 'left' ? 'bg-gradient-to-r from-black/80 via-black/40 to-transparent' : slideTextAlign === 'right' ? 'bg-gradient-to-l from-black/80 via-black/40 to-transparent' : 'bg-black/50'}`}>
-                          <div className={`flex flex-col ${slideTextAlign === 'left' ? 'items-start' : slideTextAlign === 'right' ? 'items-end' : 'items-center'} justify-center h-full ${slideTextAlign === 'center' ? 'max-w-full' : 'max-w-[70%]'} ${slideTextAlign === 'right' ? 'ml-auto' : ''} p-6 md:p-8`}>
+                          <div className={`flex flex-col ${slideTextAlign === 'left' ? 'items-start' : slideTextAlign === 'right' ? 'items-end' : 'items-center'} justify-center h-full ${slideTextAlign === 'center' ? 'max-w-full' : 'max-w-[70%]'} ${slideTextAlign === 'right' ? 'ml-auto' : ''} p-8 md:p-12`}>
                             <h3 className={`text-xl md:text-2xl font-bold text-white mb-2 leading-tight drop-shadow-md ${slideTextAlign === 'center' ? 'text-center' : slideTextAlign === 'right' ? 'text-right' : 'text-left'}`}>
                               {slideTitle || "Slide Title"}
                             </h3>
