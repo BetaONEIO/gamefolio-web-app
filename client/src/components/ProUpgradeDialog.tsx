@@ -455,11 +455,14 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   const leftPanel = (
     <div className="relative w-full h-full min-h-0 flex flex-col bg-[#020617]">
       <div className="relative flex-1 min-h-[200px] md:min-h-[220px]">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${proHeroImage})` }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#02061733] to-[#020617]" />
+        <div className="absolute inset-0 flex items-center justify-center bg-[#020617]">
+          <img
+            src={proHeroImage}
+            alt="Gamefolio Pro"
+            className="w-full h-full object-contain"
+          />
+        </div>
+        <div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-[#020617] via-[#020617cc] to-transparent" />
 
         <button
           onClick={() => onOpenChange(false)}
@@ -469,7 +472,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
         </button>
       </div>
 
-      <div className="relative z-10 px-5 pb-4 -mt-28">
+      <div className="relative z-10 bg-[#020617] px-5 pb-4 -mt-16">
         <div className="flex justify-center mb-3 md:justify-start">
           <div className="inline-flex items-center gap-1.5 bg-[#14532d4d] border border-[#4ade8033] rounded-full px-3 py-1">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -649,13 +652,13 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
               exit={{ opacity: 0 }}
             >
               <div ref={scrollContainerRef} className="flex flex-col md:hidden h-[100dvh] overflow-y-auto" style={{ scrollbarWidth: "none" }}>
-                <div className="relative w-full flex-shrink-0">
+                <div className="relative w-full flex-shrink-0 bg-[#020617]">
                   <img
                     src={proHeroImage}
                     alt="Gamefolio Pro"
-                    className="w-full h-auto object-cover"
+                    className="w-full h-auto object-contain"
                   />
-                  <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 20%, rgba(2,6,23,0.3) 40%, rgba(2,6,23,0.6) 55%, rgba(2,6,23,0.85) 68%, #020617 78%)' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-[#020617] via-[#020617cc] to-transparent" />
                   <button
                     onClick={() => onOpenChange(false)}
                     className="absolute top-3 right-3 w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center transition-colors hover:bg-black/60 z-10"
