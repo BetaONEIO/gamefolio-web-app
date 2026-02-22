@@ -455,15 +455,15 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   const leftPanel = (
     <div className="relative w-full h-full min-h-0 flex flex-col bg-[#020617]">
       <div className="relative flex-1 min-h-[200px] md:min-h-[220px]">
-        <div className="absolute inset-0 flex items-center justify-center bg-[#020617]">
+        <div className="absolute inset-0 bg-[#020617]">
           <img
             src={proHeroImage}
             alt="Gamefolio Pro"
-            className="w-full h-full object-contain"
+            className="w-full h-full object-cover"
           />
         </div>
-        <div className="absolute inset-x-0 top-0 h-[15%]" style={{ background: 'linear-gradient(to bottom, #020617 0%, #020617 20%, transparent 100%)' }} />
-        <div className="absolute inset-x-0 bottom-0 h-[15%]" style={{ background: 'linear-gradient(to top, #020617 0%, #020617 20%, transparent 100%)' }} />
+        <div className="absolute inset-x-0 top-0 h-[12%]" style={{ background: 'linear-gradient(to bottom, #020617 0%, transparent 100%)' }} />
+        <div className="absolute inset-x-0 bottom-0 h-[12%]" style={{ background: 'linear-gradient(to top, #020617 0%, transparent 100%)' }} />
 
         <button
           onClick={() => onOpenChange(false)}
@@ -502,23 +502,23 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
 
   const rightPanel = (
     <div className="flex flex-col justify-between h-full px-5 py-5 bg-[#020617]">
-      <div className="flex flex-col gap-3.5 mb-4">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3 mb-4">
         {premiumBenefits.map((benefit, index) => (
           <motion.div
             key={benefit.title}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.08 }}
-            className="flex items-start gap-3"
+            className="flex items-start gap-2"
           >
-            <div className="w-9 h-9 rounded-xl bg-[#1e293b] border border-[#1e293b] flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-[#1e293b] border border-[#1e293b] flex items-center justify-center flex-shrink-0">
               {benefit.icon}
             </div>
-            <div className="flex flex-col justify-center min-h-[36px]">
-              <span className="text-[#f8fafc] text-sm font-semibold leading-5">
+            <div className="flex flex-col justify-center min-h-[32px]">
+              <span className="text-[#f8fafc] text-xs font-semibold leading-4">
                 {benefit.title}
               </span>
-              <span className="text-[#94a3b8] text-xs leading-4">
+              <span className="text-[#94a3b8] text-[11px] leading-3.5">
                 {benefit.description}
               </span>
             </div>
@@ -640,7 +640,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-[430px] md:max-w-[620px] w-full bg-[#020617] border-none text-white p-0 overflow-hidden [&>button]:hidden max-h-[100dvh] h-[100dvh] md:h-auto md:max-h-[90vh] gap-0 rounded-none sm:rounded-none top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
+        className="max-w-[430px] md:max-w-[780px] w-full bg-[#020617] border-none text-white p-0 overflow-hidden [&>button]:hidden max-h-[100dvh] h-[100dvh] md:h-auto md:max-h-[90vh] gap-0 rounded-none sm:rounded-none top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
         data-testid="dialog-pro-upgrade"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
