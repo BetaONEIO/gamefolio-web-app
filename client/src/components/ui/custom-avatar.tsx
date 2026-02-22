@@ -437,12 +437,15 @@ export const CustomAvatar = ({
   }
 
   const displayName = user?.displayName || user?.username || "?";
+  const hasUploadedAvatar = !!(avatarSignedUrl || user?.avatarUrl);
+  const showDefaultCircleBorder = showBorder && hasUploadedAvatar && !hasNftProfile;
   
   return (
     <Avatar 
       className={`${sizeClasses[size]} transition-all duration-300 rounded-full ${className}`}
       style={showBorder ? {
-        boxShadow: borderStyles[borderIntensity](borderColor)
+        boxShadow: borderStyles[borderIntensity](borderColor),
+        ...(showDefaultCircleBorder ? { border: '2px solid hsl(var(--primary))', padding: '1px' } : {})
       } : {}}
     >
       <AvatarImage src={avatarSignedUrl || user?.avatarUrl || ""} alt={displayName} className="rounded-full object-cover" />
