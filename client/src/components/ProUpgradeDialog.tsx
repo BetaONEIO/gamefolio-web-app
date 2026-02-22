@@ -462,6 +462,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
             className="w-full h-full object-contain"
           />
         </div>
+        <div className="absolute inset-x-0 top-0 h-[30%] bg-gradient-to-b from-[#020617] via-[#020617aa] to-transparent" />
         <div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-[#020617] via-[#020617cc] to-transparent" />
 
         <button
@@ -658,6 +659,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
                     alt="Gamefolio Pro"
                     className="w-full h-auto object-contain"
                   />
+                  <div className="absolute inset-x-0 top-0 h-[30%] bg-gradient-to-b from-[#020617] via-[#020617aa] to-transparent" />
                   <div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-[#020617] via-[#020617cc] to-transparent" />
                   <button
                     onClick={() => onOpenChange(false)}
