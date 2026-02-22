@@ -38,6 +38,7 @@ import { Button } from "@/components/ui/button";
 
 // Lazy-loaded page components for better performance
 import React, { Suspense } from 'react';
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { DiscordCallback } from "./components/auth/DiscordCallback";
 
 const HomePage = React.lazy(() => import("./pages/HomePageSimple"));
@@ -375,35 +376,39 @@ function WelcomePackComponents() {
 
 function App() {
   return (
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <AuthProvider>
-            <RevenueCatProvider>
-              <LevelTrackerProvider>
-                <WelcomePackProvider>
-                  <SequenceConnect config={sequenceConfig}>
-                    <WalletProvider>
-                      <CrossmintProvider>
-                        <AuthModalProvider>
-                          <ClipDialogProvider>
-                            <MainLayout>
-                              <Router />
-                            </MainLayout>
-                            <WelcomePackComponents />
-                          </ClipDialogProvider>
-                          <Toaster />
-                        </AuthModalProvider>
-                      </CrossmintProvider>
-                    </WalletProvider>
-                  </SequenceConnect>
-                </WelcomePackProvider>
-              </LevelTrackerProvider>
-            </RevenueCatProvider>
-          </AuthProvider>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+    <ErrorBoundary level="app">
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <AuthProvider>
+              <RevenueCatProvider>
+                <LevelTrackerProvider>
+                  <WelcomePackProvider>
+                    <SequenceConnect config={sequenceConfig}>
+                      <WalletProvider>
+                        <CrossmintProvider>
+                          <AuthModalProvider>
+                            <ClipDialogProvider>
+                              <MainLayout>
+                                <ErrorBoundary level="feature">
+                                  <Router />
+                                </ErrorBoundary>
+                              </MainLayout>
+                              <WelcomePackComponents />
+                            </ClipDialogProvider>
+                            <Toaster />
+                          </AuthModalProvider>
+                        </CrossmintProvider>
+                      </WalletProvider>
+                    </SequenceConnect>
+                  </WelcomePackProvider>
+                </LevelTrackerProvider>
+              </RevenueCatProvider>
+            </AuthProvider>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

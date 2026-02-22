@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import { createContext, ReactNode, useContext, useCallback, useEffect, useRef, useState } from "react";
 import {
   useQuery,
   useMutation,
@@ -62,9 +62,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    let mounted = true;
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser && firebaseUser.email) {
-        // User signed in with Google, register/login them in our system
         try {
           const response = await apiRequest("POST", "/api/auth/google", {
             email: firebaseUser.email,
@@ -73,13 +74,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             uid: firebaseUser.uid
           });
 
+          if (!mounted) return;
+
           const userData = await response.json();
+
+          if (!mounted) return;
+
           const streakInfo = userData.streakInfo;
           queryClient.setQueryData(["/api/user"], userData);
 
-          // Handle routing based on user status
           if (userData.needsOnboarding) {
-            // New Google user or existing user that needs onboarding
             if (userData.isNewGoogleUser) {
               toast({
                 title: "Welcome to Gamefolio!",
@@ -95,7 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
             setLocation("/onboarding");
           } else {
-            // Existing user with completed onboarding
             toast({
               title: "Welcome back!",
               description: `You're now signed in with Google.`,
@@ -104,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             
             if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
               setTimeout(() => {
+                if (!mounted) return;
                 toast({
                   title: streakInfo.isNewMilestone ? "🔥 Streak Milestone!" : `🔥 Day ${streakInfo.currentStreak} Streak!`,
                   description: streakInfo.message,
@@ -116,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setLocation("/");
           }
         } catch (error) {
+          if (!mounted) return;
           console.error('Google auth error:', error);
           toast({
             title: "Authentication failed",
@@ -124,11 +129,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
         }
       }
-      setFirebaseAuthChecked(true);
+      if (mounted) {
+        setFirebaseAuthChecked(true);
+      }
     });
 
-    return () => unsubscribe();
-  }, [queryClient, toast]);
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, [queryClient, toast, setLocation]);
 
   const {
     data: user,

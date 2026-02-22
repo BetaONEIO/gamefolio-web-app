@@ -100,11 +100,13 @@ export function ThemeProvider({
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
     
-    // Apply the initial accent color
-    setAccentColor(accentColor);
-    
-    // No need to add dark class since we only use dark mode
-  }, []);
+    const hslColor = hexToHsl(accentColor);
+    root.style.setProperty('--primary', hslColor);
+    root.style.setProperty('--accent', hslColor);
+    root.style.setProperty('--ring', hslColor);
+    root.style.setProperty('--chart-1', hslColor);
+    root.style.setProperty('--chart-2', hslColor);
+  }, [accentColor]);
 
   const value = {
     theme: "dark" as const,
