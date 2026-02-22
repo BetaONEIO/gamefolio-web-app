@@ -31,19 +31,19 @@ const TrendingContentCarousel = ({ clips, isLoading, userId }: TrendingContentCa
   const [scrollStart, setScrollStart] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const scroll = (direction: 'left' | 'right') => {
+  const scroll = useCallback((direction: 'left' | 'right') => {
     if (!scrollRef.current) return;
     
     const container = scrollRef.current;
-    const itemWidth = window.innerWidth < 640 ? 280 : 480; // Responsive item width
-    const scrollAmount = itemWidth * (window.innerWidth < 640 ? 1 : 2); // Scroll by 1 item on mobile, 2 on desktop
+    const itemWidth = window.innerWidth < 640 ? 280 : 480;
+    const scrollAmount = itemWidth * (window.innerWidth < 640 ? 1 : 2);
     
     if (direction === 'left') {
       container.scrollLeft -= scrollAmount;
     } else {
       container.scrollLeft += scrollAmount;
     }
-  };
+  }, []);
 
   // Handle mouse wheel horizontal scrolling
   const handleWheel = (e: React.WheelEvent) => {

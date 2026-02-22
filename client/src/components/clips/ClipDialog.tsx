@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { ClipWithUser, CommentWithUser } from "@shared/schema";
@@ -215,19 +215,19 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   }, [clipId, previousClipId]);
 
   // Enhanced navigation functions with transition
-  const handlePreviousWithTransition = () => {
+  const handlePreviousWithTransition = useCallback(() => {
     if (onPrevious && !isTransitioning) {
       setIsTransitioning(true);
       onPrevious();
     }
-  };
+  }, [onPrevious, isTransitioning]);
 
-  const handleNextWithTransition = () => {
+  const handleNextWithTransition = useCallback(() => {
     if (onNext && !isTransitioning) {
       setIsTransitioning(true);
       onNext();
     }
-  };
+  }, [onNext, isTransitioning]);
 
   // Keyboard navigation for clip dialog
   useEffect(() => {
@@ -295,7 +295,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
     return () => {
       document.removeEventListener('keydown', handleKeyDown, { capture: true });
     };
-  }, [isOpen, showNavigation, onNext, onPrevious, onClose, isTransitioning, isFullscreen]);
+  }, [isOpen, showNavigation, onNext, onPrevious, onClose, isTransitioning, isFullscreen, clip?.videoType]);
 
   // Follow functionality
   const queryClient = useQueryClient();

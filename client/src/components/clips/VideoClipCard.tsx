@@ -128,7 +128,13 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
   };
 
   return (
-    <div onClick={handleCardClick}>
+    <div
+      onClick={handleCardClick}
+      role="button"
+      tabIndex={0}
+      aria-label={`Play video: ${clip.title}`}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(e as any); } }}
+    >
       <Card 
         className="relative overflow-hidden group cursor-pointer transition-all duration-300"
         style={{

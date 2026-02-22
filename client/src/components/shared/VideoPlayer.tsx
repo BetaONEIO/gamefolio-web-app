@@ -374,6 +374,7 @@ const VideoPlayer = ({
         <button
           className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50"
           onClick={togglePlay}
+          aria-label="Play video"
         >
           <div className="bg-primary bg-opacity-80 rounded-full p-4">
             <Play className="h-6 w-6 text-white" />
@@ -410,6 +411,7 @@ const VideoPlayer = ({
               size="sm" 
               className="text-white p-1 md:p-2 h-6 md:h-8 w-6 md:w-8"
               onClick={togglePlay}
+              aria-label={isPlaying ? "Pause video" : "Play video"}
             >
               {isPlaying ? <Pause className="h-3 w-3 md:h-4 md:w-4" /> : <Play className="h-3 w-3 md:h-4 md:w-4" />}
             </Button>
@@ -420,6 +422,7 @@ const VideoPlayer = ({
                 size="sm" 
                 className="text-white p-1 md:p-2 h-6 md:h-8 w-6 md:w-8"
                 onClick={toggleMute}
+                aria-label={isMuted ? "Unmute video" : "Mute video"}
               >
                 {isMuted ? <VolumeX className="h-3 w-3 md:h-4 md:w-4" /> : <Volume2 className="h-3 w-3 md:h-4 md:w-4" />}
               </Button>
@@ -439,6 +442,7 @@ const VideoPlayer = ({
             size="sm" 
             className="text-white p-1 md:p-2 h-6 md:h-8 w-6 md:w-8"
             onClick={toggleFullscreen}
+            aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
           >
             <Maximize className="h-3 w-3 md:h-4 md:w-4" />
           </Button>
