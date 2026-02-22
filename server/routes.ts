@@ -6471,6 +6471,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ avatarBorder: null });
       }
 
+      // Special built-in solid border
+      if (user.selectedAvatarBorderId === -1) {
+        return res.json({ avatarBorder: { id: -1, name: 'Solid', assetType: 'solid_border', imageUrl: null } });
+      }
+
       const avatarBorder = await storage.getAssetReward(user.selectedAvatarBorderId);
       res.json({ avatarBorder });
     } catch (err) {
