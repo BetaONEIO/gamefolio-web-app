@@ -15,7 +15,6 @@ import { Label } from "@/components/ui/label";
 import Cropper from "react-easy-crop";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useWelcomePack } from "@/hooks/use-welcome-pack";
 import { useWallet } from "@/hooks/use-wallet";
 import { useAuth } from "@/hooks/use-auth";
 import { useAutoWallet } from "@/hooks/use-auto-wallet";
@@ -223,7 +222,6 @@ export default function OnboardingFlow({
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const { openWelcomePack, canClaimWelcomePack } = useWelcomePack();
   const { user } = useAuth();
 
   // Form state
@@ -708,15 +706,8 @@ export default function OnboardingFlow({
       // Complete onboarding and navigate to homepage
       onComplete();
       
-      // Wait a moment to ensure state updates are processed, then show welcome pack
       setTimeout(() => {
         setLocation("/");
-        // Show welcome pack dialog if user hasn't claimed it yet
-        if (canClaimWelcomePack) {
-          setTimeout(() => {
-            openWelcomePack();
-          }, 500);
-        }
       }, 300);
       
     } catch (error) {
