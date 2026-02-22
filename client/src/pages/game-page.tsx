@@ -97,7 +97,12 @@ const GamePage = () => {
   });
 
   const handleUploadClick = () => {
-    navigate("/upload");
+    const params = new URLSearchParams({
+      gameId: game?.id?.toString() || '',
+      gameName: game?.name || '',
+      gameImage: game?.imageUrl || '',
+    });
+    navigate(`/upload?${params.toString()}`);
   };
 
   // Helper functions for time period
@@ -234,6 +239,14 @@ const GamePage = () => {
               {displayData?.length || 0} {contentType} available
             </span>
           </div>
+          <Button 
+            onClick={handleUploadClick}
+            className="mt-3"
+            size={isMobile ? "sm" : "default"}
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Upload your content for this game
+          </Button>
         </div>
       </div>
 
