@@ -1196,6 +1196,7 @@ const AdminPage = () => {
   const [slideButtonText, setSlideButtonText] = useState("");
   const [slideButtonLink, setSlideButtonLink] = useState("");
   const [slideImageUrl, setSlideImageUrl] = useState("");
+  const [slideDisplayImageUrl, setSlideDisplayImageUrl] = useState("");
   const [slideIsActive, setSlideIsActive] = useState(true);
   const [slideVisibility, setSlideVisibility] = useState("everyone");
   const [slideUploading, setSlideUploading] = useState(false);
@@ -2000,6 +2001,7 @@ const AdminPage = () => {
     setSlideButtonText("");
     setSlideButtonLink("");
     setSlideImageUrl("");
+    setSlideDisplayImageUrl("");
     setSlideIsActive(true);
     setSlideVisibility("everyone");
   };
@@ -2011,6 +2013,7 @@ const AdminPage = () => {
     setSlideButtonText(slide.buttonText || "");
     setSlideButtonLink(slide.buttonLink || "");
     setSlideImageUrl(slide.imageUrl || "");
+    setSlideDisplayImageUrl(slide.signedImageUrl || slide.imageUrl || "");
     setSlideIsActive(slide.isActive ?? true);
     setSlideVisibility(slide.visibility || "everyone");
     setActiveSlideTab(`slide-${slide.id}`);
@@ -2091,6 +2094,7 @@ const AdminPage = () => {
       if (!res.ok) throw new Error("Upload failed");
       const data = await res.json();
       setSlideImageUrl(data.imageUrl);
+      setSlideDisplayImageUrl(data.signedImageUrl || data.imageUrl);
       toast({ title: "Image uploaded", description: `Hero slide image uploaded successfully (${dimensionCheck.width}×${dimensionCheck.height}px).` });
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message || "Failed to upload image", variant: "destructive" });
@@ -4053,7 +4057,7 @@ const AdminPage = () => {
                             </div>
                             <div className="w-36 h-16 rounded overflow-hidden bg-muted flex-shrink-0" style={{ aspectRatio: '16/7' }}>
                               {slide.imageUrl ? (
-                                <img src={slide.imageUrl} alt={slide.title} className="w-full h-full object-cover" />
+                                <img src={slide.signedImageUrl || slide.imageUrl} alt={slide.title} className="w-full h-full object-cover" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">No image</div>
                               )}
@@ -4113,8 +4117,8 @@ const AdminPage = () => {
                         <label className="text-sm font-medium">Slide Image *</label>
                         {slideImageUrl ? (
                           <div className="relative w-full rounded-lg overflow-hidden bg-muted" style={{ aspectRatio: '16/7' }}>
-                            <img src={slideImageUrl} alt="Slide preview" className="w-full h-full object-cover" />
-                            <Button variant="destructive" size="sm" className="absolute top-2 right-2" onClick={() => setSlideImageUrl("")}>
+                            <img src={slideDisplayImageUrl || slideImageUrl} alt="Slide preview" className="w-full h-full object-cover" />
+                            <Button variant="destructive" size="sm" className="absolute top-2 right-2" onClick={() => { setSlideImageUrl(""); setSlideDisplayImageUrl(""); }}>
                               <Trash2 className="h-3 w-3 mr-1" /> Remove
                             </Button>
                           </div>
@@ -4175,7 +4179,7 @@ const AdminPage = () => {
                                   key={img.id || img.name}
                                   className="rounded border overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all group relative"
                                   style={{ aspectRatio: '16/7' }}
-                                  onClick={() => { setSlideImageUrl(img.publicUrl); setSlideBucketBrowser(false); setSlideBucketSearch(""); }}
+                                  onClick={() => { setSlideImageUrl(img.publicUrl); setSlideDisplayImageUrl(img.publicUrl); setSlideBucketBrowser(false); setSlideBucketSearch(""); }}
                                 >
                                   <img src={img.publicUrl} alt={img.name} className="w-full h-full object-cover" />
                                   <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[10px] px-1 py-0.5 truncate opacity-0 group-hover:opacity-100 transition-opacity">{img.name}</div>
@@ -4241,7 +4245,7 @@ const AdminPage = () => {
                         <p className="text-xs text-muted-foreground mb-3">This preview matches how the slide will appear on the homepage.</p>
                         <div className="relative w-full rounded-lg overflow-hidden bg-black border-b-2 border-primary" style={{ aspectRatio: '16/7', minHeight: '280px' }}>
                           {slideImageUrl ? (
-                            <img src={slideImageUrl} alt="Preview" className="w-full h-full object-cover" />
+                            <img src={slideDisplayImageUrl || slideImageUrl} alt="Preview" className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-800" />
                           )}
@@ -4283,8 +4287,8 @@ const AdminPage = () => {
                       <label className="text-sm font-medium">Slide Image *</label>
                       {slideImageUrl ? (
                         <div className="relative w-full rounded-lg overflow-hidden bg-muted" style={{ aspectRatio: '16/7' }}>
-                          <img src={slideImageUrl} alt="Slide preview" className="w-full h-full object-cover" />
-                          <Button variant="destructive" size="sm" className="absolute top-2 right-2" onClick={() => setSlideImageUrl("")}>
+                          <img src={slideDisplayImageUrl || slideImageUrl} alt="Slide preview" className="w-full h-full object-cover" />
+                          <Button variant="destructive" size="sm" className="absolute top-2 right-2" onClick={() => { setSlideImageUrl(""); setSlideDisplayImageUrl(""); }}>
                             <Trash2 className="h-3 w-3 mr-1" /> Remove
                           </Button>
                         </div>
@@ -4345,7 +4349,7 @@ const AdminPage = () => {
                                 key={img.id || img.name}
                                 className="rounded border overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all group relative"
                                 style={{ aspectRatio: '16/7' }}
-                                onClick={() => { setSlideImageUrl(img.publicUrl); setSlideBucketBrowser(false); setSlideBucketSearch(""); }}
+                                onClick={() => { setSlideImageUrl(img.publicUrl); setSlideDisplayImageUrl(img.publicUrl); setSlideBucketBrowser(false); setSlideBucketSearch(""); }}
                               >
                                 <img src={img.publicUrl} alt={img.name} className="w-full h-full object-cover" />
                                 <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[10px] px-1 py-0.5 truncate opacity-0 group-hover:opacity-100 transition-opacity">{img.name}</div>
@@ -4415,7 +4419,7 @@ const AdminPage = () => {
                       <p className="text-xs text-muted-foreground mb-3">This preview matches how the slide will appear on the homepage.</p>
                       <div className="relative w-full rounded-lg overflow-hidden bg-black border-b-2 border-primary" style={{ aspectRatio: '16/7', minHeight: '280px' }}>
                         {slideImageUrl ? (
-                          <img src={slideImageUrl} alt="Preview" className="w-full h-full object-cover" />
+                          <img src={slideDisplayImageUrl || slideImageUrl} alt="Preview" className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-800" />
                         )}

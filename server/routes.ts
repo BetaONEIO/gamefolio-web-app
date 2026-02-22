@@ -2093,7 +2093,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ))
         .orderBy(asc(heroSlides.displayOrder));
 
-      res.json(slides);
+      const { supabaseStorage } = await import('./supabase-storage');
+      const slidesWithSignedUrls = await Promise.all(
+        slides.map(async (slide) => {
+          if (slide.imageUrl && slide.imageUrl.includes('supabase.co') && slide.imageUrl.includes('gamefolio-media')) {
+            const signedUrl = await supabaseStorage.convertToSignedUrl(slide.imageUrl);
+            return { ...slide, imageUrl: signedUrl || slide.imageUrl };
+          }
+          return slide;
+        })
+      );
+
+      res.json(slidesWithSignedUrls);
     } catch (err) {
       console.error("Error fetching hero slides:", err);
       res.status(500).json({ message: "Error fetching hero slides" });

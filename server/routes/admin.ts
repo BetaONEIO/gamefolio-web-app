@@ -1732,8 +1732,11 @@ adminRouter.post("/hero-slides/upload-image", rewardImageUpload.single('image'),
       fs.unlinkSync(req.file.path);
     }
 
+    const signedUrl = await supabaseStorage.convertToSignedUrl(result.url);
+
     res.json({ 
       imageUrl: result.url,
+      signedImageUrl: signedUrl || result.url,
       dimensions: { width: processedMeta.width, height: processedMeta.height }
     });
   } catch (err) {
@@ -1748,7 +1751,16 @@ adminRouter.get("/hero-slides", async (req: Request, res: Response) => {
     const { db } = await import('../db');
     const { asc } = await import('drizzle-orm');
     const slides = await db.select().from(heroSlides).orderBy(asc(heroSlides.displayOrder));
-    res.json(slides);
+    const slidesWithSignedUrls = await Promise.all(
+      slides.map(async (slide) => {
+        if (slide.imageUrl && slide.imageUrl.includes('supabase.co') && slide.imageUrl.includes('gamefolio-media')) {
+          const signedUrl = await supabaseStorage.convertToSignedUrl(slide.imageUrl);
+          return { ...slide, signedImageUrl: signedUrl || slide.imageUrl };
+        }
+        return slide;
+      })
+    );
+    res.json(slidesWithSignedUrls);
   } catch (err) {
     console.error("Error fetching hero slides:", err);
     res.status(500).json({ message: "Error fetching hero slides" });
