@@ -1598,18 +1598,8 @@ export default function SettingsPage() {
                     </div>
                   )}
 
-                  {/* No Borders Unlocked Message */}
-                  {!isLoadingBorders && (!avatarBorders || (avatarBorders as any[]).length === 0) && (
-                    <div className="p-4 bg-muted/50 rounded-lg border text-center">
-                      <Sparkles className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">
-                        No borders unlocked yet. Check back soon for ways to unlock exclusive borders!
-                      </p>
-                    </div>
-                  )}
-
                   {/* Unlocked Borders Grid with Category Tabs */}
-                  {!isLoadingBorders && avatarBorders && (avatarBorders as any[]).length > 0 && (
+                  {!isLoadingBorders && (
                     <Tabs defaultValue="static" className="w-full">
                       <TabsList className="w-full grid grid-cols-2 mb-4">
                         <TabsTrigger value="static" className="text-xs md:text-sm">Static</TabsTrigger>
@@ -1692,7 +1682,7 @@ export default function SettingsPage() {
                                 </div>
                               )}
                               
-                              {(avatarBorders as any[])
+                              {((avatarBorders as any[]) || [])
                                 .filter((border: any) => (border.category || 'static') === category)
                                 .map((border: any) => (
                                   <div
@@ -1728,7 +1718,7 @@ export default function SettingsPage() {
                                 ))}
                               
                               {/* Empty state for category */}
-                              {(avatarBorders as any[]).filter((border: any) => (border.category || 'static') === category).length === 0 && category !== 'static' && (
+                              {((avatarBorders as any[]) || []).filter((border: any) => (border.category || 'static') === category).length === 0 && category !== 'static' && (
                                 <div className="col-span-full p-4 text-center text-sm text-muted-foreground">
                                   No {category} borders unlocked yet
                                 </div>

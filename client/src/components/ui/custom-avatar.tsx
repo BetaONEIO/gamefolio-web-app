@@ -328,6 +328,7 @@ export const CustomAvatar = ({
 
   const avatarBorder = borderData?.avatarBorder;
   const hasAvatarBorderOverlay = showAvatarBorderOverlay && avatarBorder?.imageUrl;
+  const hasSolidBorder = showAvatarBorderOverlay && avatarBorder?.id === -1;
 
   if (hasNftProfile) {
     const handleNftAvatarClick = (e: React.MouseEvent) => {
@@ -389,6 +390,30 @@ export const CustomAvatar = ({
         />
       )}
       </>
+    );
+  }
+
+  if (hasSolidBorder) {
+    return (
+      <div className={`relative inline-flex items-center justify-center ${className}`}>
+        <Avatar 
+          className={`${sizeClasses[size]} transition-all duration-300 rounded-full`}
+          style={{
+            border: `3px solid ${borderColor}`,
+            boxShadow: `0 0 12px ${borderColor}50`,
+            padding: '1px'
+          }}
+        >
+          <AvatarImage 
+            src={avatarSignedUrl || user?.avatarUrl || ""} 
+            alt={safeDisplayName} 
+            className="rounded-full object-cover"
+          />
+          <AvatarFallback className="bg-primary/20 text-foreground font-semibold rounded-full">
+            {safeDisplayName.substring(0, 2).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+      </div>
     );
   }
 
