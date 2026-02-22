@@ -70,28 +70,34 @@ const UploadPage = () => {
   // Content type selection
   const [contentType, setContentType] = useState<'clips' | 'reels' | 'screenshots'>('clips');
   
-  // Read the type from URL query parameter or sessionStorage and set it on mount
+  // Read the type and game from URL query parameter or sessionStorage and set it on mount
   useEffect(() => {
-    // First check URL params
     const urlParams = new URLSearchParams(window.location.search);
     const typeParam = urlParams.get('type');
+    const gameIdParam = urlParams.get('gameId');
+    const gameNameParam = urlParams.get('gameName');
+    const gameImageParam = urlParams.get('gameImage');
     
-    // Then check sessionStorage
     const storedType = sessionStorage.getItem('uploadContentType');
     
-    console.log('📤 UploadPage URL params:', window.location.search);
-    console.log('📤 Type parameter from URL:', typeParam);
-    console.log('📤 Type parameter from sessionStorage:', storedType);
-    
-    // Prefer URL param, fallback to sessionStorage
     const finalType = typeParam || storedType;
     
     if (finalType === 'clips' || finalType === 'reels' || finalType === 'screenshots') {
-      console.log('📤 Setting contentType to:', finalType);
       setContentType(finalType);
     }
     
-    // Clear sessionStorage after using it
+    if (gameIdParam && gameNameParam) {
+      const gameFromUrl: Game = {
+        id: parseInt(gameIdParam),
+        name: gameNameParam,
+        imageUrl: gameImageParam || null,
+        twitchId: null,
+        createdAt: new Date(),
+      };
+      setSelectedGame(gameFromUrl);
+      setScreenshotSelectedGame(gameFromUrl);
+    }
+    
     if (storedType) {
       sessionStorage.removeItem('uploadContentType');
     }

@@ -394,11 +394,9 @@ const GamePage = () => {
             <p className="text-muted-foreground mb-4">
               No {contentType} have been uploaded for {game.name} yet.
             </p>
-            <Link href="/upload">
-              <Button>
-                Upload First {contentType === 'clips' ? 'Clip' : contentType === 'reels' ? 'Reel' : 'Screenshot'}
-              </Button>
-            </Link>
+            <Button onClick={handleUploadClick}>
+              Upload First {contentType === 'clips' ? 'Clip' : contentType === 'reels' ? 'Reel' : 'Screenshot'}
+            </Button>
           </div>
         )}
       </div>
