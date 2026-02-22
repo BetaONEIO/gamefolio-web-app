@@ -318,6 +318,8 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
                       onClick={() => {
                         if (slide.buttonLink === '/lootbox') {
                           window.dispatchEvent(new CustomEvent('open-lootbox'));
+                        } else if (slide.buttonLink === '/pro') {
+                          window.dispatchEvent(new CustomEvent('open-pro-upgrade'));
                         } else if (slide.buttonLink?.startsWith('http')) {
                           window.open(slide.buttonLink, '_blank');
                         } else {

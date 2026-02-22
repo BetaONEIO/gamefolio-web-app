@@ -42,8 +42,13 @@ const Header = () => {
 
   useEffect(() => {
     const handleOpenLootbox = () => setLootboxOpen(true);
+    const handleOpenProUpgrade = () => setProUpgradeOpen(true);
     window.addEventListener('open-lootbox', handleOpenLootbox);
-    return () => window.removeEventListener('open-lootbox', handleOpenLootbox);
+    window.addEventListener('open-pro-upgrade', handleOpenProUpgrade);
+    return () => {
+      window.removeEventListener('open-lootbox', handleOpenLootbox);
+      window.removeEventListener('open-pro-upgrade', handleOpenProUpgrade);
+    };
   }, []);
   const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
   const [manageProOpen, setManageProOpen] = useState(false);
