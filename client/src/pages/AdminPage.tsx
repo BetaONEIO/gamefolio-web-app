@@ -1199,6 +1199,7 @@ const AdminPage = () => {
   const [slideDisplayImageUrl, setSlideDisplayImageUrl] = useState("");
   const [slideIsActive, setSlideIsActive] = useState(true);
   const [slideVisibility, setSlideVisibility] = useState("everyone");
+  const [slideTextAlign, setSlideTextAlign] = useState("left");
   const [slideUploading, setSlideUploading] = useState(false);
   const [activeSlideTab, setActiveSlideTab] = useState<string>("overview");
   const [slideBucketBrowser, setSlideBucketBrowser] = useState(false);
@@ -2004,6 +2005,7 @@ const AdminPage = () => {
     setSlideDisplayImageUrl("");
     setSlideIsActive(true);
     setSlideVisibility("everyone");
+    setSlideTextAlign("left");
   };
 
   const openEditSlide = (slide: any) => {
@@ -2016,6 +2018,7 @@ const AdminPage = () => {
     setSlideDisplayImageUrl(slide.signedImageUrl || slide.imageUrl || "");
     setSlideIsActive(slide.isActive ?? true);
     setSlideVisibility(slide.visibility || "everyone");
+    setSlideTextAlign(slide.textAlign || "left");
     setActiveSlideTab(`slide-${slide.id}`);
   };
 
@@ -2117,6 +2120,7 @@ const AdminPage = () => {
         imageUrl: slideImageUrl.trim(),
         isActive: slideIsActive,
         visibility: slideVisibility,
+        textAlign: slideTextAlign,
         displayOrder: editingSlide?.displayOrder ?? (heroSlides?.length || 0),
       };
       if (editingSlide) {
@@ -4239,6 +4243,19 @@ const AdminPage = () => {
                             {slideVisibility === 'has_lootbox' && 'Shown to users who have an unopened daily lootbox.'}
                           </p>
                         </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Text Alignment</label>
+                          <Select value={slideTextAlign} onValueChange={setSlideTextAlign}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="left">Left</SelectItem>
+                              <SelectItem value="center">Center</SelectItem>
+                              <SelectItem value="right">Right</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
 
                       <div className="border rounded-lg p-4 bg-muted/50">
@@ -4253,13 +4270,13 @@ const AdminPage = () => {
                           ) : (
                             <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-800" />
                           )}
-                          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/70">
-                            <div className="flex flex-col items-start justify-center h-full max-w-[70%] p-6 md:p-8">
-                              <h3 className="text-xl md:text-2xl font-bold text-white mb-2 leading-tight drop-shadow-md">
+                          <div className={`absolute inset-0 ${slideTextAlign === 'left' ? 'bg-gradient-to-r from-black/80 via-black/40 to-transparent' : slideTextAlign === 'right' ? 'bg-gradient-to-l from-black/80 via-black/40 to-transparent' : 'bg-black/50'}`}>
+                            <div className={`flex flex-col ${slideTextAlign === 'left' ? 'items-start' : slideTextAlign === 'right' ? 'items-end' : 'items-center'} justify-center h-full ${slideTextAlign === 'center' ? 'max-w-full' : 'max-w-[70%]'} ${slideTextAlign === 'right' ? 'ml-auto' : ''} p-6 md:p-8`}>
+                              <h3 className={`text-xl md:text-2xl font-bold text-white mb-2 leading-tight drop-shadow-md ${slideTextAlign === 'center' ? 'text-center' : slideTextAlign === 'right' ? 'text-right' : 'text-left'}`}>
                                 {slideTitle || "Slide Title"}
                               </h3>
                               {(slideSubtitle || !slideTitle) && (
-                                <h4 className="text-lg md:text-xl font-semibold text-primary mb-4 leading-tight drop-shadow-lg">
+                                <h4 className={`text-lg md:text-xl font-semibold text-primary mb-4 leading-tight drop-shadow-lg ${slideTextAlign === 'center' ? 'text-center' : slideTextAlign === 'right' ? 'text-right' : 'text-left'}`}>
                                   {slideSubtitle || "Subtitle text"}
                                 </h4>
                               )}
@@ -4411,6 +4428,19 @@ const AdminPage = () => {
                           {slideVisibility === 'has_lootbox' && 'Shown to users who have an unopened daily lootbox.'}
                         </p>
                       </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Text Alignment</label>
+                        <Select value={slideTextAlign} onValueChange={setSlideTextAlign}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="left">Left</SelectItem>
+                            <SelectItem value="center">Center</SelectItem>
+                            <SelectItem value="right">Right</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <div className="flex items-center gap-2 pt-6">
                         <Switch checked={slideIsActive} onCheckedChange={setSlideIsActive} />
                         <label className="text-sm">Active</label>
@@ -4429,13 +4459,13 @@ const AdminPage = () => {
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-800" />
                         )}
-                        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/70">
-                          <div className="flex flex-col items-start justify-center h-full max-w-[70%] p-6 md:p-8">
-                            <h3 className="text-xl md:text-2xl font-bold text-white mb-2 leading-tight drop-shadow-md">
+                        <div className={`absolute inset-0 ${slideTextAlign === 'left' ? 'bg-gradient-to-r from-black/80 via-black/40 to-transparent' : slideTextAlign === 'right' ? 'bg-gradient-to-l from-black/80 via-black/40 to-transparent' : 'bg-black/50'}`}>
+                          <div className={`flex flex-col ${slideTextAlign === 'left' ? 'items-start' : slideTextAlign === 'right' ? 'items-end' : 'items-center'} justify-center h-full ${slideTextAlign === 'center' ? 'max-w-full' : 'max-w-[70%]'} ${slideTextAlign === 'right' ? 'ml-auto' : ''} p-6 md:p-8`}>
+                            <h3 className={`text-xl md:text-2xl font-bold text-white mb-2 leading-tight drop-shadow-md ${slideTextAlign === 'center' ? 'text-center' : slideTextAlign === 'right' ? 'text-right' : 'text-left'}`}>
                               {slideTitle || "Slide Title"}
                             </h3>
                             {(slideSubtitle || !slideTitle) && (
-                              <h4 className="text-lg md:text-xl font-semibold text-primary mb-4 leading-tight drop-shadow-lg">
+                              <h4 className={`text-lg md:text-xl font-semibold text-primary mb-4 leading-tight drop-shadow-lg ${slideTextAlign === 'center' ? 'text-center' : slideTextAlign === 'right' ? 'text-right' : 'text-left'}`}>
                                 {slideSubtitle || "Subtitle text"}
                               </h4>
                             )}

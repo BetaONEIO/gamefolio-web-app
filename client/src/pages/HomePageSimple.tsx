@@ -197,6 +197,7 @@ interface DbHeroSlide {
   displayOrder: number;
   isActive: boolean;
   visibility: string;
+  textAlign: string;
 }
 
 interface HeroBannerSlideshowProps {
@@ -290,13 +291,14 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
               key={slide.id}
               className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
               style={{
-                backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7)), url(${slide.imageUrl})`,
+                backgroundImage: `url(${slide.imageUrl})`,
                 opacity: currentSlide === index ? 1 : 0,
                 zIndex: currentSlide === index ? 1 : 0,
               }}
             >
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center text-white px-4 sm:px-6 max-w-4xl">
+              <div className={`absolute inset-0 ${slide.textAlign === 'left' ? 'bg-gradient-to-r from-black/80 via-black/40 to-transparent' : slide.textAlign === 'right' ? 'bg-gradient-to-l from-black/80 via-black/40 to-transparent' : 'bg-gradient-to-t from-black/70 via-black/50 to-black/30'}`} />
+              <div className={`relative flex ${slide.textAlign === 'right' ? 'items-center justify-end' : slide.textAlign === 'left' ? 'items-center justify-start' : 'items-center justify-center'} h-full`}>
+                <div className={`${slide.textAlign === 'center' ? 'text-center' : slide.textAlign === 'right' ? 'text-right' : 'text-left'} text-white px-6 sm:px-10 md:px-16 ${slide.textAlign === 'center' ? 'max-w-4xl' : 'max-w-lg'}`}>
                   <h1 className="text-2xl sm:text-3xl md:text-6xl font-bold mb-3 sm:mb-4 leading-tight">
                     {slide.title.split('\n').map((line, idx) => (
                       <span key={idx}>
@@ -306,7 +308,7 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
                     ))}
                   </h1>
                   {slide.subtitle && (
-                    <p className="text-sm sm:text-base md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-2">
+                    <p className={`text-sm sm:text-base md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl ${slide.textAlign === 'center' ? 'mx-auto' : ''} leading-relaxed`}>
                       {slide.subtitle}
                     </p>
                   )}
