@@ -137,31 +137,22 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser }: OnboardingStepIn
 
   return (
     <div className="mb-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center">
         {steps.map((step, index) => (
-          <div key={step.id} className="flex items-center flex-1 last:flex-none">
-            <div className="flex flex-col items-center">
-              <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors border-2 ${
-                  currentStep > step.id
-                    ? "bg-primary/20 border-primary text-primary"
-                    : currentStep === step.id
-                    ? "bg-primary border-primary text-white"
-                    : "bg-gray-800 border-gray-600 text-gray-400"
-                }`}
-              >
-                {currentStep > step.id ? <Check className="h-4 w-4" /> : index + 1}
-              </div>
-              <span
-                className={`mt-1.5 text-[10px] sm:text-xs text-center whitespace-nowrap ${
-                  currentStep >= step.id ? "text-white font-medium" : "text-gray-500"
-                }`}
-              >
-                {step.label}
-              </span>
+          <div key={step.id} className={`flex items-center ${index < steps.length - 1 ? 'flex-1' : ''}`}>
+            <div
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium transition-colors border-2 ${
+                currentStep > step.id
+                  ? "bg-primary/20 border-primary text-primary"
+                  : currentStep === step.id
+                  ? "bg-primary border-primary text-white"
+                  : "bg-gray-800 border-gray-600 text-gray-400"
+              }`}
+            >
+              {currentStep > step.id ? <Check className="h-4 w-4" /> : index + 1}
             </div>
             {index < steps.length - 1 && (
-              <div className="flex-1 h-0.5 mx-1 sm:mx-2 mb-5 relative">
+              <div className="flex-1 h-0.5 mx-2 relative">
                 <div className="absolute inset-0 bg-gray-700 rounded-full" />
                 <div
                   className={`absolute inset-y-0 left-0 rounded-full transition-all duration-300 ${
