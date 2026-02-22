@@ -184,17 +184,17 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser }: OnboardingStepIn
                   ? "bg-primary/20 border-primary text-primary"
                   : currentStep === step.id
                   ? "bg-primary border-primary text-white"
-                  : "bg-gray-800 border-gray-600 text-gray-400"
+                  : "bg-[#162a1b] border-primary/20 text-gray-400"
               }`}
             >
               {currentStep > step.id ? <Check className="h-4 w-4" /> : index + 1}
             </div>
             {index < steps.length - 1 && (
               <div className="flex-1 h-0.5 mx-2 relative">
-                <div className="absolute inset-0 bg-gray-700 rounded-full" />
+                <div className="absolute inset-0 bg-primary/15 rounded-full" />
                 <div
                   className={`absolute inset-y-0 left-0 rounded-full transition-all duration-300 ${
-                    currentStep > step.id ? "bg-primary w-full" : "bg-gray-700 w-0"
+                    currentStep > step.id ? "bg-primary w-full" : "bg-primary/15 w-0"
                   }`}
                 />
               </div>
@@ -741,7 +741,7 @@ export default function OnboardingFlow({
               <div className="flex flex-col md:grid md:grid-cols-2 md:gap-8">
                 {/* Left side - Full-height image card with overlay text */}
                 <div className="hidden md:block">
-                  <div className="rounded-2xl overflow-hidden border border-primary/30 relative h-full min-h-[420px] bg-gradient-to-b from-gray-800/40 to-gray-900/90">
+                  <div className="rounded-2xl overflow-hidden border border-primary/30 relative h-full min-h-[420px] bg-gradient-to-b from-primary/10 to-[#0d1f12]">
                     <img 
                       src="/attached_assets/Gamefolio logo.png" 
                       alt="Gamefolio" 
@@ -1024,7 +1024,7 @@ export default function OnboardingFlow({
             </p>
             
             <div className="mb-6 flex flex-col items-center">
-              <div className="mb-4 h-32 w-32 overflow-hidden rounded-full border-2 border-dashed border-gray-600 flex items-center justify-center relative group cursor-pointer"
+              <div className="mb-4 h-32 w-32 overflow-hidden rounded-full border-2 border-dashed border-primary/30 flex items-center justify-center relative group cursor-pointer"
                    onClick={() => document.getElementById('avatar-upload')?.click()}>
                 {avatarUrl ? (
                   <>
@@ -1399,7 +1399,7 @@ export default function OnboardingFlow({
               </>
             ) : isCreatingAnyWallet ? (
               <>
-                <Card className="bg-gray-800/50 border-gray-700 mb-6">
+                <Card className="bg-primary/5 border-primary/20 mb-6">
                   <CardContent className="p-6">
                     <div className="flex flex-col items-center text-center py-4">
                       <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
@@ -1487,7 +1487,7 @@ export default function OnboardingFlow({
   };
 
   return (
-    <div className="w-full mx-auto px-5 pt-8 pb-6 sm:p-6 md:p-8 min-h-screen sm:min-h-0 bg-gray-900 sm:rounded-lg shadow-lg flex flex-col">
+    <div className="w-full mx-auto px-5 pt-8 pb-6 sm:p-6 md:p-8 min-h-screen sm:min-h-0 bg-[#0d1f12] sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col">
       <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} />
       <div className="flex-1 flex flex-col">
         {renderStepContent()}
