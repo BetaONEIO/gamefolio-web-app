@@ -399,7 +399,7 @@ export const CustomAvatar = ({
         <Avatar 
           className={`${sizeClasses[size]} transition-all duration-300 rounded-full`}
           style={{
-            border: `3px solid ${borderColor}`,
+            border: `4px solid ${borderColor}`,
             boxShadow: `0 0 12px ${borderColor}50`,
             padding: '1px'
           }}

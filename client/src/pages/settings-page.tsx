@@ -1150,7 +1150,7 @@ export default function SettingsPage() {
                                 className="absolute rounded-full pointer-events-none"
                                 style={{ 
                                   inset: 'calc(50% - 4.25rem)',
-                                  border: `3px solid ${avatarBorderColor}`,
+                                  border: `4px solid ${avatarBorderColor}`,
                                   boxShadow: `0 0 12px ${avatarBorderColor}50`,
                                   zIndex: 5 
                                 }}
@@ -1569,7 +1569,7 @@ export default function SettingsPage() {
                           <div 
                             className="absolute inset-[calc(50%-4.25rem)] rounded-full pointer-events-none"
                             style={{ 
-                              border: `3px solid ${avatarBorderColor}`,
+                              border: `4px solid ${avatarBorderColor}`,
                               boxShadow: `0 0 12px ${avatarBorderColor}50`,
                               zIndex: 5 
                             }}
@@ -1671,7 +1671,7 @@ export default function SettingsPage() {
                                       style={{ 
                                         width: '2.75rem', 
                                         height: '2.75rem',
-                                        border: '3px solid #ffffff',
+                                        border: '4px solid #ffffff',
                                         top: '50%',
                                         left: '50%',
                                         transform: 'translate(-50%, -50%)'
