@@ -1,14 +1,18 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Check, Gamepad2, Upload, Share2, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet } from "lucide-react";
+import { Check, Gamepad2, Upload, Share2, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop } from "lucide-react";
 import { Game } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import TwitchGameSearch, { TwitchGame } from "@/components/games/TwitchGameSearch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
+import Cropper from "react-easy-crop";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWelcomePack } from "@/hooks/use-welcome-pack";
@@ -117,6 +121,40 @@ enum OnboardingStep {
   Complete = 6,
 }
 
+const createImage = (url: string): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener('load', () => resolve(image));
+    image.addEventListener('error', (error) => reject(error));
+    if (!url.startsWith('data:')) {
+      image.setAttribute('crossOrigin', 'anonymous');
+    }
+    image.src = url;
+  });
+
+const getCroppedImg = async (
+  imageSrc: string,
+  pixelCrop: { x: number; y: number; width: number; height: number }
+): Promise<Blob> => {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('No 2d context');
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+  ctx.drawImage(
+    image,
+    pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height,
+    0, 0, pixelCrop.width, pixelCrop.height
+  );
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error('Canvas is empty'));
+    }, 'image/jpeg', 0.95);
+  });
+};
+
 interface OnboardingStepIndicatorProps {
   currentStep: OnboardingStep;
   isGoogleUser: boolean;
@@ -202,6 +240,11 @@ export default function OnboardingFlow({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string>('');
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
   // Function to toggle user type selection
   const toggleUserType = (type: string) => {
@@ -529,23 +572,42 @@ export default function OnboardingFlow({
     }
   };
 
-  // Handle file input change
+  const onCropComplete = useCallback(
+    (_: any, croppedPixels: { x: number; y: number; width: number; height: number }) => {
+      setCroppedAreaPixels(croppedPixels);
+    }, []
+  );
+
+  const applyCrop = async () => {
+    if (!imageToCrop || !croppedAreaPixels) return;
+    try {
+      const croppedBlob = await getCroppedImg(imageToCrop, croppedAreaPixels);
+      const croppedFile = new File([croppedBlob], 'avatar.jpg', { type: 'image/jpeg' });
+      setAvatarUrl(URL.createObjectURL(croppedBlob));
+      setAvatarFile(croppedFile);
+      setShowCropModal(false);
+      setImageToCrop('');
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      handleAvatarUpload(croppedFile);
+    } catch (error) {
+      console.error('Error cropping image:', error);
+      toast({
+        title: "Crop failed",
+        description: "Failed to crop the image. Please try again.",
+        variant: "gamefolioError",
+      });
+    }
+  };
+
+  // Handle file input change - opens crop modal
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Validate file type - support all major image formats
       const allowedTypes = [
-        'image/jpeg',
-        'image/jpg', 
-        'image/png',
-        'image/webp',
-        'image/gif',
-        'image/bmp',
-        'image/tiff',
-        'image/svg+xml',
-        'image/avif',
-        'image/heic',
-        'image/heif'
+        'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
+        'image/gif', 'image/bmp', 'image/tiff', 'image/svg+xml',
+        'image/avif', 'image/heic', 'image/heif'
       ];
       
       if (!allowedTypes.includes(file.type.toLowerCase())) {
@@ -557,7 +619,6 @@ export default function OnboardingFlow({
         return;
       }
       
-      // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast({
           title: "File too large",
@@ -567,14 +628,13 @@ export default function OnboardingFlow({
         return;
       }
       
-      // Show immediate preview using local blob URL
-      const localPreviewUrl = URL.createObjectURL(file);
-      setAvatarUrl(localPreviewUrl);
-      setAvatarFile(file);
-      
-      // Upload to server in background
-      handleAvatarUpload(file);
+      const imageUrl = URL.createObjectURL(file);
+      setImageToCrop(imageUrl);
+      setShowCropModal(true);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
     }
+    event.target.value = '';
   };
 
 
@@ -947,7 +1007,7 @@ export default function OnboardingFlow({
         return (
           <>
             <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-2xl font-bold text-white">Upload Your Profile Picture</h2>
+              <h2 className="text-2xl font-bold text-white">Profile Picture</h2>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Info className="h-5 w-5 text-gray-400 cursor-help" />
@@ -1050,6 +1110,78 @@ export default function OnboardingFlow({
                 )}
               </Button>
             </div>
+
+            <Dialog open={showCropModal} onOpenChange={setShowCropModal}>
+              <DialogContent className="sm:max-w-lg max-w-[95vw] max-h-[90vh] bg-slate-900 border-slate-700 overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="text-white flex items-center gap-2">
+                    <Crop className="h-5 w-5" />
+                    Crop Profile Picture
+                  </DialogTitle>
+                  <DialogDescription className="text-slate-400">
+                    Drag to reposition and use the slider to zoom in or out
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="space-y-4">
+                  <div className="relative h-64 sm:h-80 w-full bg-slate-800 rounded-lg overflow-hidden touch-none">
+                    {imageToCrop && (
+                      <Cropper
+                        image={imageToCrop}
+                        crop={crop}
+                        zoom={zoom}
+                        aspect={1}
+                        cropShape="round"
+                        showGrid={false}
+                        onCropChange={setCrop}
+                        onCropComplete={onCropComplete}
+                        onZoomChange={setZoom}
+                        objectFit="contain"
+                      />
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-white flex items-center gap-2">
+                        <ZoomIn className="h-4 w-4" />
+                        Zoom
+                      </Label>
+                      <span className="text-sm text-slate-400">{Math.round(zoom * 100)}%</span>
+                    </div>
+                    <Slider
+                      value={[zoom]}
+                      min={1}
+                      max={3}
+                      step={0.1}
+                      onValueChange={([value]) => setZoom(value)}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+
+                <DialogFooter className="gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowCropModal(false);
+                      setImageToCrop('');
+                      setCrop({ x: 0, y: 0 });
+                      setZoom(1);
+                    }}
+                    className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={applyCrop}
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    Apply Crop
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </>
         );
 
