@@ -27,7 +27,7 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
   const { data: trendingGames, isLoading } = useQuery<TwitchGame[]>({
     queryKey: ["/api/twitch/games/top"],
     queryFn: async () => {
-      const response = await fetch("/api/twitch/games/top?limit=10");
+      const response = await fetch("/api/twitch/games/top?limit=50");
       if (!response.ok) throw new Error("Failed to fetch trending games");
       return await response.json();
     }
@@ -35,11 +35,11 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
 
   if (isLoading) {
     return (
-      <div className="flex gap-3 overflow-x-auto pb-2">
-        {Array(8).fill(0).map((_, index) => (
-          <div key={index} className="flex flex-col items-center flex-shrink-0">
-            <Skeleton className="h-20 w-[60px] rounded-lg mb-2" />
-            <Skeleton className="h-4 w-14" />
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+        {Array(12).fill(0).map((_, index) => (
+          <div key={index} className="flex flex-col items-center">
+            <Skeleton className="w-full aspect-[3/4] rounded-lg mb-2" />
+            <Skeleton className="h-4 w-3/4" />
           </div>
         ))}
       </div>
@@ -56,51 +56,53 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
   }
 
   return (
-    <div className="grid grid-cols-5 gap-3">
-      {trendingGames.slice(0, 5).map((game: TwitchGame) => {
-        const isSelected = selectedGames.some(g => g.id === parseInt(game.id));
-        
-        return (
-          <button
-            key={game.id}
-            onClick={() => onSelectGame(game)}
-            className={`group flex flex-col items-center p-2 rounded-lg transition-all focus:outline-none focus:ring-2 ${
-              isSelected 
-                ? 'bg-green-500/20 border-2 border-green-500 ring-2 ring-green-500/50' 
-                : 'hover:bg-primary/20 border-2 border-transparent focus:ring-primary/50'
-            }`}
-          >
-            <div className="relative w-full aspect-[3/4] mb-2 overflow-hidden rounded-md">
-              <img
-                src={game.box_art_url ? game.box_art_url.replace('{width}', '300').replace('{height}', '400') : "https://placehold.co/120x160?text=Game"}
-                alt={game.name}
-                className="h-full w-full object-cover transition-transform group-hover:scale-110"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = "https://placehold.co/120x160?text=Game";
-                }}
-              />
-              <div className={`absolute inset-0 flex items-center justify-center transition-opacity ${
+    <div className="max-h-[400px] overflow-y-auto pr-1">
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+        {trendingGames.map((game: TwitchGame) => {
+          const isSelected = selectedGames.some(g => g.id === parseInt(game.id));
+          
+          return (
+            <button
+              key={game.id}
+              onClick={() => onSelectGame(game)}
+              className={`group flex flex-col items-center p-1.5 rounded-lg transition-all focus:outline-none focus:ring-2 ${
                 isSelected 
-                  ? 'bg-green-500/30 opacity-100' 
-                  : 'bg-black/50 opacity-0 group-hover:opacity-100'
-              }`}>
-                {isSelected ? (
-                  <Check className="h-6 w-6 text-green-500" />
-                ) : (
-                  <Plus className="h-6 w-6 text-white" />
-                )}
+                  ? 'bg-green-500/20 border-2 border-green-500 ring-2 ring-green-500/50' 
+                  : 'hover:bg-primary/20 border-2 border-transparent focus:ring-primary/50'
+              }`}
+            >
+              <div className="relative w-full aspect-[3/4] mb-1.5 overflow-hidden rounded-md">
+                <img
+                  src={game.box_art_url ? game.box_art_url.replace('{width}', '300').replace('{height}', '400') : "https://placehold.co/120x160?text=Game"}
+                  alt={game.name}
+                  className="h-full w-full object-cover transition-transform group-hover:scale-110"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "https://placehold.co/120x160?text=Game";
+                  }}
+                />
+                <div className={`absolute inset-0 flex items-center justify-center transition-opacity ${
+                  isSelected 
+                    ? 'bg-green-500/30 opacity-100' 
+                    : 'bg-black/50 opacity-0 group-hover:opacity-100'
+                }`}>
+                  {isSelected ? (
+                    <Check className="h-6 w-6 text-green-500" />
+                  ) : (
+                    <Plus className="h-6 w-6 text-white" />
+                  )}
+                </div>
               </div>
-            </div>
-            <span className={`text-sm text-center line-clamp-2 w-full transition-colors ${
-              isSelected 
-                ? 'text-green-500 font-semibold' 
-                : 'text-gray-300 group-hover:text-primary'
-            }`}>
-              {game.name}
-            </span>
-          </button>
-        );
-      })}
+              <span className={`text-xs text-center line-clamp-2 w-full leading-tight transition-colors ${
+                isSelected 
+                  ? 'text-green-500 font-semibold' 
+                  : 'text-gray-300 group-hover:text-primary'
+              }`}>
+                {game.name}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
