@@ -394,13 +394,14 @@ export const CustomAvatar = ({
   }
 
   if (hasSolidBorder) {
+    const solidColor = user?.avatarBorderColor || borderColor;
     return (
       <div className={`relative inline-flex items-center justify-center ${className}`}>
         <Avatar 
           className={`${sizeClasses[size]} transition-all duration-300 rounded-full`}
           style={{
-            border: `4px solid ${borderColor}`,
-            boxShadow: `0 0 12px ${borderColor}50`
+            border: `4px solid ${solidColor}`,
+            boxShadow: `0 0 12px ${solidColor}50`
           }}
         >
           <AvatarImage 
