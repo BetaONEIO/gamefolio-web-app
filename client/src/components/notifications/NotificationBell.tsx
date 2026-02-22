@@ -85,41 +85,9 @@ export function NotificationBell() {
   const { data: notifications = [] } = useQuery<NotificationWithUser[]>({
     queryKey: ['/api/notifications'],
     queryFn: async () => {
-      try {
-        const response = await fetch('/api/notifications');
-        if (!response.ok) throw new Error("Failed to fetch notifications");
-        return await response.json();
-      } catch (error) {
-        // Fallback to demo data when database table doesn't exist
-        return [
-          {
-            id: 1,
-            type: 'like',
-            title: 'New Like',
-            message: 'demo user liked your clip "Epic Gaming Moment"',
-            isRead: false,
-            createdAt: new Date().toISOString(),
-            fromUser: {
-              username: 'demo',
-              displayName: 'Demo User',
-              avatarUrl: null
-            }
-          },
-          {
-            id: 2,
-            type: 'comment',
-            title: 'New Comment',
-            message: 'demo user commented on your clip: "Amazing play!"',
-            isRead: false,
-            createdAt: new Date(Date.now() - 300000).toISOString(),
-            fromUser: {
-              username: 'demo',
-              displayName: 'Demo User',
-              avatarUrl: null
-            }
-          }
-        ];
-      }
+      const response = await fetch('/api/notifications', { credentials: 'include' });
+      if (!response.ok) throw new Error("Failed to fetch notifications");
+      return await response.json();
     },
   });
 
@@ -127,14 +95,9 @@ export function NotificationBell() {
   const { data: unreadCount = 0 } = useQuery<number>({
     queryKey: ['/api/notifications/unread-count'],
     queryFn: async () => {
-      try {
-        const response = await fetch('/api/notifications/unread-count');
-        if (!response.ok) throw new Error("Failed to fetch unread count");
-        return await response.json();
-      } catch (error) {
-        // Fallback to demo data when database table doesn't exist
-        return 2; // Demo unread count
-      }
+      const response = await fetch('/api/notifications/unread-count', { credentials: 'include' });
+      if (!response.ok) throw new Error("Failed to fetch unread count");
+      return await response.json();
     },
   });
 
