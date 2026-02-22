@@ -13,7 +13,7 @@ import {
 } from "@stripe/react-stripe-js";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import proHeroImage from "@assets/gamefolio_pro_banner_1770379359049.png";
+import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 import ProOnboardingScreen from "@/components/pro/ProOnboardingScreen";
 
 interface ProUpgradeDialogProps {
@@ -361,39 +361,39 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
     const monthlyPrice = monthlyPkg ? formatPrice(monthlyPkg) : null;
 
     return (
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
         {yearlyPkg && (
           <button
             type="button"
             onClick={() => setBillingPeriod("yearly")}
-            className={`relative w-full rounded-2xl border-2 transition-all p-4 text-left ${
+            className={`relative w-full rounded-xl border-2 transition-all p-3 text-left ${
               billingPeriod === "yearly"
                 ? "border-[#4ade80] bg-[#4ade800d]"
                 : "border-[#1e293b] bg-[#0f172a] hover:border-[#334155]"
             }`}
           >
             {savings > 0 && (
-              <div className="absolute -top-2.5 right-4 bg-[#4ade80] text-[#022c22] text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full">
+              <div className="absolute -top-2.5 right-3 bg-[#4ade80] text-[#022c22] text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
                 Save {savings}%
               </div>
             )}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+              <div className="flex items-center gap-2.5">
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                   billingPeriod === "yearly" ? "border-[#4ade80] bg-[#4ade80]" : "border-[#475569]"
                 }`}>
-                  {billingPeriod === "yearly" && <Check className="w-3 h-3 text-[#022c22]" strokeWidth={3} />}
+                  {billingPeriod === "yearly" && <Check className="w-2.5 h-2.5 text-[#022c22]" strokeWidth={3} />}
                 </div>
                 <div>
-                  <div className="text-white font-semibold text-[15px]">Yearly</div>
-                  <div className="text-[#94a3b8] text-xs mt-0.5">
+                  <div className="text-white font-semibold text-sm">Yearly</div>
+                  <div className="text-[#94a3b8] text-[11px]">
                     {yearlyTotal} billed annually
                   </div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-white font-bold text-lg">{yearlyPerMonth}</div>
-                <div className="text-[#94a3b8] text-xs">/month</div>
+                <div className="text-white font-bold text-base">{yearlyPerMonth}</div>
+                <div className="text-[#94a3b8] text-[11px]">/month</div>
               </div>
             </div>
           </button>
@@ -403,47 +403,47 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
           <button
             type="button"
             onClick={() => setBillingPeriod("monthly")}
-            className={`w-full rounded-2xl border-2 transition-all p-4 text-left ${
+            className={`w-full rounded-xl border-2 transition-all p-3 text-left ${
               billingPeriod === "monthly"
                 ? "border-[#4ade80] bg-[#4ade800d]"
                 : "border-[#1e293b] bg-[#0f172a] hover:border-[#334155]"
             }`}
           >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+              <div className="flex items-center gap-2.5">
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                   billingPeriod === "monthly" ? "border-[#4ade80] bg-[#4ade80]" : "border-[#475569]"
                 }`}>
-                  {billingPeriod === "monthly" && <Check className="w-3 h-3 text-[#022c22]" strokeWidth={3} />}
+                  {billingPeriod === "monthly" && <Check className="w-2.5 h-2.5 text-[#022c22]" strokeWidth={3} />}
                 </div>
                 <div>
-                  <div className="text-white font-semibold text-[15px]">Monthly</div>
-                  <div className="text-[#94a3b8] text-xs mt-0.5">
+                  <div className="text-white font-semibold text-sm">Monthly</div>
+                  <div className="text-[#94a3b8] text-[11px]">
                     Billed monthly, cancel anytime
                   </div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-white font-bold text-lg">{monthlyPrice}</div>
-                <div className="text-[#94a3b8] text-xs">/month</div>
+                <div className="text-white font-bold text-base">{monthlyPrice}</div>
+                <div className="text-[#94a3b8] text-[11px]">/month</div>
               </div>
             </div>
           </button>
         )}
 
         {!monthlyPkg && !yearlyPkg && packages && packages.length > 0 && (
-          <div className="w-full rounded-2xl border-2 border-[#4ade80] bg-[#4ade800d] p-4">
+          <div className="w-full rounded-xl border-2 border-[#4ade80] bg-[#4ade800d] p-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full border-2 border-[#4ade80] bg-[#4ade80] flex items-center justify-center flex-shrink-0">
-                  <Check className="w-3 h-3 text-[#022c22]" strokeWidth={3} />
+              <div className="flex items-center gap-2.5">
+                <div className="w-4 h-4 rounded-full border-2 border-[#4ade80] bg-[#4ade80] flex items-center justify-center flex-shrink-0">
+                  <Check className="w-2.5 h-2.5 text-[#022c22]" strokeWidth={3} />
                 </div>
                 <div>
-                  <div className="text-white font-semibold text-[15px]">{packages[0].rcBillingProduct?.displayName || "Pro"}</div>
+                  <div className="text-white font-semibold text-sm">{packages[0].rcBillingProduct?.displayName || "Pro"}</div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-white font-bold text-lg">{formatPrice(packages[0])}</div>
+                <div className="text-white font-bold text-base">{formatPrice(packages[0])}</div>
               </div>
             </div>
           </div>
@@ -454,7 +454,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
 
   const leftPanel = (
     <div className="relative w-full h-full min-h-0 flex flex-col bg-[#020617]">
-      <div className="relative flex-1 min-h-[280px] md:min-h-[300px]">
+      <div className="relative flex-1 min-h-[200px] md:min-h-[220px]">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${proHeroImage})` }}
@@ -463,15 +463,15 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
 
         <button
           onClick={() => onOpenChange(false)}
-          className="absolute top-4 right-4 md:top-4 md:left-4 md:right-auto w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center transition-colors hover:bg-black/60 z-10"
+          className="absolute top-3 right-3 md:top-3 md:left-3 md:right-auto w-8 h-8 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center transition-colors hover:bg-black/60 z-10"
         >
-          <X className="w-5 h-5 text-white" />
+          <X className="w-4 h-4 text-white" />
         </button>
       </div>
 
-      <div className="relative z-10 px-6 pb-6 -mt-32">
-        <div className="flex justify-center mb-4 md:justify-start">
-          <div className="inline-flex items-center gap-2 bg-[#14532d4d] border border-[#4ade8033] rounded-full px-4 py-1.5">
+      <div className="relative z-10 px-5 pb-4 -mt-28">
+        <div className="flex justify-center mb-3 md:justify-start">
+          <div className="inline-flex items-center gap-1.5 bg-[#14532d4d] border border-[#4ade8033] rounded-full px-3 py-1">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path fillRule="evenodd" clipRule="evenodd" d="M13.3953 9.55057L13.524 8.28791C13.5926 7.61391 13.6373 7.16924 13.602 6.88858H13.6153C14.196 6.88858 14.6673 6.39124 14.6673 5.77791C14.6673 5.16458 14.196 4.66658 13.6146 4.66658C13.0333 4.66658 12.562 5.16391 12.562 5.77791C12.562 6.05524 12.6586 6.30924 12.818 6.50391C12.5893 6.65258 12.29 6.96724 11.8393 7.44058C11.4926 7.80524 11.3193 7.98724 11.126 8.01591C11.0186 8.03123 10.909 8.01502 10.8106 7.96924C10.632 7.88658 10.5126 7.66124 10.2746 7.20991L9.01864 4.83325C8.87197 4.55525 8.74864 4.32258 8.63731 4.13525C9.09264 3.88991 9.40397 3.39058 9.40397 2.81525C9.40397 1.99592 8.77597 1.33325 8.00064 1.33325C7.22531 1.33325 6.59731 1.99658 6.59731 2.81458C6.59731 3.39058 6.90864 3.88991 7.36398 4.13458C7.25264 4.32258 7.12998 4.55525 6.98264 4.83325L5.72731 7.21058C5.48864 7.66124 5.36931 7.88658 5.19065 7.96991C5.09227 8.01568 4.98272 8.0319 4.87531 8.01657C4.68198 7.98791 4.50865 7.80524 4.16198 7.44058C3.71131 6.96724 3.41198 6.65258 3.18331 6.50391C3.34331 6.30924 3.43931 6.05524 3.43931 5.77725C3.43931 5.16458 2.96732 4.66658 2.38598 4.66658C1.80598 4.66658 1.33398 5.16391 1.33398 5.77791C1.33398 6.39124 1.80532 6.88858 2.38665 6.88858H2.39932C2.36332 7.16858 2.40865 7.61391 2.47732 8.28791L2.60598 9.55057C2.67732 10.2512 2.73665 10.9179 2.80998 11.5186H13.1913C13.2646 10.9186 13.324 10.2512 13.3953 9.55057Z" fill="#4ADE80" />
               <path fillRule="evenodd" clipRule="evenodd" d="M7.23731 14.6666H8.76397C10.754 14.6666 11.7493 14.6666 12.4133 14.0399C12.7026 13.7652 12.8866 13.2719 13.0186 12.6292H2.98265C3.11465 13.2719 3.29798 13.7652 3.58798 14.0392C4.25198 14.6666 5.24731 14.6666 7.23731 14.6666Z" fill="#4ADE80" />
@@ -482,14 +482,14 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
           </div>
         </div>
 
-        <div className="text-center md:text-left mb-2">
-          <h2 className="text-2xl font-bold leading-tight whitespace-nowrap">
+        <div className="text-center md:text-left mb-1">
+          <h2 className="text-xl font-bold leading-tight whitespace-nowrap">
             <span className="text-white">Unlock </span>
             <span className="text-[#4ade80]">Gamefolio Pro</span>
           </h2>
         </div>
 
-        <p className="text-[#94a3b8] text-base text-center md:text-left leading-relaxed hidden md:block max-w-[325px]">
+        <p className="text-[#94a3b8] text-sm text-center md:text-left leading-relaxed hidden md:block max-w-[280px]">
           Elevate your gaming identity with premium features designed for elite creators
         </p>
       </div>
@@ -497,24 +497,24 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   );
 
   const rightPanel = (
-    <div className="flex flex-col justify-between h-full px-6 py-8 bg-[#020617]">
-      <div className="flex flex-col gap-6 mb-6">
+    <div className="flex flex-col justify-between h-full px-5 py-5 bg-[#020617]">
+      <div className="flex flex-col gap-3.5 mb-4">
         {premiumBenefits.map((benefit, index) => (
           <motion.div
             key={benefit.title}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.08 }}
-            className="flex items-start gap-4"
+            className="flex items-start gap-3"
           >
-            <div className="w-12 h-12 rounded-2xl bg-[#1e293b] border border-[#1e293b] flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-[#1e293b] border border-[#1e293b] flex items-center justify-center flex-shrink-0">
               {benefit.icon}
             </div>
-            <div className="flex flex-col justify-center min-h-[48px]">
-              <span className="text-[#f8fafc] text-lg font-semibold leading-7">
+            <div className="flex flex-col justify-center min-h-[36px]">
+              <span className="text-[#f8fafc] text-sm font-semibold leading-5">
                 {benefit.title}
               </span>
-              <span className="text-[#94a3b8] text-sm leading-5">
+              <span className="text-[#94a3b8] text-xs leading-4">
                 {benefit.description}
               </span>
             </div>
@@ -522,9 +522,9 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
         ))}
       </div>
 
-      <div className="flex flex-col gap-4 mt-auto">
-        <div className="mb-1">
-          <span className="text-[#94a3b8] text-xs font-bold uppercase tracking-[1.2px]">
+      <div className="flex flex-col gap-3 mt-auto">
+        <div className="mb-0.5">
+          <span className="text-[#94a3b8] text-[10px] font-bold uppercase tracking-[1.2px]">
             Choose your plan
           </span>
         </div>
@@ -534,7 +534,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
         <button
           onClick={handleJoinPro}
           disabled={buttonDisabled}
-          className="w-full py-4 bg-[#4ade80] hover:bg-[#3bce71] rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed mt-1"
+          className="w-full py-3 bg-[#4ade80] hover:bg-[#3bce71] rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed mt-1"
           style={{ boxShadow: "0 0 30px -5px #4ade80" }}
           data-testid="button-upgrade-pro"
         >
@@ -542,8 +542,8 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
             <Loader2 className="w-5 h-5 animate-spin text-[#022c22]" />
           ) : (
             <>
-              <span className="text-[#022c22] text-lg font-bold">Join Gamefolio Pro</span>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <span className="text-[#022c22] text-base font-bold">Join Gamefolio Pro</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M4 12H20M20 12L14 6M20 12L14 18" stroke="#022C22" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </>
@@ -554,7 +554,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
           <p className="text-red-400 text-xs text-center">{checkoutError}</p>
         )}
 
-        <span className="text-[#94a3b8] text-xs text-center">
+        <span className="text-[#94a3b8] text-[11px] text-center">
           Cancel anytime. Terms and conditions apply.
         </span>
       </div>
@@ -636,7 +636,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-[430px] md:max-w-[860px] w-full bg-[#020617] border-none text-white p-0 overflow-hidden [&>button]:hidden max-h-[100dvh] h-[100dvh] md:h-auto md:max-h-[95vh] gap-0 rounded-none sm:rounded-none top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
+        className="max-w-[430px] md:max-w-[620px] w-full bg-[#020617] border-none text-white p-0 overflow-hidden [&>button]:hidden max-h-[100dvh] h-[100dvh] md:h-auto md:max-h-[90vh] gap-0 rounded-none sm:rounded-none top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
         data-testid="dialog-pro-upgrade"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
