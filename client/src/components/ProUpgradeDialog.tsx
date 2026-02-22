@@ -462,8 +462,8 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
             className="w-full h-full object-contain"
           />
         </div>
-        <div className="absolute inset-x-0 top-0 h-[40%] bg-gradient-to-b from-[#020617] via-[#020617] to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-[50%] bg-gradient-to-t from-[#020617] via-[#020617] to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-[15%]" style={{ background: 'linear-gradient(to bottom, #020617 0%, #020617 20%, transparent 100%)' }} />
+        <div className="absolute inset-x-0 bottom-0 h-[15%]" style={{ background: 'linear-gradient(to top, #020617 0%, #020617 20%, transparent 100%)' }} />
 
         <button
           onClick={() => onOpenChange(false)}
@@ -659,8 +659,8 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
                     alt="Gamefolio Pro"
                     className="w-full h-auto object-contain"
                   />
-                  <div className="absolute inset-x-0 top-0 h-[40%] bg-gradient-to-b from-[#020617] via-[#020617] to-transparent" />
-                  <div className="absolute inset-x-0 bottom-0 h-[50%] bg-gradient-to-t from-[#020617] via-[#020617] to-transparent" />
+                  <div className="absolute inset-x-0 top-0 h-[15%]" style={{ background: 'linear-gradient(to bottom, #020617 0%, #020617 20%, transparent 100%)' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-[15%]" style={{ background: 'linear-gradient(to top, #020617 0%, #020617 20%, transparent 100%)' }} />
                   <button
                     onClick={() => onOpenChange(false)}
                     className="absolute top-3 right-3 w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center transition-colors hover:bg-black/60 z-10"
