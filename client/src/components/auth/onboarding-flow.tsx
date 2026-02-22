@@ -1329,8 +1329,8 @@ export default function OnboardingFlow({
             </div>
             
             {walletAddress ? (
-              <div className="mb-6">
-                <Card className="bg-primary/10 border-primary/50">
+              <>
+                <Card className="bg-primary/10 border-primary/50 mb-6">
                   <CardContent className="p-6">
                     <div className="flex items-center gap-4 mb-4">
                       <div className="p-3 rounded-full bg-primary text-white">
@@ -1360,10 +1360,10 @@ export default function OnboardingFlow({
                     Next <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
-              </div>
+              </>
             ) : walletError ? (
-              <div className="mb-6">
-                <Card className="bg-red-900/20 border-red-500/50">
+              <>
+                <Card className="bg-red-900/20 border-red-500/50 mb-6">
                   <CardContent className="p-6">
                     <div className="flex flex-col items-center text-center py-4">
                       <div className="p-3 rounded-full bg-red-500/20 text-red-400 mb-4">
@@ -1383,18 +1383,23 @@ export default function OnboardingFlow({
                   </CardContent>
                 </Card>
                 
-                <Button
-                  onClick={goToNextStep}
-                  variant="ghost"
-                  className="w-full mt-4 text-gray-400 hover:text-white"
-                  data-testid="button-skip-wallet"
-                >
-                  Skip for now
-                </Button>
-              </div>
+                <div className="flex gap-3 mt-auto">
+                  <Button variant="outline" onClick={goToPrevStep} className="border-border hover:bg-secondary">
+                    Back
+                  </Button>
+                  <Button
+                    onClick={goToNextStep}
+                    variant="ghost"
+                    className="flex-1 text-gray-400 hover:text-white"
+                    data-testid="button-skip-wallet"
+                  >
+                    Skip for now
+                  </Button>
+                </div>
+              </>
             ) : isCreatingAnyWallet ? (
-              <div className="mb-6">
-                <Card className="bg-gray-800/50 border-gray-700">
+              <>
+                <Card className="bg-gray-800/50 border-gray-700 mb-6">
                   <CardContent className="p-6">
                     <div className="flex flex-col items-center text-center py-4">
                       <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
@@ -1405,9 +1410,15 @@ export default function OnboardingFlow({
                     </div>
                   </CardContent>
                 </Card>
-              </div>
+                
+                <div className="flex gap-3 mt-auto">
+                  <Button variant="outline" onClick={goToPrevStep} className="border-border hover:bg-secondary">
+                    Back
+                  </Button>
+                </div>
+              </>
             ) : (
-              <div className="mb-6">
+              <>
                 <p className="text-gray-300 mb-6">
                   Get a blockchain wallet to store GF Tokens, collect NFTs, and unlock exclusive features.
                 </p>
@@ -1441,7 +1452,7 @@ export default function OnboardingFlow({
                     <span>Skip for now</span>
                   </Button>
                 </div>
-              </div>
+              </>
             )}
           </div>
         );
