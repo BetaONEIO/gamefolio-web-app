@@ -1132,7 +1132,7 @@ export default function SettingsPage() {
                                 </div>
                               )}
                             </div>
-                            {selectedBorderId && avatarBorders && (() => {
+                            {selectedBorderId && selectedBorderId !== -1 && avatarBorders && (() => {
                               const border = (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId);
                               if (!border) return null;
                               
@@ -1145,6 +1145,17 @@ export default function SettingsPage() {
                                 />
                               );
                             })()}
+                            {selectedBorderId === -1 && (
+                              <div 
+                                className="absolute rounded-full pointer-events-none"
+                                style={{ 
+                                  inset: 'calc(50% - 4.25rem)',
+                                  border: `3px solid ${avatarBorderColor}`,
+                                  boxShadow: `0 0 12px ${avatarBorderColor}50`,
+                                  zIndex: 5 
+                                }}
+                              />
+                            )}
                           </div>
                           <div className="text-center flex flex-col items-center gap-1">
                             <span className="text-sm font-medium">
@@ -1543,7 +1554,7 @@ export default function SettingsPage() {
                             </div>
                           )}
                         </div>
-                        {selectedBorderId && avatarBorders && (() => {
+                        {selectedBorderId && selectedBorderId !== -1 && avatarBorders && (() => {
                           const border = (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId);
                           return border ? (
                             <InlineSvgBorder
@@ -1554,6 +1565,16 @@ export default function SettingsPage() {
                             />
                           ) : null;
                         })()}
+                        {selectedBorderId === -1 && (
+                          <div 
+                            className="absolute inset-[calc(50%-4.25rem)] rounded-full pointer-events-none"
+                            style={{ 
+                              border: `3px solid ${avatarBorderColor}`,
+                              boxShadow: `0 0 12px ${avatarBorderColor}50`,
+                              zIndex: 5 
+                            }}
+                          />
+                        )}
                       </div>
                     )}
                     <div>
@@ -1561,9 +1582,11 @@ export default function SettingsPage() {
                       <p className="text-xs text-muted-foreground">
                         {user?.activeProfilePicType === 'nft'
                           ? 'NFT Profile Picture'
-                          : selectedBorderId && avatarBorders 
-                            ? (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId)?.name || "Selected"
-                            : "No border selected"}
+                          : selectedBorderId === -1
+                            ? 'Solid Border'
+                            : selectedBorderId && avatarBorders 
+                              ? (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId)?.name || "Selected"
+                              : "No border selected"}
                       </p>
                     </div>
                   </div>
@@ -1630,6 +1653,42 @@ export default function SettingsPage() {
                                 >
                                   <X className="h-8 w-8 text-muted-foreground mb-1" />
                                   <span className="text-xs text-muted-foreground">None</span>
+                                </div>
+                              )}
+                              
+                              {/* Solid border - built-in static option, always available */}
+                              {category === 'static' && (
+                                <div
+                                  data-testid="border-select-solid"
+                                  className={`
+                                    cursor-pointer rounded-md border-2 p-2 relative transition-all flex flex-col items-center
+                                    ${selectedBorderId === -1 ? 'border-primary ring-2 ring-primary/50 bg-primary/10' : 'border-muted hover:border-primary/50'}
+                                  `}
+                                  onClick={() => {
+                                    if (selectedBorderId === -1) {
+                                      setSelectedBorderId(null);
+                                      saveAvatarBorderMutation.mutate(null);
+                                    } else {
+                                      setSelectedBorderId(-1);
+                                      saveAvatarBorderMutation.mutate(-1);
+                                    }
+                                  }}
+                                >
+                                  <div className="relative w-16 h-16 flex items-center justify-center">
+                                    <div className="w-10 h-10 rounded-full bg-muted" />
+                                    <div 
+                                      className="absolute rounded-full"
+                                      style={{ 
+                                        width: '2.75rem', 
+                                        height: '2.75rem',
+                                        border: '3px solid #ffffff',
+                                        top: '50%',
+                                        left: '50%',
+                                        transform: 'translate(-50%, -50%)'
+                                      }}
+                                    />
+                                  </div>
+                                  <span className="text-xs text-center mt-1 truncate w-full">Solid</span>
                                 </div>
                               )}
                               
