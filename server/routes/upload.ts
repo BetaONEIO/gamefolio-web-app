@@ -717,9 +717,19 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
       // In a production environment, you might want to use a separate worker queue
       const tempVideoPath = path.join(tempDir, `video-${Date.now()}.mp4`);
 
-      // Download video from Supabase for processing
-      console.log(`🎬 Downloading video for thumbnail generation from: ${uploadResult.url.substring(0, 80)}...`);
-      const videoResponse = await fetch(uploadResult.url);
+      // Download video from Supabase for processing (use signed URL for authenticated access)
+      let downloadUrl = uploadResult.url;
+      try {
+        const signedUrl = await supabaseStorage.convertToSignedUrl(uploadResult.url, 300);
+        if (signedUrl) {
+          downloadUrl = signedUrl;
+          console.log(`🔑 Using signed URL for video download`);
+        }
+      } catch (signError) {
+        console.warn('Could not generate signed URL, falling back to public URL:', signError);
+      }
+      console.log(`🎬 Downloading video for thumbnail generation from: ${downloadUrl.substring(0, 80)}...`);
+      const videoResponse = await fetch(downloadUrl);
       console.log(`📥 Video download response: ${videoResponse.status} ${videoResponse.statusText}`);
       
       if (videoResponse.ok) {
@@ -793,7 +803,7 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
         // Try to re-download with different approach for duration extraction
         try {
           console.log('Attempting alternative video download for duration extraction...');
-          const response = await fetch(uploadResult.url);
+          const response = await fetch(downloadUrl);
           if (response.ok) {
             const videoBuffer = await response.arrayBuffer();
             const retryTempPath = path.join(tempDir, `retry-video-${Date.now()}.mp4`);
