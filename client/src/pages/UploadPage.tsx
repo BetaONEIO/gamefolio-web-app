@@ -2079,7 +2079,7 @@ const UploadPage = () => {
       {isUploading && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative w-full sm:max-w-2xl bg-[#020617] sm:rounded-2xl overflow-hidden shadow-2xl border border-slate-800/50">
+          <div className="relative w-full sm:max-w-2xl bg-[#101D27] sm:rounded-2xl overflow-hidden shadow-2xl border border-[#1e3a4a]/50">
             <div className="flex flex-col items-center justify-center px-6 py-10 sm:px-10 sm:py-14 gap-6">
               <div className="flex items-center gap-1">
                 <span className="text-6xl sm:text-8xl font-black text-white tracking-tighter leading-none" style={{ letterSpacing: '-4px' }}>
@@ -2093,7 +2093,7 @@ const UploadPage = () => {
               </span>
 
               <div className="w-full space-y-3 px-2 sm:px-4">
-                <div className="w-full h-1.5 bg-slate-800/50 rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-[#1e3a4a]/50 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-[#4ade80] rounded-full transition-all duration-500 ease-out"
                     style={{
@@ -2102,7 +2102,7 @@ const UploadPage = () => {
                     }}
                   />
                 </div>
-                <div className="flex justify-between text-[10px] font-bold tracking-[1px] uppercase text-slate-600">
+                <div className="flex justify-between text-[10px] font-bold tracking-[1px] uppercase text-[#4a6a7a]">
                   <span className={uploadProgress >= 25 ? "text-[#4ade80]/60" : ""}>25%</span>
                   <span className={uploadProgress >= 50 ? "text-[#4ade80]/60" : ""}>50%</span>
                   <span className={uploadProgress >= 75 ? "text-[#4ade80]/60" : ""}>75%</span>
@@ -2114,7 +2114,7 @@ const UploadPage = () => {
                 <h3 className="text-white font-bold text-lg uppercase tracking-tight">
                   {uploadProgress < 60 ? "Almost there..." : uploadProgress < 100 ? "Almost there..." : "Processing..."}
                 </h3>
-                <p className="text-slate-400/80 text-sm">
+                <p className="text-[#8fa8b8] text-sm">
                   Uploading {file?.name || 'video'} ({(file?.size ? file.size / (1024 * 1024) : 0).toFixed(1)} MB)
                 </p>
               </div>
@@ -2128,7 +2128,7 @@ const UploadPage = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-center gap-4 px-8 py-6 bg-[#020617]/80 backdrop-blur-xl border-t border-slate-800/10">
+            <div className="flex items-center justify-center gap-4 px-8 py-6 bg-[#0b1820]/80 backdrop-blur-xl border-t border-[#1e3a4a]/10">
               <button
                 type="button"
                 onClick={() => {
@@ -2138,7 +2138,7 @@ const UploadPage = () => {
                   setIsUploading(false);
                   setUploadProgress(0);
                 }}
-                className="text-slate-400 text-sm font-bold tracking-[1.4px] uppercase hover:text-slate-200 transition-colors px-6 py-3"
+                className="text-[#8fa8b8] text-sm font-bold tracking-[1.4px] uppercase hover:text-white transition-colors px-6 py-3"
               >
                 Cancel
               </button>
@@ -2157,7 +2157,7 @@ const UploadPage = () => {
       {uploadLimitDialogOpen && !showProUpgrade && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setUploadLimitDialogOpen(false)} />
-          <div className="relative w-full sm:max-w-md bg-[#020617] sm:rounded-2xl overflow-hidden shadow-2xl border border-slate-800/50">
+          <div className="relative w-full sm:max-w-md bg-[#101D27] sm:rounded-2xl overflow-hidden shadow-2xl border border-[#1e3a4a]/50">
             <div className="flex flex-col items-center justify-center px-6 py-10 sm:px-10 sm:py-12 gap-5">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500/20 to-red-600/10 border border-red-500/20 flex items-center justify-center">
                 <AlertCircle className="w-8 h-8 text-red-400" />
@@ -2165,7 +2165,7 @@ const UploadPage = () => {
 
               <div className="text-center space-y-2">
                 <h3 className="text-white font-bold text-xl">Daily Upload Limit Reached</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">
+                <p className="text-[#8fa8b8] text-sm leading-relaxed">
                   You've used all your free uploads for today. Upgrade to Gamefolio Pro for unlimited uploads every day.
                 </p>
               </div>
@@ -2183,7 +2183,7 @@ const UploadPage = () => {
                 </button>
                 <button
                   onClick={() => setUploadLimitDialogOpen(false)}
-                  className="w-full py-3 text-slate-400 hover:text-slate-200 text-sm font-medium transition-colors"
+                  className="w-full py-3 text-[#8fa8b8] hover:text-white text-sm font-medium transition-colors"
                 >
                   Maybe Later
                 </button>
