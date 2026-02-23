@@ -2150,6 +2150,7 @@ export default function SettingsPage() {
               ) : showBannerUpload ? (
                 <BannerUploadPreview
                   currentBannerUrl={profileData.bannerUrl}
+                  isPro={user?.isPro === true}
                   onUpload={(bannerUrl) => {
                     console.log('🎯 BANNER UPLOADED - Setting tracking state:', bannerUrl);
                     setUploadedBannerUrl(bannerUrl); // Track uploaded banner

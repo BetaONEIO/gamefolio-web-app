@@ -9,13 +9,15 @@ interface BannerUploadPreviewProps {
   onCancel?: () => void;
   currentBannerUrl?: string;
   isUploading?: boolean;
+  isPro?: boolean;
 }
 
 export function BannerUploadPreview({ 
   onUpload, 
   onCancel, 
   currentBannerUrl,
-  isUploading = false 
+  isUploading = false,
+  isPro = false 
 }: BannerUploadPreviewProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -35,22 +37,39 @@ export function BannerUploadPreview({
       'image/jpeg',
       'image/jpg', 
       'image/png',
-      'image/webp'
+      'image/webp',
+      ...(isPro ? ['image/gif'] : [])
     ];
+    
+    const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
+    
+    if (isGif && !isPro) {
+      toast({
+        title: "Pro feature",
+        description: "Animated GIF banners are a Pro perk. Upgrade to Pro to use GIF banners!",
+        variant: "destructive",
+      });
+      return;
+    }
     
     if (!allowedTypes.includes(file.type.toLowerCase())) {
       toast({
         title: "Invalid file type",
-        description: "Please select a valid image file (JPEG, PNG, WebP).",
+        description: isPro 
+          ? "Please select a valid image file (JPEG, PNG, WebP, GIF)."
+          : "Please select a valid image file (JPEG, PNG, WebP).",
         variant: "destructive",
       });
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    const maxSize = isGif ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+    if (file.size > maxSize) {
       toast({
         title: "File too large",
-        description: "Please select an image smaller than 5MB.",
+        description: isGif 
+          ? "Please select a GIF smaller than 10MB."
+          : "Please select an image smaller than 5MB.",
         variant: "destructive",
       });
       return;
@@ -63,7 +82,7 @@ export function BannerUploadPreview({
     setScale(1);
     setIsDragMode(true);
     setIsImageLoaded(false);
-  }, [toast]);
+  }, [toast, isPro]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -258,14 +277,16 @@ export function BannerUploadPreview({
               Choose File
             </Button>
             <p className="text-xs text-muted-foreground">
-              Supports JPEG, PNG, WebP (max 5MB)
+              {isPro 
+                ? "Supports JPEG, PNG, WebP, GIF (max 5MB, GIF max 10MB)"
+                : "Supports JPEG, PNG, WebP (max 5MB)"}
             </p>
           </div>
           
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept={isPro ? "image/jpeg,image/png,image/webp,image/gif" : "image/jpeg,image/png,image/webp"}
             onChange={handleFileInputChange}
             className="hidden"
           />

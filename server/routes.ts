@@ -6364,35 +6364,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Uploaded file not found" });
       }
 
-      // Process image with Sharp using the file path
-      let sharpInstance = sharp(req.file.path);
+      // Check if file is a GIF and user is Pro
+      const isGif = req.file.mimetype === 'image/gif' || req.file.originalname.toLowerCase().endsWith('.gif');
+      const user = await storage.getUser(req.user.id);
+      const isPro = user?.isPro === true;
 
-      // Get image metadata
-      const metadata = await sharpInstance.metadata();
-      console.log("Image metadata:", metadata);
+      let processedBuffer: Buffer;
+      let fileName: string;
+      let mimeType: string;
 
-      if (!metadata.width || !metadata.height) {
-        return res.status(400).json({ message: "Invalid image file" });
+      if (isGif && isPro) {
+        console.log('Processing GIF banner for Pro user - preserving animation');
+        processedBuffer = await fsPromises.readFile(req.file.path);
+        fileName = `banner-${req.user.id}-${Date.now()}.gif`;
+        mimeType = 'image/gif';
+      } else if (isGif && !isPro) {
+        console.log('Non-Pro user tried to upload GIF banner - rejecting');
+        try { await fsPromises.unlink(req.file.path); } catch {}
+        return res.status(403).json({ message: "GIF banners are a Pro feature. Upgrade to Pro to use animated banners!" });
+      } else {
+        // Process image with Sharp using the file path
+        let sharpInstance = sharp(req.file.path);
+
+        // Get image metadata
+        const metadata = await sharpInstance.metadata();
+        console.log("Image metadata:", metadata);
+
+        if (!metadata.width || !metadata.height) {
+          return res.status(400).json({ message: "Invalid image file" });
+        }
+
+        const targetWidth = 1200;
+        const targetHeight = 675;
+
+        processedBuffer = await sharpInstance
+          .resize(targetWidth, targetHeight, {
+            fit: 'cover',
+            position: 'center'
+          })
+          .jpeg({ quality: 85 })
+          .toBuffer();
+        fileName = `banner-${req.user.id}-${Date.now()}.jpg`;
+        mimeType = 'image/jpeg';
       }
-
-      // For now, just resize to banner dimensions with positioning coming later
-      // We'll implement advanced positioning once basic upload works
-      const targetWidth = 1200;
-      const targetHeight = 675;
-
-      const processedImageBuffer = await sharpInstance
-        .resize(targetWidth, targetHeight, {
-          fit: 'cover',
-          position: 'center'
-        })
-        .jpeg({ quality: 85 })
-        .toBuffer();
 
       // Upload processed image to Supabase
       const { url: bannerUrl } = await supabaseStorage.uploadBuffer(
-        processedImageBuffer,
-        `banner-${req.user.id}-${Date.now()}.jpg`,
-        'image/jpeg',
+        processedBuffer,
+        fileName,
+        mimeType,
         'image',
         req.user.id
       );
