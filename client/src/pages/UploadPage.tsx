@@ -797,14 +797,6 @@ const UploadPage = () => {
       return;
     }
     
-    if (tags.length < 2) {
-      toast({
-        title: "Tags required",
-        description: "Please add at least 2 tags for your video.",
-        variant: "gamefolioError",
-      });
-      return;
-    }
     
 
     
@@ -1220,25 +1212,14 @@ const UploadPage = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="tags" className="flex items-center gap-1">
-                    Tags (minimum 2, up to 5)
-                    <span className="text-destructive">*</span>
+                    Tags (optional, up to 5)
                   </Label>
                   <TagInput
                     tags={tags}
                     setTags={setTags}
                     maxTags={5}
-                    placeholder="Add at least 2 tags and press Enter"
+                    placeholder="Add tags and press Enter"
                   />
-                  {hasAttemptedSubmit && tags.length < 2 && (
-                    <p className="text-xs text-destructive">
-                      Please add at least 2 tags to describe your clip ({tags.length}/2)
-                    </p>
-                  )}
-                  {tags.length >= 2 && (
-                    <p className="text-xs text-primary">
-                      Great! You have {tags.length} tag{tags.length > 1 ? 's' : ''} added
-                    </p>
-                  )}
                 </div>
 
                 <div className="flex items-center space-x-2 p-3 rounded-lg border border-muted bg-muted/20">
@@ -1261,81 +1242,6 @@ const UploadPage = () => {
                   </div>
                 </div>
 
-                {/* Enhanced Upload Progress Visualization */}
-                {isUploading && (
-                  <div className="space-y-4 p-6 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border border-primary/30 rounded-lg shadow-lg">
-                    {/* Header with animated icon */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                          </div>
-                        </div>
-                        <Label className="text-base font-semibold text-primary">
-                          {uploadProgress < 100 ? "Uploading" : "Processing"}
-                        </Label>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-primary">{uploadProgress}%</div>
-                        <div className="text-xs text-muted-foreground">
-                          {uploadProgress < 100 ? "Upload in progress" : "Almost done!"}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Enhanced Progress Bar */}
-                    <div className="relative">
-                      <div className="w-full h-3 bg-primary/20 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-300 ease-out relative"
-                          style={{ width: `${uploadProgress}%` }}
-                        >
-                          {/* Animated shimmer effect */}
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse"></div>
-                          {/* Moving highlight */}
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-slide-right"></div>
-                        </div>
-                      </div>
-                      {/* Progress markers */}
-                      <div className="flex justify-between mt-1 text-xs text-muted-foreground">
-                        <span className={uploadProgress >= 25 ? "text-primary" : ""}>25%</span>
-                        <span className={uploadProgress >= 50 ? "text-primary" : ""}>50%</span>
-                        <span className={uploadProgress >= 75 ? "text-primary" : ""}>75%</span>
-                        <span className={uploadProgress >= 100 ? "text-primary" : ""}>100%</span>
-                      </div>
-                    </div>
-
-                    {/* Dynamic status messages */}
-                    <div className="text-center space-y-2">
-                      <div className="text-sm font-medium text-foreground">
-                        {uploadProgress < 20 && "Preparing your video..."}
-                        {uploadProgress >= 20 && uploadProgress < 60 && "Uploading to server..."}
-                        {uploadProgress >= 60 && uploadProgress < 100 && "Almost there..."}
-                        {uploadProgress >= 100 && "Processing video"}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {uploadProgress < 100 ? (
-                          <>
-                            Uploading {file?.name} ({(file?.size ? file.size / (1024 * 1024) : 0).toFixed(1)} MB)
-                          </>
-                        ) : (
-                          "Processing video"
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Estimated time remaining */}
-                    {uploadProgress < 100 && uploadProgress > 0 && (
-                      <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                        <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>
-                        <span>Please keep this tab open while uploading</span>
-                        <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>
-                      </div>
-                    )}
-                  </div>
-                )}
               </form>
             </CardContent>
             
@@ -1354,7 +1260,7 @@ const UploadPage = () => {
                 </Button>
                 <Button
                   type="button"
-                  disabled={!file || !title.trim() || !selectedGame || tags.length < 2 || isUploading}
+                  disabled={!file || !title.trim() || !selectedGame || isUploading}
                   onClick={(e) => {
                     console.log('🚀 UPLOAD BUTTON CLICKED!');
                     console.log('Button type: button');
@@ -1827,14 +1733,13 @@ const UploadPage = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="reel-tags" className="flex items-center gap-1">
-                    Tags (minimum 2, up to 5)
-                    <span className="text-destructive">*</span>
+                    Tags (optional, up to 5)
                   </Label>
                   <TagInput
                     tags={tags}
                     setTags={setTags}
                     maxTags={5}
-                    placeholder="Add at least 2 tags and press Enter"
+                    placeholder="Add tags and press Enter"
                   />
                 </div>
 
@@ -1858,81 +1763,6 @@ const UploadPage = () => {
                   </div>
                 </div>
 
-                {/* Enhanced Upload Progress Visualization for Reels */}
-                {isUploading && (
-                  <div className="space-y-4 p-6 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border border-primary/30 rounded-lg shadow-lg">
-                    {/* Header with animated icon */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                          </div>
-                        </div>
-                        <Label className="text-base font-semibold text-primary">
-                          {uploadProgress < 100 ? "Uploading" : "Processing"}
-                        </Label>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-primary">{uploadProgress}%</div>
-                        <div className="text-xs text-muted-foreground">
-                          {uploadProgress < 100 ? "Upload in progress" : "Converting to 9:16 format..."}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Enhanced Progress Bar */}
-                    <div className="relative">
-                      <div className="w-full h-3 bg-primary/20 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-300 ease-out relative"
-                          style={{ width: `${uploadProgress}%` }}
-                        >
-                          {/* Animated shimmer effect */}
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse"></div>
-                          {/* Moving highlight */}
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-slide-right"></div>
-                        </div>
-                      </div>
-                      {/* Progress markers */}
-                      <div className="flex justify-between mt-1 text-xs text-muted-foreground">
-                        <span className={uploadProgress >= 25 ? "text-primary" : ""}>25%</span>
-                        <span className={uploadProgress >= 50 ? "text-primary" : ""}>50%</span>
-                        <span className={uploadProgress >= 75 ? "text-primary" : ""}>75%</span>
-                        <span className={uploadProgress >= 100 ? "text-primary" : ""}>100%</span>
-                      </div>
-                    </div>
-
-                    {/* Dynamic status messages for reels */}
-                    <div className="text-center space-y-2">
-                      <div className="text-sm font-medium text-foreground">
-                        {uploadProgress < 20 && "Preparing your reel..."}
-                        {uploadProgress >= 20 && uploadProgress < 60 && "Uploading to server..."}
-                        {uploadProgress >= 60 && uploadProgress < 100 && "Almost there..."}
-                        {uploadProgress >= 100 && "Converting to 9:16 reel format"}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {uploadProgress < 100 ? (
-                          <>
-                            Uploading {file?.name} ({(file?.size ? file.size / (1024 * 1024) : 0).toFixed(1)} MB)
-                          </>
-                        ) : (
-                          "Processing and cropping video to vertical format"
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Estimated time remaining */}
-                    {uploadProgress < 100 && uploadProgress > 0 && (
-                      <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                        <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>
-                        <span>Please keep this tab open while uploading</span>
-                        <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>
-                      </div>
-                    )}
-                  </div>
-                )}
                 
                 <div className="flex justify-end space-x-2">
                   <Button
@@ -1944,7 +1774,7 @@ const UploadPage = () => {
                   </Button>
                   <Button
                     type="button"
-                    disabled={!file || !title.trim() || !selectedGame || tags.length < 2 || isUploading}
+                    disabled={!file || !title.trim() || !selectedGame || isUploading}
                     onClick={(e) => {
                       console.log('🚀 REEL UPLOAD BUTTON CLICKED!');
                       console.log('Button type: button');
@@ -2015,14 +1845,6 @@ const UploadPage = () => {
                   return;
                 }
                 
-                if (screenshotTags.length < 2) {
-                  toast({
-                    title: "Tags required",
-                    description: "Please add at least 2 tags for your screenshots.",
-                    variant: "gamefolioError",
-                  });
-                  return;
-                }
                 
                 // Check upload limits (client-side validation)
                 if (uploadLimits && !uploadLimits.isPro && !uploadLimits.canUploadScreenshot) {
@@ -2196,14 +2018,13 @@ const UploadPage = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="screenshot-tags" className="flex items-center gap-1">
-                    Tags (minimum 2, up to 5)
-                    <span className="text-destructive">*</span>
+                    Tags (optional, up to 5)
                   </Label>
                   <TagInput
                     tags={screenshotTags}
                     setTags={setScreenshotTags}
                     maxTags={5}
-                    placeholder="Add at least 2 tags and press Enter"
+                    placeholder="Add tags and press Enter"
                   />
                 </div>
 
@@ -2237,7 +2058,7 @@ const UploadPage = () => {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={screenshotFiles.length === 0 || !screenshotTitle.trim() || !screenshotSelectedGame || screenshotTags.length < 2 || screenshotUploadMutation.isPending}
+                    disabled={screenshotFiles.length === 0 || !screenshotTitle.trim() || !screenshotSelectedGame || screenshotUploadMutation.isPending}
                     data-testid="button-upload-screenshots"
                   >
                     {screenshotUploadMutation.isPending ? (
@@ -2263,6 +2084,84 @@ const UploadPage = () => {
         </TabsContent>
       </Tabs>
       
+      {/* Upload Progress Modal */}
+      {isUploading && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative w-full sm:max-w-2xl bg-[#020617] sm:rounded-2xl overflow-hidden shadow-2xl border border-slate-800/50">
+            <div className="flex flex-col items-center justify-center px-6 py-10 sm:px-10 sm:py-14 gap-6">
+              <div className="flex items-center gap-1">
+                <span className="text-6xl sm:text-8xl font-black text-white tracking-tighter leading-none" style={{ letterSpacing: '-4px' }}>
+                  {uploadProgress}
+                </span>
+                <span className="text-2xl sm:text-3xl font-black text-white mt-2">%</span>
+              </div>
+
+              <span className="text-[#4ade80] text-xs font-bold tracking-[5px] uppercase">
+                {uploadProgress < 100 ? "Upload in progress" : "Processing"}
+              </span>
+
+              <div className="w-full space-y-3 px-2 sm:px-4">
+                <div className="w-full h-1.5 bg-slate-800/50 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-[#4ade80] rounded-full transition-all duration-500 ease-out"
+                    style={{
+                      width: `${uploadProgress}%`,
+                      boxShadow: '0 0 20px rgba(74, 222, 128, 0.6)',
+                    }}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] font-bold tracking-[1px] uppercase text-slate-600">
+                  <span className={uploadProgress >= 25 ? "text-[#4ade80]/60" : ""}>25%</span>
+                  <span className={uploadProgress >= 50 ? "text-[#4ade80]/60" : ""}>50%</span>
+                  <span className={uploadProgress >= 75 ? "text-[#4ade80]/60" : ""}>75%</span>
+                  <span className={uploadProgress >= 100 ? "text-[#4ade80]/60" : ""}>100%</span>
+                </div>
+              </div>
+
+              <div className="text-center space-y-1.5">
+                <h3 className="text-white font-bold text-lg uppercase tracking-tight">
+                  {uploadProgress < 60 ? "Almost there..." : uploadProgress < 100 ? "Almost there..." : "Processing..."}
+                </h3>
+                <p className="text-slate-400/80 text-sm">
+                  Uploading {file?.name || 'video'} ({(file?.size ? file.size / (1024 * 1024) : 0).toFixed(1)} MB)
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 bg-[#4ade80]/5 border border-[#4ade80]/10 rounded-full px-6 py-2.5">
+                <div className="w-2 h-2 bg-[#4ade80] rounded-full" style={{ boxShadow: '0 0 10px #4ade80' }} />
+                <span className="text-[#4ade80] text-[10px] font-bold tracking-[2px] uppercase">
+                  Please keep this tab open while uploading
+                </span>
+                <div className="w-2 h-2 bg-[#4ade80] rounded-full" style={{ boxShadow: '0 0 10px #4ade80' }} />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-4 px-8 py-6 bg-[#020617]/80 backdrop-blur-xl border-t border-slate-800/10">
+              <button
+                type="button"
+                onClick={() => {
+                  if (uploadAbortRef.current) {
+                    uploadAbortRef.current.abort();
+                  }
+                  setIsUploading(false);
+                  setUploadProgress(0);
+                }}
+                className="text-slate-400 text-sm font-bold tracking-[1.4px] uppercase hover:text-slate-200 transition-colors px-6 py-3"
+              >
+                Cancel
+              </button>
+              <div className="flex items-center gap-2.5 bg-[#4ade80]/10 border border-[#4ade80]/20 rounded-full px-8 py-4 shadow-lg">
+                <div className="w-5 h-5 border-2 border-[#4ade80]/30 border-t-[#4ade80] rounded-full animate-spin" />
+                <span className="text-[#4ade80] text-sm font-bold tracking-[1.4px] uppercase">
+                  Uploading {uploadProgress}%
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Share Dialog for uploaded content */}
       <ShareDialog
         isOpen={showShareDialog}

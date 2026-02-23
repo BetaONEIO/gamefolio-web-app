@@ -1,0 +1,647 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/UploadingClip.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,900;0,700;0,400;0,500&display=swap";
+.UploadingClip_180_2 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_180_3 {
+  background: #020617;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: -0.062439px;
+  width: 100%;
+  display: flex;
+}
+.Container_180_4 {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 801px;
+  padding: 50.677px 24.007px 50.323px 23.993px;
+  display: flex;
+}
+.Container_180_5 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 383px;
+  height: 700px;
+  display: flex;
+}
+.Container_180_6 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 15.9861px;
+  width: 274px;
+  padding-bottom: 0.014px;
+  display: flex;
+}
+.Container_180_7 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4.47559px;
+  height: 192px;
+  display: flex;
+}
+.generated_70_180_8 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -9.6px;
+  width: 230px;
+  height: 242px;
+  font-family: Plus Jakarta Sans;
+  font-size: 192px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 192px;
+  display: inline-block;
+}
+.Container_180_9 {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 42px;
+  height: 62px;
+  display: flex;
+}
+.generated__180_10 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -9.6px;
+  flex-shrink: 0;
+  width: 47px;
+  height: 62px;
+  font-family: Plus Jakarta Sans;
+  font-size: 48px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 48px;
+  display: inline-block;
+}
+.Container_180_11 {
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 0 6.392px 2px 5.608px;
+  display: flex;
+}
+.UploadInProgress_180_12 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 5.6px;
+  text-transform: uppercase;
+  width: 262px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_180_13 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 23.4202px;
+  height: 155px;
+  display: flex;
+}
+.Container_180_14 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 11.9757px;
+  height: 90px;
+  padding-bottom: 0.024px;
+  display: flex;
+}
+.Container_180_15 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 0 57.524px 1px 57.476px;
+  display: flex;
+}
+.AlmostThere_180_16 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.6px;
+  text-transform: uppercase;
+  width: 202px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_180_17 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 46px;
+  display: flex;
+}
+.Uploading_180_18 {
+  color: #94a3b8cc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 74px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 22.75px;
+  display: inline-block;
+}
+.Container_180_19 {
+  justify-content: center;
+  align-items: center;
+  width: 245px;
+  height: 18px;
+  display: flex;
+}
+.SsstwitterCom_1701481075941Mp4_180_20 {
+  color: #ffffffe6;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 247px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 22.75px;
+  display: inline-block;
+}
+.Container_180_21 {
+  width: 0;
+  height: 18px;
+}
+.Container_180_22 {
+  justify-content: center;
+  align-items: center;
+  width: 88px;
+  height: 15px;
+  display: flex;
+}
+._5MbTotalSize_180_23 {
+  color: #94a3b8cc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 90px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_180_24 {
+  box-sizing: border-box;
+  background: #4ade800d;
+  border: 1.111px solid #4ade801a;
+  border-radius: 37282700px;
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 11.9826px;
+  height: 42px;
+  padding: 13.108px 25.733px 12.892px 25.104px;
+  display: flex;
+}
+.Container_180_25 {
+  background: #4ade80;
+  border-radius: 37282700px;
+  width: 8px;
+  height: 8px;
+  box-shadow: 0 0 10px #4ade80;
+}
+.Container_180_26 {
+  justify-content: center;
+  align-items: center;
+  width: 190px;
+  height: 16px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.PleaseKeepThisTabOpen_180_27 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 193px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_180_28 {
+  background: #4ade80;
+  border-radius: 37282700px;
+  width: 8px;
+  height: 8px;
+  box-shadow: 0 0 10px #4ade80;
+}
+.Container_180_29 {
+  width: 160px;
+  height: 160px;
+}
+.Container_180_30 {
+  filter: blur(40px);
+  background: #4ade8033;
+  border-radius: 37282700px;
+  width: 241px;
+  height: 241px;
+}
+.Container_180_31 {
+  width: 160px;
+  height: 160px;
+}
+.Container_180_32 {
+  width: 128px;
+  height: 128px;
+  overflow: hidden;
+}
+.Container_180_34 {
+  justify-content: center;
+  align-items: center;
+  width: 160px;
+  height: 160px;
+  padding: 51.997px 52.003px 52.003px 51.997px;
+  display: flex;
+}
+.Container_180_35 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_180_38 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 15.9792px;
+  width: 383px;
+  padding: 0 16.01px 0 15.99px;
+  display: flex;
+}
+.Container_180_39 {
+  background: #1e293b4d;
+  border-radius: 37282700px;
+  align-items: center;
+  width: 351px;
+  height: 6px;
+  padding-right: 105px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_180_40 {
+  background: #4ade80;
+  border-radius: 37282700px;
+  flex: 1 0 0;
+  height: 6px;
+  box-shadow: 0 0 20px #4ade8099;
+}
+.Container_180_41 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 76.8993px;
+  width: 351px;
+  height: 16px;
+  padding: 0 4.806px 0 3.993px;
+  display: flex;
+}
+.Container_180_42 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.generated_25_180_43 {
+  color: #94a3b84d;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 31px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_180_44 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.generated_50_180_45 {
+  color: #94a3b84d;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 32px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_180_46 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.generated_75_180_47 {
+  color: #94a3b84d;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 31px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_180_48 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.generated_100_180_49 {
+  color: #94a3b84d;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 38px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_180_50 {
+  backdrop-filter: blur(12px);
+  box-sizing: border-box;
+  background: #02061780;
+  border-top: 1.111px solid #1e293b1a;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 15.3368px;
+  height: 132px;
+  padding: 33.108px 32.667px 31.892px 31.997px;
+  display: flex;
+}
+.Button_180_51 {
+  justify-content: center;
+  align-items: center;
+  width: 131px;
+  height: 44px;
+  padding: 11.997px 30.503px 14.003px 30.497px;
+  display: flex;
+}
+.Cancel_180_52 {
+  color: #94a3b8;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 70px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Button_180_53 {
+  box-sizing: border-box;
+  background: #4ade801a;
+  border: 1.111px solid #4ade8033;
+  border-radius: 37282700px;
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10.4393px;
+  width: 220px;
+  height: 67px;
+  padding: 17.101px 41.118px 17.899px 36.443px;
+  display: flex;
+  box-shadow: 0 10px 20px #0003;
+}
+.Container_180_54 {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  overflow: hidden;
+}
+.Container_180_56 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 106px;
+  height: 32px;
+  padding: 0 2.753px 1px 3.247px;
+  display: flex;
+}
+.Uploading_70_180_57 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 100px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 16px;
+  display: inline-block;
+}
+
+```
+
+---
+
+```src/components/UploadingClip.tsx
+import React from 'react';
+import styles from '../styles/UploadingClip.module.css';
+
+
+export default function UploadingClip() {
+  return (
+    <div className={styles.UploadingClip_180_2}>
+      <div className={styles.Container_180_3}>
+        <div className={styles.Container_180_4}>
+          <div className={styles.Container_180_5}>
+            <div className={styles.Container_180_6}>
+              <div className={styles.Container_180_7}><span className={styles.generated_70_180_8}>70</span>
+                <div className={styles.Container_180_9}><span className={styles.generated__180_10}>%</span></div>
+              </div>
+              <div className={styles.Container_180_11}><span className={styles.UploadInProgress_180_12}>Upload in progress</span></div>
+            </div>
+            <div className={styles.Container_180_13}>
+              <div className={styles.Container_180_14}>
+                <div className={styles.Container_180_15}><span className={styles.AlmostThere_180_16}>Almost there...</span></div>
+                <div className={styles.Container_180_17}><span className={styles.Uploading_180_18}>Uploading</span>
+                  <div className={styles.Container_180_19}><span className={styles.SsstwitterCom_1701481075941Mp4_180_20}>ssstwitter.com_1701481075941.mp4</span></div>
+                  <div className={styles.Container_180_21}></div>
+                  <div className={styles.Container_180_22}><span className={styles._5MbTotalSize_180_23}>1.5 MB total size</span></div>
+                </div>
+              </div>
+              <div className={styles.Container_180_24}>
+                <div className={styles.Container_180_25}></div>
+                <div className={styles.Container_180_26}><span className={styles.PleaseKeepThisTabOpen_180_27}>Please keep this tab open</span></div>
+                <div className={styles.Container_180_28}></div>
+              </div>
+            </div>
+            <div className={styles.Container_180_29}>
+              <div className={styles.Container_180_30}></div>
+              <div className={styles.Container_180_31}>
+                <div className={styles.Container_180_32}><svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M18.4939 60.436H14.4944H18.4939Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M18.4939 69.3257L15.6782 72.1628C17.2373 73.7082 19.7506 73.7082 21.3096 72.1628L18.4939 69.3257Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M30.2687 63.2784C31.8385 61.7204 31.848 59.1848 30.29 57.615C28.732 56.0452 26.1964 56.0356 24.6266 57.5937L30.2687 63.2784Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M12.3506 57.5937C10.775 56.0832 8.27945 56.1148 6.74266 57.6647C5.20588 59.2146 5.19543 61.7104 6.7192 63.273L12.3506 57.5937Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M98.1441 39.4196C98.8739 40.6764 100.228 41.4383 101.681 41.4098C103.134 41.3813 104.457 40.5669 105.137 39.2825C105.817 37.998 105.747 36.4458 104.954 35.228L98.1441 39.4196Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M63.2838 11.9985C36.3694 11.9985 14.4944 33.6549 14.4944 60.436H22.4882C22.4882 38.1344 40.7262 19.9977 63.2838 19.9977V11.9985Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M14.4944 60.436L14.489 69.3257H22.4882V60.436H14.4944Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M21.315 72.1681L30.2687 63.2784L24.6266 57.5937L15.6676 66.4834L21.315 72.1681Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M21.315 66.4887L12.3506 57.5937L6.71387 63.273L15.6729 72.1574L21.315 66.4887Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M104.954 35.2387C96.0503 20.7755 80.2679 11.9752 63.2838 11.9985V19.9977C77.4917 19.9703 90.6986 27.3274 98.1494 39.4249L104.954 35.2387Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M107.199 58.6602L110.009 55.8178C108.452 54.2794 105.947 54.2794 104.389 55.8178L107.199 58.6602Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M95.3924 64.7022C93.8211 66.2558 93.8068 68.789 95.3604 70.3603C96.914 71.9315 99.4472 71.9459 101.018 70.3923L95.3924 64.7022Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M113.38 70.3923C114.391 71.4239 115.879 71.8303 117.274 71.4555C118.669 71.0807 119.754 69.9829 120.111 68.5834C120.469 67.184 120.044 65.7005 119.001 64.7022L113.38 70.3923Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M27.229 88.5557C26.4784 87.3392 25.1357 86.6156 23.7069 86.6574C22.2781 86.6993 20.9801 87.5002 20.3019 88.7585C19.6238 90.0169 19.6684 91.5414 20.4191 92.7579L27.229 88.5557Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M62.2386 115.987C89.233 115.987 111.193 94.347 111.193 67.5499H103.194C103.194 89.8409 84.9028 107.988 62.2386 107.988V115.987Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M111.193 67.5499V58.6602H103.194V67.5499H111.193Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M104.389 55.8178L95.3924 64.7022L101.018 70.3923L110.009 61.5026L104.389 55.8178Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M104.389 61.5026L113.38 70.3923L119.001 64.7022L110.009 55.8178L104.389 61.5026Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M20.4137 92.7525C29.3771 107.23 45.2113 116.024 62.2386 115.987V107.988C47.9872 108.025 34.7306 100.67 27.2237 88.5557L20.4137 92.7525Z" fill="#4ADE80" />
+                  </svg>
+                </div>
+                <div className={styles.Container_180_34}>
+                  <div className={styles.Container_180_35}><svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M28.8809 5.81802C28.5494 5.4555 28.0809 5.24902 27.5897 5.24902C27.0984 5.24902 26.6299 5.4555 26.2984 5.81802L16.9668 16.0245C16.3677 16.7428 16.4396 17.8054 17.13 18.4365C17.8204 19.0676 18.8852 19.0441 19.547 18.383L25.8365 11.501V37.3262C25.8365 38.2925 26.6198 39.0758 27.5862 39.0758C28.5525 39.0758 29.3358 38.2925 29.3358 37.3262V11.5056L35.6277 18.3877C36.0498 18.849 36.686 19.0501 37.2966 18.9151C37.9072 18.7802 38.3994 18.3298 38.5879 17.7335C38.7763 17.1373 38.6323 16.4858 38.2102 16.0245L28.8809 5.81802Z" fill="white" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M8.74837 34.9933C8.74837 34.027 7.96502 33.2437 6.9987 33.2437C6.03238 33.2437 5.24902 34.027 5.24902 34.9933V35.1216C5.24902 38.3107 5.24902 40.8839 5.52197 42.9065C5.80192 45.0061 6.40847 46.7745 7.81055 48.1789C9.21495 49.5833 10.9833 50.1852 13.0829 50.4698C15.1055 50.7404 17.6787 50.7404 20.8678 50.7404H35.1218C38.3109 50.7404 40.8841 50.7404 42.9067 50.4698C45.0063 50.1852 46.7746 49.5833 48.179 48.1789C49.5834 46.7745 50.1853 45.0061 50.4699 42.9065C50.7406 40.8839 50.7406 38.3107 50.7406 35.1216V34.9933C50.7406 34.027 49.9572 33.2437 48.9909 33.2437C48.0246 33.2437 47.2412 34.027 47.2412 34.9933C47.2412 38.341 47.2365 40.6763 47.0009 42.4399C46.77 44.1523 46.3477 45.0575 45.7038 45.7037C45.0576 46.3499 44.1525 46.7698 42.4378 47.0008C40.6764 47.2364 38.3412 47.241 34.9935 47.241H20.9961C17.6484 47.241 15.3108 47.2364 13.5495 47.0008C11.8371 46.7698 10.932 46.3475 10.2858 45.7037C9.63954 45.0575 9.21962 44.1523 8.98866 42.4376C8.75304 40.6763 8.74837 38.341 8.74837 34.9933Z" fill="white" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_180_38}>
+              <div className={styles.Container_180_39}>
+                <div className={styles.Container_180_40}></div>
+              </div>
+              <div className={styles.Container_180_41}>
+                <div className={styles.Container_180_42}><span className={styles.generated_25_180_43}>25%</span></div>
+                <div className={styles.Container_180_44}><span className={styles.generated_50_180_45}>50%</span></div>
+                <div className={styles.Container_180_46}><span className={styles.generated_75_180_47}>75%</span></div>
+                <div className={styles.Container_180_48}><span className={styles.generated_100_180_49}>100%</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_180_50}>
+          <div className={styles.Button_180_51}><span className={styles.Cancel_180_52}>Cancel</span></div>
+          <div className={styles.Button_180_53}>
+            <div className={styles.Container_180_54}><svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" clipRule="evenodd" d="M4.99441 11.3624H4.32125H4.99441Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M4.99441 12.8586L4.5205 13.3361C4.7829 13.5962 5.20592 13.5962 5.46832 13.3361L4.99441 12.8586Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M6.9762 11.8408C7.24041 11.5786 7.24202 11.1518 6.97979 10.8876C6.71757 10.6234 6.2908 10.6218 6.02659 10.884L6.9762 11.8408Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M3.96043 10.884C3.69525 10.6298 3.27522 10.6351 3.01657 10.896C2.75791 11.1568 2.75615 11.5769 3.01262 11.8399L3.96043 10.884Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M18.4002 7.82517C18.5231 8.0367 18.751 8.16494 18.9956 8.16014C19.2401 8.15535 19.4628 8.01827 19.5773 7.80209C19.6917 7.58591 19.6799 7.32465 19.5464 7.11969L18.4002 7.82517Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M12.5329 3.20996C8.003 3.20996 4.32125 6.85492 4.32125 11.3624H5.66668C5.66668 7.60886 8.7363 4.55629 12.5329 4.55629V3.20996Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M4.32125 11.3624L4.32035 12.8586H5.66668V11.3624H4.32125Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M5.46921 13.337L6.9762 11.8408L6.02659 10.884L4.51871 12.3802L5.46921 13.337Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M5.46921 12.3811L3.96043 10.884L3.01172 11.8399L4.5196 13.3352L5.46921 12.3811Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M19.5464 7.12149C18.0478 4.6872 15.3915 3.20603 12.5329 3.20996V4.55629C14.9243 4.55168 17.1471 5.78994 18.4011 7.82607L19.5464 7.12149Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M19.9243 11.0635L20.3973 10.5851C20.1351 10.3262 19.7135 10.3262 19.4513 10.5851L19.9243 11.0635Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M17.9371 12.0805C17.6726 12.3419 17.6702 12.7683 17.9317 13.0328C18.1932 13.2972 18.6196 13.2996 18.884 13.0381L17.9371 12.0805Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M20.9645 13.0381C21.1347 13.2118 21.3852 13.2802 21.62 13.2171C21.8548 13.154 22.0373 12.9692 22.0975 12.7337C22.1577 12.4982 22.0863 12.2485 21.9106 12.0805L20.9645 13.0381Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M6.4646 16.0952C6.33826 15.8905 6.11228 15.7687 5.8718 15.7757C5.63131 15.7828 5.41285 15.9176 5.29871 16.1294C5.18457 16.3411 5.19208 16.5977 5.31843 16.8025L6.4646 16.0952Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M12.357 20.7122C16.9004 20.7122 20.5965 17.0699 20.5965 12.5598H19.2502C19.2502 16.3115 16.1716 19.3659 12.357 19.3659V20.7122Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M20.5965 12.5598V11.0635H19.2502V12.5598H20.5965Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M19.4513 10.5851L17.9371 12.0805L18.884 13.0381L20.3973 11.5419L19.4513 10.5851Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M19.4513 11.5419L20.9645 13.0381L21.9106 12.0805L20.3973 10.5851L19.4513 11.5419Z" fill="#4ADE80" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M5.31753 16.8016C6.82615 19.2382 9.49117 20.7184 12.357 20.7122V19.3659C9.95839 19.3721 7.72718 18.1341 6.4637 16.0952L5.31753 16.8016Z" fill="#4ADE80" />
+              </svg>
+            </div>
+            <div className={styles.Container_180_56}><span className={styles.Uploading_70_180_57}>Uploading 70%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
