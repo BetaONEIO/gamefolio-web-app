@@ -4199,7 +4199,8 @@ const AdminPage = () => {
                       <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
                           <label className="text-sm font-medium">Title *</label>
-                          <Input placeholder="e.g., Build Your Gamefolio" value={slideTitle} onChange={(e) => setSlideTitle(e.target.value)} />
+                          <Textarea placeholder="e.g., Build Your&#10;Gamefolio" value={slideTitle} onChange={(e) => setSlideTitle(e.target.value)} rows={2} className="resize-none" />
+                          <p className="text-xs text-muted-foreground">Press Enter to add line breaks</p>
                         </div>
                         <div className="space-y-2">
                           <label className="text-sm font-medium">Subtitle</label>
@@ -4273,7 +4274,9 @@ const AdminPage = () => {
                           <div className={`absolute inset-0 ${slideTextAlign === 'left' ? 'bg-gradient-to-r from-black/80 via-black/40 to-transparent' : slideTextAlign === 'right' ? 'bg-gradient-to-l from-black/80 via-black/40 to-transparent' : 'bg-black/50'}`}>
                             <div className={`flex flex-col ${slideTextAlign === 'left' ? 'items-start' : slideTextAlign === 'right' ? 'items-end' : 'items-center'} justify-center h-full ${slideTextAlign === 'center' ? 'max-w-full' : 'max-w-[70%]'} ${slideTextAlign === 'right' ? 'ml-auto' : ''} p-8 md:p-12`}>
                               <h3 className={`text-xl md:text-2xl font-bold text-white mb-2 leading-tight drop-shadow-md ${slideTextAlign === 'center' ? 'text-center' : slideTextAlign === 'right' ? 'text-right' : 'text-left'}`}>
-                                {slideTitle || "Slide Title"}
+                                {(slideTitle || "Slide Title").split('\n').map((line, idx) => (
+                                  <span key={idx}>{line}{idx < (slideTitle || "Slide Title").split('\n').length - 1 && <br />}</span>
+                                ))}
                               </h3>
                               {(slideSubtitle || !slideTitle) && (
                                 <h4 className={`text-lg md:text-xl font-semibold text-primary mb-4 leading-tight drop-shadow-lg ${slideTextAlign === 'center' ? 'text-center' : slideTextAlign === 'right' ? 'text-right' : 'text-left'}`}>
@@ -4384,7 +4387,8 @@ const AdminPage = () => {
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Title *</label>
-                        <Input placeholder="e.g., Build Your Gamefolio" value={slideTitle} onChange={(e) => setSlideTitle(e.target.value)} />
+                        <Textarea placeholder="e.g., Build Your&#10;Gamefolio" value={slideTitle} onChange={(e) => setSlideTitle(e.target.value)} rows={2} className="resize-none" />
+                        <p className="text-xs text-muted-foreground">Press Enter to add line breaks</p>
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Subtitle</label>
@@ -4462,7 +4466,9 @@ const AdminPage = () => {
                         <div className={`absolute inset-0 ${slideTextAlign === 'left' ? 'bg-gradient-to-r from-black/80 via-black/40 to-transparent' : slideTextAlign === 'right' ? 'bg-gradient-to-l from-black/80 via-black/40 to-transparent' : 'bg-black/50'}`}>
                           <div className={`flex flex-col ${slideTextAlign === 'left' ? 'items-start' : slideTextAlign === 'right' ? 'items-end' : 'items-center'} justify-center h-full ${slideTextAlign === 'center' ? 'max-w-full' : 'max-w-[70%]'} ${slideTextAlign === 'right' ? 'ml-auto' : ''} p-8 md:p-12`}>
                             <h3 className={`text-xl md:text-2xl font-bold text-white mb-2 leading-tight drop-shadow-md ${slideTextAlign === 'center' ? 'text-center' : slideTextAlign === 'right' ? 'text-right' : 'text-left'}`}>
-                              {slideTitle || "Slide Title"}
+                              {(slideTitle || "Slide Title").split('\n').map((line, idx) => (
+                                <span key={idx}>{line}{idx < (slideTitle || "Slide Title").split('\n').length - 1 && <br />}</span>
+                              ))}
                             </h3>
                             {(slideSubtitle || !slideTitle) && (
                               <h4 className={`text-lg md:text-xl font-semibold text-primary mb-4 leading-tight drop-shadow-lg ${slideTextAlign === 'center' ? 'text-center' : slideTextAlign === 'right' ? 'text-right' : 'text-left'}`}>
