@@ -95,11 +95,13 @@ async function sendEmail(params: EmailParams): Promise<boolean> {
     sendSmtpEmail.subject = params.subject;
     sendSmtpEmail.htmlContent = params.html;
 
-    await apiInstance.sendTransacEmail(sendSmtpEmail);
+    const response = await apiInstance.sendTransacEmail(sendSmtpEmail);
     console.log('Email sent successfully to:', params.to);
+    console.log('Brevo API response:', JSON.stringify(response?.body || response));
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to send email:', error);
+    console.error('Brevo error body:', JSON.stringify(error?.body || error?.response?.body || error?.message));
     return false;
   }
 }
