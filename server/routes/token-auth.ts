@@ -256,7 +256,7 @@ router.post('/auth/token/google', async (req: Request, res: Response) => {
     }
 
     // Existing user - check if they need onboarding
-    const needsOnboarding = !user.userType || !user.ageRange || user.username.startsWith('temp_');
+    const needsOnboarding = !user.userType || user.username.startsWith('temp_');
 
     // Update existing user's Google data if needed
     if (!user.avatarUrl && photoURL) {
@@ -370,7 +370,7 @@ router.post('/auth/token/discord', async (req: Request, res: Response) => {
     }
 
     // Existing user - check if they need onboarding
-    const needsOnboarding = !user.userType || !user.ageRange || user.username.startsWith('temp_');
+    const needsOnboarding = !user.userType || user.username.startsWith('temp_');
 
     // Update login time and streak
     try {
@@ -470,7 +470,7 @@ router.post('/auth/mobile/google', async (req: Request, res: Response) => {
     }
 
     // Check if user needs onboarding
-    const needsOnboarding = !user.userType || !user.ageRange || user.username.startsWith('temp_');
+    const needsOnboarding = !user.userType || user.username.startsWith('temp_');
 
     // Update existing user's Google data if needed
     if (!isNewUser && !user.avatarUrl && photoURL) {
@@ -660,7 +660,7 @@ router.get('/auth/mobile/discord/callback', async (req: Request, res: Response) 
     }
 
     // Check if user needs onboarding
-    const needsOnboarding = !user.userType || !user.ageRange || user.username.startsWith('temp_');
+    const needsOnboarding = !user.userType || user.username.startsWith('temp_');
 
     // Update existing user's Discord data if needed
     if (!isNewUser && !user.avatarUrl && avatar) {
@@ -747,7 +747,7 @@ router.post('/auth/mobile/discord', async (req: Request, res: Response) => {
     }
 
     // Check if user needs onboarding
-    const needsOnboarding = !user.userType || !user.ageRange || user.username.startsWith('temp_');
+    const needsOnboarding = !user.userType || user.username.startsWith('temp_');
 
     // Update existing user's Discord data if needed
     if (!isNewUser && !user.avatarUrl && avatar) {

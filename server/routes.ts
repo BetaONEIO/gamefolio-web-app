@@ -632,7 +632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return next();
     }
 
-    const needsOnboarding = !user.userType || !user.ageRange;
+    const needsOnboarding = !user.userType;
 
     if (needsOnboarding) {
       return res.status(403).json({
@@ -830,7 +830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } else {
         // Existing user - check if they need onboarding
-        const needsOnboarding = !user.userType || !user.ageRange || user.username.startsWith('temp_');
+        const needsOnboarding = !user.userType || user.username.startsWith('temp_');
 
         // Update existing user's Google data if needed
         if (!user.avatarUrl && photoURL) {
@@ -1059,7 +1059,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } else {
         // Existing user - check if they need onboarding
-        const needsOnboarding = !user.userType || !user.ageRange || user.username.startsWith('temp_');
+        const needsOnboarding = !user.userType || user.username.startsWith('temp_');
 
         // Update existing user's Discord data if needed
         if (!user.avatarUrl && avatar) {

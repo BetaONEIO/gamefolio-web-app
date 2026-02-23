@@ -62,7 +62,7 @@ export function VerificationGuard({
   }
 
   // Check onboarding completion
-  const needsOnboarding = !user.userType || !user.ageRange;
+  const needsOnboarding = !user.userType;
   if (requireOnboarding && needsOnboarding) {
     if (fallback) return <>{fallback}</>;
     
@@ -169,7 +169,7 @@ function OnboardingRequired({ user }: { user: any }) {
 
 // Quick status component for showing verification status
 export function VerificationStatus({ user }: { user: any }) {
-  const needsOnboarding = !user.userType || !user.ageRange;
+  const needsOnboarding = !user.userType;
   
   return (
     <div className="flex items-center gap-2 text-sm">

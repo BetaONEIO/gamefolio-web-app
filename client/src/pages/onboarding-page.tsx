@@ -11,7 +11,7 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (user && (!user.userType || !user.ageRange)) {
+      if (user && !user.userType) {
         const message = "You haven't completed your profile setup. Are you sure you want to leave?";
         event.returnValue = message;
         return message;
@@ -19,7 +19,7 @@ export default function OnboardingPage() {
     };
 
     const handlePopState = (event: PopStateEvent) => {
-      if (user && (!user.userType || !user.ageRange)) {
+      if (user && !user.userType) {
         window.history.pushState(null, '', '/onboarding');
         toast({
           title: "Complete your profile",
@@ -29,7 +29,7 @@ export default function OnboardingPage() {
       }
     };
 
-    if (user && (!user.userType || !user.ageRange)) {
+    if (user && !user.userType) {
       window.addEventListener('beforeunload', handleBeforeUnload);
       window.addEventListener('popstate', handlePopState);
       window.history.pushState(null, '', '/onboarding');

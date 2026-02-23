@@ -203,7 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Check if user needs onboarding
-      const needsOnboarding = !user.userType || !user.ageRange;
+      const needsOnboarding = !user.userType;
       if (needsOnboarding) {
         toast({
           title: "Complete your profile",

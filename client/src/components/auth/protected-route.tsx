@@ -46,7 +46,7 @@ export function ProtectedRoute({
   }
 
   // Check if user needs to complete onboarding
-  const needsOnboarding = !user.userType || !user.ageRange;
+  const needsOnboarding = !user.userType;
   if (needsOnboarding) {
     return (
       <Route path={path}>

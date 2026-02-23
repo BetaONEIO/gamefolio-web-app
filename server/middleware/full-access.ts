@@ -58,7 +58,7 @@ export const onboardingMiddleware = async (req: Request, res: Response, next: Ne
     return next();
   }
 
-  const needsOnboarding = !user.userType || !user.ageRange;
+  const needsOnboarding = !user.userType;
 
   if (needsOnboarding) {
     return res.status(403).json({

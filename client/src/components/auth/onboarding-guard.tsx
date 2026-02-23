@@ -12,7 +12,7 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
   const [location, setLocation] = useLocation();
 
   // Check if user needs onboarding
-  const needsOnboarding = user && (!user.userType || !user.ageRange);
+  const needsOnboarding = user && !user.userType;
 
   // Routes that should bypass onboarding checks (including guest-accessible routes)
   const bypassRoutes = [

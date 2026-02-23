@@ -12,13 +12,13 @@ export default function NotFound() {
 
   // Enforce onboarding completion even on 404 pages
   useEffect(() => {
-    if (!isLoading && user && (!user.userType || !user.ageRange)) {
+    if (!isLoading && user && !user.userType) {
       setLocation("/onboarding");
     }
   }, [user, isLoading, setLocation]);
 
   // If user needs onboarding, don't show 404 page
-  if (user && (!user.userType || !user.ageRange)) {
+  if (user && !user.userType) {
     return null;
   }
 
