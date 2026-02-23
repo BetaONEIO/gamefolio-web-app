@@ -175,9 +175,17 @@ const ProfileSettingsPage: React.FC = () => {
       return;
     }
     
-    // Check if user is uploading a GIF without Pro status
     const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
     const isPro = user?.isPro === true;
+    
+    if (isGif && !isPro) {
+      toast({
+        title: "Pro feature",
+        description: "Animated GIF profile pictures are a Pro perk. Upgrade to Pro to use GIF avatars!",
+        variant: "destructive"
+      });
+      return;
+    }
     
     // Create form data for upload
     const formData = new FormData();
@@ -210,17 +218,10 @@ const ProfileSettingsPage: React.FC = () => {
       // Update the form value with the server path and mark it as dirty
       profileForm.setValue('avatarUrl', data.avatarUrl, { shouldDirty: true, shouldValidate: true });
       
-      // Show appropriate message based on GIF/Pro status
       if (isGif && isPro) {
         toast({
           title: "Animated avatar uploaded!",
           description: "Your GIF profile picture is ready. Click save to update your profile.",
-          variant: "default"
-        });
-      } else if (isGif && !isPro) {
-        toast({
-          title: "GIF converted to static image",
-          description: "Upgrade to Pro to keep your profile picture animated! Click save to update.",
           variant: "default"
         });
       } else {

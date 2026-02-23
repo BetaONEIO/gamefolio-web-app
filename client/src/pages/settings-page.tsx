@@ -573,7 +573,6 @@ export default function SettingsPage() {
       
       if (isGif) {
         if (user?.isPro) {
-          // Pro users: Skip crop modal to preserve GIF animation
           console.log('🎬 Pro user uploading GIF - skipping crop to preserve animation');
           setAvatarFile(file);
           setAvatarPreview(URL.createObjectURL(file));
@@ -584,13 +583,12 @@ export default function SettingsPage() {
           });
           return;
         } else {
-          // Non-Pro users: Show message that animated GIFs are Pro-only, continue with cropping
           toast({
-            title: "Animated avatars are Pro-only",
-            description: "Your GIF will be converted to a static image. Upgrade to Pro to keep animations!",
-            variant: "default",
+            title: "Pro feature",
+            description: "Animated GIF profile pictures are a Pro perk. Upgrade to Pro to use GIF avatars!",
+            variant: "gamefolioError",
           });
-          // Continue to crop modal which will convert to JPEG
+          return;
         }
       }
       

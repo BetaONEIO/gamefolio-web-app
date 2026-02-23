@@ -617,6 +617,16 @@ export default function OnboardingFlow({
         return;
       }
       
+      const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
+      if (isGif && !user?.isPro) {
+        toast({
+          title: "Pro feature",
+          description: "Animated GIF profile pictures are a Pro perk. Upgrade to Pro to use GIF avatars!",
+          variant: "gamefolioError",
+        });
+        return;
+      }
+      
       if (file.size > 5 * 1024 * 1024) {
         toast({
           title: "File too large",

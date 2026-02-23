@@ -1084,22 +1084,43 @@ router.post('/avatar', fullAccessMiddleware, avatarUpload.single('avatar'), asyn
       return res.status(400).json({ error: 'No avatar file provided' });
     }
 
-    // Process image - resize to 400x400 and optimize
-    const processedBuffer = await sharp(req.file.path)
-      .resize(400, 400, { fit: 'cover', position: 'center' })
-      .jpeg({ quality: 90 })
-      .toBuffer();
+    const isGif = req.file.mimetype === 'image/gif' || req.file.originalname.toLowerCase().endsWith('.gif');
+    const user = await storage.getUser(req.user!.id);
+    const isPro = user?.isPro === true;
 
-    // Generate unique filename
-    const timestamp = Date.now();
-    const randomId = Math.round(Math.random() * 1E9);
-    const fileName = `avatar-${timestamp}-${randomId}.jpg`;
+    if (isGif && !isPro) {
+      console.log('Non-Pro user tried to upload GIF avatar - rejecting');
+      fs.unlink(req.file.path, () => {});
+      return res.status(403).json({ error: 'GIF profile pictures are a Pro feature. Upgrade to Pro to use animated avatars!' });
+    }
+
+    let processedBuffer: Buffer;
+    let fileName: string;
+    let mimeType: string;
+
+    if (isGif && isPro) {
+      console.log('Processing GIF avatar for Pro user - preserving animation');
+      processedBuffer = fs.readFileSync(req.file.path);
+      const timestamp = Date.now();
+      const randomId = Math.round(Math.random() * 1E9);
+      fileName = `avatar-${timestamp}-${randomId}.gif`;
+      mimeType = 'image/gif';
+    } else {
+      processedBuffer = await sharp(req.file.path)
+        .resize(400, 400, { fit: 'cover', position: 'center' })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+      const timestamp = Date.now();
+      const randomId = Math.round(Math.random() * 1E9);
+      fileName = `avatar-${timestamp}-${randomId}.jpg`;
+      mimeType = 'image/jpeg';
+    }
 
     // Upload to Supabase
     const uploadResult = await supabaseStorage.uploadBuffer(
       processedBuffer,
       fileName,
-      'image/jpeg',
+      mimeType,
       'image',
       req.user!.id
     );
