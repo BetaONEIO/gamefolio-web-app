@@ -161,6 +161,8 @@ const UploadPage = () => {
   const [reelPanY, setReelPanY] = useState(0);
   const [isReelAspectMismatch, setIsReelAspectMismatch] = useState(false);
   const [videoAspectRatio, setVideoAspectRatio] = useState(0);
+  const [isDraggingReel, setIsDraggingReel] = useState(false);
+  const reelDragStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
   
   // Share dialog state
   const [showShareDialog, setShowShareDialog] = useState(false);
@@ -1487,6 +1489,54 @@ const UploadPage = () => {
                                 objectFit: 'contain',
                                 transform: isReelAspectMismatch ? `scale(${reelZoom}) translate(${reelPanX}%, ${reelPanY}%)` : 'none',
                                 transformOrigin: 'center center',
+                                cursor: isReelAspectMismatch && reelZoom > 1 ? (isDraggingReel ? 'grabbing' : 'grab') : 'default',
+                                userSelect: 'none',
+                              }}
+                              onMouseDown={(e) => {
+                                if (!isReelAspectMismatch || reelZoom <= 1) return;
+                                e.preventDefault();
+                                setIsDraggingReel(true);
+                                reelDragStart.current = { x: e.clientX, y: e.clientY, panX: reelPanX, panY: reelPanY };
+                                const handleMouseMove = (ev: MouseEvent) => {
+                                  if (!reelDragStart.current) return;
+                                  const dx = ev.clientX - reelDragStart.current.x;
+                                  const dy = ev.clientY - reelDragStart.current.y;
+                                  const maxPan = Math.round((reelZoom - 1) * 30);
+                                  const newPanX = Math.max(-maxPan, Math.min(maxPan, reelDragStart.current.panX + (dx / 3)));
+                                  const newPanY = Math.max(-maxPan, Math.min(maxPan, reelDragStart.current.panY + (dy / 3)));
+                                  setReelPanX(Math.round(newPanX));
+                                  setReelPanY(Math.round(newPanY));
+                                };
+                                const handleMouseUp = () => {
+                                  setIsDraggingReel(false);
+                                  reelDragStart.current = null;
+                                  document.removeEventListener('mousemove', handleMouseMove);
+                                  document.removeEventListener('mouseup', handleMouseUp);
+                                };
+                                document.addEventListener('mousemove', handleMouseMove);
+                                document.addEventListener('mouseup', handleMouseUp);
+                              }}
+                              onTouchStart={(e) => {
+                                if (!isReelAspectMismatch || reelZoom <= 1) return;
+                                const touch = e.touches[0];
+                                setIsDraggingReel(true);
+                                reelDragStart.current = { x: touch.clientX, y: touch.clientY, panX: reelPanX, panY: reelPanY };
+                              }}
+                              onTouchMove={(e) => {
+                                if (!reelDragStart.current || !isDraggingReel) return;
+                                e.preventDefault();
+                                const touch = e.touches[0];
+                                const dx = touch.clientX - reelDragStart.current.x;
+                                const dy = touch.clientY - reelDragStart.current.y;
+                                const maxPan = Math.round((reelZoom - 1) * 30);
+                                const newPanX = Math.max(-maxPan, Math.min(maxPan, reelDragStart.current.panX + (dx / 3)));
+                                const newPanY = Math.max(-maxPan, Math.min(maxPan, reelDragStart.current.panY + (dy / 3)));
+                                setReelPanX(Math.round(newPanX));
+                                setReelPanY(Math.round(newPanY));
+                              }}
+                              onTouchEnd={() => {
+                                setIsDraggingReel(false);
+                                reelDragStart.current = null;
                               }}
                               onLoadedMetadata={() => {
                                 if (videoRef.current && videoDuration === 0) {
@@ -1569,7 +1619,7 @@ const UploadPage = () => {
                                   </span>
                                 </div>
                                 
-                                {videoAspectRatio > (9/16) && reelZoom > 1 && (
+                                {reelZoom > 1 && (
                                   <div className="flex items-center gap-3">
                                     <span className="text-xs text-muted-foreground w-12">Pan X</span>
                                     <input
@@ -1587,7 +1637,7 @@ const UploadPage = () => {
                                   </div>
                                 )}
                                 
-                                {videoAspectRatio < (9/16) && reelZoom > 1 && (
+                                {reelZoom > 1 && (
                                   <div className="flex items-center gap-3">
                                     <span className="text-xs text-muted-foreground w-12">Pan Y</span>
                                     <input
@@ -1622,7 +1672,7 @@ const UploadPage = () => {
                               </Button>
                               
                               <p className="text-xs text-muted-foreground">
-                                Your video starts fully visible. Zoom in to crop and fill the frame, then pan to adjust position.
+                                Zoom in to crop and fill the frame. Drag the video or use the sliders to position it.
                               </p>
                             </div>
                           )}
