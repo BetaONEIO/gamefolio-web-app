@@ -24,13 +24,13 @@ export default function TransactionErrorScreen({
   return (
     <div
       className="flex flex-col min-h-screen w-full"
-      style={{ background: "#020617", fontFamily: "Plus Jakarta Sans, sans-serif" }}
+      style={{ background: "#101D27", fontFamily: "Plus Jakarta Sans, sans-serif" }}
     >
       {/* Header with Red Gradient */}
       <div
         className="flex flex-col items-center gap-6 px-6 pt-12 pb-8"
         style={{
-          background: "linear-gradient(180deg, rgba(239, 68, 68, 0.1) 0%, #020617 100%)",
+          background: "linear-gradient(180deg, rgba(239, 68, 68, 0.1) 0%, #101D27 100%)",
           borderBottom: "1px solid rgba(30, 41, 59, 0.3)",
         }}
       >

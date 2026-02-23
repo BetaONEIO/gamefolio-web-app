@@ -21,7 +21,7 @@ export default function AssetPurchaseProcessing({ onComplete }: AssetPurchasePro
   }, [onComplete]);
 
   return (
-    <div className="flex flex-col items-center justify-center flex-1 w-full bg-[#020617] text-white p-6 animate-in fade-in duration-500">
+    <div className="flex flex-col items-center justify-center flex-1 w-full bg-[#101D27] text-white p-6 animate-in fade-in duration-500">
       <div className="flex flex-col items-center gap-12 max-w-[382px] w-full">
         {/* Text Header */}
         <div className="flex flex-col items-center gap-3 text-center">

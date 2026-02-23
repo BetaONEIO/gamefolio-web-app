@@ -171,13 +171,13 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
   return (
     <div
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: '#020617' }}
+      style={{ background: '#101D27' }}
     >
       {/* Header with gradient */}
       <div
         className="flex flex-col gap-4 px-6 pt-12 pb-6"
         style={{
-          background: 'linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #020617 100%)',
+          background: 'linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #101D27 100%)',
           borderBottom: '1px solid rgba(30, 41, 59, 0.3)',
         }}
       >

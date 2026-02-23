@@ -240,7 +240,7 @@ export default function MintNFTPage() {
 
   if (mintState === "processing") {
     return (
-      <div className="fixed inset-0 z-[100] bg-[#020617] flex flex-col items-center justify-center px-6">
+      <div className="fixed inset-0 z-[100] bg-[#101D27] flex flex-col items-center justify-center px-6">
         <div className="w-full max-w-md md:max-w-4xl flex flex-col md:flex-row md:items-center md:gap-16 items-center">
           <div className="md:flex-1 flex flex-col items-center">
             <div className="relative mb-8 md:mb-0">
@@ -411,8 +411,8 @@ export default function MintNFTPage() {
     }
     
     return (
-      <div className="min-h-screen bg-[#020617] flex flex-col">
-        <header className="sticky top-0 z-40 backdrop-blur-md bg-[#020617]/80 border-b border-[#1e293b]/50">
+      <div className="min-h-screen bg-[#101D27] flex flex-col">
+        <header className="sticky top-0 z-40 backdrop-blur-md bg-[#101D27]/80 border-b border-[#1e293b]/50">
           <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-5xl mx-auto px-6 pt-12 md:pt-6 pb-4">
             <div className="w-10 h-10" />
             <span className="text-lg font-bold text-[#f8fafc]">Mint Complete</span>
@@ -494,7 +494,7 @@ export default function MintNFTPage() {
                 
                 <button
                   onClick={() => setShowSingleNftDetail(true)}
-                  className="absolute -bottom-4 right-6 w-14 h-14 rounded-full bg-[#4ade80] border-4 border-[#020617] flex items-center justify-center shadow-[0_4px_6px_-4px_rgba(74,222,128,0.4),0_10px_15px_-3px_rgba(74,222,128,0.4)] hover:bg-[#22c55e] transition-colors cursor-pointer"
+                  className="absolute -bottom-4 right-6 w-14 h-14 rounded-full bg-[#4ade80] border-4 border-[#101D27] flex items-center justify-center shadow-[0_4px_6px_-4px_rgba(74,222,128,0.4),0_10px_15px_-3px_rgba(74,222,128,0.4)] hover:bg-[#22c55e] transition-colors cursor-pointer"
                 >
                   <Eye className="h-7 w-7 text-[#022c22]" />
                 </button>
@@ -586,8 +586,8 @@ export default function MintNFTPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] flex flex-col">
-      <header className="sticky top-0 z-40 backdrop-blur-md bg-[#020617]/80">
+    <div className="min-h-screen bg-[#101D27] flex flex-col">
+      <header className="sticky top-0 z-40 backdrop-blur-md bg-[#101D27]/80">
         <div className="flex items-center justify-between w-full max-w-7xl mx-auto px-4 pt-12 pb-4">
           <Button
             variant="ghost"

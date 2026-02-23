@@ -33,7 +33,7 @@ export function SuccessVanguardBorder({
   };
 
   return (
-    <div className="flex flex-col items-center justify-center flex-1 w-full bg-[#020617] text-white p-6 animate-in zoom-in-95 duration-500">
+    <div className="flex flex-col items-center justify-center flex-1 w-full bg-[#101D27] text-white p-6 animate-in zoom-in-95 duration-500">
       <div className="flex flex-col items-center gap-8 max-w-[382px] w-full">
         
         {/* Success Animation Header */}
@@ -82,7 +82,7 @@ export function SuccessVanguardBorder({
           <div className="h-[200px] bg-[#0f172b] flex items-center justify-center p-8">
             <img src={imageUrl} alt={assetName} className="w-48 h-48 object-contain" />
           </div>
-          <div className="p-6 bg-gradient-to-b from-[#0f172a] to-[#020617] flex items-center justify-between">
+          <div className="p-6 bg-gradient-to-b from-[#0f172a] to-[#101D27] flex items-center justify-between">
             <div className="flex flex-col">
               <span className="text-[10px] font-black uppercase tracking-[2px] text-[#94a3b8]">Asset Name</span>
               <span className="text-2xl font-black uppercase tracking-[-1.2px] text-[#f8fafc]">{assetName}</span>

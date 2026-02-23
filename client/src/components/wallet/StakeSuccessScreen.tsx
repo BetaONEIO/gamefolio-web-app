@@ -36,7 +36,7 @@ export default function StakeSuccessScreen({
   return (
     <div
       className="flex flex-col min-h-screen w-full"
-      style={{ background: "#020617", fontFamily: "Plus Jakarta Sans, sans-serif" }}
+      style={{ background: "#101D27", fontFamily: "Plus Jakarta Sans, sans-serif" }}
     >
       {/* Header */}
       <div

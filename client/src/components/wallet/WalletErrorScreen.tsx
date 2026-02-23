@@ -22,13 +22,13 @@ export default function WalletErrorScreen({
   return (
     <div
       className="flex flex-col min-h-screen w-full"
-      style={{ background: "#020617", fontFamily: "Plus Jakarta Sans, sans-serif" }}
+      style={{ background: "#101D27", fontFamily: "Plus Jakarta Sans, sans-serif" }}
     >
       {/* Header with red gradient */}
       <div
         className="flex flex-col items-center gap-4 px-6 pt-12 pb-6"
         style={{
-          background: "linear-gradient(180deg, rgba(239, 68, 68, 0.1) 0%, #020617 100%)",
+          background: "linear-gradient(180deg, rgba(239, 68, 68, 0.1) 0%, #101D27 100%)",
           borderBottom: "1px solid rgba(30, 41, 59, 0.3)",
         }}
       >
@@ -87,7 +87,7 @@ export default function WalletErrorScreen({
             {/* X Badge */}
             <div
               className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center"
-              style={{ background: "#020617", border: "2px solid #ef4444" }}
+              style={{ background: "#101D27", border: "2px solid #ef4444" }}
             >
               <XCircle className="w-5 h-5" style={{ color: "#ef4444" }} />
             </div>

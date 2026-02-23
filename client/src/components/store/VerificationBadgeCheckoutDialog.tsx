@@ -66,7 +66,7 @@ export function VerificationBadgeCheckoutDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="bg-[#020617] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden">
+        <DialogContent className="bg-[#101D27] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden">
           {isProcessing || isPurchasing ? (
             <AssetPurchaseProcessing onComplete={handleProcessingComplete} />
           ) : (
@@ -159,7 +159,7 @@ export function VerificationBadgeCheckoutDialog({
               </div>
 
               {/* Bottom Action */}
-              <div className="p-6 bg-[#020617] space-y-4">
+              <div className="p-6 bg-[#101D27] space-y-4">
                 <Button
                   disabled
                   className="w-full h-[68px] rounded-[16px] text-black text-lg font-black uppercase cursor-not-allowed opacity-50"

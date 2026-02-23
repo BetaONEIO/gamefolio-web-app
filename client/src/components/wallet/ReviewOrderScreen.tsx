@@ -35,7 +35,7 @@ export default function ReviewOrderScreen({
   return (
     <div 
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: '#020617' }}
+      style={{ background: '#101D27' }}
     >
       {/* Header */}
       <div 
@@ -227,7 +227,7 @@ export default function ReviewOrderScreen({
       <div 
         className="px-6 pb-24 pt-6"
         style={{ 
-          background: '#020617',
+          background: '#101D27',
           borderTop: '1px solid rgba(30, 41, 59, 0.3)'
         }}
       >

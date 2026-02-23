@@ -47,13 +47,13 @@ export default function SpendGFTScreen({
   return (
     <div
       className="flex flex-col min-h-screen w-full"
-      style={{ background: "#020617", fontFamily: "Plus Jakarta Sans, sans-serif" }}
+      style={{ background: "#101D27", fontFamily: "Plus Jakarta Sans, sans-serif" }}
     >
       {/* Header with gradient */}
       <div
         className="flex flex-col items-center gap-6 px-6 pt-12 pb-8"
         style={{
-          background: "linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #020617 100%)",
+          background: "linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #101D27 100%)",
           borderBottom: "1px solid rgba(30, 41, 59, 0.3)",
         }}
       >
@@ -144,7 +144,7 @@ export default function SpendGFTScreen({
           >
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
-              style={{ background: "#020617", border: "1px solid #1e293b" }}
+              style={{ background: "#101D27", border: "1px solid #1e293b" }}
             >
               <Image className="w-8 h-8" style={{ color: "#f8fafc" }} />
             </div>

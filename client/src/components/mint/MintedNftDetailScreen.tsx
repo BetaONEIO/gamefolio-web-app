@@ -151,7 +151,7 @@ export default function MintedNftDetailScreen({
       ];
 
   return (
-    <div className="fixed inset-0 z-[110] bg-[#020617] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="fixed inset-0 z-[110] bg-[#101D27] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
       <div className="w-full max-w-[430px] md:max-w-5xl mx-auto px-6 pt-16 md:pt-20 pb-1">
         <span className="text-sm font-medium text-[#64748b] tracking-wide">Minted NFT Detail</span>
       </div>
@@ -241,7 +241,7 @@ export default function MintedNftDetailScreen({
               </h1>
 
               <div className="flex items-center gap-2 mt-1">
-                <div className={`w-6 h-6 rounded-full border-2 border-[#020617] flex items-center justify-center overflow-hidden ${sold ? 'bg-amber-500/20' : 'bg-[#4ade80]/20'}`}>
+                <div className={`w-6 h-6 rounded-full border-2 border-[#101D27] flex items-center justify-center overflow-hidden ${sold ? 'bg-amber-500/20' : 'bg-[#4ade80]/20'}`}>
                   <div className={`w-full h-full opacity-60 ${sold ? 'bg-gradient-to-br from-amber-500 to-orange-500' : 'bg-gradient-to-br from-[#4ade80] to-[#22c55e]'}`} />
                 </div>
                 {sold ? (

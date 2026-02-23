@@ -64,7 +64,7 @@ export default function CustomAmountScreen({
   return (
     <div
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: "#020617f2", backdropFilter: "blur(4px)" }}
+      style={{ background: "#101D27f2", backdropFilter: "blur(4px)" }}
     >
       {/* Header */}
       <div className="flex items-center justify-center px-6 pt-12 pb-6">

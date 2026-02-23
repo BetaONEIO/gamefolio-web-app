@@ -144,11 +144,11 @@ export function NFTPurchaseDialog({
     return (
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent 
-          className="bg-[#020617] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
+          className="bg-[#101D27] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
           data-testid="dialog-nft-checkout"
         >
           {/* Header - left aligned */}
-          <div className="flex items-center gap-4 px-4 pt-12 pb-4 bg-[#020617]/80 backdrop-blur-md">
+          <div className="flex items-center gap-4 px-4 pt-12 pb-4 bg-[#101D27]/80 backdrop-blur-md">
             <button
               onClick={() => setStep('details')}
               className="w-10 h-10 rounded-full hover:bg-[#1e293b]/50 flex items-center justify-center transition-colors"
@@ -299,7 +299,7 @@ export function NFTPurchaseDialog({
     <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent 
-        className="bg-[#020617] border-none text-white p-0 max-w-[430px] md:max-w-[860px] w-full md:h-auto h-[100dvh] md:max-h-[90vh] overflow-hidden flex flex-col [&>button]:hidden rounded-none sm:rounded-none md:rounded-lg top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
+        className="bg-[#101D27] border-none text-white p-0 max-w-[430px] md:max-w-[860px] w-full md:h-auto h-[100dvh] md:max-h-[90vh] overflow-hidden flex flex-col [&>button]:hidden rounded-none sm:rounded-none md:rounded-lg top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
         data-testid="dialog-nft-purchase"
       >
         <div 
@@ -310,7 +310,7 @@ export function NFTPurchaseDialog({
           <div className="hide-scrollbar flex flex-col">
             
             {/* Header with back button */}
-            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-[#020617]/80 backdrop-blur-md">
+            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-[#101D27]/80 backdrop-blur-md">
               <button
                 onClick={handleClose}
                 className="w-10 h-10 rounded-full hover:bg-[#1e293b]/50 flex items-center justify-center transition-colors"
@@ -354,7 +354,7 @@ export function NFTPurchaseDialog({
                     {nft.name.replace(/^.*#/, 'Guardian #')}
                   </h1>
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 border-2 border-[#020617]" />
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 border-2 border-[#101D27]" />
                     <span className="text-sm text-[#94a3b8]">Owned by</span>
                     <span className="text-sm text-[#f8fafc]">{nft.owner}</span>
                   </div>

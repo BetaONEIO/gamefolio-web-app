@@ -118,13 +118,13 @@ export default function ActivityDetailScreen({
   return (
     <div
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: '#020617' }}
+      style={{ background: '#101D27' }}
     >
       {/* Header */}
       <div
         className="flex items-center justify-between px-6 pt-12 pb-6"
         style={{
-          background: 'linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #020617 100%)',
+          background: 'linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #101D27 100%)',
           borderBottom: '1px solid rgba(30, 41, 59, 0.3)',
         }}
       >
@@ -262,11 +262,11 @@ export default function ActivityDetailScreen({
                     className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
                     style={{
                       background: step.status === 'completed' ? '#4ade80' : step.status === 'current' ? '#3b82f6' : '#1e293b',
-                      boxShadow: '0 0 0 4px #020617',
+                      boxShadow: '0 0 0 4px #101D27',
                     }}
                   >
                     {step.status === 'completed' && (
-                      <Check className="w-3.5 h-3.5" style={{ color: '#020617' }} />
+                      <Check className="w-3.5 h-3.5" style={{ color: '#101D27' }} />
                     )}
                     {step.status === 'current' && (
                       <Clock className="w-3.5 h-3.5" style={{ color: '#fff' }} />

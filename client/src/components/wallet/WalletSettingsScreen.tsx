@@ -25,13 +25,13 @@ export default function WalletSettingsScreen({
   return (
     <div
       className="flex flex-col min-h-screen w-full"
-      style={{ background: "#020617", fontFamily: "Plus Jakarta Sans, sans-serif" }}
+      style={{ background: "#101D27", fontFamily: "Plus Jakarta Sans, sans-serif" }}
     >
       {/* Header with gradient */}
       <div
         className="flex items-center justify-center px-6 pt-12 pb-6"
         style={{
-          background: "linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #020617 100%)",
+          background: "linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #101D27 100%)",
           borderBottom: "1px solid rgba(30, 41, 59, 0.3)",
         }}
       >

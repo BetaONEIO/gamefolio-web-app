@@ -163,8 +163,8 @@ export default function MultiMintSuccessScreen({
   }
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#020617] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
-      <header className="sticky top-0 z-40 backdrop-blur-md bg-[#020617cc] border-b border-[#1e293b80] flex-shrink-0">
+    <div className="fixed inset-0 z-[100] bg-[#101D27] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+      <header className="sticky top-0 z-40 backdrop-blur-md bg-[#101D27cc] border-b border-[#1e293b80] flex-shrink-0">
         <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-5xl mx-auto px-6 pt-12 md:pt-6 pb-[17px]">
           <button
             onClick={onBack}

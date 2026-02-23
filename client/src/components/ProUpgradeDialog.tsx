@@ -165,7 +165,7 @@ function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, paymentInt
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#020617]">
+    <div className="flex flex-col h-full bg-[#101D27]">
       <div className="flex items-center py-[25px] px-6 border-b border-[#1e293b80]">
         <button
           onClick={onBack}
@@ -332,7 +332,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   if (isPro && step !== "success" && !purchaseInProgress) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[430px] w-full bg-[#020617] border-none p-0 overflow-hidden [&>button]:hidden">
+        <DialogContent className="max-w-[430px] w-full bg-[#101D27] border-none p-0 overflow-hidden [&>button]:hidden">
           <div className="p-8 text-center">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 mb-6">
               <Crown className="w-10 h-10 text-white" />
@@ -499,7 +499,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   );
 
   const rightPanel = (
-    <div className="flex flex-col justify-between h-full px-5 py-5 bg-[#020617]">
+    <div className="flex flex-col justify-between h-full px-5 py-5 bg-[#101D27]">
       <div className="grid grid-cols-2 gap-x-4 gap-y-3 mb-4">
         {premiumBenefits.map((benefit, index) => (
           <motion.div
@@ -630,7 +630,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
       />
     </Elements>
   ) : (
-    <div className="flex items-center justify-center min-h-[400px] bg-[#020617]">
+    <div className="flex items-center justify-center min-h-[400px] bg-[#101D27]">
       <Loader2 className="w-8 h-8 animate-spin text-[#4ade80]" />
     </div>
   );
@@ -638,7 +638,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-[430px] md:max-w-[780px] w-full bg-[#020617] border-none text-white p-0 overflow-hidden [&>button]:hidden max-h-[100dvh] h-[100dvh] md:h-auto md:max-h-[90vh] gap-0 rounded-none sm:rounded-none top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
+        className="max-w-[430px] md:max-w-[780px] w-full bg-[#101D27] border-none text-white p-0 overflow-hidden [&>button]:hidden max-h-[100dvh] h-[100dvh] md:h-auto md:max-h-[90vh] gap-0 rounded-none sm:rounded-none top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
         data-testid="dialog-pro-upgrade"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >

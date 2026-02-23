@@ -90,7 +90,7 @@ export function BorderDetailDialog({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
-        className="bg-[#020617] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
+        className="bg-[#101D27] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
       >
         <div
           className="flex-1 overflow-y-auto relative"
@@ -100,7 +100,7 @@ export function BorderDetailDialog({
           <div className="hide-scrollbar flex flex-col">
 
             {/* Header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between px-4 pt-12 pb-4 bg-[#020617]/80 backdrop-blur-md">
+            <div className="sticky top-0 z-10 flex items-center justify-between px-4 pt-12 pb-4 bg-[#101D27]/80 backdrop-blur-md">
               <div className="flex items-center gap-4">
                 <button
                   onClick={handleClose}
@@ -175,7 +175,7 @@ export function BorderDetailDialog({
               {/* Owner */}
               <div className="flex items-center gap-3 mb-6">
                 <div className="bg-[#1e293b]/30 rounded-full flex items-center gap-2 pr-4 pl-1 py-1">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-500 to-yellow-500 border-2 border-[#020617]" />
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-500 to-yellow-500 border-2 border-[#101D27]" />
                   <div className="flex flex-col">
                     <span className="text-[10px] text-[#94a3b8] leading-[10px]">Creator</span>
                     <span className="text-xs font-bold text-[#f8fafc] leading-4">Gamefolio Studio</span>
@@ -211,7 +211,7 @@ export function BorderDetailDialog({
             </div>
 
             {/* Sticky Bottom: Buy Button */}
-            <div className="sticky bottom-0 bg-gradient-to-t from-[#020617] via-[#020617] to-transparent px-6 pt-4 pb-6 flex flex-col gap-4 items-center">
+            <div className="sticky bottom-0 bg-gradient-to-t from-[#101D27] via-[#101D27] to-transparent px-6 pt-4 pb-6 flex flex-col gap-4 items-center">
               {border.owned ? (
                 <Button
                   className="w-full h-[68px] rounded-2xl text-white text-lg font-black uppercase bg-gradient-to-r from-green-500 to-emerald-600 cursor-default"

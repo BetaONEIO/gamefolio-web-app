@@ -34,7 +34,7 @@ export function SuccessVerificationBadge({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#020617] border-none text-white p-0 max-w-[430px] w-full overflow-hidden flex flex-col [&>button]:hidden">
+      <DialogContent className="bg-[#101D27] border-none text-white p-0 max-w-[430px] w-full overflow-hidden flex flex-col [&>button]:hidden">
         <div className="relative flex-1 flex flex-col items-center px-6 pt-16 pb-8 text-center overflow-hidden">
           {/* Background Glows */}
           <div className="absolute top-[-10%] left-[-20%] w-[344px] h-[746px] bg-[#00c95033] blur-[60px] rounded-full pointer-events-none" />
@@ -69,8 +69,8 @@ export function SuccessVerificationBadge({
               />
               
               {/* Checkmark Floating Badge */}
-              <div className="absolute bottom-[-10px] right-[-10px] w-[62px] h-[62px] bg-[#00c950] border-[4px] border-[#020617] rounded-full flex items-center justify-center shadow-[0_8px_10px_-6px_rgba(0,0,0,0.1),0_20px_25px_-5px_rgba(0,0,0,0.1)]">
-                <Check className="w-[31px] h-[31px] text-[#020617] stroke-[4px]" />
+              <div className="absolute bottom-[-10px] right-[-10px] w-[62px] h-[62px] bg-[#00c950] border-[4px] border-[#101D27] rounded-full flex items-center justify-center shadow-[0_8px_10px_-6px_rgba(0,0,0,0.1),0_20px_25px_-5px_rgba(0,0,0,0.1)]">
+                <Check className="w-[31px] h-[31px] text-[#101D27] stroke-[4px]" />
               </div>
             </div>
           </div>
@@ -100,7 +100,7 @@ export function SuccessVerificationBadge({
           <div className="relative z-10 w-full space-y-3">
             <Button
               onClick={() => onOpenChange(false)}
-              className="w-full h-[68px] rounded-2xl text-[#020617] text-lg font-black uppercase bg-[#f8fafc] hover:bg-white transition-all active:scale-[0.98] shadow-[0_8px_10px_-6px_rgba(0,0,0,0.1),0_20px_25px_-5px_rgba(0,0,0,0.1)]"
+              className="w-full h-[68px] rounded-2xl text-[#101D27] text-lg font-black uppercase bg-[#f8fafc] hover:bg-white transition-all active:scale-[0.98] shadow-[0_8px_10px_-6px_rgba(0,0,0,0.1),0_20px_25px_-5px_rgba(0,0,0,0.1)]"
               style={{ letterSpacing: '-0.9px' }}
             >
               Equip Badge

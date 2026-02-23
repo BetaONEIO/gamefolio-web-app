@@ -348,7 +348,7 @@ const LeaderboardPage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#020617] overflow-y-auto">
+    <div className="min-h-screen bg-[#101D27] overflow-y-auto">
       <div className="max-w-md lg:max-w-4xl xl:max-w-5xl mx-auto px-6 py-12 pb-32">
         {/* Hero Section */}
         <div className="flex flex-col items-center text-center mb-8">

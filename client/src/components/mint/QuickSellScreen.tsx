@@ -64,8 +64,8 @@ export default function QuickSellScreen({
   };
 
   return (
-    <div className="fixed inset-0 z-[120] bg-[#020617] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
-      <header className="backdrop-blur-md bg-[#020617cc] flex-shrink-0 z-40">
+    <div className="fixed inset-0 z-[120] bg-[#101D27] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+      <header className="backdrop-blur-md bg-[#101D27cc] flex-shrink-0 z-40">
         <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-3xl mx-auto px-4 pt-12 md:pt-6 pb-4">
           <div className="flex items-center gap-4">
             <button
@@ -166,7 +166,7 @@ export default function QuickSellScreen({
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md bg-[#020617cc] border-t border-[#1e293b4d]">
+      <div className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md bg-[#101D27cc] border-t border-[#1e293b4d]">
         <div className="w-full max-w-[430px] md:max-w-3xl mx-auto flex flex-col md:flex-row-reverse gap-3 px-6 py-6 pb-8 md:pb-6">
           <button
             disabled

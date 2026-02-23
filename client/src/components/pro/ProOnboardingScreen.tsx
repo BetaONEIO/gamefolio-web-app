@@ -69,7 +69,7 @@ export default function ProOnboardingScreen({ onComplete }: ProOnboardingScreenP
 
   if (showSuccess) {
     return (
-      <div className="flex flex-col w-full h-full min-h-[500px] md:min-h-[600px] bg-[#020617] relative overflow-hidden">
+      <div className="flex flex-col w-full h-full min-h-[500px] md:min-h-[600px] bg-[#101D27] relative overflow-hidden">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[344px] h-[746px] rounded-full bg-[#4ade8033] blur-[60px]" />
         <div className="absolute top-1/4 left-1/3 -translate-x-1/2 w-[344px] h-[746px] rounded-full bg-[#2b7fff1a] blur-[60px]" />
 
@@ -128,7 +128,7 @@ export default function ProOnboardingScreen({ onComplete }: ProOnboardingScreenP
   const slide = slides[currentSlide];
 
   return (
-    <div className="flex flex-col w-full h-full min-h-[500px] md:min-h-[600px] bg-[#020617] overflow-hidden">
+    <div className="flex flex-col w-full h-full min-h-[500px] md:min-h-[600px] bg-[#101D27] overflow-hidden">
       <div className="flex justify-end items-center h-[92px] px-6 pt-12 pb-2">
         <button
           onClick={handleSkip}

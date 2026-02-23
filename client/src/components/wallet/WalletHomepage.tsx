@@ -115,7 +115,7 @@ export default function WalletHomepage({
   };
 
   return (
-    <div className="w-full min-h-screen pb-24 font-['Plus_Jakarta_Sans']" style={{ background: '#020617' }}>
+    <div className="w-full min-h-screen pb-24 font-['Plus_Jakarta_Sans']" style={{ background: '#101D27' }}>
       {/* Beta TestNet Banner */}
       <div 
         className="w-full px-4 py-2.5 text-center text-sm font-medium"
@@ -132,7 +132,7 @@ export default function WalletHomepage({
       <div 
         className="w-full"
         style={{ 
-          background: 'linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #020617 100%)',
+          background: 'linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #101D27 100%)',
           borderBottom: '1px solid rgba(30, 41, 59, 0.3)'
         }}
       >

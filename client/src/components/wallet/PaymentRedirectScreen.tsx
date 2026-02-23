@@ -29,7 +29,7 @@ export default function PaymentRedirectScreen({
   return (
     <div 
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: '#020617' }}
+      style={{ background: '#101D27' }}
     >
       {/* Header */}
       <div 
@@ -142,7 +142,7 @@ export default function PaymentRedirectScreen({
           </span>
           <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path fillRule="evenodd" clipRule="evenodd" d="M20 36.6667C17.6944 36.6667 15.5278 36.2289 13.5 35.3533C11.4722 34.4778 9.70833 33.2906 8.20833 31.7917C6.70833 30.2928 5.52111 28.5289 4.64667 26.5C3.77222 24.4711 3.33444 22.3044 3.33333 20C3.33222 17.6955 3.77 15.5289 4.64667 13.5C5.52333 11.4711 6.71056 9.70721 8.20833 8.20832C9.70611 6.70943 11.47 5.5222 13.5 4.64665C15.53 3.77109 17.6967 3.33331 20 3.33331C22.3033 3.33331 24.47 3.77109 26.5 4.64665C28.53 5.5222 30.2939 6.70943 31.7917 8.20832C33.2894 9.70721 34.4767 11.4711 35.3533 13.5C36.23 15.5289 36.6678 17.6955 36.6667 20C36.6656 22.3044 36.2278 24.4711 35.3533 26.5C34.4789 28.5289 33.2917 30.2928 31.7917 31.7917C30.2917 33.2906 28.5278 34.4778 26.5 35.3533C24.4722 36.2289 22.3056 36.6667 20 36.6667Z" fill="#4ade80"/>
-            <path d="M14 20L18 24L26 16" stroke="#020617" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M14 20L18 24L26 16" stroke="#101D27" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
       </div>
@@ -160,20 +160,20 @@ export default function PaymentRedirectScreen({
           {/* Lock Icon */}
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path fillRule="evenodd" clipRule="evenodd" d="M16.25 6.25H13.75V4.375C13.75 2.30393 12.0711 0.625 10 0.625C7.92893 0.625 6.25 2.30393 6.25 4.375V6.25H3.75C3.05964 6.25 2.5 6.80964 2.5 7.5V16.25C2.5 16.9404 3.05964 17.5 3.75 17.5H16.25C16.9404 17.5 17.5 16.9404 17.5 16.25V7.5C17.5 6.80964 16.9404 6.25 16.25 6.25Z" fill="#F8FAFC" />
-            <path fillRule="evenodd" clipRule="evenodd" d="M10.625 12.393V14.375C10.625 14.7202 10.3452 15 10 15C9.65482 15 9.375 14.7202 9.375 14.375V12.393C8.51403 12.0886 7.99758 11.2082 8.152 10.3081C8.30643 9.40809 9.08681 8.7502 10 8.7502C10.9132 8.7502 11.6936 9.40809 11.848 10.3081C12.0024 11.2082 11.486 12.0886 10.625 12.393Z" fill="#020617" />
-            <path fillRule="evenodd" clipRule="evenodd" d="M12.5 6.25H7.5V4.375C7.5 2.99429 8.61929 1.875 10 1.875C11.3807 1.875 12.5 2.99429 12.5 4.375V6.25Z" fill="#020617" />
+            <path fillRule="evenodd" clipRule="evenodd" d="M10.625 12.393V14.375C10.625 14.7202 10.3452 15 10 15C9.65482 15 9.375 14.7202 9.375 14.375V12.393C8.51403 12.0886 7.99758 11.2082 8.152 10.3081C8.30643 9.40809 9.08681 8.7502 10 8.7502C10.9132 8.7502 11.6936 9.40809 11.848 10.3081C12.0024 11.2082 11.486 12.0886 10.625 12.393Z" fill="#101D27" />
+            <path fillRule="evenodd" clipRule="evenodd" d="M12.5 6.25H7.5V4.375C7.5 2.99429 8.61929 1.875 10 1.875C11.3807 1.875 12.5 2.99429 12.5 4.375V6.25Z" fill="#101D27" />
           </svg>
 
           {/* Shield Icon */}
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path fillRule="evenodd" clipRule="evenodd" d="M16.25 3.125H3.75C3.05964 3.125 2.5 3.68464 2.5 4.375V8.75C2.5 12.8687 4.49375 15.3648 6.16641 16.7336C7.96797 18.207 9.76016 18.707 9.83828 18.7281C9.9457 18.7573 10.059 18.7573 10.1664 18.7281C10.2445 18.707 12.0344 18.207 13.8383 16.7336C15.5063 15.3648 17.5 12.8687 17.5 8.75V4.375C17.5 3.68464 16.9404 3.125 16.25 3.125Z" fill="#F8FAFC" />
-            <path d="M7.5 10L9.16667 11.6667L12.5 8.33333" stroke="#020617" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M7.5 10L9.16667 11.6667L12.5 8.33333" stroke="#101D27" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
 
           {/* Checkmark Circle Icon */}
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="10" cy="10" r="8.75" fill="#F8FAFC" />
-            <path d="M6.5 10L9 12.5L13.5 7.5" stroke="#020617" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M6.5 10L9 12.5L13.5 7.5" stroke="#101D27" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
 

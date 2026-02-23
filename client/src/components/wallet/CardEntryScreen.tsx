@@ -103,7 +103,7 @@ function PaymentForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenPr
   return (
     <div
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: "#020617" }}
+      style={{ background: "#101D27" }}
     >
       {/* Header */}
       <div
@@ -194,7 +194,7 @@ function PaymentForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenPr
         <div
           className="px-6 pb-24 pt-6"
           style={{
-            background: "#020617",
+            background: "#101D27",
             borderTop: "1px solid rgba(30, 41, 59, 0.3)",
           }}
         >
@@ -281,7 +281,7 @@ export default function CardEntryScreen(props: CardEntryScreenProps) {
     return (
       <div
         className="w-full min-h-screen flex items-center justify-center"
-        style={{ background: "#020617" }}
+        style={{ background: "#101D27" }}
       >
         <div className="flex flex-col items-center gap-4 px-6 text-center">
           <p className="text-sm text-red-400">{loadError}</p>
@@ -300,7 +300,7 @@ export default function CardEntryScreen(props: CardEntryScreenProps) {
     return (
       <div
         className="w-full min-h-screen flex items-center justify-center"
-        style={{ background: "#020617" }}
+        style={{ background: "#101D27" }}
       >
         <div className="flex flex-col items-center gap-4">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />

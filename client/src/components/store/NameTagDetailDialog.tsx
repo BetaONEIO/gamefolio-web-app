@@ -91,7 +91,7 @@ export function NameTagDetailDialog({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
-        className="bg-[#020617] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
+        className="bg-[#101D27] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
       >
         <div
           className="flex-1 overflow-y-auto relative"
@@ -101,7 +101,7 @@ export function NameTagDetailDialog({
           <div className="hide-scrollbar flex flex-col">
 
             {/* Header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between px-4 pt-12 pb-4 bg-[#020617]/80 backdrop-blur-md">
+            <div className="sticky top-0 z-10 flex items-center justify-between px-4 pt-12 pb-4 bg-[#101D27]/80 backdrop-blur-md">
               <div className="flex items-center gap-4">
                 <button
                   onClick={handleClose}
@@ -178,9 +178,9 @@ export function NameTagDetailDialog({
               <div className="flex items-center gap-3 mb-6">
                 <div className="bg-[#1e293b]/30 rounded-full flex items-center gap-2 pr-4 pl-1 py-1">
                   {ownerAvatarUrl ? (
-                    <img src={ownerAvatarUrl} alt={ownerName || 'Owner'} className="w-7 h-7 rounded-full border-2 border-[#020617] object-cover" />
+                    <img src={ownerAvatarUrl} alt={ownerName || 'Owner'} className="w-7 h-7 rounded-full border-2 border-[#101D27] object-cover" />
                   ) : (
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 border-2 border-[#020617]" />
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 border-2 border-[#101D27]" />
                   )}
                   <div className="flex flex-col">
                     <span className="text-[10px] text-[#94a3b8] leading-[10px]">Owner</span>

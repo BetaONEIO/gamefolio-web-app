@@ -87,7 +87,7 @@ export default function NFTDetailsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white font-['Plus_Jakarta_Sans']">
+    <div className="min-h-screen bg-[#101D27] text-white font-['Plus_Jakarta_Sans']">
       <div 
         className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md"
         style={{ background: 'rgba(2, 6, 23, 0.8)' }}

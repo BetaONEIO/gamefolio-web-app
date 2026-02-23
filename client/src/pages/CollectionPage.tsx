@@ -299,7 +299,7 @@ export default function CollectionPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+      <div className="min-h-screen bg-[#101D27] flex items-center justify-center">
         <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 text-center">
           <p className="text-slate-400 mb-4">Please log in to view your collection</p>
           <Button 
@@ -324,8 +324,8 @@ export default function CollectionPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#020617] flex flex-col">
-      <div className="sticky top-0 z-10 backdrop-blur-md bg-[#020617]/80 border-b border-slate-800/30">
+    <div className="min-h-screen bg-[#101D27] flex flex-col">
+      <div className="sticky top-0 z-10 backdrop-blur-md bg-[#101D27]/80 border-b border-slate-800/30">
         <div className="w-full px-6 md:px-12 lg:px-16 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/">

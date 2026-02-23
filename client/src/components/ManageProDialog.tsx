@@ -152,8 +152,8 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
       <>
         <Dialog open={open} onOpenChange={onOpenChange}>
           <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-md md:max-w-lg [&>button]:hidden">
-            <div className="bg-[#020617] rounded-2xl overflow-hidden border border-slate-800/50 flex flex-col max-h-[90vh]">
-              <div className="flex items-center justify-between px-4 py-4 border-b border-slate-800/50 backdrop-blur-md bg-[#020617]/80 shrink-0">
+            <div className="bg-[#101D27] rounded-2xl overflow-hidden border border-slate-800/50 flex flex-col max-h-[90vh]">
+              <div className="flex items-center justify-between px-4 py-4 border-b border-slate-800/50 backdrop-blur-md bg-[#101D27]/80 shrink-0">
                 <button onClick={resetCancelState} className="p-2 rounded-full hover:bg-slate-800 transition-colors">
                   <ArrowLeft className="h-5 w-5 text-slate-50" />
                 </button>
@@ -292,8 +292,8 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-md md:max-w-lg [&>button]:hidden">
-        <div className="bg-[#020617] rounded-2xl overflow-hidden border border-slate-800/50 flex flex-col max-h-[90vh]">
-          <div className="flex items-center justify-between px-4 py-4 border-b border-slate-800/50 backdrop-blur-md bg-[#020617]/80 shrink-0">
+        <div className="bg-[#101D27] rounded-2xl overflow-hidden border border-slate-800/50 flex flex-col max-h-[90vh]">
+          <div className="flex items-center justify-between px-4 py-4 border-b border-slate-800/50 backdrop-blur-md bg-[#101D27]/80 shrink-0">
             <div className="w-10 h-10" />
             <span className="text-slate-50 font-bold text-lg">Manage Subscription</span>
             <button onClick={() => onOpenChange(false)} className="p-2 rounded-full hover:bg-slate-800 transition-colors">

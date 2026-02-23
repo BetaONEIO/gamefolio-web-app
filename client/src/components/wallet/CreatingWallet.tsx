@@ -82,7 +82,7 @@ export default function CreatingWallet({
   return (
     <div 
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: '#020617' }}
+      style={{ background: '#101D27' }}
     >
       {/* Header with back button */}
       <div className="flex items-center justify-between px-6 pt-12 pb-4">
