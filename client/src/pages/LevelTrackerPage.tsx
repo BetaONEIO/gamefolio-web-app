@@ -5,7 +5,7 @@ import { getQueryFn } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
-import { ArrowLeft, Zap, Gift, Eye, Heart, Flame, Upload, LogIn, Star, Award } from "lucide-react";
+import { ArrowLeft, Zap, Gift, Eye, Heart, Flame, Upload, LogIn, Star, Award, Camera, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import badgeIcon from "@assets/yellow_circle_transparent_1771659993513.png";
 import { isToday, isYesterday, format } from "date-fns";
@@ -197,6 +197,87 @@ export default function LevelTrackerPage() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Zap className="w-5 h-5 text-[#4ade80]" />
+          <h2 className="text-xl font-bold text-slate-50">Earn XP</h2>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-full bg-[#4ade80]/10 flex items-center justify-center mb-3">
+              <Upload className="w-6 h-6 text-[#4ade80]" />
+            </div>
+            <span className="text-2xl font-bold text-[#4ade80] mb-1">+5 XP</span>
+            <span className="text-slate-400 text-xs mb-1">Upload a Clip</span>
+            <span className="text-slate-400 text-[10px]">Share your best gaming moments</span>
+          </div>
+
+          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-full bg-[#00a6f4]/10 flex items-center justify-center mb-3">
+              <Eye className="w-6 h-6 text-[#00bcff]" />
+            </div>
+            <span className="text-2xl font-bold text-[#00bcff] mb-1">+1 XP</span>
+            <span className="text-slate-400 text-xs mb-1">Per View</span>
+            <span className="text-slate-400 text-[10px]">Earn XP when others watch</span>
+          </div>
+
+          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-full bg-[#eab308]/10 flex items-center justify-center mb-3">
+              <LogIn className="w-6 h-6 text-[#eab308]" />
+            </div>
+            <span className="text-2xl font-bold text-[#eab308] mb-1">+10 XP</span>
+            <span className="text-slate-400 text-xs mb-1">Daily Login</span>
+            <span className="text-slate-400 text-[10px]">Log in every day for streaks</span>
+          </div>
+
+          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-full bg-[#a855f7]/10 flex items-center justify-center mb-3">
+              <Gift className="w-6 h-6 text-[#a855f7]" />
+            </div>
+            <span className="text-2xl font-bold text-[#a855f7] mb-1">Bonus XP</span>
+            <span className="text-slate-400 text-xs mb-1">Daily Lootbox</span>
+            <span className="text-slate-400 text-[10px]">Open your daily lootbox reward</span>
+          </div>
+
+          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-full bg-[#ff2056]/10 flex items-center justify-center mb-3">
+              <Heart className="w-6 h-6 text-[#ff2056]" />
+            </div>
+            <span className="text-2xl font-bold text-[#ff2056] mb-1">+1 XP</span>
+            <span className="text-slate-400 text-xs mb-1">Like Received</span>
+            <span className="text-slate-400 text-[10px]">Get likes on your content</span>
+          </div>
+
+          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-full bg-[#ff6900]/10 flex items-center justify-center mb-3">
+              <Flame className="w-6 h-6 text-[#ff6900]" />
+            </div>
+            <span className="text-2xl font-bold text-[#ff6900] mb-1">+2 XP</span>
+            <span className="text-slate-400 text-xs mb-1">Fire Received</span>
+            <span className="text-slate-400 text-[10px]">Get fire reactions on clips</span>
+          </div>
+
+          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-full bg-[#06b6d4]/10 flex items-center justify-center mb-3">
+              <Camera className="w-6 h-6 text-[#06b6d4]" />
+            </div>
+            <span className="text-2xl font-bold text-[#06b6d4] mb-1">+2 XP</span>
+            <span className="text-slate-400 text-xs mb-1">Screenshot Upload</span>
+            <span className="text-slate-400 text-[10px]">Share your favourite moments</span>
+          </div>
+
+          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-full bg-[#f59e0b]/10 flex items-center justify-center mb-3">
+              <Star className="w-6 h-6 text-[#f59e0b]" />
+            </div>
+            <span className="text-2xl font-bold text-[#f59e0b] mb-1">+25 XP</span>
+            <span className="text-slate-400 text-xs mb-1">Streak Milestones</span>
+            <span className="text-slate-400 text-[10px]">Hit login streak milestones</span>
+          </div>
+        </div>
+      </div>
 
       <Card className="bg-background/50 border-border/50">
         <CardHeader>
