@@ -48,6 +48,7 @@ import { Progress } from "@/components/ui/progress";
 import { DualRangeSlider } from "@/components/ui/slider";
 import SimpleVideoPlayer from "@/components/shared/SimpleVideoPlayer";
 import { ShareDialog } from "@/components/shared/ShareDialog";
+import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { XPGainedDialog } from "@/components/gamification/XPGainedDialog";
 
 // Define filter options
@@ -135,6 +136,8 @@ const UploadPage = () => {
   const uploadAbortRef = useRef<AbortController | null>(null);
   
   // XP Dialog state
+  const [uploadLimitDialogOpen, setUploadLimitDialogOpen] = useState(false);
+  const [showProUpgrade, setShowProUpgrade] = useState(false);
   const [xpDialogOpen, setXpDialogOpen] = useState(false);
   const [xpGained, setXpGained] = useState(0);
   const [userXP, setUserXP] = useState(0);
@@ -752,19 +755,11 @@ const UploadPage = () => {
     if (uploadLimits && !uploadLimits.isPro) {
       const isReel = contentType === 'reels';
       if (isReel && !uploadLimits.canUploadReel) {
-        toast({
-          title: "Daily limit reached",
-          description: `You've reached your daily limit of ${uploadLimits.maxReelsPerDay} reels. Upgrade to Pro for unlimited uploads.`,
-          variant: "gamefolioError",
-        });
+        setUploadLimitDialogOpen(true);
         return;
       }
       if (!isReel && !uploadLimits.canUploadClip) {
-        toast({
-          title: "Daily limit reached",
-          description: `You've reached your daily limit of ${uploadLimits.maxClipsPerDay} clips. Upgrade to Pro for unlimited uploads.`,
-          variant: "gamefolioError",
-        });
+        setUploadLimitDialogOpen(true);
         return;
       }
     }
@@ -1848,11 +1843,7 @@ const UploadPage = () => {
                 
                 // Check upload limits (client-side validation)
                 if (uploadLimits && !uploadLimits.isPro && !uploadLimits.canUploadScreenshot) {
-                  toast({
-                    title: "Daily limit reached",
-                    description: `You've reached your daily limit of ${uploadLimits.maxScreenshotsPerDay} screenshots. Upgrade to Pro for unlimited uploads.`,
-                    variant: "gamefolioError",
-                  });
+                  setUploadLimitDialogOpen(true);
                   return;
                 }
                 
@@ -2161,6 +2152,51 @@ const UploadPage = () => {
           </div>
         </div>
       )}
+
+      {/* Daily Upload Limit Reached Dialog */}
+      {uploadLimitDialogOpen && !showProUpgrade && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setUploadLimitDialogOpen(false)} />
+          <div className="relative w-full sm:max-w-md bg-[#020617] sm:rounded-2xl overflow-hidden shadow-2xl border border-slate-800/50">
+            <div className="flex flex-col items-center justify-center px-6 py-10 sm:px-10 sm:py-12 gap-5">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500/20 to-red-600/10 border border-red-500/20 flex items-center justify-center">
+                <AlertCircle className="w-8 h-8 text-red-400" />
+              </div>
+
+              <div className="text-center space-y-2">
+                <h3 className="text-white font-bold text-xl">Daily Upload Limit Reached</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  You've used all your free uploads for today. Upgrade to Gamefolio Pro for unlimited uploads every day.
+                </p>
+              </div>
+
+              <div className="w-full space-y-3 pt-2">
+                <button
+                  onClick={() => {
+                    setUploadLimitDialogOpen(false);
+                    setShowProUpgrade(true);
+                  }}
+                  className="w-full py-4 bg-[#4ade80] hover:bg-[#3bce71] text-[#022c22] font-bold text-lg rounded-2xl transition-colors"
+                  style={{ boxShadow: '0 12px 40px -10px #4ade8080' }}
+                >
+                  Go Pro
+                </button>
+                <button
+                  onClick={() => setUploadLimitDialogOpen(false)}
+                  className="w-full py-3 text-slate-400 hover:text-slate-200 text-sm font-medium transition-colors"
+                >
+                  Maybe Later
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ProUpgradeDialog
+        open={showProUpgrade}
+        onOpenChange={setShowProUpgrade}
+      />
 
       {/* Share Dialog for uploaded content */}
       <ShareDialog

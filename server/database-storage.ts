@@ -5038,7 +5038,7 @@ export class DatabaseStorage implements IStorage {
   async getUploadLimits(userId: number): Promise<UploadLimits> {
     // Get user to check Pro status
     const user = await this.getUser(userId);
-    const isPro = user?.isPro || false;
+    const isPro = user?.isPro || user?.role === 'admin' || false;
     
     // Get today's upload counts
     const today = this.getTodayDateString();
