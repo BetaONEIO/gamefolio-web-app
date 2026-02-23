@@ -125,6 +125,42 @@ router.post('/twitch/games/add', async (req: express.Request, res: express.Respo
   }
 });
 
+// Add a user-created custom game (not on Twitch)
+router.post('/games/custom', async (req: express.Request, res: express.Response) => {
+  try {
+    const { name } = req.body;
+
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return res.status(400).json({ message: 'Game name is required' });
+    }
+
+    const trimmedName = name.trim();
+
+    const existingGame = await storage.getGameByName(trimmedName);
+    if (existingGame) {
+      return res.json(existingGame);
+    }
+
+    const newGame: InsertGame = {
+      name: trimmedName,
+      imageUrl: '/favicon.png',
+      isUserAdded: true,
+    };
+
+    const createdGame = await storage.createGame(newGame);
+    res.status(201).json(createdGame);
+  } catch (error: any) {
+    console.error('Error creating custom game:', error);
+    if (error.code === '23505') {
+      const existingGame = await storage.getGameByName(req.body.name?.trim());
+      if (existingGame) {
+        return res.json(existingGame);
+      }
+    }
+    res.status(500).json({ message: 'Failed to create custom game' });
+  }
+});
+
 // Get game by slug from local database
 router.get('/games/slug/:slug', async (req: express.Request, res: express.Response) => {
   try {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -79,7 +79,19 @@ const ExplorePage = () => {
     staleTime: 1000 * 60 * 30, // 30 minutes
   });
 
-  // Remove fallback - only use Twitch API data
+  // Fetch user-added games from the database
+  const {
+    data: userAddedGames,
+    isLoading: isLoadingUserAddedGames,
+  } = useQuery<Game[]>({
+    queryKey: ["/api/games", "user-added"],
+    queryFn: async () => {
+      const response = await fetch("/api/games?userAdded=true");
+      if (!response.ok) return [];
+      return response.json();
+    },
+    staleTime: 1000 * 60 * 5,
+  });
 
   // Get trending clips with time range filtering
   const { 
@@ -98,32 +110,39 @@ const ExplorePage = () => {
     },
   });
   
-  // Always use Twitch trending games - no fallback to local games
-  const displayedTrendingGames = twitchTrendingGames?.slice(0, displayedGamesCount);
+  // Merge Twitch trending games with user-added games
+  const allGames = useMemo(() => {
+    const twitch = twitchTrendingGames || [];
+    const userGames = userAddedGames || [];
+    const existingNames = new Set(twitch.map(g => g.name.toLowerCase()));
+    const uniqueUserGames = userGames.filter(g => !existingNames.has(g.name.toLowerCase()));
+    return [...twitch, ...uniqueUserGames];
+  }, [twitchTrendingGames, userAddedGames]);
+
+  const displayedTrendingGames = allGames.slice(0, displayedGamesCount);
   const isLoadingGames = isLoadingTwitchGames;
   
   // Load more games function
   const loadMoreGames = useCallback(() => {
-    if (isLoadingMore || !twitchTrendingGames) return;
+    if (isLoadingMore) return;
     
-    const totalGames = twitchTrendingGames.length;
+    const totalGames = allGames.length;
     if (displayedGamesCount >= totalGames) return;
     
     setIsLoadingMore(true);
     
-    // Simulate loading delay for better UX
     setTimeout(() => {
       setDisplayedGamesCount(prev => Math.min(prev + 20, totalGames));
       setIsLoadingMore(false);
     }, 500);
-  }, [isLoadingMore, twitchTrendingGames, displayedGamesCount]);
+  }, [isLoadingMore, allGames, displayedGamesCount]);
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !isLoadingMore && twitchTrendingGames) {
-          const totalGames = twitchTrendingGames.length;
+        if (entries[0].isIntersecting && !isLoadingMore && allGames.length > 0) {
+          const totalGames = allGames.length;
           if (displayedGamesCount < totalGames) {
             loadMoreGames();
           }
@@ -140,7 +159,7 @@ const ExplorePage = () => {
     }
 
     return () => observer.disconnect();
-  }, [loadMoreGames, isLoadingMore, twitchTrendingGames, displayedGamesCount]);
+  }, [loadMoreGames, isLoadingMore, allGames, displayedGamesCount]);
   
   // Function to manually refresh trending games
   const handleRefreshTrendingGames = () => {

@@ -51,14 +51,14 @@ const TrendingGameCard = ({ game }: TrendingGameCardProps) => {
           )}
           
           <img
-            src={game.box_art_url || game.imageUrl || defaultImage}
+            src={game.isUserAdded ? '/favicon.png' : (game.box_art_url || game.imageUrl || defaultImage)}
             alt={game.name}
-            className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${imageLoaded && !imageError ? 'opacity-100' : 'opacity-0'}`}
+            className={`w-full h-full transition-transform duration-300 group-hover:scale-105 ${game.isUserAdded ? 'object-contain p-3 bg-muted' : 'object-cover'} ${imageLoaded && !imageError ? 'opacity-100' : 'opacity-0'}`}
             onLoad={() => setImageLoaded(true)}
             onError={(e) => {
               setImageError(true);
               setImageLoaded(true);
-              e.currentTarget.src = defaultImage;
+              e.currentTarget.src = '/favicon.png';
             }}
           />
           

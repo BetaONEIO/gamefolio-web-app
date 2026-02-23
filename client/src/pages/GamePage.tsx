@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Clock, Calendar, CalendarDays, Play, Users, TrendingUp, Camera } from "lucide-react";
+import { ArrowLeft, Clock, Calendar, CalendarDays, Play, Users, TrendingUp, Camera, Mail } from "lucide-react";
 import { Link } from "wouter";
 import VideoClipCard from "@/components/clips/VideoClipCard";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
@@ -188,9 +189,12 @@ export default function GamePage() {
           
           <div className="flex items-center gap-4">
             <img
-              src={game.imageUrl || "/placeholder-game.png"}
+              src={game.imageUrl || "/favicon.png"}
               alt={game.name}
-              className={isMobile ? "h-24 w-24 rounded-lg object-cover" : "h-16 w-16 rounded-lg object-cover"}
+              className={cn(
+                isMobile ? "h-24 w-24 rounded-lg" : "h-16 w-16 rounded-lg",
+                game.isUserAdded ? "object-contain bg-muted p-2" : "object-cover"
+              )}
             />
             <div>
               <h1 className={isMobile ? "text-xl font-bold" : "text-3xl font-bold"}>{game.name}</h1>
@@ -201,6 +205,24 @@ export default function GamePage() {
             </div>
           </div>
         </div>
+
+        {game.isUserAdded && (
+          <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 p-4 flex items-start gap-3">
+            <Mail className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium">Is this your game?</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Contact us so we can learn more about it!{" "}
+                <a
+                  href={`mailto:support@gamefolio.com?subject=${encodeURIComponent(game.name)}&body=${encodeURIComponent(`Hi Gamefolio team,\n\nI'd like to tell you more about "${game.name}".\n\nGame page: ${window.location.href}\n\nThanks!`)}`}
+                  className="text-primary underline hover:text-primary/80"
+                >
+                  Email us at support@gamefolio.com
+                </a>
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Controls */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">

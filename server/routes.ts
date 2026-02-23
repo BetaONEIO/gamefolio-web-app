@@ -3410,7 +3410,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all games
   app.get("/api/games", async (req, res) => {
     try {
+      const userAdded = req.query.userAdded === 'true';
       const games = await storage.getAllGames();
+      if (userAdded) {
+        return res.json(games.filter(g => g.isUserAdded));
+      }
       res.json(games);
     } catch (err) {
       console.error("Error fetching games:", err);

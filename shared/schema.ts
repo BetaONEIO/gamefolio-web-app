@@ -100,6 +100,7 @@ export const games = pgTable("games", {
   name: text("name").notNull().unique(),
   imageUrl: text("image_url"),
   twitchId: text("twitch_id"), // Twitch game ID for mapping
+  isUserAdded: boolean("is_user_added").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

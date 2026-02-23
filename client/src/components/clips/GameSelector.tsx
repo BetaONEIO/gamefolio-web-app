@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { Check, ChevronsUpDown, Loader2, Gamepad2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Check, ChevronsUpDown, Loader2, Gamepad2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,7 @@ import {
 import { Game } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { TwitchGame } from "@/components/games/TwitchGameSearch";
+import { useToast } from "@/hooks/use-toast";
 
 interface GameSelectorProps {
   games: Game[];
@@ -29,8 +30,9 @@ const GameSelector = ({ games, selectedGame, onSelect }: GameSelectorProps) => {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [isCreatingCustom, setIsCreatingCustom] = useState(false);
+  const { toast } = useToast();
   
-  // Debounce search to avoid excessive API calls
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery);
@@ -41,10 +43,8 @@ const GameSelector = ({ games, selectedGame, onSelect }: GameSelectorProps) => {
     };
   }, [searchQuery]);
   
-  // Only execute search when the query is at least 2 characters
   const enableSearch = debouncedQuery.length >= 2;
   
-  // Search games with Twitch API
   const {
     data: searchResults,
     isLoading: isSearchLoading,
@@ -53,24 +53,22 @@ const GameSelector = ({ games, selectedGame, onSelect }: GameSelectorProps) => {
     queryFn: async () => {
       if (!enableSearch) return [];
       
-      // Use the Twitch API endpoint with search parameter
       const response = await fetch(`/api/twitch/games/search?q=${encodeURIComponent(debouncedQuery)}`);
       if (!response.ok) throw new Error("Failed to search games");
       
       const twitchGames = await response.json();
       
-      // Convert Twitch games to our Game format for compatibility
       return twitchGames.map((game: TwitchGame) => ({
         id: parseInt(game.id),
         name: game.name,
         imageUrl: game.box_art_url.replace('{width}', '285').replace('{height}', '380') || null,
+        isUserAdded: false,
         createdAt: new Date()
       }));
     },
-    enabled: enableSearch && open, // Only run query when search is enabled and dropdown is open
+    enabled: enableSearch && open,
   });
   
-  // Fetch trending games if no search is active
   const {
     data: trendingGames,
     isLoading: isTrendingLoading,
@@ -82,25 +80,58 @@ const GameSelector = ({ games, selectedGame, onSelect }: GameSelectorProps) => {
       
       const twitchGames = await response.json();
       
-      // Convert Twitch games to our Game format
       return twitchGames.map((game: TwitchGame) => ({
         id: parseInt(game.id),
         name: game.name,
         imageUrl: game.box_art_url.replace('{width}', '285').replace('{height}', '380') || null,
+        isUserAdded: false,
         createdAt: new Date()
       }));
     },
-    enabled: open && !enableSearch, // Only run when dropdown is open and no search is active
+    enabled: open && !enableSearch,
   });
+
+  const handleCreateCustomGame = async () => {
+    if (!searchQuery.trim()) return;
+    
+    setIsCreatingCustom(true);
+    try {
+      const response = await fetch('/api/games/custom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: searchQuery.trim() }),
+      });
+      
+      if (!response.ok) throw new Error('Failed to create game');
+      
+      const newGame: Game = await response.json();
+      onSelect(newGame);
+      setOpen(false);
+      setSearchQuery("");
+      toast({
+        title: "Game added",
+        description: `"${newGame.name}" has been added and selected.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add custom game. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingCustom(false);
+    }
+  };
   
-  // Function to handle search input changes
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
   };
   
-  // Determine what games to display and loading state
   const displayGames = enableSearch ? (searchResults || []) : (trendingGames || games);
   const isLoading = enableSearch ? isSearchLoading : isTrendingLoading;
+  const showCustomOption = enableSearch && !isLoading && searchQuery.trim().length >= 2 && 
+    (!searchResults || searchResults.length === 0 || 
+     !searchResults.some(g => g.name.toLowerCase() === searchQuery.trim().toLowerCase()));
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -123,7 +154,7 @@ const GameSelector = ({ games, selectedGame, onSelect }: GameSelectorProps) => {
                       loading="lazy"
                       className="h-full w-full object-cover"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://placehold.co/24x24/gray/white?text=G';
+                        (e.target as HTMLImageElement).src = '/favicon.png';
                       }}
                     />
                   </div>
@@ -159,60 +190,93 @@ const GameSelector = ({ games, selectedGame, onSelect }: GameSelectorProps) => {
             </div>
           ) : (
             <CommandList className="max-h-[50vh] overflow-y-auto">
-              <CommandEmpty className="py-8 px-4 text-center text-base sm:text-sm">
-                {searchQuery.length < 2 
-                  ? "Type at least 2 characters to search for games..." 
-                  : "No games found. Try a different search term."}
-              </CommandEmpty>
-              <CommandGroup heading={enableSearch ? "Search Results" : "Trending Games"}>
-                {displayGames.map((game) => (
+              {!showCustomOption && (
+                <CommandEmpty className="py-8 px-4 text-center text-base sm:text-sm">
+                  {searchQuery.length < 2 
+                    ? "Type at least 2 characters to search for games..." 
+                    : "No games found. Try a different search term."}
+                </CommandEmpty>
+              )}
+              
+              {showCustomOption && (
+                <CommandGroup heading="Can't find your game?">
                   <CommandItem
-                    key={game.id}
-                    value={game.name}
-                    onSelect={() => {
-                      onSelect(game.id === selectedGame?.id ? null : game);
-                      setOpen(false);
-                    }}
+                    value={`custom-${searchQuery}`}
+                    onSelect={handleCreateCustomGame}
                     className="p-3 sm:p-2 cursor-pointer min-h-[60px] sm:min-h-[48px]"
-                    data-testid={`game-option-${game.id}`}
+                    disabled={isCreatingCustom}
                   >
                     <div className="flex items-center gap-3 sm:gap-2 w-full">
-                      {game.imageUrl ? (
-                        <div className="h-12 w-12 sm:h-10 sm:w-10 overflow-hidden rounded flex-shrink-0">
-                          <img 
-                            src={game.imageUrl} 
-                            alt={game.name}
-                            loading="lazy"
-                            className="h-full w-full object-cover"
-                            onError={(e) => {
-                              // Handle image load errors
-                              (e.target as HTMLImageElement).src = 'https://placehold.co/40x40/gray/white?text=Game';
-                            }}
-                          />
-                        </div>
-                      ) : (
-                        <div className="h-12 w-12 sm:h-10 sm:w-10 flex items-center justify-center rounded bg-secondary flex-shrink-0">
-                          <Gamepad2 className="h-6 w-6 sm:h-5 sm:w-5 text-muted-foreground" />
-                        </div>
-                      )}
+                      <div className="h-12 w-12 sm:h-10 sm:w-10 flex items-center justify-center rounded bg-primary/10 border-2 border-dashed border-primary/30 flex-shrink-0">
+                        {isCreatingCustom ? (
+                          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                        ) : (
+                          <Plus className="h-5 w-5 text-primary" />
+                        )}
+                      </div>
                       <div className="flex flex-col flex-1 min-w-0">
-                        <div className="flex items-center w-full">
-                          <Check
-                            className={cn(
-                              "mr-2 h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0",
-                              selectedGame?.id === game.id ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          <span className="font-medium text-base sm:text-sm truncate">{game.name}</span>
-                        </div>
-                        <span className="text-sm sm:text-xs text-muted-foreground pl-7 sm:pl-6">
-                          Twitch ID: {game.id}
+                        <span className="font-medium text-base sm:text-sm text-primary">
+                          Add "{searchQuery.trim()}"
+                        </span>
+                        <span className="text-sm sm:text-xs text-muted-foreground">
+                          Add as a custom game
                         </span>
                       </div>
                     </div>
                   </CommandItem>
-                ))}
-              </CommandGroup>
+                </CommandGroup>
+              )}
+
+              {displayGames.length > 0 && (
+                <CommandGroup heading={enableSearch ? "Search Results" : "Trending Games"}>
+                  {displayGames.map((game) => (
+                    <CommandItem
+                      key={game.id}
+                      value={game.name}
+                      onSelect={() => {
+                        onSelect(game.id === selectedGame?.id ? null : game);
+                        setOpen(false);
+                      }}
+                      className="p-3 sm:p-2 cursor-pointer min-h-[60px] sm:min-h-[48px]"
+                      data-testid={`game-option-${game.id}`}
+                    >
+                      <div className="flex items-center gap-3 sm:gap-2 w-full">
+                        {game.imageUrl ? (
+                          <div className="h-12 w-12 sm:h-10 sm:w-10 overflow-hidden rounded flex-shrink-0">
+                            <img 
+                              src={game.imageUrl} 
+                              alt={game.name}
+                              loading="lazy"
+                              className="h-full w-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = '/favicon.png';
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-12 w-12 sm:h-10 sm:w-10 flex items-center justify-center rounded bg-secondary flex-shrink-0">
+                            <Gamepad2 className="h-6 w-6 sm:h-5 sm:w-5 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="flex flex-col flex-1 min-w-0">
+                          <div className="flex items-center w-full">
+                            <Check
+                              className={cn(
+                                "mr-2 h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0",
+                                selectedGame?.id === game.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <span className="font-medium text-base sm:text-sm truncate">{game.name}</span>
+                          </div>
+                          <span className="text-sm sm:text-xs text-muted-foreground pl-7 sm:pl-6">
+                            {(game as any).isUserAdded ? "Community added" : `Twitch ID: ${game.id}`}
+                          </span>
+                        </div>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
             </CommandList>
           )}
         </Command>
