@@ -3422,6 +3422,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Get all games with optional search
+  app.get("/api/admin/games", adminMiddleware, async (req, res) => {
+    try {
+      const search = req.query.search as string | undefined;
+      let allGames = await storage.getAllGames();
+      if (search && search.trim()) {
+        const term = search.trim().toLowerCase();
+        allGames = allGames.filter(g => g.name.toLowerCase().includes(term));
+      }
+      res.json(allGames);
+    } catch (err) {
+      console.error("Error fetching admin games:", err);
+      res.status(500).json({ message: "Error fetching games" });
+    }
+  });
+
+  // Admin: Create a game
+  app.post("/api/admin/games", adminMiddleware, async (req, res) => {
+    try {
+      const { name, imageUrl, isUserAdded, twitchId } = req.body;
+      if (!name || typeof name !== 'string' || !name.trim()) {
+        return res.status(400).json({ message: "Game name is required" });
+      }
+      const existing = await storage.getGameByName(name.trim());
+      if (existing) {
+        return res.status(409).json({ message: "A game with this name already exists" });
+      }
+      const game = await storage.createGame({
+        name: name.trim(),
+        imageUrl: imageUrl || '/favicon.png',
+        twitchId: twitchId || null,
+        isUserAdded: isUserAdded ?? true,
+      });
+      res.status(201).json(game);
+    } catch (err: any) {
+      console.error("Error creating admin game:", err);
+      if (err.code === '23505') {
+        return res.status(409).json({ message: "A game with this name already exists" });
+      }
+      res.status(500).json({ message: "Error creating game" });
+    }
+  });
+
+  // Admin: Update a game
+  app.patch("/api/admin/games/:id", adminMiddleware, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid game ID" });
+
+      const { name, imageUrl, twitchId, isUserAdded } = req.body;
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name.trim();
+      if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
+      if (twitchId !== undefined) updateData.twitchId = twitchId || null;
+      if (isUserAdded !== undefined) updateData.isUserAdded = isUserAdded;
+
+      const game = await storage.updateGame(id, updateData);
+      if (!game) return res.status(404).json({ message: "Game not found" });
+      res.json(game);
+    } catch (err: any) {
+      console.error("Error updating admin game:", err);
+      if (err.code === '23505') {
+        return res.status(409).json({ message: "A game with this name already exists" });
+      }
+      res.status(500).json({ message: "Error updating game" });
+    }
+  });
+
+  // Admin: Delete a game
+  app.delete("/api/admin/games/:id", adminMiddleware, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid game ID" });
+
+      const deleted = await storage.deleteGame(id);
+      if (!deleted) return res.status(404).json({ message: "Game not found" });
+      res.json({ message: "Game deleted successfully" });
+    } catch (err) {
+      console.error("Error deleting admin game:", err);
+      res.status(500).json({ message: "Error deleting game" });
+    }
+  });
+
   // Get or create game by slug (for Twitch games that don't exist in database yet)
   app.get("/api/games/slug/:slug", async (req, res) => {
     try {

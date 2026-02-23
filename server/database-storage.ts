@@ -468,6 +468,18 @@ export class DatabaseStorage implements IStorage {
     return game;
   }
 
+  async updateGame(id: number, data: Partial<InsertGame>): Promise<Game | null> {
+    const [game] = await db.update(games).set(data).where(eq(games.id, id)).returning();
+    return game || null;
+  }
+
+  async deleteGame(id: number): Promise<boolean> {
+    await db.update(clips).set({ gameId: null }).where(eq(clips.gameId, id));
+    await db.update(screenshots).set({ gameId: null }).where(eq(screenshots.gameId, id));
+    const result = await db.delete(games).where(eq(games.id, id)).returning();
+    return result.length > 0;
+  }
+
   async getAllGames(): Promise<Game[]> {
     return db.select().from(games).orderBy(asc(games.name));
   }

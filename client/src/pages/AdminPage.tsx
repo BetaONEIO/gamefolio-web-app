@@ -4,7 +4,7 @@ import { getQueryFn } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
 import AdminContentFilter from "./AdminContentFilter";
-import { UserWithBadges, BannerSettings, Badge as BadgeType, assetTypes, AssetType } from "@shared/schema";
+import { UserWithBadges, BannerSettings, Badge as BadgeType, assetTypes, AssetType, Game } from "@shared/schema";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -1168,6 +1168,264 @@ import {
   ChevronDown,
 } from "lucide-react";
 
+const AdminGamesTab = () => {
+  const { toast } = useToast();
+  const [gameSearch, setGameSearch] = useState("");
+  const [gameDialogOpen, setGameDialogOpen] = useState(false);
+  const [editingGame, setEditingGame] = useState<Game | null>(null);
+  const [deleteConfirmGame, setDeleteConfirmGame] = useState<Game | null>(null);
+  const [gameForm, setGameForm] = useState({ name: "", imageUrl: "", twitchId: "", isUserAdded: true });
+
+  const { data: adminGames = [], isLoading: isLoadingGames, refetch: refetchGames } = useQuery<Game[]>({
+    queryKey: ["/api/admin/games", gameSearch],
+    queryFn: async () => {
+      const params = gameSearch ? `?search=${encodeURIComponent(gameSearch)}` : "";
+      const res = await fetch(`/api/admin/games${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch games");
+      return res.json();
+    },
+  });
+
+  const openAddDialog = () => {
+    setEditingGame(null);
+    setGameForm({ name: "", imageUrl: "", twitchId: "", isUserAdded: true });
+    setGameDialogOpen(true);
+  };
+
+  const openEditDialog = (game: Game) => {
+    setEditingGame(game);
+    setGameForm({
+      name: game.name,
+      imageUrl: game.imageUrl || "",
+      twitchId: game.twitchId || "",
+      isUserAdded: game.isUserAdded,
+    });
+    setGameDialogOpen(true);
+  };
+
+  const handleSaveGame = async () => {
+    if (!gameForm.name.trim()) {
+      toast({ title: "Error", description: "Game name is required", variant: "destructive" });
+      return;
+    }
+    try {
+      const url = editingGame ? `/api/admin/games/${editingGame.id}` : "/api/admin/games";
+      const method = editingGame ? "PATCH" : "POST";
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: gameForm.name.trim(),
+          imageUrl: gameForm.imageUrl.trim() || "/favicon.png",
+          twitchId: gameForm.twitchId.trim() || null,
+          isUserAdded: gameForm.isUserAdded,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to save game");
+      }
+      toast({ title: "Success", description: editingGame ? "Game updated" : "Game created" });
+      setGameDialogOpen(false);
+      refetchGames();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleDeleteGame = async () => {
+    if (!deleteConfirmGame) return;
+    try {
+      const res = await fetch(`/api/admin/games/${deleteConfirmGame.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to delete game");
+      }
+      toast({ title: "Success", description: `"${deleteConfirmGame.name}" has been deleted` });
+      setDeleteConfirmGame(null);
+      refetchGames();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Games Management</CardTitle>
+              <CardDescription>View, add, edit, and delete games. {adminGames.length} games total.</CardDescription>
+            </div>
+            <Button size="sm" onClick={openAddDialog}>
+              <Plus className="h-4 w-4 mr-1" />
+              Add Game
+            </Button>
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search games..."
+                value={gameSearch}
+                onChange={(e) => setGameSearch(e.target.value)}
+                className="pl-8 h-9"
+              />
+            </div>
+            <Button variant="outline" size="sm" onClick={() => refetchGames()}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoadingGames ? (
+            <div className="text-center py-8 text-muted-foreground">Loading games...</div>
+          ) : adminGames.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {gameSearch ? "No games match your search." : "No games found."}
+            </div>
+          ) : (
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[60px]">Image</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Twitch ID</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {adminGames.map((game) => (
+                    <TableRow key={game.id}>
+                      <TableCell>
+                        <div className="h-10 w-10 rounded overflow-hidden bg-muted flex items-center justify-center">
+                          {game.imageUrl ? (
+                            <img
+                              src={game.imageUrl}
+                              alt={game.name}
+                              className={`h-full w-full ${game.isUserAdded ? 'object-contain p-1' : 'object-cover'}`}
+                              onError={(e) => { (e.target as HTMLImageElement).src = '/favicon.png'; }}
+                            />
+                          ) : (
+                            <span className="text-xs text-muted-foreground">N/A</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">{game.name}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs">{game.twitchId || "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant={game.isUserAdded ? "secondary" : "outline"} className="text-xs">
+                          {game.isUserAdded ? "User Added" : "Twitch"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {new Date(game.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => openEditDialog(game)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmGame(game)} className="text-destructive hover:text-destructive">
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add/Edit Game Dialog */}
+      <Dialog open={gameDialogOpen} onOpenChange={setGameDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingGame ? "Edit Game" : "Add Game"}</DialogTitle>
+            <DialogDescription>
+              {editingGame ? "Update the game details below." : "Enter the details for the new game."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Name</Label>
+              <Input
+                value={gameForm.name}
+                onChange={(e) => setGameForm({ ...gameForm, name: e.target.value })}
+                placeholder="Game name"
+              />
+            </div>
+            <div>
+              <Label>Image URL</Label>
+              <Input
+                value={gameForm.imageUrl}
+                onChange={(e) => setGameForm({ ...gameForm, imageUrl: e.target.value })}
+                placeholder="/favicon.png"
+              />
+              {gameForm.imageUrl && (
+                <div className="mt-2 h-16 w-16 rounded overflow-hidden bg-muted">
+                  <img
+                    src={gameForm.imageUrl || "/favicon.png"}
+                    alt="Preview"
+                    className="h-full w-full object-contain"
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/favicon.png'; }}
+                  />
+                </div>
+              )}
+            </div>
+            <div>
+              <Label>Twitch ID (optional)</Label>
+              <Input
+                value={gameForm.twitchId}
+                onChange={(e) => setGameForm({ ...gameForm, twitchId: e.target.value })}
+                placeholder="Twitch game ID"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={gameForm.isUserAdded}
+                onCheckedChange={(checked) => setGameForm({ ...gameForm, isUserAdded: checked })}
+              />
+              <Label>User-added game (community submitted)</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGameDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveGame}>{editingGame ? "Save Changes" : "Add Game"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmGame} onOpenChange={() => setDeleteConfirmGame(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Game</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{deleteConfirmGame?.name}"? Any clips or screenshots linked to this game will have their game association removed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmGame(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteGame}>Delete Game</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
 const AdminPage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -2205,6 +2463,7 @@ const AdminPage = () => {
           <TabsTrigger value="assets" className="text-xs px-3 py-1.5">Assets</TabsTrigger>
           <TabsTrigger value="pro-subscribers" className="text-xs px-3 py-1.5">Pro</TabsTrigger>
           <TabsTrigger value="settings" className="text-xs px-3 py-1.5">Settings</TabsTrigger>
+          <TabsTrigger value="games" className="text-xs px-3 py-1.5">Games</TabsTrigger>
         </TabsList>
 
         {/* Dashboard Tab */}
@@ -5732,6 +5991,11 @@ const AdminPage = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+        </TabsContent>
+
+        {/* Games Management Tab */}
+        <TabsContent value="games" className="space-y-4">
+          <AdminGamesTab />
         </TabsContent>
       </Tabs>
 

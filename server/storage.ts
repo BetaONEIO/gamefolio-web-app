@@ -104,6 +104,8 @@ export interface IStorage {
   getGameByName(name: string): Promise<Game | null>;
   getGameByTwitchId(twitchId: string): Promise<Game | null>;
   createGame(game: InsertGame): Promise<Game>;
+  updateGame(id: number, data: Partial<InsertGame>): Promise<Game | null>;
+  deleteGame(id: number): Promise<boolean>;
   getAllGames(): Promise<Game[]>;
   getTrendingGames(limit?: number): Promise<Game[]>;
 
