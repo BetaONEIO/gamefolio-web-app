@@ -99,8 +99,9 @@ export const games = pgTable("games", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
   imageUrl: text("image_url"),
-  twitchId: text("twitch_id"), // Twitch game ID for mapping
+  twitchId: text("twitch_id"),
   isUserAdded: boolean("is_user_added").default(false).notNull(),
+  showContactBanner: boolean("show_contact_banner").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

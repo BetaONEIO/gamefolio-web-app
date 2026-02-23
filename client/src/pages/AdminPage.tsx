@@ -1174,7 +1174,7 @@ const AdminGamesTab = () => {
   const [gameDialogOpen, setGameDialogOpen] = useState(false);
   const [editingGame, setEditingGame] = useState<Game | null>(null);
   const [deleteConfirmGame, setDeleteConfirmGame] = useState<Game | null>(null);
-  const [gameForm, setGameForm] = useState({ name: "", imageUrl: "", twitchId: "", isUserAdded: true });
+  const [gameForm, setGameForm] = useState({ name: "", imageUrl: "", twitchId: "", isUserAdded: true, showContactBanner: true });
 
   const { data: adminGames = [], isLoading: isLoadingGames, refetch: refetchGames } = useQuery<Game[]>({
     queryKey: ["/api/admin/games", gameSearch],
@@ -1188,7 +1188,7 @@ const AdminGamesTab = () => {
 
   const openAddDialog = () => {
     setEditingGame(null);
-    setGameForm({ name: "", imageUrl: "", twitchId: "", isUserAdded: true });
+    setGameForm({ name: "", imageUrl: "", twitchId: "", isUserAdded: true, showContactBanner: true });
     setGameDialogOpen(true);
   };
 
@@ -1199,6 +1199,7 @@ const AdminGamesTab = () => {
       imageUrl: game.imageUrl || "",
       twitchId: game.twitchId || "",
       isUserAdded: game.isUserAdded,
+      showContactBanner: game.showContactBanner,
     });
     setGameDialogOpen(true);
   };
@@ -1220,6 +1221,7 @@ const AdminGamesTab = () => {
           imageUrl: gameForm.imageUrl.trim() || "/favicon.png",
           twitchId: gameForm.twitchId.trim() || null,
           isUserAdded: gameForm.isUserAdded,
+          showContactBanner: gameForm.showContactBanner,
         }),
       });
       if (!res.ok) {
@@ -1399,6 +1401,15 @@ const AdminGamesTab = () => {
               />
               <Label>User-added game (community submitted)</Label>
             </div>
+            {gameForm.isUserAdded && (
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={gameForm.showContactBanner}
+                  onCheckedChange={(checked) => setGameForm({ ...gameForm, showContactBanner: checked })}
+                />
+                <Label>Show "Is this your game?" banner</Label>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setGameDialogOpen(false)}>Cancel</Button>

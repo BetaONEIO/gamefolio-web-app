@@ -3471,12 +3471,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid game ID" });
 
-      const { name, imageUrl, twitchId, isUserAdded } = req.body;
+      const { name, imageUrl, twitchId, isUserAdded, showContactBanner } = req.body;
       const updateData: any = {};
       if (name !== undefined) updateData.name = name.trim();
       if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
       if (twitchId !== undefined) updateData.twitchId = twitchId || null;
       if (isUserAdded !== undefined) updateData.isUserAdded = isUserAdded;
+      if (showContactBanner !== undefined) updateData.showContactBanner = showContactBanner;
 
       const game = await storage.updateGame(id, updateData);
       if (!game) return res.status(404).json({ message: "Game not found" });

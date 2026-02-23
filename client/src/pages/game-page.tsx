@@ -250,7 +250,7 @@ const GamePage = () => {
         </div>
       </div>
 
-      {game.isUserAdded && (
+      {game.isUserAdded && game.showContactBanner && (
         <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 p-4 flex items-start gap-3">
           <Mail className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
           <div>
