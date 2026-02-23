@@ -69,7 +69,6 @@ const ViewContentPage = React.lazy(() => import("./pages/ViewContentPage"));
 const PostUploadSuccessPage = React.lazy(() => import("./pages/PostUploadSuccessPage"));
 const VerifyEmailPage = React.lazy(() => import("./pages/verify-email"));
 const VerifyCodePage = React.lazy(() => import("./pages/verify-code-page"));
-const ResetPasswordPage = React.lazy(() => import("./pages/ResetPasswordPage"));
 const TermsPage = React.lazy(() => import("./pages/terms-page"));
 const PrivacyPage = React.lazy(() => import("./pages/privacy-page"));
 const ContactPage = React.lazy(() => import("./pages/contact-page"));
@@ -186,7 +185,6 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   const isAuthOrOnboarding = location.startsWith("/onboarding") ||
                            location.startsWith("/verify-email") ||
                            location.startsWith("/verify-code") ||
-                           location.startsWith("/reset-password") ||
                            location.startsWith("/embed/") ||
                            location.startsWith("/leaderboard/embed") ||
                            location.startsWith("/view/");
@@ -324,7 +322,6 @@ function Router() {
           <Route path="/onboarding" component={OnboardingPage} />
           <Route path="/verify-email" component={VerifyEmailPage} />
           <Route path="/verify-code" component={VerifyCodePage} />
-          <Route path="/reset-password" component={ResetPasswordPage} />
           <Route path="/2fa-verify" component={TwoFactorVerifyPage} />
           <Route path="/terms" component={TermsPage} />
           <Route path="/privacy" component={PrivacyPage} />

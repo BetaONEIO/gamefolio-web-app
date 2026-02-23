@@ -59,7 +59,7 @@ import { twitchApi } from "./services/twitch-api";
 import { VideoProcessor } from "./video-processor";
 import sharp from "sharp";
 import { EmailService } from "./email-service";
-import { createVerificationCode, verifyEmailCode, createPasswordResetToken, verifyPasswordResetToken, deletePasswordResetToken } from "./services/token-service";
+import { createVerificationCode, verifyEmailCode, createPasswordResetCode, verifyPasswordResetCode, deletePasswordResetTokensByUser } from "./services/token-service";
 import { NotificationService } from "./notification-service";
 import { MentionService } from "./mention-service";
 import { initializeRealtimeNotificationService } from './realtime-notification-service';

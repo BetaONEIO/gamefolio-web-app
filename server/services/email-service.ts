@@ -127,18 +127,15 @@ export class EmailService {
     }
   }
 
-  static async sendPasswordResetEmail(email: string, token: string): Promise<boolean> {
-    const resetUrl = `${SITE_URL}/reset-password?token=${token}`;
-
+  static async sendPasswordResetEmail(email: string, code: string): Promise<boolean> {
     console.log(`📧 sendPasswordResetEmail called for: ${email}`);
-    console.log(`🔗 Password reset URL: ${resetUrl}`);
     console.log(`🌐 Base URL detected as: ${SITE_URL}`);
     console.log(`🔑 BREVO_API_KEY configured: ${!!process.env.BREVO_API_KEY}`);
 
     try {
       console.log('📄 Loading password-reset template...');
       const html = await loadTemplate('password-reset', {
-        resetUrl,
+        resetCode: code,
         siteUrl: SITE_URL
       });
       console.log('📄 Template loaded successfully');

@@ -9,9 +9,9 @@ import {
   createVerificationCode,
   verifyEmailCode,
   verifyEmailToken,
-  createPasswordResetToken,
-  verifyPasswordResetToken,
-  deletePasswordResetToken
+  createPasswordResetCode,
+  verifyPasswordResetCode,
+  deletePasswordResetTokensByUser
 } from '../services/token-service';
 import { EmailService } from '../services/email-service'; // Assuming EmailService is set up for Brevo
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../services/jwt-service';
@@ -346,8 +346,7 @@ router.post('/auth/verify-email', async (req: Request, res: Response) => {
 
 
 /**
- * Request password reset
- * This route is used to generate a new password reset token and send the reset email
+ * Request password reset - sends a 6-digit code to the user's email
  */
 router.post('/auth/forgot-password', async (req: Request, res: Response) => {
   try {
@@ -360,7 +359,6 @@ router.post('/auth/forgot-password', async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Email is required' });
     }
 
-    // Find the user by email (normalize to lowercase for case-insensitive comparison)
     const [user] = await db
       .select()
       .from(users)
@@ -369,66 +367,87 @@ router.post('/auth/forgot-password', async (req: Request, res: Response) => {
     console.log('👤 User found:', !!user);
 
     if (!user) {
-      // For security reasons, don't reveal if the email exists or not
       console.log('❌ User not found, but returning success for security');
       return res.status(200).json({
-        message: 'If your email is registered, a password reset link has been sent'
+        message: 'If your email is registered, you will receive a password reset code'
       });
     }
 
-    // Generate a new password reset token
-    console.log('🔑 Generating password reset token...');
-    const token = await createPasswordResetToken(user.id);
-    console.log('🔑 Token generated successfully');
+    console.log('🔑 Generating password reset code...');
+    const code = await createPasswordResetCode(user.id, user.email);
+    console.log('🔑 Code generated successfully');
 
-    // Send password reset email using Brevo
     try {
       console.log('📧 Attempting to send password reset email...');
-      const emailResult = await EmailService.sendPasswordResetEmail(user.email, token);
+      const emailResult = await EmailService.sendPasswordResetEmail(user.email, code);
       console.log(`✅ Password reset email result: ${emailResult} for ${user.email}`);
     } catch (error) {
       console.error('❌ Failed to send password reset email:', error);
-      // Continue with the response even if email fails
     }
 
     console.log('✅ Password reset request completed successfully');
     return res.status(200).json({
-      message: 'Password reset email sent',
+      message: 'Password reset code sent',
     });
 
   } catch (error) {
     console.error('❌ Error requesting password reset:', error);
-    return res.status(500).json({ message: 'Failed to send password reset email' });
+    return res.status(500).json({ message: 'Failed to send password reset code' });
   }
 });
 
 /**
- * Reset password with token
- * This route is used to reset a password using a token
+ * Verify password reset code
+ */
+router.post('/auth/verify-reset-code', async (req: Request, res: Response) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ message: 'Email and code are required' });
+    }
+
+    if (!/^\d{6}$/.test(code)) {
+      return res.status(400).json({ message: 'Invalid code format' });
+    }
+
+    const userId = await verifyPasswordResetCode(email, code);
+
+    if (!userId) {
+      return res.status(400).json({ message: 'Invalid or expired code' });
+    }
+
+    return res.status(200).json({ message: 'Code verified successfully', verified: true });
+
+  } catch (error) {
+    console.error('Error verifying reset code:', error);
+    return res.status(500).json({ message: 'Failed to verify code' });
+  }
+});
+
+/**
+ * Reset password with verified code
  */
 router.post('/auth/reset-password', async (req: Request, res: Response) => {
   try {
-    const { token, newPassword } = req.body;
+    const { email, code, newPassword } = req.body;
 
-    if (!token || !newPassword) {
-      return res.status(400).json({ message: 'Token and new password are required' });
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ message: 'Email, code, and new password are required' });
     }
 
-    // Verify the token
-    const userId = await verifyPasswordResetToken(token);
+    const userId = await verifyPasswordResetCode(email, code);
 
     if (!userId) {
-      return res.status(400).json({ message: 'Invalid or expired token' });
+      return res.status(400).json({ message: 'Invalid or expired code' });
     }
 
-    // Use the same hashing function as in routes.ts
     const hashPassword = async (password: string) => {
       const salt = randomBytes(16).toString("hex");
       const buf = (await scryptAsync(password, salt, 64)) as Buffer;
       return `${buf.toString("hex")}.${salt}`;
     };
 
-    // Update the user's password
     const hashedPassword = await hashPassword(newPassword);
 
     await db
@@ -436,8 +455,7 @@ router.post('/auth/reset-password', async (req: Request, res: Response) => {
       .set({ password: hashedPassword })
       .where(eq(users.id, userId));
 
-    // Delete the used token
-    await deletePasswordResetToken(token);
+    await deletePasswordResetTokensByUser(userId);
 
     return res.status(200).json({ message: 'Password reset successfully' });
 

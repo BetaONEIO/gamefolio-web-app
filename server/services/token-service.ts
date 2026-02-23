@@ -128,56 +128,65 @@ export const verifyEmailToken = async (token: string): Promise<number | null> =>
 };
 
 /**
- * Create a new password reset token
+ * Create a new password reset code (6-digit code sent via email)
  */
-export const createPasswordResetToken = async (userId: number): Promise<string> => {
-  // Delete any existing tokens for the user
+export const createPasswordResetCode = async (userId: number, email: string): Promise<string> => {
   await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
   
-  // Generate a new token
+  const code = generateVerificationCode();
   const token = generateToken();
   
-  // Create an expiration date (1 hour from now)
   const expiresAt = new Date();
-  expiresAt.setHours(expiresAt.getHours() + 1);
+  expiresAt.setMinutes(expiresAt.getMinutes() + 15);
   
-  // Insert the new token
+  console.log(`🔧 Creating password reset code for user ${userId}, expires at: ${expiresAt.toISOString()}`);
+  
   await db.insert(passwordResetTokens).values({
     userId,
     token,
+    code,
+    email: email.toLowerCase(),
     expiresAt,
   });
   
-  return token;
+  return code;
 };
 
 /**
- * Verify a password reset token
+ * Verify a password reset code by email and return userId
  */
-export const verifyPasswordResetToken = async (token: string): Promise<number | null> => {
-  // Find the token
+export const verifyPasswordResetCode = async (email: string, code: string): Promise<number | null> => {
   const [resetToken] = await db
     .select()
     .from(passwordResetTokens)
-    .where(eq(passwordResetTokens.token, token));
+    .where(eq(passwordResetTokens.email, email.toLowerCase()));
   
   if (!resetToken) {
+    console.log(`❌ Password reset code not found for email ${email}`);
     return null;
   }
   
-  // Check if the token has expired
-  if (new Date() > resetToken.expiresAt) {
-    // Delete the expired token
+  if (resetToken.code !== code) {
+    console.log(`❌ Invalid password reset code for email ${email}`);
+    return null;
+  }
+  
+  const now = new Date();
+  const expiresAt = new Date(resetToken.expiresAt);
+  
+  if (now > expiresAt) {
     await db.delete(passwordResetTokens).where(eq(passwordResetTokens.id, resetToken.id));
+    console.log(`🕒 Password reset code expired for email ${email}`);
     return null;
   }
   
+  console.log(`✅ Password reset code verified for email ${email}`);
   return resetToken.userId;
 };
 
 /**
- * Delete a password reset token (after it's been used)
+ * Delete password reset tokens for a user (after code is used)
  */
-export const deletePasswordResetToken = async (token: string): Promise<void> => {
-  await db.delete(passwordResetTokens).where(eq(passwordResetTokens.token, token));
+export const deletePasswordResetTokensByUser = async (userId: number): Promise<void> => {
+  await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
 };
