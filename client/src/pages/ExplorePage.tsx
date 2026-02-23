@@ -110,13 +110,19 @@ const ExplorePage = () => {
     },
   });
   
-  // Merge Twitch trending games with user-added games
+  // Merge Twitch trending games with user-added games, interleaving user games near the top
   const allGames = useMemo(() => {
     const twitch = twitchTrendingGames || [];
     const userGames = userAddedGames || [];
     const existingNames = new Set(twitch.map(g => g.name.toLowerCase()));
     const uniqueUserGames = userGames.filter(g => !existingNames.has(g.name.toLowerCase()));
-    return [...twitch, ...uniqueUserGames];
+    if (uniqueUserGames.length === 0) return twitch;
+    const result: Game[] = [];
+    const insertAfter = Math.min(4, twitch.length);
+    result.push(...twitch.slice(0, insertAfter));
+    result.push(...uniqueUserGames);
+    result.push(...twitch.slice(insertAfter));
+    return result;
   }, [twitchTrendingGames, userAddedGames]);
 
   const displayedTrendingGames = allGames.slice(0, displayedGamesCount);
@@ -180,17 +186,33 @@ const ExplorePage = () => {
     if (searchQuery.trim()) {
       const isHashtag = searchQuery.startsWith('#');
       if (isHashtag) {
-        // Navigate directly to hashtag page
-        const hashtag = searchQuery.slice(1); // Remove the # symbol
+        const hashtag = searchQuery.slice(1);
         setLocation(`/hashtag/${encodeURIComponent(hashtag)}`);
       } else {
-        // Check if it's a game search first
+        try {
+          const localResponse = await fetch(`/api/search/games?q=${encodeURIComponent(searchQuery)}`);
+          if (localResponse.ok) {
+            const localGames = await localResponse.json();
+            if (localGames.length > 0) {
+              const game = localGames[0];
+              const gameSlug = game.name
+                .toLowerCase()
+                .replace(/[^a-z0-9\s]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/^-+|-+$/g, '');
+              setLocation(`/games/${gameSlug}`);
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Local game search error:', error);
+        }
+
         try {
           const response = await fetch(`/api/twitch/games/search?q=${encodeURIComponent(searchQuery)}`);
           if (response.ok) {
             const games = await response.json();
             if (games.length > 0) {
-              // Navigate to the first matching game
               const game = games[0];
               const gameSlug = game.name.toLowerCase().replace(/[^a-z0-9]/g, '');
               setLocation(`/games/${gameSlug}`);
@@ -198,10 +220,9 @@ const ExplorePage = () => {
             }
           }
         } catch (error) {
-          console.error('Game search error:', error);
+          console.error('Twitch game search error:', error);
         }
         
-        // Fallback to general search
         setLocation(`/explore?q=${encodeURIComponent(searchQuery)}`);
       }
     }
