@@ -1916,7 +1916,7 @@ const UploadPage = () => {
                             <img
                               src={preview}
                               alt={`Preview ${index + 1}`}
-                              className="w-full h-32 object-cover rounded-lg border"
+                              className="w-full aspect-video object-cover rounded-lg border"
                               data-testid={`img-screenshot-preview-${index}`}
                             />
                             <Button
