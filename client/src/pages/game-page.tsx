@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Upload, ArrowLeft, Play, TrendingUp, Camera, Users, Clock, Calendar, CalendarDays, X } from "lucide-react";
+import { Upload, ArrowLeft, Play, TrendingUp, Camera, Users, Clock, Calendar, CalendarDays, X, Mail } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { ClipWithUser, Game, User } from "@shared/schema";
 import { formatDuration } from "@/lib/constants";
@@ -249,6 +249,24 @@ const GamePage = () => {
           </Button>
         </div>
       </div>
+
+      {game.isUserAdded && (
+        <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 p-4 flex items-start gap-3">
+          <Mail className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-medium">Is this your game?</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Contact us so we can learn more about it!{" "}
+              <a
+                href={`mailto:support@gamefolio.com?subject=${encodeURIComponent(game.name)}&body=${encodeURIComponent(`Hi Gamefolio team,\n\nI'd like to tell you more about "${game.name}".\n\nGame page: ${window.location.href}\n\nThanks!`)}`}
+                className="text-primary underline hover:text-primary/80"
+              >
+                Email us at support@gamefolio.com
+              </a>
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
