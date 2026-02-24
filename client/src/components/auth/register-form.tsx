@@ -37,6 +37,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
   });
   const [passwordsMatch, setPasswordsMatch] = useState<boolean | null>(null);
   const [serverError, setServerError] = useState<string>("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{
     username?: string;
     email?: string;
@@ -263,6 +264,15 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       return;
     }
 
+    if (!agreedToTerms) {
+      toast({
+        title: "Error",
+        description: "You must agree to the Terms & Conditions and Privacy Policy to register",
+        variant: "gamefolioError",
+      });
+      return;
+    }
+
     // Password requirements validation
     const passwordReqs = validatePasswordRequirements(formData.password);
     if (!passwordReqs.length || !passwordReqs.uppercase || !passwordReqs.number || !passwordReqs.special) {
@@ -447,17 +457,25 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
         <FieldError error={fieldErrors.dateOfBirth} />
       </div>
 
-      <div className="text-xs text-muted-foreground text-center space-y-2">
-        <p>
-          By creating an account, you agree to our{" "}
-          <a href="/terms" className="text-primary hover:underline">
-            Terms and Conditions
+      <div className="flex items-start gap-2">
+        <input
+          type="checkbox"
+          id="agree-terms"
+          checked={agreedToTerms}
+          onChange={(e) => setAgreedToTerms(e.target.checked)}
+          disabled={isLoading}
+          className="mt-1 h-4 w-4 rounded border-gray-600 bg-gray-800 text-primary focus:ring-primary accent-primary cursor-pointer"
+        />
+        <label htmlFor="agree-terms" className="text-xs text-muted-foreground cursor-pointer select-none">
+          By registering you are agreeing to our{" "}
+          <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+            Terms & Conditions
           </a>{" "}
           and{" "}
-          <a href="/privacy" className="text-primary hover:underline">
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
             Privacy Policy
           </a>
-        </p>
+        </label>
       </div>
 
       {/* General server error display */}
