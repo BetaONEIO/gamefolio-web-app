@@ -622,7 +622,7 @@ const TrendingPage: React.FC = () => {
 
       {/* Screenshot Modal Dialog */}
       <Dialog open={!!selectedScreenshot} onOpenChange={() => setSelectedScreenshot(null)}>
-        <DialogContent className="max-w-[95%] w-[95%] p-0 bg-background text-foreground max-h-[95vh] h-auto lg:h-[95vh] overflow-y-auto lg:overflow-hidden screenshot-dialog-close">
+        <DialogContent className="max-w-[80%] w-[80%] p-0 bg-background text-foreground max-h-[76vh] h-[76vh] overflow-y-auto lg:overflow-hidden screenshot-dialog-close">
           <style>{`
             .screenshot-dialog-close > button[type="button"] {
               background: rgba(0,0,0,0.4) !important;
@@ -632,8 +632,8 @@ const TrendingPage: React.FC = () => {
               opacity: 1 !important;
               right: 12px !important;
               top: 12px !important;
-              width: 40px !important;
-              height: 40px !important;
+              width: 32px !important;
+              height: 32px !important;
               display: flex !important;
               align-items: center !important;
               justify-content: center !important;
@@ -643,15 +643,15 @@ const TrendingPage: React.FC = () => {
               background: rgba(0,0,0,0.6) !important;
             }
             .screenshot-dialog-close > button[type="button"] svg {
-              width: 20px !important;
-              height: 20px !important;
+              width: 16px !important;
+              height: 16px !important;
             }
           `}</style>
 
           {selectedScreenshot && (
-            <div className="flex flex-col lg:flex-row h-full">
+            <div className="flex flex-col lg:flex-row h-auto lg:h-full min-h-full">
               {/* Left side - Image display */}
-              <div className="bg-black flex items-center justify-center w-full lg:w-[75%] h-[60vh] lg:h-full relative">
+              <div className="bg-black flex items-center justify-center w-full lg:w-[75%] h-[50vh] lg:h-full flex-shrink-0">
                 {(!selectedScreenshot.ageRestricted || ageRestrictionAccepted) ? (
                   <img
                     src={screenshotSignedUrl || selectedScreenshot.imageUrl}
@@ -671,9 +671,9 @@ const TrendingPage: React.FC = () => {
               </div>
 
               {/* Right side - Info and engagement */}
-              <div className="h-full flex flex-col w-full lg:w-[25%]">
+              <div className="flex flex-col w-full lg:w-[25%] lg:h-full">
                 {/* Header with username and Follow button */}
-                <div className="border-b border-border p-4 flex items-center justify-between">
+                <div className="border-b border-border p-4 pr-12 flex items-center justify-between">
                   <div className="flex items-center">
                     <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3">
                       {selectedScreenshot.user.avatarUrl ? (
@@ -723,12 +723,12 @@ const TrendingPage: React.FC = () => {
                 </div>
 
                 {/* Screenshot Details - scrollable */}
-                <div className="flex-1 p-4 pb-8 lg:pb-4 overflow-y-auto space-y-3">
+                <div className="flex-1 lg:overflow-y-auto px-4 py-3 space-y-3">
                   {/* Title and description */}
                   <div>
-                    <h1 className="font-semibold text-xl">{selectedScreenshot.title}</h1>
+                    <h1 className="text-lg font-semibold">{selectedScreenshot.title}</h1>
                     {selectedScreenshot.description && (
-                      <p className="text-foreground mt-1 leading-relaxed break-words text-base">{selectedScreenshot.description}</p>
+                      <p className="text-sm text-foreground mt-1">{selectedScreenshot.description}</p>
                     )}
 
                     {/* Game badge */}
