@@ -390,15 +390,15 @@ const Header = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 mt-2">
-                  <DropdownMenuItem onClick={() => setLocation('/upload?type=clips')} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => { window.dispatchEvent(new CustomEvent('upload-type-change', { detail: 'clips' })); setLocation('/upload?type=clips'); }} className="cursor-pointer">
                     <Video className="h-4 w-4 mr-2" />
                     Upload Clip
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setLocation('/upload?type=reels')} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => { window.dispatchEvent(new CustomEvent('upload-type-change', { detail: 'reels' })); setLocation('/upload?type=reels'); }} className="cursor-pointer">
                     <Film className="h-4 w-4 mr-2" />
                     Upload Reel
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setLocation('/upload?type=screenshots')} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => { window.dispatchEvent(new CustomEvent('upload-type-change', { detail: 'screenshots' })); setLocation('/upload?type=screenshots'); }} className="cursor-pointer">
                     <Camera className="h-4 w-4 mr-2" />
                     Upload Screenshot
                   </DropdownMenuItem>

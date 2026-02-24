@@ -115,6 +115,18 @@ const UploadPage = () => {
     sessionStorage.removeItem('uploadGameImage');
   }, []);
   
+  // Watch for upload type changes from the header dropdown when already on the upload page
+  useEffect(() => {
+    const handleTypeChange = (e: Event) => {
+      const type = (e as CustomEvent).detail;
+      if (type === 'clips' || type === 'reels' || type === 'screenshots') {
+        setContentType(type);
+      }
+    };
+    window.addEventListener('upload-type-change', handleTypeChange);
+    return () => window.removeEventListener('upload-type-change', handleTypeChange);
+  }, []);
+
   // Screenshot-specific state - supports multiple screenshots (up to 3)
   const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
   const [screenshotPreviews, setScreenshotPreviews] = useState<string[]>([]);
