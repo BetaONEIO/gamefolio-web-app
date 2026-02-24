@@ -5,10 +5,16 @@ import { getQueryFn } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
-import { ArrowLeft, Zap, Gift, Eye, Heart, Flame, Upload, LogIn, Star, Award, Camera, MessageCircle } from "lucide-react";
+import { ArrowLeft, Zap, Gift, Eye, Heart, Flame, Upload, LogIn, Star, Award, Camera, MessageCircle, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import badgeIcon from "@assets/yellow_circle_transparent_1771659993513.png";
 import { isToday, isYesterday, format } from "date-fns";
+
+interface StreakInfo {
+  currentStreak: number;
+  longestStreak: number;
+  lastStreakUpdate: string | null;
+}
 
 function formatSimpleDate(date: Date): string {
   if (isToday(date)) return "Today";
@@ -92,6 +98,18 @@ export default function LevelTrackerPage() {
     queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!user?.id,
   });
+
+  const todayLoginXP = xpHistory?.filter(item => {
+    const itemDate = new Date(item.createdAt);
+    return item.source === 'daily_login' && isToday(itemDate);
+  }) || [];
+
+  const todayDailyXP = todayLoginXP.reduce((sum, item) => sum + item.xpAmount, 0);
+
+  const todayMilestoneXP = xpHistory?.filter(item => {
+    const itemDate = new Date(item.createdAt);
+    return item.source === 'streak_milestone' && isToday(itemDate);
+  }).reduce((sum, item) => sum + item.xpAmount, 0) || 0;
 
   const svgSize = 220;
   const radius = 95;
@@ -197,6 +215,48 @@ export default function LevelTrackerPage() {
           </div>
         </CardContent>
       </Card>
+
+      {(todayDailyXP > 0 || todayMilestoneXP > 0) && (
+        <Card className="mb-6 bg-gradient-to-br from-[#0f172a] to-[#1a2744] border-[#4ade80]/30 overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#4ade80]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <CardContent className="pt-6 pb-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-[#4ade80]/15 flex items-center justify-center">
+                <Sun className="w-5 h-5 text-[#4ade80]" />
+              </div>
+              <div>
+                <h3 className="font-bold text-white">Today's Daily XP</h3>
+                <p className="text-xs text-slate-400">Earned from logging in today</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex-1 bg-[#0b1120] rounded-xl p-4 text-center border border-[#4ade80]/10">
+                <p className="text-2xl font-bold text-[#4ade80]">+{todayDailyXP} XP</p>
+                <p className="text-xs text-slate-400 mt-1">Daily Login</p>
+              </div>
+              {todayMilestoneXP > 0 && (
+                <div className="flex-1 bg-[#0b1120] rounded-xl p-4 text-center border border-[#f59e0b]/10">
+                  <p className="text-2xl font-bold text-[#f59e0b]">+{todayMilestoneXP} XP</p>
+                  <p className="text-xs text-slate-400 mt-1">Streak Bonus</p>
+                </div>
+              )}
+            </div>
+            {user.currentStreak > 0 && (
+              <div className="flex items-center gap-2 mt-4 text-sm">
+                <Flame className="w-4 h-4 text-orange-500" />
+                <span className="text-slate-300">
+                  {user.currentStreak} day streak
+                </span>
+                {user.longestStreak > 0 && user.longestStreak > user.currentStreak && (
+                  <span className="text-slate-500 text-xs ml-auto">
+                    Best: {user.longestStreak} days
+                  </span>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-4">

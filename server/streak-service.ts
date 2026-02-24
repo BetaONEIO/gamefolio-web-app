@@ -122,7 +122,7 @@ export class StreakService {
           screenshotId: null,
           commentId: null,
           metadata: { streakDay: currentStreak, dailyXP, milestoneBonus: bonusAwarded },
-          actionUrl: '/profile',
+          actionUrl: '/level-tracker',
         });
       } catch (notifError) {
         console.error("Error creating streak notification:", notifError);
