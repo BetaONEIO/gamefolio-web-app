@@ -230,61 +230,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
   if (isMobile) {
     return createPortal(
       <div className="fixed inset-0 z-[100] bg-background flex flex-col">
-        <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-border">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
-              e.stopPropagation();
-              onClose();
-            }}>
-              {screenshotUser?.nftProfileTokenId && screenshotUser?.nftProfileImageUrl ? (
-                <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#4ade80]/40 flex-shrink-0">
-                  <img src={screenshotUser.nftProfileImageUrl} alt={screenshotUser.displayName || ''} className="w-full h-full object-cover" />
-                </div>
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0 border border-white/20">
-                  {(avatarSignedUrl || avatarUrl) ? (
-                    <img src={avatarSignedUrl || avatarUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <UserIcon className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </div>
-              )}
-            </Link>
-            <div className="flex flex-col min-w-0">
-              <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
-                e.stopPropagation();
-                onClose();
-              }}>
-                <span className="text-foreground font-semibold text-sm truncate">
-                  {screenshot.user?.displayName || screenshot.user?.username || 'Unknown'}
-                </span>
-              </Link>
-              <span className="text-muted-foreground text-xs truncate">
-                @{screenshot.user?.username || 'unknown'}
-              </span>
-            </div>
-            {currentUserId && screenshotUser?.id && currentUserId !== screenshotUser.id && (
-              <Button
-                size="sm"
-                variant={followStatus?.isFollowing ? "secondary" : "default"}
-                className="h-7 text-xs px-2 flex-shrink-0 ml-1"
-                onClick={(e) => { e.stopPropagation(); followMutation.mutate(screenshotUser.id); }}
-                disabled={followMutation.isPending}
-              >
-                {followStatus?.isFollowing ? (
-                  <>
-                    <UserCheck className="h-3 w-3 mr-1" />
-                    Following
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="h-3 w-3 mr-1" />
-                    Follow
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
+        <div className="flex items-center justify-end px-3 py-2 flex-shrink-0">
           <div className="flex items-center gap-2 flex-shrink-0">
             {hasNavigation && (
               <span className="text-muted-foreground text-xs font-medium">
@@ -368,6 +314,57 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
           )}
 
           <div className="px-4 py-3 space-y-3">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-3 min-w-0">
+                <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  onClose();
+                }}>
+                  {screenshotUser?.nftProfileTokenId && screenshotUser?.nftProfileImageUrl ? (
+                    <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#4ade80]/40 flex-shrink-0">
+                      <img src={screenshotUser.nftProfileImageUrl} alt={screenshotUser.displayName || ''} className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {(avatarSignedUrl || avatarUrl) ? (
+                        <img src={avatarSignedUrl || avatarUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <UserIcon className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  )}
+                </Link>
+                <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  onClose();
+                }}>
+                  <span className="text-foreground font-medium text-sm hover:text-primary transition-colors">
+                    {screenshot.user?.displayName || screenshot.user?.username || 'Unknown'}
+                  </span>
+                </Link>
+              </div>
+              {currentUserId && screenshotUser?.id && currentUserId !== screenshotUser.id && (
+                <Button
+                  size="sm"
+                  variant={followStatus?.isFollowing ? "secondary" : "default"}
+                  className="h-7 text-xs px-3 flex-shrink-0"
+                  onClick={(e) => { e.stopPropagation(); followMutation.mutate(screenshotUser.id); }}
+                  disabled={followMutation.isPending}
+                >
+                  {followStatus?.isFollowing ? (
+                    <>
+                      <UserCheck className="h-3 w-3 mr-1" />
+                      Following
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="h-3 w-3 mr-1" />
+                      Follow
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
             <div>
               <h2 className="text-lg font-semibold text-foreground">{screenshot.title}</h2>
               {screenshot.description && (
