@@ -49,7 +49,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
   const calculatePosition = useCallback(() => {
     if (!anchorRect || !popupRef.current) return;
     const popup = popupRef.current;
-    const popupWidth = window.innerWidth >= 768 ? 680 : 340;
+    const popupWidth = window.innerWidth >= 768 ? (manyTraits ? 860 : 680) : 340;
     const popupHeight = popupRef.current?.offsetHeight || 500;
     const gap = 16;
     const viewportW = window.innerWidth;
@@ -77,7 +77,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
     if (top < padding) top = padding;
 
     setPosition({ top, left });
-  }, [anchorRect]);
+  }, [anchorRect, manyTraits]);
 
   useEffect(() => {
     if (anchorRect) {
@@ -114,6 +114,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
   const ownerDisplay = username || "Owner";
 
   const allAttributes = metadata?.attributes || [];
+  const manyTraits = allAttributes.length > 4;
 
   const hasAnchor = !!anchorRect;
 
@@ -129,7 +130,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
 
       <div
         ref={popupRef}
-        className={`${hasAnchor ? 'absolute' : 'fixed top-4 left-2 right-2 bottom-4 md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[680px] md:h-auto md:bottom-auto md:right-auto'} z-10 ${hasAnchor ? 'w-[340px] md:w-[680px]' : ''} max-w-full md:max-w-[95vw] max-h-full md:max-h-[85vh] bg-[#0f172a] rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] border border-[#1e293b] flex flex-col md:flex-row animate-in fade-in slide-in-from-left-2 duration-200`}
+        className={`${hasAnchor ? 'absolute' : `fixed top-4 left-2 right-2 bottom-4 md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 ${manyTraits ? 'md:w-[860px]' : 'md:w-[680px]'} md:h-auto md:bottom-auto md:right-auto`} z-10 ${hasAnchor ? `w-[340px] ${manyTraits ? 'md:w-[860px]' : 'md:w-[680px]'}` : ''} max-w-full md:max-w-[95vw] max-h-full md:max-h-[85vh] bg-[#0f172a] rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] border border-[#1e293b] flex flex-col md:flex-row animate-in fade-in slide-in-from-left-2 duration-200`}
         style={hasAnchor && position ? { top: `${position.top}px`, left: `${position.left}px` } : hasAnchor ? { visibility: 'hidden' } : undefined}
         onClick={(e) => e.stopPropagation()}
       >
@@ -228,7 +229,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
               <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-[0.6px]">
                 Traits & Rarity
               </span>
-              <div className="grid grid-cols-2 gap-1.5">
+              <div className={`grid ${manyTraits ? 'grid-cols-3' : 'grid-cols-2'} gap-1.5`}>
                 {allAttributes.map((attr: NftAttribute, index: number) => {
                   const rarityKey = getTraitRarity(attr.trait_type, attr.value);
                   const rarity = RARITY_MAP[rarityKey];
