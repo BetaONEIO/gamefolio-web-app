@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
+import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
 import { ArrowLeft, Camera } from "lucide-react";
 import { Gamepad2 } from "lucide-react";
 import { useLocation } from "wouter";
@@ -19,6 +20,7 @@ const LatestScreenshotsPage = () => {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
+  const [selectedScreenshot, setSelectedScreenshot] = useState<any>(null);
 
   const { data: screenshotsData, isLoading } = useQuery<any[]>({
     queryKey: ['/api/screenshots', 'recent', 50],
@@ -115,9 +117,7 @@ const LatestScreenshotsPage = () => {
               screenshot={screenshot}
               profile={screenshot.user || {}}
               showUserInfo={true}
-              onSelect={(s: any) => {
-                setLocation(`/@${s.user?.username}/screenshots/${s.id}`);
-              }}
+              onSelect={(s: any) => setSelectedScreenshot(s)}
             />
           ))
         ) : screenshotsData && screenshotsData.length > 0 ? (
@@ -144,6 +144,12 @@ const LatestScreenshotsPage = () => {
           </div>
         )}
       </div>
+
+      <ScreenshotLightbox
+        screenshot={selectedScreenshot}
+        onClose={() => setSelectedScreenshot(null)}
+        currentUserId={user?.id}
+      />
     </div>
   );
 };

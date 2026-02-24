@@ -15,6 +15,7 @@ import { useLocation, Link } from "wouter";
 import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
 import { LatestReelsCarousel } from "@/components/clips/LatestReelsCarousel";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
+import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
 import { Camera } from "lucide-react";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
 import { ProUpgradeDialog } from "@/components/ProUpgradeDialog";
@@ -454,6 +455,7 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
 const HomePage = () => {
   const [feedPeriod, setFeedPeriod] = useState<'day' | 'week' | 'month'>('day');
   const [selectedGameFilter, setSelectedGameFilter] = useState<string | null>(null);
+  const [selectedScreenshot, setSelectedScreenshot] = useState<any>(null);
   const [, setLocation] = useLocation();
   
   // Get current user from auth context
@@ -699,12 +701,7 @@ const HomePage = () => {
                   isOwnProfile={user?.id === screenshot.userId}
                   profile={screenshot.user}
                   showUserInfo={true}
-                  onSelect={(s: any) => {
-                    const username = s.user?.username;
-                    if (username) {
-                      setLocation(`/@${username}/screenshots/${s.id}`);
-                    }
-                  }}
+                  onSelect={(s: any) => setSelectedScreenshot(s)}
                 />
               ))}
             </div>
@@ -721,6 +718,11 @@ const HomePage = () => {
       </LazySection>
       </div>
 
+      <ScreenshotLightbox
+        screenshot={selectedScreenshot}
+        onClose={() => setSelectedScreenshot(null)}
+        currentUserId={user?.id}
+      />
     </div>
   );
 };
