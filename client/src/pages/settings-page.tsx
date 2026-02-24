@@ -784,7 +784,7 @@ export default function SettingsPage() {
   });
 
   // Track selected avatar border ID
-  const [selectedBorderId, setSelectedBorderId] = useState<number | null>(user?.selectedAvatarBorderId || null);
+  const [selectedBorderId, setSelectedBorderId] = useState<number | null>(user?.selectedAvatarBorderId ?? -1);
   
   // Track avatar border color for SVG customization
   const [avatarBorderColor, setAvatarBorderColor] = useState<string>(user?.avatarBorderColor || '#4ADE80');
@@ -793,7 +793,7 @@ export default function SettingsPage() {
   // Update selected border when user data loads
   useEffect(() => {
     if (user?.selectedAvatarBorderId !== undefined) {
-      setSelectedBorderId(user.selectedAvatarBorderId);
+      setSelectedBorderId(user.selectedAvatarBorderId ?? -1);
     }
     if (user?.avatarBorderColor) {
       setAvatarBorderColor(user.avatarBorderColor);
