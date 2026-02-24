@@ -4217,12 +4217,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clipId,
         qrCode: qrCodeDataUrl,
         socialMediaLinks,
-        shareUrl: clipUrl, // Use shareUrl to match frontend expectations
-        clipUrl, // Keep both for backward compatibility
+        shareUrl: clipUrl,
+        clipUrl,
         title: clip.title,
         description: clip.description,
         thumbnailUrl: clip.thumbnailUrl || null,
-        videoUrl: clip.videoUrl || null
+        videoUrl: clip.videoUrl || null,
+        videoType: clip.videoType || 'clip'
       });
     } catch (err) {
       console.error("Error generating share data:", err);

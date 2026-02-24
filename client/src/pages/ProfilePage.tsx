@@ -226,7 +226,7 @@ const ProfilePage = () => {
 
   // Share dialog state for newly uploaded content
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [shareDialogType, setShareDialogType] = useState<'clip' | 'screenshot' | null>(null);
+  const [shareDialogType, setShareDialogType] = useState<'clip' | 'reel' | 'screenshot' | null>(null);
   const [shareDialogId, setShareDialogId] = useState<number | null>(null);
 
   // Profile theme scope ref for dynamic styling
@@ -333,7 +333,7 @@ const ProfilePage = () => {
             setShareDialogId(contentId);
             setShareDialogOpen(true);
           } else if (type === 'clip' || type === 'reel') {
-            setShareDialogType('clip');
+            setShareDialogType(type as 'clip' | 'reel');
             setShareDialogId(contentId);
             setShareDialogOpen(true);
           }
@@ -3372,10 +3372,11 @@ const ProfilePage = () => {
 
       {/* Share Dialogs for newly uploaded content */}
       <React.Suspense fallback={null}>
-        {shareDialogType === 'clip' && shareDialogId && (
+        {(shareDialogType === 'clip' || shareDialogType === 'reel') && shareDialogId && (
           <ClipShareDialog
             clipId={shareDialogId}
             isOwnContent={true}
+            contentType={shareDialogType}
             open={shareDialogOpen}
             onOpenChange={(open) => {
               setShareDialogOpen(open);

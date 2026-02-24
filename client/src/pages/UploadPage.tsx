@@ -562,7 +562,7 @@ const UploadPage = () => {
           const fileName = `${prefix}/${timestamp}-${randomId}.${extension}`;
           const filePath = `users/${user.id}/${fileName}`;
           
-          setUploadProgress(10);
+          setUploadProgress(5);
           
           const credsResponse = await fetch('/api/upload/supabase-creds', {
             method: 'POST',
@@ -578,26 +578,43 @@ const UploadPage = () => {
           const credsData = await credsResponse.json();
           const { uploadUrl, publicUrl } = credsData;
           console.log('Got upload URL for direct upload');
-          setUploadProgress(20);
+          setUploadProgress(15);
           
-          const uploadResponse = await fetch(uploadUrl, {
-            method: 'PUT',
-            body: file,
-            headers: {
-              'Content-Type': file.type,
-              'x-upsert': 'false'
-            },
-            signal,
+          await new Promise<void>((resolveUpload, rejectUpload) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('PUT', uploadUrl);
+            xhr.setRequestHeader('Content-Type', file.type);
+            xhr.setRequestHeader('x-upsert', 'false');
+            
+            xhr.upload.onprogress = (event) => {
+              if (event.lengthComputable) {
+                const uploadPercent = Math.round((event.loaded / event.total) * 100);
+                setUploadProgress(20 + Math.round(uploadPercent * 0.65));
+              }
+            };
+            
+            xhr.onload = () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                console.log('Direct Supabase upload complete');
+                setUploadProgress(85);
+                resolveUpload();
+              } else {
+                console.error('Supabase upload error:', xhr.responseText);
+                rejectUpload(new Error(`Direct upload to Supabase failed: ${xhr.status}`));
+              }
+            };
+            
+            xhr.onerror = () => {
+              rejectUpload(new Error('Upload network error'));
+            };
+            
+            signal.addEventListener('abort', () => {
+              xhr.abort();
+              rejectUpload(new Error('Upload cancelled'));
+            });
+            
+            xhr.send(file);
           });
-          
-          if (!uploadResponse.ok) {
-            const errorText = await uploadResponse.text();
-            console.error('Supabase upload error:', errorText);
-            throw new Error(`Direct upload to Supabase failed: ${uploadResponse.status}`);
-          }
-          
-          console.log('Direct Supabase upload complete');
-          setUploadProgress(70);
           
           const processData = {
             uploadResult: { url: publicUrl, path: filePath },
@@ -2123,7 +2140,7 @@ const UploadPage = () => {
 
               <div className="text-center space-y-1.5">
                 <h3 className="text-white font-bold text-lg uppercase tracking-tight">
-                  {uploadProgress < 60 ? "Almost there..." : uploadProgress < 100 ? "Almost there..." : "Processing..."}
+                  {uploadProgress < 85 ? "Uploading your content..." : uploadProgress < 100 ? "Processing..." : "Complete!"}
                 </h3>
                 <p className="text-[#8fa8b8] text-sm">
                   Uploading {file?.name || 'video'} ({(file?.size ? file.size / (1024 * 1024) : 0).toFixed(1)} MB)

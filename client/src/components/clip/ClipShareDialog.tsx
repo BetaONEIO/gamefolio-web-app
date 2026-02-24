@@ -48,6 +48,7 @@ interface ShareData {
   description: string;
   thumbnailUrl?: string | null;
   videoUrl?: string | null;
+  videoType?: string;
 }
 
 const SOCIAL_PLATFORMS = [
@@ -243,8 +244,11 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
           <div className="flex-1 overflow-y-auto space-y-4 sm:space-y-6 px-2 pb-4 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
             {/* Clip Thumbnail - Responsive sizing */}
             <div className="flex justify-center">
-              <div className="relative w-full max-w-sm sm:max-w-md h-48 sm:h-56 bg-gray-800 rounded-lg overflow-hidden border border-gray-600">
-                {/* Display clip thumbnail from share data */}
+              <div className={`relative bg-gray-800 rounded-lg overflow-hidden border border-gray-600 ${
+                (contentType === 'reel' || shareData.videoType === 'reel')
+                  ? 'w-36 sm:w-44 aspect-[9/16]'
+                  : 'w-full max-w-sm sm:max-w-md h-48 sm:h-56'
+              }`}>
                 <ClipThumbnail thumbnailUrl={shareData.thumbnailUrl} videoUrl={shareData.videoUrl} />
                 <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center">
