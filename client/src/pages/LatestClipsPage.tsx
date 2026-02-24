@@ -14,7 +14,7 @@ const LatestClipsPage = () => {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
-  const [timePeriod, setTimePeriod] = useState<string>("all");
+  const [timePeriod, setTimePeriod] = useState<string>("recent");
   const isMobile = useMobile();
 
   useEffect(() => {
@@ -61,9 +61,10 @@ const LatestClipsPage = () => {
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
             {[
-              { value: 'all', label: 'All' },
+              { value: 'recent', label: 'Most Recent' },
+              { value: '1d', label: '1D' },
               { value: '1w', label: '1W' },
-              { value: '1m', label: '1M' },
+              { value: 'ever', label: 'Ever' },
             ].map((period) => (
               <button
                 key={period.value}
@@ -125,13 +126,13 @@ const LatestClipsPage = () => {
           <div className="col-span-full text-center py-12">
             <Video className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-xl font-semibold mb-2">
-              {timePeriod === '1w' ? 'No clips from this week' : timePeriod === '1m' ? 'No clips from this month' : 'No clips yet'}
+              {timePeriod === '1d' ? 'No clips from today' : timePeriod === '1w' ? 'No clips from this week' : timePeriod === 'ever' ? 'No clips yet' : 'No clips yet'}
             </h3>
             <p className="text-muted-foreground mb-4">
-              {timePeriod !== 'all' ? 'Try selecting a different time period' : 'Be the first to upload a gaming clip!'}
+              {timePeriod !== 'recent' ? 'Try selecting a different time period' : 'Be the first to upload a gaming clip!'}
             </p>
-            {timePeriod !== 'all' ? (
-              <Button onClick={() => setTimePeriod('all')} data-testid="button-show-all">
+            {timePeriod !== 'recent' ? (
+              <Button onClick={() => setTimePeriod('recent')} data-testid="button-show-all">
                 Show All Clips
               </Button>
             ) : (

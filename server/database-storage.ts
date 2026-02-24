@@ -723,6 +723,7 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
 
     switch (period) {
+      case '1d':
       case 'day':
       case 'today':
         dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000); // 1 day ago
@@ -773,6 +774,7 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
 
     switch (period) {
+      case '1d':
       case 'day':
       case 'today':
         dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -841,6 +843,7 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
 
     switch (period) {
+      case '1d':
       case 'day':
       case 'today':
         dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -2617,6 +2620,7 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
 
     switch (period) {
+      case '1d':
       case 'day':
       case 'today':
         dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -2675,6 +2679,7 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
 
     switch (period) {
+      case '1d':
       case 'day':
       case 'today':
         dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -2733,6 +2738,7 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
 
     switch (period) {
+      case '1d':
       case 'day':
       case 'today':
         dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -2791,6 +2797,7 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
 
     switch (period) {
+      case '1d':
       case 'day':
       case 'today':
         dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -2869,6 +2876,7 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
 
     switch (period) {
+      case '1d':
       case 'day':
       case 'today':
         dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);

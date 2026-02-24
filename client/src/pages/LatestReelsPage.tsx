@@ -10,7 +10,7 @@ import { useState } from "react";
 import { GameFilter } from "@/components/filters/GameFilter";
 
 export default function LatestReelsPage() {
-  const [timePeriod, setTimePeriod] = useState<string>("all");
+  const [timePeriod, setTimePeriod] = useState<string>("recent");
   const { data: latestReels, isLoading } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/reels/trending', timePeriod],
     queryFn: async () => {
@@ -83,9 +83,10 @@ export default function LatestReelsPage() {
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
               {[
-                { value: 'all', label: 'All' },
+                { value: 'recent', label: 'Most Recent' },
+                { value: '1d', label: '1D' },
                 { value: '1w', label: '1W' },
-                { value: '1m', label: '1M' },
+                { value: 'ever', label: 'Ever' },
               ].map((period) => (
                 <button
                   key={period.value}
@@ -249,13 +250,13 @@ export default function LatestReelsPage() {
           <div className="text-center py-12">
             <div className="text-6xl mb-4">📱</div>
             <h2 className="text-2xl font-semibold text-white mb-2">
-              {timePeriod === '1w' ? 'No reels from this week' : timePeriod === '1m' ? 'No reels from this month' : 'No Reels Yet'}
+              {timePeriod === '1d' ? 'No reels from today' : timePeriod === '1w' ? 'No reels from this week' : timePeriod === 'ever' ? 'No reels yet' : 'No Reels Yet'}
             </h2>
             <p className="text-muted-foreground mb-6">
-              {timePeriod !== 'all' ? 'Try selecting a different time period' : 'Be the first to share a reel on Gamefolio!'}
+              {timePeriod !== 'recent' ? 'Try selecting a different time period' : 'Be the first to share a reel on Gamefolio!'}
             </p>
-            {timePeriod !== 'all' ? (
-              <Button onClick={() => setTimePeriod('all')} data-testid="button-show-all">
+            {timePeriod !== 'recent' ? (
+              <Button onClick={() => setTimePeriod('recent')} data-testid="button-show-all">
                 Show All Reels
               </Button>
             ) : (

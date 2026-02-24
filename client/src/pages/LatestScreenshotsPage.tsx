@@ -22,7 +22,7 @@ const LatestScreenshotsPage = () => {
   const [, setLocation] = useLocation();
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<any>(null);
-  const [timePeriod, setTimePeriod] = useState<string>("all");
+  const [timePeriod, setTimePeriod] = useState<string>("recent");
   const isMobile = useMobile();
 
   const { data: screenshotsData, isLoading } = useQuery<any[]>({
@@ -71,9 +71,10 @@ const LatestScreenshotsPage = () => {
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
             {[
-              { value: 'all', label: 'All' },
+              { value: 'recent', label: 'Most Recent' },
+              { value: '1d', label: '1D' },
               { value: '1w', label: '1W' },
-              { value: '1m', label: '1M' },
+              { value: 'ever', label: 'Ever' },
             ].map((period) => (
               <button
                 key={period.value}
@@ -160,13 +161,13 @@ const LatestScreenshotsPage = () => {
           <div className="col-span-full text-center py-12">
             <Camera className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-xl font-semibold mb-2">
-              {timePeriod === '1w' ? 'No screenshots from this week' : timePeriod === '1m' ? 'No screenshots from this month' : 'No screenshots yet'}
+              {timePeriod === '1d' ? 'No screenshots from today' : timePeriod === '1w' ? 'No screenshots from this week' : timePeriod === 'ever' ? 'No screenshots yet' : 'No screenshots yet'}
             </h3>
             <p className="text-muted-foreground mb-4">
-              {timePeriod !== 'all' ? 'Try selecting a different time period' : 'Be the first to upload a gaming screenshot!'}
+              {timePeriod !== 'recent' ? 'Try selecting a different time period' : 'Be the first to upload a gaming screenshot!'}
             </p>
-            {timePeriod !== 'all' ? (
-              <Button onClick={() => setTimePeriod('all')}>
+            {timePeriod !== 'recent' ? (
+              <Button onClick={() => setTimePeriod('recent')}>
                 Show All Screenshots
               </Button>
             ) : (
