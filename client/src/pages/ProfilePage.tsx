@@ -1235,6 +1235,22 @@ const ProfilePage = () => {
   const backgroundColor = profile.backgroundColor || '#0B2232';
   const cardColor = profile.cardColor || '#1E3A8A';
 
+  const PROFILE_FONT_MAP: Record<string, string> = {
+    'default': 'system-ui, sans-serif',
+    'inter': "'Inter', sans-serif",
+    'roboto': "'Roboto', sans-serif",
+    'poppins': "'Poppins', sans-serif",
+    'montserrat': "'Montserrat', sans-serif",
+    'oswald': "'Oswald', sans-serif",
+    'playfair': "'Playfair Display', serif",
+    'raleway': "'Raleway', sans-serif",
+    'space-grotesk': "'Space Grotesk', sans-serif",
+    'orbitron': "'Orbitron', sans-serif",
+    'press-start': "'Press Start 2P', cursive",
+    'russo-one': "'Russo One', sans-serif",
+  };
+  const profileFontFamily = PROFILE_FONT_MAP[profile.profileFont || 'default'] || PROFILE_FONT_MAP['default'];
+
   // Convert hex colors to RGB for opacity support
   const hexToRgb = (hex: string) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -1655,7 +1671,7 @@ const ProfilePage = () => {
           {/* Username and Display Name - Left aligned on Mobile */}
           <div className="flex flex-col items-start gap-0.5 mb-2 mt-8 pl-4">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold">{profile.displayName}</h1>
+              <h1 className="text-xl font-bold" style={{ fontFamily: profileFontFamily }}>{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
@@ -1949,7 +1965,7 @@ const ProfilePage = () => {
 
             {/* Display Name and Badges */}
             <div className="flex items-center gap-2 flex-wrap mt-8">
-              <h1 className="text-2xl font-bold">{profile.displayName}</h1>
+              <h1 className="text-2xl font-bold" style={{ fontFamily: profileFontFamily }}>{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}

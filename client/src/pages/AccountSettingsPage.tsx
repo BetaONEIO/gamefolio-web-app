@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useQuery } from '@tanstack/react-query';
 import { Redirect } from 'wouter';
-import { Loader2, Trash2, AlertTriangle, Shield } from 'lucide-react';
+import { Loader2, Trash2, AlertTriangle, Shield, Palette, Type } from 'lucide-react';
 import { validatePassword, isPasswordValid } from '@/lib/password-validation';
 import { PasswordRequirementsDisplay } from '@/components/ui/password-requirements';
 
@@ -80,9 +80,26 @@ const securityFormSchema = z.object({
   path: ["confirmPassword"],
 });
 
+const FONT_OPTIONS = [
+  { value: 'default', label: 'Default', family: 'system-ui, sans-serif' },
+  { value: 'inter', label: 'Inter', family: "'Inter', sans-serif" },
+  { value: 'roboto', label: 'Roboto', family: "'Roboto', sans-serif" },
+  { value: 'poppins', label: 'Poppins', family: "'Poppins', sans-serif" },
+  { value: 'montserrat', label: 'Montserrat', family: "'Montserrat', sans-serif" },
+  { value: 'oswald', label: 'Oswald', family: "'Oswald', sans-serif" },
+  { value: 'playfair', label: 'Playfair Display', family: "'Playfair Display', serif" },
+  { value: 'raleway', label: 'Raleway', family: "'Raleway', sans-serif" },
+  { value: 'space-grotesk', label: 'Space Grotesk', family: "'Space Grotesk', sans-serif" },
+  { value: 'orbitron', label: 'Orbitron', family: "'Orbitron', sans-serif" },
+  { value: 'press-start', label: 'Press Start 2P', family: "'Press Start 2P', cursive" },
+  { value: 'russo-one', label: 'Russo One', family: "'Russo One', sans-serif" },
+];
+
 const appearanceFormSchema = z.object({
   accentColor: z.string().min(1, 'Accent color is required'),
   primaryColor: z.string().min(1, 'Primary color is required'),
+  backgroundColor: z.string().min(1, 'Background color is required'),
+  profileFont: z.string().default('default'),
   layoutStyle: z.enum(['grid', 'masonry', 'classic']),
   bannerUrl: z.string().optional().or(z.literal('')),
 });
@@ -137,6 +154,8 @@ const AccountSettingsPage: React.FC = () => {
     defaultValues: {
       accentColor: user?.accentColor || '#4C8',
       primaryColor: user?.primaryColor || '#02172C',
+      backgroundColor: user?.backgroundColor || '#0B2232',
+      profileFont: user?.profileFont || 'default',
       layoutStyle: (user?.layoutStyle as 'grid' | 'masonry' | 'classic') || 'grid',
       bannerUrl: user?.bannerUrl || '',
     }
@@ -154,6 +173,8 @@ const AccountSettingsPage: React.FC = () => {
         userData: {
           accentColor: values.accentColor,
           primaryColor: values.primaryColor,
+          backgroundColor: values.backgroundColor,
+          profileFont: values.profileFont,
           layoutStyle: values.layoutStyle,
           bannerUrl: values.bannerUrl,
         }
@@ -301,10 +322,14 @@ const AccountSettingsPage: React.FC = () => {
       <h1 className="text-3xl font-bold mb-8">Account Settings</h1>
       
       <Tabs defaultValue="privacy" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8">
+        <TabsList className="grid w-full grid-cols-3 mb-8">
           <TabsTrigger value="privacy">
             <Shield className="h-4 w-4 mr-2" />
             Privacy & Safety
+          </TabsTrigger>
+          <TabsTrigger value="appearance">
+            <Palette className="h-4 w-4 mr-2" />
+            Appearance
           </TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
@@ -313,6 +338,132 @@ const AccountSettingsPage: React.FC = () => {
         {/* Privacy & Safety */}
         <TabsContent value="privacy">
           <BlockedUsersSection />
+        </TabsContent>
+
+        {/* Appearance Settings */}
+        <TabsContent value="appearance">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5" />
+                Profile Appearance
+              </CardTitle>
+              <CardDescription>
+                Customize how your profile looks to other users.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...appearanceForm}>
+                <form onSubmit={appearanceForm.handleSubmit(onAppearanceSubmit)} className="space-y-8">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: appearanceForm.watch('backgroundColor') }} />
+                      Background Color
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Choose a background color for your profile page.
+                    </p>
+                    <FormField
+                      control={appearanceForm.control}
+                      name="backgroundColor"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <div className="flex flex-col sm:flex-row gap-6 items-start">
+                              <HexColorPicker color={field.value} onChange={field.onChange} />
+                              <div className="space-y-3 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <Label className="text-sm font-medium">Hex Code</Label>
+                                  <Input
+                                    value={field.value}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                    className="w-32 font-mono text-sm"
+                                    placeholder="#0B2232"
+                                  />
+                                </div>
+                                <div
+                                  className="w-full h-24 rounded-lg border border-border"
+                                  style={{ backgroundColor: field.value }}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                  This color will be used as the background gradient on your profile.
+                                </p>
+                              </div>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="border-t pt-6 space-y-4">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <Type className="h-4 w-4" />
+                      Profile Font
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Choose a font style for your profile display name and text.
+                    </p>
+                    <FormField
+                      control={appearanceForm.control}
+                      name="profileFont"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                              {FONT_OPTIONS.map((font) => {
+                                const isSelected = field.value === font.value;
+                                return (
+                                  <button
+                                    key={font.value}
+                                    type="button"
+                                    onClick={() => field.onChange(font.value)}
+                                    className={`p-4 rounded-lg border-2 text-left transition-all ${
+                                      isSelected
+                                        ? 'border-primary bg-primary/10'
+                                        : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                                    }`}
+                                  >
+                                    <p
+                                      className="text-lg font-semibold mb-1 truncate"
+                                      style={{ fontFamily: font.family }}
+                                    >
+                                      {font.label}
+                                    </p>
+                                    <p
+                                      className="text-xs text-muted-foreground truncate"
+                                      style={{ fontFamily: font.family }}
+                                    >
+                                      {user?.displayName || 'Your Name'}
+                                    </p>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="flex justify-end pt-4">
+                    <Button type="submit" disabled={updateProfile.isPending}>
+                      {updateProfile.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Saving...
+                        </>
+                      ) : (
+                        'Save Appearance'
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
         </TabsContent>
         
         {/* Security Settings */}

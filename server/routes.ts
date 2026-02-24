@@ -1687,6 +1687,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           activeProfilePicType: userWithoutPassword.activeProfilePicType || 'upload',
           proSubscriptionType: userWithoutPassword.proSubscriptionType || null,
           proSubscriptionEndDate: userWithoutPassword.proSubscriptionEndDate || null,
+          profileFont: userWithoutPassword.profileFont || 'default',
         });
       }
     } catch (error) {
@@ -1738,6 +1739,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           activeProfilePicType: fallbackWithoutPassword.activeProfilePicType || 'upload',
           proSubscriptionType: fallbackWithoutPassword.proSubscriptionType || null,
           proSubscriptionEndDate: fallbackWithoutPassword.proSubscriptionEndDate || null,
+          profileFont: fallbackWithoutPassword.profileFont || 'default',
         });
       }
     } catch (fallbackError) {
@@ -1786,6 +1788,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       activeProfilePicType: userWithoutPassword.activeProfilePicType || 'upload',
       proSubscriptionType: userWithoutPassword.proSubscriptionType || null,
       proSubscriptionEndDate: userWithoutPassword.proSubscriptionEndDate || null,
+      profileFont: userWithoutPassword.profileFont || 'default',
     });
   });
 
