@@ -66,6 +66,19 @@ const FONT_OPTIONS = [
   { value: 'honk', label: 'Honk', family: "'Honk', system-ui", scale: 0.9 },
 ];
 
+const FONT_ANIMATIONS = [
+  { value: 'none', label: 'None', animClass: '' },
+  { value: 'bounce', label: 'Bounce', animClass: 'animate-font-bounce' },
+  { value: 'shake', label: 'Shake', animClass: 'animate-font-shake' },
+  { value: 'pulse', label: 'Pulse', animClass: 'animate-font-pulse' },
+  { value: 'float', label: 'Float', animClass: 'animate-font-float' },
+  { value: 'wave', label: 'Wave', animClass: 'animate-font-wave' },
+  { value: 'flicker', label: 'Flicker', animClass: 'animate-font-flicker' },
+  { value: 'rubberband', label: 'Rubber Band', animClass: 'animate-font-rubberband' },
+  { value: 'jello', label: 'Jello', animClass: 'animate-font-jello' },
+  { value: 'swing', label: 'Swing', animClass: 'animate-font-swing' },
+];
+
 const FONT_EFFECTS = [
   { value: 'none', label: 'None', textShadow: 'none' },
   { value: 'drop-shadow', label: 'Drop Shadow', textShadow: '2px 2px 4px rgba(0,0,0,0.8)' },
@@ -418,7 +431,8 @@ export default function SettingsPage() {
     profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
     profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
     profileFont: (user as any)?.profileFont || "default",
-    profileFontEffect: (user as any)?.profileFontEffect || "none"
+    profileFontEffect: (user as any)?.profileFontEffect || "none",
+    profileFontAnimation: (user as any)?.profileFontAnimation || "none"
   });
   
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -2031,28 +2045,31 @@ export default function SettingsPage() {
                           {(() => {
                             const selectedFont = FONT_OPTIONS.find(f => f.value === profileData.profileFont);
                             const selectedEffect = FONT_EFFECTS.find(f => f.value === profileData.profileFontEffect);
+                            const selectedAnim = FONT_ANIMATIONS.find(f => f.value === profileData.profileFontAnimation);
                             const fontFamily = selectedFont?.family || 'system-ui, sans-serif';
                             const fontScale = selectedFont?.scale || 1;
                             const textShadow = selectedEffect?.textShadow || 'none';
+                            const animClass = selectedAnim?.animClass || '';
                             return (
                               <div className="p-4 bg-muted/30 rounded-lg w-full flex flex-col items-center">
                                 <p
-                                  className="font-bold text-white text-center"
+                                  className={`font-bold text-white text-center ${animClass}`}
                                   style={{ fontFamily, textShadow, fontSize: `${1.875 * fontScale}rem`, lineHeight: `${2.25 * fontScale}rem` }}
                                 >
                                   {user?.displayName || user?.username || 'Your Name'}
                                 </p>
                                 <p className="text-xs text-muted-foreground mt-3">
-                                  {selectedFont?.label || 'Default'}{selectedEffect && selectedEffect.value !== 'none' ? ` · ${selectedEffect.label}` : ''}
+                                  {selectedFont?.label || 'Default'}{selectedEffect && selectedEffect.value !== 'none' ? ` · ${selectedEffect.label}` : ''}{selectedAnim && selectedAnim.value !== 'none' ? ` · ${selectedAnim.label}` : ''}
                                 </p>
                               </div>
                             );
                           })()}
 
                           <Tabs defaultValue="font-list" className="w-full">
-                            <TabsList className="w-full grid grid-cols-2">
+                            <TabsList className="w-full grid grid-cols-3">
                               <TabsTrigger value="font-list">Fonts</TabsTrigger>
                               <TabsTrigger value="effect-list">Effects</TabsTrigger>
+                              <TabsTrigger value="animation-list">Animation</TabsTrigger>
                             </TabsList>
 
                             <TabsContent value="font-list" className="mt-4">
@@ -2108,6 +2125,30 @@ export default function SettingsPage() {
                                         style={{ textShadow: effect.textShadow }}
                                       >
                                         {effect.label}
+                                      </p>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </TabsContent>
+
+                            <TabsContent value="animation-list" className="mt-4">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                                {FONT_ANIMATIONS.map((anim) => {
+                                  const isSelected = profileData.profileFontAnimation === anim.value;
+                                  return (
+                                    <button
+                                      key={anim.value}
+                                      type="button"
+                                      onClick={() => setProfileData(prev => ({ ...prev, profileFontAnimation: anim.value }))}
+                                      className={`p-3 rounded-lg border-2 text-center transition-all ${
+                                        isSelected
+                                          ? 'border-primary bg-primary/10'
+                                          : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                                      }`}
+                                    >
+                                      <p className={`text-sm font-bold text-white truncate ${anim.animClass}`}>
+                                        {anim.label}
                                       </p>
                                     </button>
                                   );

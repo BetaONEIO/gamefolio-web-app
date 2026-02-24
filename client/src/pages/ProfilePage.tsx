@@ -1287,6 +1287,20 @@ const ProfilePage = () => {
   };
   const profileTextShadow = FONT_EFFECT_MAP[(profile as any).profileFontEffect || 'none'] || 'none';
 
+  const FONT_ANIMATION_MAP: Record<string, string> = {
+    'none': '',
+    'bounce': 'animate-font-bounce',
+    'shake': 'animate-font-shake',
+    'pulse': 'animate-font-pulse',
+    'float': 'animate-font-float',
+    'wave': 'animate-font-wave',
+    'flicker': 'animate-font-flicker',
+    'rubberband': 'animate-font-rubberband',
+    'jello': 'animate-font-jello',
+    'swing': 'animate-font-swing',
+  };
+  const profileFontAnimClass = FONT_ANIMATION_MAP[(profile as any).profileFontAnimation || 'none'] || '';
+
   // Convert hex colors to RGB for opacity support
   const hexToRgb = (hex: string) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -1707,7 +1721,7 @@ const ProfilePage = () => {
           {/* Username and Display Name - Left aligned on Mobile */}
           <div className="flex flex-col items-start gap-0.5 mb-2 mt-8 pl-4">
             <div className="flex items-center gap-2">
-              <h1 className="font-bold" style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, fontSize: `${1.25 * profileFontScale}rem`, lineHeight: `${1.75 * profileFontScale}rem` }}>{profile.displayName}</h1>
+              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, fontSize: `${1.25 * profileFontScale}rem`, lineHeight: `${1.75 * profileFontScale}rem` }}>{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
@@ -2001,7 +2015,7 @@ const ProfilePage = () => {
 
             {/* Display Name and Badges */}
             <div className="flex items-center gap-2 flex-wrap mt-8">
-              <h1 className="font-bold" style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, fontSize: `${1.5 * profileFontScale}rem`, lineHeight: `${2 * profileFontScale}rem` }}>{profile.displayName}</h1>
+              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, fontSize: `${1.5 * profileFontScale}rem`, lineHeight: `${2 * profileFontScale}rem` }}>{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}

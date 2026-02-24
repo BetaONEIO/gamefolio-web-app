@@ -1689,6 +1689,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           proSubscriptionEndDate: userWithoutPassword.proSubscriptionEndDate || null,
           profileFont: userWithoutPassword.profileFont || 'default',
           profileFontEffect: userWithoutPassword.profileFontEffect || 'none',
+          profileFontAnimation: userWithoutPassword.profileFontAnimation || 'none',
         });
       }
     } catch (error) {
@@ -1742,6 +1743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           proSubscriptionEndDate: fallbackWithoutPassword.proSubscriptionEndDate || null,
           profileFont: fallbackWithoutPassword.profileFont || 'default',
           profileFontEffect: fallbackWithoutPassword.profileFontEffect || 'none',
+          profileFontAnimation: fallbackWithoutPassword.profileFontAnimation || 'none',
         });
       }
     } catch (fallbackError) {
@@ -1792,6 +1794,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       proSubscriptionEndDate: userWithoutPassword.proSubscriptionEndDate || null,
       profileFont: userWithoutPassword.profileFont || 'default',
       profileFontEffect: userWithoutPassword.profileFontEffect || 'none',
+      profileFontAnimation: userWithoutPassword.profileFontAnimation || 'none',
     });
   });
 

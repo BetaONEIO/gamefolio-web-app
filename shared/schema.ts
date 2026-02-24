@@ -21,6 +21,7 @@ export const users = pgTable("users", {
   avatarBorderColor: text("avatar_border_color").default("#4ADE80"), // Default avatar border color
   profileFont: text("profile_font").default("default"),
   profileFontEffect: text("profile_font_effect").default("none"),
+  profileFontAnimation: text("profile_font_animation").default("none"),
   layoutStyle: text("layout_style").default("grid"), // grid, masonry, classic
   // Platform connections
   steamUsername: text("steam_username"),
