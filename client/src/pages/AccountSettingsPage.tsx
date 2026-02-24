@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -6,9 +6,9 @@ import { useUpdateProfile } from '@/hooks/use-profile';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect } from 'wouter';
-import { Loader2, Trash2, AlertTriangle, Shield, Palette, Type } from 'lucide-react';
+import { Loader2, Trash2, AlertTriangle, Shield, Palette, Type, Sparkles, Check, X, Save } from 'lucide-react';
 import { validatePassword, isPasswordValid } from '@/lib/password-validation';
 import { PasswordRequirementsDisplay } from '@/components/ui/password-requirements';
 
@@ -60,6 +60,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { HexColorPicker } from "react-colorful";
 import { BlockedUsersSection } from '@/components/settings/blocked-users-section';
 import { TwoFactorSettings } from '@/components/TwoFactorSettings';
+import { useSignedUrl } from '@/hooks/use-signed-url';
+import type { NameTag, VerificationBadge } from '@shared/schema';
 
 // Form validation schemas
 
@@ -107,6 +109,31 @@ const appearanceFormSchema = z.object({
 type SecurityFormValues = z.infer<typeof securityFormSchema>;
 type AppearanceFormValues = z.infer<typeof appearanceFormSchema>;
 
+const NameTagImage: React.FC<{
+  imageUrl: string;
+  alt: string;
+  className?: string;
+  style?: React.CSSProperties;
+}> = ({ imageUrl, alt, className, style }) => {
+  const { signedUrl, isLoading } = useSignedUrl(imageUrl);
+  
+  if (isLoading) {
+    return <div className={className} style={{ ...style, backgroundColor: 'rgba(255,255,255,0.1)' }} />;
+  }
+  
+  return (
+    <img
+      src={signedUrl || imageUrl}
+      alt={alt}
+      className={className}
+      style={style}
+      onError={(e) => {
+        (e.target as HTMLImageElement).style.opacity = '0.3';
+      }}
+    />
+  );
+};
+
 const AccountSettingsPage: React.FC = () => {
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
@@ -120,6 +147,10 @@ const AccountSettingsPage: React.FC = () => {
   const [deleteAccountUsername, setDeleteAccountUsername] = useState('');
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [pendingNameTagId, setPendingNameTagId] = useState<number | null | undefined>(undefined);
+  const [pendingVerificationBadgeId, setPendingVerificationBadgeId] = useState<number | null | undefined>(undefined);
+  const [appearanceSubTab, setAppearanceSubTab] = useState<string>('colors');
+  const queryClient = useQueryClient();
   
   // Define ProfileBanner type
   type ProfileBanner = {
@@ -135,8 +166,28 @@ const AccountSettingsPage: React.FC = () => {
     queryKey: ['/api/user/unlocked-banners'],
     enabled: !!user,
   });
-  
 
+  const { data: userNameTags = [], isLoading: isLoadingNameTags } = useQuery<NameTag[]>({
+    queryKey: ['/api/user/name-tags'],
+    enabled: !!user,
+  });
+
+  const { data: userVerificationBadges = [], isLoading: isLoadingVerificationBadges } = useQuery<VerificationBadge[]>({
+    queryKey: ['/api/user/verification-badges'],
+    enabled: !!user,
+  });
+
+  useEffect(() => {
+    if (pendingNameTagId !== undefined && pendingNameTagId === user?.selectedNameTagId) {
+      setPendingNameTagId(undefined);
+    }
+  }, [user?.selectedNameTagId, pendingNameTagId]);
+
+  useEffect(() => {
+    if (pendingVerificationBadgeId !== undefined && pendingVerificationBadgeId === (user as any)?.selectedVerificationBadgeId) {
+      setPendingVerificationBadgeId(undefined);
+    }
+  }, [(user as any)?.selectedVerificationBadgeId, pendingVerificationBadgeId]);
   
   // Security form setup
   const securityForm = useForm<SecurityFormValues>({
@@ -189,6 +240,40 @@ const AccountSettingsPage: React.FC = () => {
       toast({
         title: "Update failed",
         description: "Failed to update appearance. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const saveNameTagAndBadge = async () => {
+    if (!user) return;
+    const updates: any = {};
+    if (pendingNameTagId !== undefined) {
+      updates.selectedNameTagId = pendingNameTagId;
+    }
+    if (pendingVerificationBadgeId !== undefined) {
+      updates.selectedVerificationBadgeId = pendingVerificationBadgeId;
+    }
+    if (Object.keys(updates).length === 0) return;
+    
+    try {
+      await updateProfile.mutateAsync({
+        userId: user.id,
+        userData: updates,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      if (user.username) {
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${user.username}`] });
+      }
+      toast({
+        title: "Settings saved",
+        description: "Your appearance settings have been updated.",
+        duration: 3000,
+      });
+    } catch (error) {
+      toast({
+        title: "Save failed",
+        description: "Failed to save settings. Please try again.",
         variant: "destructive",
       });
     }
@@ -353,115 +438,393 @@ const AccountSettingsPage: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Form {...appearanceForm}>
-                <form onSubmit={appearanceForm.handleSubmit(onAppearanceSubmit)} className="space-y-8">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: appearanceForm.watch('backgroundColor') }} />
-                      Background Color
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Choose a background color for your profile page.
-                    </p>
-                    <FormField
-                      control={appearanceForm.control}
-                      name="backgroundColor"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <div className="flex flex-col sm:flex-row gap-6 items-start">
-                              <HexColorPicker color={field.value} onChange={field.onChange} />
-                              <div className="space-y-3 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <Label className="text-sm font-medium">Hex Code</Label>
-                                  <Input
-                                    value={field.value}
-                                    onChange={(e) => field.onChange(e.target.value)}
-                                    className="w-32 font-mono text-sm"
-                                    placeholder="#0B2232"
-                                  />
+              <Tabs value={appearanceSubTab} onValueChange={setAppearanceSubTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-6">
+                  <TabsTrigger value="colors">
+                    <Palette className="h-4 w-4 mr-2" />
+                    Colors & Font
+                  </TabsTrigger>
+                  <TabsTrigger value="nametags">
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Name Tags
+                  </TabsTrigger>
+                  <TabsTrigger value="badges">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Badges
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="colors">
+                  <Form {...appearanceForm}>
+                    <form onSubmit={appearanceForm.handleSubmit(onAppearanceSubmit)} className="space-y-8">
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: appearanceForm.watch('backgroundColor') }} />
+                          Background Color
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Choose a background color for your profile page.
+                        </p>
+                        <FormField
+                          control={appearanceForm.control}
+                          name="backgroundColor"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <div className="flex flex-col sm:flex-row gap-6 items-start">
+                                  <HexColorPicker color={field.value} onChange={field.onChange} />
+                                  <div className="space-y-3 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <Label className="text-sm font-medium">Hex Code</Label>
+                                      <Input
+                                        value={field.value}
+                                        onChange={(e) => field.onChange(e.target.value)}
+                                        className="w-32 font-mono text-sm"
+                                        placeholder="#0B2232"
+                                      />
+                                    </div>
+                                    <div
+                                      className="w-full h-24 rounded-lg border border-border"
+                                      style={{ backgroundColor: field.value }}
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                      This color will be used as the background gradient on your profile.
+                                    </p>
+                                  </div>
                                 </div>
-                                <div
-                                  className="w-full h-24 rounded-lg border border-border"
-                                  style={{ backgroundColor: field.value }}
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                  This color will be used as the background gradient on your profile.
-                                </p>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="border-t pt-6 space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <Type className="h-4 w-4" />
+                          Profile Font
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Choose a font style for your profile display name and text.
+                        </p>
+                        <FormField
+                          control={appearanceForm.control}
+                          name="profileFont"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                  {FONT_OPTIONS.map((font) => {
+                                    const isSelected = field.value === font.value;
+                                    return (
+                                      <button
+                                        key={font.value}
+                                        type="button"
+                                        onClick={() => field.onChange(font.value)}
+                                        className={`p-4 rounded-lg border-2 text-left transition-all ${
+                                          isSelected
+                                            ? 'border-primary bg-primary/10'
+                                            : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                                        }`}
+                                      >
+                                        <p
+                                          className="text-lg font-semibold mb-1 truncate"
+                                          style={{ fontFamily: font.family }}
+                                        >
+                                          {font.label}
+                                        </p>
+                                        <p
+                                          className="text-xs text-muted-foreground truncate"
+                                          style={{ fontFamily: font.family }}
+                                        >
+                                          {user?.displayName || 'Your Name'}
+                                        </p>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="flex justify-end pt-4">
+                        <Button type="submit" disabled={updateProfile.isPending}>
+                          {updateProfile.isPending ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Appearance'
+                          )}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </TabsContent>
+
+                <TabsContent value="nametags">
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
+                        <Sparkles className="h-5 w-5 text-primary" />
+                        Name Tag
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Select a name tag to display below your username on your profile.
+                      </p>
+                    </div>
+
+                    {isLoadingNameTags ? (
+                      <div className="flex items-center justify-center p-8">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                      </div>
+                    ) : userNameTags.length === 0 ? (
+                      <div className="p-6 bg-muted/50 rounded-lg border text-center">
+                        <Sparkles className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          No name tags unlocked yet. Visit the store to get exclusive name tags!
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {(() => {
+                          const displayNameTagId = pendingNameTagId !== undefined ? pendingNameTagId : user?.selectedNameTagId;
+                          const selectedTag = displayNameTagId ? userNameTags.find((t: NameTag) => t.id === displayNameTagId) : null;
+                          
+                          return (
+                            <div className="flex flex-col items-center space-y-3">
+                              <div className="p-4 bg-muted/30 rounded-lg w-full flex flex-col items-center">
+                                {selectedTag ? (
+                                  <>
+                                    <NameTagImage
+                                      imageUrl={selectedTag.imageUrl}
+                                      alt={selectedTag.name}
+                                      className="w-full max-w-sm h-auto object-contain"
+                                    />
+                                    <p className="text-sm font-medium mt-3">{selectedTag.name}</p>
+                                    <span className={`text-xs capitalize font-medium mt-1 ${
+                                      selectedTag.rarity === 'legendary' ? 'text-yellow-400' :
+                                      selectedTag.rarity === 'epic' ? 'text-purple-400' :
+                                      selectedTag.rarity === 'rare' ? 'text-blue-400' : 'text-gray-400'
+                                    }`}>
+                                      {selectedTag.rarity}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <div className="text-center py-4">
+                                    <Sparkles className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                                    <p className="text-sm text-muted-foreground">No name tag selected</p>
+                                  </div>
+                                )}
                               </div>
+                              <span className="text-xs text-muted-foreground">
+                                {selectedTag ? (pendingNameTagId !== undefined ? 'New Selection' : 'Current') : 'Select a tag below'}
+                              </span>
                             </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                          );
+                        })()}
 
-                  <div className="border-t pt-6 space-y-4">
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                      <Type className="h-4 w-4" />
-                      Profile Font
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Choose a font style for your profile display name and text.
-                    </p>
-                    <FormField
-                      control={appearanceForm.control}
-                      name="profileFont"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                              {FONT_OPTIONS.map((font) => {
-                                const isSelected = field.value === font.value;
-                                return (
-                                  <button
-                                    key={font.value}
-                                    type="button"
-                                    onClick={() => field.onChange(font.value)}
-                                    className={`p-4 rounded-lg border-2 text-left transition-all ${
-                                      isSelected
-                                        ? 'border-primary bg-primary/10'
-                                        : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                                    }`}
-                                  >
-                                    <p
-                                      className="text-lg font-semibold mb-1 truncate"
-                                      style={{ fontFamily: font.family }}
-                                    >
-                                      {font.label}
-                                    </p>
-                                    <p
-                                      className="text-xs text-muted-foreground truncate"
-                                      style={{ fontFamily: font.family }}
-                                    >
-                                      {user?.displayName || 'Your Name'}
-                                    </p>
-                                  </button>
-                                );
-                              })}
+                        {((pendingNameTagId !== undefined ? pendingNameTagId : user?.selectedNameTagId) !== null) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPendingNameTagId(null)}
+                            className="w-full"
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Remove Name Tag
+                          </Button>
+                        )}
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {userNameTags.map((tag: NameTag) => {
+                            const displayNameTagId = pendingNameTagId !== undefined ? pendingNameTagId : user?.selectedNameTagId;
+                            const isSelected = displayNameTagId === tag.id;
+                            return (
+                              <button
+                                key={tag.id}
+                                type="button"
+                                onClick={() => setPendingNameTagId(tag.id)}
+                                className={`
+                                  relative p-3 rounded-lg transition-all transform hover:scale-105
+                                  ${isSelected 
+                                    ? 'ring-2 ring-primary bg-primary/20' 
+                                    : 'border border-border hover:border-primary/50'}
+                                `}
+                              >
+                                <NameTagImage
+                                  imageUrl={tag.imageUrl}
+                                  alt={tag.name}
+                                  className="w-full h-14 object-contain"
+                                  style={{
+                                    borderRadius: '2px',
+                                    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.1)'
+                                  }}
+                                />
+                                <p className="text-xs text-center mt-1 truncate">{tag.name}</p>
+                                {isSelected && (
+                                  <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5">
+                                    <Check className="h-2.5 w-2.5" />
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {(pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId) && (
+                          <Button
+                            className="w-full"
+                            onClick={saveNameTagAndBadge}
+                            disabled={updateProfile.isPending}
+                          >
+                            {updateProfile.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                              <Save className="h-4 w-4 mr-2" />
+                            )}
+                            Save Name Tag
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="badges">
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
+                        <Shield className="h-5 w-5 text-green-500" />
+                        Verified Badge
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Choose a verified badge to display next to your username on your profile.
+                      </p>
+                    </div>
+
+                    {isLoadingVerificationBadges ? (
+                      <div className="flex items-center justify-center p-8">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                      </div>
+                    ) : userVerificationBadges.length === 0 ? (
+                      <div className="p-6 bg-muted/50 rounded-lg border text-center">
+                        <Shield className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          No verification badges available yet. Visit the store to get exclusive badges!
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {(() => {
+                          const displayBadgeId = pendingVerificationBadgeId !== undefined ? pendingVerificationBadgeId : (user as any)?.selectedVerificationBadgeId;
+                          const selectedBadge = displayBadgeId ? userVerificationBadges.find((b: VerificationBadge) => b.id === displayBadgeId) : null;
+                          
+                          return (
+                            <div className="flex flex-col items-center space-y-3">
+                              <div className="p-4 bg-muted/30 rounded-lg w-full flex flex-col items-center">
+                                {selectedBadge ? (
+                                  <>
+                                    <NameTagImage
+                                      imageUrl={selectedBadge.imageUrl}
+                                      alt={selectedBadge.name}
+                                      className="w-16 h-16 object-contain"
+                                    />
+                                    <p className="text-sm font-medium mt-3">{selectedBadge.name}</p>
+                                    {!selectedBadge.isDefault && (
+                                      <span className={`text-xs capitalize font-medium mt-1 ${
+                                        selectedBadge.rarity === 'legendary' ? 'text-yellow-400' :
+                                        selectedBadge.rarity === 'epic' ? 'text-purple-400' :
+                                        selectedBadge.rarity === 'rare' ? 'text-blue-400' : 'text-gray-400'
+                                      }`}>
+                                        {selectedBadge.rarity}
+                                      </span>
+                                    )}
+                                  </>
+                                ) : (
+                                  <div className="text-center py-4">
+                                    <Shield className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                                    <p className="text-sm text-muted-foreground">No verified badge selected</p>
+                                  </div>
+                                )}
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {selectedBadge ? (pendingVerificationBadgeId !== undefined ? 'New Selection' : 'Current') : 'Select a badge below'}
+                              </span>
                             </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                          );
+                        })()}
 
-                  <div className="flex justify-end pt-4">
-                    <Button type="submit" disabled={updateProfile.isPending}>
-                      {updateProfile.isPending ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Saving...
-                        </>
-                      ) : (
-                        'Save Appearance'
-                      )}
-                    </Button>
+                        {((pendingVerificationBadgeId !== undefined ? pendingVerificationBadgeId : (user as any)?.selectedVerificationBadgeId) !== null) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPendingVerificationBadgeId(null)}
+                            className="w-full"
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Remove Verified Badge
+                          </Button>
+                        )}
+
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                          {userVerificationBadges.map((badge: VerificationBadge) => {
+                            const displayBadgeId = pendingVerificationBadgeId !== undefined ? pendingVerificationBadgeId : (user as any)?.selectedVerificationBadgeId;
+                            const isSelected = displayBadgeId === badge.id;
+                            return (
+                              <button
+                                key={badge.id}
+                                type="button"
+                                onClick={() => setPendingVerificationBadgeId(badge.id)}
+                                className={`
+                                  relative p-3 rounded-lg transition-all transform hover:scale-105 flex flex-col items-center
+                                  ${isSelected 
+                                    ? 'ring-2 ring-green-500 bg-green-500/20' 
+                                    : 'border border-border hover:border-green-500/50'}
+                                `}
+                              >
+                                <NameTagImage
+                                  imageUrl={badge.imageUrl}
+                                  alt={badge.name}
+                                  className="w-10 h-10 object-contain"
+                                />
+                                <p className="text-xs text-center mt-1 truncate w-full">{badge.name}</p>
+                                {badge.isDefault && (
+                                  <span className="text-[10px] text-green-500 font-medium">Free</span>
+                                )}
+                                {isSelected && (
+                                  <div className="absolute -top-1 -right-1 bg-green-500 text-white rounded-full p-0.5">
+                                    <Check className="h-2.5 w-2.5" />
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {(pendingVerificationBadgeId !== undefined && pendingVerificationBadgeId !== (user as any)?.selectedVerificationBadgeId) && (
+                          <Button
+                            className="w-full"
+                            onClick={saveNameTagAndBadge}
+                            disabled={updateProfile.isPending}
+                          >
+                            {updateProfile.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                              <Save className="h-4 w-4 mr-2" />
+                            )}
+                            Save Badge
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </form>
-              </Form>
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </TabsContent>
