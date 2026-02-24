@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useSignedUrl } from "@/hooks/use-signed-url";
@@ -148,7 +149,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
   if (!screenshot) return null;
 
   if (isMobile && isFullscreen) {
-    return (
+    return createPortal(
       <div className="fixed inset-0 z-[100] bg-black flex flex-col">
         <div className="absolute top-3 right-3 z-50 flex items-center gap-2">
           {hasNavigation && (
@@ -221,12 +222,13 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
             </div>
           </div>
         )}
-      </div>
+      </div>,
+      document.body
     );
   }
 
   if (isMobile) {
-    return (
+    return createPortal(
       <div className="fixed inset-0 z-[100] bg-background flex flex-col">
         <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-border">
           <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -448,7 +450,8 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
             </div>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
