@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { GoogleAuthButton } from "./GoogleAuthButton";
@@ -10,7 +11,7 @@ import { PasswordRequirementsDisplay } from "@/components/ui/password-requiremen
 import { FieldError, FieldStatus } from "@/components/ui/field-error";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +39,8 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
   const [passwordsMatch, setPasswordsMatch] = useState<boolean | null>(null);
   const [serverError, setServerError] = useState<string>("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{
     username?: string;
     email?: string;
@@ -468,15 +471,217 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
         />
         <label htmlFor="agree-terms" className="text-xs text-muted-foreground cursor-pointer select-none">
           By registering you are agreeing to our{" "}
-          <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+          <button type="button" onClick={(e) => { e.preventDefault(); setShowTerms(true); }} className="text-primary hover:underline">
             Terms & Conditions
-          </a>{" "}
+          </button>{" "}
           and{" "}
-          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+          <button type="button" onClick={(e) => { e.preventDefault(); setShowPrivacy(true); }} className="text-primary hover:underline">
             Privacy Policy
-          </a>
+          </button>
         </label>
       </div>
+
+      <Dialog open={showTerms} onOpenChange={setShowTerms}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-gray-900 border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-primary">Terms and Conditions</DialogTitle>
+            <p className="text-sm text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
+          </DialogHeader>
+          <div className="prose prose-invert prose-sm max-w-none text-gray-300 space-y-4">
+            <h2 className="text-lg font-semibold text-white">1. Acceptance of Terms</h2>
+            <p>By accessing and using Gamefolio ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.</p>
+
+            <h2 className="text-lg font-semibold text-white">2. Description of Service</h2>
+            <p>Gamefolio is a social gaming platform that allows users to:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Upload and share gaming clips, screenshots, and reels</li>
+              <li>Create and customize gaming profiles</li>
+              <li>Follow other gamers and discover content</li>
+              <li>Connect gaming accounts and showcase achievements</li>
+              <li>Participate in the gaming community</li>
+            </ul>
+
+            <h2 className="text-lg font-semibold text-white">3. User Accounts</h2>
+            <p>To access certain features of the Service, you must register for an account. When you register, you agree to:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Provide accurate, current, and complete information</li>
+              <li>Maintain the security of your password and identification</li>
+              <li>Accept responsibility for all activities under your account</li>
+              <li>Notify us immediately of unauthorized use of your account</li>
+            </ul>
+
+            <h2 className="text-lg font-semibold text-white">4. Content Guidelines</h2>
+            <p>Users are responsible for the content they upload. You agree not to upload content that:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Is illegal, harmful, or offensive</li>
+              <li>Violates intellectual property rights</li>
+              <li>Contains malware or harmful code</li>
+              <li>Promotes harassment or discrimination</li>
+              <li>Is sexually explicit or inappropriate</li>
+              <li>Violates any applicable laws or regulations</li>
+            </ul>
+
+            <h2 className="text-lg font-semibold text-white">5. Intellectual Property</h2>
+            <p>You retain ownership of content you upload, but grant Gamefolio a non-exclusive, worldwide, royalty-free license to use, display, and distribute your content on the platform. The Gamefolio platform, including its design, features, and code, is protected by copyright and other intellectual property laws.</p>
+
+            <h2 className="text-lg font-semibold text-white">6. Privacy and Data Protection</h2>
+            <p>Your privacy is important to us. Please review our Privacy Policy, which also governs your use of the Service, to understand our practices.</p>
+
+            <h2 className="text-lg font-semibold text-white">7. Community Standards</h2>
+            <p>Gamefolio is committed to maintaining a positive gaming community. Users must:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Treat other users with respect</li>
+              <li>Follow community guidelines</li>
+              <li>Report inappropriate behavior</li>
+              <li>Engage in constructive interactions</li>
+            </ul>
+
+            <h2 className="text-lg font-semibold text-white">8. Termination</h2>
+            <p>We may terminate or suspend your account and bar access to the Service immediately, without prior notice or liability, for any reason whatsoever, including without limitation if you breach the Terms.</p>
+
+            <h2 className="text-lg font-semibold text-white">9. Disclaimer of Warranties</h2>
+            <p>The Service is provided on an "AS IS" and "AS AVAILABLE" basis. Gamefolio makes no representations or warranties of any kind, express or implied, as to the operation of the Service or the information included on the Service.</p>
+
+            <h2 className="text-lg font-semibold text-white">10. Limitation of Liability</h2>
+            <p>Gamefolio will not be liable for any damages of any kind arising from the use of the Service, including but not limited to direct, indirect, incidental, punitive, and consequential damages.</p>
+
+            <h2 className="text-lg font-semibold text-white">11. Changes to Terms</h2>
+            <p>We reserve the right to modify these terms at any time. Changes will be effective immediately upon posting. Your continued use of the Service after changes constitutes acceptance of the new terms.</p>
+
+            <h2 className="text-lg font-semibold text-white">12. Contact Information</h2>
+            <p>If you have any questions about these Terms and Conditions, please contact us at:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Email: legal@gamefolio.com</li>
+              <li>Website: www.gamefolio.com</li>
+            </ul>
+
+            <h2 className="text-lg font-semibold text-white">13. Governing Law</h2>
+            <p>These Terms shall be interpreted and governed by the laws of the jurisdiction in which Gamefolio operates, without regard to its conflict of law provisions.</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPrivacy} onOpenChange={setShowPrivacy}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-gray-900 border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-primary">Privacy Policy</DialogTitle>
+            <p className="text-sm text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
+          </DialogHeader>
+          <div className="prose prose-invert prose-sm max-w-none text-gray-300 space-y-4">
+            <h2 className="text-lg font-semibold text-white">1. Introduction</h2>
+            <p>Welcome to Gamefolio. We respect your privacy and are committed to protecting your personal data. This privacy policy explains how we collect, use, and safeguard your information when you use our gaming social platform.</p>
+
+            <h2 className="text-lg font-semibold text-white">2. Information We Collect</h2>
+            <h3 className="text-base font-medium text-white">2.1 Personal Information</h3>
+            <p>When you create an account, we collect:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Username and display name</li>
+              <li>Email address</li>
+              <li>Password (encrypted)</li>
+              <li>Profile information (bio, gaming preferences)</li>
+              <li>Profile pictures and banners</li>
+            </ul>
+
+            <h3 className="text-base font-medium text-white">2.2 Content Information</h3>
+            <p>When you use our platform, we collect:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Gaming clips, screenshots, and reels you upload</li>
+              <li>Comments, likes, and reactions</li>
+              <li>Gaming achievements and statistics</li>
+              <li>Social interactions (follows, messages)</li>
+            </ul>
+
+            <h3 className="text-base font-medium text-white">2.3 Technical Information</h3>
+            <p>We automatically collect:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>IP address and device information</li>
+              <li>Browser type and version</li>
+              <li>Usage patterns and preferences</li>
+              <li>Performance and error logs</li>
+            </ul>
+
+            <h2 className="text-lg font-semibold text-white">3. How We Use Your Information</h2>
+            <p>We use your information to:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Provide and maintain our gaming platform</li>
+              <li>Personalize your gaming experience</li>
+              <li>Enable social features and community interactions</li>
+              <li>Send important account and service notifications</li>
+              <li>Improve our platform and develop new features</li>
+              <li>Ensure platform security and prevent abuse</li>
+              <li>Comply with legal obligations</li>
+            </ul>
+
+            <h2 className="text-lg font-semibold text-white">4. Information Sharing</h2>
+            <h3 className="text-base font-medium text-white">4.1 Public Content</h3>
+            <p>Content you choose to make public (gaming clips, profile information, comments) will be visible to other users and may be shared across the platform.</p>
+
+            <h3 className="text-base font-medium text-white">4.2 Service Providers</h3>
+            <p>We work with trusted service providers who help us operate our platform, including cloud hosting, email services, and analytics providers.</p>
+
+            <h3 className="text-base font-medium text-white">4.3 Legal Requirements</h3>
+            <p>We may disclose information if required by law, legal process, or to protect the rights, property, or safety of Gamefolio, our users, or others.</p>
+
+            <h2 className="text-lg font-semibold text-white">5. Data Security</h2>
+            <p>We implement appropriate technical and organizational measures to protect your personal data, including:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Encryption of sensitive data in transit and at rest</li>
+              <li>Regular security audits and monitoring</li>
+              <li>Access controls and authentication measures</li>
+              <li>Secure data storage and backup procedures</li>
+            </ul>
+
+            <h2 className="text-lg font-semibold text-white">6. Your Rights and Choices</h2>
+            <p>You have the right to:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Access and review your personal data</li>
+              <li>Update or correct your information</li>
+              <li>Delete your account and associated data</li>
+              <li>Control your privacy settings</li>
+              <li>Opt out of non-essential communications</li>
+              <li>Request data portability</li>
+            </ul>
+
+            <h2 className="text-lg font-semibold text-white">7. Cookies and Tracking</h2>
+            <p>We use cookies and similar technologies to enhance your experience, including:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Essential cookies for platform functionality</li>
+              <li>Analytics cookies to understand usage patterns</li>
+              <li>Preference cookies to remember your settings</li>
+            </ul>
+            <p>You can control cookie settings through your browser preferences.</p>
+
+            <h2 className="text-lg font-semibold text-white">8. Third-Party Services</h2>
+            <p>Our platform integrates with third-party gaming services (Steam, PlayStation, Xbox, etc.). When you connect these accounts, we may receive information according to their privacy policies and the permissions you grant.</p>
+
+            <h2 className="text-lg font-semibold text-white">9. International Data Transfers</h2>
+            <p>Your information may be transferred to and processed in countries other than your own. We ensure appropriate safeguards are in place to protect your data during such transfers.</p>
+
+            <h2 className="text-lg font-semibold text-white">10. Children's Privacy</h2>
+            <p>Gamefolio is not intended for children under 13. We do not knowingly collect personal information from children under 13. If we become aware of such collection, we will delete the information immediately.</p>
+
+            <h2 className="text-lg font-semibold text-white">11. Data Retention</h2>
+            <p>We retain your personal data only as long as necessary to provide our services and fulfill legal obligations. When you delete your account, we will delete or anonymize your personal data, except where retention is required by law.</p>
+
+            <h2 className="text-lg font-semibold text-white">12. Changes to This Policy</h2>
+            <p>We may update this privacy policy from time to time. We will notify you of any material changes by email or through our platform. Your continued use of Gamefolio after changes constitutes acceptance.</p>
+
+            <h2 className="text-lg font-semibold text-white">13. Contact Us</h2>
+            <p>If you have questions about this privacy policy or our data practices, please contact us at:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Email: privacy@gamefolio.com</li>
+              <li>Website: www.gamefolio.com</li>
+            </ul>
+
+            <h2 className="text-lg font-semibold text-white">14. Regional Compliance</h2>
+            <h3 className="text-base font-medium text-white">14.1 GDPR (European Union)</h3>
+            <p>If you are in the EU, you have additional rights under the General Data Protection Regulation, including the right to lodge a complaint with a supervisory authority.</p>
+
+            <h3 className="text-base font-medium text-white">14.2 CCPA (California)</h3>
+            <p>California residents have rights under the California Consumer Privacy Act, including the right to know what personal information is collected and the right to delete personal information.</p>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* General server error display */}
       {serverError && (
