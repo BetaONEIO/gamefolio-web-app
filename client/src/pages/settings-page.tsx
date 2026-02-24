@@ -1941,38 +1941,61 @@ export default function SettingsPage() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {FONT_OPTIONS.map((font) => {
-                            const isSelected = profileData.profileFont === font.value;
+                        <div className="space-y-6">
+                          {(() => {
+                            const selectedFont = FONT_OPTIONS.find(f => f.value === profileData.profileFont);
+                            const fontFamily = selectedFont?.family || 'system-ui, sans-serif';
                             return (
-                              <button
-                                key={font.value}
-                                type="button"
-                                onClick={() => {
-                                  setPreviewFontValue(font.value);
-                                  setFontPreviewOpen(true);
-                                }}
-                                className={`p-4 rounded-lg border-2 text-left transition-all ${
-                                  isSelected
-                                    ? 'border-primary bg-primary/10'
-                                    : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                                }`}
-                              >
+                              <div className="p-4 bg-muted/30 rounded-lg w-full flex flex-col items-center">
                                 <p
-                                  className="text-lg font-semibold mb-1 truncate"
-                                  style={{ fontFamily: font.family }}
+                                  className="text-3xl font-bold text-white text-center"
+                                  style={{ fontFamily }}
                                 >
-                                  {font.label}
+                                  {user?.displayName || user?.username || 'Your Name'}
                                 </p>
                                 <p
-                                  className="text-xs text-muted-foreground truncate"
-                                  style={{ fontFamily: font.family }}
+                                  className="text-sm text-slate-400 text-center mt-1"
+                                  style={{ fontFamily }}
                                 >
-                                  {user?.displayName || 'Your Name'}
+                                  @{user?.username || 'username'}
                                 </p>
-                              </button>
+                                <p className="text-xs text-muted-foreground mt-3">
+                                  {selectedFont?.label || 'Default'}
+                                </p>
+                              </div>
                             );
-                          })}
+                          })()}
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {FONT_OPTIONS.map((font) => {
+                              const isSelected = profileData.profileFont === font.value;
+                              return (
+                                <button
+                                  key={font.value}
+                                  type="button"
+                                  onClick={() => setProfileData(prev => ({ ...prev, profileFont: font.value }))}
+                                  className={`p-4 rounded-lg border-2 text-left transition-all ${
+                                    isSelected
+                                      ? 'border-primary bg-primary/10'
+                                      : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                                  }`}
+                                >
+                                  <p
+                                    className="text-lg font-semibold mb-1 truncate"
+                                    style={{ fontFamily: font.family }}
+                                  >
+                                    {font.label}
+                                  </p>
+                                  <p
+                                    className="text-xs text-muted-foreground truncate"
+                                    style={{ fontFamily: font.family }}
+                                  >
+                                    {user?.displayName || 'Your Name'}
+                                  </p>
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -2857,51 +2880,6 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
-      <Dialog open={fontPreviewOpen} onOpenChange={setFontPreviewOpen}>
-        <DialogContent className="max-w-sm p-0 overflow-hidden bg-[#0a1929] border-slate-700">
-          <DialogHeader className="px-6 pt-6 pb-0">
-            <DialogTitle className="text-white">Font Preview</DialogTitle>
-            <DialogDescription className="text-slate-400">
-              {FONT_OPTIONS.find(f => f.value === previewFontValue)?.label}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="px-6 py-5">
-            <p
-              className="text-3xl font-bold text-white text-center"
-              style={{ fontFamily: FONT_OPTIONS.find(f => f.value === previewFontValue)?.family || 'system-ui, sans-serif' }}
-            >
-              {user?.displayName || user?.username || 'Your Name'}
-            </p>
-            <p
-              className="text-sm text-slate-400 text-center mt-1"
-              style={{ fontFamily: FONT_OPTIONS.find(f => f.value === previewFontValue)?.family || 'system-ui, sans-serif' }}
-            >
-              @{user?.username || 'username'}
-            </p>
-          </div>
-
-          <DialogFooter className="px-6 pb-6 pt-0 gap-2 sm:gap-2">
-            <Button
-              variant="outline"
-              className="border-slate-600 text-slate-300 hover:bg-slate-800"
-              onClick={() => setFontPreviewOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="text-slate-900 font-bold"
-              style={{ backgroundColor: profileData.accentColor || '#4ADE80' }}
-              onClick={() => {
-                setProfileData(prev => ({ ...prev, profileFont: previewFontValue }));
-                setFontPreviewOpen(false);
-              }}
-            >
-              Apply Font
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </KeyboardAvoidingWrapper>
   );
 }
