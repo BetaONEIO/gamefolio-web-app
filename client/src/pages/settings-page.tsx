@@ -1791,282 +1791,6 @@ export default function SettingsPage() {
                   )}
                 </div>
 
-                {/* Name Tag Selection Section */}
-                <div className="space-y-4 pt-4 border-t">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-primary" />
-                    <Label className="text-base font-medium">Name Tag</Label>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Select a name tag to display below your username on your profile.
-                  </p>
-
-                  {isLoadingNameTags ? (
-                    <div className="flex items-center justify-center p-4">
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    </div>
-                  ) : userNameTags.length === 0 ? (
-                    <div className="p-4 bg-muted/50 rounded-lg border text-center">
-                      <Sparkles className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">
-                        No name tags unlocked yet. Visit the store to get exclusive name tags!
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {/* Current Name Tag Preview - shown above the grid */}
-                      {(() => {
-                        const displayNameTagId = pendingNameTagId !== undefined ? pendingNameTagId : user?.selectedNameTagId;
-                        const selectedTag = displayNameTagId ? userNameTags.find((t: NameTag) => t.id === displayNameTagId) : null;
-                        
-                        return (
-                          <div className="flex flex-col items-center space-y-3">
-                            <div className="p-3 bg-muted/30 rounded-lg w-full flex flex-col items-center">
-                              {selectedTag ? (
-                                <>
-                                  <NameTagImage
-                                    imageUrl={selectedTag.imageUrl}
-                                    alt={selectedTag.name}
-                                    className="w-full max-w-sm h-auto object-contain"
-                                  />
-                                  <p className="text-sm font-medium mt-3">{selectedTag.name}</p>
-                                  <div className="flex items-center gap-2 text-xs mt-1">
-                                    <span className={`capitalize font-medium ${
-                                      selectedTag.rarity === 'legendary' ? 'text-yellow-400' :
-                                      selectedTag.rarity === 'epic' ? 'text-purple-400' :
-                                      selectedTag.rarity === 'rare' ? 'text-blue-400' : 'text-gray-400'
-                                    }`}>
-                                      {selectedTag.rarity}
-                                    </span>
-                                  </div>
-                                </>
-                              ) : (
-                                <div className="text-center py-2">
-                                  <Sparkles className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-                                  <p className="text-sm text-muted-foreground">No name tag selected</p>
-                                </div>
-                              )}
-                            </div>
-                            <span className="text-xs text-muted-foreground">
-                              {selectedTag ? (pendingNameTagId !== undefined ? 'New Selection' : 'Current') : 'Select a tag below'}
-                            </span>
-                          </div>
-                        );
-                      })()}
-
-                      {/* Remove Name Tag button - show if there's a tag currently selected (pending or saved) */}
-                      {((pendingNameTagId !== undefined ? pendingNameTagId : user?.selectedNameTagId) !== null) && (
-                        <div className="space-y-3">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPendingNameTagId(null)}
-                            className="w-full"
-                          >
-                            <X className="h-4 w-4 mr-2" />
-                            Remove Name Tag
-                          </Button>
-
-                          {hasUnsavedChanges && (
-                            <Button
-                              className="w-full bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
-                              onClick={handleSave}
-                              disabled={updateProfileMutation.isPending || uploadingAvatar || uploadingBanner}
-                            >
-                              {(updateProfileMutation.isPending || uploadingAvatar || uploadingBanner) ? (
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              ) : (
-                                <Save className="h-4 w-4 mr-2" />
-                              )}
-                              Save Changes
-                            </Button>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Name Tag Grid */}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {userNameTags.map((tag: NameTag) => {
-                          const displayNameTagId = pendingNameTagId !== undefined ? pendingNameTagId : user?.selectedNameTagId;
-                          const isSelected = displayNameTagId === tag.id;
-                          return (
-                            <button
-                              key={tag.id}
-                              type="button"
-                              onClick={() => setPendingNameTagId(tag.id)}
-                              className={`
-                                relative p-2 rounded-lg transition-all transform hover:scale-105
-                                ${isSelected 
-                                  ? 'ring-2 ring-primary bg-primary/20' 
-                                  : 'border border-border hover:border-primary/50'}
-                              `}
-                            >
-                              <NameTagImage
-                                imageUrl={tag.imageUrl}
-                                alt={tag.name}
-                                className="w-full h-14 object-contain"
-                                style={{
-                                  borderRadius: '2px',
-                                  boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.1)'
-                                }}
-                              />
-                              <p className="text-xs text-center mt-1 truncate">{tag.name}</p>
-
-                              {isSelected && (
-                                <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5">
-                                  <Check className="h-2.5 w-2.5" />
-                                </div>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {/* Second Save Changes button below the grid for better UX */}
-                      {hasUnsavedChanges && (
-                        <div className="pt-2">
-                          <Button
-                            className="w-full bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
-                            onClick={handleSave}
-                            disabled={updateProfileMutation.isPending || uploadingAvatar || uploadingBanner}
-                          >
-                            {(updateProfileMutation.isPending || uploadingAvatar || uploadingBanner) ? (
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            ) : (
-                              <Save className="h-4 w-4 mr-2" />
-                            )}
-                            Save Changes
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Verified Badge Selection Section */}
-                <div className="space-y-4 pt-4 border-t">
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-green-500" />
-                    <Label className="text-base font-medium">Verified Badge</Label>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Choose a verified badge to display next to your username on your profile.
-                  </p>
-
-                  {isLoadingVerificationBadges ? (
-                    <div className="flex items-center justify-center p-4">
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    </div>
-                  ) : userVerificationBadges.length === 0 ? (
-                    <div className="p-4 bg-muted/50 rounded-lg border text-center">
-                      <Shield className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">
-                        No verification badges available yet. Visit the store to get exclusive badges!
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {/* Current Verified Badge Preview */}
-                      {(() => {
-                        const displayBadgeId = pendingVerificationBadgeId !== undefined ? pendingVerificationBadgeId : (user as any)?.selectedVerificationBadgeId;
-                        const selectedBadge = displayBadgeId ? userVerificationBadges.find((b: VerificationBadge) => b.id === displayBadgeId) : null;
-                        
-                        return (
-                          <div className="flex flex-col items-center space-y-3">
-                            <div className="p-3 bg-muted/30 rounded-lg w-full flex flex-col items-center">
-                              {selectedBadge ? (
-                                <>
-                                  <NameTagImage
-                                    imageUrl={selectedBadge.imageUrl}
-                                    alt={selectedBadge.name}
-                                    className="w-16 h-16 object-contain"
-                                  />
-                                  <p className="text-sm font-medium mt-3">{selectedBadge.name}</p>
-                                  {!selectedBadge.isDefault && (
-                                    <div className="flex items-center gap-2 text-xs mt-1">
-                                      <span className={`capitalize font-medium ${
-                                        selectedBadge.rarity === 'legendary' ? 'text-yellow-400' :
-                                        selectedBadge.rarity === 'epic' ? 'text-purple-400' :
-                                        selectedBadge.rarity === 'rare' ? 'text-blue-400' : 'text-gray-400'
-                                      }`}>
-                                        {selectedBadge.rarity}
-                                      </span>
-                                    </div>
-                                  )}
-                                </>
-                              ) : (
-                                <div className="text-center py-2">
-                                  <Shield className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-                                  <p className="text-sm text-muted-foreground">No verified badge selected</p>
-                                </div>
-                              )}
-                            </div>
-                            <span className="text-xs text-muted-foreground">
-                              {selectedBadge ? (pendingVerificationBadgeId !== undefined ? 'New Selection' : 'Current') : 'Select a badge below'}
-                            </span>
-                          </div>
-                        );
-                      })()}
-
-                      {/* Remove Verified Badge button */}
-                      {((pendingVerificationBadgeId !== undefined ? pendingVerificationBadgeId : (user as any)?.selectedVerificationBadgeId) !== null) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setPendingVerificationBadgeId(null)}
-                          className="w-full"
-                        >
-                          <X className="h-4 w-4 mr-2" />
-                          Remove Verified Badge
-                        </Button>
-                      )}
-
-                      {/* Verified Badge Grid */}
-                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                        {userVerificationBadges.map((badge: VerificationBadge) => {
-                          const displayBadgeId = pendingVerificationBadgeId !== undefined ? pendingVerificationBadgeId : (user as any)?.selectedVerificationBadgeId;
-                          const isSelected = displayBadgeId === badge.id;
-                          return (
-                            <button
-                              key={badge.id}
-                              type="button"
-                              onClick={() => setPendingVerificationBadgeId(badge.id)}
-                              className={`
-                                relative p-2 rounded-lg transition-all transform hover:scale-105 flex flex-col items-center
-                                ${isSelected 
-                                  ? 'ring-2 ring-green-500 bg-green-500/20' 
-                                  : 'border border-border hover:border-green-500/50'}
-                              `}
-                            >
-                              <NameTagImage
-                                imageUrl={badge.imageUrl}
-                                alt={badge.name}
-                                className="w-10 h-10 object-contain"
-                              />
-                              <p className="text-xs text-center mt-1 truncate w-full">{badge.name}</p>
-                              {badge.isDefault && (
-                                <span className="text-[10px] text-green-500 font-medium">Free</span>
-                              )}
-
-                              {isSelected && (
-                                <div className="absolute -top-1 -right-1 bg-green-500 text-white rounded-full p-0.5">
-                                  <Check className="h-2.5 w-2.5" />
-                                </div>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      <Link href="/store">
-                        <p className="text-sm text-muted-foreground hover:text-green-500 transition-colors cursor-pointer mt-2 text-center">
-                          Browse more verification badges in our store
-                        </p>
-                      </Link>
-                    </div>
-                  )}
-                </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="displayName">Display Name</Label>
                   <Input
@@ -2094,43 +1818,331 @@ export default function SettingsPage() {
           {/* Appearance Tab */}
           <TabsContent value="appearance">
             <div className="relative">
-              <div className="space-y-6">
-                {/* Preset Themes */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      Quick Themes
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {PRESET_THEMES.map((theme) => {
-                        const defaultThemeColor = '#0B2232';
-                        return (
-                          <div
-                            key={theme.name}
-                            className="cursor-pointer rounded-lg border-2 border-transparent hover:border-primary/50 transition-colors"
-                            onClick={() => applyPresetTheme(theme)}
-                          >
-                            <div
-                              className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm"
-                              style={{ 
-                                background: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
-                              }}
-                            >
+              <Tabs defaultValue="themes" className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-6">
+                  <TabsTrigger value="themes" className="text-xs sm:text-sm">
+                    <Palette className="h-4 w-4 mr-1 sm:mr-2" />
+                    Themes
+                  </TabsTrigger>
+                  <TabsTrigger value="nametags" className="text-xs sm:text-sm">
+                    <Sparkles className="h-4 w-4 mr-1 sm:mr-2" />
+                    Name Tags
+                  </TabsTrigger>
+                  <TabsTrigger value="badges" className="text-xs sm:text-sm">
+                    <Shield className="h-4 w-4 mr-1 sm:mr-2" />
+                    Badges
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Themes Sub-tab */}
+                <TabsContent value="themes">
+                  <div className="space-y-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          Quick Themes
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          {PRESET_THEMES.map((theme) => {
+                            const defaultThemeColor = '#0B2232';
+                            return (
                               <div
-                                className="w-8 h-8 rounded-full border-2 border-white"
-                                style={{ backgroundColor: theme.accentColor }}
-                              />
-                            </div>
-                            <p className="text-center mt-2 text-sm font-medium">{theme.name}</p>
+                                key={theme.name}
+                                className="cursor-pointer rounded-lg border-2 border-transparent hover:border-primary/50 transition-colors"
+                                onClick={() => applyPresetTheme(theme)}
+                              >
+                                <div
+                                  className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm"
+                                  style={{ 
+                                    background: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
+                                  }}
+                                >
+                                  <div
+                                    className="w-8 h-8 rounded-full border-2 border-white"
+                                    style={{ backgroundColor: theme.accentColor }}
+                                  />
+                                </div>
+                                <p className="text-center mt-2 text-sm font-medium">{theme.name}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+
+                {/* Name Tags Sub-tab */}
+                <TabsContent value="nametags">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-primary" />
+                        Name Tag
+                      </CardTitle>
+                      <CardDescription>
+                        Select a name tag to display below your username on your profile.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {isLoadingNameTags ? (
+                        <div className="flex items-center justify-center p-8">
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                        </div>
+                      ) : userNameTags.length === 0 ? (
+                        <div className="p-6 bg-muted/50 rounded-lg border text-center">
+                          <Sparkles className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">
+                            No name tags unlocked yet. Visit the store to get exclusive name tags!
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-6">
+                          {(() => {
+                            const displayNameTagId = pendingNameTagId !== undefined ? pendingNameTagId : user?.selectedNameTagId;
+                            const selectedTag = displayNameTagId ? userNameTags.find((t: NameTag) => t.id === displayNameTagId) : null;
+                            
+                            return (
+                              <div className="flex flex-col items-center space-y-3">
+                                <div className="p-4 bg-muted/30 rounded-lg w-full flex flex-col items-center">
+                                  {selectedTag ? (
+                                    <>
+                                      <NameTagImage
+                                        imageUrl={selectedTag.imageUrl}
+                                        alt={selectedTag.name}
+                                        className="w-full max-w-sm h-auto object-contain"
+                                      />
+                                      <p className="text-sm font-medium mt-3">{selectedTag.name}</p>
+                                      <span className={`text-xs capitalize font-medium mt-1 ${
+                                        selectedTag.rarity === 'legendary' ? 'text-yellow-400' :
+                                        selectedTag.rarity === 'epic' ? 'text-purple-400' :
+                                        selectedTag.rarity === 'rare' ? 'text-blue-400' : 'text-gray-400'
+                                      }`}>
+                                        {selectedTag.rarity}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <div className="text-center py-4">
+                                      <Sparkles className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                                      <p className="text-sm text-muted-foreground">No name tag selected</p>
+                                    </div>
+                                  )}
+                                </div>
+                                <span className="text-xs text-muted-foreground">
+                                  {selectedTag ? (pendingNameTagId !== undefined ? 'New Selection' : 'Current') : 'Select a tag below'}
+                                </span>
+                              </div>
+                            );
+                          })()}
+
+                          {((pendingNameTagId !== undefined ? pendingNameTagId : user?.selectedNameTagId) !== null) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setPendingNameTagId(null)}
+                              className="w-full"
+                            >
+                              <X className="h-4 w-4 mr-2" />
+                              Remove Name Tag
+                            </Button>
+                          )}
+
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            {userNameTags.map((tag: NameTag) => {
+                              const displayNameTagId = pendingNameTagId !== undefined ? pendingNameTagId : user?.selectedNameTagId;
+                              const isSelected = displayNameTagId === tag.id;
+                              return (
+                                <button
+                                  key={tag.id}
+                                  type="button"
+                                  onClick={() => setPendingNameTagId(tag.id)}
+                                  className={`
+                                    relative p-3 rounded-lg transition-all transform hover:scale-105
+                                    ${isSelected 
+                                      ? 'ring-2 ring-primary bg-primary/20' 
+                                      : 'border border-border hover:border-primary/50'}
+                                  `}
+                                >
+                                  <NameTagImage
+                                    imageUrl={tag.imageUrl}
+                                    alt={tag.name}
+                                    className="w-full h-14 object-contain"
+                                    style={{
+                                      borderRadius: '2px',
+                                      boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.1)'
+                                    }}
+                                  />
+                                  <p className="text-xs text-center mt-1 truncate">{tag.name}</p>
+                                  {isSelected && (
+                                    <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5">
+                                      <Check className="h-2.5 w-2.5" />
+                                    </div>
+                                  )}
+                                </button>
+                              );
+                            })}
                           </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-            </div>
+
+                          {hasUnsavedChanges && (
+                            <Button
+                              className="w-full bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
+                              onClick={handleSave}
+                              disabled={updateProfileMutation.isPending || uploadingAvatar || uploadingBanner}
+                            >
+                              {(updateProfileMutation.isPending || uploadingAvatar || uploadingBanner) ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              ) : (
+                                <Save className="h-4 w-4 mr-2" />
+                              )}
+                              Save Changes
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Verified Badges Sub-tab */}
+                <TabsContent value="badges">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Shield className="h-5 w-5 text-green-500" />
+                        Verified Badge
+                      </CardTitle>
+                      <CardDescription>
+                        Choose a verified badge to display next to your username on your profile.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {isLoadingVerificationBadges ? (
+                        <div className="flex items-center justify-center p-8">
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                        </div>
+                      ) : userVerificationBadges.length === 0 ? (
+                        <div className="p-6 bg-muted/50 rounded-lg border text-center">
+                          <Shield className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">
+                            No verification badges available yet. Visit the store to get exclusive badges!
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-6">
+                          {(() => {
+                            const displayBadgeId = pendingVerificationBadgeId !== undefined ? pendingVerificationBadgeId : (user as any)?.selectedVerificationBadgeId;
+                            const selectedBadge = displayBadgeId ? userVerificationBadges.find((b: VerificationBadge) => b.id === displayBadgeId) : null;
+                            
+                            return (
+                              <div className="flex flex-col items-center space-y-3">
+                                <div className="p-4 bg-muted/30 rounded-lg w-full flex flex-col items-center">
+                                  {selectedBadge ? (
+                                    <>
+                                      <NameTagImage
+                                        imageUrl={selectedBadge.imageUrl}
+                                        alt={selectedBadge.name}
+                                        className="w-16 h-16 object-contain"
+                                      />
+                                      <p className="text-sm font-medium mt-3">{selectedBadge.name}</p>
+                                      {!selectedBadge.isDefault && (
+                                        <span className={`text-xs capitalize font-medium mt-1 ${
+                                          selectedBadge.rarity === 'legendary' ? 'text-yellow-400' :
+                                          selectedBadge.rarity === 'epic' ? 'text-purple-400' :
+                                          selectedBadge.rarity === 'rare' ? 'text-blue-400' : 'text-gray-400'
+                                        }`}>
+                                          {selectedBadge.rarity}
+                                        </span>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <div className="text-center py-4">
+                                      <Shield className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                                      <p className="text-sm text-muted-foreground">No verified badge selected</p>
+                                    </div>
+                                  )}
+                                </div>
+                                <span className="text-xs text-muted-foreground">
+                                  {selectedBadge ? (pendingVerificationBadgeId !== undefined ? 'New Selection' : 'Current') : 'Select a badge below'}
+                                </span>
+                              </div>
+                            );
+                          })()}
+
+                          {((pendingVerificationBadgeId !== undefined ? pendingVerificationBadgeId : (user as any)?.selectedVerificationBadgeId) !== null) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setPendingVerificationBadgeId(null)}
+                              className="w-full"
+                            >
+                              <X className="h-4 w-4 mr-2" />
+                              Remove Verified Badge
+                            </Button>
+                          )}
+
+                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                            {userVerificationBadges.map((badge: VerificationBadge) => {
+                              const displayBadgeId = pendingVerificationBadgeId !== undefined ? pendingVerificationBadgeId : (user as any)?.selectedVerificationBadgeId;
+                              const isSelected = displayBadgeId === badge.id;
+                              return (
+                                <button
+                                  key={badge.id}
+                                  type="button"
+                                  onClick={() => setPendingVerificationBadgeId(badge.id)}
+                                  className={`
+                                    relative p-3 rounded-lg transition-all transform hover:scale-105 flex flex-col items-center
+                                    ${isSelected 
+                                      ? 'ring-2 ring-green-500 bg-green-500/20' 
+                                      : 'border border-border hover:border-green-500/50'}
+                                  `}
+                                >
+                                  <NameTagImage
+                                    imageUrl={badge.imageUrl}
+                                    alt={badge.name}
+                                    className="w-10 h-10 object-contain"
+                                  />
+                                  <p className="text-xs text-center mt-1 truncate w-full">{badge.name}</p>
+                                  {badge.isDefault && (
+                                    <span className="text-[10px] text-green-500 font-medium">Free</span>
+                                  )}
+                                  {isSelected && (
+                                    <div className="absolute -top-1 -right-1 bg-green-500 text-white rounded-full p-0.5">
+                                      <Check className="h-2.5 w-2.5" />
+                                    </div>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          <Link href="/store">
+                            <p className="text-sm text-muted-foreground hover:text-green-500 transition-colors cursor-pointer mt-2 text-center">
+                              Browse more verification badges in our store
+                            </p>
+                          </Link>
+
+                          {hasUnsavedChanges && (
+                            <Button
+                              className="w-full bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
+                              onClick={handleSave}
+                              disabled={updateProfileMutation.isPending || uploadingAvatar || uploadingBanner}
+                            >
+                              {(updateProfileMutation.isPending || uploadingAvatar || uploadingBanner) ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              ) : (
+                                <Save className="h-4 w-4 mr-2" />
+                              )}
+                              Save Changes
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </div>
           </TabsContent>
 
