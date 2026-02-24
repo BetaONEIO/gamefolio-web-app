@@ -30,15 +30,6 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
     });
   };
 
-  const handleWheel = (e: React.WheelEvent) => {
-    if (!scrollRef.current) return;
-    if (Math.abs(e.deltaX) > 0) return;
-    if (Math.abs(e.deltaY) > 0 && e.deltaX === 0) {
-      e.preventDefault();
-      scrollRef.current.scrollLeft += e.deltaY;
-    }
-  };
-
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!scrollRef.current) return;
     setIsDragging(true);
@@ -109,7 +100,6 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
         className={`flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide pb-4 px-2 sm:px-8 py-2 select-none ${
           isDragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
-        onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}

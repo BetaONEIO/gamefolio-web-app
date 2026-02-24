@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import VideoClipCard from "@/components/clips/VideoClipCard";
+import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 import { ArrowLeft, Video } from "lucide-react";
 import { useLocation } from "wouter";
 import { ClipWithUser } from "@shared/schema";
@@ -83,10 +83,11 @@ const LatestClipsPage = () => {
           ))
         ) : filteredClips.length > 0 ? (
           filteredClips.map((clip) => (
-            <VideoClipCard
+            <VideoClipGridItem
               key={clip.id}
               clip={clip}
-              userId={user?.id || undefined}
+              userId={user?.id}
+              compact={false}
               clipsList={filteredClips}
             />
           ))
