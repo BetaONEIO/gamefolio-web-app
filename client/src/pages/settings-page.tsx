@@ -1875,18 +1875,29 @@ export default function SettingsPage() {
           <TabsContent value="appearance">
             <div className="relative">
               <Tabs defaultValue="themes" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 mb-6">
-                  <TabsTrigger value="themes" className="text-xs sm:text-sm">
-                    <Palette className="h-4 w-4 mr-1 sm:mr-2" />
-                    Themes
+                <TabsList className="grid w-full grid-cols-5 mb-6">
+                  <TabsTrigger value="themes" className="text-xs sm:text-sm px-1">
+                    <Palette className="h-4 w-4 mr-0.5 sm:mr-1" />
+                    <span className="hidden sm:inline">Themes</span>
+                    <span className="sm:hidden">Theme</span>
                   </TabsTrigger>
-                  <TabsTrigger value="nametags" className="text-xs sm:text-sm">
-                    <Sparkles className="h-4 w-4 mr-1 sm:mr-2" />
-                    Name Tags
+                  <TabsTrigger value="background" className="text-xs sm:text-sm px-1">
+                    <span className="hidden sm:inline">Background</span>
+                    <span className="sm:hidden">BG</span>
                   </TabsTrigger>
-                  <TabsTrigger value="badges" className="text-xs sm:text-sm">
-                    <Shield className="h-4 w-4 mr-1 sm:mr-2" />
-                    Badges
+                  <TabsTrigger value="fonts" className="text-xs sm:text-sm px-1">
+                    <span className="hidden sm:inline">Fonts</span>
+                    <span className="sm:hidden">Font</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="nametags" className="text-xs sm:text-sm px-1">
+                    <Sparkles className="h-4 w-4 mr-0.5 sm:mr-1" />
+                    <span className="hidden sm:inline">Name Tags</span>
+                    <span className="sm:hidden">Tags</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="badges" className="text-xs sm:text-sm px-1">
+                    <Shield className="h-4 w-4 mr-0.5 sm:mr-1" />
+                    <span className="hidden sm:inline">Badges</span>
+                    <span className="sm:hidden">Badge</span>
                   </TabsTrigger>
                 </TabsList>
 
@@ -1928,6 +1939,26 @@ export default function SettingsPage() {
                       </CardContent>
                     </Card>
 
+                    {hasUnsavedChanges && (
+                      <Button
+                        className="w-full bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
+                        onClick={handleSave}
+                        disabled={updateProfileMutation.isPending || uploadingAvatar || uploadingBanner}
+                      >
+                        {(updateProfileMutation.isPending || uploadingAvatar || uploadingBanner) ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Save className="h-4 w-4 mr-2" />
+                        )}
+                        Save Changes
+                      </Button>
+                    )}
+                  </div>
+                </TabsContent>
+
+                {/* Background Sub-tab */}
+                <TabsContent value="background">
+                  <div className="space-y-6">
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -1966,6 +1997,26 @@ export default function SettingsPage() {
                       </CardContent>
                     </Card>
 
+                    {hasUnsavedChanges && (
+                      <Button
+                        className="w-full bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
+                        onClick={handleSave}
+                        disabled={updateProfileMutation.isPending || uploadingAvatar || uploadingBanner}
+                      >
+                        {(updateProfileMutation.isPending || uploadingAvatar || uploadingBanner) ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Save className="h-4 w-4 mr-2" />
+                        )}
+                        Save Changes
+                      </Button>
+                    )}
+                  </div>
+                </TabsContent>
+
+                {/* Fonts Sub-tab */}
+                <TabsContent value="fonts">
+                  <div className="space-y-6">
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -1998,13 +2049,13 @@ export default function SettingsPage() {
                             );
                           })()}
 
-                          <Tabs defaultValue="fonts" className="w-full">
+                          <Tabs defaultValue="font-list" className="w-full">
                             <TabsList className="w-full grid grid-cols-2">
-                              <TabsTrigger value="fonts">Fonts</TabsTrigger>
-                              <TabsTrigger value="effects">Effects</TabsTrigger>
+                              <TabsTrigger value="font-list">Fonts</TabsTrigger>
+                              <TabsTrigger value="effect-list">Effects</TabsTrigger>
                             </TabsList>
 
-                            <TabsContent value="fonts" className="mt-4">
+                            <TabsContent value="font-list" className="mt-4">
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                 {FONT_OPTIONS.map((font) => {
                                   const isSelected = profileData.profileFont === font.value;
@@ -2037,7 +2088,7 @@ export default function SettingsPage() {
                               </div>
                             </TabsContent>
 
-                            <TabsContent value="effects" className="mt-4">
+                            <TabsContent value="effect-list" className="mt-4">
                               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                                 {FONT_EFFECTS.map((effect) => {
                                   const isSelected = profileData.profileFontEffect === effect.value;
