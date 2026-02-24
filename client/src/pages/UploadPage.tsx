@@ -87,11 +87,19 @@ const UploadPage = () => {
       setContentType(finalType);
     }
     
-    if (gameIdParam && gameNameParam) {
+    const storedGameId = sessionStorage.getItem('uploadGameId');
+    const storedGameName = sessionStorage.getItem('uploadGameName');
+    const storedGameImage = sessionStorage.getItem('uploadGameImage');
+
+    const finalGameId = gameIdParam || storedGameId;
+    const finalGameName = gameNameParam || storedGameName;
+    const finalGameImage = gameImageParam || storedGameImage;
+
+    if (finalGameId && finalGameName) {
       const gameFromUrl: Game = {
-        id: parseInt(gameIdParam),
-        name: gameNameParam,
-        imageUrl: gameImageParam || null,
+        id: parseInt(finalGameId),
+        name: finalGameName,
+        imageUrl: finalGameImage || null,
         twitchId: null,
         createdAt: new Date(),
       };
@@ -102,6 +110,9 @@ const UploadPage = () => {
     if (storedType) {
       sessionStorage.removeItem('uploadContentType');
     }
+    sessionStorage.removeItem('uploadGameId');
+    sessionStorage.removeItem('uploadGameName');
+    sessionStorage.removeItem('uploadGameImage');
   }, []);
   
   // Screenshot-specific state - supports multiple screenshots (up to 3)
