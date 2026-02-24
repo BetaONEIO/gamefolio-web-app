@@ -36,7 +36,7 @@ export function LikeButton({
   const queryClient = useQueryClient();
   const { isOpen, actionType, openDialog, closeDialog } = useJoinDialog();
   const [liked, setLiked] = useState(initialLiked);
-  const [count, setCount] = useState(initialCount);
+  const [count, setCount] = useState(Number(initialCount) || 0);
 
   // Check current like status when user is authenticated
   const { data: likeStatus } = useQuery({

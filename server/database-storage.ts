@@ -1454,9 +1454,9 @@ export class DatabaseStorage implements IStorage {
       user: row.user,
       game: row.game || undefined,
       _count: {
-        likes: row.likesCount,
-        reactions: row.reactionsCount,
-        comments: row.commentsCount
+        likes: Number(row.likesCount) || 0,
+        reactions: Number(row.reactionsCount) || 0,
+        comments: Number(row.commentsCount) || 0
       }
     }));
   }
@@ -2916,9 +2916,9 @@ export class DatabaseStorage implements IStorage {
       user: row.user?.id ? { ...row.user } : null,
       game: row.game?.id ? { ...row.game } : null,
       _count: {
-        likes: row.likesCount,
-        reactions: row.reactionsCount,
-        comments: row.commentsCount
+        likes: Number(row.likesCount) || 0,
+        reactions: Number(row.reactionsCount) || 0,
+        comments: Number(row.commentsCount) || 0
       }
     })) as any;
   }

@@ -18,6 +18,7 @@ import { ProBadge } from "@/components/ui/pro-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 import { apiRequest } from "@/lib/queryClient";
 import {
   AlertDialog,
@@ -30,6 +31,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+
+function CommentAvatar({ avatarUrl, username }: { avatarUrl: string | null | undefined; username: string }) {
+  const { signedUrl } = useSignedUrl(avatarUrl);
+  return (
+    <Avatar className="h-8 w-8 flex-shrink-0">
+      <AvatarImage 
+        src={signedUrl || avatarUrl || undefined} 
+        alt={username || "User"} 
+      />
+      <AvatarFallback className="text-xs">
+        {username?.[0]?.toUpperCase() || "U"}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
 
 interface CommentSectionProps {
   clipId: number;
@@ -219,15 +235,10 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                   className="h-8 w-8 rounded-lg border border-[#4ade80]/40 object-cover flex-shrink-0"
                 />
               ) : (
-                <Avatar className="h-8 w-8 flex-shrink-0">
-                  <AvatarImage 
-                    src={comment.user.avatarUrl || undefined} 
-                    alt={comment.user.username || "User"} 
-                  />
-                  <AvatarFallback className="text-xs">
-                    {comment.user.username?.[0].toUpperCase() || "U"}
-                  </AvatarFallback>
-                </Avatar>
+                <CommentAvatar 
+                  avatarUrl={comment.user.avatarUrl} 
+                  username={comment.user.username || "U"} 
+                />
               )}
               <div className="flex-1">
                 <div className="flex flex-wrap items-baseline">

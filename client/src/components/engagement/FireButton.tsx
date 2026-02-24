@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Flame } from "lucide-react"; // Assuming Flame icon is available from lucide-react
-import { cn } from "@/lib/utils"; // Assuming cn utility for class names
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { Flame } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
 
@@ -36,7 +36,24 @@ export function FireButton({
   const queryClient = useQueryClient();
   const { isOpen, actionType, openDialog, closeDialog } = useJoinDialog();
   const [fired, setFired] = useState(initialFired);
-  const [count, setCount] = useState(initialCount);
+  const [count, setCount] = useState(Number(initialCount) || 0);
+
+  const { data: fireStatus } = useQuery({
+    queryKey: [`/api/${contentType}s/${contentId}/reactions/status`],
+    queryFn: async () => {
+      const res = await fetch(`/api/${contentType}s/${contentId}/reactions/status`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch fire status");
+      return res.json();
+    },
+    enabled: !!user,
+    staleTime: 30000,
+  });
+
+  useEffect(() => {
+    if (fireStatus && typeof fireStatus === 'object' && 'hasFired' in fireStatus && typeof fireStatus.hasFired === 'boolean') {
+      setFired(fireStatus.hasFired);
+    }
+  }, [fireStatus]);
 
   const fireMutation = useMutation({
     mutationFn: async () => {
@@ -88,6 +105,9 @@ export function FireButton({
       }
       queryClient.invalidateQueries({ 
         queryKey: [`/api/${contentType}s/${contentId}/reactions`] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: [`/api/${contentType}s/${contentId}/reactions/status`] 
       });
       queryClient.invalidateQueries({ 
         queryKey: [`/api/${contentType}s/${contentId}`] 
@@ -170,13 +190,15 @@ export function FireButton({
             disabled={isLoading}
             className={cn(
               "transition-colors rounded-full p-0 bg-black/50 hover:bg-black/70",
+              fired ? "text-orange-500" : "text-white hover:text-orange-500",
               size === "sm" && "w-8 h-8",
               size === "lg" && "w-10 h-10 md:w-12 md:h-12"
             )}
           >
             <Flame 
               className={cn(
-                "text-orange-500",
+                "text-orange-500 transition-all duration-200",
+                fired ? "fill-current scale-110" : "hover:scale-105",
                 size === "sm" && "h-4 w-4",
                 size === "lg" && "h-5 w-5 md:h-6 md:w-6"
               )} 

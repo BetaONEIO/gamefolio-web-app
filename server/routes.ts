@@ -5175,6 +5175,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/clips/:id/reactions/status", hybridAuth, async (req, res) => {
+    try {
+      const clipId = parseInt(req.params.id);
+      if (isNaN(clipId)) {
+        return res.status(400).json({ error: "Invalid clip ID" });
+      }
+      const userId = req.user!.id;
+      const existingReaction = await storage.getUserClipReaction(userId, clipId, '🔥');
+      res.json({ hasFired: !!existingReaction });
+    } catch (error) {
+      console.error("Error checking clip fire status:", error);
+      res.status(500).json({ error: "Failed to check fire status" });
+    }
+  });
+
   // Check if user has liked a screenshot
   app.get("/api/screenshots/:id/likes/status", emailVerificationMiddleware, async (req, res) => {
     try {
@@ -9117,6 +9132,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching screenshot reactions:", error);
       res.status(500).json({ error: "Failed to fetch reactions" });
+    }
+  });
+
+  app.get("/api/screenshots/:id/reactions/status", hybridAuth, async (req, res) => {
+    try {
+      const screenshotId = parseInt(req.params.id);
+      if (isNaN(screenshotId)) {
+        return res.status(400).json({ error: "Invalid screenshot ID" });
+      }
+      const userId = req.user!.id;
+      const existingReaction = await storage.getUserScreenshotReaction(userId, screenshotId, '🔥');
+      res.json({ hasFired: !!existingReaction });
+    } catch (error) {
+      console.error("Error checking screenshot fire status:", error);
+      res.status(500).json({ error: "Failed to check fire status" });
     }
   });
 
