@@ -54,10 +54,18 @@ export function DailyStreakProvider({ children }: { children: ReactNode }) {
   );
 }
 
+const fallbackContext: DailyStreakContextType = {
+  overlayStep: "hidden",
+  streakData: null,
+  showDailyXp: () => {},
+  advanceToStreak: () => {},
+  dismiss: () => {},
+};
+
 export function useDailyStreak() {
   const context = useContext(DailyStreakContext);
   if (!context) {
-    throw new Error("useDailyStreak must be used within a DailyStreakProvider");
+    return fallbackContext;
   }
   return context;
 }
