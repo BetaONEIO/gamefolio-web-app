@@ -9,23 +9,11 @@ import { FireButton } from "@/components/engagement/FireButton";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { formatDistance } from "date-fns";
 import { Link } from "wouter";
-import { Eye, Clock, MessageSquare, Share2, User as UserIcon, UserPlus, UserCheck, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Eye, Clock, MessageSquare, Share2, User as UserIcon, UserPlus, UserCheck, ChevronLeft, ChevronRight, X, Maximize2, Minimize2 } from "lucide-react";
 import type { Game, Screenshot } from "@shared/schema";
 
 const ScreenshotShareDialog = React.lazy(() => import("@/components/screenshot/ScreenshotShareDialog").then(m => ({ default: m.ScreenshotShareDialog })));
 const ScreenshotCommentSection = React.lazy(() => import("@/components/screenshots/ScreenshotCommentSection").then(m => ({ default: m.ScreenshotCommentSection })));
-
-function MobileScreenshotImage({ imageUrl }: { imageUrl: string }) {
-  const { signedUrl } = useSignedUrl(imageUrl);
-  return (
-    <img
-      src={signedUrl || imageUrl}
-      alt=""
-      className="w-full h-full object-contain pointer-events-none"
-      draggable={false}
-    />
-  );
-}
 
 interface ScreenshotLightboxProps {
   screenshot: any | null;
@@ -43,10 +31,13 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
 
   const [isMobile, setIsMobile] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; time: number } | null>(null);
   const hasDraggedRef = useRef(false);
+  const commentSectionRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768);
@@ -148,7 +139,91 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
     },
   });
 
+  const scrollToComments = useCallback(() => {
+    if (commentSectionRef.current && scrollContainerRef.current) {
+      commentSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
+
   if (!screenshot) return null;
+
+  if (isMobile && isFullscreen) {
+    return (
+      <div className="fixed inset-0 z-[60] bg-black flex flex-col">
+        <div className="absolute top-3 right-3 z-50 flex items-center gap-2">
+          {hasNavigation && (
+            <span className="text-white/70 text-xs font-medium bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full">
+              {currentIndex + 1} / {totalSlides}
+            </span>
+          )}
+          <button
+            onClick={() => setIsFullscreen(false)}
+            className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
+          >
+            <Minimize2 className="h-5 w-5 text-white" />
+          </button>
+        </div>
+
+        <div
+          className="flex-1 relative overflow-hidden"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+        >
+          <div
+            className="w-full h-full flex items-center justify-center"
+            style={{
+              transform: `translateX(${dragX}px)`,
+              opacity: Math.max(0.3, 1 - Math.abs(dragX) / 300),
+              transition: isDragging ? "none" : "transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease",
+            }}
+          >
+            <img
+              src={signedUrl || screenshot.imageUrl}
+              alt={screenshot.title}
+              className="max-w-full max-h-full object-contain pointer-events-none"
+              draggable={false}
+            />
+          </div>
+
+          {hasNavigation && hasPrevious && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handlePrevious(); }}
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
+            >
+              <ChevronLeft className="h-6 w-6 text-white" />
+            </button>
+          )}
+          {hasNavigation && hasNext && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleNext(); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
+            >
+              <ChevronRight className="h-6 w-6 text-white" />
+            </button>
+          )}
+        </div>
+
+        {hasNavigation && totalSlides > 1 && (
+          <div className="absolute bottom-4 left-0 right-0 z-30 flex justify-center">
+            <div className="flex items-center gap-1.5">
+              {screenshots!.map((_, i) => (
+                <div
+                  key={i}
+                  className={`rounded-full transition-all duration-300 ${
+                    i === currentIndex
+                      ? "w-5 h-1.5 bg-white"
+                      : "w-1.5 h-1.5 bg-white/30"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (isMobile) {
     return (
@@ -159,31 +234,52 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
               e.stopPropagation();
               onClose();
             }}>
-              <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0 border border-white/20">
-                {avatarSignedUrl ? (
-                  <img src={avatarSignedUrl} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <UserIcon className="h-4 w-4 text-muted-foreground" />
-                )}
-              </div>
+              {screenshotUser?.nftProfileTokenId && screenshotUser?.nftProfileImageUrl ? (
+                <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#4ade80]/40 flex-shrink-0">
+                  <img src={screenshotUser.nftProfileImageUrl} alt={screenshotUser.displayName || ''} className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0 border border-white/20">
+                  {avatarSignedUrl ? (
+                    <img src={avatarSignedUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <UserIcon className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+              )}
             </Link>
-            <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
-              e.stopPropagation();
-              onClose();
-            }}>
-              <span className="text-foreground font-semibold text-sm">
+            <div className="flex flex-col min-w-0">
+              <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                onClose();
+              }}>
+                <span className="text-foreground font-semibold text-sm truncate">
+                  {screenshot.user?.displayName || screenshot.user?.username}
+                </span>
+              </Link>
+              <span className="text-muted-foreground text-xs truncate">
                 @{screenshot.user?.username || 'unknown'}
               </span>
-            </Link>
+            </div>
             {currentUserId && screenshotUser?.id && currentUserId !== screenshotUser.id && (
               <Button
                 size="sm"
                 variant={followStatus?.isFollowing ? "secondary" : "default"}
-                className="h-6 text-xs px-2 flex-shrink-0 ml-1"
+                className="h-7 text-xs px-2 flex-shrink-0 ml-1"
                 onClick={(e) => { e.stopPropagation(); followMutation.mutate(screenshotUser.id); }}
                 disabled={followMutation.isPending}
               >
-                {followStatus?.isFollowing ? "Following" : "Follow"}
+                {followStatus?.isFollowing ? (
+                  <>
+                    <UserCheck className="h-3 w-3 mr-1" />
+                    Following
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-3 w-3 mr-1" />
+                    Follow
+                  </>
+                )}
               </Button>
             )}
           </div>
@@ -202,7 +298,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
           <div
             className="relative bg-black overflow-hidden"
             style={{ height: '45vh', minHeight: '200px' }}
@@ -226,6 +322,13 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                 draggable={false}
               />
             </div>
+
+            <button
+              onClick={() => setIsFullscreen(true)}
+              className="absolute bottom-2 right-2 z-10 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
+            >
+              <Maximize2 className="h-4 w-4 text-white" />
+            </button>
 
             {hasNavigation && hasPrevious && (
               <button
@@ -305,14 +408,13 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                       initialCount={(screenshot as any)._count?.reactions || 0}
                       size="lg"
                     />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-muted-foreground hover:text-foreground flex items-center gap-1"
+                    <button
+                      onClick={scrollToComments}
+                      className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
                     >
                       <MessageSquare className="h-4 w-4" />
-                      <span>{(screenshot as any)._count?.comments || 0}</span>
-                    </Button>
+                      <span className="text-sm">{(screenshot as any)._count?.comments || 0}</span>
+                    </button>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -339,9 +441,11 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
               </div>
             </div>
 
-            <React.Suspense fallback={null}>
-              <ScreenshotCommentSection screenshotId={screenshot.id} />
-            </React.Suspense>
+            <div ref={commentSectionRef}>
+              <React.Suspense fallback={null}>
+                <ScreenshotCommentSection screenshotId={screenshot.id} />
+              </React.Suspense>
+            </div>
           </div>
         </div>
       </div>
