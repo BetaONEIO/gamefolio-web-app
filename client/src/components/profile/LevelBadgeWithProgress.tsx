@@ -108,7 +108,7 @@ export function LevelBadgeWithProgress({
 
             {/* Custom Badge with Dynamic Level Number */}
             <div 
-              className="relative z-10 flex items-center justify-center shadow-lg"
+              className="relative z-10 flex items-center justify-center"
               style={{
                 width: `${badgeSize}px`,
                 height: `${badgeSize}px`,
