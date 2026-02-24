@@ -20,7 +20,7 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
     if (!scrollRef.current) return;
 
     const container = scrollRef.current;
-    const itemWidth = window.innerWidth < 640 ? 144 : 180;
+    const itemWidth = window.innerWidth < 640 ? 176 : 224;
     const scrollAmount = itemWidth * (window.innerWidth < 640 ? 2 : 3);
 
     if (direction === 'left') {
@@ -66,7 +66,7 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
     return (
       <div className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide pb-4 px-2 sm:px-8">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="w-36 sm:w-40 lg:w-44 xl:w-48 flex-shrink-0">
+          <div key={i} className="w-44 sm:w-52 lg:w-56 xl:w-60 flex-shrink-0">
             <Skeleton className="aspect-[9/16] rounded-xl" />
           </div>
         ))}
@@ -120,7 +120,7 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
         {reelsArray.map((reel) => (
           <div
             key={`latest-reel-${reel.id}`}
-            className="w-36 sm:w-40 lg:w-44 xl:w-48 flex-shrink-0"
+            className="w-44 sm:w-52 lg:w-56 xl:w-60 flex-shrink-0"
           >
             <VideoClipGridItem
               clip={reel}
