@@ -38,18 +38,16 @@ const MobileNav = () => {
               key={item.href}
               href={item.href}
               onClick={(e) => handleNavClick(item, e)}
-              className={cn(
-                "flex flex-col items-center text-xs w-full no-underline",
-                location === item.href
-                  ? "text-primary"
-                  : "text-muted-foreground"
-              )}
+              className="flex flex-col items-center text-xs w-full no-underline"
             >
               <item.icon className={cn(
                 "mb-1",
-                item.isUpload ? "w-7 h-7" : "w-6 h-6"
+                item.isUpload ? "w-7 h-7" : "w-6 h-6",
+                location === item.href ? "text-primary" : "text-muted-foreground"
               )} />
-              <span>{item.label}</span>
+              <span className={cn(
+                location === item.href ? "text-white" : "text-muted-foreground"
+              )}>{item.label}</span>
             </Link>
           ))}
         </div>
