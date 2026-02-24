@@ -1069,9 +1069,9 @@ export default function SettingsPage() {
 
   return (
     <KeyboardAvoidingWrapper 
-      className="min-h-screen p-6 pb-24 md:pb-6"
+      className="min-h-screen px-0 py-4 pb-24 md:p-6 md:pb-6"
     >
-      <div className="w-full px-4">
+      <div className="w-full px-3 md:px-4">
         {/* Header */}
         <div className="mb-6">
           <Button
