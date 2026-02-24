@@ -45,6 +45,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import { formatDistanceToNow } from "date-fns";
 import { VerificationGuard } from "@/components/auth/verification-guard";
+import { useSignedUrl } from "@/hooks/use-signed-url";
+
+const SignedAvatar: React.FC<{ url: string | null | undefined; fallback: string; className?: string }> = ({ url, fallback, className }) => {
+  const { signedUrl } = useSignedUrl(url);
+  return (
+    <Avatar className={className}>
+      <AvatarImage src={signedUrl || ''} />
+      <AvatarFallback>{fallback}</AvatarFallback>
+    </Avatar>
+  );
+};
 
 
 interface Message {
@@ -549,12 +560,7 @@ const MessagesPage: React.FC = () => {
                             <img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" />
                           </div>
                         ) : (
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={user.avatarUrl || ""} />
-                            <AvatarFallback>
-                              {user.displayName.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                          <SignedAvatar url={user.avatarUrl} fallback={user.displayName.charAt(0).toUpperCase()} className="h-10 w-10" />
                         )}
                         <div className="flex-1">
                           <p className="font-medium">{user.displayName}</p>
@@ -674,12 +680,7 @@ const MessagesPage: React.FC = () => {
                             <img src={convUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                           </div>
                         ) : (
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={avatarUrl} />
-                            <AvatarFallback>
-                              {displayName.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                          <SignedAvatar url={avatarUrl} fallback={displayName.charAt(0).toUpperCase()} className="h-10 w-10" />
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
@@ -807,12 +808,7 @@ const MessagesPage: React.FC = () => {
                                   <img src={otherUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                                 </div>
                               ) : (
-                                <Avatar className="h-10 w-10 cursor-pointer">
-                                  <AvatarImage src={avatarUrl} />
-                                  <AvatarFallback>
-                                    {displayName.charAt(0).toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
+                                <SignedAvatar url={avatarUrl} fallback={displayName.charAt(0).toUpperCase()} className="h-10 w-10 cursor-pointer" />
                               )}
                             </Link>
                           ) : (
@@ -821,12 +817,7 @@ const MessagesPage: React.FC = () => {
                                 <img src={otherUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                               </div>
                             ) : (
-                              <Avatar className="h-10 w-10">
-                                <AvatarImage src={avatarUrl} />
-                                <AvatarFallback>
-                                  {displayName.charAt(0).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
+                              <SignedAvatar url={avatarUrl} fallback={displayName.charAt(0).toUpperCase()} className="h-10 w-10" />
                             )
                           )}
                           <div>
@@ -856,12 +847,7 @@ const MessagesPage: React.FC = () => {
                                 <img src={selectedUserInfo.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                               </div>
                             ) : (
-                              <Avatar className="h-10 w-10 cursor-pointer">
-                                <AvatarImage src={avatarUrl} />
-                                <AvatarFallback>
-                                  {displayName.charAt(0).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
+                              <SignedAvatar url={avatarUrl} fallback={displayName.charAt(0).toUpperCase()} className="h-10 w-10 cursor-pointer" />
                             )}
                           </Link>
                         ) : (
@@ -870,12 +856,7 @@ const MessagesPage: React.FC = () => {
                               <img src={selectedUserInfo.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                             </div>
                           ) : (
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={avatarUrl} />
-                              <AvatarFallback>
-                                {displayName.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
+                            <SignedAvatar url={avatarUrl} fallback={displayName.charAt(0).toUpperCase()} className="h-10 w-10" />
                           )
                         )}
                         <div>
@@ -972,12 +953,7 @@ const MessagesPage: React.FC = () => {
                               <img src={conversationUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                             </div>
                           ) : (
-                            <Avatar className="h-10 w-10 cursor-pointer">
-                              <AvatarImage src={avatarUrl} />
-                              <AvatarFallback>
-                                {displayName.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
+                            <SignedAvatar url={avatarUrl} fallback={displayName.charAt(0).toUpperCase()} className="h-10 w-10 cursor-pointer" />
                           )}
                         </Link>
                       ) : (
@@ -986,12 +962,7 @@ const MessagesPage: React.FC = () => {
                             <img src={conversationUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                           </div>
                         ) : (
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={avatarUrl} />
-                            <AvatarFallback>
-                              {displayName.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                          <SignedAvatar url={avatarUrl} fallback={displayName.charAt(0).toUpperCase()} className="h-10 w-10" />
                         )
                       )}
                       <div>
@@ -1073,7 +1044,7 @@ const MessagesPage: React.FC = () => {
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
+            <ScrollArea className="flex-1 px-4 py-4 pr-5">
               {loadingMessages ? (
                 <div className="space-y-4">
                   {[...Array(5)].map((_, i) => (
@@ -1117,10 +1088,7 @@ const MessagesPage: React.FC = () => {
                               <img src={senderUser.nftProfileImageUrl} alt={senderUser.displayName} className="w-full h-full object-cover" />
                             </div>
                           ) : (
-                            <Avatar className="h-7 w-7">
-                              <AvatarImage src={avatarSrc} />
-                              <AvatarFallback className="text-xs">{senderInitial}</AvatarFallback>
-                            </Avatar>
+                            <SignedAvatar url={avatarSrc} fallback={senderInitial} className="h-7 w-7" />
                           )}
                         </div>
                       )}
@@ -1195,10 +1163,9 @@ const MessagesPage: React.FC = () => {
             </ScrollArea>
 
             {/* Message Input */}
-            <div className="p-4 border-t bg-card">
+            <div className="px-4 py-3 border-t bg-card">
               <form
                 onSubmit={handleSendMessage}
-                className="p-4 border-t border-gray-200 dark:border-gray-700"
               >
                 <div className="flex gap-2">
                   {(() => {
