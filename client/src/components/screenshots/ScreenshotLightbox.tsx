@@ -60,7 +60,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId }: Scree
 
   return (
     <Dialog open={!!screenshot} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-[95%] w-[95%] p-0 bg-background text-foreground max-h-[95vh] h-[95vh] overflow-y-auto lg:overflow-hidden screenshot-lightbox-close">
+      <DialogContent className="max-w-[80%] w-[80%] p-0 bg-background text-foreground max-h-[76vh] h-[76vh] overflow-y-auto lg:overflow-hidden screenshot-lightbox-close">
         <style>{`
           .screenshot-lightbox-close > button[type="button"] {
             background: rgba(0,0,0,0.4) !important;
@@ -70,8 +70,8 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId }: Scree
             opacity: 1 !important;
             right: 12px !important;
             top: 12px !important;
-            width: 40px !important;
-            height: 40px !important;
+            width: 32px !important;
+            height: 32px !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
@@ -81,8 +81,8 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId }: Scree
             background: rgba(0,0,0,0.6) !important;
           }
           .screenshot-lightbox-close > button[type="button"] svg {
-            width: 20px !important;
-            height: 20px !important;
+            width: 16px !important;
+            height: 16px !important;
           }
         `}</style>
         <div className="flex flex-col lg:flex-row h-auto lg:h-full min-h-full">
@@ -95,55 +95,57 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId }: Scree
           </div>
 
           <div className="flex flex-col w-full lg:w-[25%] lg:h-full">
-            <div className="border-b border-border p-4 flex items-center justify-between">
-              <div className="flex items-center">
-                {screenshotUser?.nftProfileTokenId && screenshotUser?.nftProfileImageUrl ? (
-                  <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#4ade80]/40 mr-3 flex-shrink-0">
-                    <img src={screenshotUser.nftProfileImageUrl} alt={screenshotUser.displayName || ''} className="w-full h-full object-cover" />
-                  </div>
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3">
-                    {avatarSignedUrl ? (
-                      <img
-                        src={avatarSignedUrl}
-                        alt={screenshot.user?.displayName || ''}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <UserIcon className="h-5 w-5 text-muted-foreground" />
-                    )}
-                  </div>
-                )}
-                <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
-                  e.stopPropagation();
-                  onClose();
-                }}>
-                  <div className="text-muted-foreground flex items-center hover:text-primary transition-colors cursor-pointer">
-                    @{screenshot.user?.username}
-                  </div>
-                </Link>
-              </div>
-              {currentUserId && screenshotUser?.id && currentUserId !== screenshotUser.id && (
-                <Button
-                  size="sm"
-                  variant={followStatus?.isFollowing ? "secondary" : "default"}
-                  className="h-7 text-xs px-3"
-                  onClick={() => followMutation.mutate(screenshotUser.id)}
-                  disabled={followMutation.isPending}
-                >
-                  {followStatus?.isFollowing ? (
-                    <>
-                      <UserCheck className="h-3 w-3 mr-1" />
-                      Following
-                    </>
+            <div className="border-b border-border p-4 pr-12">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center min-w-0">
+                  {screenshotUser?.nftProfileTokenId && screenshotUser?.nftProfileImageUrl ? (
+                    <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#4ade80]/40 mr-3 flex-shrink-0">
+                      <img src={screenshotUser.nftProfileImageUrl} alt={screenshotUser.displayName || ''} className="w-full h-full object-cover" />
+                    </div>
                   ) : (
-                    <>
-                      <UserPlus className="h-3 w-3 mr-1" />
-                      Follow
-                    </>
+                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3 flex-shrink-0">
+                      {avatarSignedUrl ? (
+                        <img
+                          src={avatarSignedUrl}
+                          alt={screenshot.user?.displayName || ''}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <UserIcon className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
                   )}
-                </Button>
-              )}
+                  <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    onClose();
+                  }}>
+                    <div className="text-white flex items-center hover:text-primary transition-colors cursor-pointer font-medium">
+                      {screenshot.user?.displayName || screenshot.user?.username}
+                    </div>
+                  </Link>
+                </div>
+                {currentUserId && screenshotUser?.id && currentUserId !== screenshotUser.id && (
+                  <Button
+                    size="sm"
+                    variant={followStatus?.isFollowing ? "secondary" : "default"}
+                    className="h-7 text-xs px-3 flex-shrink-0 ml-2"
+                    onClick={(e) => { e.stopPropagation(); followMutation.mutate(screenshotUser.id); }}
+                    disabled={followMutation.isPending}
+                  >
+                    {followStatus?.isFollowing ? (
+                      <>
+                        <UserCheck className="h-3 w-3 mr-1" />
+                        Following
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="h-3 w-3 mr-1" />
+                        Follow
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div className="flex-1 lg:overflow-y-auto px-4 py-3 space-y-3">
