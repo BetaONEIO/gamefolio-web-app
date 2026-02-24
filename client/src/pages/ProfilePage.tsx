@@ -1248,6 +1248,18 @@ const ProfilePage = () => {
     'orbitron': "'Orbitron', sans-serif",
     'press-start': "'Press Start 2P', cursive",
     'russo-one': "'Russo One', sans-serif",
+    'bungee-shade': "'Bungee Shade', cursive",
+    'nabla': "'Nabla', cursive",
+    'silkscreen': "'Silkscreen', cursive",
+    'rubik-bubbles': "'Rubik Bubbles', cursive",
+    'monoton': "'Monoton', cursive",
+    'creepster': "'Creepster', cursive",
+    'permanent-marker': "'Permanent Marker', cursive",
+    'bangers': "'Bangers', cursive",
+    'fredoka': "'Fredoka', sans-serif",
+    'righteous': "'Righteous', cursive",
+    'bungee-inline': "'Bungee Inline', cursive",
+    'notable': "'Notable', sans-serif",
   };
   const profileFontFamily = PROFILE_FONT_MAP[profile.profileFont || 'default'] || PROFILE_FONT_MAP['default'];
 

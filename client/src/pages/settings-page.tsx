@@ -50,6 +50,18 @@ const FONT_OPTIONS = [
   { value: 'orbitron', label: 'Orbitron', family: "'Orbitron', sans-serif" },
   { value: 'press-start', label: 'Press Start 2P', family: "'Press Start 2P', cursive" },
   { value: 'russo-one', label: 'Russo One', family: "'Russo One', sans-serif" },
+  { value: 'bungee-shade', label: 'Bungee Shade', family: "'Bungee Shade', cursive" },
+  { value: 'nabla', label: 'Nabla', family: "'Nabla', cursive" },
+  { value: 'silkscreen', label: 'Silkscreen', family: "'Silkscreen', cursive" },
+  { value: 'rubik-bubbles', label: 'Rubik Bubbles', family: "'Rubik Bubbles', cursive" },
+  { value: 'monoton', label: 'Monoton', family: "'Monoton', cursive" },
+  { value: 'creepster', label: 'Creepster', family: "'Creepster', cursive" },
+  { value: 'permanent-marker', label: 'Permanent Marker', family: "'Permanent Marker', cursive" },
+  { value: 'bangers', label: 'Bangers', family: "'Bangers', cursive" },
+  { value: 'fredoka', label: 'Fredoka', family: "'Fredoka', sans-serif" },
+  { value: 'righteous', label: 'Righteous', family: "'Righteous', cursive" },
+  { value: 'bungee-inline', label: 'Bungee Inline', family: "'Bungee Inline', cursive" },
+  { value: 'notable', label: 'Notable', family: "'Notable', sans-serif" },
 ];
 
 // Component to fetch SVG and render it inline with color replacement
