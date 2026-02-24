@@ -149,7 +149,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
 
   if (isMobile && isFullscreen) {
     return (
-      <div className="fixed inset-0 z-[60] bg-black flex flex-col">
+      <div className="fixed inset-0 z-[100] bg-black flex flex-col">
         <div className="absolute top-3 right-3 z-50 flex items-center gap-2">
           {hasNavigation && (
             <span className="text-white/70 text-xs font-medium bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full">
@@ -227,7 +227,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
 
   if (isMobile) {
     return (
-      <div className="fixed inset-0 z-50 bg-background flex flex-col">
+      <div className="fixed inset-0 z-[100] bg-background flex flex-col">
         <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-border">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
