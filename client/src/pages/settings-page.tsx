@@ -1969,14 +1969,14 @@ export default function SettingsPage() {
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                          Profile Font
+                          Profile Font & Effects
                         </CardTitle>
                         <CardDescription>
-                          Choose a font style for your profile display name and text.
+                          Choose a font style and effect for your profile display name.
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-6">
+                        <div className="space-y-4">
                           {(() => {
                             const selectedFont = FONT_OPTIONS.find(f => f.value === profileData.profileFont);
                             const selectedEffect = FONT_EFFECTS.find(f => f.value === profileData.profileFontEffect);
@@ -1997,64 +1997,72 @@ export default function SettingsPage() {
                             );
                           })()}
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {FONT_OPTIONS.map((font) => {
-                              const isSelected = profileData.profileFont === font.value;
-                              return (
-                                <button
-                                  key={font.value}
-                                  type="button"
-                                  onClick={() => setProfileData(prev => ({ ...prev, profileFont: font.value }))}
-                                  className={`p-4 rounded-lg border-2 text-left transition-all ${
-                                    isSelected
-                                      ? 'border-primary bg-primary/10'
-                                      : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                                  }`}
-                                >
-                                  <p
-                                    className="text-lg font-semibold mb-1 truncate"
-                                    style={{ fontFamily: font.family }}
-                                  >
-                                    {font.label}
-                                  </p>
-                                  <p
-                                    className="text-xs text-muted-foreground truncate"
-                                    style={{ fontFamily: font.family }}
-                                  >
-                                    {user?.displayName || 'Your Name'}
-                                  </p>
-                                </button>
-                              );
-                            })}
-                          </div>
+                          <Tabs defaultValue="fonts" className="w-full">
+                            <TabsList className="w-full grid grid-cols-2">
+                              <TabsTrigger value="fonts">Fonts</TabsTrigger>
+                              <TabsTrigger value="effects">Effects</TabsTrigger>
+                            </TabsList>
 
-                          <div className="mt-6">
-                            <h3 className="text-sm font-semibold text-muted-foreground mb-3">Font Effect</h3>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                              {FONT_EFFECTS.map((effect) => {
-                                const isSelected = profileData.profileFontEffect === effect.value;
-                                return (
-                                  <button
-                                    key={effect.value}
-                                    type="button"
-                                    onClick={() => setProfileData(prev => ({ ...prev, profileFontEffect: effect.value }))}
-                                    className={`p-3 rounded-lg border-2 text-center transition-all ${
-                                      isSelected
-                                        ? 'border-primary bg-primary/10'
-                                        : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                                    }`}
-                                  >
-                                    <p
-                                      className="text-sm font-bold text-white truncate"
-                                      style={{ textShadow: effect.textShadow }}
+                            <TabsContent value="fonts" className="mt-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {FONT_OPTIONS.map((font) => {
+                                  const isSelected = profileData.profileFont === font.value;
+                                  return (
+                                    <button
+                                      key={font.value}
+                                      type="button"
+                                      onClick={() => setProfileData(prev => ({ ...prev, profileFont: font.value }))}
+                                      className={`p-4 rounded-lg border-2 text-left transition-all ${
+                                        isSelected
+                                          ? 'border-primary bg-primary/10'
+                                          : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                                      }`}
                                     >
-                                      {effect.label}
-                                    </p>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
+                                      <p
+                                        className="text-lg font-semibold mb-1 truncate"
+                                        style={{ fontFamily: font.family }}
+                                      >
+                                        {font.label}
+                                      </p>
+                                      <p
+                                        className="text-xs text-muted-foreground truncate"
+                                        style={{ fontFamily: font.family }}
+                                      >
+                                        {user?.displayName || 'Your Name'}
+                                      </p>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </TabsContent>
+
+                            <TabsContent value="effects" className="mt-4">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                                {FONT_EFFECTS.map((effect) => {
+                                  const isSelected = profileData.profileFontEffect === effect.value;
+                                  return (
+                                    <button
+                                      key={effect.value}
+                                      type="button"
+                                      onClick={() => setProfileData(prev => ({ ...prev, profileFontEffect: effect.value }))}
+                                      className={`p-3 rounded-lg border-2 text-center transition-all ${
+                                        isSelected
+                                          ? 'border-primary bg-primary/10'
+                                          : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                                      }`}
+                                    >
+                                      <p
+                                        className="text-sm font-bold text-white truncate"
+                                        style={{ textShadow: effect.textShadow }}
+                                      >
+                                        {effect.label}
+                                      </p>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </TabsContent>
+                          </Tabs>
                         </div>
                       </CardContent>
                     </Card>
