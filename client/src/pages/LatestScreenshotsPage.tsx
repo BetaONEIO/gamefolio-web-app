@@ -8,6 +8,7 @@ import { ArrowLeft, Camera } from "lucide-react";
 import { Gamepad2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useState } from "react";
+import { useMobile } from "@/hooks/use-mobile";
 import {
   Select,
   SelectContent,
@@ -21,11 +22,13 @@ const LatestScreenshotsPage = () => {
   const [, setLocation] = useLocation();
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<any>(null);
+  const [timePeriod, setTimePeriod] = useState<string>("all");
+  const isMobile = useMobile();
 
   const { data: screenshotsData, isLoading } = useQuery<any[]>({
-    queryKey: ['/api/screenshots', 'recent', 50],
+    queryKey: ['/api/screenshots', timePeriod, 50],
     queryFn: async () => {
-      const response = await fetch('/api/screenshots?period=recent&limit=50');
+      const response = await fetch(`/api/screenshots?period=${timePeriod}&limit=50`);
       if (!response.ok) throw new Error('Failed to fetch screenshots');
       return response.json();
     },
@@ -45,7 +48,7 @@ const LatestScreenshotsPage = () => {
     : [];
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
+    <div className={`container mx-auto px-4 py-6 space-y-6 ${isMobile ? 'pb-24' : ''}`}>
       <div className="space-y-4 mb-8">
         <div className="flex items-center gap-4">
           <Button
@@ -65,38 +68,60 @@ const LatestScreenshotsPage = () => {
           </div>
         </div>
 
-        {screenshotsData && screenshotsData.length > 0 && uniqueGames.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Gamepad2 className="h-5 w-5 text-muted-foreground" />
-            <Select
-              value={selectedGameId?.toString() || "all"}
-              onValueChange={(value) => {
-                if (value === "all") {
-                  setSelectedGameId(null);
-                } else {
-                  setSelectedGameId(parseInt(value));
-                }
-              }}
-            >
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="All Games" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">
-                  All Games ({screenshotsData.length})
-                </SelectItem>
-                {uniqueGames.map((game: any) => {
-                  const count = screenshotsData.filter((s: any) => s.game?.id === game.id).length;
-                  return (
-                    <SelectItem key={game.id} value={game.id.toString()}>
-                      {game.name} ({count})
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+            {[
+              { value: 'all', label: 'All' },
+              { value: '1w', label: '1W' },
+              { value: '1m', label: '1M' },
+            ].map((period) => (
+              <button
+                key={period.value}
+                onClick={() => setTimePeriod(period.value)}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  timePeriod === period.value
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
+              >
+                {period.label}
+              </button>
+            ))}
           </div>
-        )}
+
+          {screenshotsData && screenshotsData.length > 0 && uniqueGames.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Gamepad2 className="h-5 w-5 text-muted-foreground" />
+              <Select
+                value={selectedGameId?.toString() || "all"}
+                onValueChange={(value) => {
+                  if (value === "all") {
+                    setSelectedGameId(null);
+                  } else {
+                    setSelectedGameId(parseInt(value));
+                  }
+                }}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="All Games" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    All Games ({screenshotsData.length})
+                  </SelectItem>
+                  {uniqueGames.map((game: any) => {
+                    const count = screenshotsData.filter((s: any) => s.game?.id === game.id).length;
+                    return (
+                      <SelectItem key={game.id} value={game.id.toString()}>
+                        {game.name} ({count})
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -134,13 +159,21 @@ const LatestScreenshotsPage = () => {
         ) : (
           <div className="col-span-full text-center py-12">
             <Camera className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No screenshots yet</h3>
+            <h3 className="text-xl font-semibold mb-2">
+              {timePeriod === '1w' ? 'No screenshots from this week' : timePeriod === '1m' ? 'No screenshots from this month' : 'No screenshots yet'}
+            </h3>
             <p className="text-muted-foreground mb-4">
-              Be the first to upload a gaming screenshot!
+              {timePeriod !== 'all' ? 'Try selecting a different time period' : 'Be the first to upload a gaming screenshot!'}
             </p>
-            <Button onClick={() => setLocation('/upload/screenshots')}>
-              Upload Your First Screenshot
-            </Button>
+            {timePeriod !== 'all' ? (
+              <Button onClick={() => setTimePeriod('all')}>
+                Show All Screenshots
+              </Button>
+            ) : (
+              <Button onClick={() => setLocation('/upload/screenshots')}>
+                Upload Your First Screenshot
+              </Button>
+            )}
           </div>
         )}
       </div>

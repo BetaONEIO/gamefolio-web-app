@@ -10,11 +10,12 @@ import { useState } from "react";
 import { GameFilter } from "@/components/filters/GameFilter";
 
 export default function LatestReelsPage() {
+  const [timePeriod, setTimePeriod] = useState<string>("all");
   const { data: latestReels, isLoading } = useQuery<ClipWithUser[]>({
-    queryKey: ['/api/reels/latest', { limit: 50 }],
+    queryKey: ['/api/reels/trending', timePeriod],
     queryFn: async () => {
-      const response = await fetch('/api/reels/latest?limit=50', { credentials: 'include' });
-      if (!response.ok) throw new Error('Failed to fetch latest reels');
+      const response = await fetch(`/api/reels/trending?period=${timePeriod}&limit=50`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch reels');
       return response.json();
     },
   });
@@ -22,7 +23,6 @@ export default function LatestReelsPage() {
   const isMobile = useMobile();
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
 
-  // Filter reels by selected game
   const filteredReels = latestReels
     ? selectedGameId
       ? latestReels.filter((reel) => reel.game?.id === selectedGameId)
@@ -37,7 +37,7 @@ export default function LatestReelsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background p-4 md:p-6">
+      <div className={`min-h-screen bg-background p-4 md:p-6 ${isMobile ? 'pb-24' : ''}`}>
         <div className="w-full">
           <div className="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:gap-4 md:mb-8">
             <Link href="/">
@@ -62,7 +62,7 @@ export default function LatestReelsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
+    <div className={`min-h-screen bg-background p-4 md:p-6 ${isMobile ? 'pb-24' : ''}`}>
       <div className="w-full">
         <div className="space-y-4 mb-6 md:mb-8">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
@@ -79,20 +79,40 @@ export default function LatestReelsPage() {
               </span>
             </div>
           </div>
-          
-          {/* Game Filter */}
-          {latestReels && latestReels.length > 0 && (
-            <GameFilter
-              clips={latestReels}
-              selectedGameId={selectedGameId}
-              onGameSelect={setSelectedGameId}
-            />
-          )}
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+              {[
+                { value: 'all', label: 'All' },
+                { value: '1w', label: '1W' },
+                { value: '1m', label: '1M' },
+              ].map((period) => (
+                <button
+                  key={period.value}
+                  onClick={() => setTimePeriod(period.value)}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    timePeriod === period.value
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  }`}
+                >
+                  {period.label}
+                </button>
+              ))}
+            </div>
+
+            {latestReels && latestReels.length > 0 && (
+              <GameFilter
+                clips={latestReels}
+                selectedGameId={selectedGameId}
+                onGameSelect={setSelectedGameId}
+              />
+            )}
+          </div>
         </div>
 
         {filteredReels.length > 0 ? (
           isMobile ? (
-            // Mobile: Instagram/TikTok style 2-column masonry grid using CSS columns
             <div className="columns-2 gap-1 space-y-1">
               {filteredReels.map((reel, index) => {
                 const aspectRatios = ['aspect-[9/16]', 'aspect-[3/4]', 'aspect-[2/3]', 'aspect-[9/14]', 'aspect-[3/5]', 'aspect-[4/5]'];
@@ -105,7 +125,6 @@ export default function LatestReelsPage() {
                     className="break-inside-avoid mb-1"
                   >
                     <div className={`relative ${aspectRatio} w-full rounded-sm overflow-hidden cursor-pointer group`}>
-                      {/* Thumbnail */}
                       <img
                         src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
                         alt={reel.title}
@@ -116,10 +135,8 @@ export default function LatestReelsPage() {
                         }}
                       />
                       
-                      {/* Gradient overlay */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
                       
-                      {/* Duration badge - top left */}
                       <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold">
                         {(() => {
                           const actualDuration = reel.trimEnd && reel.trimEnd > 0 
@@ -129,25 +146,20 @@ export default function LatestReelsPage() {
                         })()}
                       </div>
                       
-                      {/* View count - top right */}
                       <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold flex items-center gap-1">
                         <Eye className="h-3 w-3" />
                         {formatNumber(reel.views || 0)}
                       </div>
                       
-                      {/* Content overlay - left aligned bottom */}
                       <div className="absolute bottom-0 left-0 right-0 p-2">
-                        {/* Title */}
                         <h3 className="text-white font-bold text-xs mb-0.5 drop-shadow-lg line-clamp-2">
                           {reel.title}
                         </h3>
 
-                        {/* Username */}
                         <p className="text-white text-[10px] mb-1 drop-shadow-lg">
                           @{reel.user.username}
                         </p>
 
-                        {/* Game badge underneath username */}
                         {reel.game && (
                           <div className="inline-block bg-green-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis">
                             {reel.game.name}
@@ -160,7 +172,6 @@ export default function LatestReelsPage() {
               })}
             </div>
           ) : (
-            // Desktop: Grid with 4 columns
             <div className="grid grid-cols-4 gap-4 w-full">
               {filteredReels.map((reel) => (
                 <div 
@@ -168,7 +179,6 @@ export default function LatestReelsPage() {
                   onClick={() => openClipDialog(reel.id, filteredReels)}
                   className="group relative bg-black rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
                 >
-                  {/* Thumbnail/Video */}
                   <div className="relative w-full h-full">
                     <img
                       src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
@@ -180,10 +190,8 @@ export default function LatestReelsPage() {
                       }}
                     />
 
-                    {/* Gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
 
-                    {/* Play button overlay */}
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <div className="bg-primary backdrop-blur-sm rounded-full p-3">
                         <svg className="w-6 h-6 text-white fill-white" viewBox="0 0 24 24">
@@ -192,7 +200,6 @@ export default function LatestReelsPage() {
                       </div>
                     </div>
 
-                    {/* Duration badge - top left */}
                     <div className="absolute top-3 left-3 bg-black/70 text-white text-xs px-2 py-1 rounded-md font-semibold">
                       {(() => {
                         const actualDuration = reel.trimEnd && reel.trimEnd > 0 
@@ -202,25 +209,20 @@ export default function LatestReelsPage() {
                       })()}
                     </div>
 
-                    {/* View count - top right */}
                     <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded-md font-semibold flex items-center gap-1">
                       <Eye className="h-3 w-3" />
                       {formatNumber(reel.views || 0)}
                     </div>
 
-                    {/* Content overlay - left aligned bottom */}
                     <div className="absolute bottom-0 left-0 right-0 p-3">
-                      {/* Title */}
                       <h3 className="text-white font-bold text-sm mb-0.5 drop-shadow-lg line-clamp-2">
                         {reel.title}
                       </h3>
 
-                      {/* Username */}
                       <p className="text-white text-xs mb-1.5 drop-shadow-lg">
                         @{reel.user.username}
                       </p>
 
-                      {/* Game badge underneath username */}
                       {reel.game && (
                         <div className="inline-block bg-green-600 text-white text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis">
                           {reel.game.name}
@@ -246,13 +248,21 @@ export default function LatestReelsPage() {
         ) : (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">📱</div>
-            <h2 className="text-2xl font-semibold text-white mb-2">No Reels Yet</h2>
+            <h2 className="text-2xl font-semibold text-white mb-2">
+              {timePeriod === '1w' ? 'No reels from this week' : timePeriod === '1m' ? 'No reels from this month' : 'No Reels Yet'}
+            </h2>
             <p className="text-muted-foreground mb-6">
-              Be the first to share a reel on Gamefolio!
+              {timePeriod !== 'all' ? 'Try selecting a different time period' : 'Be the first to share a reel on Gamefolio!'}
             </p>
-            <Link href="/upload">
-              <Button data-testid="button-upload-first-reel">Upload Your First Reel</Button>
-            </Link>
+            {timePeriod !== 'all' ? (
+              <Button onClick={() => setTimePeriod('all')} data-testid="button-show-all">
+                Show All Reels
+              </Button>
+            ) : (
+              <Link href="/upload">
+                <Button data-testid="button-upload-first-reel">Upload Your First Reel</Button>
+              </Link>
+            )}
           </div>
         )}
       </div>
