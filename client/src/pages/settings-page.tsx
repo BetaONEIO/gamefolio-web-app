@@ -1970,20 +1970,6 @@ export default function SettingsPage() {
                       </CardContent>
                     </Card>
 
-                    {hasUnsavedChanges && (
-                      <Button
-                        className="w-full bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
-                        onClick={handleSave}
-                        disabled={updateProfileMutation.isPending || uploadingAvatar || uploadingBanner}
-                      >
-                        {(updateProfileMutation.isPending || uploadingAvatar || uploadingBanner) ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        ) : (
-                          <Save className="h-4 w-4 mr-2" />
-                        )}
-                        Save Changes
-                      </Button>
-                    )}
                   </div>
                 </TabsContent>
 
@@ -2028,20 +2014,6 @@ export default function SettingsPage() {
                       </CardContent>
                     </Card>
 
-                    {hasUnsavedChanges && (
-                      <Button
-                        className="w-full bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
-                        onClick={handleSave}
-                        disabled={updateProfileMutation.isPending || uploadingAvatar || uploadingBanner}
-                      >
-                        {(updateProfileMutation.isPending || uploadingAvatar || uploadingBanner) ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        ) : (
-                          <Save className="h-4 w-4 mr-2" />
-                        )}
-                        Save Changes
-                      </Button>
-                    )}
                   </div>
                 </TabsContent>
 
@@ -2177,20 +2149,6 @@ export default function SettingsPage() {
                       </CardContent>
                     </Card>
 
-                    {hasUnsavedChanges && (
-                      <Button
-                        className="w-full bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
-                        onClick={handleSave}
-                        disabled={updateProfileMutation.isPending || uploadingAvatar || uploadingBanner}
-                      >
-                        {(updateProfileMutation.isPending || uploadingAvatar || uploadingBanner) ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        ) : (
-                          <Save className="h-4 w-4 mr-2" />
-                        )}
-                        Save Changes
-                      </Button>
-                    )}
                   </div>
                 </TabsContent>
 
@@ -2305,20 +2263,6 @@ export default function SettingsPage() {
                             })}
                           </div>
 
-                          {hasUnsavedChanges && (
-                            <Button
-                              className="w-full bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
-                              onClick={handleSave}
-                              disabled={updateProfileMutation.isPending || uploadingAvatar || uploadingBanner}
-                            >
-                              {(updateProfileMutation.isPending || uploadingAvatar || uploadingBanner) ? (
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              ) : (
-                                <Save className="h-4 w-4 mr-2" />
-                              )}
-                              Save Changes
-                            </Button>
-                          )}
                         </div>
                       )}
                     </CardContent>
@@ -2443,20 +2387,6 @@ export default function SettingsPage() {
                             </p>
                           </Link>
 
-                          {hasUnsavedChanges && (
-                            <Button
-                              className="w-full bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
-                              onClick={handleSave}
-                              disabled={updateProfileMutation.isPending || uploadingAvatar || uploadingBanner}
-                            >
-                              {(updateProfileMutation.isPending || uploadingAvatar || uploadingBanner) ? (
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              ) : (
-                                <Save className="h-4 w-4 mr-2" />
-                              )}
-                              Save Changes
-                            </Button>
-                          )}
                         </div>
                       )}
                     </CardContent>
