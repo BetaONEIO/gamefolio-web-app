@@ -681,7 +681,7 @@ const HomePage = () => {
 
       {/* Latest Screenshots Section */}
       <LazySection minHeight="400px" rootMargin="200px">
-        <section className="px-4 sm:px-6 md:px-8 pt-6 sm:pt-8">
+        <section className="px-4 sm:px-6 md:px-8 pt-8 sm:pt-10 mt-2">
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-xl sm:text-2xl font-bold">Latest Screenshots</h2>
             <Link href="/latest-screenshots" className="text-primary text-sm font-medium hover:underline flex items-center">

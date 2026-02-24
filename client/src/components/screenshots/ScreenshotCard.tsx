@@ -33,7 +33,7 @@ export function ScreenshotCard({
 
   return (
     <Card 
-      className={`relative overflow-hidden group/card cursor-pointer transition-all duration-500 hover:shadow-lg clip-highlight ${
+      className={`relative overflow-hidden group/card cursor-pointer transition-all duration-500 hover:shadow-lg ${
         isHighlighted ? 'ring-4 ring-primary ring-offset-2' : ''
       }`}
       id={isHighlighted ? `screenshot-${screenshot.id}` : undefined}

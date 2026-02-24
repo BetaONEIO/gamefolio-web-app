@@ -7173,7 +7173,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...unlockedBadges,
       ];
       
-      res.json(mergedBadges);
+      const hiddenBadgeNames = ['moderator', 'moderator icon', 'pro user'];
+      const filteredBadges = mergedBadges
+        .filter(b => !hiddenBadgeNames.includes(b.name.toLowerCase()))
+        .map(b => {
+          if (b.name.toLowerCase() === 'verified128') {
+            return { ...b, name: 'Pro' };
+          }
+          return b;
+        });
+      
+      res.json(filteredBadges);
     } catch (err) {
       console.error("Error fetching unlocked verification badges:", err);
       return res.status(500).json({ message: "Error fetching unlocked verification badges" });
