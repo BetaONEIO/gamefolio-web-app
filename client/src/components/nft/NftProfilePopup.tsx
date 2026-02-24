@@ -137,7 +137,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
             <img
               src={nftImage}
               alt={displayName}
-              className="w-full aspect-square object-contain bg-[#1e293b]"
+              className="w-full aspect-square object-cover bg-[#1e293b]"
             />
           ) : (
             <div className="w-full aspect-square bg-[#1e293b] flex items-center justify-center">
@@ -158,7 +158,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
           <div className="absolute top-3 left-3 backdrop-blur-lg bg-black/50 rounded-xl flex items-center gap-1.5 px-2 py-1">
             <div className="w-2 h-2 rounded-full bg-[#4ade80]" />
             <span className="text-[8px] font-bold text-white uppercase tracking-[0.5px]">
-              NFT Profile
+              Verified Asset
             </span>
           </div>
         </div>
