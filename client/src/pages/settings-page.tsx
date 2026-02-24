@@ -470,6 +470,13 @@ export default function SettingsPage() {
 
   // Track previous avatarUrl to detect successful uploads
   const prevAvatarUrl = React.useRef(user?.avatarUrl);
+  const fontPreviewRef = React.useRef<HTMLDivElement>(null);
+
+  const scrollToFontPreview = () => {
+    if (window.innerWidth < 768) {
+      fontPreviewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
   
   // Track deactivated avatar URL so preview stays visible but greyed out
   const [deactivatedAvatarUrl, setDeactivatedAvatarUrl] = useState<string | null>(null);
@@ -2061,7 +2068,7 @@ export default function SettingsPage() {
                             const textShadow = selectedEffect?.textShadow || 'none';
                             const animClass = selectedAnim?.animClass || '';
                             return (
-                              <div className="p-4 bg-muted/30 rounded-lg w-full flex flex-col items-center">
+                              <div ref={fontPreviewRef} className="p-4 bg-muted/30 rounded-lg w-full flex flex-col items-center">
                                 <p
                                   className={`font-bold text-white text-center ${animClass}`}
                                   style={{ fontFamily, textShadow, fontSize: `${1.875 * fontScale}rem`, lineHeight: `${2.25 * fontScale}rem` }}
@@ -2090,7 +2097,7 @@ export default function SettingsPage() {
                                     <button
                                       key={font.value}
                                       type="button"
-                                      onClick={() => setProfileData(prev => ({ ...prev, profileFont: font.value }))}
+                                      onClick={() => { setProfileData(prev => ({ ...prev, profileFont: font.value })); scrollToFontPreview(); }}
                                       className={`p-4 rounded-lg border-2 text-left transition-all ${
                                         isSelected
                                           ? 'border-primary bg-primary/10'
@@ -2123,7 +2130,7 @@ export default function SettingsPage() {
                                     <button
                                       key={effect.value}
                                       type="button"
-                                      onClick={() => setProfileData(prev => ({ ...prev, profileFontEffect: effect.value }))}
+                                      onClick={() => { setProfileData(prev => ({ ...prev, profileFontEffect: effect.value })); scrollToFontPreview(); }}
                                       className={`p-3 rounded-lg border-2 text-center transition-all ${
                                         isSelected
                                           ? 'border-primary bg-primary/10'
@@ -2150,7 +2157,7 @@ export default function SettingsPage() {
                                     <button
                                       key={anim.value}
                                       type="button"
-                                      onClick={() => setProfileData(prev => ({ ...prev, profileFontAnimation: anim.value }))}
+                                      onClick={() => { setProfileData(prev => ({ ...prev, profileFontAnimation: anim.value })); scrollToFontPreview(); }}
                                       className={`p-3 rounded-lg border-2 text-center transition-all ${
                                         isSelected
                                           ? 'border-primary bg-primary/10'
