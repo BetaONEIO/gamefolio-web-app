@@ -1260,6 +1260,8 @@ const ProfilePage = () => {
     'righteous': "'Righteous', cursive",
     'bungee-inline': "'Bungee Inline', cursive",
     'notable': "'Notable', sans-serif",
+    'bungee-spice': "'Bungee Spice', cursive",
+    'honk': "'Honk', system-ui",
   };
   const profileFontFamily = PROFILE_FONT_MAP[profile.profileFont || 'default'] || PROFILE_FONT_MAP['default'];
 

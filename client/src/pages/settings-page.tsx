@@ -62,6 +62,8 @@ const FONT_OPTIONS = [
   { value: 'righteous', label: 'Righteous', family: "'Righteous', cursive" },
   { value: 'bungee-inline', label: 'Bungee Inline', family: "'Bungee Inline', cursive" },
   { value: 'notable', label: 'Notable', family: "'Notable', sans-serif" },
+  { value: 'bungee-spice', label: 'Bungee Spice', family: "'Bungee Spice', cursive" },
+  { value: 'honk', label: 'Honk', family: "'Honk', system-ui" },
 ];
 
 // Component to fetch SVG and render it inline with color replacement
