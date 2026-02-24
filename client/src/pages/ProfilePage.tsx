@@ -3235,30 +3235,7 @@ const ProfilePage = () => {
               height: 16px !important;
             }
           `}</style>
-          {selectedScreenshot && (() => {
-            const currentIdx = screenshots ? screenshots.findIndex(s => s.id === selectedScreenshot.id) : -1;
-            const hasPrev = screenshots && screenshots.length > 1 && currentIdx > 0;
-            const hasNextItem = screenshots && screenshots.length > 1 && currentIdx < (screenshots?.length || 0) - 1;
-            return (
-            <>
-            {hasPrev && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setSelectedScreenshot(screenshots![currentIdx - 1]); }}
-                className="fixed left-4 top-1/2 -translate-y-1/2 z-[70] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
-                aria-label="Previous screenshot"
-              >
-                <ChevronLeft className="h-7 w-7" />
-              </button>
-            )}
-            {hasNextItem && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setSelectedScreenshot(screenshots![currentIdx + 1]); }}
-                className="fixed right-4 top-1/2 -translate-y-1/2 z-[70] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
-                aria-label="Next screenshot"
-              >
-                <ChevronRight className="h-7 w-7" />
-              </button>
-            )}
+          {selectedScreenshot && (
             <div className="flex flex-col lg:flex-row h-auto lg:h-full min-h-full">
               <div className="bg-black flex items-center justify-center w-full lg:w-[75%] h-[50vh] lg:h-full flex-shrink-0">
                 <img
@@ -3387,10 +3364,35 @@ const ProfilePage = () => {
                 </div>
               </div>
             </div>
-            </>
-            );
-          })()}
+          )}
         </DialogContent>
+        {selectedScreenshot && (() => {
+          const currentIdx = screenshots ? screenshots.findIndex(s => s.id === selectedScreenshot.id) : -1;
+          const hasPrev = screenshots && screenshots.length > 1 && currentIdx > 0;
+          const hasNextItem = screenshots && screenshots.length > 1 && currentIdx < (screenshots?.length || 0) - 1;
+          return (
+            <>
+              {hasPrev && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSelectedScreenshot(screenshots![currentIdx - 1]); }}
+                  className="fixed left-[calc(10%-56px)] top-1/2 -translate-y-1/2 z-[60] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
+                  aria-label="Previous screenshot"
+                >
+                  <ChevronLeft className="h-7 w-7" />
+                </button>
+              )}
+              {hasNextItem && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSelectedScreenshot(screenshots![currentIdx + 1]); }}
+                  className="fixed right-[calc(10%-56px)] top-1/2 -translate-y-1/2 z-[60] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
+                  aria-label="Next screenshot"
+                >
+                  <ChevronRight className="h-7 w-7" />
+                </button>
+              )}
+            </>
+          );
+        })()}
       </Dialog>
 
       {/* Share Dialogs for newly uploaded content */}

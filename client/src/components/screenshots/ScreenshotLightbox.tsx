@@ -118,25 +118,6 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
           }
         `}</style>
 
-        {hasPrevious && (
-          <button
-            onClick={(e) => { e.stopPropagation(); handlePrevious(); }}
-            className="fixed left-4 top-1/2 -translate-y-1/2 z-[70] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
-            aria-label="Previous screenshot"
-          >
-            <ChevronLeft className="h-7 w-7" />
-          </button>
-        )}
-        {hasNext && (
-          <button
-            onClick={(e) => { e.stopPropagation(); handleNext(); }}
-            className="fixed right-4 top-1/2 -translate-y-1/2 z-[70] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
-            aria-label="Next screenshot"
-          >
-            <ChevronRight className="h-7 w-7" />
-          </button>
-        )}
-
         <div className="flex flex-col lg:flex-row h-auto lg:h-full min-h-full">
           <div className="bg-black flex items-center justify-center w-full lg:w-[75%] h-[50vh] lg:h-full flex-shrink-0">
             <img
@@ -287,6 +268,25 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
           </div>
         </div>
       </DialogContent>
+
+      {hasPrevious && (
+        <button
+          onClick={(e) => { e.stopPropagation(); handlePrevious(); }}
+          className="fixed left-[calc(10%-56px)] top-1/2 -translate-y-1/2 z-[60] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
+          aria-label="Previous screenshot"
+        >
+          <ChevronLeft className="h-7 w-7" />
+        </button>
+      )}
+      {hasNext && (
+        <button
+          onClick={(e) => { e.stopPropagation(); handleNext(); }}
+          className="fixed right-[calc(10%-56px)] top-1/2 -translate-y-1/2 z-[60] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
+          aria-label="Next screenshot"
+        >
+          <ChevronRight className="h-7 w-7" />
+        </button>
+      )}
     </Dialog>
   );
 }
