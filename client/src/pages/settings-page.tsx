@@ -1953,12 +1953,6 @@ export default function SettingsPage() {
                                 >
                                   {user?.displayName || user?.username || 'Your Name'}
                                 </p>
-                                <p
-                                  className="text-sm text-slate-400 text-center mt-1"
-                                  style={{ fontFamily }}
-                                >
-                                  @{user?.username || 'username'}
-                                </p>
                                 <p className="text-xs text-muted-foreground mt-3">
                                   {selectedFont?.label || 'Default'}
                                 </p>
