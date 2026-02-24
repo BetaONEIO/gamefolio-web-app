@@ -196,15 +196,23 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
         {comments && comments.length > 0 ? (
           comments.map((comment) => (
             <div key={comment.id} className="flex space-x-3 text-sm">
-              <Avatar className="h-8 w-8 flex-shrink-0">
-                <AvatarImage 
-                  src={comment.user.avatarUrl || undefined} 
-                  alt={comment.user.username || "User"} 
+              {(comment.user as any).nftProfileTokenId && (comment.user as any).nftProfileImageUrl ? (
+                <img
+                  src={(comment.user as any).nftProfileImageUrl}
+                  alt={comment.user.username || "User"}
+                  className="h-8 w-8 rounded-lg border border-[#4ade80]/40 object-cover flex-shrink-0"
                 />
-                <AvatarFallback className="text-xs">
-                  {comment.user.username?.[0].toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
+              ) : (
+                <Avatar className="h-8 w-8 flex-shrink-0">
+                  <AvatarImage 
+                    src={comment.user.avatarUrl || undefined} 
+                    alt={comment.user.username || "User"} 
+                  />
+                  <AvatarFallback className="text-xs">
+                    {comment.user.username?.[0].toUpperCase() || "U"}
+                  </AvatarFallback>
+                </Avatar>
+              )}
               <div className="flex-1">
                 <div className="flex flex-wrap items-baseline">
                   <Link href={`/@${comment.user.username}`}>

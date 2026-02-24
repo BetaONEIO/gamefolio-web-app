@@ -1964,7 +1964,10 @@ export class DatabaseStorage implements IStorage {
           displayName: users.displayName,
           avatarUrl: users.avatarUrl,
           emailVerified: users.emailVerified,
-          role: users.role
+          role: users.role,
+          nftProfileTokenId: users.nftProfileTokenId,
+          nftProfileImageUrl: users.nftProfileImageUrl,
+          selectedVerificationBadgeId: users.selectedVerificationBadgeId
         }
       })
       .from(screenshotComments)

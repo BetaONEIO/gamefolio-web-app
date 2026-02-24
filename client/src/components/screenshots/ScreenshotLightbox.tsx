@@ -2,14 +2,14 @@ import React, { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useSignedUrl } from "@/hooks/use-signed-url";
-import { useQuery } from "@tanstack/react-query";
-import { getQueryFn } from "@/lib/queryClient";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getQueryFn, apiRequest } from "@/lib/queryClient";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { formatDistance } from "date-fns";
 import { Link } from "wouter";
-import { Eye, Clock, MessageSquare, Share2, User as UserIcon } from "lucide-react";
+import { Eye, Clock, MessageSquare, Share2, User as UserIcon, UserPlus, UserCheck } from "lucide-react";
 import type { Game, Screenshot } from "@shared/schema";
 
 const ScreenshotShareDialog = React.lazy(() => import("@/components/screenshot/ScreenshotShareDialog").then(m => ({ default: m.ScreenshotShareDialog })));
@@ -25,6 +25,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId }: Scree
   const { signedUrl } = useSignedUrl(screenshot?.imageUrl);
   const avatarUrl = screenshot?.user?.avatarUrl;
   const { signedUrl: avatarSignedUrl } = useSignedUrl(avatarUrl);
+  const queryClient = useQueryClient();
 
   const { data: games = [] } = useQuery<Game[]>({
     queryKey: ['/api/games'],
@@ -32,7 +33,28 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId }: Scree
     enabled: !!screenshot,
   });
 
+  const screenshotUser = screenshot?.user;
   const isOwnContent = currentUserId === screenshot?.userId;
+
+  const { data: followStatus } = useQuery({
+    queryKey: ['/api/follow/status', screenshotUser?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/follow/status/${screenshotUser?.id}`, { credentials: 'include' });
+      if (!response.ok) return { isFollowing: false };
+      return response.json();
+    },
+    enabled: !!currentUserId && !!screenshotUser?.id && currentUserId !== screenshotUser?.id,
+  });
+
+  const followMutation = useMutation({
+    mutationFn: async (targetUserId: number) => {
+      const response = await apiRequest('POST', `/api/follow/${targetUserId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/follow/status', screenshotUser?.id] });
+    },
+  });
 
   if (!screenshot) return null;
 
@@ -75,17 +97,23 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId }: Scree
           <div className="flex flex-col w-full lg:w-[25%] lg:h-full">
             <div className="border-b border-border p-4 flex items-center justify-between">
               <div className="flex items-center">
-                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3">
-                  {avatarSignedUrl ? (
-                    <img
-                      src={avatarSignedUrl}
-                      alt={screenshot.user?.displayName || ''}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <UserIcon className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </div>
+                {screenshotUser?.nftProfileTokenId && screenshotUser?.nftProfileImageUrl ? (
+                  <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#4ade80]/40 mr-3 flex-shrink-0">
+                    <img src={screenshotUser.nftProfileImageUrl} alt={screenshotUser.displayName || ''} className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3">
+                    {avatarSignedUrl ? (
+                      <img
+                        src={avatarSignedUrl}
+                        alt={screenshot.user?.displayName || ''}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <UserIcon className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
+                )}
                 <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
                   e.stopPropagation();
                   onClose();
@@ -95,6 +123,27 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId }: Scree
                   </div>
                 </Link>
               </div>
+              {currentUserId && screenshotUser?.id && currentUserId !== screenshotUser.id && (
+                <Button
+                  size="sm"
+                  variant={followStatus?.isFollowing ? "secondary" : "default"}
+                  className="h-7 text-xs px-3"
+                  onClick={() => followMutation.mutate(screenshotUser.id)}
+                  disabled={followMutation.isPending}
+                >
+                  {followStatus?.isFollowing ? (
+                    <>
+                      <UserCheck className="h-3 w-3 mr-1" />
+                      Following
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="h-3 w-3 mr-1" />
+                      Follow
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
 
             <div className="flex-1 lg:overflow-y-auto px-4 py-3 space-y-3">

@@ -1,19 +1,11 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Heart, MessageSquare, Share2, Eye, Flag, X, ImageOff, UserPlus, UserCheck } from 'lucide-react';
-import { Card, CardFooter } from '@/components/ui/card';
+import React from 'react';
+import { Flag, X, ImageOff } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { FireButton } from '@/components/engagement/FireButton';
-import { ScreenshotShareDialog } from '@/components/screenshot/ScreenshotShareDialog';
-import { ReportButton } from '@/components/reporting/ReportButton';
 import { ReportDialog } from '@/components/content/ReportDialog';
-import { useLikeScreenshot } from '@/hooks/use-clips';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
 import { LazyImage } from '@/components/ui/lazy-image';
 import { useSignedUrl } from '@/hooks/use-signed-url';
-import { apiRequest } from '@/lib/queryClient';
 import { Link } from 'wouter';
 
 interface ScreenshotCardProps {
@@ -35,120 +27,9 @@ export function ScreenshotCard({
   onSelect,
   showUserInfo = false
 }: ScreenshotCardProps) {
-  const { user: currentUser } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   const { signedUrl: screenshotSignedUrl } = useSignedUrl(screenshot.imageUrl);
   const screenshotUser = (screenshot as any).user;
   const { signedUrl: signedAvatarUrl } = useSignedUrl(showUserInfo ? screenshotUser?.avatarUrl : null);
-
-  const { data: followStatus } = useQuery({
-    queryKey: ['/api/follow/status', screenshotUser?.id],
-    queryFn: async () => {
-      const response = await fetch(`/api/follow/status/${screenshotUser?.id}`, { credentials: 'include' });
-      if (!response.ok) return { isFollowing: false };
-      return response.json();
-    },
-    enabled: showUserInfo && !!currentUser && !!screenshotUser?.id && currentUser.id !== screenshotUser?.id,
-  });
-
-  const followMutation = useMutation({
-    mutationFn: async (targetUserId: number) => {
-      const response = await apiRequest('POST', `/api/follow/${targetUserId}`);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/follow/status', screenshotUser?.id] });
-    },
-  });
-  
-  // Screenshot like functionality
-  const likeMutation = useLikeScreenshot();
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [likeCount, setLikeCount] = useState(() => {
-    const screenshotAny = screenshot as any;
-    const likeCountValue = typeof screenshotAny._count?.likes === 'string' ? parseInt(screenshotAny._count.likes) : screenshotAny._count?.likes || 0;
-    return isNaN(likeCountValue) ? 0 : likeCountValue;
-  });
-
-  // Check if user has liked this screenshot
-  const { data: likeStatus } = useQuery({
-    queryKey: ['screenshotLikeStatus', screenshot.id],
-    queryFn: async () => {
-      if (!currentUser) return { hasLiked: false };
-      const response = await fetch(`/api/screenshots/${screenshot.id}/likes/status`, {
-        credentials: 'include'
-      });
-      if (!response.ok) return { hasLiked: false };
-      return response.json();
-    },
-    enabled: !!currentUser,
-  });
-
-  const hasUserLiked = likeStatus?.hasLiked || false;
-
-  // Handle like button click
-  const handleLikeClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (!currentUser) {
-      toast({
-        title: "Not logged in",
-        description: "You need to be logged in to like screenshots",
-        variant: "default"
-      });
-      return;
-    }
-    
-    // Prevent users from liking their own content
-    if (currentUser?.id === screenshot.userId) {
-      toast({
-        title: "Cannot like own content",
-        description: "You cannot like your own content, casual!",
-        variant: "default"
-      });
-      return;
-    }
-    
-    // Store the current count for rollback if needed
-    const previousCount = likeCount;
-    
-    // Optimistically update like count
-    setLikeCount(hasUserLiked ? likeCount - 1 : likeCount + 1);
-    
-    // Trigger animation when liking (not unliking)
-    if (!hasUserLiked) {
-      setIsAnimating(true);
-      setTimeout(() => setIsAnimating(false), 2000);
-    }
-    
-    likeMutation.mutate({
-      screenshotId: screenshot.id,
-      unlike: hasUserLiked
-    }, {
-      onSuccess: (data: any) => {
-        // Update with actual count from server if provided
-        if (data && typeof data.count === 'number') {
-          setLikeCount(data.count);
-        }
-        toast({
-          title: hasUserLiked ? "Unliked" : "Liked!",
-          description: hasUserLiked ? "Removed from your liked screenshots" : "Added to your liked screenshots ❤️",
-          variant: "default"
-        });
-      },
-      onError: (error: any) => {
-        // Rollback optimistic update on error
-        setLikeCount(previousCount);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to toggle like",
-          variant: "destructive"
-        });
-      }
-    });
-  };
 
   return (
     <Card 
@@ -251,31 +132,6 @@ export function ScreenshotCard({
                 <span className="text-sm font-medium text-foreground truncate max-w-[120px]">{screenshotUser.displayName || screenshotUser.username}</span>
               </div>
             </Link>
-            {currentUser && currentUser.id !== screenshotUser.id && (
-              <Button
-                size="sm"
-                variant={followStatus?.isFollowing ? "secondary" : "default"}
-                className="h-7 text-xs px-3"
-                onClick={(e: React.MouseEvent) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  followMutation.mutate(screenshotUser.id);
-                }}
-                disabled={followMutation.isPending}
-              >
-                {followStatus?.isFollowing ? (
-                  <>
-                    <UserCheck className="h-3 w-3 mr-1" />
-                    Following
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="h-3 w-3 mr-1" />
-                    Follow
-                  </>
-                )}
-              </Button>
-            )}
           </div>
         )}
         {/* Title */}
@@ -290,47 +146,6 @@ export function ScreenshotCard({
           </div>
         )}
         
-        {/* Stats row */}
-        <div className="flex items-center gap-4 text-xs sm:text-sm text-muted-foreground pt-1">
-          <button 
-            onClick={handleLikeClick}
-            className={`flex items-center gap-1 transition-colors ${hasUserLiked ? 'text-green-500' : 'hover:text-green-500'}`}
-          >
-            <Heart 
-              className={`h-4 w-4 transition-all duration-300 ${
-                hasUserLiked 
-                  ? `fill-green-500 stroke-green-500 ${isAnimating ? 'animate-bounce scale-125' : ''}` 
-                  : 'fill-transparent'
-              }`} 
-              style={{
-                animation: isAnimating ? 'heartGrow 2s ease-out' : undefined
-              }}
-            />
-            <span>{likeCount}</span>
-          </button>
-          
-          <FireButton 
-            contentId={screenshot.id}
-            contentType="screenshot"
-            contentOwnerId={screenshot.userId}
-            initialFired={false}
-            initialCount={(screenshot as any)._count?.reactions || 0}
-            size="sm"
-            showCount={true}
-          />
-          
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onSelect?.(screenshot);
-            }}
-            className="flex items-center gap-1 hover:text-primary transition-colors"
-          >
-            <MessageSquare className="h-4 w-4" />
-            <span>{(screenshot as any)._count?.comments || 0}</span>
-          </button>
-        </div>
       </div>
     </Card>
   );
