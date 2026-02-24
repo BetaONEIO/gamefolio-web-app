@@ -75,8 +75,8 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
     
     const container = containerRef.current;
     const itemWidth = contentType === 'reels' 
-      ? (window.innerWidth < 640 ? 144 : 180) 
-      : (window.innerWidth < 640 ? 280 : 420);
+      ? (window.innerWidth < 640 ? 224 : 288) 
+      : (window.innerWidth < 640 ? 280 : 480);
     const scrollAmount = itemWidth * (window.innerWidth < 640 ? 1 : 2);
     
     if (direction === 'left') {
@@ -188,8 +188,8 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
               <div 
                 key={i}
                 className={contentType === 'reels'
-                  ? "w-36 sm:w-40 lg:w-44 xl:w-48 flex-shrink-0"
-                  : "w-72 sm:w-80 lg:w-96 xl:w-[420px] 2xl:w-[480px] flex-shrink-0"
+                  ? "w-56 sm:w-64 lg:w-72 xl:w-80 flex-shrink-0"
+                  : "w-[280px] sm:w-[320px] md:w-[400px] lg:w-[480px] flex-shrink-0"
                 }
               >
                 <Skeleton className={contentType === 'reels' ? "aspect-[9/16] rounded-lg" : "aspect-video rounded-lg"} />
@@ -309,8 +309,8 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
               <div 
                 key={`recommended-clip-${clip.id}`}
                 className={contentType === 'reels'
-                  ? "w-36 sm:w-40 lg:w-44 xl:w-48 flex-shrink-0"
-                  : "w-72 sm:w-80 lg:w-96 xl:w-[420px] 2xl:w-[480px] flex-shrink-0"
+                  ? "w-56 sm:w-64 lg:w-72 xl:w-80 flex-shrink-0"
+                  : "w-[280px] sm:w-[320px] md:w-[400px] lg:w-[480px] flex-shrink-0"
                 }
               >
                 <VideoClipGridItem 
