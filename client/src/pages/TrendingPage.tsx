@@ -404,8 +404,6 @@ const TrendingPage: React.FC = () => {
 
       // Mobile: Instagram/TikTok style 2-column masonry grid - tapping opens fullscreen vertical swipe viewer
       if (isMobile) {
-        const aspectRatios = ['aspect-[9/16]', 'aspect-[3/4]', 'aspect-[2/3]', 'aspect-[9/14]', 'aspect-[3/5]', 'aspect-[4/5]'];
-        
         const formatNumber = (num: number) => {
           if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
           if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
@@ -414,17 +412,14 @@ const TrendingPage: React.FC = () => {
         
         return (
           <>
-            <div className="columns-2 gap-1 space-y-1">
-              {trendingReels.map((reel, index) => {
-                const aspectRatio = aspectRatios[index % aspectRatios.length];
-                
+            <div className="grid grid-cols-2 gap-1">
+              {trendingReels.map((reel) => {
                 return (
                   <div
                     key={reel.id}
                     onClick={() => openClipDialog(reel.id, trendingReels)}
-                    className="break-inside-avoid mb-1"
                   >
-                    <div className={`relative ${aspectRatio} w-full rounded-sm overflow-hidden cursor-pointer group`}>
+                    <div className="relative aspect-[9/16] w-full rounded-sm overflow-hidden cursor-pointer group">
                       <div className="absolute inset-0 bg-gray-800" />
                       <LazyImage
                         src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
