@@ -696,26 +696,26 @@ const HomePage = () => {
               ))}
             </div>
           ) : latestScreenshots && latestScreenshots.length > 0 ? (
-            <div className="relative">
+            <div className="relative group">
               <button
-                onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft -= 360; } }}
-                className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors hidden sm:block"
+                onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft -= 480; } }}
+                className="absolute -left-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
               <button
-                onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft += 360; } }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors hidden sm:block"
+                onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft += 480; } }}
+                className="absolute -right-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
               >
                 <ChevronRight className="h-5 w-5" />
               </button>
               <div
                 ref={screenshotsScrollRef}
-                className="flex gap-4 overflow-x-auto scrollbar-hide pb-4 px-2 cursor-grab"
+                className="flex gap-5 overflow-x-auto scrollbar-hide pb-4 cursor-grab"
                 style={{ scrollBehavior: 'smooth' }}
               >
                 {latestScreenshots.map((screenshot: any) => (
-                  <div key={screenshot.id} className="flex-shrink-0 w-[280px] sm:w-[320px] md:w-[360px]">
+                  <div key={screenshot.id} className="flex-shrink-0 w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px]">
                     <ScreenshotCard
                       screenshot={screenshot}
                       isOwnProfile={user?.id === screenshot.userId}
