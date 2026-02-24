@@ -121,31 +121,24 @@ export default function NFTDetailsPage() {
       <div className="pt-28 pb-8">
         <div className="flex justify-center px-4 py-2">
           <div 
-            className="relative w-[398px] h-[398px] rounded-3xl overflow-hidden"
+            className="relative rounded-2xl overflow-hidden p-3"
             style={{ 
-              background: 'rgba(255, 255, 255, 0.01)',
-              boxShadow: '0 25px 50px -12px rgba(74, 222, 128, 0.05)'
+              background: 'linear-gradient(145deg, #0c1a2a 0%, #0a1420 50%, #0d1f2d 100%)',
+              border: '1px solid rgba(30, 41, 59, 0.6)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.03)'
             }}
           >
+            <div className="absolute top-6 left-6 z-10 flex items-center gap-2 px-3 py-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#4ade80] shadow-[0_0_6px_rgba(74,222,128,0.6)]" />
+              <span className="text-[11px] font-bold text-white uppercase tracking-[1.5px]">
+                Verified Asset
+              </span>
+            </div>
             <img
               src={nft.image}
               alt={nft.name}
-              className="w-full h-full object-cover"
+              className="w-[374px] h-[374px] object-cover rounded-xl"
             />
-            {nft.isGameReady && (
-              <div 
-                className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-2xl"
-                style={{ 
-                  background: 'rgba(0, 0, 0, 0.4)',
-                  backdropFilter: 'blur(8px)'
-                }}
-              >
-                <div className="w-2 h-2 rounded-full bg-[#4ade80]" />
-                <span className="text-[10px] font-bold text-white uppercase tracking-wider">
-                  Game-Ready
-                </span>
-              </div>
-            )}
           </div>
         </div>
 
