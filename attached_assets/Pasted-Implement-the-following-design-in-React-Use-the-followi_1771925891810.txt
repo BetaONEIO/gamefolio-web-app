@@ -1,0 +1,449 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/DailyStreak.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,900;0,700;0,400&display=swap";
+.DailyStreak_185_197 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_185_198 {
+  background: #020617;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: -0.881897px;
+  width: 100%;
+  display: flex;
+}
+.Container_185_199 {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 808px;
+  padding: 68.767px 24.007px 69.233px 23.993px;
+  display: flex;
+}
+.Container_185_200 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 383px;
+  height: 670px;
+  display: flex;
+}
+.Container_185_201 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 15.9861px;
+  width: 311px;
+  padding-bottom: 0.014px;
+  display: flex;
+}
+.Container_185_202 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 192px;
+  display: flex;
+}
+.generated_12_185_203 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -9.6px;
+  width: 181px;
+  height: 242px;
+  font-family: Plus Jakarta Sans;
+  font-size: 192px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 192px;
+  display: inline-block;
+}
+.Container_185_204 {
+  justify-content: center;
+  align-items: center;
+  width: 128px;
+  height: 62px;
+  display: flex;
+}
+.Days_185_205 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 133px;
+  height: 62px;
+  font-family: Plus Jakarta Sans;
+  font-size: 48px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 48px;
+  display: inline-block;
+}
+.Container_185_206 {
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 0 23.049px 2px 22.951px;
+  display: flex;
+}
+.ConsecutiveStreak_185_207 {
+  color: #ff6900;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 5.6px;
+  text-transform: uppercase;
+  width: 265px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_185_208 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 23.4201px;
+  height: 156px;
+  display: flex;
+}
+.Container_185_209 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 11.9757px;
+  height: 90px;
+  padding-bottom: 0.024px;
+  display: flex;
+}
+.Container_185_210 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 0 95.076px 1px 94.924px;
+  display: flex;
+}
+.YouReOnFire_185_211 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.6px;
+  text-transform: uppercase;
+  width: 193px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_185_212 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 46px;
+  display: flex;
+}
+.YouVeLoggedInFor_12DaysStraightReach_15DaysForA_185_213 {
+  color: #94a3b8cc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 366px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 22.75px;
+  display: inline-block;
+}
+.Container_185_214 {
+  justify-content: center;
+  align-items: center;
+  width: 161px;
+  height: 18px;
+  display: flex;
+}
+.LegendaryMysteryBox_185_215 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 164px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 22.75px;
+  display: inline-block;
+}
+.generated__185_216 {
+  color: #94a3b8cc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 7px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 22.75px;
+  display: inline-block;
+}
+.Container_185_217 {
+  box-sizing: border-box;
+  background: #ff69001a;
+  border: 1.111px solid #ff690033;
+  border-radius: 37282700px;
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 11.9861px;
+  width: 250px;
+  height: 43px;
+  padding: 13.108px 25.91px 13.406px 25.104px;
+  display: flex;
+}
+.Container_185_218 {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+}
+.Container_185_220 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 171px;
+  height: 16px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.PersonalBest_24Days_185_221 {
+  color: #ff6900;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 174px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_185_222 {
+  width: 160px;
+  height: 160px;
+}
+.Container_185_223 {
+  filter: blur(40px);
+  background: #ff690033;
+  border-radius: 37282700px;
+  width: 241px;
+  height: 241px;
+}
+.Container_185_224 {
+  width: 160px;
+  height: 160px;
+}
+.Container_185_225 {
+  filter: blur(20px);
+  background: linear-gradient(#f5490066 0%, #fb2c3666 50%, #ffb90033 100%);
+  width: 227px;
+  height: 227px;
+}
+.Container_185_226 {
+  width: 128px;
+  height: 128px;
+  overflow: hidden;
+}
+.Container_185_228 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 7.14584px;
+  width: 383px;
+  height: 6px;
+  padding: 0 16.135px 0 15.99px;
+  display: flex;
+}
+.Container_185_229,
+.Container_185_230,
+.Container_185_231,
+.Container_185_232,
+.Container_185_233 {
+  background: #4ade80;
+  border-radius: 37282700px;
+  flex: 1 0 0;
+  height: 6px;
+  box-shadow: 0 0 15px #4ade8066;
+}
+.Container_185_234,
+.Container_185_235 {
+  background: #1e293b4d;
+  border-radius: 37282700px;
+  flex: 1 0 0;
+  height: 6px;
+}
+.Container_185_236 {
+  backdrop-filter: blur(12px);
+  box-sizing: border-box;
+  background: #02061780;
+  border-top: 1.111px solid #1e293b1a;
+  justify-content: center;
+  align-items: center;
+  height: 126px;
+  padding: 33.108px 32.003px 31.892px 31.997px;
+  display: flex;
+}
+.Button_185_237 {
+  background: #4ade80;
+  border-radius: 37282700px;
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 15.4028px;
+  width: 367px;
+  height: 61px;
+  padding: 20px 74.795px 21px 73.802px;
+  display: flex;
+  box-shadow: 0 15px 30px #4ade8033;
+}
+.Container_185_238 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 183px;
+  height: 20px;
+  padding-bottom: 2px;
+  display: flex;
+}
+.ContinuePlaying_185_239 {
+  color: #022c22;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 2.8px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 188px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_185_240 {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+
+```
+
+---
+
+```src/components/DailyStreak.tsx
+import React from 'react';
+import styles from '../styles/DailyStreak.module.css';
+
+
+export default function DailyStreak() {
+  return (
+    <div className={styles.DailyStreak_185_197}>
+      <div className={styles.Container_185_198}>
+        <div className={styles.Container_185_199}>
+          <div className={styles.Container_185_200}>
+            <div className={styles.Container_185_201}>
+              <div className={styles.Container_185_202}><span className={styles.generated_12_185_203}>12</span>
+                <div className={styles.Container_185_204}><span className={styles.Days_185_205}>DAYS</span></div>
+              </div>
+              <div className={styles.Container_185_206}><span className={styles.ConsecutiveStreak_185_207}>Consecutive streak</span></div>
+            </div>
+            <div className={styles.Container_185_208}>
+              <div className={styles.Container_185_209}>
+                <div className={styles.Container_185_210}><span className={styles.YouReOnFire_185_211}>You&#x27;re on fire!</span></div>
+                <div className={styles.Container_185_212}><span className={styles.YouVeLoggedInFor_12DaysStraightReach_15DaysForA_185_213}>You&#x27;ve logged in for 12 days straight. Reach 15 days for a</span>
+                  <div className={styles.Container_185_214}><span className={styles.LegendaryMysteryBox_185_215}>Legendary Mystery Box</span></div><span className={styles.generated__185_216}>.</span>
+                </div>
+              </div>
+              <div className={styles.Container_185_217}>
+                <div className={styles.Container_185_218}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <g clipPath="url(#clip0_185_218)">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M3.64449 2.59135C6.61712 -0.377362 11.4501 -0.34603 14.4407 2.6454C17.433 5.63762 17.4643 10.4729 14.4909 13.4456C11.5175 16.4182 6.68292 16.3877 3.6907 13.3954C1.98425 11.6964 1.17297 9.2956 1.49902 6.9097C1.54293 6.58806 1.83927 6.36291 2.16091 6.40682C2.48256 6.45073 2.7077 6.74707 2.66379 7.06871C2.38698 9.09069 3.07452 11.1254 4.521 12.5651C7.06282 15.1062 11.154 15.1211 13.6606 12.6153C16.1664 10.1087 16.1515 6.01752 13.6104 3.4757C11.0702 0.936236 6.98136 0.919786 4.47479 3.42244L5.0607 3.42479C5.38515 3.4263 5.64695 3.69055 5.64543 4.01501C5.64392 4.33946 5.37967 4.60125 5.05522 4.59974L3.06093 4.59034C2.73861 4.58862 2.47787 4.32753 2.47658 4.00521L2.4664 2.01249C2.46528 1.80261 2.57622 1.60807 2.75743 1.50216C2.93863 1.39624 3.16258 1.39505 3.3449 1.49902C3.52723 1.603 3.64024 1.79634 3.64136 2.00623L3.64449 2.59135ZM9.06494 4.29895C9.38939 4.29895 9.65242 4.56197 9.65242 4.88643V7.77681L11.4391 9.56274C11.5919 9.71017 11.6533 9.92857 11.5996 10.134C11.5459 10.3394 11.3856 10.4999 11.1802 10.5538C10.9749 10.6076 10.7564 10.5465 10.6088 10.3938L8.47825 8.26324V4.88721C8.47825 4.56276 8.74049 4.29895 9.06494 4.29895Z" fill="#FF6900" />
+                    </g>
+                    <defs>
+                      <clipPath id="clip0_185_218">
+                        <rect width="16" height="16" fill="white" />
+                      </clipPath>
+                    </defs>
+                  </svg>
+                </div>
+                <div className={styles.Container_185_220}><span className={styles.PersonalBest_24Days_185_221}>Personal Best: 24 Days</span></div>
+              </div>
+            </div>
+            <div className={styles.Container_185_222}>
+              <div className={styles.Container_185_223}></div>
+              <div className={styles.Container_185_224}>
+                <div className={styles.Container_185_225}></div>
+                <div className={styles.Container_185_226}><svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M68.4297 115.601C85.0999 112.263 106.655 100.269 106.655 69.2592C106.655 41.0435 86.0011 22.2509 71.1494 13.6172C67.8484 11.6974 63.9928 14.2198 63.9928 18.0327V27.781C63.9928 35.4708 60.7612 49.5066 51.7808 55.346C47.1947 58.327 42.2352 53.8635 41.6806 48.4241L41.222 43.9552C40.6887 38.7611 35.3986 35.6095 31.2497 38.7771C23.7892 44.4565 15.998 54.4288 15.998 69.2538C15.998 107.175 44.203 116.662 58.3028 116.662C59.1276 116.662 59.9879 116.635 60.8839 116.582C53.9193 115.99 42.6618 111.671 42.6618 97.6987C42.6618 86.7666 50.6343 79.3807 56.6923 75.7811C58.3241 74.8212 60.2279 76.0744 60.2279 77.9676V81.1139C60.2279 83.5136 61.1612 87.2732 63.3742 89.8436C65.8806 92.7553 69.5549 89.7049 69.8482 85.876C69.9442 84.6708 71.1601 83.9029 72.2053 84.5108C75.6236 86.5106 79.9911 90.7768 79.9911 97.6987C79.9911 108.62 73.9704 113.644 68.4297 115.601Z" fill="#FF6900" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_185_228}>
+              <div className={styles.Container_185_229}></div>
+              <div className={styles.Container_185_230}></div>
+              <div className={styles.Container_185_231}></div>
+              <div className={styles.Container_185_232}></div>
+              <div className={styles.Container_185_233}></div>
+              <div className={styles.Container_185_234}></div>
+              <div className={styles.Container_185_235}></div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_185_236}>
+          <div className={styles.Button_185_237}>
+            <div className={styles.Container_185_238}><span className={styles.ContinuePlaying_185_239}>Continue Playing</span></div>
+            <div className={styles.Container_185_240}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" clipRule="evenodd" d="M17.8405 7.47317C18.6561 7.90689 19.1658 8.75526 19.1658 9.67901C19.1658 10.6028 18.6561 11.4511 17.8405 11.8848L7.16384 17.6907C5.44468 18.6265 3.33301 17.4098 3.33301 15.4857V3.87317C3.33301 1.94817 5.44468 0.732337 7.16384 1.6665L17.8405 7.47317Z" fill="#022C22" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+

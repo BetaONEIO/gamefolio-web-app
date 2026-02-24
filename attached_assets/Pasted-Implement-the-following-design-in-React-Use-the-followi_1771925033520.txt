@@ -1,0 +1,429 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/DailyXpBonus.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,900;0,700;0,400&display=swap";
+.DailyXpBonus_183_59 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_183_60 {
+  background: #020617;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: -0.881897px;
+  width: 100%;
+  display: flex;
+}
+.Container_183_61 {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 808px;
+  padding: 86.372px 24.007px 86.628px 23.993px;
+  display: flex;
+}
+.Container_183_62 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 383px;
+  height: 635px;
+  display: flex;
+}
+.Container_183_63 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 15.9861px;
+  width: 286px;
+  padding-bottom: 0.014px;
+  display: flex;
+}
+.Container_183_64 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 192px;
+  display: flex;
+}
+.generated_50_183_65 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -9.6px;
+  width: 240px;
+  height: 242px;
+  font-family: Plus Jakarta Sans;
+  font-size: 192px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 192px;
+  display: inline-block;
+}
+.Container_183_66 {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 45px;
+  height: 62px;
+  display: flex;
+}
+.Xp_183_67 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -9.6px;
+  flex-shrink: 0;
+  width: 50px;
+  height: 62px;
+  font-family: Plus Jakarta Sans;
+  font-size: 48px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 48px;
+  display: inline-block;
+}
+.Container_183_68 {
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 0 21.177px 2px 21.823px;
+  display: flex;
+}
+.DailyLoginBonus_183_69 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 5.6px;
+  text-transform: uppercase;
+  width: 243px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_183_70 {
+  justify-content: center;
+  align-items: center;
+  width: 383px;
+  height: 90px;
+  display: flex;
+}
+.Container_183_71 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 11.9757px;
+  padding-bottom: 0.024px;
+  display: flex;
+}
+.Container_183_72 {
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 0 113.455px 1px 112.545px;
+  display: flex;
+}
+.LevelingUp_183_73 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.6px;
+  text-transform: uppercase;
+  width: 157px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_183_74 {
+  justify-content: center;
+  align-items: center;
+  height: 46px;
+  padding: 2.222px 13.25px 2.778px 12.75px;
+  display: flex;
+}
+.YourDailyStreakIsActiveKeepLoggingInEveryDayToEarnEvenBiggerRewards_183_75 {
+  color: #94a3b8cc;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 357px;
+  height: 41px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 22.75px;
+  display: inline-block;
+}
+.Container_183_76 {
+  width: 160px;
+  height: 160px;
+}
+.Container_183_77 {
+  filter: blur(40px);
+  background: #4ade8033;
+  border-radius: 37282700px;
+  width: 241px;
+  height: 241px;
+}
+.Container_183_78 {
+  width: 160px;
+  height: 160px;
+}
+.Container_183_79 {
+  width: 128px;
+  height: 128px;
+  overflow: hidden;
+}
+.Container_183_83 {
+  width: 160px;
+  height: 160px;
+}
+.Container_183_84 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 15.9791px;
+  width: 383px;
+  padding: 0 16.01px 0 15.99px;
+  display: flex;
+}
+.Container_183_85 {
+  background: #1e293b4d;
+  border-radius: 37282700px;
+  align-items: center;
+  width: 351px;
+  height: 6px;
+  padding-right: 70px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_183_86 {
+  background: #4ade80;
+  border-radius: 37282700px;
+  flex: 1 0 0;
+  height: 6px;
+  box-shadow: 0 0 20px #4ade8099;
+}
+.Container_183_87 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 97.809px;
+  width: 351px;
+  height: 16px;
+  padding: 0 4.84px 0 3.993px;
+  display: flex;
+}
+.Container_183_88 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.Day_1_183_89 {
+  color: #94a3b84d;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 37px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_183_90 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.Day_5Streak_183_91 {
+  color: #4ade8099;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 86px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_183_92 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.Day_7_183_93 {
+  color: #94a3b84d;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 38px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_183_94 {
+  backdrop-filter: blur(12px);
+  box-sizing: border-box;
+  background: #02061780;
+  border-top: 1.111px solid #1e293b1a;
+  justify-content: center;
+  align-items: center;
+  height: 126px;
+  padding: 33.108px 32.003px 31.892px 31.997px;
+  display: flex;
+}
+.Button_183_95 {
+  background: #4ade80;
+  border-radius: 37282700px;
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 15.0278px;
+  width: 367px;
+  height: 61px;
+  padding: 20px 94.483px 21px 93.49px;
+  display: flex;
+  box-shadow: 0 15px 30px #4ade8033;
+}
+.Container_183_96 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 144px;
+  height: 20px;
+  padding-bottom: 2px;
+  display: flex;
+}
+.ClaimReward_183_97 {
+  color: #022c22;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 2.8px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 149px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_183_98 {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+
+```
+
+---
+
+```src/components/DailyXpBonus.tsx
+import React from 'react';
+import styles from '../styles/DailyXpBonus.module.css';
+
+
+export default function DailyXpBonus() {
+  return (
+    <div className={styles.DailyXpBonus_183_59}>
+      <div className={styles.Container_183_60}>
+        <div className={styles.Container_183_61}>
+          <div className={styles.Container_183_62}>
+            <div className={styles.Container_183_63}>
+              <div className={styles.Container_183_64}><span className={styles.generated_50_183_65}>50</span>
+                <div className={styles.Container_183_66}><span className={styles.Xp_183_67}>XP</span></div>
+              </div>
+              <div className={styles.Container_183_68}><span className={styles.DailyLoginBonus_183_69}>Daily login bonus</span></div>
+            </div>
+            <div className={styles.Container_183_70}>
+              <div className={styles.Container_183_71}>
+                <div className={styles.Container_183_72}><span className={styles.LevelingUp_183_73}>Leveling up!</span></div>
+                <div className={styles.Container_183_74}><span className={styles.YourDailyStreakIsActiveKeepLoggingInEveryDayToEarnEvenBiggerRewards_183_75}>Your daily streak is active. Keep logging in every day to earn even bigger rewards.</span></div>
+              </div>
+            </div>
+            <div className={styles.Container_183_76}>
+              <div className={styles.Container_183_77}></div>
+              <div className={styles.Container_183_78}>
+                <div className={styles.Container_183_79}><svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M56.3608 46.469C59.756 40.3757 61.4563 37.3291 63.9934 37.3291C66.5305 37.3291 68.2308 40.3757 71.6261 46.469L72.5057 48.0459C73.4712 49.7784 73.9539 50.642 74.7049 51.2106C75.4558 51.7845 76.3998 51.999 78.2718 52.4228L79.9775 52.809C86.5749 54.3001 89.8736 55.0457 90.6567 57.572C91.4452 60.093 89.1924 62.7212 84.6976 67.9831L83.5336 69.3455C82.2571 70.8366 81.6188 71.5875 81.3345 72.5101C81.0395 73.4327 81.136 74.4303 81.3345 76.4257L81.5061 78.2386C82.1873 85.2544 82.5253 88.7623 80.4709 90.3232C78.4166 91.8787 75.3324 90.4627 69.1534 87.6199L67.555 86.8797C65.801 86.0751 64.9267 85.6674 63.9934 85.6674C63.0655 85.6674 62.1858 86.0751 60.4319 86.8797L58.8335 87.6199C52.6544 90.4627 49.5702 91.8841 47.5159 90.3232C45.4616 88.7677 45.7995 85.2544 46.4807 78.2386L46.6523 76.4257C46.8508 74.4303 46.9473 73.4327 46.6523 72.5101C46.368 71.5875 45.7298 70.8366 44.4532 69.3455L43.2892 67.9831C38.7944 62.7266 36.5416 60.0983 37.3301 57.572C38.1132 55.051 41.4065 54.3001 48.004 52.809L49.715 52.4228C51.5924 51.9937 52.5257 51.7845 53.2819 51.2159C54.0329 50.642 54.5156 49.7784 55.4811 48.0513L56.3608 46.469Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M63.9931 6.66602C66.202 6.66602 67.9927 8.45668 67.9927 10.6656V21.3311C67.9927 23.54 66.202 25.3307 63.9931 25.3307C61.7842 25.3307 59.9936 23.54 59.9936 21.3311V10.6656C59.9936 8.45668 61.7842 6.66602 63.9931 6.66602ZM6.66602 63.9931C6.66602 61.7842 8.45668 59.9936 10.6656 59.9936H21.3311C23.54 59.9936 25.3307 61.7842 25.3307 63.9931C25.3307 66.202 23.54 67.9927 21.3311 67.9927H10.6656C8.45668 67.9927 6.66602 66.202 6.66602 63.9931ZM102.656 63.9931C102.656 61.7842 104.446 59.9936 106.655 59.9936H117.321C119.53 59.9936 121.32 61.7842 121.32 63.9931C121.32 66.202 119.53 67.9927 117.321 67.9927H106.655C104.446 67.9927 102.656 66.202 102.656 63.9931ZM63.9931 102.656C66.202 102.656 67.9927 104.446 67.9927 106.655V117.321C67.9927 119.53 66.202 121.32 63.9931 121.32C61.7842 121.32 59.9936 119.53 59.9936 117.321V106.655C59.9936 104.446 61.7842 102.656 63.9931 102.656Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M99.8898 28.0005C101.5 29.6123 101.5 32.2234 99.8898 33.8353L98.0018 35.7288C96.3812 37.2926 93.8063 37.269 92.2146 35.6758C90.6228 34.0826 90.6017 31.5077 92.167 29.8885L94.0551 28.0005C95.6669 26.3907 98.278 26.3907 99.8898 28.0005Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M28.001 28.0005C29.6128 26.3907 32.2239 26.3907 33.8358 28.0005L35.7293 29.8885C37.2931 31.5092 37.2695 34.0841 35.6763 35.6758C34.0831 37.2675 31.5082 37.2886 29.889 35.7233L28.001 33.8353C26.3912 32.2234 26.3912 29.6123 28.001 28.0005Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M35.7238 92.1665C37.3336 93.7783 37.3336 96.3895 35.7238 98.0013L33.8358 99.8894C32.2091 101.405 29.6743 101.36 28.1021 99.7882C26.53 98.216 26.4853 95.6812 28.001 94.0546L29.889 92.1665C31.5008 90.5567 34.112 90.5567 35.7238 92.1665Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M92.167 92.1665C93.7788 90.5567 96.39 90.5567 98.0018 92.1665L99.8898 94.0546C101.406 95.6812 101.361 98.216 99.7887 99.7882C98.2165 101.36 95.6817 101.405 94.0551 99.8894L92.167 98.0013C90.5572 96.3895 90.5572 93.7783 92.167 92.1665Z" fill="#4ADE80" />
+                  </svg>
+                </div>
+                <div className={styles.Container_183_83}></div>
+              </div>
+            </div>
+            <div className={styles.Container_183_84}>
+              <div className={styles.Container_183_85}>
+                <div className={styles.Container_183_86}></div>
+              </div>
+              <div className={styles.Container_183_87}>
+                <div className={styles.Container_183_88}><span className={styles.Day_1_183_89}>Day 1</span></div>
+                <div className={styles.Container_183_90}><span className={styles.Day_5Streak_183_91}>Day 5 Streak</span></div>
+                <div className={styles.Container_183_92}><span className={styles.Day_7_183_93}>Day 7</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_183_94}>
+          <div className={styles.Button_183_95}>
+            <div className={styles.Container_183_96}><span className={styles.ClaimReward_183_97}>Claim Reward</span></div>
+            <div className={styles.Container_183_98}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" clipRule="evenodd" d="M3.33834 9.36962C2.99022 9.36962 2.70801 9.65182 2.70801 9.99995C2.70801 10.3481 2.99022 10.6303 3.33834 10.6303H11.1124V15.0426C11.1126 15.2974 11.2662 15.5269 11.5016 15.6244C11.737 15.7219 12.0079 15.6681 12.1882 15.488L17.2308 10.4454C17.4766 10.1993 17.4766 9.80061 17.2308 9.55451L12.1882 4.51188C12.0079 4.33184 11.737 4.27802 11.5016 4.37549C11.2662 4.47295 11.1126 4.70254 11.1124 4.95731V9.36962H3.33834Z" fill="#022C22" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
