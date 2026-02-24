@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { useDailyStreak } from "@/hooks/use-daily-streak";
 
 type AuthContextType = {
   user: User | null;
@@ -40,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { showDailyXp } = useDailyStreak();
 
   // Remove localStorage dependency - rely on session only
   const [firebaseAuthChecked, setFirebaseAuthChecked] = useState(false);
@@ -108,13 +110,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
               setTimeout(() => {
                 if (!mounted) return;
-                toast({
-                  title: streakInfo.isNewMilestone ? "🔥 Streak Milestone!" : `🔥 Day ${streakInfo.currentStreak} Streak!`,
-                  description: streakInfo.message,
-                  variant: "gamefolioSuccess",
-                  duration: 5000,
+                showDailyXp({
+                  dailyXP: streakInfo.dailyXP,
+                  bonusAwarded: streakInfo.bonusAwarded,
+                  currentStreak: streakInfo.currentStreak,
+                  longestStreak: streakInfo.longestStreak || userData.longestStreak || 0,
+                  isNewMilestone: streakInfo.isNewMilestone,
+                  message: streakInfo.message,
+                  nextMilestone: streakInfo.nextMilestone || 5,
                 });
-              }, 1500);
+              }, 800);
             }
             
             setLocation("/");
@@ -193,13 +198,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
         setTimeout(() => {
-          toast({
-            title: streakInfo.isNewMilestone ? "🔥 Streak Milestone!" : `🔥 Day ${streakInfo.currentStreak} Streak!`,
-            description: streakInfo.message,
-            variant: "gamefolioSuccess",
-            duration: 5000,
+          showDailyXp({
+            dailyXP: streakInfo.dailyXP,
+            bonusAwarded: streakInfo.bonusAwarded,
+            currentStreak: streakInfo.currentStreak,
+            longestStreak: streakInfo.longestStreak || user.longestStreak || 0,
+            isNewMilestone: streakInfo.isNewMilestone,
+            message: streakInfo.message,
+            nextMilestone: streakInfo.nextMilestone || 5,
           });
-        }, 1500);
+        }, 800);
       }
 
       // Check if user needs onboarding

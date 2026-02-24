@@ -822,6 +822,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
                 dailyXP: streakInfo.dailyXP,
+                longestStreak: userToReturn.longestStreak || 0,
+                nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
                 message: streakInfo.message,
                 isNewMilestone: streakInfo.isNewMilestone
               }
@@ -875,6 +877,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
                 dailyXP: streakInfo.dailyXP,
+                longestStreak: userToReturn.longestStreak || 0,
+                nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
                 message: streakInfo.message,
                 isNewMilestone: streakInfo.isNewMilestone
               }
@@ -1051,6 +1055,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
                 dailyXP: streakInfo.dailyXP,
+                longestStreak: userToReturn.longestStreak || 0,
+                nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
                 message: streakInfo.message,
                 isNewMilestone: streakInfo.isNewMilestone
               }
@@ -1102,6 +1108,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
                 dailyXP: streakInfo.dailyXP,
+                longestStreak: userToReturn.longestStreak || 0,
+                nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
                 message: streakInfo.message,
                 isNewMilestone: streakInfo.isNewMilestone
               }
@@ -1357,6 +1365,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           streakInfo: {
             currentStreak: streakInfo.currentStreak,
             bonusAwarded: streakInfo.bonusAwarded,
+            dailyXP: streakInfo.dailyXP,
+            longestStreak: userToReturn.longestStreak || 0,
+            nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
             message: streakInfo.message,
             isNewMilestone: streakInfo.isNewMilestone
           }
@@ -1581,6 +1592,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           streakInfo: {
             currentStreak: streakInfo.currentStreak,
             bonusAwarded: streakInfo.bonusAwarded,
+            dailyXP: streakInfo.dailyXP,
+            longestStreak: user.longestStreak || 0,
+            nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
             message: streakInfo.message,
             isNewMilestone: streakInfo.isNewMilestone
           }

@@ -136,6 +136,9 @@ router.post('/auth/token/login', async (req: Request, res: Response) => {
         streakInfo: {
           currentStreak: streakInfo.currentStreak,
           bonusAwarded: streakInfo.bonusAwarded,
+          dailyXP: streakInfo.dailyXP,
+          longestStreak: userToReturn.longestStreak || 0,
+          nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
           message: streakInfo.message,
           isNewMilestone: streakInfo.isNewMilestone,
         },
@@ -245,6 +248,9 @@ router.post('/auth/token/google', async (req: Request, res: Response) => {
             streakInfo: streakInfo ? {
               currentStreak: streakInfo.currentStreak,
               bonusAwarded: streakInfo.bonusAwarded,
+              dailyXP: streakInfo.dailyXP,
+              longestStreak: user.longestStreak || 0,
+              nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
               message: streakInfo.message,
               isNewMilestone: streakInfo.isNewMilestone,
             } : undefined,
@@ -283,6 +289,9 @@ router.post('/auth/token/google', async (req: Request, res: Response) => {
           streakInfo: streakInfo ? {
             currentStreak: streakInfo.currentStreak,
             bonusAwarded: streakInfo.bonusAwarded,
+            dailyXP: streakInfo.dailyXP,
+            longestStreak: user.longestStreak || 0,
+            nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
             message: streakInfo.message,
             isNewMilestone: streakInfo.isNewMilestone,
           } : undefined,
@@ -359,6 +368,9 @@ router.post('/auth/token/discord', async (req: Request, res: Response) => {
             streakInfo: streakInfo ? {
               currentStreak: streakInfo.currentStreak,
               bonusAwarded: streakInfo.bonusAwarded,
+              dailyXP: streakInfo.dailyXP,
+              longestStreak: user.longestStreak || 0,
+              nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
               message: streakInfo.message,
               isNewMilestone: streakInfo.isNewMilestone,
             } : undefined,
@@ -388,6 +400,9 @@ router.post('/auth/token/discord', async (req: Request, res: Response) => {
           streakInfo: streakInfo ? {
             currentStreak: streakInfo.currentStreak,
             bonusAwarded: streakInfo.bonusAwarded,
+            dailyXP: streakInfo.dailyXP,
+            longestStreak: user.longestStreak || 0,
+            nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
             message: streakInfo.message,
             isNewMilestone: streakInfo.isNewMilestone,
           } : undefined,
@@ -507,6 +522,9 @@ router.post('/auth/mobile/google', async (req: Request, res: Response) => {
           streakInfo: {
             currentStreak: streakInfo.currentStreak,
             bonusAwarded: streakInfo.bonusAwarded,
+            dailyXP: streakInfo.dailyXP,
+            longestStreak: user.longestStreak || 0,
+            nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
             message: streakInfo.message,
             isNewMilestone: streakInfo.isNewMilestone
           }
@@ -785,6 +803,9 @@ router.post('/auth/mobile/discord', async (req: Request, res: Response) => {
           streakInfo: {
             currentStreak: streakInfo.currentStreak,
             bonusAwarded: streakInfo.bonusAwarded,
+            dailyXP: streakInfo.dailyXP,
+            longestStreak: user.longestStreak || 0,
+            nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
             message: streakInfo.message,
             isNewMilestone: streakInfo.isNewMilestone
           }

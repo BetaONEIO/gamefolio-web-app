@@ -15,9 +15,12 @@ import { CrossmintProvider } from "@/hooks/use-crossmint";
 import { RevenueCatProvider } from "@/hooks/use-revenuecat";
 import { LevelTrackerProvider } from "@/hooks/use-level-tracker";
 import { WelcomePackProvider, useWelcomePack } from "@/hooks/use-welcome-pack";
+import { DailyStreakProvider } from "@/hooks/use-daily-streak";
 import { useVersionCheck } from "@/hooks/use-version-check";
 import AuthModal from "@/components/auth/auth-modal";
 import { WelcomePackDialog } from "@/components/welcome-pack/WelcomePackDialog";
+import DailyXpBonus from "@/components/gamification/DailyXpBonus";
+import DailyStreakOverlay from "@/components/gamification/DailyStreak";
 import { WalletPointer } from "@/components/welcome-pack/WalletPointer";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AdminProtectedRoute } from "@/components/auth/admin-protected-route";
@@ -382,6 +385,7 @@ function App() {
       <ThemeProvider>
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
+            <DailyStreakProvider>
             <AuthProvider>
               <RevenueCatProvider>
                 <LevelTrackerProvider>
@@ -397,6 +401,8 @@ function App() {
                                 </ErrorBoundary>
                               </MainLayout>
                               <WelcomePackComponents />
+                              <DailyXpBonus />
+                              <DailyStreakOverlay />
                             </ClipDialogProvider>
                             <Toaster />
                           </AuthModalProvider>
@@ -407,6 +413,7 @@ function App() {
                 </LevelTrackerProvider>
               </RevenueCatProvider>
             </AuthProvider>
+            </DailyStreakProvider>
           </TooltipProvider>
         </QueryClientProvider>
       </ThemeProvider>
