@@ -3375,7 +3375,7 @@ const ProfilePage = () => {
               {hasPrev && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setSelectedScreenshot(screenshots![currentIdx - 1]); }}
-                  className="fixed left-[calc(10%-56px)] top-1/2 -translate-y-1/2 z-[60] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
+                  className="fixed left-[calc(10%-80px)] top-1/2 -translate-y-1/2 z-[60] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors"
                   aria-label="Previous screenshot"
                 >
                   <ChevronLeft className="h-7 w-7" />
@@ -3384,7 +3384,7 @@ const ProfilePage = () => {
               {hasNextItem && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setSelectedScreenshot(screenshots![currentIdx + 1]); }}
-                  className="fixed right-[calc(10%-56px)] top-1/2 -translate-y-1/2 z-[60] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
+                  className="fixed right-[calc(10%-80px)] top-1/2 -translate-y-1/2 z-[60] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors"
                   aria-label="Next screenshot"
                 >
                   <ChevronRight className="h-7 w-7" />

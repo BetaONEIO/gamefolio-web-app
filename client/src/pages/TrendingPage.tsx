@@ -22,7 +22,7 @@ import { FireButton } from '@/components/engagement/FireButton';
 import { ReportButton } from '@/components/reporting/ReportButton';
 import { MobileTrendingViewer } from '@/components/clips/MobileTrendingViewer';
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
-import { UserIcon, X, Trash2 } from 'lucide-react';
+import { UserIcon, X, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'wouter';
 import { AgeRestrictionDialog } from '@/components/content/AgeRestrictionDialog';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -810,6 +810,33 @@ const TrendingPage: React.FC = () => {
             </div>
           )}
         </DialogContent>
+        {selectedScreenshot && trendingScreenshots && (() => {
+          const currentIdx = trendingScreenshots.findIndex(s => s.id === selectedScreenshot.id);
+          const hasPrev = trendingScreenshots.length > 1 && currentIdx > 0;
+          const hasNextItem = trendingScreenshots.length > 1 && currentIdx < trendingScreenshots.length - 1;
+          return (
+            <>
+              {hasPrev && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSelectedScreenshot(trendingScreenshots[currentIdx - 1]); }}
+                  className="fixed left-[calc(10%-80px)] top-1/2 -translate-y-1/2 z-[60] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors"
+                  aria-label="Previous screenshot"
+                >
+                  <ChevronLeft className="h-7 w-7" />
+                </button>
+              )}
+              {hasNextItem && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSelectedScreenshot(trendingScreenshots[currentIdx + 1]); }}
+                  className="fixed right-[calc(10%-80px)] top-1/2 -translate-y-1/2 z-[60] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors"
+                  aria-label="Next screenshot"
+                >
+                  <ChevronRight className="h-7 w-7" />
+                </button>
+              )}
+            </>
+          );
+        })()}
       </Dialog>
 
       {/* Age Restriction Dialog for Screenshots */}

@@ -272,7 +272,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
       {hasPrevious && (
         <button
           onClick={(e) => { e.stopPropagation(); handlePrevious(); }}
-          className="fixed left-[calc(10%-56px)] top-1/2 -translate-y-1/2 z-[60] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
+          className="fixed left-[calc(10%-80px)] top-1/2 -translate-y-1/2 z-[60] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors"
           aria-label="Previous screenshot"
         >
           <ChevronLeft className="h-7 w-7" />
@@ -281,7 +281,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
       {hasNext && (
         <button
           onClick={(e) => { e.stopPropagation(); handleNext(); }}
-          className="fixed right-[calc(10%-56px)] top-1/2 -translate-y-1/2 z-[60] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
+          className="fixed right-[calc(10%-80px)] top-1/2 -translate-y-1/2 z-[60] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors"
           aria-label="Next screenshot"
         >
           <ChevronRight className="h-7 w-7" />
