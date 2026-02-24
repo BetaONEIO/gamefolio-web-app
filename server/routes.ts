@@ -8032,13 +8032,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
               id: sender.id,
               username: sender.username,
               displayName: sender.displayName,
-              avatarUrl: sender.avatarUrl
+              avatarUrl: sender.avatarUrl,
+              nftProfileTokenId: sender.nftProfileTokenId,
+              nftProfileImageUrl: sender.nftProfileImageUrl,
+              activeProfilePicType: sender.activeProfilePicType,
             } : null,
             receiver: receiver ? {
               id: receiver.id,
               username: receiver.username,
               displayName: receiver.displayName,
-              avatarUrl: receiver.avatarUrl
+              avatarUrl: receiver.avatarUrl,
+              nftProfileTokenId: receiver.nftProfileTokenId,
+              nftProfileImageUrl: receiver.nftProfileImageUrl,
+              activeProfilePicType: receiver.activeProfilePicType,
             } : null
           };
         })

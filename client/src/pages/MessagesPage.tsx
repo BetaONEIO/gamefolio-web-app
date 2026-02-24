@@ -647,9 +647,10 @@ const MessagesPage: React.FC = () => {
             ) : (
               <div className="space-y-1">
                 {filteredConversations.map((conversation: any) => {
-                  const user = conversation.user || {};
-                  const displayName = user.displayName || user.username || 'Unknown User';
-                  const avatarUrl = user.avatarUrl || '';
+                  const convUser = conversation.user || {};
+                  const displayName = convUser.displayName || convUser.username || 'Unknown User';
+                  const avatarUrl = convUser.avatarUrl || '';
+                  const useNftAvatar = convUser.activeProfilePicType === 'nft' && convUser.nftProfileImageUrl;
 
                   return (
                     <div
@@ -668,9 +669,9 @@ const MessagesPage: React.FC = () => {
                           setShowMobileConversationList(false); // Hide conversation list on mobile when chat is selected
                         }}
                       >
-                        {user.nftProfileTokenId && user.nftProfileImageUrl ? (
+                        {useNftAvatar ? (
                           <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
-                            <img src={user.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
+                            <img src={convUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                           </div>
                         ) : (
                           <Avatar className="h-10 w-10">
@@ -959,13 +960,14 @@ const MessagesPage: React.FC = () => {
                 const displayName = conversationUser.displayName || conversationUser.username || 'Unknown User';
                 const username = conversationUser.username || 'unknown';
                 const avatarUrl = conversationUser.avatarUrl || '';
+                const useNftAvatar = conversationUser.activeProfilePicType === 'nft' && conversationUser.nftProfileImageUrl;
 
                 return (
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       {username && username !== 'unknown' ? (
                         <Link href={`/profile/${username}`} data-testid="link-profile-avatar">
-                          {conversationUser.nftProfileTokenId && conversationUser.nftProfileImageUrl ? (
+                          {useNftAvatar ? (
                             <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40 cursor-pointer">
                               <img src={conversationUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                             </div>
@@ -979,7 +981,7 @@ const MessagesPage: React.FC = () => {
                           )}
                         </Link>
                       ) : (
-                        conversationUser.nftProfileTokenId && conversationUser.nftProfileImageUrl ? (
+                        useNftAvatar ? (
                           <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
                             <img src={conversationUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                           </div>
@@ -1093,17 +1095,40 @@ const MessagesPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {Array.isArray(messages) && messages.map((message: any) => (
+                  {Array.isArray(messages) && messages.map((message: any) => {
+                    const isMine = message.senderId === user.id;
+                    const senderUser = message.sender;
+                    const useNftInBubble = senderUser?.activeProfilePicType === 'nft' && senderUser?.nftProfileImageUrl;
+                    const avatarSrc = useNftInBubble
+                      ? senderUser.nftProfileImageUrl
+                      : senderUser?.avatarUrl || '';
+                    const senderInitial = (senderUser?.displayName || senderUser?.username || '?')[0]?.toUpperCase();
+
+                    return (
                     <div
                       key={message.id}
-                      className={`flex ${
-                        message.senderId === user.id ? "justify-end" : "justify-start"
-                      }`}
+                      className={`flex items-end gap-2 ${isMine ? "justify-end" : "justify-start"}`}
                     >
+                      {/* Avatar for received messages (left side) */}
+                      {!isMine && (
+                        <div className="flex-shrink-0">
+                          {useNftInBubble ? (
+                            <div className="h-7 w-7 rounded-md overflow-hidden border border-[#4ade80]/40">
+                              <img src={senderUser.nftProfileImageUrl} alt={senderUser.displayName} className="w-full h-full object-cover" />
+                            </div>
+                          ) : (
+                            <Avatar className="h-7 w-7">
+                              <AvatarImage src={avatarSrc} />
+                              <AvatarFallback className="text-xs">{senderInitial}</AvatarFallback>
+                            </Avatar>
+                          )}
+                        </div>
+                      )}
+
                       <div className={`max-w-xs lg:max-w-md`}>
                         <div
                           className={`rounded-lg px-4 py-2 relative group ${
-                            message.senderId === user.id
+                            isMine
                               ? "bg-green-600 text-white"
                               : "bg-muted"
                           }`}
@@ -1162,7 +1187,7 @@ const MessagesPage: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                  ))}
+                  ); })}
 
                   <div ref={messagesEndRef} />
                 </div>

@@ -2482,14 +2482,16 @@ export class DatabaseStorage implements IStorage {
               displayName: otherUser.displayName,
               avatarUrl: otherUser.avatarUrl,
               nftProfileTokenId: otherUser.nftProfileTokenId,
-              nftProfileImageUrl: otherUser.nftProfileImageUrl
+              nftProfileImageUrl: otherUser.nftProfileImageUrl,
+              activeProfilePicType: otherUser.activeProfilePicType
             },
             lastMessage: {
               id: lastMessage.id,
               content: lastMessage.content,
               createdAt: lastMessage.createdAt,
               senderId: lastMessage.senderId,
-              receiverId: lastMessage.receiverId
+              receiverId: lastMessage.receiverId,
+              isRead: lastMessage.isRead
             },
             unreadCount: unreadCount.count || 0
           });
