@@ -1377,15 +1377,6 @@ const ProfilePage = () => {
         zIndex: 1
       }}
     >
-      {/* Mobile accent color gradient overlay */}
-      <div 
-        className="absolute inset-0 md:hidden pointer-events-none"
-        style={{
-          background: `linear-gradient(180deg, ${accentColor}90 0%, ${accentColor}40 15%, transparent 45%)`,
-          zIndex: 0,
-        }}
-      />
-
       {/* Birthday Banner */}
       {(() => {
         if (!profile?.birthday) return null;
