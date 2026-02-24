@@ -98,6 +98,10 @@ const MessagesPage: React.FC = () => {
 
   const conversationsQuery = useQuery({
     queryKey: ["/api/messages/conversations"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/messages/conversations");
+      return response.json();
+    },
     enabled: !!user,
     refetchInterval: 5000,
     refetchOnWindowFocus: true,
@@ -118,6 +122,10 @@ const MessagesPage: React.FC = () => {
 
   const { data: blockedUsers = [] } = useQuery({
     queryKey: ["/api/users/blocked"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/users/blocked");
+      return response.json();
+    },
     enabled: !!user,
     refetchInterval: 5000,
   });

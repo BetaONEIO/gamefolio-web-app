@@ -7993,18 +7993,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Messaging is disabled for your account" });
       }
 
-      const rawConversations = await storage.getConversations(req.user.id);
-      const conversations = rawConversations.map((c: any) => ({
-        userId: c.userId,
-        username: c.user?.username ?? "",
-        displayName: c.user?.displayName ?? c.user?.username ?? "",
-        avatarUrl: c.user?.avatarUrl ?? null,
-        nftProfileTokenId: c.user?.nftProfileTokenId ?? null,
-        nftProfileImageUrl: c.user?.nftProfileImageUrl ?? null,
-        lastMessage: c.lastMessage?.content ?? "",
-        lastMessageTime: c.lastMessage?.createdAt ?? new Date().toISOString(),
-        isRead: (c.unreadCount ?? 0) === 0,
-      }));
+      const conversations = await storage.getConversations(req.user.id);
       res.json(conversations);
     } catch (err) {
       console.error("Error fetching conversations:", err);
