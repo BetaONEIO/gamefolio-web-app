@@ -16,8 +16,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
 
 const UploadPage = lazy(() => import("./UploadPage"));
@@ -387,7 +385,7 @@ const GamePage = () => {
                 />
               ))
             ) : contentType === 'reels' ? (
-              displayData.map((reel) => (
+              displayData.map((reel: ClipWithUser) => (
                 <VideoClipGridItem
                   key={reel.id}
                   clip={reel}
@@ -397,7 +395,7 @@ const GamePage = () => {
                 />
               ))
             ) : (
-              displayData.map((clip) => (
+              displayData.map((clip: ClipWithUser) => (
                 <VideoClipGridItem
                   key={clip.id}
                   clip={clip}
