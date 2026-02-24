@@ -457,6 +457,7 @@ const HomePage = () => {
   const [selectedGameFilter, setSelectedGameFilter] = useState<string | null>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<any>(null);
   const [, setLocation] = useLocation();
+  const screenshotsScrollRef = useRef<HTMLDivElement>(null);
   
   // Get current user from auth context
   const { user } = useAuth();
@@ -494,7 +495,7 @@ const HomePage = () => {
   const { data: latestScreenshots, isLoading: isLoadingScreenshots } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/screenshots', 'recent'],
     queryFn: async () => {
-      const response = await fetch('/api/screenshots?period=recent&limit=6');
+      const response = await fetch('/api/screenshots?period=recent&limit=12');
       if (!response.ok) {
         throw new Error('Failed to fetch latest screenshots');
       }
@@ -687,23 +688,44 @@ const HomePage = () => {
           <div className="border-b border-border/50 mb-4 sm:mb-6 md:mb-8" />
 
           {isLoadingScreenshots ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="flex gap-4 overflow-hidden pb-4 px-2">
               {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="aspect-video rounded-xl" />
+                <div key={i} className="flex-shrink-0 w-[280px] sm:w-[320px] md:w-[360px]">
+                  <Skeleton className="aspect-video rounded-xl" />
+                </div>
               ))}
             </div>
           ) : latestScreenshots && latestScreenshots.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {latestScreenshots.map((screenshot: any) => (
-                <ScreenshotCard
-                  key={screenshot.id}
-                  screenshot={screenshot}
-                  isOwnProfile={user?.id === screenshot.userId}
-                  profile={screenshot.user}
-                  showUserInfo={true}
-                  onSelect={(s: any) => setSelectedScreenshot(s)}
-                />
-              ))}
+            <div className="relative">
+              <button
+                onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft -= 360; } }}
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors hidden sm:block"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft += 360; } }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors hidden sm:block"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+              <div
+                ref={screenshotsScrollRef}
+                className="flex gap-4 overflow-x-auto scrollbar-hide pb-4 px-2 cursor-grab"
+                style={{ scrollBehavior: 'smooth' }}
+              >
+                {latestScreenshots.map((screenshot: any) => (
+                  <div key={screenshot.id} className="flex-shrink-0 w-[280px] sm:w-[320px] md:w-[360px]">
+                    <ScreenshotCard
+                      screenshot={screenshot}
+                      isOwnProfile={user?.id === screenshot.userId}
+                      profile={screenshot.user}
+                      showUserInfo={true}
+                      onSelect={(s: any) => setSelectedScreenshot(s)}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="text-center py-8 sm:py-12 bg-card/50 rounded-xl border border-border/50 mx-2">
