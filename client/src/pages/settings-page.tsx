@@ -405,6 +405,10 @@ export default function SettingsPage() {
   
   // Verification badge state - same pattern as name tags
   const [pendingVerificationBadgeId, setPendingVerificationBadgeId] = useState<number | null | undefined>(undefined);
+
+  // Font preview dialog state
+  const [fontPreviewOpen, setFontPreviewOpen] = useState(false);
+  const [previewFontValue, setPreviewFontValue] = useState<string>('default');
   
   // Crop modal state
   const [showCropModal, setShowCropModal] = useState(false);
@@ -1944,7 +1948,10 @@ export default function SettingsPage() {
                               <button
                                 key={font.value}
                                 type="button"
-                                onClick={() => setProfileData(prev => ({ ...prev, profileFont: font.value }))}
+                                onClick={() => {
+                                  setPreviewFontValue(font.value);
+                                  setFontPreviewOpen(true);
+                                }}
                                 className={`p-4 rounded-lg border-2 text-left transition-all ${
                                   isSelected
                                     ? 'border-primary bg-primary/10'
@@ -2850,6 +2857,105 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+      <Dialog open={fontPreviewOpen} onOpenChange={setFontPreviewOpen}>
+        <DialogContent className="max-w-lg p-0 overflow-hidden bg-[#0a1929] border-slate-700">
+          <DialogHeader className="px-6 pt-6 pb-0">
+            <DialogTitle className="text-white">Font Preview</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              See how <span className="font-semibold text-white">{FONT_OPTIONS.find(f => f.value === previewFontValue)?.label}</span> looks on your profile
+            </DialogDescription>
+          </DialogHeader>
+
+          {(() => {
+            const previewFont = FONT_OPTIONS.find(f => f.value === previewFontValue);
+            const previewFamily = previewFont?.family || 'system-ui, sans-serif';
+            const bgColor = profileData.backgroundColor || '#0B2232';
+            const accent = profileData.accentColor || '#4ADE80';
+
+            return (
+              <div className="mx-6 my-4 rounded-xl overflow-hidden border border-slate-700">
+                <div
+                  className="h-20 w-full relative"
+                  style={{
+                    background: signedBannerUrl
+                      ? `url(${signedBannerUrl}) center/cover`
+                      : `linear-gradient(135deg, ${bgColor} 0%, #1a3a5c 100%)`
+                  }}
+                />
+
+                <div className="relative px-5 pb-5" style={{ backgroundColor: bgColor }}>
+                  <div className="flex items-end gap-4 -mt-8 mb-3">
+                    <div className="w-16 h-16 rounded-full border-3 border-slate-800 overflow-hidden bg-slate-700 flex-shrink-0">
+                      {signedAvatarUrl ? (
+                        <img src={signedAvatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-400 text-xl font-bold">
+                          {(user?.displayName || user?.username || '?')[0]?.toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <h2
+                    className="text-xl font-bold text-white mb-0.5 truncate"
+                    style={{ fontFamily: previewFamily }}
+                  >
+                    {user?.displayName || user?.username || 'Your Name'}
+                  </h2>
+                  <p className="text-sm text-slate-400 mb-3" style={{ fontFamily: previewFamily }}>
+                    @{user?.username || 'username'}
+                  </p>
+
+                  <div className="flex gap-6 mb-3 text-sm">
+                    <div>
+                      <span className="font-bold text-white" style={{ fontFamily: previewFamily }}>40</span>
+                      <span className="text-slate-500 ml-1 text-xs uppercase" style={{ fontFamily: previewFamily }}>Uploads</span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-white" style={{ fontFamily: previewFamily }}>8</span>
+                      <span className="text-slate-500 ml-1 text-xs uppercase" style={{ fontFamily: previewFamily }}>Followers</span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-white" style={{ fontFamily: previewFamily }}>7</span>
+                      <span className="text-slate-500 ml-1 text-xs uppercase" style={{ fontFamily: previewFamily }}>Following</span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs uppercase tracking-wider mb-2" style={{ color: accent, fontFamily: previewFamily }}>
+                    Member since August 2025
+                  </p>
+
+                  {user?.bio && (
+                    <p className="text-sm text-slate-300 line-clamp-2" style={{ fontFamily: previewFamily }}>
+                      {user.bio}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          <DialogFooter className="px-6 pb-6 pt-0 gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              className="border-slate-600 text-slate-300 hover:bg-slate-800"
+              onClick={() => setFontPreviewOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="text-slate-900 font-bold"
+              style={{ backgroundColor: profileData.accentColor || '#4ADE80' }}
+              onClick={() => {
+                setProfileData(prev => ({ ...prev, profileFont: previewFontValue }));
+                setFontPreviewOpen(false);
+              }}
+            >
+              Apply Font
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </KeyboardAvoidingWrapper>
   );
 }
