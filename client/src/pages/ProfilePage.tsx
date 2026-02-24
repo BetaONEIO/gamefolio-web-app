@@ -1265,6 +1265,26 @@ const ProfilePage = () => {
   };
   const profileFontFamily = PROFILE_FONT_MAP[profile.profileFont || 'default'] || PROFILE_FONT_MAP['default'];
 
+  const FONT_EFFECT_MAP: Record<string, string> = {
+    'none': 'none',
+    'drop-shadow': '2px 2px 4px rgba(0,0,0,0.8)',
+    'hard-shadow': '3px 3px 0px rgba(0,0,0,0.9)',
+    'neon-green': '0 0 7px #00ff00, 0 0 10px #00ff00, 0 0 21px #00ff00, 0 0 42px #00ff00',
+    'neon-blue': '0 0 7px #00bfff, 0 0 10px #00bfff, 0 0 21px #00bfff, 0 0 42px #00bfff',
+    'neon-pink': '0 0 7px #ff00de, 0 0 10px #ff00de, 0 0 21px #ff00de, 0 0 42px #ff00de',
+    'neon-red': '0 0 7px #ff0000, 0 0 10px #ff0000, 0 0 21px #ff0000, 0 0 42px #ff1a1a',
+    'neon-purple': '0 0 7px #bf00ff, 0 0 10px #bf00ff, 0 0 21px #bf00ff, 0 0 42px #bf00ff',
+    'neon-yellow': '0 0 7px #ffff00, 0 0 10px #ffff00, 0 0 21px #ffff00, 0 0 42px #ffff00',
+    'fire': '0 0 4px #ff4500, 0 0 11px #ff4500, 0 0 19px #ff6600, 0 0 40px #ff6600, 0 0 80px #ff8800',
+    'ice': '0 0 5px #e0f7ff, 0 0 10px #a0d8ef, 0 0 20px #7ec8e3, 0 0 40px #45b7d1',
+    'gold': '0 0 5px #ffd700, 0 0 10px #ffc400, 0 0 20px #ffaa00, 0 0 40px #ff8c00',
+    'retro': '2px 2px 0 #ff0000, -2px -2px 0 #00bfff',
+    'outline-white': '-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff',
+    'outline-black': '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000',
+    'rainbow': '0 0 5px #ff0000, 0 0 10px #ff7700, 0 0 15px #ffff00, 0 0 20px #00ff00, 0 0 25px #0000ff, 0 0 30px #8b00ff',
+  };
+  const profileTextShadow = FONT_EFFECT_MAP[(profile as any).profileFontEffect || 'none'] || 'none';
+
   // Convert hex colors to RGB for opacity support
   const hexToRgb = (hex: string) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -1685,7 +1705,7 @@ const ProfilePage = () => {
           {/* Username and Display Name - Left aligned on Mobile */}
           <div className="flex flex-col items-start gap-0.5 mb-2 mt-8 pl-4">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold" style={{ fontFamily: profileFontFamily }}>{profile.displayName}</h1>
+              <h1 className="text-xl font-bold" style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow }}>{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
@@ -1979,7 +1999,7 @@ const ProfilePage = () => {
 
             {/* Display Name and Badges */}
             <div className="flex items-center gap-2 flex-wrap mt-8">
-              <h1 className="text-2xl font-bold" style={{ fontFamily: profileFontFamily }}>{profile.displayName}</h1>
+              <h1 className="text-2xl font-bold" style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow }}>{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}

@@ -21,7 +21,7 @@ Gamefolio is a comprehensive gaming portfolio and social platform for gamers to 
 - **ClipDialog Improvements**: Memoized navigation handlers with `useCallback`; added `clip?.videoType` to keyboard listener deps
 - **ARIA Accessibility**: Added `role`, `tabIndex`, `aria-label`, and keyboard handlers to `VideoClipCard` and `VideoPlayer` controls
 - **Scroll Memoization**: Wrapped `TrendingContentCarousel` scroll handler in `useCallback` in `HomePageSimple.tsx`
-- **Profile Appearance Customization**: Added Appearance tab to AccountSettingsPage with HexColorPicker for background color and font selector (12 Google Fonts options). `profileFont` column added to users table. Custom font applied to display name on ProfilePage (mobile + desktop views). Google Fonts loaded via index.css import.
+- **Profile Appearance Customization**: Added Appearance tab to AccountSettingsPage with HexColorPicker for background color and font selector (26 Google Fonts options including chromatic COLRv1 fonts: Nabla, Bungee Spice, Honk). `profileFont` and `profileFontEffect` columns on users table. Font effects system with 16 options (neon glows in 6 colors, drop shadow, hard shadow, fire/ice/gold glow, retro offset, white/black outline, rainbow glow). Custom font and effect applied to display name on ProfilePage (mobile + desktop views). Google Fonts loaded via index.css import.
 
 ## System Architecture
 

@@ -1688,6 +1688,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           proSubscriptionType: userWithoutPassword.proSubscriptionType || null,
           proSubscriptionEndDate: userWithoutPassword.proSubscriptionEndDate || null,
           profileFont: userWithoutPassword.profileFont || 'default',
+          profileFontEffect: userWithoutPassword.profileFontEffect || 'none',
         });
       }
     } catch (error) {
@@ -1740,6 +1741,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           proSubscriptionType: fallbackWithoutPassword.proSubscriptionType || null,
           proSubscriptionEndDate: fallbackWithoutPassword.proSubscriptionEndDate || null,
           profileFont: fallbackWithoutPassword.profileFont || 'default',
+          profileFontEffect: fallbackWithoutPassword.profileFontEffect || 'none',
         });
       }
     } catch (fallbackError) {
@@ -1789,6 +1791,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       proSubscriptionType: userWithoutPassword.proSubscriptionType || null,
       proSubscriptionEndDate: userWithoutPassword.proSubscriptionEndDate || null,
       profileFont: userWithoutPassword.profileFont || 'default',
+      profileFontEffect: userWithoutPassword.profileFontEffect || 'none',
     });
   });
 

@@ -66,6 +66,25 @@ const FONT_OPTIONS = [
   { value: 'honk', label: 'Honk', family: "'Honk', system-ui" },
 ];
 
+const FONT_EFFECTS = [
+  { value: 'none', label: 'None', textShadow: 'none' },
+  { value: 'drop-shadow', label: 'Drop Shadow', textShadow: '2px 2px 4px rgba(0,0,0,0.8)' },
+  { value: 'hard-shadow', label: 'Hard Shadow', textShadow: '3px 3px 0px rgba(0,0,0,0.9)' },
+  { value: 'neon-green', label: 'Neon Green', textShadow: '0 0 7px #00ff00, 0 0 10px #00ff00, 0 0 21px #00ff00, 0 0 42px #00ff00' },
+  { value: 'neon-blue', label: 'Neon Blue', textShadow: '0 0 7px #00bfff, 0 0 10px #00bfff, 0 0 21px #00bfff, 0 0 42px #00bfff' },
+  { value: 'neon-pink', label: 'Neon Pink', textShadow: '0 0 7px #ff00de, 0 0 10px #ff00de, 0 0 21px #ff00de, 0 0 42px #ff00de' },
+  { value: 'neon-red', label: 'Neon Red', textShadow: '0 0 7px #ff0000, 0 0 10px #ff0000, 0 0 21px #ff0000, 0 0 42px #ff1a1a' },
+  { value: 'neon-purple', label: 'Neon Purple', textShadow: '0 0 7px #bf00ff, 0 0 10px #bf00ff, 0 0 21px #bf00ff, 0 0 42px #bf00ff' },
+  { value: 'neon-yellow', label: 'Neon Yellow', textShadow: '0 0 7px #ffff00, 0 0 10px #ffff00, 0 0 21px #ffff00, 0 0 42px #ffff00' },
+  { value: 'fire', label: 'Fire Glow', textShadow: '0 0 4px #ff4500, 0 0 11px #ff4500, 0 0 19px #ff6600, 0 0 40px #ff6600, 0 0 80px #ff8800' },
+  { value: 'ice', label: 'Ice Glow', textShadow: '0 0 5px #e0f7ff, 0 0 10px #a0d8ef, 0 0 20px #7ec8e3, 0 0 40px #45b7d1' },
+  { value: 'gold', label: 'Gold Glow', textShadow: '0 0 5px #ffd700, 0 0 10px #ffc400, 0 0 20px #ffaa00, 0 0 40px #ff8c00' },
+  { value: 'retro', label: 'Retro Offset', textShadow: '2px 2px 0 #ff0000, -2px -2px 0 #00bfff' },
+  { value: 'outline-white', label: 'White Outline', textShadow: '-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff' },
+  { value: 'outline-black', label: 'Black Outline', textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000' },
+  { value: 'rainbow', label: 'Rainbow Glow', textShadow: '0 0 5px #ff0000, 0 0 10px #ff7700, 0 0 15px #ffff00, 0 0 20px #00ff00, 0 0 25px #0000ff, 0 0 30px #8b00ff' },
+];
+
 // Component to fetch SVG and render it inline with color replacement
 const InlineSvgBorder: React.FC<{
   svgUrl: string;
@@ -398,7 +417,8 @@ export default function SettingsPage() {
     profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
     profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
     profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
-    profileFont: (user as any)?.profileFont || "default"
+    profileFont: (user as any)?.profileFont || "default",
+    profileFontEffect: (user as any)?.profileFontEffect || "none"
   });
   
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -526,6 +546,7 @@ export default function SettingsPage() {
     profileData.profileBackgroundTheme !== ((user as any)?.profileBackgroundTheme || "default") ||
     profileData.profileBackgroundAnimation !== ((user as any)?.profileBackgroundAnimation || "none") ||
     profileData.profileFont !== ((user as any)?.profileFont || "default") ||
+    profileData.profileFontEffect !== ((user as any)?.profileFontEffect || "none") ||
     avatarFile !== null ||
     selectedPreviousAvatar !== null ||
     (pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId) ||
@@ -1958,17 +1979,19 @@ export default function SettingsPage() {
                         <div className="space-y-6">
                           {(() => {
                             const selectedFont = FONT_OPTIONS.find(f => f.value === profileData.profileFont);
+                            const selectedEffect = FONT_EFFECTS.find(f => f.value === profileData.profileFontEffect);
                             const fontFamily = selectedFont?.family || 'system-ui, sans-serif';
+                            const textShadow = selectedEffect?.textShadow || 'none';
                             return (
                               <div className="p-4 bg-muted/30 rounded-lg w-full flex flex-col items-center">
                                 <p
                                   className="text-3xl font-bold text-white text-center"
-                                  style={{ fontFamily }}
+                                  style={{ fontFamily, textShadow }}
                                 >
                                   {user?.displayName || user?.username || 'Your Name'}
                                 </p>
                                 <p className="text-xs text-muted-foreground mt-3">
-                                  {selectedFont?.label || 'Default'}
+                                  {selectedFont?.label || 'Default'}{selectedEffect && selectedEffect.value !== 'none' ? ` · ${selectedEffect.label}` : ''}
                                 </p>
                               </div>
                             );
@@ -2003,6 +2026,34 @@ export default function SettingsPage() {
                                 </button>
                               );
                             })}
+                          </div>
+
+                          <div className="mt-6">
+                            <h3 className="text-sm font-semibold text-muted-foreground mb-3">Font Effect</h3>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                              {FONT_EFFECTS.map((effect) => {
+                                const isSelected = profileData.profileFontEffect === effect.value;
+                                return (
+                                  <button
+                                    key={effect.value}
+                                    type="button"
+                                    onClick={() => setProfileData(prev => ({ ...prev, profileFontEffect: effect.value }))}
+                                    className={`p-3 rounded-lg border-2 text-center transition-all ${
+                                      isSelected
+                                        ? 'border-primary bg-primary/10'
+                                        : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                                    }`}
+                                  >
+                                    <p
+                                      className="text-sm font-bold text-white truncate"
+                                      style={{ textShadow: effect.textShadow }}
+                                    >
+                                      {effect.label}
+                                    </p>
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </div>
                         </div>
                       </CardContent>
