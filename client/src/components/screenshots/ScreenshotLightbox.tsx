@@ -237,8 +237,24 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
   if (isMobile) {
     return createPortal(
       <div className="fixed inset-0 z-[100] bg-background flex flex-col">
-        <div className="flex items-center justify-end px-3 py-2 flex-shrink-0">
-          <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center justify-between px-3 py-2 flex-shrink-0">
+          {hasNavigation && totalSlides > 1 ? (
+            <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto scrollbar-hide">
+              {screenshots!.map((_, i) => (
+                <div
+                  key={i}
+                  className={`rounded-full transition-all duration-300 flex-shrink-0 ${
+                    i === currentIndex
+                      ? "w-5 h-1.5 bg-primary"
+                      : "w-1.5 h-1.5 bg-muted-foreground/30"
+                  }`}
+                />
+              ))}
+            </div>
+          ) : (
+            <div />
+          )}
+          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
             {hasNavigation && (
               <span className="text-muted-foreground text-xs font-medium">
                 {currentIndex + 1} / {totalSlides}
@@ -303,22 +319,6 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
             )}
           </div>
 
-          {hasNavigation && totalSlides > 1 && (
-            <div className="flex justify-center py-2 bg-background">
-              <div className="flex items-center gap-1.5">
-                {screenshots!.map((_, i) => (
-                  <div
-                    key={i}
-                    className={`rounded-full transition-all duration-300 ${
-                      i === currentIndex
-                        ? "w-5 h-1.5 bg-primary"
-                        : "w-1.5 h-1.5 bg-muted-foreground/30"
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
 
           <div className="px-4 py-3 space-y-3">
             <div className="flex items-center justify-between pb-3 border-b border-border">
