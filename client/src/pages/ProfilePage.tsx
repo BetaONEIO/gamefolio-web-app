@@ -1235,35 +1235,37 @@ const ProfilePage = () => {
   const backgroundColor = profile.backgroundColor || '#0B2232';
   const cardColor = profile.cardColor || '#1E3A8A';
 
-  const PROFILE_FONT_MAP: Record<string, string> = {
-    'default': 'system-ui, sans-serif',
-    'inter': "'Inter', sans-serif",
-    'roboto': "'Roboto', sans-serif",
-    'poppins': "'Poppins', sans-serif",
-    'montserrat': "'Montserrat', sans-serif",
-    'oswald': "'Oswald', sans-serif",
-    'playfair': "'Playfair Display', serif",
-    'raleway': "'Raleway', sans-serif",
-    'space-grotesk': "'Space Grotesk', sans-serif",
-    'orbitron': "'Orbitron', sans-serif",
-    'press-start': "'Press Start 2P', cursive",
-    'russo-one': "'Russo One', sans-serif",
-    'bungee-shade': "'Bungee Shade', cursive",
-    'nabla': "'Nabla', cursive",
-    'silkscreen': "'Silkscreen', cursive",
-    'rubik-bubbles': "'Rubik Bubbles', cursive",
-    'monoton': "'Monoton', cursive",
-    'creepster': "'Creepster', cursive",
-    'permanent-marker': "'Permanent Marker', cursive",
-    'bangers': "'Bangers', cursive",
-    'fredoka': "'Fredoka', sans-serif",
-    'righteous': "'Righteous', cursive",
-    'bungee-inline': "'Bungee Inline', cursive",
-    'notable': "'Notable', sans-serif",
-    'bungee-spice': "'Bungee Spice', cursive",
-    'honk': "'Honk', system-ui",
+  const PROFILE_FONT_MAP: Record<string, { family: string; scale: number }> = {
+    'default': { family: 'system-ui, sans-serif', scale: 1 },
+    'inter': { family: "'Inter', sans-serif", scale: 1 },
+    'roboto': { family: "'Roboto', sans-serif", scale: 1 },
+    'poppins': { family: "'Poppins', sans-serif", scale: 1 },
+    'montserrat': { family: "'Montserrat', sans-serif", scale: 1 },
+    'oswald': { family: "'Oswald', sans-serif", scale: 1.1 },
+    'playfair': { family: "'Playfair Display', serif", scale: 1 },
+    'raleway': { family: "'Raleway', sans-serif", scale: 1 },
+    'space-grotesk': { family: "'Space Grotesk', sans-serif", scale: 1 },
+    'orbitron': { family: "'Orbitron', sans-serif", scale: 0.9 },
+    'press-start': { family: "'Press Start 2P', cursive", scale: 0.55 },
+    'russo-one': { family: "'Russo One', sans-serif", scale: 1 },
+    'bungee-shade': { family: "'Bungee Shade', cursive", scale: 0.85 },
+    'nabla': { family: "'Nabla', cursive", scale: 0.9 },
+    'silkscreen': { family: "'Silkscreen', cursive", scale: 0.75 },
+    'rubik-bubbles': { family: "'Rubik Bubbles', cursive", scale: 1 },
+    'monoton': { family: "'Monoton', cursive", scale: 1 },
+    'creepster': { family: "'Creepster', cursive", scale: 1.1 },
+    'permanent-marker': { family: "'Permanent Marker', cursive", scale: 1.05 },
+    'bangers': { family: "'Bangers', cursive", scale: 1.15 },
+    'fredoka': { family: "'Fredoka', sans-serif", scale: 1 },
+    'righteous': { family: "'Righteous', cursive", scale: 1.05 },
+    'bungee-inline': { family: "'Bungee Inline', cursive", scale: 0.85 },
+    'notable': { family: "'Notable', sans-serif", scale: 0.8 },
+    'bungee-spice': { family: "'Bungee Spice', cursive", scale: 0.85 },
+    'honk': { family: "'Honk', system-ui", scale: 0.9 },
   };
-  const profileFontFamily = PROFILE_FONT_MAP[profile.profileFont || 'default'] || PROFILE_FONT_MAP['default'];
+  const fontEntry = PROFILE_FONT_MAP[profile.profileFont || 'default'] || PROFILE_FONT_MAP['default'];
+  const profileFontFamily = fontEntry.family;
+  const profileFontScale = fontEntry.scale;
 
   const FONT_EFFECT_MAP: Record<string, string> = {
     'none': 'none',
@@ -1705,7 +1707,7 @@ const ProfilePage = () => {
           {/* Username and Display Name - Left aligned on Mobile */}
           <div className="flex flex-col items-start gap-0.5 mb-2 mt-8 pl-4">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold" style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow }}>{profile.displayName}</h1>
+              <h1 className="font-bold" style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, fontSize: `${1.25 * profileFontScale}rem`, lineHeight: `${1.75 * profileFontScale}rem` }}>{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
@@ -1999,7 +2001,7 @@ const ProfilePage = () => {
 
             {/* Display Name and Badges */}
             <div className="flex items-center gap-2 flex-wrap mt-8">
-              <h1 className="text-2xl font-bold" style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow }}>{profile.displayName}</h1>
+              <h1 className="font-bold" style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, fontSize: `${1.5 * profileFontScale}rem`, lineHeight: `${2 * profileFontScale}rem` }}>{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}

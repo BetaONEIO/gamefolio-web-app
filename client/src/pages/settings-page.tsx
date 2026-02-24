@@ -38,32 +38,32 @@ import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
 
 const FONT_OPTIONS = [
-  { value: 'default', label: 'Default', family: 'system-ui, sans-serif' },
-  { value: 'inter', label: 'Inter', family: "'Inter', sans-serif" },
-  { value: 'roboto', label: 'Roboto', family: "'Roboto', sans-serif" },
-  { value: 'poppins', label: 'Poppins', family: "'Poppins', sans-serif" },
-  { value: 'montserrat', label: 'Montserrat', family: "'Montserrat', sans-serif" },
-  { value: 'oswald', label: 'Oswald', family: "'Oswald', sans-serif" },
-  { value: 'playfair', label: 'Playfair Display', family: "'Playfair Display', serif" },
-  { value: 'raleway', label: 'Raleway', family: "'Raleway', sans-serif" },
-  { value: 'space-grotesk', label: 'Space Grotesk', family: "'Space Grotesk', sans-serif" },
-  { value: 'orbitron', label: 'Orbitron', family: "'Orbitron', sans-serif" },
-  { value: 'press-start', label: 'Press Start 2P', family: "'Press Start 2P', cursive" },
-  { value: 'russo-one', label: 'Russo One', family: "'Russo One', sans-serif" },
-  { value: 'bungee-shade', label: 'Bungee Shade', family: "'Bungee Shade', cursive" },
-  { value: 'nabla', label: 'Nabla', family: "'Nabla', cursive" },
-  { value: 'silkscreen', label: 'Silkscreen', family: "'Silkscreen', cursive" },
-  { value: 'rubik-bubbles', label: 'Rubik Bubbles', family: "'Rubik Bubbles', cursive" },
-  { value: 'monoton', label: 'Monoton', family: "'Monoton', cursive" },
-  { value: 'creepster', label: 'Creepster', family: "'Creepster', cursive" },
-  { value: 'permanent-marker', label: 'Permanent Marker', family: "'Permanent Marker', cursive" },
-  { value: 'bangers', label: 'Bangers', family: "'Bangers', cursive" },
-  { value: 'fredoka', label: 'Fredoka', family: "'Fredoka', sans-serif" },
-  { value: 'righteous', label: 'Righteous', family: "'Righteous', cursive" },
-  { value: 'bungee-inline', label: 'Bungee Inline', family: "'Bungee Inline', cursive" },
-  { value: 'notable', label: 'Notable', family: "'Notable', sans-serif" },
-  { value: 'bungee-spice', label: 'Bungee Spice', family: "'Bungee Spice', cursive" },
-  { value: 'honk', label: 'Honk', family: "'Honk', system-ui" },
+  { value: 'default', label: 'Default', family: 'system-ui, sans-serif', scale: 1 },
+  { value: 'inter', label: 'Inter', family: "'Inter', sans-serif", scale: 1 },
+  { value: 'roboto', label: 'Roboto', family: "'Roboto', sans-serif", scale: 1 },
+  { value: 'poppins', label: 'Poppins', family: "'Poppins', sans-serif", scale: 1 },
+  { value: 'montserrat', label: 'Montserrat', family: "'Montserrat', sans-serif", scale: 1 },
+  { value: 'oswald', label: 'Oswald', family: "'Oswald', sans-serif", scale: 1.1 },
+  { value: 'playfair', label: 'Playfair Display', family: "'Playfair Display', serif", scale: 1 },
+  { value: 'raleway', label: 'Raleway', family: "'Raleway', sans-serif", scale: 1 },
+  { value: 'space-grotesk', label: 'Space Grotesk', family: "'Space Grotesk', sans-serif", scale: 1 },
+  { value: 'orbitron', label: 'Orbitron', family: "'Orbitron', sans-serif", scale: 0.9 },
+  { value: 'press-start', label: 'Press Start 2P', family: "'Press Start 2P', cursive", scale: 0.55 },
+  { value: 'russo-one', label: 'Russo One', family: "'Russo One', sans-serif", scale: 1 },
+  { value: 'bungee-shade', label: 'Bungee Shade', family: "'Bungee Shade', cursive", scale: 0.85 },
+  { value: 'nabla', label: 'Nabla', family: "'Nabla', cursive", scale: 0.9 },
+  { value: 'silkscreen', label: 'Silkscreen', family: "'Silkscreen', cursive", scale: 0.75 },
+  { value: 'rubik-bubbles', label: 'Rubik Bubbles', family: "'Rubik Bubbles', cursive", scale: 1 },
+  { value: 'monoton', label: 'Monoton', family: "'Monoton', cursive", scale: 1 },
+  { value: 'creepster', label: 'Creepster', family: "'Creepster', cursive", scale: 1.1 },
+  { value: 'permanent-marker', label: 'Permanent Marker', family: "'Permanent Marker', cursive", scale: 1.05 },
+  { value: 'bangers', label: 'Bangers', family: "'Bangers', cursive", scale: 1.15 },
+  { value: 'fredoka', label: 'Fredoka', family: "'Fredoka', sans-serif", scale: 1 },
+  { value: 'righteous', label: 'Righteous', family: "'Righteous', cursive", scale: 1.05 },
+  { value: 'bungee-inline', label: 'Bungee Inline', family: "'Bungee Inline', cursive", scale: 0.85 },
+  { value: 'notable', label: 'Notable', family: "'Notable', sans-serif", scale: 0.8 },
+  { value: 'bungee-spice', label: 'Bungee Spice', family: "'Bungee Spice', cursive", scale: 0.85 },
+  { value: 'honk', label: 'Honk', family: "'Honk', system-ui", scale: 0.9 },
 ];
 
 const FONT_EFFECTS = [
@@ -1981,12 +1981,13 @@ export default function SettingsPage() {
                             const selectedFont = FONT_OPTIONS.find(f => f.value === profileData.profileFont);
                             const selectedEffect = FONT_EFFECTS.find(f => f.value === profileData.profileFontEffect);
                             const fontFamily = selectedFont?.family || 'system-ui, sans-serif';
+                            const fontScale = selectedFont?.scale || 1;
                             const textShadow = selectedEffect?.textShadow || 'none';
                             return (
                               <div className="p-4 bg-muted/30 rounded-lg w-full flex flex-col items-center">
                                 <p
-                                  className="text-3xl font-bold text-white text-center"
-                                  style={{ fontFamily, textShadow }}
+                                  className="font-bold text-white text-center"
+                                  style={{ fontFamily, textShadow, fontSize: `${1.875 * fontScale}rem`, lineHeight: `${2.25 * fontScale}rem` }}
                                 >
                                   {user?.displayName || user?.username || 'Your Name'}
                                 </p>
