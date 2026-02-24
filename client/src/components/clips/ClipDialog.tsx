@@ -252,12 +252,12 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
       
       if (isReel) {
         switch (e.key) {
-          case 'ArrowUp':
+          case 'ArrowLeft':
             e.preventDefault();
             e.stopPropagation();
             handlePreviousWithTransition();
             break;
-          case 'ArrowDown':
+          case 'ArrowRight':
             e.preventDefault();
             e.stopPropagation();
             handleNextWithTransition();
@@ -296,6 +296,35 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
       document.removeEventListener('keydown', handleKeyDown, { capture: true });
     };
   }, [isOpen, showNavigation, onNext, onPrevious, onClose, isTransitioning, isFullscreen, clip?.videoType]);
+
+  useEffect(() => {
+    if (!isOpen || !showNavigation) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (isTransitioning) return;
+      const target = e.target as HTMLElement;
+      const isScrollableElement = target.closest('.overflow-y-auto, .overflow-auto, textarea, [contenteditable]');
+      if (isScrollableElement) return;
+      
+      e.preventDefault();
+      if (e.deltaY > 0 || e.deltaX > 0) {
+        handleNextWithTransition();
+      } else if (e.deltaY < 0 || e.deltaX < 0) {
+        handlePreviousWithTransition();
+      }
+    };
+
+    const dialogEl = dialogRef.current;
+    if (dialogEl) {
+      dialogEl.addEventListener('wheel', handleWheel, { passive: false });
+    }
+
+    return () => {
+      if (dialogEl) {
+        dialogEl.removeEventListener('wheel', handleWheel);
+      }
+    };
+  }, [isOpen, showNavigation, isTransitioning, handleNextWithTransition, handlePreviousWithTransition]);
 
   // Follow functionality
   const queryClient = useQueryClient();
@@ -1085,8 +1114,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           <>
             {onPrevious && (
               <button
-                onClick={(e) => { e.stopPropagation(); handlePreviousWithTransition(); }}
-                className="fixed left-2 top-1/2 -translate-y-1/2 z-[60] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); handlePreviousWithTransition(); }}
+                onPointerDown={(e) => e.stopPropagation()}
+                className="fixed left-4 top-1/2 -translate-y-1/2 z-[70] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors pointer-events-auto"
                 aria-label="Previous"
               >
                 <ChevronLeft className="h-7 w-7" />
@@ -1094,8 +1124,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             )}
             {onNext && (
               <button
-                onClick={(e) => { e.stopPropagation(); handleNextWithTransition(); }}
-                className="fixed right-2 top-1/2 -translate-y-1/2 z-[60] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleNextWithTransition(); }}
+                onPointerDown={(e) => e.stopPropagation()}
+                className="fixed right-4 top-1/2 -translate-y-1/2 z-[70] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors pointer-events-auto"
                 aria-label="Next"
               >
                 <ChevronRight className="h-7 w-7" />

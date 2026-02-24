@@ -678,6 +678,9 @@ const HomePage = () => {
         <section className="px-4 sm:px-6 md:px-8 pt-6 sm:pt-8">
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-xl sm:text-2xl font-bold">Latest Screenshots</h2>
+            <Link href="/latest-screenshots" className="text-primary text-sm font-medium hover:underline flex items-center">
+              View all <ChevronRight className="h-4 w-4 ml-1" />
+            </Link>
           </div>
           <div className="border-b border-border/50 mb-4 sm:mb-6 md:mb-8" />
 
@@ -696,6 +699,12 @@ const HomePage = () => {
                   isOwnProfile={user?.id === screenshot.userId}
                   profile={screenshot.user}
                   showUserInfo={true}
+                  onSelect={(s: any) => {
+                    const username = s.user?.username;
+                    if (username) {
+                      setLocation(`/@${username}/screenshots/${s.id}`);
+                    }
+                  }}
                 />
               ))}
             </div>

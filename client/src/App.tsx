@@ -64,6 +64,7 @@ const OnboardingPage = React.lazy(() => import("./pages/onboarding-page"));
 const MessagesPage = React.lazy(() => import("./pages/MessagesPage"));
 const LatestReelsPage = React.lazy(() => import("./pages/LatestReelsPage"));
 const LatestClipsPage = React.lazy(() => import("./pages/LatestClipsPage"));
+const LatestScreenshotsPage = React.lazy(() => import("@/pages/LatestScreenshotsPage"));
 const NotFound = React.lazy(() => import("@/pages/not-found"));
 const AdminPage = React.lazy(() => import("./pages/AdminPage"));
 const AdminContentFilter = React.lazy(() => import("./pages/AdminContentFilter"));
@@ -314,6 +315,7 @@ function Router() {
           <ProtectedRoute path="/messages" component={MessagesPage} />
           <ProtectedRoute path="/latest-reels" component={LatestReelsPage} />
           <ProtectedRoute path="/latest-clips" component={LatestClipsPage} />
+          <ProtectedRoute path="/latest-screenshots" component={LatestScreenshotsPage} />
 
           <AdminProtectedRoute path="/admin" component={AdminPage} />
           <AdminProtectedRoute path="/admin/content-filter" component={AdminContentFilter} />
