@@ -16,6 +16,7 @@ import { GamefolioShareDialog } from "./GamefolioShareDialog";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import NftProfilePopup from "@/components/nft/NftProfilePopup";
+import { useProfilePictureLightbox, ProfilePictureLightbox } from "@/components/ui/profile-picture-lightbox";
 
 const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
   streamer: { label: "Streamer", icon: Video, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
@@ -58,6 +59,9 @@ const ProfileHeader = ({
   const { user } = useAuth();
   const { isOpen, actionType, openDialog, closeDialog } = useJoinDialog();
   const [nftPopup, setNftPopup] = useState<{ userId: number; tokenId: number; imageUrl: string; anchorRect: DOMRect | null } | null>(null);
+  const { lightboxData, openLightbox, closeLightbox } = useProfilePictureLightbox();
+  
+  const isNftProfileActive = !!(profile?.nftProfileTokenId && profile?.nftProfileImageUrl && (profile?.activeProfilePicType === 'nft' || !profile?.activeProfilePicType));
 
   const { data: nameTagData } = useQuery<{ nameTag: NameTag | null }>({
     queryKey: ['/api/user', profile.id, 'name-tag'],
@@ -132,10 +136,16 @@ const ProfileHeader = ({
               className="shadow-lg"
               borderIntensity="strong"
               showAvatarBorderOverlay={true}
-              onNftClick={(userId, tokenId, imageUrl, event) => {
+              onNftClick={isNftProfileActive ? (userId, tokenId, imageUrl, event) => {
                 const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
                 setNftPopup({ userId, tokenId, imageUrl, anchorRect: rect });
-              }}
+              } : undefined}
+              onClick={!isNftProfileActive ? () => {
+                const avatarUrl = profile.avatarUrl || '';
+                if (avatarUrl) {
+                  openLightbox(avatarUrl, profile.displayName || profile.username, profile.username);
+                }
+              } : undefined}
             />
             
             {/* Collections Tab */}
@@ -373,6 +383,14 @@ const ProfileHeader = ({
           username={profile.username}
         />
       )}
+      
+      <ProfilePictureLightbox
+        isOpen={lightboxData.isOpen}
+        onClose={closeLightbox}
+        avatarUrl={lightboxData.avatarUrl}
+        displayName={lightboxData.displayName}
+        username={lightboxData.username}
+      />
     </div>
   );
 };

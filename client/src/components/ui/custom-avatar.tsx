@@ -251,6 +251,7 @@ interface CustomAvatarProps {
   borderIntensity?: "subtle" | "normal" | "strong";
   showAvatarBorderOverlay?: boolean;
   onNftClick?: (userId: number, tokenId: number, imageUrl: string, event: React.MouseEvent) => void;
+  onClick?: (event: React.MouseEvent) => void;
 }
 
 const sizeClasses = {
@@ -296,7 +297,8 @@ export const CustomAvatar = ({
   showBorder = true,
   borderIntensity = "normal",
   showAvatarBorderOverlay = true,
-  onNftClick
+  onNftClick,
+  onClick
 }: CustomAvatarProps) => {
   const borderColor = 'hsl(var(--primary))';
   const safeDisplayName = user?.displayName || user?.username || "?";
@@ -397,7 +399,7 @@ export const CustomAvatar = ({
     const solidColor = user?.avatarBorderColor || borderColor;
     const solidBorderWidth = (size === 'sm' || size === 'md') ? 3 : 4;
     return (
-      <div className={`relative inline-flex items-center justify-center ${className}`}>
+      <div className={`relative inline-flex items-center justify-center ${className} ${onClick ? 'cursor-pointer' : ''}`} onClick={onClick}>
         <Avatar 
           className={`${sizeClasses[size]} transition-all duration-300 rounded-full`}
           style={{
@@ -420,7 +422,7 @@ export const CustomAvatar = ({
 
   if (hasAvatarBorderOverlay) {
     return (
-      <div className={`relative inline-flex items-center justify-center ${sizeClasses[size]} ${className}`} style={{ overflow: 'visible' }}>
+      <div className={`relative inline-flex items-center justify-center ${sizeClasses[size]} ${className} ${onClick ? 'cursor-pointer' : ''}`} style={{ overflow: 'visible' }} onClick={onClick}>
         {/* Glow effect behind the profile picture - subtle glow matching border color */}
         <div 
           className="absolute inset-0 rounded-full"
@@ -468,11 +470,12 @@ export const CustomAvatar = ({
   
   return (
     <Avatar 
-      className={`${sizeClasses[size]} transition-all duration-300 rounded-full ${className}`}
+      className={`${sizeClasses[size]} transition-all duration-300 rounded-full ${className} ${onClick ? 'cursor-pointer' : ''}`}
       style={showBorder ? {
         boxShadow: borderStyles[borderIntensity](borderColor),
         ...(showDefaultCircleBorder ? { border: '2px solid hsl(var(--primary))', padding: '1px' } : {})
       } : {}}
+      onClick={onClick}
     >
       <AvatarImage src={avatarSignedUrl || user?.avatarUrl || ""} alt={displayName} className="rounded-full object-cover" />
       <AvatarFallback className="bg-primary/20 text-foreground font-semibold rounded-full">
