@@ -183,7 +183,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
         </div>
         <div className="border-b border-border/50 mb-4 sm:mb-6 md:mb-8" />
         <div className="relative">
-          <div className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide pb-4 px-2 sm:px-8">
+          <div className="flex gap-3 sm:gap-4 md:gap-6 overflow-x-auto scrollbar-hide pb-4 px-2 sm:px-4 md:px-8 py-2">
             {Array(6).fill(0).map((_, i) => (
               <div 
                 key={i}
@@ -295,7 +295,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
           {/* Carousel Container */}
           <div 
             ref={containerRef}
-            className={`flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide pb-4 px-2 sm:px-8 select-none ${
+            className={`flex gap-3 sm:gap-4 md:gap-6 overflow-x-auto scrollbar-hide pb-4 px-2 sm:px-4 md:px-8 py-2 select-none ${
               isDragging ? 'cursor-grabbing' : 'cursor-grab'
             }`}
             style={{ scrollBehavior: isDragging ? 'auto' : 'smooth' }}
@@ -317,7 +317,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
                   clip={clip}
                   userId={actualUserId}
                   data-testid={`clip-recommended-${clip.id}`}
-                  compact={contentType === 'clips'}
+                  compact={false}
                 />
               </div>
             ))}
