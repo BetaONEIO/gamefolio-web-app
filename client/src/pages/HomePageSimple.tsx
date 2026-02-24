@@ -722,6 +722,8 @@ const HomePage = () => {
         screenshot={selectedScreenshot}
         onClose={() => setSelectedScreenshot(null)}
         currentUserId={user?.id}
+        screenshots={latestScreenshots || []}
+        onNavigate={(s: any) => setSelectedScreenshot(s)}
       />
     </div>
   );

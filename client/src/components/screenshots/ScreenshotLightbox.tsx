@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useSignedUrl } from "@/hooks/use-signed-url";
@@ -9,7 +9,7 @@ import { FireButton } from "@/components/engagement/FireButton";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { formatDistance } from "date-fns";
 import { Link } from "wouter";
-import { Eye, Clock, MessageSquare, Share2, User as UserIcon, UserPlus, UserCheck } from "lucide-react";
+import { Eye, Clock, MessageSquare, Share2, User as UserIcon, UserPlus, UserCheck, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Game, Screenshot } from "@shared/schema";
 
 const ScreenshotShareDialog = React.lazy(() => import("@/components/screenshot/ScreenshotShareDialog").then(m => ({ default: m.ScreenshotShareDialog })));
@@ -19,9 +19,11 @@ interface ScreenshotLightboxProps {
   screenshot: any | null;
   onClose: () => void;
   currentUserId?: number;
+  screenshots?: any[];
+  onNavigate?: (screenshot: any) => void;
 }
 
-export function ScreenshotLightbox({ screenshot, onClose, currentUserId }: ScreenshotLightboxProps) {
+export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screenshots, onNavigate }: ScreenshotLightboxProps) {
   const { signedUrl } = useSignedUrl(screenshot?.imageUrl);
   const avatarUrl = screenshot?.user?.avatarUrl;
   const { signedUrl: avatarSignedUrl } = useSignedUrl(avatarUrl);
@@ -35,6 +37,36 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId }: Scree
 
   const screenshotUser = screenshot?.user;
   const isOwnContent = currentUserId === screenshot?.userId;
+
+  const currentIndex = screenshots && screenshot ? screenshots.findIndex((s: any) => s.id === screenshot.id) : -1;
+  const hasNavigation = screenshots && screenshots.length > 1 && onNavigate;
+  const hasPrevious = hasNavigation && currentIndex > 0;
+  const hasNext = hasNavigation && currentIndex < (screenshots?.length || 0) - 1;
+
+  const handlePrevious = useCallback(() => {
+    if (!screenshots || !onNavigate || currentIndex <= 0) return;
+    onNavigate(screenshots[currentIndex - 1]);
+  }, [screenshots, onNavigate, currentIndex]);
+
+  const handleNext = useCallback(() => {
+    if (!screenshots || !onNavigate || currentIndex >= screenshots.length - 1) return;
+    onNavigate(screenshots[currentIndex + 1]);
+  }, [screenshots, onNavigate, currentIndex]);
+
+  useEffect(() => {
+    if (!screenshot || !hasNavigation) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft' && hasPrevious) {
+        e.preventDefault();
+        handlePrevious();
+      } else if (e.key === 'ArrowRight' && hasNext) {
+        e.preventDefault();
+        handleNext();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [screenshot, hasNavigation, hasPrevious, hasNext, handlePrevious, handleNext]);
 
   const { data: followStatus } = useQuery({
     queryKey: ['/api/follow/status', screenshotUser?.id],
@@ -85,6 +117,26 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId }: Scree
             height: 16px !important;
           }
         `}</style>
+
+        {hasPrevious && (
+          <button
+            onClick={(e) => { e.stopPropagation(); handlePrevious(); }}
+            className="fixed left-4 top-1/2 -translate-y-1/2 z-[70] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
+            aria-label="Previous screenshot"
+          >
+            <ChevronLeft className="h-7 w-7" />
+          </button>
+        )}
+        {hasNext && (
+          <button
+            onClick={(e) => { e.stopPropagation(); handleNext(); }}
+            className="fixed right-4 top-1/2 -translate-y-1/2 z-[70] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
+            aria-label="Next screenshot"
+          >
+            <ChevronRight className="h-7 w-7" />
+          </button>
+        )}
+
         <div className="flex flex-col lg:flex-row h-auto lg:h-full min-h-full">
           <div className="bg-black flex items-center justify-center w-full lg:w-[75%] h-[50vh] lg:h-full flex-shrink-0">
             <img

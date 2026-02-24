@@ -43,7 +43,9 @@ import {
   Coffee,
   Scroll,
   Pin,
-  Hexagon
+  Hexagon,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -3207,9 +3209,8 @@ const ProfilePage = () => {
         {/* Screenshot Lightbox Modal - Enhanced to match ClipDialog */}
       <Dialog open={!!selectedScreenshot} onOpenChange={() => {
         setSelectedScreenshot(null);
-        // Dialog closes without navigation - stays on same page
       }}>
-        <DialogContent className="max-w-[95%] w-[95%] p-0 bg-background text-foreground max-h-[95vh] h-[95vh] overflow-y-auto lg:overflow-hidden screenshot-dialog-close">
+        <DialogContent className="max-w-[80%] w-[80%] p-0 bg-background text-foreground max-h-[76vh] h-[76vh] overflow-y-auto lg:overflow-hidden screenshot-dialog-close">
           <style>{`
             .screenshot-dialog-close > button[type="button"] {
               background: rgba(0,0,0,0.4) !important;
@@ -3219,8 +3220,8 @@ const ProfilePage = () => {
               opacity: 1 !important;
               right: 12px !important;
               top: 12px !important;
-              width: 40px !important;
-              height: 40px !important;
+              width: 32px !important;
+              height: 32px !important;
               display: flex !important;
               align-items: center !important;
               justify-content: center !important;
@@ -3230,13 +3231,35 @@ const ProfilePage = () => {
               background: rgba(0,0,0,0.6) !important;
             }
             .screenshot-dialog-close > button[type="button"] svg {
-              width: 20px !important;
-              height: 20px !important;
+              width: 16px !important;
+              height: 16px !important;
             }
           `}</style>
-          {selectedScreenshot && (
+          {selectedScreenshot && (() => {
+            const currentIdx = screenshots ? screenshots.findIndex(s => s.id === selectedScreenshot.id) : -1;
+            const hasPrev = screenshots && screenshots.length > 1 && currentIdx > 0;
+            const hasNextItem = screenshots && screenshots.length > 1 && currentIdx < (screenshots?.length || 0) - 1;
+            return (
+            <>
+            {hasPrev && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setSelectedScreenshot(screenshots![currentIdx - 1]); }}
+                className="fixed left-4 top-1/2 -translate-y-1/2 z-[70] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
+                aria-label="Previous screenshot"
+              >
+                <ChevronLeft className="h-7 w-7" />
+              </button>
+            )}
+            {hasNextItem && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setSelectedScreenshot(screenshots![currentIdx + 1]); }}
+                className="fixed right-4 top-1/2 -translate-y-1/2 z-[70] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
+                aria-label="Next screenshot"
+              >
+                <ChevronRight className="h-7 w-7" />
+              </button>
+            )}
             <div className="flex flex-col lg:flex-row h-auto lg:h-full min-h-full">
-              {/* Left side - Image display */}
               <div className="bg-black flex items-center justify-center w-full lg:w-[75%] h-[50vh] lg:h-full flex-shrink-0">
                 <img
                   src={screenshotSignedUrl || selectedScreenshot.imageUrl}
@@ -3245,10 +3268,8 @@ const ProfilePage = () => {
                 />
               </div>
 
-              {/* Right side - Info and comments */}
               <div className="flex flex-col w-full lg:w-[25%] lg:h-full">
-                {/* Header with username */}
-                <div className="border-b border-border p-4 flex items-center justify-between">
+                <div className="border-b border-border p-4 pr-12">
                   <div className="flex items-center">
                     <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3">
                       {profileAvatarSignedUrl ? (
@@ -3263,10 +3284,10 @@ const ProfilePage = () => {
                     </div>
                     <Link href={`/profile/${profile?.username}`} onClick={(e: React.MouseEvent) => {
                       e.stopPropagation();
-                      setSelectedScreenshot(null); // Close the dialog when navigating to profile
+                      setSelectedScreenshot(null);
                     }}>
-                      <div className="text-muted-foreground flex items-center hover:text-primary transition-colors cursor-pointer">
-                        @{profile?.username}
+                      <div className="text-white flex items-center hover:text-primary transition-colors cursor-pointer font-medium">
+                        {profile?.displayName || profile?.username}
                       </div>
                     </Link>
                   </div>
@@ -3366,7 +3387,9 @@ const ProfilePage = () => {
                 </div>
               </div>
             </div>
-          )}
+            </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
