@@ -421,7 +421,7 @@ const HomePage = () => {
                       alt={slide.title}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/70">
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent">
                       <div className="flex flex-col items-start justify-center h-full max-w-3xl p-8 md:p-12">
                         <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight drop-shadow-md">
                           {slide.title}
@@ -481,7 +481,7 @@ const HomePage = () => {
             )}
           </div>
           {(!activeSlides || activeSlides.length === 0) && (
-            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/70">
+            <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent">
               <div className="flex flex-col items-start justify-center h-full max-w-3xl p-8 md:p-12">
                 <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight drop-shadow-md">
                   Build Your Gamefolio
