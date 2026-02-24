@@ -1806,7 +1806,7 @@ export default function StorePage() {
                         <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
                           <div className="bg-black/70 rounded-lg px-3 py-2 flex flex-col items-center gap-1">
                             <Lock className="w-5 h-5 text-amber-400" />
-                            <span className="text-[10px] text-amber-300 font-medium">Pro Only</span>
+                            <span className="text-[10px] text-amber-300 font-medium">{border.owned ? 'Unlock Pro to access' : 'Pro Only'}</span>
                           </div>
                         </div>
                       )}

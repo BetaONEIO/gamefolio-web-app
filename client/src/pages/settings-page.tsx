@@ -1672,11 +1672,13 @@ export default function SettingsPage() {
                       <TabsList className="w-full grid grid-cols-2 mb-4">
                         <TabsTrigger value="static" className="text-xs md:text-sm">Static</TabsTrigger>
                         <TabsTrigger value="animated" className="text-xs md:text-sm relative">
-                          <img 
-                            src="/assets/pro-badge.png" 
-                            alt="PRO" 
-                            className="absolute -top-4 left-1/2 -translate-x-1/2 h-5 w-auto"
-                          />
+                          {!user?.isPro && (
+                            <img 
+                              src="/assets/pro-badge.png" 
+                              alt="PRO" 
+                              className="absolute -top-4 left-1/2 -translate-x-1/2 h-5 w-auto"
+                            />
+                          )}
                           Animated
                         </TabsTrigger>
                       </TabsList>
@@ -1695,7 +1697,7 @@ export default function SettingsPage() {
                               </div>
                             )}
                             
-                            <div className={`grid grid-cols-3 md:grid-cols-4 gap-3 ${isLocked ? 'blur-sm pointer-events-none select-none' : ''}`}>
+                            <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
                               {/* None option - only show in first tab */}
                               {category === 'static' && (
                                 <div
@@ -1757,8 +1759,8 @@ export default function SettingsPage() {
                                     key={border.id}
                                     data-testid={`border-select-${border.id}`}
                                     className={`
-                                      cursor-pointer rounded-md border-2 p-2 relative transition-all flex flex-col items-center
-                                      ${selectedBorderId === border.id ? 'border-primary ring-2 ring-primary/50 bg-primary/10' : 'border-muted hover:border-primary/50'}
+                                      rounded-md border-2 p-2 relative transition-all flex flex-col items-center
+                                      ${isLocked ? 'cursor-default border-muted' : 'cursor-pointer ' + (selectedBorderId === border.id ? 'border-primary ring-2 ring-primary/50 bg-primary/10' : 'border-muted hover:border-primary/50')}
                                     `}
                                     onClick={() => {
                                       if (isLocked) return;
@@ -1778,10 +1780,18 @@ export default function SettingsPage() {
                                         color="#ffffff"
                                         className="absolute inset-0 pointer-events-none [&>svg]:w-full [&>svg]:h-full"
                                       />
+                                      {isLocked && (
+                                        <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
+                                          <Lock className="h-5 w-5 text-green-400" />
+                                        </div>
+                                      )}
                                     </div>
                                     <span className="text-xs text-center mt-1 truncate w-full">
                                       {border.name}
                                     </span>
+                                    {isLocked && (
+                                      <span className="text-[10px] text-green-500 text-center leading-tight mt-0.5">Upgrade Pro</span>
+                                    )}
                                   </div>
                                 ))}
                               
