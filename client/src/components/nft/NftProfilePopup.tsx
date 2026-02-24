@@ -46,53 +46,6 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
   const popupRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 
-  const calculatePosition = useCallback(() => {
-    if (!anchorRect || !popupRef.current) return;
-    const popup = popupRef.current;
-    const popupWidth = window.innerWidth >= 768 ? (manyTraits ? 860 : 680) : 340;
-    const popupHeight = popupRef.current?.offsetHeight || 500;
-    const gap = 16;
-    const viewportW = window.innerWidth;
-    const viewportH = window.innerHeight;
-    const padding = 20;
-
-    // Default: try to place to the right of the avatar
-    let left = anchorRect.right + gap;
-    // Align top of popup with top of avatar
-    let top = anchorRect.top;
-
-    // If it doesn't fit on the right, try the left side
-    if (left + popupWidth > viewportW - padding) {
-      left = anchorRect.left - popupWidth - gap;
-    }
-
-    // Ensure it doesn't go off screen horizontally
-    if (left < padding) left = padding;
-    if (left + popupWidth > viewportW - padding) left = viewportW - popupWidth - padding;
-
-    // Ensure it doesn't go off screen vertically
-    if (top + popupHeight > viewportH - padding) {
-      top = viewportH - popupHeight - padding;
-    }
-    if (top < padding) top = padding;
-
-    setPosition({ top, left });
-  }, [anchorRect, manyTraits]);
-
-  useEffect(() => {
-    if (anchorRect) {
-      requestAnimationFrame(calculatePosition);
-    }
-  }, [anchorRect, calculatePosition]);
-
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleEsc);
-    return () => document.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
-
   const { data, isLoading } = useQuery<{
     hasNftProfile: boolean;
     tokenId: number;
@@ -115,6 +68,47 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
 
   const allAttributes = metadata?.attributes || [];
   const manyTraits = allAttributes.length > 4;
+
+  const calculatePosition = useCallback(() => {
+    if (!anchorRect || !popupRef.current) return;
+    const popupWidth = window.innerWidth >= 768 ? (manyTraits ? 860 : 680) : 340;
+    const popupHeight = popupRef.current?.offsetHeight || 500;
+    const gap = 16;
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+    const padding = 20;
+
+    let left = anchorRect.right + gap;
+    let top = anchorRect.top;
+
+    if (left + popupWidth > viewportW - padding) {
+      left = anchorRect.left - popupWidth - gap;
+    }
+
+    if (left < padding) left = padding;
+    if (left + popupWidth > viewportW - padding) left = viewportW - popupWidth - padding;
+
+    if (top + popupHeight > viewportH - padding) {
+      top = viewportH - popupHeight - padding;
+    }
+    if (top < padding) top = padding;
+
+    setPosition({ top, left });
+  }, [anchorRect, manyTraits]);
+
+  useEffect(() => {
+    if (anchorRect) {
+      requestAnimationFrame(calculatePosition);
+    }
+  }, [anchorRect, calculatePosition]);
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [onClose]);
 
   const hasAnchor = !!anchorRect;
 
