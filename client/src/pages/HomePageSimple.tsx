@@ -458,6 +458,9 @@ const HomePage = () => {
   const [selectedScreenshot, setSelectedScreenshot] = useState<any>(null);
   const [, setLocation] = useLocation();
   const screenshotsScrollRef = useRef<HTMLDivElement>(null);
+  const [screenshotsDragging, setScreenshotsDragging] = useState(false);
+  const [screenshotsDragStart, setScreenshotsDragStart] = useState(0);
+  const [screenshotsScrollStart, setScreenshotsScrollStart] = useState(0);
   
   // Get current user from auth context
   const { user } = useAuth();
@@ -711,8 +714,23 @@ const HomePage = () => {
               </button>
               <div
                 ref={screenshotsScrollRef}
-                className="flex gap-5 overflow-x-auto scrollbar-hide pb-4 cursor-grab"
-                style={{ scrollBehavior: 'smooth' }}
+                className={`flex gap-5 overflow-x-auto scrollbar-hide pb-4 select-none ${screenshotsDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                style={{ scrollBehavior: screenshotsDragging ? 'auto' : 'smooth' }}
+                onMouseDown={(e) => {
+                  if (!screenshotsScrollRef.current) return;
+                  setScreenshotsDragging(true);
+                  setScreenshotsDragStart(e.clientX);
+                  setScreenshotsScrollStart(screenshotsScrollRef.current.scrollLeft);
+                  e.preventDefault();
+                }}
+                onMouseMove={(e) => {
+                  if (!screenshotsDragging || !screenshotsScrollRef.current) return;
+                  e.preventDefault();
+                  const dragDistance = e.clientX - screenshotsDragStart;
+                  screenshotsScrollRef.current.scrollLeft = screenshotsScrollStart - dragDistance;
+                }}
+                onMouseUp={() => setScreenshotsDragging(false)}
+                onMouseLeave={() => setScreenshotsDragging(false)}
               >
                 {latestScreenshots.map((screenshot: any) => (
                   <div key={screenshot.id} className="flex-shrink-0 w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px]">
