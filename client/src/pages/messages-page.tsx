@@ -104,6 +104,7 @@ export default function MessagesPage() {
   const { data: conversations = [] } = useQuery<Conversation[]>({
     queryKey: ["/api/messages/conversations"],
     enabled: !!user,
+    refetchInterval: 3000,
   });
 
 
@@ -131,6 +132,7 @@ export default function MessagesPage() {
     queryKey: ["/api/messages", selectedConversation?.userId],
     enabled: !!selectedConversation && selectedConversation.userId !== 0,
     refetchOnWindowFocus: false,
+    refetchInterval: 3000,
   });
 
   // Send message mutation
