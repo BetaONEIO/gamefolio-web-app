@@ -234,7 +234,7 @@ const MobileMenu = () => {
                     onClick={close}
                     className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
                   >
-                    <GamefolioProfileIcon className="mr-3 h-5 w-5" />
+                    <GamefolioProfileIcon className="mr-3 h-5 w-5 text-primary" />
                     <span className="font-medium">My Gamefolio</span>
                   </Link>
                 </li>
