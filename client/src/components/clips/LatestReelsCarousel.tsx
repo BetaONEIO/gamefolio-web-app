@@ -20,14 +20,14 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
     if (!scrollRef.current) return;
 
     const container = scrollRef.current;
-    const itemWidth = window.innerWidth < 640 ? 176 : 224;
-    const scrollAmount = itemWidth * (window.innerWidth < 640 ? 2 : 3);
+    const firstChild = container.firstElementChild as HTMLElement | null;
+    const itemWidth = firstChild ? firstChild.offsetWidth + 16 : 240;
+    const scrollAmount = itemWidth * 3;
 
-    if (direction === 'left') {
-      container.scrollLeft -= scrollAmount;
-    } else {
-      container.scrollLeft += scrollAmount;
-    }
+    container.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
   };
 
   const handleWheel = (e: React.WheelEvent) => {
@@ -109,7 +109,6 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
         className={`flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide pb-4 px-2 sm:px-8 py-2 select-none ${
           isDragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
-        style={{ scrollBehavior: isDragging ? 'auto' : 'smooth' }}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}

@@ -479,7 +479,7 @@ const HomePage = () => {
   const { data: latestReels, isLoading: isLoadingReels } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/reels/latest'],
     queryFn: async () => {
-      const response = await fetch('/api/reels/latest?limit=6');
+      const response = await fetch('/api/reels/latest?limit=12');
       if (!response.ok) {
         throw new Error('Failed to fetch latest reels');
       }
