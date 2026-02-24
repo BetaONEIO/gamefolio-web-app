@@ -809,15 +809,15 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     </div>
                   )}
                   {/* Reel badge indicator */}
-                  <div className="absolute top-4 right-4 z-50">
+                  <div className="absolute top-4 left-4 z-50">
                     <span className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-bold">
                       Reel
                     </span>
                   </div>
-                  {/* Fullscreen button */}
+                  {/* Fullscreen button - top right, away from video controls */}
                   <button
                     onClick={() => setIsFullscreen(true)}
-                    className="absolute bottom-16 right-4 z-50 p-2 rounded-full bg-black/60 hover:bg-black/80 transition-colors"
+                    className="absolute top-4 right-4 z-50 p-2 rounded-full bg-black/60 hover:bg-black/80 transition-colors"
                     title="View fullscreen"
                   >
                     <Maximize2 className="h-5 w-5 text-white" />
