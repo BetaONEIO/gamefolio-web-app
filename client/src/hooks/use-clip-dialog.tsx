@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ClipDialog } from '@/components/clips/ClipDialog';
 import { FullscreenReelsViewer } from '@/components/clips/FullscreenReelsViewer';
 import { useQuery } from '@tanstack/react-query';
@@ -46,9 +46,15 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
   // Enable navigation for any clip list with more than 1 clip
   const hasNavigation = clipsList && clipsList.length > 1;
 
-  // Reels now use the regular ClipDialog with 9:16 format and details panel
-  // The fullscreen viewer is only triggered via the fullscreen button in ClipDialog
-  const showFullscreenReelsViewer = false;
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  const showFullscreenReelsViewer = isReel && isMobile && isOpen && clipsList && clipsList.length > 0;
 
   const handleNext = () => {
     if (!clipsList || currentIndex === -1) return;

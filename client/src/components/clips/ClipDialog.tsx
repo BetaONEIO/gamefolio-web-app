@@ -618,6 +618,8 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     clipId={clip.id}
                     disableAspectRatio={true}
                     hideControls={true}
+                    externalPaused={!reelIsPlaying}
+                    externalMuted={reelIsMuted}
                     onPlayingChange={setReelIsPlaying}
                     onMutedChange={setReelIsMuted}
                   />
@@ -629,14 +631,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        const video = document.querySelector('video');
-                        if (video) {
-                          if (reelIsPlaying) {
-                            video.pause();
-                          } else {
-                            video.play();
-                          }
-                        }
+                        setReelIsPlaying(!reelIsPlaying);
                       }}
                       className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
                     >
@@ -649,11 +644,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        const video = document.querySelector('video');
-                        if (video) {
-                          video.muted = !video.muted;
-                          setReelIsMuted(!reelIsMuted);
-                        }
+                        setReelIsMuted(!reelIsMuted);
                       }}
                       className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
                     >
@@ -750,15 +741,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     
                     {/* Right side action buttons */}
                     <div className="absolute right-3 bottom-8 flex flex-col items-center space-y-5 z-50 pointer-events-auto">
-                      <div className="flex flex-col items-center mb-2">
-                        {clip?.user && (
-                          <CustomAvatar 
-                            user={clip.user} 
-                            size="md" 
-                            showBorder={true}
-                          />
-                        )}
-                      </div>
                       <FireButton 
                         contentId={clip.id}
                         contentType="clip"
@@ -1130,6 +1112,30 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                 aria-label="Next"
               >
                 <ChevronRight className="h-7 w-7" />
+              </button>
+            )}
+          </>
+        )}
+        {showNavigation && isMobile && clip?.videoType !== 'reel' && (
+          <>
+            {onPrevious && (
+              <button
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); handlePreviousWithTransition(); }}
+                onPointerDown={(e) => e.stopPropagation()}
+                className="fixed left-3 top-3 z-[70] bg-black/60 hover:bg-black/80 text-white p-2.5 rounded-full transition-colors pointer-events-auto"
+                aria-label="Previous clip"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+            )}
+            {onNext && (
+              <button
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleNextWithTransition(); }}
+                onPointerDown={(e) => e.stopPropagation()}
+                className="fixed right-14 top-3 z-[70] bg-black/60 hover:bg-black/80 text-white p-2.5 rounded-full transition-colors pointer-events-auto"
+                aria-label="Next clip"
+              >
+                <ChevronRight className="h-6 w-6" />
               </button>
             )}
           </>
