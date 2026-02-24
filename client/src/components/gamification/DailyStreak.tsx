@@ -14,7 +14,7 @@ export default function DailyStreak() {
   const filledSegments = Math.min(streak % totalSegments || totalSegments, totalSegments);
 
   const nextMilestoneLabel = nextMilestone > streak
-    ? `Reach ${nextMilestone} days for a`
+    ? `Reach ${nextMilestone} days for bonus XP!`
     : `You've hit your ${streak}-day milestone!`;
 
   return (
@@ -102,8 +102,7 @@ export default function DailyStreak() {
           >
             {nextMilestone > streak ? (
               <>
-                You've logged in for {streak} days straight. {nextMilestoneLabel}{" "}
-                <span className="text-white font-bold">Legendary Mystery Box</span>.
+                You've logged in for {streak} days straight. {nextMilestoneLabel}
               </>
             ) : (
               <>You've hit your {streak}-day streak milestone! Keep going for even bigger rewards.</>
@@ -169,7 +168,7 @@ export default function DailyStreak() {
             className="text-[#022c22] font-black uppercase tracking-[0.2em]"
             style={{ fontSize: "14px", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
           >
-            Continue Playing
+            Continue
           </span>
           <ChevronRight className="w-5 h-5 text-[#022c22]" strokeWidth={3} />
         </button>
