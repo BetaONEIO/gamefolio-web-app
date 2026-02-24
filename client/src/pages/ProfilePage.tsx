@@ -1750,7 +1750,12 @@ const ProfilePage = () => {
                       <Badge 
                         key={`${type}-${index}`}
                         variant="outline" 
-                        className={`${config.color} border text-xs font-medium px-2 py-0.5`}
+                        className="border text-xs font-medium px-2 py-0.5"
+                        style={{
+                          backgroundColor: `${accentColor}20`,
+                          color: accentColor,
+                          borderColor: `${accentColor}50`,
+                        }}
                       >
                         <IconComponent className="w-3 h-3 mr-1" />
                         {config.label}
@@ -2039,7 +2044,12 @@ const ProfilePage = () => {
                     <Badge 
                       key={`${type}-${index}`}
                       variant="outline" 
-                      className={`${config.color} border text-xs font-medium px-2 py-0.5`}
+                      className="border text-xs font-medium px-2 py-0.5"
+                      style={{
+                        backgroundColor: `${accentColor}20`,
+                        color: accentColor,
+                        borderColor: `${accentColor}50`,
+                      }}
                     >
                       <IconComponent className="w-3 h-3 mr-1" />
                       {config.label}
