@@ -152,227 +152,198 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
 
   if (isMobile) {
     return (
-      <div className="fixed inset-0 z-50 bg-black flex flex-col">
-        <div className="absolute top-3 right-3 z-50">
-          <button
-            onClick={onClose}
-            className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
-          >
-            <X className="h-5 w-5 text-white" />
-          </button>
+      <div className="fixed inset-0 z-50 bg-background flex flex-col">
+        <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-border">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              onClose();
+            }}>
+              <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0 border border-white/20">
+                {avatarSignedUrl ? (
+                  <img src={avatarSignedUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <UserIcon className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+            </Link>
+            <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              onClose();
+            }}>
+              <span className="text-foreground font-semibold text-sm">
+                @{screenshot.user?.username || 'unknown'}
+              </span>
+            </Link>
+            {currentUserId && screenshotUser?.id && currentUserId !== screenshotUser.id && (
+              <Button
+                size="sm"
+                variant={followStatus?.isFollowing ? "secondary" : "default"}
+                className="h-6 text-xs px-2 flex-shrink-0 ml-1"
+                onClick={(e) => { e.stopPropagation(); followMutation.mutate(screenshotUser.id); }}
+                disabled={followMutation.isPending}
+              >
+                {followStatus?.isFollowing ? "Following" : "Follow"}
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {hasNavigation && (
+              <span className="text-muted-foreground text-xs font-medium">
+                {currentIndex + 1} / {totalSlides}
+              </span>
+            )}
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center"
+            >
+              <X className="h-4 w-4 text-foreground" />
+            </button>
+          </div>
         </div>
 
-        {hasNavigation && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2">
-            <span className="text-white/70 text-xs font-medium bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full">
-              {currentIndex + 1} / {totalSlides}
-            </span>
+        <div className="flex-1 overflow-y-auto">
+          <div
+            className="relative bg-black overflow-hidden"
+            style={{ height: '45vh', minHeight: '200px' }}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+          >
+            <div
+              className="w-full h-full flex items-center justify-center"
+              style={{
+                transform: `translateX(${dragX}px)`,
+                opacity: Math.max(0.3, 1 - Math.abs(dragX) / 300),
+                transition: isDragging ? "none" : "transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease",
+              }}
+            >
+              <img
+                src={signedUrl || screenshot.imageUrl}
+                alt={screenshot.title}
+                className="max-w-full max-h-full object-contain pointer-events-none"
+                draggable={false}
+              />
+            </div>
+
+            {hasNavigation && hasPrevious && (
+              <button
+                onClick={(e) => { e.stopPropagation(); handlePrevious(); }}
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
+              >
+                <ChevronLeft className="h-5 w-5 text-white" />
+              </button>
+            )}
+            {hasNavigation && hasNext && (
+              <button
+                onClick={(e) => { e.stopPropagation(); handleNext(); }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
+              >
+                <ChevronRight className="h-5 w-5 text-white" />
+              </button>
+            )}
           </div>
-        )}
 
-        <div
-          className="flex-1 relative overflow-hidden touch-pan-y"
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-        >
-          {hasNavigation && screenshots ? (
-            screenshots.map((s, index) => {
-              let offset = index - currentIndex;
-              const absOffset = Math.abs(offset);
-              if (absOffset > 2) return null;
-
-              const isActive = offset === 0;
-              const translateX = isActive ? dragX : offset * window.innerWidth * 0.3 + (dragX * 0.3);
-              const scale = isActive ? 1 : 1 - absOffset * 0.08;
-              const opacity = isActive ? 1 : Math.max(0, 1 - absOffset * 0.4);
-              const zIndex = 10 - absOffset;
-
-              return (
-                <div
-                  key={s.id}
-                  className="absolute inset-0 flex items-center justify-center"
-                  style={{
-                    transform: `translateX(${translateX}px) scale(${scale})`,
-                    opacity,
-                    zIndex,
-                    transition: isDragging && isActive ? "none" : "transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease",
-                    pointerEvents: isActive ? "auto" : "none",
-                  }}
-                >
-                  <div className="w-full h-full flex items-center justify-center p-2">
-                    <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black/50 border border-white/10 flex items-center justify-center shadow-2xl">
-                      {isActive ? (
-                        <img
-                          src={signedUrl || screenshot.imageUrl}
-                          alt={screenshot.title}
-                          className="max-w-full max-h-full object-contain pointer-events-none"
-                          draggable={false}
-                        />
-                      ) : (
-                        <MobileScreenshotImage imageUrl={s.imageUrl} />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center p-2">
-              <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black/50 flex items-center justify-center">
-                <img
-                  src={signedUrl || screenshot.imageUrl}
-                  alt={screenshot.title}
-                  className="max-w-full max-h-full object-contain"
-                />
+          {hasNavigation && totalSlides > 1 && (
+            <div className="flex justify-center py-2 bg-background">
+              <div className="flex items-center gap-1.5">
+                {screenshots!.map((_, i) => (
+                  <div
+                    key={i}
+                    className={`rounded-full transition-all duration-300 ${
+                      i === currentIndex
+                        ? "w-5 h-1.5 bg-primary"
+                        : "w-1.5 h-1.5 bg-muted-foreground/30"
+                    }`}
+                  />
+                ))}
               </div>
             </div>
           )}
-        </div>
 
-        {hasNavigation && totalSlides > 1 && (
-          <div className="absolute left-0 right-0 bottom-[160px] z-30 flex justify-center">
-            <div className="flex items-center gap-1.5">
-              {screenshots!.map((_, i) => (
-                <div
-                  key={i}
-                  className={`rounded-full transition-all duration-300 ${
-                    i === currentIndex
-                      ? "w-6 h-2 bg-white"
-                      : "w-2 h-2 bg-white/30"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="absolute bottom-0 left-0 right-0 z-40 pointer-events-auto">
-          <div className="bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-12 pb-6 px-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
-                e.stopPropagation();
-                onClose();
-              }}>
-                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0 border border-white/30">
-                  {avatarSignedUrl ? (
-                    <img src={avatarSignedUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <UserIcon className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </div>
-              </Link>
-              <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
-                e.stopPropagation();
-                onClose();
-              }}>
-                <span className="text-white font-semibold text-sm drop-shadow-lg">
-                  @{screenshot.user?.username || 'unknown'}
-                </span>
-              </Link>
-              {currentUserId && screenshotUser?.id && currentUserId !== screenshotUser.id && (
-                <Button
-                  size="sm"
-                  variant={followStatus?.isFollowing ? "secondary" : "default"}
-                  className="h-6 text-xs px-2 flex-shrink-0 ml-1"
-                  onClick={(e) => { e.stopPropagation(); followMutation.mutate(screenshotUser.id); }}
-                  disabled={followMutation.isPending}
-                >
-                  {followStatus?.isFollowing ? "Following" : "Follow"}
-                </Button>
+          <div className="px-4 py-3 space-y-3">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">{screenshot.title}</h2>
+              {screenshot.description && (
+                <p className="text-sm text-muted-foreground mt-1">{screenshot.description}</p>
               )}
-            </div>
 
-            <h2 className="text-white font-semibold text-base mb-1 leading-tight line-clamp-1 drop-shadow-lg">
-              {screenshot.title}
-            </h2>
+              {screenshot.gameId && games?.find((g: Game) => g.id === screenshot.gameId) && (
+                <div className="mt-2">
+                  <Link href={`/games/${(games.find((g: Game) => g.id === screenshot.gameId)?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                    <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold hover:bg-green-500 cursor-pointer transition-colors">
+                      {games.find((g: Game) => g.id === screenshot.gameId)?.name}
+                    </span>
+                  </Link>
+                </div>
+              )}
 
-            {screenshot.description && (
-              <p className="text-white/80 text-sm line-clamp-1 drop-shadow-md mb-1">
-                {screenshot.description}
-              </p>
-            )}
-
-            {screenshot.gameId && games?.find((g: Game) => g.id === screenshot.gameId) && (
-              <span className="text-green-400 text-sm font-medium drop-shadow-lg">
-                {games.find((g: Game) => g.id === screenshot.gameId)?.name}
-              </span>
-            )}
-
-            <div className="flex items-center justify-between mt-3">
-              <div className="flex items-center gap-3">
-                <LikeButton
-                  contentId={screenshot.id}
-                  contentType="screenshot"
-                  contentOwnerId={screenshot.userId}
-                  initialLiked={false}
-                  initialCount={(screenshot as any)._count?.likes || 0}
-                  size="lg"
-                />
-                <FireButton
-                  contentId={screenshot.id}
-                  contentType="screenshot"
-                  contentOwnerId={screenshot.userId}
-                  initialFired={false}
-                  initialCount={(screenshot as any)._count?.reactions || 0}
-                  size="lg"
-                />
-                <button
-                  onClick={() => setShowComments(!showComments)}
-                  className="flex items-center gap-1 text-white/70 hover:text-white transition-colors"
-                >
-                  <MessageSquare className="h-5 w-5" />
-                  <span className="text-xs">{(screenshot as any)._count?.comments || 0}</span>
-                </button>
+              <div className="flex items-center mt-2 text-sm text-muted-foreground">
+                <Eye className="h-4 w-4 mr-1" />
+                <span className="mr-3">{screenshot.views || 0} views</span>
+                <Clock className="h-4 w-4 mr-1" />
+                <span>{screenshot.createdAt ? formatDistance(new Date(screenshot.createdAt), new Date(), { addSuffix: true }) : 'Unknown time'}</span>
               </div>
 
-              <div className="flex items-center gap-2">
-                <React.Suspense fallback={null}>
-                  <ScreenshotShareDialog
-                    screenshotId={screenshot.id.toString()}
-                    isOwnContent={isOwnContent}
-                    trigger={
-                      <button className="text-white/70 hover:text-white transition-colors">
-                        <Share2 className="h-5 w-5" />
-                      </button>
-                    }
-                  />
-                </React.Suspense>
-                <ReportButton
-                  contentType="screenshot"
-                  contentId={screenshot.id}
-                  contentTitle={screenshot.title}
-                  variant="ghost"
-                  size="sm"
-                  className="text-white/70 hover:text-white p-0 h-auto"
-                />
+              <div className="border-t border-b border-border py-3 mt-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <LikeButton
+                      contentId={screenshot.id}
+                      contentType="screenshot"
+                      contentOwnerId={screenshot.userId}
+                      initialLiked={false}
+                      initialCount={(screenshot as any)._count?.likes || 0}
+                      size="lg"
+                    />
+                    <FireButton
+                      contentId={screenshot.id}
+                      contentType="screenshot"
+                      contentOwnerId={screenshot.userId}
+                      initialFired={false}
+                      initialCount={(screenshot as any)._count?.reactions || 0}
+                      size="lg"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground hover:text-foreground flex items-center gap-1"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      <span>{(screenshot as any)._count?.comments || 0}</span>
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <React.Suspense fallback={null}>
+                      <ScreenshotShareDialog
+                        screenshotId={screenshot.id.toString()}
+                        isOwnContent={isOwnContent}
+                        trigger={
+                          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                            <Share2 className="h-4 w-4" />
+                          </Button>
+                        }
+                      />
+                    </React.Suspense>
+                    <ReportButton
+                      contentType="screenshot"
+                      contentId={screenshot.id}
+                      contentTitle={screenshot.title}
+                      variant="ghost"
+                      size="sm"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
+
+            <React.Suspense fallback={null}>
+              <ScreenshotCommentSection screenshotId={screenshot.id} />
+            </React.Suspense>
           </div>
         </div>
-
-        {showComments && (
-          <>
-            <div
-              className="fixed inset-0 bg-black/30 z-40"
-              onClick={() => setShowComments(false)}
-            />
-            <div className="fixed inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg overflow-hidden flex flex-col">
-              <button
-                onClick={() => setShowComments(false)}
-                className="w-full flex justify-center py-2 flex-shrink-0"
-              >
-                <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
-              </button>
-              <div className="flex-1 overflow-y-auto px-4 pb-4">
-                <React.Suspense fallback={null}>
-                  <ScreenshotCommentSection screenshotId={screenshot.id} />
-                </React.Suspense>
-              </div>
-            </div>
-          </>
-        )}
       </div>
     );
   }
