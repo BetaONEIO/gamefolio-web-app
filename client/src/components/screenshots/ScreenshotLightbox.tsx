@@ -120,23 +120,30 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
     dragStartRef.current = null;
   }, [dragX, hasNext, hasPrevious, handleNext, handlePrevious]);
 
-  const { data: followStatus } = useQuery({
-    queryKey: ['/api/follow/status', screenshotUser?.id],
+  const username = screenshot?.user?.username;
+
+  const { data: followStatus } = useQuery<{ following: boolean; requested: boolean }>({
+    queryKey: [`/api/users/${username}/follow-status`],
     queryFn: async () => {
-      const response = await fetch(`/api/follow/status/${screenshotUser?.id}`, { credentials: 'include' });
-      if (!response.ok) return { isFollowing: false };
+      const response = await fetch(`/api/users/${username}/follow-status`, { credentials: 'include' });
+      if (!response.ok) return { following: false, requested: false };
       return response.json();
     },
-    enabled: !!currentUserId && !!screenshotUser?.id && currentUserId !== screenshotUser?.id,
+    enabled: !!currentUserId && !!username && !!screenshotUser?.id && currentUserId !== screenshotUser?.id,
   });
 
   const followMutation = useMutation({
-    mutationFn: async (targetUserId: number) => {
-      const response = await apiRequest('POST', `/api/follow/${targetUserId}`);
-      return response.json();
+    mutationFn: async () => {
+      if (followStatus?.following) {
+        const response = await apiRequest('DELETE', `/api/users/${username}/follow`);
+        return response.json();
+      } else {
+        const response = await apiRequest('POST', `/api/users/${username}/follow`);
+        return response.json();
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/follow/status', screenshotUser?.id] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${username}/follow-status`] });
     },
   });
 
@@ -346,15 +353,20 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
               {currentUserId && screenshotUser?.id && currentUserId !== screenshotUser.id && (
                 <Button
                   size="sm"
-                  variant={followStatus?.isFollowing ? "secondary" : "default"}
+                  variant={followStatus?.following ? "secondary" : "default"}
                   className="h-7 text-xs px-3 flex-shrink-0"
-                  onClick={(e) => { e.stopPropagation(); followMutation.mutate(screenshotUser.id); }}
+                  onClick={(e) => { e.stopPropagation(); followMutation.mutate(); }}
                   disabled={followMutation.isPending}
                 >
-                  {followStatus?.isFollowing ? (
+                  {followStatus?.following ? (
                     <>
                       <UserCheck className="h-3 w-3 mr-1" />
                       Following
+                    </>
+                  ) : followStatus?.requested ? (
+                    <>
+                      <Clock className="h-3 w-3 mr-1" />
+                      Requested
                     </>
                   ) : (
                     <>
@@ -522,15 +534,20 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                 {currentUserId && screenshotUser?.id && currentUserId !== screenshotUser.id && (
                   <Button
                     size="sm"
-                    variant={followStatus?.isFollowing ? "secondary" : "default"}
+                    variant={followStatus?.following ? "secondary" : "default"}
                     className="h-7 text-xs px-3 flex-shrink-0 ml-2"
-                    onClick={(e) => { e.stopPropagation(); followMutation.mutate(screenshotUser.id); }}
+                    onClick={(e) => { e.stopPropagation(); followMutation.mutate(); }}
                     disabled={followMutation.isPending}
                   >
-                    {followStatus?.isFollowing ? (
+                    {followStatus?.following ? (
                       <>
                         <UserCheck className="h-3 w-3 mr-1" />
                         Following
+                      </>
+                    ) : followStatus?.requested ? (
+                      <>
+                        <Clock className="h-3 w-3 mr-1" />
+                        Requested
                       </>
                     ) : (
                       <>
