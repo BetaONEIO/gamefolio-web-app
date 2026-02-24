@@ -234,12 +234,9 @@ export default function ExplorePage() {
 
                   {/* Game Info */}
                   <div className="p-4">
-                    <h3 className="font-semibold text-sm mb-2 line-clamp-2 min-h-[2.5rem] text-foreground group-hover:text-primary transition-colors">
+                    <h3 className="font-semibold text-sm line-clamp-2 min-h-[2.5rem] text-foreground group-hover:text-primary transition-colors">
                       {game.name}
                     </h3>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                      Clips
-                    </p>
                   </div>
                 </CardContent>
               </Card>
