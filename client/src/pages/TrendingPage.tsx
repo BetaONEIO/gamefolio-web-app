@@ -85,7 +85,7 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
       className="group relative bg-black rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
     >
       {/* Thumbnail/Video */}
-      <div className="relative w-full h-full">
+      <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gray-800" />
         <LazyImage
           src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
@@ -418,6 +418,7 @@ const TrendingPage: React.FC = () => {
                   <div
                     key={reel.id}
                     onClick={() => openClipDialog(reel.id, trendingReels)}
+                    className="w-full"
                   >
                     <div className="relative aspect-[9/16] w-full rounded-sm overflow-hidden cursor-pointer group">
                       <div className="absolute inset-0 bg-gray-800" />
