@@ -403,7 +403,7 @@ const AccountSettingsPage: React.FC = () => {
   }
   
   return (
-    <div className="container max-w-5xl mx-auto px-4 py-8 pb-24 md:pb-8">
+    <div className="w-full px-4 py-8 pb-24 md:pb-8">
       <h1 className="text-3xl font-bold mb-8">Account Settings</h1>
       
       <Tabs defaultValue="privacy" className="w-full">

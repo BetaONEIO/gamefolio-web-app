@@ -127,7 +127,7 @@ export default function LevelTrackerPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto pb-24 pt-6 px-4">
+    <div className="w-full pb-24 pt-6 px-4">
       <div className="flex items-center gap-4 mb-6">
         <Link href={`/@${user.username}`}>
           <Button variant="ghost" size="icon">

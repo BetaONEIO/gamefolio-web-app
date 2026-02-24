@@ -37,6 +37,21 @@ import { KeyboardAvoidingWrapper } from "@/components/shared/KeyboardAvoidingWra
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
 
+const FONT_OPTIONS = [
+  { value: 'default', label: 'Default', family: 'system-ui, sans-serif' },
+  { value: 'inter', label: 'Inter', family: "'Inter', sans-serif" },
+  { value: 'roboto', label: 'Roboto', family: "'Roboto', sans-serif" },
+  { value: 'poppins', label: 'Poppins', family: "'Poppins', sans-serif" },
+  { value: 'montserrat', label: 'Montserrat', family: "'Montserrat', sans-serif" },
+  { value: 'oswald', label: 'Oswald', family: "'Oswald', sans-serif" },
+  { value: 'playfair', label: 'Playfair Display', family: "'Playfair Display', serif" },
+  { value: 'raleway', label: 'Raleway', family: "'Raleway', sans-serif" },
+  { value: 'space-grotesk', label: 'Space Grotesk', family: "'Space Grotesk', sans-serif" },
+  { value: 'orbitron', label: 'Orbitron', family: "'Orbitron', sans-serif" },
+  { value: 'press-start', label: 'Press Start 2P', family: "'Press Start 2P', cursive" },
+  { value: 'russo-one', label: 'Russo One', family: "'Russo One', sans-serif" },
+];
+
 // Component to fetch SVG and render it inline with color replacement
 const InlineSvgBorder: React.FC<{
   svgUrl: string;
@@ -368,7 +383,8 @@ export default function SettingsPage() {
     avatarUrl: user?.avatarUrl || "",
     profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
     profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
-    profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none"
+    profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
+    profileFont: (user as any)?.profileFont || "default"
   });
   
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -491,6 +507,7 @@ export default function SettingsPage() {
     profileData.profileBackgroundType !== ((user as any)?.profileBackgroundType || "solid") ||
     profileData.profileBackgroundTheme !== ((user as any)?.profileBackgroundTheme || "default") ||
     profileData.profileBackgroundAnimation !== ((user as any)?.profileBackgroundAnimation || "none") ||
+    profileData.profileFont !== ((user as any)?.profileFont || "default") ||
     avatarFile !== null ||
     selectedPreviousAvatar !== null ||
     (pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId) ||
@@ -1001,7 +1018,7 @@ export default function SettingsPage() {
     <KeyboardAvoidingWrapper 
       className="min-h-screen p-6 pb-24 md:pb-6"
     >
-      <div className="max-w-4xl mx-auto">
+      <div className="w-full px-4">
         {/* Header */}
         <div className="mb-6">
           <Button
@@ -1871,6 +1888,102 @@ export default function SettingsPage() {
                         </div>
                       </CardContent>
                     </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: profileData.backgroundColor }} />
+                          Background Color
+                        </CardTitle>
+                        <CardDescription>
+                          Choose a background color for your profile page.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-col sm:flex-row gap-6 items-start">
+                          <HexColorPicker
+                            color={profileData.backgroundColor}
+                            onChange={(color) => setProfileData(prev => ({ ...prev, backgroundColor: color }))}
+                          />
+                          <div className="space-y-3 flex-1">
+                            <div className="flex items-center gap-2">
+                              <Label className="text-sm font-medium">Hex Code</Label>
+                              <Input
+                                value={profileData.backgroundColor}
+                                onChange={(e) => setProfileData(prev => ({ ...prev, backgroundColor: e.target.value }))}
+                                className="w-32 font-mono text-sm"
+                                placeholder="#0B2232"
+                              />
+                            </div>
+                            <div
+                              className="w-full h-24 rounded-lg border border-border"
+                              style={{ backgroundColor: profileData.backgroundColor }}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              This color will be used as the background gradient on your profile.
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          Profile Font
+                        </CardTitle>
+                        <CardDescription>
+                          Choose a font style for your profile display name and text.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {FONT_OPTIONS.map((font) => {
+                            const isSelected = profileData.profileFont === font.value;
+                            return (
+                              <button
+                                key={font.value}
+                                type="button"
+                                onClick={() => setProfileData(prev => ({ ...prev, profileFont: font.value }))}
+                                className={`p-4 rounded-lg border-2 text-left transition-all ${
+                                  isSelected
+                                    ? 'border-primary bg-primary/10'
+                                    : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                                }`}
+                              >
+                                <p
+                                  className="text-lg font-semibold mb-1 truncate"
+                                  style={{ fontFamily: font.family }}
+                                >
+                                  {font.label}
+                                </p>
+                                <p
+                                  className="text-xs text-muted-foreground truncate"
+                                  style={{ fontFamily: font.family }}
+                                >
+                                  {user?.displayName || 'Your Name'}
+                                </p>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {hasUnsavedChanges && (
+                      <Button
+                        className="w-full bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
+                        onClick={handleSave}
+                        disabled={updateProfileMutation.isPending || uploadingAvatar || uploadingBanner}
+                      >
+                        {(updateProfileMutation.isPending || uploadingAvatar || uploadingBanner) ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Save className="h-4 w-4 mr-2" />
+                        )}
+                        Save Changes
+                      </Button>
+                    )}
                   </div>
                 </TabsContent>
 
