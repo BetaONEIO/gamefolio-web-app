@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Settings, LogOut, CheckCircle2, Palette, UserCog, Menu, ShieldCheck, Flame, Trophy, Crown } from "lucide-react";
+import { Search, Plus, Settings, LogOut, CheckCircle2, Palette, UserCog, Menu, ShieldCheck, Flame, Trophy, Crown, Video, Film, Camera } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
@@ -380,14 +380,30 @@ const Header = () => {
                 open={manageProOpen} 
                 onOpenChange={setManageProOpen}
               />
-              <Link href="/upload">
-                <Button 
-                  className="ml-2 sm:ml-4 flex items-center px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300 bg-primary hover:bg-primary/90 border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_hsl(var(--primary)/0.13)]"
-                >
-                  <Plus className="mr-1 sm:mr-3 h-4 w-4 sm:h-6 sm:w-6" />
-                  <span className="hidden sm:inline">Upload</span>
-                </Button>
-              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    className="ml-2 sm:ml-4 flex items-center px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300 bg-primary hover:bg-primary/90 border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_hsl(var(--primary)/0.13)]"
+                  >
+                    <Plus className="mr-1 sm:mr-3 h-4 w-4 sm:h-6 sm:w-6" />
+                    <span className="hidden sm:inline">Upload</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 mt-2">
+                  <DropdownMenuItem onClick={() => setLocation('/upload?type=clips')} className="cursor-pointer">
+                    <Video className="h-4 w-4 mr-2" />
+                    Upload Clip
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLocation('/upload?type=reels')} className="cursor-pointer">
+                    <Film className="h-4 w-4 mr-2" />
+                    Upload Reel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLocation('/upload?type=screenshots')} className="cursor-pointer">
+                    <Camera className="h-4 w-4 mr-2" />
+                    Upload Screenshot
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               <div className="relative">
                 <DropdownMenu>
