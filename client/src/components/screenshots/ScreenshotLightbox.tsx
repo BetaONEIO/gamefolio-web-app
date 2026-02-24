@@ -155,20 +155,25 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
 
   if (!screenshot) return null;
 
+  const getVisibleDots = (total: number, current: number, windowSize = 5) => {
+    if (total <= windowSize) return Array.from({ length: total }, (_, i) => i);
+    const half = Math.floor(windowSize / 2);
+    let start = Math.max(0, current - half);
+    const end = Math.min(total - 1, start + windowSize - 1);
+    if (end - start < windowSize - 1) start = Math.max(0, end - windowSize + 1);
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  };
+
   if (isMobile && isFullscreen) {
+    const visibleDots = getVisibleDots(totalSlides, currentIndex);
     return createPortal(
       <div className="fixed inset-0 z-[100] bg-black flex flex-col">
-        <div className="absolute top-3 right-3 z-50 flex items-center gap-2">
-          {hasNavigation && (
-            <span className="text-white/70 text-xs font-medium bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full">
-              {currentIndex + 1} / {totalSlides}
-            </span>
-          )}
+        <div className="absolute top-3 right-3 z-50">
           <button
             onClick={() => { setIsFullscreen(false); onClose(); }}
-            className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
+            className="rounded-sm opacity-70 transition-opacity hover:opacity-100 p-3 bg-black/30 backdrop-blur-sm hover:bg-black/50 flex items-center justify-center"
           >
-            <X className="h-5 w-5 text-white" />
+            <X className="h-6 w-6 text-white" />
           </button>
         </div>
 
@@ -214,18 +219,24 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
         </div>
 
         {hasNavigation && totalSlides > 1 && (
-          <div className="absolute bottom-4 left-0 right-0 z-30 flex justify-center">
+          <div className="absolute top-3 left-0 right-0 z-30 flex justify-center">
             <div className="flex items-center gap-1.5">
-              {screenshots!.map((_, i) => (
-                <div
-                  key={i}
-                  className={`rounded-full transition-all duration-300 ${
-                    i === currentIndex
-                      ? "w-5 h-1.5 bg-white"
-                      : "w-1.5 h-1.5 bg-white/30"
-                  }`}
-                />
-              ))}
+              {visibleDots.map((dotIndex, pos) => {
+                const isActive = dotIndex === currentIndex;
+                const isFaded = (pos === 0 && dotIndex > 0) || (pos === visibleDots.length - 1 && dotIndex < totalSlides - 1);
+                return (
+                  <div
+                    key={dotIndex}
+                    className={`rounded-full transition-all duration-300 ${
+                      isActive
+                        ? "w-2 h-2 bg-green-500"
+                        : isFaded
+                        ? "w-1.5 h-1.5 bg-white/20"
+                        : "w-1.5 h-1.5 bg-white/60"
+                    }`}
+                  />
+                );
+              })}
             </div>
           </div>
         )}
@@ -235,38 +246,16 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
   }
 
   if (isMobile) {
+    const visibleDotsMobile = getVisibleDots(totalSlides, currentIndex);
     return createPortal(
       <div className="fixed inset-0 z-[100] bg-background flex flex-col">
-        <div className="flex items-center justify-between px-3 py-2 flex-shrink-0">
-          {hasNavigation && totalSlides > 1 ? (
-            <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto scrollbar-hide">
-              {screenshots!.map((_, i) => (
-                <div
-                  key={i}
-                  className={`rounded-full transition-all duration-300 flex-shrink-0 ${
-                    i === currentIndex
-                      ? "w-5 h-1.5 bg-primary"
-                      : "w-1.5 h-1.5 bg-muted-foreground/30"
-                  }`}
-                />
-              ))}
-            </div>
-          ) : (
-            <div />
-          )}
-          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-            {hasNavigation && (
-              <span className="text-muted-foreground text-xs font-medium">
-                {currentIndex + 1} / {totalSlides}
-              </span>
-            )}
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center"
-            >
-              <X className="h-4 w-4 text-foreground" />
-            </button>
-          </div>
+        <div className="flex items-center justify-end px-3 py-2 flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="rounded-sm opacity-70 transition-opacity hover:opacity-100 p-2 bg-black/30 backdrop-blur-sm hover:bg-black/50 flex items-center justify-center"
+          >
+            <X className="h-5 w-5 text-white" />
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
@@ -316,6 +305,29 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
               >
                 <ChevronRight className="h-5 w-5 text-white" />
               </button>
+            )}
+
+            {hasNavigation && totalSlides > 1 && (
+              <div className="absolute top-3 left-0 right-0 z-20 flex justify-center pointer-events-none">
+                <div className="flex items-center gap-1.5">
+                  {visibleDotsMobile.map((dotIndex, pos) => {
+                    const isActive = dotIndex === currentIndex;
+                    const isFaded = (pos === 0 && dotIndex > 0) || (pos === visibleDotsMobile.length - 1 && dotIndex < totalSlides - 1);
+                    return (
+                      <div
+                        key={dotIndex}
+                        className={`rounded-full transition-all duration-300 ${
+                          isActive
+                            ? "w-2 h-2 bg-green-500"
+                            : isFaded
+                            ? "w-1.5 h-1.5 bg-white/20"
+                            : "w-1.5 h-1.5 bg-white/60"
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
 
