@@ -699,7 +699,7 @@ const HomePage = () => {
               ))}
             </div>
           ) : latestScreenshots && latestScreenshots.length > 0 ? (
-            <div className="relative group">
+            <div className="relative">
               <button
                 onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft -= 480; } }}
                 className="absolute -left-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"

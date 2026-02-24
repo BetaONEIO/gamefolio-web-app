@@ -33,7 +33,7 @@ export function ScreenshotCard({
 
   return (
     <Card 
-      className={`relative overflow-hidden group cursor-pointer transition-all duration-300 hover:shadow-lg ${
+      className={`relative overflow-hidden group/card cursor-pointer transition-all duration-500 hover:shadow-lg clip-highlight ${
         isHighlighted ? 'ring-4 ring-primary ring-offset-2' : ''
       }`}
       id={isHighlighted ? `screenshot-${screenshot.id}` : undefined}
@@ -45,7 +45,7 @@ export function ScreenshotCard({
         <LazyImage 
           src={screenshotSignedUrl || screenshot.imageUrl || ''} 
           alt={screenshot.title}
-          className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${screenshot.ageRestricted ? 'blur-2xl' : ''}`}
+          className={`w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105 ${screenshot.ageRestricted ? 'blur-2xl' : ''}`}
           placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
           showLoadingSpinner={true}
           containerClassName="absolute inset-0"
@@ -77,7 +77,7 @@ export function ScreenshotCard({
           <Button
             size="sm"
             variant="destructive"
-            className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 h-8 w-8 md:h-7 md:w-7"
+            className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 h-8 w-8 md:h-7 md:w-7"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -91,7 +91,7 @@ export function ScreenshotCard({
             <X className="h-4 w-4 md:h-3 md:w-3" />
           </Button>
         ) : (
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div className="absolute top-2 right-2 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300">
             <ReportDialog
               contentType="screenshot"
               contentId={screenshot.id}
