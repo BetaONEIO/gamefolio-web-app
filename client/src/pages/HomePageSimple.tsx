@@ -14,6 +14,8 @@ import LootboxBanner from "@assets/lootbox-banner-1_1770362095039.png";
 import { useLocation, Link } from "wouter";
 import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
 import { LatestReelsCarousel } from "@/components/clips/LatestReelsCarousel";
+import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
+import { Camera } from "lucide-react";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
 import { ProUpgradeDialog } from "@/components/ProUpgradeDialog";
 import { LazySection } from "@/components/ui/lazy-section";
@@ -487,6 +489,17 @@ const HomePage = () => {
     }
   });
 
+  const { data: latestScreenshots, isLoading: isLoadingScreenshots } = useQuery<ClipWithUser[]>({
+    queryKey: ['/api/screenshots', 'recent'],
+    queryFn: async () => {
+      const response = await fetch('/api/screenshots?period=recent&limit=6');
+      if (!response.ok) {
+        throw new Error('Failed to fetch latest screenshots');
+      }
+      return response.json();
+    }
+  });
+
   // Query to check if user has uploaded any content (clips or screenshots)
   const { data: userHasContent, isLoading: isLoadingUserContent } = useQuery<boolean>({
     queryKey: ['/api/user/has-content', userId],
@@ -657,6 +670,44 @@ const HomePage = () => {
             isLoading={isLoadingReels}
             userId={userId}
           />
+        </section>
+      </LazySection>
+
+      {/* Latest Screenshots Section */}
+      <LazySection minHeight="400px" rootMargin="200px">
+        <section className="px-4 sm:px-6 md:px-8 pt-6 sm:pt-8">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-xl sm:text-2xl font-bold">Latest Screenshots</h2>
+          </div>
+          <div className="border-b border-border/50 mb-4 sm:mb-6 md:mb-8" />
+
+          {isLoadingScreenshots ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="aspect-video rounded-xl" />
+              ))}
+            </div>
+          ) : latestScreenshots && latestScreenshots.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {latestScreenshots.map((screenshot: any) => (
+                <ScreenshotCard
+                  key={screenshot.id}
+                  screenshot={screenshot}
+                  isOwnProfile={user?.id === screenshot.userId}
+                  profile={screenshot.user}
+                  showUserInfo={true}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 sm:py-12 bg-card/50 rounded-xl border border-border/50 mx-2">
+              <Camera className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+              <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">No Screenshots Yet</h3>
+              <p className="text-muted-foreground text-sm px-4">
+                Be the first to share a screenshot!
+              </p>
+            </div>
+          )}
         </section>
       </LazySection>
       </div>

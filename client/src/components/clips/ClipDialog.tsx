@@ -1080,29 +1080,29 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             </div>
           </div>
         )}
+        </DialogPrimitive.Content>
         {showNavigation && !isMobile && (
           <>
             {onPrevious && (
               <button
                 onClick={(e) => { e.stopPropagation(); handlePreviousWithTransition(); }}
-                className="absolute left-3 top-1/2 -translate-y-1/2 z-[70] bg-black/60 hover:bg-black/80 text-white p-2.5 rounded-full transition-colors"
+                className="fixed left-2 top-1/2 -translate-y-1/2 z-[60] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
                 aria-label="Previous"
               >
-                <ChevronLeft className="h-6 w-6" />
+                <ChevronLeft className="h-7 w-7" />
               </button>
             )}
             {onNext && (
               <button
                 onClick={(e) => { e.stopPropagation(); handleNextWithTransition(); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 z-[70] bg-black/60 hover:bg-black/80 text-white p-2.5 rounded-full transition-colors"
+                className="fixed right-2 top-1/2 -translate-y-1/2 z-[60] bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-colors"
                 aria-label="Next"
               >
-                <ChevronRight className="h-6 w-6" />
+                <ChevronRight className="h-7 w-7" />
               </button>
             )}
           </>
         )}
-        </DialogPrimitive.Content>
       </DialogPortal>
       
       <JoinGamefolioDialog 
