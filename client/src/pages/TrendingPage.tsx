@@ -569,39 +569,6 @@ const TrendingPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Time Period Filter */}
-          <div className="flex items-center gap-2">
-            {(['recent', '1w', '1m', 'ever'] as const).map((period) => (
-              <Button
-                key={period}
-                variant={timePeriod === period ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTimePeriod(period)}
-                className="flex items-center gap-2"
-              >
-                {getPeriodIcon(period)}
-                {getPeriodLabel(period)}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {/* Mobile time period filter - compact */}
-        <div className="px-4 mb-4 flex md:hidden items-center justify-between">
-          <h2 className="text-lg font-semibold">Trending</h2>
-          <div className="flex items-center gap-1">
-            {(['recent', '1w', '1m', 'ever'] as const).map((period) => (
-              <Button
-                key={period}
-                variant={timePeriod === period ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setTimePeriod(period)}
-                className="h-8 px-2 text-xs"
-              >
-                {getPeriodLabel(period)}
-              </Button>
-            ))}
-          </div>
         </div>
 
         {/* Content */}
