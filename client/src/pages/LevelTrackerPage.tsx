@@ -263,6 +263,12 @@ export default function LevelTrackerPage() {
     enabled: !!user?.id,
   });
 
+  const { data: lootboxStatus } = useQuery<{ canOpen: boolean; lastOpenedAt: string | null }>({
+    queryKey: ["/api/lootbox/status"],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: !!user?.id,
+  });
+
   const svgSize = 220;
   const radius = 95;
   const strokeWidth = 10;
@@ -452,18 +458,18 @@ export default function LevelTrackerPage() {
                   </div>
                   <span className="text-sm font-bold text-purple-400">+500 XP</span>
                 </div>
-                <div className={`flex items-center justify-between px-3 py-3 rounded-xl border ${dailyActivity?.lootboxOpenedToday ? "bg-purple-500/10 border-purple-500/20" : "bg-muted/40 border-border/50"}`}>
+                <div className={`flex items-center justify-between px-3 py-3 rounded-xl border ${lootboxStatus?.canOpen === false ? "bg-purple-500/10 border-purple-500/20" : "bg-muted/40 border-border/50"}`}>
                   <div>
-                    <p className={`text-sm font-medium ${dailyActivity?.lootboxOpenedToday ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                    <p className={`text-sm font-medium ${lootboxStatus?.canOpen === false ? "text-muted-foreground line-through" : "text-foreground"}`}>
                       Daily Lootbox
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {dailyActivity?.lootboxOpenedToday ? "Already opened today" : "Open your daily lootbox"}
+                      {lootboxStatus?.canOpen === false ? "Already opened today" : "Open your daily lootbox"}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {dailyActivity?.lootboxOpenedToday && <CheckCircle2 className="w-4 h-4 text-[#4ade80]" />}
-                    <span className={`text-sm font-bold ${dailyActivity?.lootboxOpenedToday ? "text-muted-foreground" : "text-purple-400"}`}>+100 XP</span>
+                    {lootboxStatus?.canOpen === false && <CheckCircle2 className="w-4 h-4 text-[#4ade80]" />}
+                    <span className={`text-sm font-bold ${lootboxStatus?.canOpen === false ? "text-muted-foreground" : "text-purple-400"}`}>+100 XP</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between px-3 py-3 rounded-xl bg-muted/40 border border-border/50">
