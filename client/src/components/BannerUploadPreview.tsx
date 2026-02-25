@@ -40,15 +40,18 @@ export function BannerUploadPreview({
   const bannerHeight = containerWidth > 0 ? Math.round(containerWidth / 3.5) : 200;
   const stageHeight = bannerHeight + OVERFLOW_PADDING * 2;
 
+  const fileSelectedRef = useRef(false);
+
   useEffect(() => {
     if (!previewUrl && fileInputRef.current) {
+      fileSelectedRef.current = false;
       fileInputRef.current.click();
       const handleFocus = () => {
         setTimeout(() => {
-          if (!fileInputRef.current?.files?.length) {
+          if (!fileSelectedRef.current) {
             onCancel?.();
           }
-        }, 300);
+        }, 500);
       };
       window.addEventListener('focus', handleFocus, { once: true });
       return () => window.removeEventListener('focus', handleFocus);
@@ -135,7 +138,10 @@ export function BannerUploadPreview({
 
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) handleFileSelect(file);
+    if (file) {
+      fileSelectedRef.current = true;
+      handleFileSelect(file);
+    }
   }, [handleFileSelect]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
