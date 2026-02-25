@@ -9,6 +9,17 @@ Gamefolio is a comprehensive gaming portfolio and social platform for gamers to 
 - Prioritize data integrity and security
 - Prefer comprehensive solutions over quick fixes
 
+## Recent Changes (Feb 2026 - XP System Overhaul)
+- **Overhauled XP Reward Structure** in `server/leaderboard-service.ts`: Clip/Reel Upload +200 XP, Screenshot +100 XP, Daily Login +25 XP, View +2 XP, Like Received +10 XP, Fire Reaction +15 XP, Comment Received +20 XP, Share Received +40 XP, Follow Received +50 XP
+- **New Streak Milestone System** in `server/streak-service.ts`: Day 2 (+50), Day 3 (+75), Day 5 (+150), Day 7 (+300), Day 14 (+500), Day 30 (+1,000), then doubles every 30 days
+- **Performance Milestone Service** (`server/performance-milestone-service.ts`): Per-clip view milestones (50/100/250/500/1K/5K/10K views) awarding XP once per clip
+- **Creator Milestone Service** (`server/creator-milestone-service.ts`): First upload of day (+100), 5 uploads/week (+300), 10 uploads/week (+750), first clip to 100 views (+250), first clip to 1K views (+1000)
+- **Bonus Events Service** (`server/bonus-events-service.ts`): Weekend upload bonus (+50% XP), Featured Clip of the Day (+500 XP), Lootbox opened (+100 XP), Upload within 24h of last (+75 XP)
+- **Daily Activity Tracking**: Watch 5 clips/day (+10 XP), Watch 20 clips/day (+30 XP), Daily comment (+15 XP), Daily like (+5 XP), Daily share (+20 XP)
+- **New API Endpoint** `GET /api/user/:id/daily-activity`: Returns all daily progress data for the Level Tracker page
+- **Admin Endpoint** `POST /api/admin/featured-clip/:clipId`: Awards +500 XP to clip owner
+- **Overhauled Level Tracker Page** with 5 new sections: Daily Activity Tracker (with 24hr countdown clock), Streak Tracker (all milestones + progress), Creator Milestones, Performance Milestones, Bonus Events
+
 ## Recent Changes (Feb 2026 - CodeRabbit Review Fixes)
 - **Error Boundaries**: Added `ErrorBoundary` component (`client/src/components/ErrorBoundary.tsx`) wrapping App root and Router for crash resilience
 - **Firebase Auth Race Condition**: Added mounted flag to `use-auth.tsx` to prevent state updates on unmounted components; added `setLocation` to deps

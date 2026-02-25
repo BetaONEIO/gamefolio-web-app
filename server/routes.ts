@@ -12,6 +12,9 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { storage } from "./storage";
 import { LeaderboardService } from "./leaderboard-service";
 import { StreakService } from "./streak-service";
+import { PerformanceMilestoneService } from "./performance-milestone-service";
+import { CreatorMilestoneService } from "./creator-milestone-service";
+import { BonusEventsService } from "./bonus-events-service";
 import { createInsertSchema } from "drizzle-zod";
 import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema } from "@shared/schema";
 import { promisify } from "util";
@@ -2372,6 +2375,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user's daily activity and progress for the Level Tracker
+  app.get("/api/user/:userId/daily-activity", authMiddleware, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const requestingUserId = (req.user as any).id;
+      const requestingUserRole = (req.user as any).role;
+
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      if (userId !== requestingUserId && requestingUserRole !== 'admin') {
+        return res.status(403).json({ message: "You can only view your own activity" });
+      }
+
+      const [xpHistory, pointsHistory] = await Promise.all([
+        storage.getUserXPHistory(userId, 500),
+        storage.getUserPointsHistory(userId, 500),
+      ]);
+      const today = new Date();
+
+      const isSameDay = (d1: Date, d2: Date) =>
+        d1.getFullYear() === d2.getFullYear() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate();
+
+      const todayXP = xpHistory.filter((h) => isSameDay(new Date(h.createdAt), today));
+      const todayPts = pointsHistory.filter((h) => isSameDay(new Date(h.createdAt), today));
+
+      const clipsWatchedToday = todayXP.filter((h) => h.source === "watch_clip_counted").length;
+      const watch5Done = todayPts.some((h) => h.action === "watch_5_clips");
+      const watch20Done = todayPts.some((h) => h.action === "watch_20_clips");
+      const commentedToday = todayPts.some((h) => h.action === "comment");
+      const likedToday = todayPts.some((h) => h.action === "like");
+      const sharedToday = todayPts.some((h) => h.action === "share_given");
+      const loginXPToday = todayPts.filter((h) => h.action === "daily_login").reduce((s, h) => s + h.points, 0);
+      const streakBonusToday = todayPts.filter((h) => h.action === "streak_milestone").reduce((s, h) => s + h.points, 0);
+      const lootboxOpenedToday = todayPts.some((h) => h.action === "lootbox_bonus");
+
+      // Creator milestone statuses
+      const { CreatorMilestoneService: CMS } = await import("./creator-milestone-service");
+      const creatorStatus = await CMS.getCreatorMilestoneStatus(userId);
+
+      // Streak info
+      const { StreakService: SS } = await import("./streak-service");
+      const streakInfo = await SS.getUserStreak(userId);
+
+      // Current weekend status
+      const { BonusEventsService: BES } = await import("./bonus-events-service");
+      const isWeekend = BES.isWeekend();
+
+      res.json({
+        clipsWatchedToday,
+        watch5Done,
+        watch20Done,
+        commentedToday,
+        likedToday,
+        sharedToday,
+        loginXPToday,
+        streakBonusToday,
+        lootboxOpenedToday,
+        ...creatorStatus,
+        streak: streakInfo,
+        isWeekend,
+      });
+    } catch (error) {
+      console.error("Error fetching daily activity:", error);
+      res.status(500).json({ message: "Error fetching daily activity" });
+    }
+  });
+
+  // Admin: Feature a clip (awards +500 XP to the clip owner)
+  app.post("/api/admin/featured-clip/:clipId", adminMiddleware, async (req, res) => {
+    try {
+      const clipId = parseInt(req.params.clipId);
+      if (isNaN(clipId)) {
+        return res.status(400).json({ message: "Invalid clip ID" });
+      }
+      const clip = await storage.getClip(clipId);
+      if (!clip) {
+        return res.status(404).json({ message: "Clip not found" });
+      }
+      await BonusEventsService.awardFeaturedClipBonus(clip.userId, clipId);
+      res.json({ message: `Clip #${clipId} featured! Owner awarded +500 XP.` });
+    } catch (error) {
+      console.error("Error featuring clip:", error);
+      res.status(500).json({ message: "Error featuring clip" });
+    }
+  });
+
   // Recalculate levels for all users based on their current XP
   app.post("/api/admin/recalculate-levels", authMiddleware, async (req, res) => {
     try {
@@ -4431,6 +4523,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'upload',
         `Upload: ${clipData.videoType === 'reel' ? 'Reel' : 'Clip'} - ${title}`
       );
+
+      // Weekend upload bonus (+50% XP on Sat/Sun)
+      await BonusEventsService.awardWeekendUploadBonus(userId, 200);
+
+      // Creator milestones: first upload of the day + weekly milestones
+      await CreatorMilestoneService.checkFirstUploadOfDay(userId);
+      await CreatorMilestoneService.checkWeeklyUploadMilestones(userId);
+
+      // Consecutive upload bonus (uploaded within 24h of last upload)
+      await BonusEventsService.checkConsecutiveUploadBonus(userId);
       
       // Get updated user data to return current XP and level
       const updatedUser = await storage.getUserById(userId);
@@ -4896,12 +4998,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const comment = await storage.createComment(commentData);
 
-      // Award points to the user for commenting
+      // Award points to the commenter
       await LeaderboardService.awardPoints(
         req.user!.id,
         'comment',
         `Commented on clip #${clipId}`
       );
+
+      // Award comment_received XP to the clip owner (if different from commenter)
+      const commentedClip = await storage.getClip(clipId);
+      if (commentedClip && commentedClip.userId !== req.user!.id) {
+        await LeaderboardService.awardCustomPoints(
+          commentedClip.userId,
+          'comment_received',
+          20,
+          `Received a comment on clip #${clipId}`
+        );
+      }
 
       // Parse mentions from comment content and create mention records
       const mentions = await mentionService.parseMentions(req.body.content);
@@ -5256,6 +5369,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             'like',
             `Liked clip #${clipId}`
           );
+          // Award like_received XP to the clip owner
+          const likedClip = await storage.getClip(clipId);
+          if (likedClip && likedClip.userId !== userId) {
+            await LeaderboardService.awardCustomPoints(
+              likedClip.userId,
+              'like_received',
+              10,
+              `Received a like on clip #${clipId}`
+            );
+          }
         }
 
         // Create notification for the clip owner
@@ -5461,12 +5584,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Increment the view count on the clip
         await storage.incrementClipViews(clipId);
 
-        // Award 1 point to the content owner for receiving a view
+        // Award view XP to the content owner
         await LeaderboardService.awardPoints(
           clip.userId,
           'view',
           `Clip #${clipId} received a view`
         );
+
+        // Get updated view count for milestone checks
+        const updatedClip = await storage.getClip(clipId);
+        const newViewCount = updatedClip?.views || 0;
+
+        // Check performance milestones (view count thresholds)
+        await PerformanceMilestoneService.checkAndAwardViewMilestones(clipId, clip.userId, newViewCount);
+
+        // Check creator milestones for first clips to reach 100 / 1,000 views
+        if (newViewCount >= 100) {
+          await CreatorMilestoneService.checkFirst100Views(clip.userId, clipId);
+        }
+        if (newViewCount >= 1000) {
+          await CreatorMilestoneService.checkFirst1000Views(clip.userId, clipId);
+        }
+
+        // Award watch XP to the viewer (if authenticated)
+        if (req.user?.id && req.user.id !== clip.userId) {
+          await BonusEventsService.awardWatchClipXP(req.user.id);
+        }
       }
 
       res.json({ success: true });
@@ -5888,6 +6031,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If user is not private, follow immediately
       await storage.createFollow({followerId, followingId});
       await NotificationService.createFollowNotification(followingId, followerId);
+
+      // Award follow_received XP to the person being followed
+      await LeaderboardService.awardCustomPoints(
+        followingId,
+        'follow_received',
+        50,
+        `Received a new follower`
+      );
 
       res.json({ status: 'following', message: 'User followed successfully' });
     } catch (err) {
@@ -7668,12 +7819,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const screenshot = await storage.createScreenshot(screenshotData);
 
-      // Award upload points to the user (2 XP for screenshots)
+      // Award upload points to the user (100 XP for screenshots)
       await LeaderboardService.awardPoints(
         userId,
         'screenshot_upload',
         `Upload: Screenshot - ${title}`
       );
+
+      // Weekend upload bonus (+50% XP on Sat/Sun)
+      await BonusEventsService.awardWeekendUploadBonus(userId, 100);
+
+      // Creator milestones: first upload of the day + weekly milestones
+      await CreatorMilestoneService.checkFirstUploadOfDay(userId);
+      await CreatorMilestoneService.checkWeeklyUploadMilestones(userId);
+
+      // Consecutive upload bonus
+      await BonusEventsService.checkConsecutiveUploadBonus(userId);
       
       // Get updated user data to return current XP and level
       const updatedUser = await storage.getUserById(userId);
@@ -10135,6 +10296,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!result) {
         return res.status(404).json({ message: "No rewards available in lootbox" });
       }
+
+      // Award the lootbox bonus XP (+100 XP for opening the lootbox)
+      await BonusEventsService.awardLootboxBonus(userId);
 
       // Determine the appropriate message based on reward type
       let message: string;

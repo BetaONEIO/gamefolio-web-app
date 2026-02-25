@@ -5,14 +5,29 @@ import { InsertUserPointsHistory, InsertWeeklyLeaderboard, InsertTopContributor 
 // Points are used for BOTH leaderboards AND leveling
 // Every point earned contributes to user's level progression
 export const POINT_VALUES = {
-  upload: 20,             // 20 points for uploading clips/reels
-  screenshot_upload: 2,   // 2 points for uploading screenshots
-  like: 1,                // 1 point for liking content
-  comment: 1,             // 1 point for commenting
-  fire: 5,                // 5 points for fire reactions (permanent, limited daily)
-  view: 0.01,             // 0.01 points per view (1 point per 100 views)
-  daily_login: 10,        // 10 points for daily consecutive login
-  streak_milestone: 0,    // Variable points for streak milestones (set dynamically)
+  upload: 200,                    // 200 XP for uploading clips/reels
+  screenshot_upload: 100,         // 100 XP for uploading screenshots
+  like: 5,                        // 5 XP for liking content (like_given)
+  like_received: 10,              // 10 XP when your content receives a like
+  comment: 15,                    // 15 XP for commenting on a clip (comment_given)
+  comment_received: 20,           // 20 XP when your content receives a comment
+  fire: 15,                       // 15 XP for fire reactions received
+  share_received: 40,             // 40 XP when your clip is shared
+  follow_received: 50,            // 50 XP when someone follows you
+  share_given: 20,                // 20 XP for sharing a clip
+  view: 0.02,                     // 0.02 points per view (+2 XP per view)
+  daily_login: 25,                // 25 XP for daily login
+  streak_milestone: 0,            // Variable XP for streak milestones (set dynamically)
+  watch_5_clips: 10,              // 10 XP for watching 5 clips in a day
+  watch_20_clips: 30,             // 30 XP for watching 20 clips in a day
+  first_upload_of_day: 100,       // 100 XP for first upload of the day
+  weekly_uploads_5: 300,          // 300 XP for 5 uploads in a week
+  weekly_uploads_10: 750,         // 750 XP for 10 uploads in a week
+  first_100_views: 250,           // 250 XP first clip to reach 100 views
+  first_1000_views: 1000,         // 1000 XP first clip to reach 1,000 views
+  lootbox_bonus: 100,             // 100 XP for opening the daily lootbox
+  consecutive_upload_bonus: 75,   // 75 XP for uploading within 24h of last upload
+  weekend_upload_bonus: 0,        // Variable - 50% of upload XP on weekends
 } as const;
 
 export class LeaderboardService {

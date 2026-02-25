@@ -3,18 +3,43 @@ import { LeaderboardService, POINT_VALUES } from "./leaderboard-service";
 
 const DAILY_LOGIN_XP = POINT_VALUES.daily_login;
 
-const MILESTONE_INTERVAL = 5;
+// Specific milestone days and their XP bonuses
+const STREAK_MILESTONES: { day: number; bonus: number }[] = [
+  { day: 2, bonus: 50 },
+  { day: 3, bonus: 75 },
+  { day: 5, bonus: 150 },
+  { day: 7, bonus: 300 },
+  { day: 14, bonus: 500 },
+  { day: 30, bonus: 1000 },
+];
 
 function getMilestoneBonus(streak: number): number {
-  if (streak <= 0 || streak % MILESTONE_INTERVAL !== 0) return 0;
-  const tier = streak / MILESTONE_INTERVAL;
-  if (tier <= 2) return 25;
-  if (tier <= 4) return 50;
-  if (tier <= 6) return 100;
-  if (tier <= 10) return 200;
-  if (tier <= 20) return 500;
-  return 1000;
+  if (streak <= 0) return 0;
+  // Check explicit milestones first
+  const explicit = STREAK_MILESTONES.find(m => m.day === streak);
+  if (explicit) return explicit.bonus;
+  // Beyond 30: scale by doubling every 30 days
+  if (streak > 30 && streak % 30 === 0) {
+    const multiplier = Math.floor(streak / 30);
+    return 1000 * Math.pow(2, multiplier - 1);
+  }
+  return 0;
 }
+
+export function getNextMilestone(currentStreak: number): { day: number; bonus: number } | null {
+  // Check explicit milestones
+  const next = STREAK_MILESTONES.find(m => m.day > currentStreak);
+  if (next) return next;
+  // Beyond 30
+  const nextMultiple = Math.ceil((currentStreak + 1) / 30) * 30;
+  if (nextMultiple > 30) {
+    const multiplier = Math.floor(nextMultiple / 30);
+    return { day: nextMultiple, bonus: 1000 * Math.pow(2, multiplier - 1) };
+  }
+  return null;
+}
+
+export { STREAK_MILESTONES };
 
 export class StreakService {
   private static getCalendarDate(date: Date): Date {
@@ -163,6 +188,7 @@ export class StreakService {
     longestStreak: number;
     nextMilestone: number | null;
     nextMilestoneBonus: number | null;
+    allMilestones: { day: number; bonus: number }[];
   }> {
     try {
       const user = await storage.getUserById(userId);
@@ -171,22 +197,24 @@ export class StreakService {
           currentStreak: 0,
           longestStreak: 0,
           nextMilestone: null,
-          nextMilestoneBonus: null
+          nextMilestoneBonus: null,
+          allMilestones: STREAK_MILESTONES
         };
       }
 
       const currentStreak = user.currentStreak || 0;
       const longestStreak = user.longestStreak || 0;
 
-      const remainder = currentStreak % MILESTONE_INTERVAL;
-      const nextMilestone = currentStreak + (MILESTONE_INTERVAL - remainder);
-      const nextMilestoneBonus = getMilestoneBonus(nextMilestone);
+      const nextMilestoneData = getNextMilestone(currentStreak);
+      const nextMilestone = nextMilestoneData?.day ?? null;
+      const nextMilestoneBonus = nextMilestoneData?.bonus ?? null;
 
       return {
         currentStreak,
         longestStreak,
         nextMilestone,
-        nextMilestoneBonus: nextMilestoneBonus > 0 ? nextMilestoneBonus : null
+        nextMilestoneBonus: nextMilestoneBonus && nextMilestoneBonus > 0 ? nextMilestoneBonus : null,
+        allMilestones: STREAK_MILESTONES
       };
     } catch (error) {
       console.error("Error getting user streak:", error);
@@ -194,7 +222,8 @@ export class StreakService {
         currentStreak: 0,
         longestStreak: 0,
         nextMilestone: null,
-        nextMilestoneBonus: null
+        nextMilestoneBonus: null,
+        allMilestones: STREAK_MILESTONES
       };
     }
   }

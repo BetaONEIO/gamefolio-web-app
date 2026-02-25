@@ -14,6 +14,8 @@ import QRCode from 'qrcode';
 import { fullAccessMiddleware } from '../middleware/full-access';
 import { hybridFullAccess } from '../middleware/hybrid-auth';
 import { LeaderboardService } from '../leaderboard-service';
+import { BonusEventsService } from '../bonus-events-service';
+import { CreatorMilestoneService } from '../creator-milestone-service';
 
 const router = express.Router();
 
@@ -490,12 +492,22 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
     await storage.incrementDailyUploadCount(req.user!.id, 'screenshot');
     console.log(`📊 Incremented screenshot upload count for user ${req.user!.id}`);
 
-    // Award upload points to the user (screenshots are worth 2 XP)
+    // Award upload points to the user (screenshots are worth 100 XP)
     await LeaderboardService.awardPoints(
       req.user!.id,
       'screenshot_upload',
       `Upload: Screenshot - ${screenshot.title}`
     );
+
+    // Weekend upload bonus (+50% XP on Sat/Sun)
+    await BonusEventsService.awardWeekendUploadBonus(req.user!.id, 100);
+
+    // Creator milestones: first upload of the day + weekly milestones
+    await CreatorMilestoneService.checkFirstUploadOfDay(req.user!.id);
+    await CreatorMilestoneService.checkWeeklyUploadMilestones(req.user!.id);
+
+    // Consecutive upload bonus
+    await BonusEventsService.checkConsecutiveUploadBonus(req.user!.id);
 
     // Generate QR code and sharing data for screenshot
     const baseUrl = 'https://app.gamefolio.com';
@@ -522,7 +534,7 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
         shareUrl: screenshotUrl,
         socialMediaLinks
       },
-      xpGained: 2,
+      xpGained: 100,
       userXP: user?.totalXP || 0,
       userLevel: user?.level || 1,
       message: 'Screenshot uploaded successfully'
