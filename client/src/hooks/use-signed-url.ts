@@ -53,6 +53,7 @@ export function useSignedUrl(publicUrl: string | undefined | null) {
       return;
     }
 
+    setSignedUrl(null);
     const abortController = new AbortController();
     setIsLoading(true);
     setError(null);
