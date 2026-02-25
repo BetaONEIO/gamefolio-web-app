@@ -12,6 +12,7 @@ import { useCreateComment, useDeleteComment } from "@/hooks/use-clips";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { Heart, Trash2 } from "lucide-react";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
@@ -37,7 +38,7 @@ function CommentAvatar({ avatarUrl, username }: { avatarUrl: string | null | und
   return (
     <Avatar className="h-10 w-10 flex-shrink-0">
       <AvatarImage 
-        src={signedUrl || avatarUrl || undefined} 
+        src={signedUrl || undefined} 
         alt={username || "User"} 
       />
       <AvatarFallback className="text-xs">
@@ -308,22 +309,10 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
           className="mt-4 space-y-3 flex-shrink-0"
         >
           <div className="flex items-start gap-3">
-            {currentUser?.nftProfileTokenId && currentUser?.nftProfileImageUrl ? (
-              <img
-                src={currentUser.nftProfileImageUrl}
-                alt={currentUser?.username || "User"}
-                className="h-10 w-10 rounded-lg border border-[#4ade80]/40 object-cover flex-shrink-0 hidden sm:flex"
-              />
-            ) : (
-              <Avatar className="h-10 w-10 hidden sm:flex flex-shrink-0">
-                <AvatarImage 
-                  src={currentUser?.avatarUrl || undefined} 
-                  alt={currentUser?.username || "User"} 
-                />
-                <AvatarFallback className="text-xs">
-                  {currentUser?.username?.[0].toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
+            {currentUser && (
+              <div className="hidden sm:flex flex-shrink-0">
+                <CustomAvatar user={currentUser} size="sm" showBorder={false} />
+              </div>
             )}
             <div className="flex-1 space-y-2">
               <StyledMentionInput
