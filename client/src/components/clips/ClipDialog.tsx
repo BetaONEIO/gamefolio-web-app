@@ -901,7 +901,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     {clip?.user && (
                       <CustomAvatar 
                         user={clip.user} 
-                        size="sm" 
+                        size="md" 
                         showBorder={true}
                       />
                     )}
