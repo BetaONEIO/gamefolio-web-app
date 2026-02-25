@@ -35,7 +35,7 @@ import {
 function CommentAvatar({ avatarUrl, username }: { avatarUrl: string | null | undefined; username: string }) {
   const { signedUrl } = useSignedUrl(avatarUrl);
   return (
-    <Avatar className="h-8 w-8 flex-shrink-0">
+    <Avatar className="h-10 w-10 flex-shrink-0">
       <AvatarImage 
         src={signedUrl || avatarUrl || undefined} 
         alt={username || "User"} 
@@ -189,7 +189,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
     return (
       <div className="bg-card rounded-lg p-4">
         <div className="flex items-center mb-4">
-          <Skeleton className="h-8 w-8 rounded-full" />
+          <Skeleton className="h-10 w-10 rounded-full" />
           <Skeleton className="ml-2 h-4 w-32" />
         </div>
         <Skeleton className="h-20 w-full mb-4" />
@@ -312,10 +312,10 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
               <img
                 src={currentUser.nftProfileImageUrl}
                 alt={currentUser?.username || "User"}
-                className="h-8 w-8 rounded-lg border border-[#4ade80]/40 object-cover flex-shrink-0 hidden sm:flex"
+                className="h-10 w-10 rounded-lg border border-[#4ade80]/40 object-cover flex-shrink-0 hidden sm:flex"
               />
             ) : (
-              <Avatar className="h-8 w-8 hidden sm:flex flex-shrink-0">
+              <Avatar className="h-10 w-10 hidden sm:flex flex-shrink-0">
                 <AvatarImage 
                   src={currentUser?.avatarUrl || undefined} 
                   alt={currentUser?.username || "User"} 
