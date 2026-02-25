@@ -6690,15 +6690,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Invalid image file" });
         }
 
-        const targetWidth = 1200;
-        const targetHeight = 675;
+        const targetWidth = 1600;
 
         processedBuffer = await sharpInstance
-          .resize(targetWidth, targetHeight, {
-            fit: 'cover',
-            position: 'center'
+          .resize(targetWidth, undefined, {
+            fit: 'inside',
+            withoutEnlargement: true
           })
-          .jpeg({ quality: 85 })
+          .jpeg({ quality: 95 })
           .toBuffer();
         fileName = `banner-${req.user.id}-${Date.now()}.jpg`;
         mimeType = 'image/jpeg';

@@ -12,8 +12,8 @@ interface BannerUploadPreviewProps {
   isPro?: boolean;
 }
 
-// Must match the h-64 (256px) banner height used in ProfileHeader
-const BANNER_HEIGHT = 256;
+// Must match the md:h-72 (288px) banner height used on the profile page
+const BANNER_HEIGHT = 288;
 // Extra space shown above/below the crop box so the user can see what's outside it
 const OVERFLOW_PADDING = 80;
 const STAGE_HEIGHT = BANNER_HEIGHT + OVERFLOW_PADDING * 2;
@@ -222,8 +222,8 @@ export function BannerUploadPreview({
       const srcX = natW / 2 - srcW / 2 - position.x / scale;
       const srcY = natH / 2 - srcH / 2 - position.y / scale;
 
-      // Export at 1200 wide, height proportional to the crop box ratio
-      const exportW = 1200;
+      // Export at 1600 wide for sharper results on high-DPI displays
+      const exportW = 1600;
       const exportH = Math.round(exportW * cropH / cropW);
 
       const canvas = document.createElement('canvas');
@@ -234,7 +234,7 @@ export function BannerUploadPreview({
       ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, exportW, exportH);
 
       const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(b => b ? resolve(b) : reject(new Error('Canvas to blob failed')), 'image/jpeg', 0.92);
+        canvas.toBlob(b => b ? resolve(b) : reject(new Error('Canvas to blob failed')), 'image/jpeg', 0.95);
       });
 
       const formData = new FormData();
