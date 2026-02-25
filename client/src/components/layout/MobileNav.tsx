@@ -1,18 +1,25 @@
 import { useLocation, Link } from "wouter";
-import { PlusCircle, User } from "lucide-react";
+import { PlusCircle, User, Video, Film, Camera, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
 import { GamefolioTrendingIcon } from "@/components/icons/GamefolioTrendingIcon";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import AuthModal from "@/components/auth/auth-modal";
+
+const uploadOptions = [
+  { icon: Video, label: "Upload Clip", type: "clips", color: "from-blue-500 to-blue-600" },
+  { icon: Film, label: "Upload Reel", type: "reels", color: "from-purple-500 to-purple-600" },
+  { icon: Camera, label: "Screenshot", type: "screenshots", color: "from-green-500 to-green-600" },
+];
 
 const MobileNav = () => {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
   const username = user?.username || "user";
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
 
   const navItems = [
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
@@ -23,33 +30,115 @@ const MobileNav = () => {
   ];
 
   const handleNavClick = (item: typeof navItems[0], e: React.MouseEvent) => {
+    if (item.isUpload) {
+      e.preventDefault();
+      setUploadMenuOpen((prev) => !prev);
+      return;
+    }
     if (item.requiresAuth && !user) {
       e.preventDefault();
       setShowAuthModal(true);
     }
   };
 
+  const handleUploadOptionClick = useCallback((type: string) => {
+    setUploadMenuOpen(false);
+    window.dispatchEvent(new CustomEvent("upload-type-change", { detail: type }));
+    setLocation(`/upload?type=${type}`);
+  }, [setLocation]);
+
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40">
+      {uploadMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 backdrop-blur-md bg-black/50 transition-opacity duration-300"
+          onClick={() => setUploadMenuOpen(false)}
+        />
+      )}
+
+      <div className="fixed bottom-16 left-0 right-0 z-50 flex justify-center pointer-events-none">
+        <div className="relative w-0 h-0">
+          {uploadOptions.map((option, index) => {
+            const total = uploadOptions.length;
+            const spreadAngle = 40;
+            const startAngle = -90 - ((total - 1) * spreadAngle) / 2;
+            const angle = startAngle + index * spreadAngle;
+            const radians = (angle * Math.PI) / 180;
+            const radius = 120;
+            const x = Math.cos(radians) * radius;
+            const y = Math.sin(radians) * radius;
+
+            return (
+              <button
+                key={option.type}
+                onClick={() => handleUploadOptionClick(option.type)}
+                className={cn(
+                  "absolute pointer-events-auto flex flex-col items-center justify-center",
+                  "w-20 h-20 rounded-2xl shadow-xl border border-white/10",
+                  "bg-gradient-to-br text-white",
+                  option.color,
+                  "transition-all duration-300 ease-out",
+                  uploadMenuOpen
+                    ? "opacity-100 scale-100"
+                    : "opacity-0 scale-0"
+                )}
+                style={{
+                  transform: uploadMenuOpen
+                    ? `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`
+                    : `translate(-50%, -50%)`,
+                  transitionDelay: uploadMenuOpen ? `${index * 50}ms` : `${(total - 1 - index) * 30}ms`,
+                }}
+              >
+                <option.icon className="w-6 h-6 mb-1" />
+                <span className="text-[10px] font-semibold leading-tight text-center px-1">
+                  {option.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
         <div className="flex justify-around py-3">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={(e) => handleNavClick(item, e)}
-              className="flex flex-col items-center text-xs w-full no-underline"
-            >
-              <item.icon className={cn(
-                "mb-1",
-                item.isUpload ? "w-7 h-7" : "w-6 h-6",
-                location === item.href ? "text-primary" : "text-muted-foreground"
-              )} />
-              <span className={cn(
-                location === item.href ? "text-white" : "text-muted-foreground"
-              )}>{item.label}</span>
-            </Link>
-          ))}
+          {navItems.map((item) => {
+            if (item.isUpload) {
+              return (
+                <button
+                  key="upload"
+                  onClick={(e) => handleNavClick(item, e)}
+                  className="flex flex-col items-center text-xs w-full bg-transparent border-0 cursor-pointer"
+                >
+                  <div className={cn(
+                    "mb-1 transition-transform duration-300",
+                    uploadMenuOpen && "rotate-45"
+                  )}>
+                    <PlusCircle className={cn(
+                      "w-7 h-7 transition-colors duration-200",
+                      uploadMenuOpen ? "text-primary" : "text-muted-foreground"
+                    )} />
+                  </div>
+                </button>
+              );
+            }
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={(e) => handleNavClick(item, e)}
+                className="flex flex-col items-center text-xs w-full no-underline"
+              >
+                <item.icon className={cn(
+                  "mb-1 w-6 h-6",
+                  location === item.href ? "text-primary" : "text-muted-foreground"
+                )} />
+                <span className={cn(
+                  location === item.href ? "text-white" : "text-muted-foreground"
+                )}>{item.label}</span>
+              </Link>
+            );
+          })}
         </div>
       </nav>
       
