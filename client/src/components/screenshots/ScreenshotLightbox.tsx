@@ -478,7 +478,15 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
 
   return (
     <Dialog open={!!screenshot} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-[80%] w-[80%] p-0 bg-background text-foreground max-h-[76vh] h-[76vh] overflow-hidden screenshot-lightbox-close">
+      <DialogContent
+        className="max-w-[80%] w-[80%] p-0 bg-background text-foreground max-h-[76vh] h-[76vh] overflow-hidden screenshot-lightbox-close"
+        onInteractOutside={(e) => {
+          const target = e.target as HTMLElement;
+          if (target.closest('[data-navigation-arrow]')) {
+            e.preventDefault();
+          }
+        }}
+      >
         <style>{`
           .screenshot-lightbox-close > button[type="button"] {
             background: rgba(0,0,0,0.4) !important;
@@ -662,6 +670,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
       </DialogContent>
       {hasPrevious && createPortal(
         <button
+          data-navigation-arrow
           onClick={(e) => { e.stopPropagation(); handlePrevious(); }}
           className="fixed left-[2%] top-1/2 -translate-y-1/2 z-[200] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors"
           aria-label="Previous screenshot"
@@ -672,6 +681,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
       )}
       {hasNext && createPortal(
         <button
+          data-navigation-arrow
           onClick={(e) => { e.stopPropagation(); handleNext(); }}
           className="fixed right-[2%] top-1/2 -translate-y-1/2 z-[200] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors"
           aria-label="Next screenshot"
