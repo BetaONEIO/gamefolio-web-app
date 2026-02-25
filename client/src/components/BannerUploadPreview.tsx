@@ -1,8 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Upload, X, Check, ZoomIn, ZoomOut, ArrowLeft } from 'lucide-react';
+import { ZoomIn, ZoomOut, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface BannerUploadPreviewProps {
@@ -25,7 +24,6 @@ export function BannerUploadPreview({
 }: BannerUploadPreviewProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
   const [minScale, setMinScale] = useState(1);
@@ -41,6 +39,21 @@ export function BannerUploadPreview({
 
   const bannerHeight = containerWidth > 0 ? Math.round(containerWidth / 3.5) : 200;
   const stageHeight = bannerHeight + OVERFLOW_PADDING * 2;
+
+  useEffect(() => {
+    if (!previewUrl && fileInputRef.current) {
+      fileInputRef.current.click();
+      const handleFocus = () => {
+        setTimeout(() => {
+          if (!fileInputRef.current?.files?.length) {
+            onCancel?.();
+          }
+        }, 300);
+      };
+      window.addEventListener('focus', handleFocus, { once: true });
+      return () => window.removeEventListener('focus', handleFocus);
+    }
+  }, []);
 
   useEffect(() => {
     const el = stageRef.current;
@@ -120,15 +133,6 @@ export function BannerUploadPreview({
     setShowEditor(true);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingFile(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFileSelect(file);
-  }, [handleFileSelect]);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDraggingFile(true); }, []);
-  const handleDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDraggingFile(false); }, []);
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) handleFileSelect(file);
@@ -244,7 +248,6 @@ export function BannerUploadPreview({
       if (!result.url) throw new Error('No URL returned from server');
 
       onUpload(result.url);
-      toast({ title: 'Banner uploaded!', description: 'Your banner has been updated.', variant: 'gamefolioSuccess' });
       handleCancel();
     } catch (error) {
       console.error('Banner upload error:', error);
@@ -254,31 +257,7 @@ export function BannerUploadPreview({
 
   if (!previewUrl) {
     return (
-      <Card className="w-full">
-        <CardHeader><CardTitle>Upload Banner</CardTitle></CardHeader>
-        <CardContent>
-          <div
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
-              isDraggingFile ? 'border-primary bg-primary/10' : 'border-muted-foreground/25 hover:border-primary/50'
-            }`}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-lg font-medium mb-2">Drop your banner image here</p>
-            <p className="text-sm text-muted-foreground mb-4">or click to select a file</p>
-            <Button variant="outline" onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }} className="mb-2" data-testid="button-choose-file">
-              Choose File
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              {isPro ? 'Supports JPEG, PNG, WebP, GIF (max 5MB, GIF max 10MB)' : 'Supports JPEG, PNG, WebP (max 5MB)'}
-            </p>
-          </div>
-          <input ref={fileInputRef} type="file" accept={isPro ? 'image/jpeg,image/png,image/webp,image/gif' : 'image/jpeg,image/png,image/webp'} onChange={handleFileInputChange} className="hidden" />
-        </CardContent>
-      </Card>
+      <input ref={fileInputRef} type="file" accept={isPro ? 'image/jpeg,image/png,image/webp,image/gif' : 'image/jpeg,image/png,image/webp'} onChange={handleFileInputChange} className="hidden" />
     );
   }
 

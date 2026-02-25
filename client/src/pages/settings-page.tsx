@@ -2528,7 +2528,7 @@ export default function SettingsPage() {
                           {profileData.bannerUrl ? 'Change Banner' : 'Upload Banner'}
                         </Button>
                         <p className="text-xs text-muted-foreground mt-2">
-                          Max file size: 5MB • Drag to position like Facebook cover photo
+                          Max file size: 5MB
                         </p>
                       </div>
                       {profileData.bannerUrl && (
