@@ -1907,13 +1907,19 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="displayName">Display Name</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="displayName">Display Name</Label>
+                    <span className={`text-xs ${profileData.displayName.length >= 30 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                      {profileData.displayName.length}/30
+                    </span>
+                  </div>
                   <div className="flex gap-2">
                     <Input
                       id="displayName"
                       value={profileData.displayName}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, displayName: e.target.value }))}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, displayName: e.target.value.slice(0, 30) }))}
                       placeholder="Your display name"
+                      maxLength={30}
                       className="flex-1"
                     />
                     <Popover>
@@ -1933,7 +1939,7 @@ export default function SettingsPage() {
                                     key={emoji}
                                     type="button"
                                     className="text-lg hover:bg-accent rounded p-0.5 transition-colors cursor-pointer"
-                                    onClick={() => setProfileData(prev => ({ ...prev, displayName: prev.displayName + emoji }))}
+                                    onClick={() => setProfileData(prev => ({ ...prev, displayName: (prev.displayName + emoji).slice(0, 30) }))}
                                     title={emoji}
                                   >
                                     {emoji}
