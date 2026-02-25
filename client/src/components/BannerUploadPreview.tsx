@@ -13,9 +13,7 @@ interface BannerUploadPreviewProps {
 }
 
 const CROP_ASPECT = 16 / 9;
-const CROP_HEIGHT = 170;
-const CROP_WIDTH = CROP_HEIGHT * CROP_ASPECT;
-const MIN_SCALE = 0.5;
+const SIDE_PADDING = 60;
 const MAX_SCALE = 3;
 
 export function BannerUploadPreview({
@@ -33,18 +31,33 @@ export function BannerUploadPreview({
   const [minScale, setMinScale] = useState(1);
   const [imageNaturalSize, setImageNaturalSize] = useState({ w: 0, h: 0 });
   const [showEditor, setShowEditor] = useState(false);
+  const [containerWidth, setContainerWidth] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  const cropW = containerWidth;
+  const cropH = containerWidth > 0 ? Math.round(containerWidth / CROP_ASPECT) : 0;
+  const outerH = cropH + SIDE_PADDING * 2;
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width ?? 0;
+      if (w > 0) setContainerWidth(w);
+    });
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, [showEditor]);
+
   const clampPosition = useCallback(
-    (x: number, y: number, s: number, natW: number, natH: number) => {
+    (x: number, y: number, s: number, natW: number, natH: number, cW: number, cH: number) => {
       const scaledW = natW * s;
       const scaledH = natH * s;
-      const maxX = Math.max(0, (scaledW - CROP_WIDTH) / 2);
-      const maxY = Math.max(0, (scaledH - CROP_HEIGHT) / 2);
+      const maxX = Math.max(0, (scaledW - cW) / 2);
+      const maxY = Math.max(0, (scaledH - cH) / 2);
       return {
         x: Math.max(-maxX, Math.min(maxX, x)),
         y: Math.max(-maxY, Math.min(maxY, y)),
@@ -114,17 +127,23 @@ export function BannerUploadPreview({
     const natW = img.naturalWidth;
     const natH = img.naturalHeight;
     setImageNaturalSize({ w: natW, h: natH });
+    setShowEditor(true);
+  }, []);
 
-    const scaleByWidth = CROP_WIDTH / natW;
-    const scaleByHeight = CROP_HEIGHT / natH;
+  useEffect(() => {
+    if (!showEditor || containerWidth === 0 || imageNaturalSize.w === 0) return;
+
+    const cW = containerWidth;
+    const cH = Math.round(containerWidth / CROP_ASPECT);
+    const scaleByWidth = cW / imageNaturalSize.w;
+    const scaleByHeight = cH / imageNaturalSize.h;
     const fitScale = Math.max(scaleByWidth, scaleByHeight);
-    const computed = Math.max(fitScale, MIN_SCALE);
+    const computed = Math.max(fitScale, 0.1);
 
     setMinScale(computed);
     setScale(computed);
     setPosition({ x: 0, y: 0 });
-    setShowEditor(true);
-  }, []);
+  }, [showEditor, containerWidth, imageNaturalSize]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -166,11 +185,17 @@ export function BannerUploadPreview({
 
       const handleMouseMove = (ev: MouseEvent) => {
         ev.preventDefault();
-        const deltaX = ev.clientX - startX;
-        const deltaY = ev.clientY - startY;
-        const newX = startPosX + deltaX;
-        const newY = startPosY + deltaY;
-        const clamped = clampPosition(newX, newY, scale, imageNaturalSize.w, imageNaturalSize.h);
+        const cW = containerWidth;
+        const cH = Math.round(containerWidth / CROP_ASPECT);
+        const clamped = clampPosition(
+          startPosX + (ev.clientX - startX),
+          startPosY + (ev.clientY - startY),
+          scale,
+          imageNaturalSize.w,
+          imageNaturalSize.h,
+          cW,
+          cH
+        );
         setPosition(clamped);
       };
 
@@ -182,7 +207,7 @@ export function BannerUploadPreview({
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     },
-    [position, scale, imageNaturalSize, clampPosition]
+    [position, scale, imageNaturalSize, containerWidth, clampPosition]
   );
 
   const handleTouchStart = useCallback(
@@ -200,14 +225,16 @@ export function BannerUploadPreview({
         if (ev.touches.length !== 1) return;
         ev.preventDefault();
         const t = ev.touches[0];
-        const deltaX = t.clientX - startX;
-        const deltaY = t.clientY - startY;
+        const cW = containerWidth;
+        const cH = Math.round(containerWidth / CROP_ASPECT);
         const clamped = clampPosition(
-          startPosX + deltaX,
-          startPosY + deltaY,
+          startPosX + (t.clientX - startX),
+          startPosY + (t.clientY - startY),
           scale,
           imageNaturalSize.w,
-          imageNaturalSize.h
+          imageNaturalSize.h,
+          cW,
+          cH
         );
         setPosition(clamped);
       };
@@ -220,16 +247,18 @@ export function BannerUploadPreview({
       document.addEventListener('touchmove', handleTouchMove, { passive: false });
       document.addEventListener('touchend', handleTouchEnd);
     },
-    [position, scale, imageNaturalSize, clampPosition]
+    [position, scale, imageNaturalSize, containerWidth, clampPosition]
   );
 
   const handleScaleChange = useCallback(
     (newScale: number) => {
-      const clamped = clampPosition(position.x, position.y, newScale, imageNaturalSize.w, imageNaturalSize.h);
+      const cW = containerWidth;
+      const cH = Math.round(containerWidth / CROP_ASPECT);
+      const clamped = clampPosition(position.x, position.y, newScale, imageNaturalSize.w, imageNaturalSize.h, cW, cH);
       setScale(newScale);
       setPosition(clamped);
     },
-    [position, imageNaturalSize, clampPosition]
+    [position, imageNaturalSize, containerWidth, clampPosition]
   );
 
   const handleCancel = useCallback(() => {
@@ -248,9 +277,11 @@ export function BannerUploadPreview({
       const img = imageRef.current;
       const natW = imageNaturalSize.w;
       const natH = imageNaturalSize.h;
+      const cW = containerWidth;
+      const cH = Math.round(containerWidth / CROP_ASPECT);
 
-      const cropW = CROP_WIDTH / scale;
-      const cropH = CROP_HEIGHT / scale;
+      const cropW = cW / scale;
+      const cropH = cH / scale;
 
       const srcX = natW / 2 - cropW / 2 - position.x / scale;
       const srcY = natH / 2 - cropH / 2 - position.y / scale;
@@ -307,7 +338,7 @@ export function BannerUploadPreview({
         variant: 'destructive',
       });
     }
-  }, [selectedFile, position, scale, imageNaturalSize, onUpload, toast, handleCancel]);
+  }, [selectedFile, position, scale, imageNaturalSize, containerWidth, onUpload, toast, handleCancel]);
 
   if (!previewUrl) {
     return (
@@ -361,7 +392,6 @@ export function BannerUploadPreview({
     );
   }
 
-  const outerH = CROP_HEIGHT + 120;
   const scaledW = imageNaturalSize.w * scale;
   const scaledH = imageNaturalSize.h * scale;
 
@@ -370,11 +400,11 @@ export function BannerUploadPreview({
       <CardHeader>
         <CardTitle>Edit media</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Drag to reposition · scroll or use the slider to zoom
+          Drag to reposition · use the slider to zoom
         </p>
       </CardHeader>
       <CardContent className="space-y-4 px-0 pb-4">
-        {/* Hidden img for natural-size reading */}
+        {/* Hidden img to read natural dimensions */}
         {!showEditor && (
           <img
             ref={imageRef}
@@ -385,108 +415,87 @@ export function BannerUploadPreview({
           />
         )}
 
-        {showEditor && (
-          <>
-            {/* Outer dark stage */}
-            <div
-              ref={containerRef}
-              className="relative w-full overflow-hidden bg-black select-none cursor-move"
-              style={{ height: outerH }}
-              onMouseDown={handleMouseDown}
-              onTouchStart={handleTouchStart}
-            >
-              {/* Hidden img used for canvas drawing */}
+        {/* Outer dark stage — full card width */}
+        <div
+          ref={containerRef}
+          className="relative w-full overflow-hidden bg-black select-none cursor-move"
+          style={{ height: outerH > 0 ? outerH : 300 }}
+          onMouseDown={showEditor ? handleMouseDown : undefined}
+          onTouchStart={showEditor ? handleTouchStart : undefined}
+        >
+          {showEditor && (
+            <>
+              {/* The image, centred and offset by drag position */}
               <img
                 ref={imageRef}
                 src={previewUrl}
                 alt=""
-                className="pointer-events-none"
+                className="pointer-events-none absolute"
                 style={{
-                  position: 'absolute',
                   width: scaledW,
                   height: scaledH,
                   left: '50%',
                   top: '50%',
                   transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
-                  imageRendering: 'auto',
-                  opacity: 1,
                 }}
                 draggable={false}
               />
 
-              {/* Dark overlay: top strip */}
+              {/* Dark overlay strips outside the crop box */}
+              {/* top */}
               <div
                 className="absolute inset-x-0 top-0 bg-black/60 pointer-events-none"
-                style={{ height: (outerH - CROP_HEIGHT) / 2 }}
+                style={{ height: SIDE_PADDING }}
               />
-              {/* Dark overlay: bottom strip */}
+              {/* bottom */}
               <div
                 className="absolute inset-x-0 bottom-0 bg-black/60 pointer-events-none"
-                style={{ height: (outerH - CROP_HEIGHT) / 2 }}
-              />
-              {/* Dark overlay: left strip */}
-              <div
-                className="absolute left-0 bg-black/60 pointer-events-none"
-                style={{
-                  top: (outerH - CROP_HEIGHT) / 2,
-                  height: CROP_HEIGHT,
-                  right: `calc(50% + ${CROP_WIDTH / 2}px)`,
-                }}
-              />
-              {/* Dark overlay: right strip */}
-              <div
-                className="absolute right-0 bg-black/60 pointer-events-none"
-                style={{
-                  top: (outerH - CROP_HEIGHT) / 2,
-                  height: CROP_HEIGHT,
-                  left: `calc(50% + ${CROP_WIDTH / 2}px)`,
-                }}
+                style={{ height: SIDE_PADDING }}
               />
 
-              {/* Crop box border */}
+              {/* Crop box border — full width, centred vertically */}
               <div
-                className="absolute pointer-events-none"
+                className="absolute inset-x-0 pointer-events-none"
                 style={{
-                  top: (outerH - CROP_HEIGHT) / 2,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: CROP_WIDTH,
-                  height: CROP_HEIGHT,
+                  top: SIDE_PADDING,
+                  height: cropH,
                   border: '2px solid #1d9bf0',
                   boxSizing: 'border-box',
                 }}
               />
-            </div>
+            </>
+          )}
+        </div>
 
-            {/* Zoom slider */}
-            <div className="flex items-center gap-3 px-4">
-              <button
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => handleScaleChange(Math.max(minScale, scale / 1.15))}
-                aria-label="Zoom out"
-                data-testid="button-zoom-out"
-              >
-                <ZoomOut className="h-5 w-5" />
-              </button>
-              <input
-                type="range"
-                min={minScale}
-                max={MAX_SCALE}
-                step={0.01}
-                value={scale}
-                onChange={(e) => handleScaleChange(parseFloat(e.target.value))}
-                className="flex-1 accent-[#1d9bf0] cursor-pointer"
-              />
-              <button
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => handleScaleChange(Math.min(MAX_SCALE, scale * 1.15))}
-                aria-label="Zoom in"
-                data-testid="button-zoom-in"
-              >
-                <ZoomIn className="h-5 w-5" />
-              </button>
-            </div>
-          </>
+        {/* Zoom slider */}
+        {showEditor && (
+          <div className="flex items-center gap-3 px-4">
+            <button
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => handleScaleChange(Math.max(minScale, scale / 1.15))}
+              aria-label="Zoom out"
+              data-testid="button-zoom-out"
+            >
+              <ZoomOut className="h-5 w-5" />
+            </button>
+            <input
+              type="range"
+              min={minScale}
+              max={MAX_SCALE}
+              step={0.001}
+              value={scale}
+              onChange={(e) => handleScaleChange(parseFloat(e.target.value))}
+              className="flex-1 accent-[#1d9bf0] cursor-pointer"
+            />
+            <button
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => handleScaleChange(Math.min(MAX_SCALE, scale * 1.15))}
+              aria-label="Zoom in"
+              data-testid="button-zoom-in"
+            >
+              <ZoomIn className="h-5 w-5" />
+            </button>
+          </div>
         )}
 
         {/* Action buttons */}
