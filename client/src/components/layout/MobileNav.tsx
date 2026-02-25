@@ -1,5 +1,5 @@
 import { useLocation, Link } from "wouter";
-import { PlusCircle, User, Video, Film, Camera, X } from "lucide-react";
+import { PlusCircle, User, Video, Film, Camera } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
@@ -9,9 +9,9 @@ import { useState, useCallback } from "react";
 import AuthModal from "@/components/auth/auth-modal";
 
 const uploadOptions = [
-  { icon: Video, label: "Upload Clip", type: "clips", color: "from-blue-500 to-blue-600" },
-  { icon: Film, label: "Upload Reel", type: "reels", color: "from-purple-500 to-purple-600" },
-  { icon: Camera, label: "Screenshot", type: "screenshots", color: "from-green-500 to-green-600" },
+  { icon: Video, label: "Upload Clip", type: "clips", tilt: -12 },
+  { icon: Film, label: "Upload Reel", type: "reels", tilt: 0 },
+  { icon: Camera, label: "Screenshot", type: "screenshots", tilt: 12 },
 ];
 
 const MobileNav = () => {
@@ -56,17 +56,12 @@ const MobileNav = () => {
         />
       )}
 
-      <div className="fixed bottom-16 left-0 right-0 z-50 flex justify-center pointer-events-none">
+      <div className="fixed bottom-14 left-0 right-0 z-50 flex justify-center pointer-events-none">
         <div className="relative w-0 h-0">
           {uploadOptions.map((option, index) => {
             const total = uploadOptions.length;
-            const spreadAngle = 40;
-            const startAngle = -90 - ((total - 1) * spreadAngle) / 2;
-            const angle = startAngle + index * spreadAngle;
-            const radians = (angle * Math.PI) / 180;
-            const radius = 120;
-            const x = Math.cos(radians) * radius;
-            const y = Math.sin(radians) * radius;
+            const yOffset = -(index + 1) * 68;
+            const xOffset = (index - 1) * 32;
 
             return (
               <button
@@ -74,9 +69,10 @@ const MobileNav = () => {
                 onClick={() => handleUploadOptionClick(option.type)}
                 className={cn(
                   "absolute pointer-events-auto flex flex-col items-center justify-center",
-                  "w-20 h-20 rounded-2xl shadow-xl border border-white/10",
-                  "bg-gradient-to-br text-white",
-                  option.color,
+                  "w-[76px] h-[88px] rounded-2xl",
+                  "bg-card border border-border",
+                  "shadow-lg shadow-black/20",
+                  "text-foreground",
                   "transition-all duration-300 ease-out",
                   uploadMenuOpen
                     ? "opacity-100 scale-100"
@@ -84,13 +80,13 @@ const MobileNav = () => {
                 )}
                 style={{
                   transform: uploadMenuOpen
-                    ? `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`
-                    : `translate(-50%, -50%)`,
-                  transitionDelay: uploadMenuOpen ? `${index * 50}ms` : `${(total - 1 - index) * 30}ms`,
+                    ? `translate(calc(-50% + ${xOffset}px), calc(-50% + ${yOffset}px)) rotate(${option.tilt}deg)`
+                    : `translate(-50%, 0px) rotate(0deg)`,
+                  transitionDelay: uploadMenuOpen ? `${index * 60}ms` : `${(total - 1 - index) * 30}ms`,
                 }}
               >
-                <option.icon className="w-6 h-6 mb-1" />
-                <span className="text-[10px] font-semibold leading-tight text-center px-1">
+                <option.icon className="w-6 h-6 mb-1.5 text-primary" />
+                <span className="text-[10px] font-semibold leading-tight text-center px-1 text-foreground">
                   {option.label}
                 </span>
               </button>
