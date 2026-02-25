@@ -42,7 +42,7 @@ export function BannerUploadPreview({
   const stageRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // Measure the stage width via ResizeObserver
+  // Measure the stage width via ResizeObserver (re-run when previewUrl changes so the stage div exists)
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
@@ -52,7 +52,7 @@ export function BannerUploadPreview({
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [previewUrl]);
 
   // Clamp drag position so the image never exposes empty space inside the crop box
   const clampPosition = useCallback(
@@ -202,13 +202,19 @@ export function BannerUploadPreview({
   }, [onCancel]);
 
   const handleUpload = useCallback(async () => {
-    if (!selectedFile || !onUpload || !visibleImageRef.current) return;
+    if (!selectedFile || !onUpload) return;
 
     try {
-      const img = visibleImageRef.current;
+      // Use hiddenImageRef for canvas drawing — it's guaranteed to be loaded
+      const img = hiddenImageRef.current || visibleImageRef.current;
+      if (!img) throw new Error('Image not available');
+
       const { w: natW, h: natH } = imageNaturalSize;
+      if (!natW || !natH) throw new Error('Image dimensions not available');
+
       const cropW = containerWidth;
       const cropH = BANNER_HEIGHT;
+      if (!cropW) throw new Error('Container not measured yet');
 
       // Calculate source rectangle in the original image
       const srcW = cropW / scale;
