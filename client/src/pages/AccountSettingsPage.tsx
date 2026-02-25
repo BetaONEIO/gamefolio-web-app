@@ -474,108 +474,22 @@ const AccountSettingsPage: React.FC = () => {
     <div className="w-full px-4 py-8 pb-24 md:pb-8">
       <h1 className="text-3xl font-bold mb-8">Account Settings</h1>
       
-      <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-8">
-          <TabsTrigger value="profile">
-            <User className="h-4 w-4 mr-2" />
-            Profile
-          </TabsTrigger>
+      <Tabs defaultValue="privacy" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-8">
           <TabsTrigger value="privacy">
             <Shield className="h-4 w-4 mr-2" />
-            Privacy
-          </TabsTrigger>
-          <TabsTrigger value="appearance">
-            <Palette className="h-4 w-4 mr-2" />
-            Appearance
+            Privacy & Safety
           </TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
 
-        {/* Profile Settings */}
-        <TabsContent value="profile">
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile</CardTitle>
-              <CardDescription>Update your public display name and bio.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="displayName">Display Name</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="displayName"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Your display name"
-                    className="flex-1"
-                  />
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="icon" type="button" title="Add emoji">
-                        <Smile className="h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-72 p-3" align="end">
-                      <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
-                        {EMOJI_CATEGORIES.map((category) => (
-                          <div key={category.label}>
-                            <p className="text-xs font-semibold text-muted-foreground mb-1">{category.label}</p>
-                            <div className="flex flex-wrap gap-1">
-                              {category.emojis.map((emoji) => (
-                                <button
-                                  key={emoji}
-                                  type="button"
-                                  className="text-lg hover:bg-accent rounded p-0.5 transition-colors cursor-pointer"
-                                  onClick={() => setDisplayName(prev => prev + emoji)}
-                                >
-                                  {emoji}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="Tell people about yourself..."
-                  rows={3}
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button onClick={onProfileSubmit} disabled={isSavingProfile}>
-                {isSavingProfile ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Profile
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
-        
         {/* Privacy & Safety */}
         <TabsContent value="privacy">
           <BlockedUsersSection />
         </TabsContent>
 
-        {/* Appearance Settings */}
-        <TabsContent value="appearance">
+        {/* REMOVED: Appearance Settings — now lives on the profile page */}
+        {false && <TabsContent value="appearance">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -976,7 +890,7 @@ const AccountSettingsPage: React.FC = () => {
               </Tabs>
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent>}
         
         {/* Security Settings */}
         <TabsContent value="security">
