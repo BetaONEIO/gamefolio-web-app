@@ -596,6 +596,7 @@ export default function SettingsPage() {
     profileData.profileBackgroundAnimation !== ((user as any)?.profileBackgroundAnimation || "none") ||
     profileData.profileFont !== ((user as any)?.profileFont || "default") ||
     profileData.profileFontEffect !== ((user as any)?.profileFontEffect || "none") ||
+    profileData.profileFontAnimation !== ((user as any)?.profileFontAnimation || "none") ||
     avatarFile !== null ||
     selectedPreviousAvatar !== null ||
     (pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId) ||

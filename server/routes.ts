@@ -3243,9 +3243,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "username", "displayName", "bio", "userType", "location", "website",
         "dateOfBirth", "avatarUrl", "bannerUrl", "activeProfilePicType",
         "avatarBorderColor", "primaryColor", "secondaryColor", "accentColor",
-        "backgroundColor", "steamUsername", "xboxUsername", "playstationUsername",
+        "backgroundColor", "cardColor", "layoutStyle", "showUserType",
+        "profileFont", "profileFontEffect", "profileFontAnimation",
+        "profileBackgroundType", "profileBackgroundTheme", "profileBackgroundAnimation",
+        "steamUsername", "xboxUsername", "playstationUsername",
         "discordUsername", "epicUsername", "twitchUsername", "youtubeUsername",
-        "twitterUsername", "instagramUsername",
+        "twitterUsername", "instagramUsername", "facebookUsername", "nintendoUsername",
       ]);
       const safeBody = Object.fromEntries(
         Object.entries(req.body).filter(([key]) => ALLOWED_PROFILE_FIELDS.has(key))
