@@ -1,7 +1,7 @@
-import React, { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, X, RotateCcw, Check, Move } from 'lucide-react';
+import { Upload, X, Check, ZoomIn, ZoomOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface BannerUploadPreviewProps {
@@ -12,87 +12,129 @@ interface BannerUploadPreviewProps {
   isPro?: boolean;
 }
 
-export function BannerUploadPreview({ 
-  onUpload, 
-  onCancel, 
+const CROP_ASPECT = 16 / 9;
+const CROP_HEIGHT = 170;
+const CROP_WIDTH = CROP_HEIGHT * CROP_ASPECT;
+const MIN_SCALE = 0.5;
+const MAX_SCALE = 3;
+
+export function BannerUploadPreview({
+  onUpload,
+  onCancel,
   currentBannerUrl,
   isUploading = false,
-  isPro = false 
+  isPro = false
 }: BannerUploadPreviewProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [isDragMode, setIsDragMode] = useState(false);
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [minScale, setMinScale] = useState(1);
+  const [imageNaturalSize, setImageNaturalSize] = useState({ w: 0, h: 0 });
+  const [showEditor, setShowEditor] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const handleFileSelect = useCallback((file: File) => {
-    const allowedTypes = [
-      'image/jpeg',
-      'image/jpg', 
-      'image/png',
-      'image/webp',
-      ...(isPro ? ['image/gif'] : [])
-    ];
-    
-    const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
-    
-    if (isGif && !isPro) {
-      toast({
-        title: "Pro feature",
-        description: "Animated GIF banners are a Pro perk. Upgrade to Pro to use GIF banners!",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (!allowedTypes.includes(file.type.toLowerCase())) {
-      toast({
-        title: "Invalid file type",
-        description: isPro 
-          ? "Please select a valid image file (JPEG, PNG, WebP, GIF)."
-          : "Please select a valid image file (JPEG, PNG, WebP).",
-        variant: "destructive",
-      });
-      return;
-    }
+  const clampPosition = useCallback(
+    (x: number, y: number, s: number, natW: number, natH: number) => {
+      const scaledW = natW * s;
+      const scaledH = natH * s;
+      const maxX = Math.max(0, (scaledW - CROP_WIDTH) / 2);
+      const maxY = Math.max(0, (scaledH - CROP_HEIGHT) / 2);
+      return {
+        x: Math.max(-maxX, Math.min(maxX, x)),
+        y: Math.max(-maxY, Math.min(maxY, y)),
+      };
+    },
+    []
+  );
 
-    const maxSize = isGif ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
-    if (file.size > maxSize) {
-      toast({
-        title: "File too large",
-        description: isGif 
-          ? "Please select a GIF smaller than 10MB."
-          : "Please select an image smaller than 5MB.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleFileSelect = useCallback(
+    (file: File) => {
+      const allowedTypes = [
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/webp',
+        ...(isPro ? ['image/gif'] : []),
+      ];
 
-    setSelectedFile(file);
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
+      const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
+
+      if (isGif && !isPro) {
+        toast({
+          title: 'Pro feature',
+          description: 'Animated GIF banners are a Pro perk. Upgrade to Pro to use GIF banners!',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (!allowedTypes.includes(file.type.toLowerCase())) {
+        toast({
+          title: 'Invalid file type',
+          description: isPro
+            ? 'Please select a valid image file (JPEG, PNG, WebP, GIF).'
+            : 'Please select a valid image file (JPEG, PNG, WebP).',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const maxSize = isGif ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast({
+          title: 'File too large',
+          description: isGif
+            ? 'Please select a GIF smaller than 10MB.'
+            : 'Please select an image smaller than 5MB.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setSelectedFile(file);
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      setPosition({ x: 0, y: 0 });
+      setScale(1);
+      setShowEditor(false);
+    },
+    [toast, isPro]
+  );
+
+  const handleImageLoad = useCallback(() => {
+    const img = imageRef.current;
+    if (!img) return;
+
+    const natW = img.naturalWidth;
+    const natH = img.naturalHeight;
+    setImageNaturalSize({ w: natW, h: natH });
+
+    const scaleByWidth = CROP_WIDTH / natW;
+    const scaleByHeight = CROP_HEIGHT / natH;
+    const fitScale = Math.max(scaleByWidth, scaleByHeight);
+    const computed = Math.max(fitScale, MIN_SCALE);
+
+    setMinScale(computed);
+    setScale(computed);
     setPosition({ x: 0, y: 0 });
-    setScale(1);
-    setIsDragMode(true);
-    setIsImageLoaded(false);
-  }, [toast, isPro]);
+    setShowEditor(true);
+  }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      handleFileSelect(files[0]);
-    }
-  }, [handleFileSelect]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      const files = e.dataTransfer.files;
+      if (files.length > 0) handleFileSelect(files[0]);
+    },
+    [handleFileSelect]
+  );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -104,110 +146,133 @@ export function BannerUploadPreview({
     setIsDragging(false);
   }, []);
 
-  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleFileSelect(file);
-    }
-  }, [handleFileSelect]);
+  const handleFileInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) handleFileSelect(file);
+    },
+    [handleFileSelect]
+  );
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (!isDragMode) return;
-    
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startPosX = position.x;
-    const startPosY = position.y;
-    
-    const handleMouseMove = (e: MouseEvent) => {
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
       e.preventDefault();
-      
-      const deltaX = e.clientX - startX;
-      const deltaY = e.clientY - startY;
-      
-      const newX = startPosX + deltaX;
-      const newY = startPosY + deltaY;
-      
-      const maxX = 200;
-      const maxY = 100;
-      
-      setPosition({
-        x: Math.max(-maxX, Math.min(maxX, newX)),
-        y: Math.max(-maxY, Math.min(maxY, newY))
-      });
-    };
-    
-    const handleMouseUp = (e: MouseEvent) => {
+      e.stopPropagation();
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const startPosX = position.x;
+      const startPosY = position.y;
+
+      const handleMouseMove = (ev: MouseEvent) => {
+        ev.preventDefault();
+        const deltaX = ev.clientX - startX;
+        const deltaY = ev.clientY - startY;
+        const newX = startPosX + deltaX;
+        const newY = startPosY + deltaY;
+        const clamped = clampPosition(newX, newY, scale, imageNaturalSize.w, imageNaturalSize.h);
+        setPosition(clamped);
+      };
+
+      const handleMouseUp = () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    },
+    [position, scale, imageNaturalSize, clampPosition]
+  );
+
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      if (e.touches.length !== 1) return;
       e.preventDefault();
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-    
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  }, [isDragMode, position, scale]);
 
-  const handleZoomIn = useCallback(() => {
-    setScale(prev => Math.min(prev * 1.5, 3));
-  }, []);
+      const touch = e.touches[0];
+      const startX = touch.clientX;
+      const startY = touch.clientY;
+      const startPosX = position.x;
+      const startPosY = position.y;
 
-  const handleZoomOut = useCallback(() => {
-    setScale(prev => Math.max(prev / 1.5, 0.5));
-  }, []);
+      const handleTouchMove = (ev: TouchEvent) => {
+        if (ev.touches.length !== 1) return;
+        ev.preventDefault();
+        const t = ev.touches[0];
+        const deltaX = t.clientX - startX;
+        const deltaY = t.clientY - startY;
+        const clamped = clampPosition(
+          startPosX + deltaX,
+          startPosY + deltaY,
+          scale,
+          imageNaturalSize.w,
+          imageNaturalSize.h
+        );
+        setPosition(clamped);
+      };
 
-  const calculateFitToWidthScale = useCallback(() => {
-    if (!imageRef.current || !containerRef.current) return 1;
-    
-    const container = containerRef.current;
-    const image = imageRef.current;
-    
-    const containerWidth = container.offsetWidth;
-    const imageNaturalWidth = image.naturalWidth;
-    
-    if (imageNaturalWidth === 0) return 1;
-    
-    const widthScale = containerWidth / imageNaturalWidth;
-    return Math.max(widthScale * 1.1, 1);
-  }, []);
+      const handleTouchEnd = () => {
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
+      };
 
-  const handleImageLoad = useCallback(() => {
-    setIsImageLoaded(true);
-    setTimeout(() => {
-      const autoScale = calculateFitToWidthScale();
-      setScale(autoScale);
-      setPosition({ x: 0, y: 0 });
-    }, 100);
-  }, [calculateFitToWidthScale]);
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchend', handleTouchEnd);
+    },
+    [position, scale, imageNaturalSize, clampPosition]
+  );
 
-  const handleReset = useCallback(() => {
-    setPosition({ x: 0, y: 0 });
-    const autoScale = calculateFitToWidthScale();
-    setScale(autoScale);
-  }, [calculateFitToWidthScale]);
+  const handleScaleChange = useCallback(
+    (newScale: number) => {
+      const clamped = clampPosition(position.x, position.y, newScale, imageNaturalSize.w, imageNaturalSize.h);
+      setScale(newScale);
+      setPosition(clamped);
+    },
+    [position, imageNaturalSize, clampPosition]
+  );
 
   const handleCancel = useCallback(() => {
     setSelectedFile(null);
     setPreviewUrl(null);
     setPosition({ x: 0, y: 0 });
     setScale(1);
-    setIsDragMode(false);
+    setShowEditor(false);
     onCancel?.();
   }, [onCancel]);
 
   const handleUpload = useCallback(async () => {
-    if (!selectedFile || !onUpload) return;
+    if (!selectedFile || !onUpload || !imageRef.current) return;
 
     try {
-      console.log('Starting banner upload with positioning:', { position, scale });
-      
+      const img = imageRef.current;
+      const natW = imageNaturalSize.w;
+      const natH = imageNaturalSize.h;
+
+      const cropW = CROP_WIDTH / scale;
+      const cropH = CROP_HEIGHT / scale;
+
+      const srcX = natW / 2 - cropW / 2 - position.x / scale;
+      const srcY = natH / 2 - cropH / 2 - position.y / scale;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 1200;
+      canvas.height = 675;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas context unavailable');
+
+      ctx.drawImage(img, srcX, srcY, cropW, cropH, 0, 0, 1200, 675);
+
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (b) => (b ? resolve(b) : reject(new Error('Canvas to blob failed'))),
+          'image/jpeg',
+          0.92
+        );
+      });
+
       const formData = new FormData();
-      formData.append('banner', selectedFile);
-      formData.append('positionX', position.x.toString());
-      formData.append('positionY', position.y.toString());
-      formData.append('scale', scale.toString());
+      formData.append('banner', blob, 'banner.jpg');
 
       const response = await fetch('/api/upload/banner', {
         method: 'POST',
@@ -215,7 +280,6 @@ export function BannerUploadPreview({
       });
 
       const result = await response.json();
-      console.log('Upload response:', result);
 
       if (!response.ok) {
         throw new Error(result.message || `HTTP ${response.status}: Upload failed`);
@@ -226,25 +290,26 @@ export function BannerUploadPreview({
       }
 
       onUpload(result.url);
-      
+
       toast({
-        title: "Banner uploaded!",
-        description: "Your custom banner has been uploaded successfully.",
-        variant: "gamefolioSuccess",
+        title: 'Banner uploaded!',
+        description: 'Your custom banner has been uploaded successfully.',
+        variant: 'gamefolioSuccess',
       });
-      
+
       handleCancel();
     } catch (error) {
       console.error('Banner upload error:', error);
       toast({
-        title: "Upload failed",
-        description: error instanceof Error ? error.message : "Failed to upload banner. Please try again.",
-        variant: "destructive",
+        title: 'Upload failed',
+        description:
+          error instanceof Error ? error.message : 'Failed to upload banner. Please try again.',
+        variant: 'destructive',
       });
     }
-  }, [selectedFile, position, scale, onUpload, toast, handleCancel]);
+  }, [selectedFile, position, scale, imageNaturalSize, onUpload, toast, handleCancel]);
 
-  if (!isDragMode && !previewUrl) {
+  if (!previewUrl) {
     return (
       <Card className="w-full">
         <CardHeader>
@@ -252,41 +317,42 @@ export function BannerUploadPreview({
         </CardHeader>
         <CardContent>
           <div
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-              isDragging 
-                ? 'border-primary bg-primary/10' 
+            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+              isDragging
+                ? 'border-primary bg-primary/10'
                 : 'border-muted-foreground/25 hover:border-primary/50'
             }`}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
+            onClick={() => fileInputRef.current?.click()}
           >
             <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-lg font-medium mb-2">
-              Drop your banner image here
-            </p>
-            <p className="text-sm text-muted-foreground mb-4">
-              or click to select a file
-            </p>
-            <Button 
-              variant="outline" 
-              onClick={() => fileInputRef.current?.click()}
+            <p className="text-lg font-medium mb-2">Drop your banner image here</p>
+            <p className="text-sm text-muted-foreground mb-4">or click to select a file</p>
+            <Button
+              variant="outline"
+              onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
               className="mb-2"
               data-testid="button-choose-file"
             >
               Choose File
             </Button>
             <p className="text-xs text-muted-foreground">
-              {isPro 
-                ? "Supports JPEG, PNG, WebP, GIF (max 5MB, GIF max 10MB)"
-                : "Supports JPEG, PNG, WebP (max 5MB)"}
+              {isPro
+                ? 'Supports JPEG, PNG, WebP, GIF (max 5MB, GIF max 10MB)'
+                : 'Supports JPEG, PNG, WebP (max 5MB)'}
             </p>
           </div>
-          
+
           <input
             ref={fileInputRef}
             type="file"
-            accept={isPro ? "image/jpeg,image/png,image/webp,image/gif" : "image/jpeg,image/png,image/webp"}
+            accept={
+              isPro
+                ? 'image/jpeg,image/png,image/webp,image/gif'
+                : 'image/jpeg,image/png,image/webp'
+            }
             onChange={handleFileInputChange}
             className="hidden"
           />
@@ -295,127 +361,164 @@ export function BannerUploadPreview({
     );
   }
 
+  const outerH = CROP_HEIGHT + 120;
+  const scaledW = imageNaturalSize.w * scale;
+  const scaledH = imageNaturalSize.h * scale;
+
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Move className="h-5 w-5" />
-          Position Your Banner
-        </CardTitle>
+        <CardTitle>Edit media</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Drag to reposition and use zoom controls to fit your banner perfectly
+          Drag to reposition · scroll or use the slider to zoom
         </p>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Preview Container */}
-        <div className="relative w-full h-64 bg-muted rounded-lg overflow-hidden border border-border">
-          <div 
-            ref={containerRef}
-            className="relative w-full h-full cursor-move select-none"
-            onMouseDown={handleMouseDown}
-          >
-            {previewUrl && (
+      <CardContent className="space-y-4 px-0 pb-4">
+        {/* Hidden img for natural-size reading */}
+        {!showEditor && (
+          <img
+            ref={imageRef}
+            src={previewUrl}
+            alt=""
+            className="hidden"
+            onLoad={handleImageLoad}
+          />
+        )}
+
+        {showEditor && (
+          <>
+            {/* Outer dark stage */}
+            <div
+              ref={containerRef}
+              className="relative w-full overflow-hidden bg-black select-none cursor-move"
+              style={{ height: outerH }}
+              onMouseDown={handleMouseDown}
+              onTouchStart={handleTouchStart}
+            >
+              {/* Hidden img used for canvas drawing */}
               <img
                 ref={imageRef}
                 src={previewUrl}
-                alt="Banner preview"
-                className="absolute w-full h-full object-contain transition-transform duration-75"
+                alt=""
+                className="pointer-events-none"
                 style={{
-                  transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-                  transformOrigin: 'center',
+                  position: 'absolute',
+                  width: scaledW,
+                  height: scaledH,
+                  left: '50%',
+                  top: '50%',
+                  transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
+                  imageRendering: 'auto',
+                  opacity: 1,
                 }}
-                onLoad={handleImageLoad}
                 draggable={false}
               />
-            )}
-            
-            {/* Overlay with positioning hint */}
-            <div className="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none">
-              <div className="bg-black/70 text-white px-3 py-1 rounded-md text-sm font-medium">
-                {isDragMode ? 'Drag to reposition' : 'Click to start positioning'}
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Controls - Mobile Responsive */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleZoomOut}
-              disabled={scale <= 0.5}
-              data-testid="button-zoom-out"
-            >
-              −
-            </Button>
-            <span className="text-sm font-medium w-16 text-center">
-              {Math.round(scale * 100)}%
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleZoomIn}
-              disabled={scale >= 3}
-              data-testid="button-zoom-in"
-            >
-              +
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleReset}
-              title="Fit to width and reset position"
-              data-testid="button-reset"
-            >
-              <RotateCcw className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const autoScale = calculateFitToWidthScale();
-                setScale(autoScale);
-              }}
-              title="Auto-fit image to banner width"
-              className="text-xs px-2"
-              data-testid="button-auto-fit"
-            >
-              Auto Fit
-            </Button>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row items-stretch gap-2 w-full">
-            <Button
-              variant="outline"
-              onClick={handleCancel}
-              disabled={isUploading}
-              className="w-full sm:w-auto sm:flex-1"
-              data-testid="button-cancel-banner"
-            >
-              <X className="h-4 w-4 mr-2" />
-              Cancel
-            </Button>
-            <Button
-              onClick={handleUpload}
-              disabled={!selectedFile || isUploading}
-              className="w-full sm:w-auto sm:flex-1"
-              data-testid="button-upload-banner"
-            >
-              {isUploading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Check className="h-4 w-4 mr-2" />
-                  Upload Banner
-                </>
-              )}
-            </Button>
-          </div>
+              {/* Dark overlay: top strip */}
+              <div
+                className="absolute inset-x-0 top-0 bg-black/60 pointer-events-none"
+                style={{ height: (outerH - CROP_HEIGHT) / 2 }}
+              />
+              {/* Dark overlay: bottom strip */}
+              <div
+                className="absolute inset-x-0 bottom-0 bg-black/60 pointer-events-none"
+                style={{ height: (outerH - CROP_HEIGHT) / 2 }}
+              />
+              {/* Dark overlay: left strip */}
+              <div
+                className="absolute left-0 bg-black/60 pointer-events-none"
+                style={{
+                  top: (outerH - CROP_HEIGHT) / 2,
+                  height: CROP_HEIGHT,
+                  right: `calc(50% + ${CROP_WIDTH / 2}px)`,
+                }}
+              />
+              {/* Dark overlay: right strip */}
+              <div
+                className="absolute right-0 bg-black/60 pointer-events-none"
+                style={{
+                  top: (outerH - CROP_HEIGHT) / 2,
+                  height: CROP_HEIGHT,
+                  left: `calc(50% + ${CROP_WIDTH / 2}px)`,
+                }}
+              />
+
+              {/* Crop box border */}
+              <div
+                className="absolute pointer-events-none"
+                style={{
+                  top: (outerH - CROP_HEIGHT) / 2,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: CROP_WIDTH,
+                  height: CROP_HEIGHT,
+                  border: '2px solid #1d9bf0',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* Zoom slider */}
+            <div className="flex items-center gap-3 px-4">
+              <button
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => handleScaleChange(Math.max(minScale, scale / 1.15))}
+                aria-label="Zoom out"
+                data-testid="button-zoom-out"
+              >
+                <ZoomOut className="h-5 w-5" />
+              </button>
+              <input
+                type="range"
+                min={minScale}
+                max={MAX_SCALE}
+                step={0.01}
+                value={scale}
+                onChange={(e) => handleScaleChange(parseFloat(e.target.value))}
+                className="flex-1 accent-[#1d9bf0] cursor-pointer"
+              />
+              <button
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => handleScaleChange(Math.min(MAX_SCALE, scale * 1.15))}
+                aria-label="Zoom in"
+                data-testid="button-zoom-in"
+              >
+                <ZoomIn className="h-5 w-5" />
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Action buttons */}
+        <div className="flex flex-col sm:flex-row items-stretch gap-2 px-4">
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+            disabled={isUploading}
+            className="w-full sm:w-auto sm:flex-1"
+            data-testid="button-cancel-banner"
+          >
+            <X className="h-4 w-4 mr-2" />
+            Cancel
+          </Button>
+          <Button
+            onClick={handleUpload}
+            disabled={!selectedFile || isUploading || !showEditor}
+            className="w-full sm:w-auto sm:flex-1"
+            data-testid="button-upload-banner"
+          >
+            {isUploading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Check className="h-4 w-4 mr-2" />
+                Apply
+              </>
+            )}
+          </Button>
         </div>
       </CardContent>
     </Card>
