@@ -73,6 +73,8 @@ const MobileNav = () => {
                   "bg-card border border-border",
                   "shadow-lg shadow-black/20",
                   "text-foreground",
+                  "hover:bg-green-500 active:bg-green-500",
+                  "group",
                   "transition-all duration-300 ease-out",
                   uploadMenuOpen
                     ? "opacity-100 scale-100"
@@ -85,8 +87,8 @@ const MobileNav = () => {
                   transitionDelay: uploadMenuOpen ? `${index * 60}ms` : `${(total - 1 - index) * 30}ms`,
                 }}
               >
-                <option.icon className="w-6 h-6 mb-1.5 text-primary" />
-                <span className="text-[10px] font-semibold leading-tight text-center px-1 text-foreground">
+                <option.icon className="w-6 h-6 mb-1.5 text-primary group-hover:text-white group-active:text-white transition-colors" />
+                <span className="text-[10px] font-semibold leading-tight text-center px-1 text-foreground group-hover:text-white group-active:text-white transition-colors">
                   {option.label}
                 </span>
               </button>
