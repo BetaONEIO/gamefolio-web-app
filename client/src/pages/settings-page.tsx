@@ -1689,7 +1689,7 @@ export default function SettingsPage() {
                             ? 'Solid Border'
                             : selectedBorderId && avatarBorders 
                               ? (avatarBorders as any[])?.find((b: any) => b.id === selectedBorderId)?.name || "Selected"
-                              : "No border selected"}
+                              : "None"}
                       </p>
                     </div>
                   </div>
@@ -1733,25 +1733,7 @@ export default function SettingsPage() {
                             )}
                             
                             <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                              {/* None option - only show in first tab */}
-                              {category === 'static' && (
-                                <div
-                                  data-testid="border-select-none"
-                                  className={`
-                                    cursor-pointer rounded-md border-2 p-3 relative transition-all flex flex-col items-center justify-center
-                                    ${selectedBorderId === null ? 'border-primary ring-2 ring-primary/50 bg-primary/10' : 'border-muted hover:border-primary/50'}
-                                  `}
-                                  onClick={() => {
-                                    setSelectedBorderId(null);
-                                    saveAvatarBorderMutation.mutate(null);
-                                  }}
-                                >
-                                  <X className="h-8 w-8 text-muted-foreground mb-1" />
-                                  <span className="text-xs text-muted-foreground">None</span>
-                                </div>
-                              )}
-                              
-                              {/* Solid border - built-in static option, always available */}
+                              {/* Solid border - default option, always first */}
                               {category === 'static' && (
                                 <div
                                   data-testid="border-select-solid"
@@ -1760,13 +1742,8 @@ export default function SettingsPage() {
                                     ${selectedBorderId === -1 ? 'border-primary ring-2 ring-primary/50 bg-primary/10' : 'border-muted hover:border-primary/50'}
                                   `}
                                   onClick={() => {
-                                    if (selectedBorderId === -1) {
-                                      setSelectedBorderId(null);
-                                      saveAvatarBorderMutation.mutate(null);
-                                    } else {
-                                      setSelectedBorderId(-1);
-                                      saveAvatarBorderMutation.mutate(-1);
-                                    }
+                                    setSelectedBorderId(-1);
+                                    saveAvatarBorderMutation.mutate(-1);
                                   }}
                                 >
                                   <div className="relative w-16 h-16 flex items-center justify-center">
@@ -1784,6 +1761,24 @@ export default function SettingsPage() {
                                     />
                                   </div>
                                   <span className="text-xs text-center mt-1 truncate w-full">Solid</span>
+                                </div>
+                              )}
+
+                              {/* None option - after solid */}
+                              {category === 'static' && (
+                                <div
+                                  data-testid="border-select-none"
+                                  className={`
+                                    cursor-pointer rounded-md border-2 p-3 relative transition-all flex flex-col items-center justify-center
+                                    ${selectedBorderId === null ? 'border-primary ring-2 ring-primary/50 bg-primary/10' : 'border-muted hover:border-primary/50'}
+                                  `}
+                                  onClick={() => {
+                                    setSelectedBorderId(null);
+                                    saveAvatarBorderMutation.mutate(null);
+                                  }}
+                                >
+                                  <X className="h-8 w-8 text-muted-foreground mb-1" />
+                                  <span className="text-xs text-muted-foreground">None</span>
                                 </div>
                               )}
                               

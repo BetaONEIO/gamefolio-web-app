@@ -474,8 +474,12 @@ const AccountSettingsPage: React.FC = () => {
     <div className="w-full px-4 py-8 pb-24 md:pb-8">
       <h1 className="text-3xl font-bold mb-8">Account Settings</h1>
       
-      <Tabs defaultValue="security" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-8">
+      <Tabs defaultValue="profile" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 mb-8">
+          <TabsTrigger value="profile">
+            <User className="h-4 w-4 mr-2" />
+            Profile
+          </TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="2fa">
             <KeyRound className="h-4 w-4 mr-2" />
@@ -486,6 +490,86 @@ const AccountSettingsPage: React.FC = () => {
             Privacy & Safety
           </TabsTrigger>
         </TabsList>
+
+        {/* Profile Tab */}
+        <TabsContent value="profile">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Profile Info
+              </CardTitle>
+              <CardDescription>
+                Update your display name and bio.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Display Name */}
+              <div className="space-y-2">
+                <Label htmlFor="displayName">Display Name</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="displayName"
+                    value={displayName}
+                    onChange={e => setDisplayName(e.target.value.slice(0, 30))}
+                    placeholder="Your display name"
+                    maxLength={30}
+                    className="flex-1"
+                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="icon" title="Add emoji">
+                        <Smile className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 p-3" align="end">
+                      <div className="space-y-3">
+                        {EMOJI_CATEGORIES.map(cat => (
+                          <div key={cat.label}>
+                            <p className="text-xs font-semibold text-muted-foreground mb-1">{cat.label}</p>
+                            <div className="flex flex-wrap gap-1">
+                              {cat.emojis.map(emoji => (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  className="text-lg hover:bg-muted rounded p-0.5 transition-colors"
+                                  onClick={() => setDisplayName(prev => (prev + emoji).slice(0, 30))}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <p className="text-xs text-muted-foreground">{displayName.length}/30 characters</p>
+              </div>
+
+              {/* Bio */}
+              <div className="space-y-2">
+                <Label htmlFor="bio">Bio</Label>
+                <Textarea
+                  id="bio"
+                  value={bio}
+                  onChange={e => setBio(e.target.value.slice(0, 200))}
+                  placeholder="Tell others about yourself..."
+                  rows={3}
+                  maxLength={200}
+                />
+                <p className="text-xs text-muted-foreground">{bio.length}/200 characters</p>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button onClick={onProfileSubmit} disabled={isSavingProfile} className="ml-auto">
+                {isSavingProfile ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                Save Profile
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
 
         {/* Privacy & Safety */}
         <TabsContent value="privacy">

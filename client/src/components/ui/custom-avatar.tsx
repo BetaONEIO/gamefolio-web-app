@@ -321,6 +321,8 @@ export const CustomAvatar = ({
   // Get signed URL for NFT profile image (may also be in private bucket)
   const { signedUrl: nftSignedUrl } = useSignedUrl(user?.nftProfileImageUrl);
   
+  const effectiveBorderId = user?.selectedAvatarBorderId ?? -1;
+
   const { data: borderData } = useQuery<{ avatarBorder: AssetReward | null }>({
     queryKey: [`/api/user/${user?.id}/avatar-border`],
     queryFn: getQueryFn({ on401: 'returnNull' }),
@@ -329,8 +331,8 @@ export const CustomAvatar = ({
   });
 
   const avatarBorder = borderData?.avatarBorder;
-  const hasAvatarBorderOverlay = showAvatarBorderOverlay && avatarBorder?.imageUrl;
-  const hasSolidBorder = showAvatarBorderOverlay && avatarBorder?.id === -1;
+  const hasAvatarBorderOverlay = showAvatarBorderOverlay && !!avatarBorder?.imageUrl;
+  const hasSolidBorder = showAvatarBorderOverlay && (avatarBorder?.id === -1 || effectiveBorderId === -1);
 
   if (hasNftProfile) {
     const handleNftAvatarClick = (e: React.MouseEvent) => {
