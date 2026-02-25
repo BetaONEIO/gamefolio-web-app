@@ -32,7 +32,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 import DOMPurify from "dompurify";
-import { useSignedUrl, useSignedUrls } from "@/hooks/use-signed-url";
+import { useSignedUrl, useSignedUrls, clearSignedUrlCache } from "@/hooks/use-signed-url";
 import type { NameTag, VerificationBadge } from "@shared/schema";
 import { KeyboardAvoidingWrapper } from "@/components/shared/KeyboardAvoidingWrapper";
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
@@ -519,29 +519,20 @@ export default function SettingsPage() {
         const prevHasBanner = prev.bannerUrl && prev.bannerUrl.length > 0;
         const userHasBanner = user.bannerUrl && user.bannerUrl.length > 0;
         
-        console.log('🔄 Settings useEffect - Enhanced banner preservation:');
-        console.log('📋 Previous banner:', prev.bannerUrl);
-        console.log('👤 User banner:', user.bannerUrl);
-        console.log('🔼 Uploaded banner URL:', uploadedBannerUrl);
-        console.log('🧮 Analysis:', { hasUploadedBanner, prevHasBanner, userHasBanner });
-        
         let finalBannerUrl = "";
         
         if (hasUploadedBanner) {
-          // Preserve uploaded banner regardless of user data state
-          finalBannerUrl = uploadedBannerUrl;
-          console.log('🛡️ Preserving uploaded banner');
+          if (user.bannerUrl === uploadedBannerUrl) {
+            finalBannerUrl = user.bannerUrl;
+            setTimeout(() => setUploadedBannerUrl(''), 0);
+          } else {
+            finalBannerUrl = uploadedBannerUrl;
+          }
         } else if (prevHasBanner && !userHasBanner) {
-          // Preserve existing banner if user data is null/empty
           finalBannerUrl = prev.bannerUrl;
-          console.log('🛡️ Preserving existing banner over null user data');
         } else {
-          // Use user data as fallback
           finalBannerUrl = user.bannerUrl || "";
-          console.log('📥 Using user data banner');
         }
-        
-        console.log('✅ Final banner URL:', finalBannerUrl);
         
         return {
           displayName: user.displayName || "",
@@ -909,21 +900,6 @@ export default function SettingsPage() {
       return response.json();
     },
     onSuccess: (updatedUser) => {
-      // CRITICAL: Only clear tracking if banner was actually saved to database
-      console.log('💾 Profile save success - checking banner preservation:');
-      console.log('🔼 Uploaded banner URL:', uploadedBannerUrl);
-      console.log('📋 Database banner URL:', updatedUser.bannerUrl);
-      
-      if (uploadedBannerUrl) {
-        if (updatedUser.bannerUrl === uploadedBannerUrl) {
-          console.log('✅ Banner successfully saved to database, clearing tracking state');
-          setUploadedBannerUrl('');
-        } else {
-          console.log('⚠️ Banner not saved to database, keeping tracking state for preservation');
-          // Keep tracking state to preserve banner through the refresh cycle
-        }
-      }
-      
       // Direct cache update using functional updater to merge with existing cache
       // This preserves fields like selectedNameTagId that aren't returned in the PATCH response
       const cacheUpdater = (oldData: any) => {
@@ -2514,32 +2490,12 @@ export default function SettingsPage() {
           {/* Banner Images Tab */}
           <TabsContent value="banners">
             <div className="space-y-6">
-              {/* Banner Position Preview */}
               {showBannerPosition && selectedBannerForPosition ? (
                 <BannerPositionPreview
                   bannerUrl={selectedBannerForPosition.url}
                   bannerName={selectedBannerForPosition.name}
                   onApply={handleBannerPositionApply}
                   onCancel={handleBannerPositionCancel}
-                />
-              ) : showBannerUpload ? (
-                <BannerUploadPreview
-                  currentBannerUrl={profileData.bannerUrl}
-                  isPro={user?.isPro === true}
-                  onUpload={(bannerUrl) => {
-                    console.log('🎯 BANNER UPLOADED - Setting tracking state:', bannerUrl);
-                    setUploadedBannerUrl(bannerUrl); // Track uploaded banner
-                    setProfileData(prev => ({ ...prev, bannerUrl }));
-                    setShowBannerUpload(false);
-                    setUploadingBanner(false);
-                    
-                    console.log('✅ Banner URL set and tracked, protected from useEffect override');
-                  }}
-                  onCancel={() => {
-                    setShowBannerUpload(false);
-                    setUploadingBanner(false);
-                  }}
-                  isUploading={uploadingBanner}
                 />
               ) : (
                 <Card>
@@ -2593,6 +2549,27 @@ export default function SettingsPage() {
                     </div>
                   </CardContent>
                 </Card>
+              )}
+
+              {showBannerUpload && (
+                <BannerUploadPreview
+                  currentBannerUrl={profileData.bannerUrl}
+                  isPro={user?.isPro === true}
+                  onUpload={(bannerUrl) => {
+                    if (profileData.bannerUrl) {
+                      clearSignedUrlCache(profileData.bannerUrl);
+                    }
+                    setUploadedBannerUrl(bannerUrl);
+                    setProfileData(prev => ({ ...prev, bannerUrl }));
+                    setShowBannerUpload(false);
+                    setUploadingBanner(false);
+                  }}
+                  onCancel={() => {
+                    setShowBannerUpload(false);
+                    setUploadingBanner(false);
+                  }}
+                  isUploading={uploadingBanner}
+                />
               )}
 
               {/* Banner Collection */}
@@ -2669,36 +2646,6 @@ export default function SettingsPage() {
                       ))}
                     </div>
 
-                    {profileData.bannerUrl && (
-                      <div className="mt-6">
-                        <Label className="text-sm font-medium">Current Banner Preview</Label>
-                        <div className="mt-2 aspect-[3.5/1] w-full rounded-lg border overflow-hidden">
-                          <img
-                            src={signedBannerUrl || profileData.bannerUrl}
-                            alt="Selected banner"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Remove Banner Option */}
-                    {profileData.bannerUrl && (
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setProfileData(prev => ({ ...prev, bannerUrl: "" }));
-                          toast({
-                            title: "Banner removed!",
-                            description: `Banner has been removed. Click "Save Changes" to apply.`,
-                            variant: "gamefolioSuccess",
-                          });
-                        }}
-                        className="mt-4"
-                      >
-                        Remove Banner
-                      </Button>
-                    )}
                   </div>
                 </CardContent>
               </Card>

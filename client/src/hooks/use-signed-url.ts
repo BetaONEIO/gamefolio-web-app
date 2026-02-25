@@ -29,6 +29,14 @@ function setCachedSignedUrl(originalUrl: string, signedUrl: string): void {
   });
 }
 
+export function clearSignedUrlCache(originalUrl?: string): void {
+  if (originalUrl) {
+    signedUrlCache.delete(originalUrl);
+  } else {
+    signedUrlCache.clear();
+  }
+}
+
 export function useSignedUrl(publicUrl: string | undefined | null) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
