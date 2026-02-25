@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect } from 'wouter';
-import { Loader2, Trash2, AlertTriangle, Shield, Palette, Type, Sparkles, Check, X, Save } from 'lucide-react';
+import { Loader2, Trash2, AlertTriangle, Shield, Palette, Type, Sparkles, Check, X, Save, Smile, User } from 'lucide-react';
 import { validatePassword, isPasswordValid } from '@/lib/password-validation';
 import { PasswordRequirementsDisplay } from '@/components/ui/password-requirements';
 
@@ -36,7 +36,9 @@ import {
   FormMessage 
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -97,6 +99,33 @@ const FONT_OPTIONS = [
   { value: 'russo-one', label: 'Russo One', family: "'Russo One', sans-serif" },
 ];
 
+const EMOJI_CATEGORIES = [
+  {
+    label: "Smileys",
+    emojis: ["😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😜","🤪","😝","🤑","🤗","🤭","😏","😎","🥳","🤩"],
+  },
+  {
+    label: "Gaming",
+    emojis: ["🎮","🕹️","👾","🎯","🏆","🥇","🎲","🃏","🎰","⚔️","🛡️","🗡️","💣","🎱","🔫","🏹","🧨","🎳","🤺","🥊"],
+  },
+  {
+    label: "Animals",
+    emojis: ["🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🐔","🦄","🐉","🦋","🦅","🐺","🦝","🐗","🦖"],
+  },
+  {
+    label: "Fire & Stars",
+    emojis: ["🔥","⚡","💥","✨","⭐","🌟","💫","🌈","❄️","🌊","🌀","☄️","🌙","🌞","💎","👑","🏅","🎖️","🎗️","🎀"],
+  },
+  {
+    label: "Hands & People",
+    emojis: ["👋","🤚","🖐️","✋","🖖","👌","🤌","✌️","🤞","🤟","🤘","🤙","👈","👉","👆","👇","☝️","👍","👎","✊","👊","🤛","🤜","🙌","👏","🤝","🫶","💪","🦾"],
+  },
+  {
+    label: "Objects",
+    emojis: ["💻","🖥️","🖨️","⌨️","🖱️","📱","📷","🎥","📡","🔭","🔬","💡","🔋","🔌","🧲","💾","💿","📀","🎵","🎶","🎸","🥁","🎺","🎷","🎻","🎤","🎧","📻","📺","🎬"],
+  },
+];
+
 const appearanceFormSchema = z.object({
   accentColor: z.string().min(1, 'Accent color is required'),
   primaryColor: z.string().min(1, 'Primary color is required'),
@@ -150,6 +179,9 @@ const AccountSettingsPage: React.FC = () => {
   const [pendingNameTagId, setPendingNameTagId] = useState<number | null | undefined>(undefined);
   const [pendingVerificationBadgeId, setPendingVerificationBadgeId] = useState<number | null | undefined>(undefined);
   const [appearanceSubTab, setAppearanceSubTab] = useState<string>('colors');
+  const [displayName, setDisplayName] = useState<string>('');
+  const [bio, setBio] = useState<string>('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const queryClient = useQueryClient();
   
   // Define ProfileBanner type
@@ -242,6 +274,42 @@ const AccountSettingsPage: React.FC = () => {
         description: "Failed to update appearance. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  // Sync profile fields from user data
+  useEffect(() => {
+    if (user) {
+      setDisplayName(user.displayName || '');
+      setBio((user as any).bio || '');
+    }
+  }, [user]);
+
+  const onProfileSubmit = async () => {
+    if (!user) return;
+    setIsSavingProfile(true);
+    try {
+      await updateProfile.mutateAsync({
+        userId: user.id,
+        userData: { displayName, bio },
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      if (user.username) {
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${user.username}`] });
+      }
+      toast({
+        title: "Profile updated",
+        description: "Your display name and bio have been saved.",
+        duration: 3000,
+      });
+    } catch {
+      toast({
+        title: "Update failed",
+        description: "Failed to save profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -406,11 +474,15 @@ const AccountSettingsPage: React.FC = () => {
     <div className="w-full px-4 py-8 pb-24 md:pb-8">
       <h1 className="text-3xl font-bold mb-8">Account Settings</h1>
       
-      <Tabs defaultValue="privacy" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-8">
+      <Tabs defaultValue="profile" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 mb-8">
+          <TabsTrigger value="profile">
+            <User className="h-4 w-4 mr-2" />
+            Profile
+          </TabsTrigger>
           <TabsTrigger value="privacy">
             <Shield className="h-4 w-4 mr-2" />
-            Privacy & Safety
+            Privacy
           </TabsTrigger>
           <TabsTrigger value="appearance">
             <Palette className="h-4 w-4 mr-2" />
@@ -418,6 +490,83 @@ const AccountSettingsPage: React.FC = () => {
           </TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
+
+        {/* Profile Settings */}
+        <TabsContent value="profile">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile</CardTitle>
+              <CardDescription>Update your public display name and bio.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="displayName">Display Name</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="displayName"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Your display name"
+                    className="flex-1"
+                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="icon" type="button" title="Add emoji">
+                        <Smile className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 p-3" align="end">
+                      <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                        {EMOJI_CATEGORIES.map((category) => (
+                          <div key={category.label}>
+                            <p className="text-xs font-semibold text-muted-foreground mb-1">{category.label}</p>
+                            <div className="flex flex-wrap gap-1">
+                              {category.emojis.map((emoji) => (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  className="text-lg hover:bg-accent rounded p-0.5 transition-colors cursor-pointer"
+                                  onClick={() => setDisplayName(prev => prev + emoji)}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bio">Bio</Label>
+                <Textarea
+                  id="bio"
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="Tell people about yourself..."
+                  rows={3}
+                />
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-end">
+              <Button onClick={onProfileSubmit} disabled={isSavingProfile}>
+                {isSavingProfile ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Profile
+                  </>
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
 
         
         {/* Privacy & Safety */}

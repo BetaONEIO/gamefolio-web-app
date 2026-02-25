@@ -303,7 +303,7 @@ const ProfileHeader = ({
           <div className="flex items-center gap-3 flex-shrink-0">
             {/* Edit Profile Button for own profile, Follow Button for others */}
             {isCurrentUser ? (
-              <Link href="/settings">
+              <Link href="/account/settings">
                 <Button
                   size="sm"
                   variant="default"
