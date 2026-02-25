@@ -659,25 +659,27 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
           </div>
         </div>
 
-        {hasPrevious && (
-          <button
-            onClick={(e) => { e.stopPropagation(); handlePrevious(); }}
-            className="fixed left-[calc(10%-80px)] top-1/2 -translate-y-1/2 z-[60] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors"
-            aria-label="Previous screenshot"
-          >
-            <ChevronLeft className="h-7 w-7" />
-          </button>
-        )}
-        {hasNext && (
-          <button
-            onClick={(e) => { e.stopPropagation(); handleNext(); }}
-            className="fixed right-[calc(10%-80px)] top-1/2 -translate-y-1/2 z-[60] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors"
-            aria-label="Next screenshot"
-          >
-            <ChevronRight className="h-7 w-7" />
-          </button>
-        )}
       </DialogContent>
+      {hasPrevious && createPortal(
+        <button
+          onClick={(e) => { e.stopPropagation(); handlePrevious(); }}
+          className="fixed left-[2%] top-1/2 -translate-y-1/2 z-[200] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors"
+          aria-label="Previous screenshot"
+        >
+          <ChevronLeft className="h-7 w-7" />
+        </button>,
+        document.body
+      )}
+      {hasNext && createPortal(
+        <button
+          onClick={(e) => { e.stopPropagation(); handleNext(); }}
+          className="fixed right-[2%] top-1/2 -translate-y-1/2 z-[200] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors"
+          aria-label="Next screenshot"
+        >
+          <ChevronRight className="h-7 w-7" />
+        </button>,
+        document.body
+      )}
     </Dialog>
   );
 }
