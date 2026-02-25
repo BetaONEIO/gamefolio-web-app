@@ -2548,21 +2548,48 @@ export default function SettingsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
+                      {profileData.bannerUrl && (
+                        <div>
+                          <Label className="text-sm font-medium">Current Banner Preview</Label>
+                          <div className="mt-2 aspect-[3.5/1] w-full rounded-lg border overflow-hidden">
+                            <img
+                              src={signedBannerUrl || profileData.bannerUrl}
+                              alt="Current banner"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        </div>
+                      )}
                       <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
                         <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                         <p className="text-sm text-muted-foreground mb-4">
-                          Upload your custom banner with preview and positioning
+                          {profileData.bannerUrl ? 'Upload a new banner image' : 'Upload your custom banner with preview and positioning'}
                         </p>
                         <Button 
                           variant="outline"
                           onClick={() => setShowBannerUpload(true)}
                         >
-                          Upload Banner
+                          {profileData.bannerUrl ? 'Change Banner' : 'Upload Banner'}
                         </Button>
                         <p className="text-xs text-muted-foreground mt-2">
                           Max file size: 5MB • Drag to position like Facebook cover photo
                         </p>
                       </div>
+                      {profileData.bannerUrl && (
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setProfileData(prev => ({ ...prev, bannerUrl: "" }));
+                            toast({
+                              title: "Banner removed!",
+                              description: `Banner has been removed. Click "Save Changes" to apply.`,
+                              variant: "gamefolioSuccess",
+                            });
+                          }}
+                        >
+                          Remove Banner
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -2642,11 +2669,10 @@ export default function SettingsPage() {
                       ))}
                     </div>
 
-                    {/* Current Selection */}
                     {profileData.bannerUrl && (
                       <div className="mt-6">
                         <Label className="text-sm font-medium">Current Banner Preview</Label>
-                        <div className="mt-2 aspect-[16/9] max-w-md rounded-lg border overflow-hidden">
+                        <div className="mt-2 aspect-[3.5/1] w-full rounded-lg border overflow-hidden">
                           <img
                             src={signedBannerUrl || profileData.bannerUrl}
                             alt="Selected banner"
