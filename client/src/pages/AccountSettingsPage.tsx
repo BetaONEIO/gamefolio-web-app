@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect } from 'wouter';
-import { Loader2, Trash2, AlertTriangle, Shield, Palette, Type, Sparkles, Check, X, Save, Smile, User } from 'lucide-react';
+import { Loader2, Trash2, AlertTriangle, Shield, Palette, Type, Sparkles, Check, X, Save, Smile, User, KeyRound } from 'lucide-react';
 import { validatePassword, isPasswordValid } from '@/lib/password-validation';
 import { PasswordRequirementsDisplay } from '@/components/ui/password-requirements';
 
@@ -475,8 +475,12 @@ const AccountSettingsPage: React.FC = () => {
       <h1 className="text-3xl font-bold mb-8">Account Settings</h1>
       
       <Tabs defaultValue="security" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8">
+        <TabsList className="grid w-full grid-cols-3 mb-8">
           <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="2fa">
+            <KeyRound className="h-4 w-4 mr-2" />
+            Two-Factor Auth
+          </TabsTrigger>
           <TabsTrigger value="privacy">
             <Shield className="h-4 w-4 mr-2" />
             Privacy & Safety
@@ -1038,9 +1042,11 @@ const AccountSettingsPage: React.FC = () => {
             </CardContent>
           </Card>
           
-          <div className="mt-6">
-            <TwoFactorSettings />
-          </div>
+        </TabsContent>
+
+        {/* Two-Factor Authentication */}
+        <TabsContent value="2fa">
+          <TwoFactorSettings />
         </TabsContent>
       </Tabs>
 
