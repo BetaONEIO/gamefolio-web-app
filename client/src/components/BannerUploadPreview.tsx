@@ -12,7 +12,11 @@ interface BannerUploadPreviewProps {
   isPro?: boolean;
 }
 
-const CROP_ASPECT = 16 / 9;
+// Must match the h-64 (256px) banner height used in ProfileHeader
+const BANNER_HEIGHT = 256;
+// Extra space shown above/below the crop box so the user can see what's outside it
+const OVERFLOW_PADDING = 80;
+const STAGE_HEIGHT = BANNER_HEIGHT + OVERFLOW_PADDING * 2;
 const MAX_SCALE = 3;
 
 export function BannerUploadPreview({
@@ -35,13 +39,12 @@ export function BannerUploadPreview({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hiddenImageRef = useRef<HTMLImageElement>(null);
   const visibleImageRef = useRef<HTMLImageElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const cropH = containerWidth > 0 ? Math.round(containerWidth / CROP_ASPECT) : 0;
-
+  // Measure the stage width via ResizeObserver
   useEffect(() => {
-    const el = containerRef.current;
+    const el = stageRef.current;
     if (!el) return;
     const ro = new ResizeObserver((entries) => {
       const w = entries[0]?.contentRect.width ?? 0;
@@ -51,12 +54,13 @@ export function BannerUploadPreview({
     return () => ro.disconnect();
   }, []);
 
+  // Clamp drag position so the image never exposes empty space inside the crop box
   const clampPosition = useCallback(
-    (x: number, y: number, s: number, natW: number, natH: number, cW: number, cH: number) => {
+    (x: number, y: number, s: number, natW: number, natH: number, cropW: number, cropH: number) => {
       const scaledW = natW * s;
       const scaledH = natH * s;
-      const maxX = Math.max(0, (scaledW - cW) / 2);
-      const maxY = Math.max(0, (scaledH - cH) / 2);
+      const maxX = Math.max(0, (scaledW - cropW) / 2);
+      const maxY = Math.max(0, (scaledH - cropH) / 2);
       return {
         x: Math.max(-maxX, Math.min(maxX, x)),
         y: Math.max(-maxY, Math.min(maxY, y)),
@@ -65,15 +69,16 @@ export function BannerUploadPreview({
     []
   );
 
-  const computeMinScale = useCallback((natW: number, natH: number, cW: number, cH: number) => {
-    if (natW === 0 || natH === 0 || cW === 0 || cH === 0) return 1;
-    return Math.max(cW / natW, cH / natH);
+  // Auto-fit: image must cover the full crop box
+  const computeMinScale = useCallback((natW: number, natH: number, cropW: number, cropH: number) => {
+    if (!natW || !natH || !cropW || !cropH) return 1;
+    return Math.max(cropW / natW, cropH / natH);
   }, []);
 
+  // Re-initialise scale/position whenever image or container size changes
   useEffect(() => {
     if (!showEditor || containerWidth === 0 || imageNaturalSize.w === 0) return;
-    const cH = Math.round(containerWidth / CROP_ASPECT);
-    const fit = computeMinScale(imageNaturalSize.w, imageNaturalSize.h, containerWidth, cH);
+    const fit = computeMinScale(imageNaturalSize.w, imageNaturalSize.h, containerWidth, BANNER_HEIGHT);
     setMinScale(fit);
     setScale(fit);
     setPosition({ x: 0, y: 0 });
@@ -138,14 +143,13 @@ export function BannerUploadPreview({
     const startY = e.clientY;
     const startPosX = position.x;
     const startPosY = position.y;
-    const cH = Math.round(containerWidth / CROP_ASPECT);
 
     const onMove = (ev: MouseEvent) => {
       ev.preventDefault();
       setPosition(clampPosition(
         startPosX + ev.clientX - startX,
         startPosY + ev.clientY - startY,
-        scale, imageNaturalSize.w, imageNaturalSize.h, containerWidth, cH
+        scale, imageNaturalSize.w, imageNaturalSize.h, containerWidth, BANNER_HEIGHT
       ));
     };
     const onUp = () => {
@@ -164,7 +168,6 @@ export function BannerUploadPreview({
     const startY = touch.clientY;
     const startPosX = position.x;
     const startPosY = position.y;
-    const cH = Math.round(containerWidth / CROP_ASPECT);
 
     const onMove = (ev: TouchEvent) => {
       if (ev.touches.length !== 1) return;
@@ -173,7 +176,7 @@ export function BannerUploadPreview({
       setPosition(clampPosition(
         startPosX + t.clientX - startX,
         startPosY + t.clientY - startY,
-        scale, imageNaturalSize.w, imageNaturalSize.h, containerWidth, cH
+        scale, imageNaturalSize.w, imageNaturalSize.h, containerWidth, BANNER_HEIGHT
       ));
     };
     const onEnd = () => {
@@ -185,9 +188,8 @@ export function BannerUploadPreview({
   }, [position, scale, imageNaturalSize, containerWidth, clampPosition]);
 
   const handleScaleChange = useCallback((newScale: number) => {
-    const cH = Math.round(containerWidth / CROP_ASPECT);
     setScale(newScale);
-    setPosition(prev => clampPosition(prev.x, prev.y, newScale, imageNaturalSize.w, imageNaturalSize.h, containerWidth, cH));
+    setPosition(prev => clampPosition(prev.x, prev.y, newScale, imageNaturalSize.w, imageNaturalSize.h, containerWidth, BANNER_HEIGHT));
   }, [imageNaturalSize, containerWidth, clampPosition]);
 
   const handleCancel = useCallback(() => {
@@ -205,20 +207,25 @@ export function BannerUploadPreview({
     try {
       const img = visibleImageRef.current;
       const { w: natW, h: natH } = imageNaturalSize;
-      const cW = containerWidth;
-      const cH = Math.round(containerWidth / CROP_ASPECT);
+      const cropW = containerWidth;
+      const cropH = BANNER_HEIGHT;
 
-      const srcW = cW / scale;
-      const srcH = cH / scale;
+      // Calculate source rectangle in the original image
+      const srcW = cropW / scale;
+      const srcH = cropH / scale;
       const srcX = natW / 2 - srcW / 2 - position.x / scale;
       const srcY = natH / 2 - srcH / 2 - position.y / scale;
 
+      // Export at 1200 wide, height proportional to the crop box ratio
+      const exportW = 1200;
+      const exportH = Math.round(exportW * cropH / cropW);
+
       const canvas = document.createElement('canvas');
-      canvas.width = 1200;
-      canvas.height = 675;
+      canvas.width = exportW;
+      canvas.height = exportH;
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Canvas context unavailable');
-      ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, 1200, 675);
+      ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, exportW, exportH);
 
       const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob(b => b ? resolve(b) : reject(new Error('Canvas to blob failed')), 'image/jpeg', 0.92);
@@ -242,6 +249,7 @@ export function BannerUploadPreview({
     }
   }, [selectedFile, position, scale, imageNaturalSize, containerWidth, onUpload, toast, handleCancel]);
 
+  // ── Upload picker ─────────────────────────────────────────────────────────
   if (!previewUrl) {
     return (
       <Card className="w-full">
@@ -272,55 +280,83 @@ export function BannerUploadPreview({
     );
   }
 
+  // ── Editor ────────────────────────────────────────────────────────────────
   return (
     <Card className="w-full">
       <CardHeader>
         <CardTitle>Edit media</CardTitle>
-        <p className="text-sm text-muted-foreground">Drag to reposition · use the slider to zoom</p>
+        <p className="text-sm text-muted-foreground">
+          Drag to reposition · use the slider to zoom · the highlighted area is your banner
+        </p>
       </CardHeader>
       <CardContent className="space-y-4 px-0 pb-4">
 
-        {/* Hidden img to read natural dimensions — always mounted while previewUrl is set */}
-        <img
-          ref={hiddenImageRef}
-          src={previewUrl}
-          alt=""
-          className="hidden"
-          onLoad={handleImageLoad}
-        />
+        {/* Hidden img — used only to read naturalWidth / naturalHeight */}
+        <img ref={hiddenImageRef} src={previewUrl} alt="" className="hidden" onLoad={handleImageLoad} />
 
-        {/* Crop stage — full width, 16:9 height, clips the image */}
+        {/* ── Stage ── */}
         <div
-          ref={containerRef}
+          ref={stageRef}
           className="relative w-full overflow-hidden bg-black select-none cursor-move"
-          style={{ height: cropH > 0 ? cropH : undefined, aspectRatio: cropH === 0 ? '16/9' : undefined }}
+          style={{ height: STAGE_HEIGHT }}
           onMouseDown={showEditor ? handleMouseDown : undefined}
           onTouchStart={showEditor ? handleTouchStart : undefined}
         >
           {showEditor && (
-            <img
-              ref={visibleImageRef}
-              src={previewUrl}
-              alt="Banner preview"
-              className="pointer-events-none absolute"
-              style={{
-                left: '50%',
-                top: '50%',
-                maxWidth: 'none',
-                width: imageNaturalSize.w,
-                height: imageNaturalSize.h,
-                transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`,
-                transformOrigin: 'center center',
-              }}
-              draggable={false}
-            />
+            <>
+              {/* The image — natural size, centred, zoomed via CSS scale */}
+              <img
+                ref={visibleImageRef}
+                src={previewUrl}
+                alt="Banner preview"
+                className="pointer-events-none absolute"
+                style={{
+                  left: '50%',
+                  top: '50%',
+                  maxWidth: 'none',
+                  width: imageNaturalSize.w,
+                  height: imageNaturalSize.h,
+                  transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`,
+                  transformOrigin: 'center center',
+                }}
+                draggable={false}
+              />
+
+              {/* Dark overlay — above the crop box */}
+              <div
+                className="absolute inset-x-0 top-0 pointer-events-none bg-black/60"
+                style={{ height: OVERFLOW_PADDING }}
+              />
+
+              {/* Dark overlay — below the crop box */}
+              <div
+                className="absolute inset-x-0 bottom-0 pointer-events-none bg-black/60"
+                style={{ height: OVERFLOW_PADDING }}
+              />
+
+              {/* Crop box border — full width, BANNER_HEIGHT tall, centred vertically */}
+              <div
+                className="absolute inset-x-0 pointer-events-none"
+                style={{
+                  top: OVERFLOW_PADDING,
+                  height: BANNER_HEIGHT,
+                  border: '2px solid #1d9bf0',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </>
           )}
         </div>
 
-        {/* Zoom slider */}
+        {/* ── Zoom slider ── */}
         {showEditor && (
           <div className="flex items-center gap-3 px-4">
-            <button className="text-muted-foreground hover:text-foreground transition-colors" onClick={() => handleScaleChange(Math.max(minScale, scale / 1.15))} aria-label="Zoom out" data-testid="button-zoom-out">
+            <button
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => handleScaleChange(Math.max(minScale, scale / 1.15))}
+              aria-label="Zoom out"
+              data-testid="button-zoom-out"
+            >
               <ZoomOut className="h-5 w-5" />
             </button>
             <input
@@ -332,23 +368,27 @@ export function BannerUploadPreview({
               onChange={e => handleScaleChange(parseFloat(e.target.value))}
               className="flex-1 accent-[#1d9bf0] cursor-pointer"
             />
-            <button className="text-muted-foreground hover:text-foreground transition-colors" onClick={() => handleScaleChange(Math.min(MAX_SCALE, scale * 1.15))} aria-label="Zoom in" data-testid="button-zoom-in">
+            <button
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => handleScaleChange(Math.min(MAX_SCALE, scale * 1.15))}
+              aria-label="Zoom in"
+              data-testid="button-zoom-in"
+            >
               <ZoomIn className="h-5 w-5" />
             </button>
           </div>
         )}
 
-        {/* Action buttons */}
+        {/* ── Action buttons ── */}
         <div className="flex flex-col sm:flex-row items-stretch gap-2 px-4">
           <Button variant="outline" onClick={handleCancel} disabled={isUploading} className="w-full sm:flex-1" data-testid="button-cancel-banner">
             <X className="h-4 w-4 mr-2" />Cancel
           </Button>
           <Button onClick={handleUpload} disabled={!selectedFile || isUploading || !showEditor} className="w-full sm:flex-1" data-testid="button-upload-banner">
-            {isUploading ? (
-              <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />Uploading...</>
-            ) : (
-              <><Check className="h-4 w-4 mr-2" />Apply</>
-            )}
+            {isUploading
+              ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />Uploading...</>
+              : <><Check className="h-4 w-4 mr-2" />Apply</>
+            }
           </Button>
         </div>
       </CardContent>
