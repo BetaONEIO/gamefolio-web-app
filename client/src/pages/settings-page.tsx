@@ -928,7 +928,7 @@ export default function SettingsPage() {
       
       toast({
         title: "Settings updated!",
-        description: "Your profile has been successfully updated. Check your profile page!",
+        description: "Your profile has been successfully updated. Check your Gamefolio!",
         variant: "gamefolioSuccess",
       });
     },
