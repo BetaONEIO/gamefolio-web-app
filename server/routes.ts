@@ -3236,11 +3236,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Only allow safe profile fields to be updated via this route.
+      // Sensitive/system fields (gfTokenBalance, isPro, level, totalXP, etc.)
+      // are managed by dedicated server-side routes only.
+      const ALLOWED_PROFILE_FIELDS = new Set([
+        "username", "displayName", "bio", "userType", "location", "website",
+        "dateOfBirth", "avatarUrl", "bannerUrl", "activeProfilePicType",
+        "avatarBorderColor", "primaryColor", "secondaryColor", "accentColor",
+        "backgroundColor", "steamUsername", "xboxUsername", "playstationUsername",
+        "discordUsername", "epicUsername", "twitchUsername", "youtubeUsername",
+        "twitterUsername", "instagramUsername",
+      ]);
+      const safeBody = Object.fromEntries(
+        Object.entries(req.body).filter(([key]) => ALLOWED_PROFILE_FIELDS.has(key))
+      );
+
       // Handle demo user separately
       if (userId === 999) {
-        console.log("Updating demo user with data:", req.body);
+        console.log("Updating demo user with data:", safeBody);
         // For demo user, actually update the in-memory demo user data
-        const updatedDemoUser = await storage.updateUser(userId, req.body);
+        const updatedDemoUser = await storage.updateUser(userId, safeBody);
         if (updatedDemoUser) {
           console.log("Demo user updated successfully, new banner URL:", updatedDemoUser.bannerUrl);
           const { password, ...userWithoutPassword } = updatedDemoUser;
@@ -3251,7 +3266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update the user profile
-      const updatedUser = await storage.updateUser(userId, req.body);
+      const updatedUser = await storage.updateUser(userId, safeBody);
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
       }
