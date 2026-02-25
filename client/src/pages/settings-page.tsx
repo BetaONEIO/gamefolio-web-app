@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile } from "lucide-react";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -29,6 +29,7 @@ import { SiEpicgames, SiNintendo } from 'react-icons/si';
 import Cropper from "react-easy-crop";
 import NftProfilePopup from "@/components/nft/NftProfilePopup";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 import DOMPurify from "dompurify";
 import { useSignedUrl, useSignedUrls } from "@/hooks/use-signed-url";
@@ -36,6 +37,33 @@ import type { NameTag, VerificationBadge } from "@shared/schema";
 import { KeyboardAvoidingWrapper } from "@/components/shared/KeyboardAvoidingWrapper";
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
+
+const EMOJI_CATEGORIES = [
+  {
+    label: "Smileys",
+    emojis: ["😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😜","🤪","😝","🤑","🤗","🤭","😏","😎","🥳","🤩"],
+  },
+  {
+    label: "Gaming",
+    emojis: ["🎮","🕹️","👾","🎯","🏆","🥇","🎲","🃏","🎰","⚔️","🛡️","🗡️","💣","🎱","🔫","🏹","🧨","🎳","🤺","🥊"],
+  },
+  {
+    label: "Animals",
+    emojis: ["🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🐔","🦄","🐉","🦋","🦅","🐺","🦝","🐗","🦖"],
+  },
+  {
+    label: "Fire & Stars",
+    emojis: ["🔥","⚡","💥","✨","⭐","🌟","💫","🌈","❄️","🌊","🌀","☄️","🌙","🌞","💎","👑","🏅","🎖️","🎗️","🎀"],
+  },
+  {
+    label: "Hands & People",
+    emojis: ["👋","🤚","🖐️","✋","🖖","👌","🤌","✌️","🤞","🤟","🤘","🤙","👈","👉","👆","👇","☝️","👍","👎","✊","👊","🤛","🤜","🙌","👏","🤝","🫶","💪","🦾"],
+  },
+  {
+    label: "Objects",
+    emojis: ["💻","🖥️","🖨️","⌨️","🖱️","📱","📷","🎥","📡","🔭","🔬","💡","🔋","🔌","🧲","💾","💿","📀","🎵","🎶","🎸","🥁","🎺","🎷","🎻","🎤","🎧","📻","📺","🎬"],
+  },
+];
 
 const FONT_OPTIONS = [
   { value: 'default', label: 'Default', family: 'system-ui, sans-serif', scale: 1 },
@@ -1880,12 +1908,44 @@ export default function SettingsPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="displayName">Display Name</Label>
-                  <Input
-                    id="displayName"
-                    value={profileData.displayName}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, displayName: e.target.value }))}
-                    placeholder="Your display name"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="displayName"
+                      value={profileData.displayName}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, displayName: e.target.value }))}
+                      placeholder="Your display name"
+                      className="flex-1"
+                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="icon" type="button" title="Add emoji">
+                          <Smile className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72 p-3" align="end">
+                        <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                          {EMOJI_CATEGORIES.map((category) => (
+                            <div key={category.label}>
+                              <p className="text-xs font-semibold text-muted-foreground mb-1">{category.label}</p>
+                              <div className="flex flex-wrap gap-1">
+                                {category.emojis.map((emoji) => (
+                                  <button
+                                    key={emoji}
+                                    type="button"
+                                    className="text-lg hover:bg-accent rounded p-0.5 transition-colors cursor-pointer"
+                                    onClick={() => setProfileData(prev => ({ ...prev, displayName: prev.displayName + emoji }))}
+                                    title={emoji}
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
                 
                 <div className="space-y-2">
