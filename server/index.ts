@@ -16,7 +16,7 @@ import gfStakingRoutes from './routes/gf-staking';
 import storeRoutes from './routes/store';
 import { createOGMetaMiddleware } from './og-meta';
 import { storage } from './storage';
-import { LeaderboardService } from './leaderboard-service';
+import { LeaderboardService, loadXpSettingsFromDB } from './leaderboard-service';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -118,6 +118,8 @@ app.use((req, res, next) => {
   try {
     const server = await registerRoutes(app);
 
+    // Load XP settings from DB and sync into POINT_VALUES
+    await loadXpSettingsFromDB();
 
     // Serve static email assets
     app.use('/static/email-assets', express.static(path.join(__dirname, 'static/email-assets')));

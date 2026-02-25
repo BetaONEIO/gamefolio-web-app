@@ -106,7 +106,9 @@ import {
   commentLikes,
   screenshotCommentLikes,
   UserDailyFires, InsertUserDailyFires,
-  FireLimits
+  FireLimits,
+  xpSettings,
+  XpSetting, InsertXpSetting
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, isNotNull, getTableColumns } from "drizzle-orm";
@@ -5610,5 +5612,38 @@ export class DatabaseStorage implements IStorage {
       firesUsedToday,
       canFire: firesUsedToday < maxFiresPerDay
     };
+  }
+
+  async getXpSettings(): Promise<XpSetting[]> {
+    return await db.select().from(xpSettings).orderBy(xpSettings.category, xpSettings.key);
+  }
+
+  async updateXpSetting(key: string, value: number, updatedBy?: number): Promise<XpSetting> {
+    const [updated] = await db
+      .update(xpSettings)
+      .set({ value, updatedAt: new Date(), updatedBy: updatedBy ?? null })
+      .where(eq(xpSettings.key, key))
+      .returning();
+    if (!updated) throw new Error(`XP setting '${key}' not found`);
+    return updated;
+  }
+
+  async upsertXpSetting(setting: InsertXpSetting): Promise<XpSetting> {
+    const [result] = await db
+      .insert(xpSettings)
+      .values({ ...setting, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: xpSettings.key,
+        set: {
+          value: setting.value,
+          label: setting.label,
+          description: setting.description,
+          category: setting.category,
+          updatedAt: new Date(),
+          updatedBy: setting.updatedBy ?? null,
+        },
+      })
+      .returning();
+    return result;
   }
 }

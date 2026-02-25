@@ -1506,6 +1506,67 @@ const AdminPage = () => {
   const [pointsAdjustment, setPointsAdjustment] = useState<number | null>(null);
   const [pointsAdjustmentReason, setPointsAdjustmentReason] = useState("");
 
+  // XP config state
+  const [xpEdits, setXpEdits] = useState<Record<string, number>>({});
+  const [xpSaving, setXpSaving] = useState(false);
+  const [xpSeeding, setXpSeeding] = useState(false);
+
+  const { data: xpConfigData, isLoading: xpConfigLoading, refetch: refetchXpConfig } = useQuery<Array<{
+    key: string; label: string; description: string; category: string; value: number; updatedAt: string | null; id: number | null;
+  }>>({
+    queryKey: ["/api/admin/xp-config"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+  });
+
+  const xpCurrentValue = (key: string): number => {
+    if (xpEdits[key] !== undefined) return xpEdits[key];
+    return xpConfigData?.find(s => s.key === key)?.value ?? 0;
+  };
+
+  const handleXpEdit = (key: string, val: string) => {
+    const num = parseFloat(val);
+    if (!isNaN(num)) setXpEdits(prev => ({ ...prev, [key]: num }));
+  };
+
+  const saveXpCategory = async (category: string) => {
+    const items = (xpConfigData || []).filter(s => s.category === category);
+    const updates = items
+      .filter(s => xpEdits[s.key] !== undefined)
+      .map(s => ({ key: s.key, value: xpEdits[s.key] }));
+    if (updates.length === 0) {
+      toast({ title: "No changes", description: "No values were edited in this section." });
+      return;
+    }
+    setXpSaving(true);
+    try {
+      await apiRequest("PUT", "/api/admin/xp-config", { updates });
+      const saved = { ...xpEdits };
+      updates.forEach(u => delete saved[u.key]);
+      setXpEdits(saved);
+      refetchXpConfig();
+      toast({ title: "Saved", description: `Updated ${updates.length} XP value(s)` });
+    } catch {
+      toast({ title: "Error", description: "Failed to save XP settings", variant: "gamefolioError" });
+    } finally {
+      setXpSaving(false);
+    }
+  };
+
+  const seedXpDefaults = async () => {
+    if (!confirm("This will reset all XP values to the built-in defaults. Continue?")) return;
+    setXpSeeding(true);
+    try {
+      await apiRequest("POST", "/api/admin/xp-config/seed", {});
+      setXpEdits({});
+      refetchXpConfig();
+      toast({ title: "Done", description: "XP settings seeded with current defaults" });
+    } catch {
+      toast({ title: "Error", description: "Failed to seed XP settings", variant: "gamefolioError" });
+    } finally {
+      setXpSeeding(false);
+    }
+  };
+
   // Asset rewards state
   const [newRewardName, setNewRewardName] = useState("");
   const [newRewardImageUrl, setNewRewardImageUrl] = useState("");
@@ -3885,77 +3946,183 @@ const AdminPage = () => {
 
         {/* Points Tab */}
         <TabsContent value="points" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Star className="h-5 w-5" />
-                Points System Overview
-              </CardTitle>
-              <CardDescription>
-                View how points are awarded and manage user points
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Upload className="h-4 w-4 text-blue-500" />
-                      <h3 className="font-semibold">Uploads</h3>
+          {/* XP Reward Structure — Editable */}
+          {(() => {
+            const categories = [
+              { key: "engagement", label: "Engagement", description: "XP earned through social interactions on the platform", color: "blue" },
+              { key: "daily_activity", label: "Daily Activity", description: "XP earned by completing daily tasks (resets at 00:00)", color: "green" },
+              { key: "creator_milestones", label: "Creator Milestones", description: "One-time or weekly milestone bonuses for creators", color: "purple" },
+              { key: "bonus_events", label: "Bonus Events", description: "Special XP bonuses triggered by platform events", color: "orange" },
+            ];
+            const colorMap: Record<string, string> = {
+              blue: "text-blue-500 border-blue-200 dark:border-blue-800",
+              green: "text-green-500 border-green-200 dark:border-green-800",
+              purple: "text-purple-500 border-purple-200 dark:border-purple-800",
+              orange: "text-orange-500 border-orange-200 dark:border-orange-800",
+            };
+            return (
+              <>
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Star className="h-5 w-5" />
+                          XP Reward Structure
+                        </CardTitle>
+                        <CardDescription className="mt-1">
+                          Edit XP values and save by category. Changes take effect immediately without a restart.
+                        </CardDescription>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={seedXpDefaults}
+                        disabled={xpSeeding}
+                        className="shrink-0"
+                      >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${xpSeeding ? "animate-spin" : ""}`} />
+                        Seed Defaults
+                      </Button>
                     </div>
-                    <p className="text-2xl font-bold text-blue-500">5 points</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Per clip, reel, or screenshot uploaded
-                    </p>
-                  </div>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {xpConfigLoading ? (
+                      <div className="text-center py-8 text-muted-foreground">Loading XP settings…</div>
+                    ) : !xpConfigData || xpConfigData.length === 0 ? (
+                      <div className="p-4 border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg">
+                        <p className="text-sm text-yellow-900 dark:text-yellow-100 mb-3">
+                          XP settings have not been seeded to the database yet. Click <strong>Seed Defaults</strong> to populate them with the current built-in values.
+                        </p>
+                        <Button size="sm" onClick={seedXpDefaults} disabled={xpSeeding}>
+                          <RefreshCw className={`h-4 w-4 mr-2 ${xpSeeding ? "animate-spin" : ""}`} />
+                          Seed Now
+                        </Button>
+                      </div>
+                    ) : (
+                      categories.map(cat => {
+                        const items = xpConfigData.filter(s => s.category === cat.key);
+                        if (items.length === 0) return null;
+                        const hasEdits = items.some(s => xpEdits[s.key] !== undefined);
+                        return (
+                          <div key={cat.key} className={`border rounded-lg p-4 ${colorMap[cat.color]}`}>
+                            <div className="flex items-center justify-between mb-3">
+                              <div>
+                                <h3 className={`font-semibold text-sm ${colorMap[cat.color].split(" ")[0]}`}>{cat.label}</h3>
+                                <p className="text-xs text-muted-foreground">{cat.description}</p>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant={hasEdits ? "default" : "outline"}
+                                onClick={() => saveXpCategory(cat.key)}
+                                disabled={xpSaving}
+                                className="shrink-0"
+                              >
+                                {xpSaving ? <RefreshCw className="h-3 w-3 mr-1 animate-spin" /> : null}
+                                Save {cat.label}
+                              </Button>
+                            </div>
+                            <div className="space-y-2">
+                              {items.map(setting => {
+                                const currentVal = xpCurrentValue(setting.key);
+                                const isDirty = xpEdits[setting.key] !== undefined;
+                                return (
+                                  <div key={setting.key} className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium leading-none">{setting.label}</p>
+                                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{setting.description}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      {isDirty && (
+                                        <span className="text-xs text-yellow-500 font-medium">unsaved</span>
+                                      )}
+                                      <Input
+                                        type="number"
+                                        step="any"
+                                        min="0"
+                                        value={currentVal}
+                                        onChange={e => handleXpEdit(setting.key, e.target.value)}
+                                        className="w-24 h-8 text-right text-sm"
+                                      />
+                                      <span className="text-xs text-muted-foreground w-6">XP</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </CardContent>
+                </Card>
 
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Heart className="h-4 w-4 text-red-500" />
-                      <h3 className="font-semibold">Likes</h3>
-                    </div>
-                    <p className="text-2xl font-bold text-red-500">2 points</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Per like given to content
-                    </p>
-                  </div>
-
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <MessageCircle className="h-4 w-4 text-green-500" />
-                      <h3 className="font-semibold">Comments</h3>
-                    </div>
-                    <p className="text-2xl font-bold text-green-500">5 points</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Per comment posted
-                    </p>
-                  </div>
-
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-orange-500">🔥</span>
-                      <h3 className="font-semibold">Fire Reactions</h3>
-                    </div>
-                    <p className="text-2xl font-bold text-orange-500">3 points</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Per fire reaction given
-                    </p>
-                  </div>
-
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
+                {/* Per-Clip View Milestones — reference only, not editable here */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
                       <Eye className="h-4 w-4 text-purple-500" />
-                      <h3 className="font-semibold">Views</h3>
+                      Per-Clip View Milestones
+                    </CardTitle>
+                    <CardDescription>
+                      XP awarded automatically when a clip reaches view thresholds (each milestone awarded once per clip)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {[
+                        { views: "50", xp: "+50 XP" },
+                        { views: "100", xp: "+100 XP" },
+                        { views: "250", xp: "+200 XP" },
+                        { views: "500", xp: "+400 XP" },
+                        { views: "1,000", xp: "+800 XP" },
+                        { views: "5,000", xp: "+1,500 XP" },
+                        { views: "10,000", xp: "+3,000 XP" },
+                        { views: "25,000", xp: "+6,000 XP" },
+                      ].map(m => (
+                        <div key={m.views} className="p-3 border rounded-lg text-center">
+                          <p className="text-xs text-muted-foreground">{m.views} views</p>
+                          <p className="text-sm font-bold text-purple-500 mt-1">{m.xp}</p>
+                        </div>
+                      ))}
                     </div>
-                    <p className="text-2xl font-bold text-purple-500">1 point</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Per view on uploaded content (also awards 1 XP)
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                  </CardContent>
+                </Card>
+
+                {/* Streak Milestones — reference only */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <span>🔥</span>
+                      Streak Milestones
+                    </CardTitle>
+                    <CardDescription>
+                      Bonus XP awarded on specific login streak days
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {[
+                        { day: "Day 2", xp: "+50 XP" },
+                        { day: "Day 3", xp: "+75 XP" },
+                        { day: "Day 5", xp: "+150 XP" },
+                        { day: "Day 7", xp: "+300 XP" },
+                        { day: "Day 14", xp: "+500 XP" },
+                        { day: "Day 30", xp: "+1,000 XP" },
+                        { day: "Day 60", xp: "+2,000 XP" },
+                        { day: "Day 90+", xp: "Doubles" },
+                      ].map(m => (
+                        <div key={m.day} className="p-3 border rounded-lg text-center">
+                          <p className="text-xs text-muted-foreground">{m.day}</p>
+                          <p className="text-sm font-bold text-orange-500 mt-1">{m.xp}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            );
+          })()}
 
           <Card>
             <CardHeader>

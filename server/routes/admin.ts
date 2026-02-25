@@ -8,6 +8,7 @@ import fs from 'fs';
 import multer from 'multer';
 import { ContentFilterService } from '../services/content-filter';
 import { insertBannerSettingsSchema, insertAssetRewardSchema, insertHeroSlideSchema, heroSlides } from '@shared/schema';
+import { POINT_VALUES, XP_SETTINGS_DEFINITION, updatePointValue } from '../leaderboard-service';
 import { z } from 'zod';
 import { supabaseStorage } from '../supabase-storage';
 
@@ -1917,6 +1918,98 @@ adminRouter.post("/hero-slides/reorder", async (req: Request, res: Response) => 
   } catch (err) {
     console.error("Error reordering hero slides:", err);
     res.status(500).json({ message: "Error reordering hero slides" });
+  }
+});
+
+// ==========================================
+// XP Settings Routes
+// ==========================================
+
+// GET /api/admin/xp-config - Return all XP settings (with current in-memory values)
+adminRouter.get("/xp-config", async (req: Request, res: Response) => {
+  try {
+    const dbSettings = await storage.getXpSettings();
+    const dbMap = new Map(dbSettings.map(s => [s.key, s]));
+
+    // Merge DB records with the canonical definition (so we always show all settings)
+    const result = XP_SETTINGS_DEFINITION.map(def => {
+      const dbRow = dbMap.get(def.key);
+      return {
+        key: def.key,
+        label: def.label,
+        description: def.description,
+        category: def.category,
+        value: dbRow ? dbRow.value : POINT_VALUES[def.key] ?? 0,
+        updatedAt: dbRow?.updatedAt ?? null,
+        updatedBy: dbRow?.updatedBy ?? null,
+        id: dbRow?.id ?? null,
+      };
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error("Error fetching XP config:", err);
+    res.status(500).json({ message: "Error fetching XP config" });
+  }
+});
+
+// PUT /api/admin/xp-config - Update one or more XP settings
+adminRouter.put("/xp-config", async (req: Request, res: Response) => {
+  try {
+    const { updates } = req.body as { updates: Array<{ key: string; value: number }> };
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({ message: "updates array is required" });
+    }
+
+    const adminUser = req.user as any;
+    const updatedBy = adminUser?.id ?? null;
+
+    for (const { key, value } of updates) {
+      if (typeof key !== "string" || typeof value !== "number" || isNaN(value)) {
+        return res.status(400).json({ message: `Invalid update: key=${key} value=${value}` });
+      }
+      const def = XP_SETTINGS_DEFINITION.find(d => d.key === key);
+      if (!def) {
+        return res.status(400).json({ message: `Unknown XP setting key: ${key}` });
+      }
+      // Upsert into DB
+      await storage.upsertXpSetting({
+        key,
+        value,
+        label: def.label,
+        description: def.description,
+        category: def.category,
+        updatedBy,
+      });
+      // Update in-memory POINT_VALUES immediately
+      updatePointValue(key, value);
+    }
+
+    res.json({ message: `Updated ${updates.length} XP setting(s) successfully` });
+  } catch (err) {
+    console.error("Error updating XP config:", err);
+    res.status(500).json({ message: "Error updating XP config" });
+  }
+});
+
+// POST /api/admin/xp-config/seed - Seed DB with current defaults (idempotent)
+adminRouter.post("/xp-config/seed", async (req: Request, res: Response) => {
+  try {
+    const adminUser = req.user as any;
+    for (const def of XP_SETTINGS_DEFINITION) {
+      await storage.upsertXpSetting({
+        key: def.key,
+        value: POINT_VALUES[def.key] ?? 0,
+        label: def.label,
+        description: def.description,
+        category: def.category,
+        updatedBy: adminUser?.id ?? null,
+      });
+    }
+    res.json({ message: `Seeded ${XP_SETTINGS_DEFINITION.length} XP settings successfully` });
+  } catch (err) {
+    console.error("Error seeding XP config:", err);
+    res.status(500).json({ message: "Error seeding XP config" });
   }
 });
 

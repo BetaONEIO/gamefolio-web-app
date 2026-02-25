@@ -4,7 +4,8 @@ import { InsertUserPointsHistory, InsertWeeklyLeaderboard, InsertTopContributor 
 // Point values for different actions
 // Points are used for BOTH leaderboards AND leveling
 // Every point earned contributes to user's level progression
-export const POINT_VALUES = {
+// NOTE: These are mutable — they are overwritten at startup from the xp_settings DB table
+export let POINT_VALUES: Record<string, number> = {
   upload: 200,                    // 200 XP for uploading clips/reels
   screenshot_upload: 100,         // 100 XP for uploading screenshots
   like: 5,                        // 5 XP for liking content (like_given)
@@ -28,7 +29,55 @@ export const POINT_VALUES = {
   lootbox_bonus: 100,             // 100 XP for opening the daily lootbox
   consecutive_upload_bonus: 75,   // 75 XP for uploading within 24h of last upload
   weekend_upload_bonus: 0,        // Variable - 50% of upload XP on weekends
-} as const;
+};
+
+// The canonical XP settings definition used to seed the database and label each setting
+export const XP_SETTINGS_DEFINITION: Array<{
+  key: string;
+  label: string;
+  description: string;
+  category: string;
+}> = [
+  { key: "upload", label: "Clip/Reel Upload", description: "XP awarded when a user uploads a clip or reel", category: "engagement" },
+  { key: "screenshot_upload", label: "Screenshot Upload", description: "XP awarded when a user uploads a screenshot", category: "engagement" },
+  { key: "like", label: "Like Given", description: "XP awarded when a user likes content", category: "engagement" },
+  { key: "like_received", label: "Like Received", description: "XP awarded when your content receives a like", category: "engagement" },
+  { key: "comment", label: "Comment Given", description: "XP awarded when a user comments on content", category: "engagement" },
+  { key: "comment_received", label: "Comment Received", description: "XP awarded when your content receives a comment", category: "engagement" },
+  { key: "fire", label: "Fire Reaction Received", description: "XP awarded when your content receives a fire reaction", category: "engagement" },
+  { key: "share_received", label: "Share Received", description: "XP awarded when your clip is shared", category: "engagement" },
+  { key: "follow_received", label: "Follow Received", description: "XP awarded when someone follows you", category: "engagement" },
+  { key: "share_given", label: "Share Given", description: "XP awarded when a user shares a clip", category: "engagement" },
+  { key: "view", label: "View (per view)", description: "XP awarded per view on uploaded content", category: "engagement" },
+  { key: "daily_login", label: "Daily Login", description: "XP awarded for logging in each day", category: "daily_activity" },
+  { key: "watch_5_clips", label: "Watch 5 Clips (Daily)", description: "XP awarded for watching 5 clips in a day", category: "daily_activity" },
+  { key: "watch_20_clips", label: "Watch 20 Clips (Daily)", description: "XP awarded for watching 20 clips in a day", category: "daily_activity" },
+  { key: "first_upload_of_day", label: "First Upload of Day", description: "XP awarded for the first clip uploaded each day", category: "creator_milestones" },
+  { key: "weekly_uploads_5", label: "5 Uploads in a Week", description: "XP awarded when you reach 5 uploads in a week", category: "creator_milestones" },
+  { key: "weekly_uploads_10", label: "10 Uploads in a Week", description: "XP awarded when you reach 10 uploads in a week", category: "creator_milestones" },
+  { key: "first_100_views", label: "First Clip to 100 Views", description: "XP awarded when your first clip reaches 100 views", category: "creator_milestones" },
+  { key: "first_1000_views", label: "First Clip to 1,000 Views", description: "XP awarded when your first clip reaches 1,000 views", category: "creator_milestones" },
+  { key: "lootbox_bonus", label: "Daily Lootbox Opened", description: "XP awarded for opening the daily lootbox", category: "bonus_events" },
+  { key: "consecutive_upload_bonus", label: "Upload Within 24h Bonus", description: "XP bonus for uploading within 24h of your last upload", category: "bonus_events" },
+];
+
+// Load XP settings from the DB and update POINT_VALUES in memory
+export async function loadXpSettingsFromDB(): Promise<void> {
+  try {
+    const settings = await storage.getXpSettings();
+    for (const setting of settings) {
+      POINT_VALUES[setting.key] = setting.value;
+    }
+    console.log(`✅ Loaded ${settings.length} XP settings from DB`);
+  } catch (err) {
+    console.warn('⚠️ Could not load XP settings from DB, using defaults:', err);
+  }
+}
+
+// Update a single XP setting in memory and persist to DB
+export function updatePointValue(key: string, value: number): void {
+  POINT_VALUES[key] = value;
+}
 
 export class LeaderboardService {
   // Get current week in ISO format (e.g., "2024-W01")

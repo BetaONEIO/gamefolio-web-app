@@ -1457,3 +1457,18 @@ export const previousAvatars = pgTable("previous_avatars", {
 });
 
 export type PreviousAvatar = typeof previousAvatars.$inferSelect;
+
+export const xpSettings = pgTable("xp_settings", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  value: real("value").notNull(),
+  label: text("label").notNull(),
+  description: text("description").notNull(),
+  category: text("category").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  updatedBy: integer("updated_by"),
+});
+
+export const insertXpSettingsSchema = createInsertSchema(xpSettings).omit({ id: true, updatedAt: true });
+export type InsertXpSetting = z.infer<typeof insertXpSettingsSchema>;
+export type XpSetting = typeof xpSettings.$inferSelect;

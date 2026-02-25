@@ -2,7 +2,7 @@ import {
   users, games, clips, likes, comments, userGameFavorites, follows, messages, profileBanners,
   monthlyLeaderboard, weeklyLeaderboard, topContributors, userPointsHistory, userXPHistory, notifications, userBadges, contentFilterSettings, bannedWords,
   heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions, nftWatchlist, assetRewards, assetRewardClaims,
-  userDailyUploads, proLootboxGrants, nameTags, userUnlockedNameTags, userDailyFires, profileBorders, userUnlockedBorders, verificationBadges, userUnlockedVerificationBadges,
+  userDailyUploads, proLootboxGrants, nameTags, userUnlockedNameTags, userDailyFires, profileBorders, userUnlockedBorders, verificationBadges, userUnlockedVerificationBadges, xpSettings,
   type User, type InsertUser,
   type Game, type InsertGame,
   type Clip, type InsertClip,
@@ -52,7 +52,8 @@ import {
   type Screenshot, type InsertScreenshot,
   type InsertScreenshot as InsertScreenshotData,
   type ScreenshotComment, type InsertScreenshotComment,
-  type ScreenshotCommentWithUser
+  type ScreenshotCommentWithUser,
+  type XpSetting, type InsertXpSetting
 } from "@shared/schema";
 
 export interface IStorage {
@@ -481,6 +482,11 @@ export interface IStorage {
   getUserDailyFires(userId: number, date: string): Promise<UserDailyFires | null>;
   incrementDailyFireCount(userId: number): Promise<UserDailyFires>;
   getFireLimits(userId: number): Promise<FireLimits>;
+
+  // XP settings operations
+  getXpSettings(): Promise<XpSetting[]>;
+  updateXpSetting(key: string, value: number, updatedBy?: number): Promise<XpSetting>;
+  upsertXpSetting(setting: InsertXpSetting): Promise<XpSetting>;
 }
 
 // Use DatabaseStorage with Supabase - no fallback to in-memory storage
