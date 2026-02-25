@@ -283,7 +283,7 @@ export default function LevelTrackerPage() {
   const currentStreak = streak?.currentStreak || 0;
 
   return (
-    <div className="w-full pb-24 pt-6 px-4 max-w-7xl mx-auto">
+    <div className="container mx-auto px-4 py-6 pb-24">
       <div className="flex items-center gap-4 mb-6">
         <Link href={`/@${user.username}`}>
           <Button variant="ghost" size="icon">
@@ -293,70 +293,69 @@ export default function LevelTrackerPage() {
         <h1 className="text-2xl font-bold">Level Tracker</h1>
       </div>
 
-      {/* Desktop: two-column. Mobile: single column */}
-      <div className="lg:grid lg:grid-cols-[320px_1fr] lg:gap-6 lg:items-start">
-
-        {/* Left column — Level Progress Ring (sticky on desktop) */}
-        <div className="lg:sticky lg:top-6">
-          <Card className="mb-6 lg:mb-0 border-primary/20">
-            <CardContent className="pt-6 pb-6">
-              <div className="flex flex-col items-center gap-4">
-                {progressLoading ? (
-                  <Skeleton className="w-[200px] h-[200px] rounded-full" />
-                ) : (
-                  <div className="relative">
-                    <svg className="-rotate-90" width={svgSize} height={svgSize}>
-                      <circle cx={svgSize / 2} cy={svgSize / 2} r={radius} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={strokeWidth} />
-                      <circle
-                        cx={svgSize / 2}
-                        cy={svgSize / 2}
-                        r={radius}
-                        fill="none"
-                        stroke="#EAB308"
-                        strokeWidth={strokeWidth}
-                        strokeLinecap="round"
-                        strokeDasharray={circumference}
-                        strokeDashoffset={strokeDashoffset}
-                        style={{ transition: "stroke-dashoffset 0.5s ease" }}
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="relative w-[185px] h-[185px] md:w-[200px] md:h-[200px] mx-auto">
-                          <img src={badgeIcon} alt="Level Badge" className="w-full h-full object-contain" />
-                          <span className="absolute inset-0 flex items-center justify-center font-bold text-black text-4xl md:text-5xl" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}>
-                            {progress?.level || user.level || 1}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+      {/* Header card — ring on left, XP stats on right */}
+      <Card className="mb-6 border-primary/20">
+        <CardContent className="flex flex-col sm:flex-row items-center gap-6 pt-6 pb-6">
+          {/* Ring */}
+          <div className="shrink-0">
+            {progressLoading ? (
+              <Skeleton className="w-[220px] h-[220px] rounded-full" />
+            ) : (
+              <div className="relative">
+                <svg className="-rotate-90" width={svgSize} height={svgSize}>
+                  <circle cx={svgSize / 2} cy={svgSize / 2} r={radius} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={strokeWidth} />
+                  <circle
+                    cx={svgSize / 2}
+                    cy={svgSize / 2}
+                    r={radius}
+                    fill="none"
+                    stroke="#EAB308"
+                    strokeWidth={strokeWidth}
+                    strokeLinecap="round"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
+                    style={{ transition: "stroke-dashoffset 0.5s ease" }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="relative w-[185px] h-[185px]">
+                    <img src={badgeIcon} alt="Level Badge" className="w-full h-full object-contain" />
+                    <span className="absolute inset-0 flex items-center justify-center font-bold text-black text-5xl" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}>
+                      {progress?.level || user.level || 1}
+                    </span>
                   </div>
-                )}
-
-                {!progressLoading && progress && (
-                  <div className="text-center space-y-2 w-full">
-                    <p className="text-2xl font-bold text-primary">
-                      {Math.round(progress.currentPoints).toLocaleString()} XP
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {Math.round(progress.pointsRemaining).toLocaleString()} XP to Level {progress.level + 1}
-                    </p>
-                    <div className="flex items-center gap-2 justify-center text-xs text-muted-foreground">
-                      <span>Lvl {progress.level}</span>
-                      <div className="flex-1 max-w-[160px] h-2 bg-muted rounded-full overflow-hidden">
-                        <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }} />
-                      </div>
-                      <span>Lvl {progress.level + 1}</span>
-                    </div>
-                  </div>
-                )}
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </div>
 
-        {/* Right column — Tabbed sections */}
-        <div>
+          {/* XP Stats */}
+          {!progressLoading && progress ? (
+            <div className="flex-1 space-y-3 text-center sm:text-left">
+              <p className="text-4xl font-bold text-primary">
+                {Math.round(progress.currentPoints).toLocaleString()} XP
+              </p>
+              <p className="text-base text-muted-foreground">
+                {Math.round(progress.pointsRemaining).toLocaleString()} XP to Level {progress.level + 1}
+              </p>
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <span className="shrink-0">Lvl {progress.level}</span>
+                <div className="flex-1 h-2.5 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }} />
+                </div>
+                <span className="shrink-0">Lvl {progress.level + 1}</span>
+              </div>
+            </div>
+          ) : progressLoading ? (
+            <div className="flex-1 space-y-3">
+              <Skeleton className="h-10 w-48" />
+              <Skeleton className="h-5 w-64" />
+              <Skeleton className="h-3 w-full" />
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
       <Tabs defaultValue="today">
         <TabsList className="w-full mb-4 flex overflow-x-auto h-auto flex-nowrap gap-0.5 bg-muted/50 p-1 rounded-xl">
           <TabsTrigger value="today" className="flex-1 text-xs sm:text-sm whitespace-nowrap py-2">Today</TabsTrigger>
@@ -752,8 +751,6 @@ export default function LevelTrackerPage() {
           </Card>
         </TabsContent>
       </Tabs>
-        </div>
-      </div>
     </div>
   );
 }
