@@ -241,7 +241,7 @@ const ProfileHeader = ({
               {/* Username with user type badge(s) */}
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl font-bold text-foreground">
-                  {profile.displayName}
+                  {profile.displayName && profile.displayName.length > 12 ? profile.displayName.slice(0, 12) + '…' : profile.displayName}
                 </h1>
                 {/* Name Tag - next to username */}
                 {nameTagData?.nameTag && signedNameTagUrl && (

@@ -133,7 +133,7 @@ const MobileMenu = () => {
                   />
                 </div>
                 <div className="ml-3">
-                  <p className="font-medium">{user.displayName}</p>
+                  <p className="font-medium">{user.displayName && user.displayName.length > 12 ? user.displayName.slice(0, 12) + '…' : user.displayName}</p>
                   <p className="text-xs text-muted-foreground">@{user.username}</p>
                 </div>
               </div>

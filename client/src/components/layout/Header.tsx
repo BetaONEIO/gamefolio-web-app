@@ -430,7 +430,7 @@ const Header = () => {
                             />
                           </div>
                           <div>
-                            <p className="text-sm font-medium">{user.displayName}</p>
+                            <p className="text-sm font-medium">{user.displayName && user.displayName.length > 12 ? user.displayName.slice(0, 12) + '…' : user.displayName}</p>
                             <p className="text-sm text-muted-foreground">@{user.username}</p>
                           </div>
                         </div>
