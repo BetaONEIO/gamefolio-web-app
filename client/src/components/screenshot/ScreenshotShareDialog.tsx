@@ -73,12 +73,19 @@ export function ScreenshotShareDialog({
     retryDelay: 1000,
   });
 
+  const trackShare = async () => {
+    try {
+      await fetch(`/api/screenshots/${screenshotId}/track-share`, { method: "POST", credentials: "include" });
+    } catch (_) {}
+  };
+
   const handleCopyLink = async () => {
     if (!shareData?.screenshotUrl) return;
     
     try {
       await navigator.clipboard.writeText(shareData.screenshotUrl);
       setCopySuccess(true);
+      trackShare();
       toast({
         title: "Link Copied!",
         description: "The screenshot link has been copied to your clipboard.",
@@ -107,6 +114,7 @@ export function ScreenshotShareDialog({
           text: shareData.description || 'Amazing gaming content from Gamefolio',
           url: shareData.screenshotUrl
         });
+        trackShare();
         toast({
           title: "Shared successfully",
           description: "Content shared using your device's share menu.",
@@ -119,12 +127,11 @@ export function ScreenshotShareDialog({
     }
   };
 
-  
-
   const handleSocialShare = (platform: string, url: string) => {
     if (!url) return;
     
     window.open(url, '_blank', 'noopener,noreferrer');
+    trackShare();
     toast({
       title: `Sharing on ${platform}`,
       description: isOwnContent ? `📸 Sharing your gaming screenshot from your Gamefolio! Your followers will see your epic moment and can visit your profile to see more content.` : `📸 Sharing this gaming screenshot! Check out this epic moment on Gamefolio.`,
@@ -215,7 +222,7 @@ export function ScreenshotShareDialog({
                   size="sm"
                   onClick={handleCopyLink}
                   className={`px-4 transition-colors ${
-                    copySuccess ? 'text-white bg-blue-600 border-blue-500' : 'text-blue-400 border-blue-500 bg-gray-800 hover:bg-blue-500 hover:text-white'
+                    copySuccess ? 'text-black bg-[#4ade80] border-[#4ade80]' : 'text-[#4ade80] border-[#4ade80]/50 bg-transparent hover:bg-[#4ade80] hover:text-black'
                   }`}
                   aria-label="Copy screenshot URL to clipboard"
                 >
@@ -228,7 +235,7 @@ export function ScreenshotShareDialog({
                     variant="outline"
                     size="sm"
                     onClick={handleNativeShare}
-                    className="px-4 bg-blue-500 text-white hover:bg-blue-600 border-blue-500"
+                    className="px-4 bg-[#4ade80] text-black hover:bg-[#22c55e] border-[#4ade80]"
                     aria-label="Share using device's native share menu"
                   >
                     <Share2 className="h-4 w-4 mr-1" />

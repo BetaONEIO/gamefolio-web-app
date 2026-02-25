@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { getQueryFn } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "wouter";
 import { ArrowLeft, Zap, Gift, Eye, Heart, Flame, Upload, LogIn, Star, Award, Camera, MessageCircle, Sun, CheckCircle2, Circle, Share2, UserPlus, Trophy, Target, Calendar, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -141,11 +142,11 @@ const sourceLabels: Record<string, string> = {
 };
 
 const sourceColors: Record<string, string> = {
-  view: "text-blue-400",
+  view: "text-[#4ade80]",
   lootbox: "text-purple-400",
   like_received: "text-pink-400",
   fire_received: "text-orange-400",
-  upload: "text-green-400",
+  upload: "text-[#4ade80]",
   daily_login: "text-yellow-400",
   welcome_bonus: "text-amber-400",
   comment_received: "text-sky-400",
@@ -154,8 +155,8 @@ const sourceColors: Record<string, string> = {
   comment: "text-sky-400",
   like: "text-pink-400",
   share_given: "text-teal-400",
-  watch_5_clips: "text-blue-300",
-  watch_20_clips: "text-blue-300",
+  watch_5_clips: "text-[#4ade80]",
+  watch_20_clips: "text-[#4ade80]",
   first_upload_of_day: "text-amber-400",
   weekly_uploads_5: "text-amber-400",
   weekly_uploads_10: "text-amber-400",
@@ -190,9 +191,9 @@ function CountdownClock() {
   }, []);
 
   return (
-    <div className="flex items-center gap-1.5 text-xs text-slate-400">
+    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
       <Clock className="w-3 h-3" />
-      <span>Resets in <span className="font-mono text-slate-200 font-semibold">{timeLeft}</span></span>
+      <span>Resets in <span className="font-mono text-foreground font-semibold">{timeLeft}</span></span>
     </div>
   );
 }
@@ -213,29 +214,29 @@ function ActivityItem({
   color?: string;
 }) {
   return (
-    <div className="flex items-center gap-3 p-3 rounded-xl bg-[#0b1120] border border-[#1e293b]/60">
+    <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 border border-border/50">
       <div className="shrink-0">
         {done ? (
           <CheckCircle2 className="w-5 h-5 text-[#4ade80]" />
         ) : (
-          <Circle className="w-5 h-5 text-slate-600" />
+          <Circle className="w-5 h-5 text-muted-foreground/50" />
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium ${done ? "text-slate-400 line-through" : "text-slate-200"}`}>{label}</p>
+        <p className={`text-sm font-medium ${done ? "text-muted-foreground line-through" : "text-foreground"}`}>{label}</p>
         {progress !== undefined && total !== undefined && !done && (
           <div className="flex items-center gap-2 mt-1">
-            <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
               <div
                 className="h-full bg-[#4ade80] rounded-full transition-all"
                 style={{ width: `${Math.min((progress / total) * 100, 100)}%` }}
               />
             </div>
-            <span className="text-xs text-slate-500">{progress}/{total}</span>
+            <span className="text-xs text-muted-foreground">{progress}/{total}</span>
           </div>
         )}
       </div>
-      <span className={`text-sm font-bold shrink-0 ${done ? "text-slate-500" : color}`}>+{xp} XP</span>
+      <span className={`text-sm font-bold shrink-0 ${done ? "text-muted-foreground" : color}`}>+{xp} XP</span>
     </div>
   );
 }
@@ -282,7 +283,7 @@ export default function LevelTrackerPage() {
   const currentStreak = streak?.currentStreak || 0;
 
   return (
-    <div className="w-full pb-24 pt-6 px-4">
+    <div className="w-full pb-24 pt-6 px-4 max-w-2xl mx-auto">
       <div className="flex items-center gap-4 mb-6">
         <Link href={`/@${user.username}`}>
           <Button variant="ghost" size="icon">
@@ -292,8 +293,8 @@ export default function LevelTrackerPage() {
         <h1 className="text-2xl font-bold">Level Tracker</h1>
       </div>
 
-      {/* Level Progress Ring */}
-      <Card className="mb-6 bg-gradient-to-br from-background to-background/80 border-primary/20">
+      {/* Level Progress Ring — always visible */}
+      <Card className="mb-6 border-primary/20">
         <CardContent className="pt-6">
           <div className="flex flex-col items-center gap-4">
             {progressLoading ? (
@@ -349,463 +350,402 @@ export default function LevelTrackerPage() {
         </CardContent>
       </Card>
 
-      {/* Daily Activity Tracker */}
-      <Card className="mb-6 bg-gradient-to-br from-[#0f172a] to-[#1a2744] border-[#4ade80]/20 overflow-hidden">
-        <CardContent className="pt-5 pb-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-[#4ade80]" />
-              <h2 className="font-bold text-white text-base">Daily Activity</h2>
-            </div>
-            <CountdownClock />
-          </div>
+      {/* Tabbed sections */}
+      <Tabs defaultValue="today">
+        <TabsList className="w-full mb-4 flex overflow-x-auto h-auto flex-nowrap gap-0.5 bg-muted/50 p-1 rounded-xl">
+          <TabsTrigger value="today" className="flex-1 text-xs sm:text-sm whitespace-nowrap py-2">Today</TabsTrigger>
+          <TabsTrigger value="streaks" className="flex-1 text-xs sm:text-sm whitespace-nowrap py-2">Streaks</TabsTrigger>
+          <TabsTrigger value="milestones" className="flex-1 text-xs sm:text-sm whitespace-nowrap py-2">Milestones</TabsTrigger>
+          <TabsTrigger value="earnxp" className="flex-1 text-xs sm:text-sm whitespace-nowrap py-2">Earn XP</TabsTrigger>
+          <TabsTrigger value="history" className="flex-1 text-xs sm:text-sm whitespace-nowrap py-2">History</TabsTrigger>
+        </TabsList>
 
-          {activityLoading ? (
-            <div className="space-y-2">
-              {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <ActivityItem
-                label="Daily Login"
-                xp={25}
-                done={!!(dailyActivity?.loginXPToday && dailyActivity.loginXPToday > 0)}
-                color="text-yellow-400"
-              />
-              <ActivityItem
-                label="Watch 5 Clips"
-                xp={10}
-                done={dailyActivity?.watch5Done || false}
-                progress={Math.min(dailyActivity?.clipsWatchedToday || 0, 5)}
-                total={5}
-                color="text-blue-400"
-              />
-              <ActivityItem
-                label="Watch 20 Clips"
-                xp={30}
-                done={dailyActivity?.watch20Done || false}
-                progress={Math.min(dailyActivity?.clipsWatchedToday || 0, 20)}
-                total={20}
-                color="text-blue-400"
-              />
-              <ActivityItem
-                label="Comment on a Clip"
-                xp={15}
-                done={dailyActivity?.commentedToday || false}
-                color="text-sky-400"
-              />
-              <ActivityItem
-                label="Like a Clip"
-                xp={5}
-                done={dailyActivity?.likedToday || false}
-                color="text-pink-400"
-              />
-              <ActivityItem
-                label="Share a Clip"
-                xp={20}
-                done={dailyActivity?.sharedToday || false}
-                color="text-teal-400"
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Streak Tracker */}
-      <Card className="mb-6 bg-gradient-to-br from-[#0f172a] to-[#1a2744] border-[#f97316]/20 overflow-hidden">
-        <CardContent className="pt-5 pb-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Flame className="w-5 h-5 text-orange-500" />
-            <h2 className="font-bold text-white text-base">Login Streak</h2>
-            {currentStreak > 0 && (
-              <span className="ml-auto text-orange-400 font-bold text-sm">{currentStreak} day{currentStreak !== 1 ? "s" : ""}</span>
-            )}
-          </div>
-
-          {activityLoading ? (
-            <Skeleton className="h-20 w-full" />
-          ) : (
-            <>
-              {dailyActivity?.streakBonusToday ? (
-                <div className="mb-3 p-3 rounded-xl bg-[#f97316]/10 border border-[#f97316]/20 text-center">
-                  <p className="text-orange-400 font-bold text-sm">Milestone Bonus Earned Today!</p>
-                  <p className="text-2xl font-bold text-orange-300">+{dailyActivity.streakBonusToday} XP</p>
+        {/* TODAY — Daily Activity + Bonus Events */}
+        <TabsContent value="today" className="space-y-4">
+          <Card className="border-primary/20">
+            <CardContent className="pt-5 pb-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-[#4ade80]" />
+                  <h2 className="font-bold text-base">Daily Activity</h2>
                 </div>
-              ) : null}
+                <CountdownClock />
+              </div>
 
-              {streak?.nextMilestone && (
-                <div className="mb-3 p-3 rounded-xl bg-[#0b1120] border border-[#1e293b]/60">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-slate-400">Next milestone: Day {streak.nextMilestone}</span>
-                    <span className="text-xs font-bold text-orange-400">+{streak.nextMilestoneBonus?.toLocaleString()} XP</span>
-                  </div>
-                  <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-orange-500 rounded-full transition-all"
-                      style={{
-                        width: `${Math.min((currentStreak / (streak.nextMilestone || 1)) * 100, 100)}%`,
-                      }}
-                    />
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">{currentStreak} / {streak.nextMilestone} days</p>
+              {activityLoading ? (
+                <div className="space-y-2">
+                  {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <ActivityItem
+                    label="Daily Login"
+                    xp={25}
+                    done={!!(dailyActivity?.loginXPToday && dailyActivity.loginXPToday > 0)}
+                    color="text-yellow-400"
+                  />
+                  <ActivityItem
+                    label="Watch 5 Clips"
+                    xp={10}
+                    done={dailyActivity?.watch5Done || false}
+                    progress={Math.min(dailyActivity?.clipsWatchedToday || 0, 5)}
+                    total={5}
+                    color="text-[#4ade80]"
+                  />
+                  <ActivityItem
+                    label="Watch 20 Clips"
+                    xp={30}
+                    done={dailyActivity?.watch20Done || false}
+                    progress={Math.min(dailyActivity?.clipsWatchedToday || 0, 20)}
+                    total={20}
+                    color="text-[#4ade80]"
+                  />
+                  <ActivityItem
+                    label="Comment on a Clip"
+                    xp={15}
+                    done={dailyActivity?.commentedToday || false}
+                    color="text-sky-400"
+                  />
+                  <ActivityItem
+                    label="Like a Clip"
+                    xp={5}
+                    done={dailyActivity?.likedToday || false}
+                    color="text-pink-400"
+                  />
+                  <ActivityItem
+                    label="Share a Clip"
+                    xp={20}
+                    done={dailyActivity?.sharedToday || false}
+                    color="text-teal-400"
+                  />
                 </div>
               )}
+            </CardContent>
+          </Card>
 
+          {/* Bonus Events */}
+          <Card className="border-amber-500/20">
+            <CardContent className="pt-5 pb-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Star className="w-5 h-5 text-amber-400" />
+                <h2 className="font-bold text-base">Bonus Events</h2>
+              </div>
+              <div className="space-y-2">
+                <div className={`flex items-center justify-between px-3 py-3 rounded-xl border ${dailyActivity?.isWeekend ? "bg-amber-500/10 border-amber-500/30" : "bg-muted/40 border-border/50"}`}>
+                  <div>
+                    <p className={`text-sm font-medium ${dailyActivity?.isWeekend ? "text-amber-300" : "text-foreground"}`}>
+                      Weekend Upload Bonus {dailyActivity?.isWeekend ? "🔥 Active!" : "(Sat & Sun)"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Get 50% extra XP on uploads</p>
+                  </div>
+                  <span className={`text-sm font-bold ${dailyActivity?.isWeekend ? "text-amber-400" : "text-muted-foreground"}`}>+50% XP</span>
+                </div>
+                <div className="flex items-center justify-between px-3 py-3 rounded-xl bg-muted/40 border border-border/50">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Featured Clip of the Day</p>
+                    <p className="text-xs text-muted-foreground">Selected by our team — check your notifications</p>
+                  </div>
+                  <span className="text-sm font-bold text-purple-400">+500 XP</span>
+                </div>
+                <div className={`flex items-center justify-between px-3 py-3 rounded-xl border ${dailyActivity?.lootboxOpenedToday ? "bg-purple-500/10 border-purple-500/20" : "bg-muted/40 border-border/50"}`}>
+                  <div>
+                    <p className={`text-sm font-medium ${dailyActivity?.lootboxOpenedToday ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                      Daily Lootbox
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {dailyActivity?.lootboxOpenedToday ? "Already opened today" : "Open your daily lootbox"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {dailyActivity?.lootboxOpenedToday && <CheckCircle2 className="w-4 h-4 text-[#4ade80]" />}
+                    <span className={`text-sm font-bold ${dailyActivity?.lootboxOpenedToday ? "text-muted-foreground" : "text-purple-400"}`}>+100 XP</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between px-3 py-3 rounded-xl bg-muted/40 border border-border/50">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Upload Within 24h of Last Upload</p>
+                    <p className="text-xs text-muted-foreground">Keep the momentum going</p>
+                  </div>
+                  <span className="text-sm font-bold text-lime-400">+75 XP</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* STREAKS */}
+        <TabsContent value="streaks">
+          <Card className="border-orange-500/20">
+            <CardContent className="pt-5 pb-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Flame className="w-5 h-5 text-orange-500" />
+                <h2 className="font-bold text-base">Login Streak</h2>
+                {currentStreak > 0 && (
+                  <span className="ml-auto text-orange-400 font-bold text-sm">{currentStreak} day{currentStreak !== 1 ? "s" : ""}</span>
+                )}
+              </div>
+
+              {activityLoading ? (
+                <Skeleton className="h-20 w-full" />
+              ) : (
+                <>
+                  {dailyActivity?.streakBonusToday ? (
+                    <div className="mb-3 p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 text-center">
+                      <p className="text-orange-400 font-bold text-sm">Milestone Bonus Earned Today!</p>
+                      <p className="text-2xl font-bold text-orange-300">+{dailyActivity.streakBonusToday} XP</p>
+                    </div>
+                  ) : null}
+
+                  {streak?.nextMilestone && (
+                    <div className="mb-3 p-3 rounded-xl bg-muted/40 border border-border/50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-muted-foreground">Next milestone: Day {streak.nextMilestone}</span>
+                        <span className="text-xs font-bold text-orange-400">+{streak.nextMilestoneBonus?.toLocaleString()} XP</span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-orange-500 rounded-full transition-all"
+                          style={{ width: `${Math.min((currentStreak / (streak.nextMilestone || 1)) * 100, 100)}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">{currentStreak} / {streak.nextMilestone} days</p>
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-muted-foreground font-medium mb-2">All Milestones</p>
+                    {allMilestones.map((m) => (
+                      <div
+                        key={m.day}
+                        className={`flex items-center justify-between px-3 py-2 rounded-lg ${
+                          currentStreak >= m.day
+                            ? "bg-orange-500/10 border border-orange-500/20"
+                            : "bg-muted/40 border border-border/40"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {currentStreak >= m.day ? (
+                            <CheckCircle2 className="w-4 h-4 text-orange-400" />
+                          ) : (
+                            <Circle className="w-4 h-4 text-muted-foreground/50" />
+                          )}
+                          <span className={`text-sm ${currentStreak >= m.day ? "text-muted-foreground" : "text-foreground"}`}>
+                            {m.day} Day Streak
+                          </span>
+                        </div>
+                        <span className={`text-sm font-bold ${currentStreak >= m.day ? "text-orange-600" : "text-orange-400"}`}>
+                          +{m.bonus.toLocaleString()} XP
+                        </span>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-muted/40 border border-border/40">
+                      <div className="flex items-center gap-2">
+                        <Circle className="w-4 h-4 text-muted-foreground/50" />
+                        <span className="text-sm text-muted-foreground">60+ Days</span>
+                      </div>
+                      <span className="text-sm font-bold text-orange-400">Scales up...</span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* MILESTONES — Creator + Performance */}
+        <TabsContent value="milestones" className="space-y-4">
+          {/* Creator Milestones */}
+          <Card className="border-purple-500/20">
+            <CardContent className="pt-5 pb-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Trophy className="w-5 h-5 text-purple-400" />
+                <h2 className="font-bold text-base">Creator Milestones</h2>
+              </div>
+
+              {activityLoading ? (
+                <div className="space-y-2">
+                  {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <ActivityItem
+                    label="First Upload of the Day"
+                    xp={100}
+                    done={dailyActivity?.firstUploadOfDayDone || false}
+                    color="text-amber-400"
+                  />
+                  <ActivityItem
+                    label="5 Uploads This Week"
+                    xp={300}
+                    done={dailyActivity?.weekly5Done || false}
+                    progress={Math.min(dailyActivity?.weeklyUploadsCount || 0, 5)}
+                    total={5}
+                    color="text-amber-400"
+                  />
+                  <ActivityItem
+                    label="10 Uploads This Week"
+                    xp={750}
+                    done={dailyActivity?.weekly10Done || false}
+                    progress={Math.min(dailyActivity?.weeklyUploadsCount || 0, 10)}
+                    total={10}
+                    color="text-amber-400"
+                  />
+                  <ActivityItem
+                    label="First Clip to 100 Views"
+                    xp={250}
+                    done={dailyActivity?.first100ViewsDone || false}
+                    color="text-cyan-400"
+                  />
+                  <ActivityItem
+                    label="First Clip to 1,000 Views"
+                    xp={1000}
+                    done={dailyActivity?.first1000ViewsDone || false}
+                    color="text-cyan-400"
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Performance Milestones */}
+          <Card className="border-cyan-500/20">
+            <CardContent className="pt-5 pb-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Target className="w-5 h-5 text-cyan-400" />
+                <h2 className="font-bold text-base">Per-Clip Performance Milestones</h2>
+              </div>
               <div className="space-y-1.5">
-                <p className="text-xs text-slate-500 font-medium mb-2">All Milestones</p>
-                {allMilestones.map((m) => (
+                {[
+                  { views: 50, xp: 50 },
+                  { views: 100, xp: 100 },
+                  { views: 250, xp: 200 },
+                  { views: 500, xp: 400 },
+                  { views: 1000, xp: 800 },
+                  { views: 5000, xp: 1500 },
+                  { views: 10000, xp: 3000 },
+                ].map((m) => (
                   <div
-                    key={m.day}
-                    className={`flex items-center justify-between px-3 py-2 rounded-lg ${
-                      currentStreak >= m.day
-                        ? "bg-[#f97316]/10 border border-[#f97316]/20"
-                        : "bg-[#0b1120] border border-[#1e293b]/40"
-                    }`}
+                    key={m.views}
+                    className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-muted/40 border border-border/40"
                   >
                     <div className="flex items-center gap-2">
-                      {currentStreak >= m.day ? (
-                        <CheckCircle2 className="w-4 h-4 text-orange-400" />
-                      ) : (
-                        <Circle className="w-4 h-4 text-slate-600" />
-                      )}
-                      <span className={`text-sm ${currentStreak >= m.day ? "text-slate-400" : "text-slate-300"}`}>
-                        {m.day} Day Streak
-                      </span>
+                      <Eye className="w-4 h-4 text-cyan-500" />
+                      <span className="text-sm text-foreground">{m.views.toLocaleString()} Views</span>
                     </div>
-                    <span className={`text-sm font-bold ${currentStreak >= m.day ? "text-orange-600" : "text-orange-400"}`}>
-                      +{m.bonus.toLocaleString()} XP
-                    </span>
+                    <span className="text-sm font-bold text-cyan-400">+{m.xp.toLocaleString()} XP</span>
                   </div>
                 ))}
-                <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#0b1120] border border-[#1e293b]/40">
+                <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-muted/40 border border-border/40">
                   <div className="flex items-center gap-2">
-                    <Circle className="w-4 h-4 text-slate-600" />
-                    <span className="text-sm text-slate-400">60+ Days</span>
+                    <Eye className="w-4 h-4 text-cyan-500" />
+                    <span className="text-sm text-muted-foreground">25K+ Views</span>
                   </div>
-                  <span className="text-sm font-bold text-orange-400">Scales up...</span>
+                  <span className="text-sm font-bold text-cyan-600">Scales up...</span>
                 </div>
               </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Creator Milestones */}
-      <Card className="mb-6 bg-gradient-to-br from-[#0f172a] to-[#1a2744] border-[#a855f7]/20 overflow-hidden">
-        <CardContent className="pt-5 pb-5">
+        {/* EARN XP — Reference grid */}
+        <TabsContent value="earnxp">
           <div className="flex items-center gap-2 mb-4">
-            <Trophy className="w-5 h-5 text-purple-400" />
-            <h2 className="font-bold text-white text-base">Creator Milestones</h2>
+            <Zap className="w-5 h-5 text-[#4ade80]" />
+            <h2 className="text-lg font-bold">How to Earn XP</h2>
           </div>
 
-          {activityLoading ? (
-            <div className="space-y-2">
-              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <ActivityItem
-                label="First Upload of the Day"
-                xp={100}
-                done={dailyActivity?.firstUploadOfDayDone || false}
-                color="text-amber-400"
-              />
-              <ActivityItem
-                label="5 Uploads This Week"
-                xp={300}
-                done={dailyActivity?.weekly5Done || false}
-                progress={Math.min(dailyActivity?.weeklyUploadsCount || 0, 5)}
-                total={5}
-                color="text-amber-400"
-              />
-              <ActivityItem
-                label="10 Uploads This Week"
-                xp={750}
-                done={dailyActivity?.weekly10Done || false}
-                progress={Math.min(dailyActivity?.weeklyUploadsCount || 0, 10)}
-                total={10}
-                color="text-amber-400"
-              />
-              <ActivityItem
-                label="First Clip to 100 Views"
-                xp={250}
-                done={dailyActivity?.first100ViewsDone || false}
-                color="text-cyan-400"
-              />
-              <ActivityItem
-                label="First Clip to 1,000 Views"
-                xp={1000}
-                done={dailyActivity?.first1000ViewsDone || false}
-                color="text-cyan-400"
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Performance Milestones */}
-      <Card className="mb-6 bg-gradient-to-br from-[#0f172a] to-[#1a2744] border-[#06b6d4]/20 overflow-hidden">
-        <CardContent className="pt-5 pb-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Target className="w-5 h-5 text-cyan-400" />
-            <h2 className="font-bold text-white text-base">Per-Clip Performance Milestones</h2>
-          </div>
-          <div className="space-y-1.5">
+          <div className="grid grid-cols-2 gap-3">
             {[
-              { views: 50, xp: 50 },
-              { views: 100, xp: 100 },
-              { views: 250, xp: 200 },
-              { views: 500, xp: 400 },
-              { views: 1000, xp: 800 },
-              { views: 5000, xp: 1500 },
-              { views: 10000, xp: 3000 },
-            ].map((m) => (
-              <div
-                key={m.views}
-                className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-[#0b1120] border border-[#1e293b]/40"
-              >
-                <div className="flex items-center gap-2">
-                  <Eye className="w-4 h-4 text-cyan-500" />
-                  <span className="text-sm text-slate-300">{m.views.toLocaleString()} Views</span>
+              { icon: Upload, color: "#4ade80", xp: "+200 XP", label: "Upload a Clip/Reel", sub: "Share your gaming moments" },
+              { icon: Camera, color: "#06b6d4", xp: "+100 XP", label: "Screenshot Upload", sub: "Share your best moments" },
+              { icon: Eye, color: "#4ade80", xp: "+2 XP", label: "Per View", sub: "Earn XP when others watch" },
+              { icon: Heart, color: "#ff2056", xp: "+10 XP", label: "Like Received", sub: "Get likes on your content" },
+              { icon: Flame, color: "#ff6900", xp: "+15 XP", label: "Fire Reaction", sub: "Get fire reactions on clips" },
+              { icon: MessageCircle, color: "#38bdf8", xp: "+20 XP", label: "Comment Received", sub: "Get comments on your clips" },
+              { icon: Share2, color: "#2dd4bf", xp: "+40 XP", label: "Share Received", sub: "When others share your clip" },
+              { icon: UserPlus, color: "#a78bfa", xp: "+50 XP", label: "Follow Received", sub: "Gain a new follower" },
+              { icon: LogIn, color: "#eab308", xp: "+25 XP", label: "Daily Login", sub: "Log in every day for streaks" },
+              { icon: Gift, color: "#a855f7", xp: "+100 XP", label: "Daily Lootbox", sub: "Open your daily lootbox" },
+              { icon: Star, color: "#f59e0b", xp: "+50 XP", label: "Streak Milestones", sub: "Hit login streak milestones" },
+              { icon: Share2, color: "#4ade80", xp: "+20 XP", label: "Share Given", sub: "Share someone's clip" },
+            ].map((item) => (
+              <div key={item.label} className="bg-card border border-border/50 rounded-2xl p-4 flex flex-col items-center text-center">
+                <div className="w-11 h-11 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: `${item.color}18` }}>
+                  <item.icon className="w-5 h-5" style={{ color: item.color }} />
                 </div>
-                <span className="text-sm font-bold text-cyan-400">+{m.xp.toLocaleString()} XP</span>
+                <span className="text-xl font-bold mb-1" style={{ color: item.color }}>{item.xp}</span>
+                <span className="text-foreground text-xs font-medium mb-0.5">{item.label}</span>
+                <span className="text-muted-foreground text-[10px]">{item.sub}</span>
               </div>
             ))}
-            <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-[#0b1120] border border-[#1e293b]/40">
-              <div className="flex items-center gap-2">
-                <Eye className="w-4 h-4 text-cyan-500" />
-                <span className="text-sm text-slate-400">25K+ Views</span>
-              </div>
-              <span className="text-sm font-bold text-cyan-600">Scales up...</span>
-            </div>
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
 
-      {/* Bonus Events */}
-      <Card className="mb-6 bg-gradient-to-br from-[#0f172a] to-[#1a2744] border-[#f59e0b]/20 overflow-hidden">
-        <CardContent className="pt-5 pb-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Star className="w-5 h-5 text-amber-400" />
-            <h2 className="font-bold text-white text-base">Bonus Events</h2>
-          </div>
-          <div className="space-y-2">
-            <div className={`flex items-center justify-between px-3 py-3 rounded-xl border ${dailyActivity?.isWeekend ? "bg-[#f59e0b]/10 border-[#f59e0b]/30" : "bg-[#0b1120] border-[#1e293b]/40"}`}>
-              <div>
-                <p className={`text-sm font-medium ${dailyActivity?.isWeekend ? "text-amber-300" : "text-slate-300"}`}>
-                  Weekend Upload Bonus {dailyActivity?.isWeekend ? "🔥 Active!" : "(Sat & Sun)"}
-                </p>
-                <p className="text-xs text-slate-500">Get 50% extra XP on uploads</p>
-              </div>
-              <span className={`text-sm font-bold ${dailyActivity?.isWeekend ? "text-amber-400" : "text-slate-500"}`}>+50% XP</span>
-            </div>
-            <div className="flex items-center justify-between px-3 py-3 rounded-xl bg-[#0b1120] border border-[#1e293b]/40">
-              <div>
-                <p className="text-sm font-medium text-slate-300">Featured Clip of the Day</p>
-                <p className="text-xs text-slate-500">Selected by our team — check your notifications</p>
-              </div>
-              <span className="text-sm font-bold text-purple-400">+500 XP</span>
-            </div>
-            <div className={`flex items-center justify-between px-3 py-3 rounded-xl border ${dailyActivity?.lootboxOpenedToday ? "bg-[#a855f7]/10 border-[#a855f7]/20" : "bg-[#0b1120] border-[#1e293b]/40"}`}>
-              <div>
-                <p className={`text-sm font-medium ${dailyActivity?.lootboxOpenedToday ? "text-slate-400 line-through" : "text-slate-300"}`}>
-                  Daily Lootbox
-                </p>
-                <p className="text-xs text-slate-500">
-                  {dailyActivity?.lootboxOpenedToday ? "Already opened today" : "Open your daily lootbox"}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                {dailyActivity?.lootboxOpenedToday && <CheckCircle2 className="w-4 h-4 text-[#4ade80]" />}
-                <span className={`text-sm font-bold ${dailyActivity?.lootboxOpenedToday ? "text-slate-500" : "text-purple-400"}`}>+100 XP</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between px-3 py-3 rounded-xl bg-[#0b1120] border border-[#1e293b]/40">
-              <div>
-                <p className="text-sm font-medium text-slate-300">Upload Within 24h of Last Upload</p>
-                <p className="text-xs text-slate-500">Keep the momentum going</p>
-              </div>
-              <span className="text-sm font-bold text-lime-400">+75 XP</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        {/* HISTORY */}
+        <TabsContent value="history">
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Zap className="w-5 h-5 text-primary" />
+                <span className="text-primary">XP History</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {historyLoading ? (
+                <div className="space-y-2">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : xpHistory && xpHistory.length > 0 ? (
+                <div className="space-y-2">
+                  {(showAll ? xpHistory : xpHistory.slice(0, INITIAL_DISPLAY_COUNT)).map((item: XPHistoryItem) => {
+                    const Icon = sourceIcons[item.source] || Zap;
+                    const label = sourceLabels[item.source] || item.source;
+                    const colorClass = sourceColors[item.source] || "text-primary";
 
-      {/* Earn XP Quick Reference */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Zap className="w-5 h-5 text-[#4ade80]" />
-          <h2 className="text-xl font-bold text-slate-50">Earn XP</h2>
-        </div>
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-3 p-3 rounded-lg bg-card/50 border border-border/30 hover:border-border/50 transition-colors overflow-hidden"
+                      >
+                        <div className="p-2 rounded-full bg-background text-primary shrink-0">
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <span className="font-medium text-sm whitespace-nowrap shrink-0">{label}</span>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {item.clip?.title && (
+                            <span className="text-muted-foreground/70"> · {item.clip.title}</span>
+                          )}
+                        </span>
+                        <div className="ml-auto flex flex-col items-end shrink-0 gap-0.5">
+                          <span className={`text-sm font-bold whitespace-nowrap ${colorClass}`}>
+                            +{item.xpAmount} XP
+                          </span>
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                            {formatSimpleDate(new Date(item.createdAt))}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
-            <div className="w-12 h-12 rounded-full bg-[#4ade80]/10 flex items-center justify-center mb-3">
-              <Upload className="w-6 h-6 text-[#4ade80]" />
-            </div>
-            <span className="text-2xl font-bold text-[#4ade80] mb-1">+200 XP</span>
-            <span className="text-slate-400 text-xs mb-1">Upload a Clip/Reel</span>
-            <span className="text-slate-400 text-[10px]">Share your gaming moments</span>
-          </div>
-
-          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
-            <div className="w-12 h-12 rounded-full bg-[#06b6d4]/10 flex items-center justify-center mb-3">
-              <Camera className="w-6 h-6 text-[#06b6d4]" />
-            </div>
-            <span className="text-2xl font-bold text-[#06b6d4] mb-1">+100 XP</span>
-            <span className="text-slate-400 text-xs mb-1">Screenshot Upload</span>
-            <span className="text-slate-400 text-[10px]">Share your best moments</span>
-          </div>
-
-          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
-            <div className="w-12 h-12 rounded-full bg-[#00a6f4]/10 flex items-center justify-center mb-3">
-              <Eye className="w-6 h-6 text-[#00bcff]" />
-            </div>
-            <span className="text-2xl font-bold text-[#00bcff] mb-1">+2 XP</span>
-            <span className="text-slate-400 text-xs mb-1">Per View</span>
-            <span className="text-slate-400 text-[10px]">Earn XP when others watch</span>
-          </div>
-
-          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
-            <div className="w-12 h-12 rounded-full bg-[#ff2056]/10 flex items-center justify-center mb-3">
-              <Heart className="w-6 h-6 text-[#ff2056]" />
-            </div>
-            <span className="text-2xl font-bold text-[#ff2056] mb-1">+10 XP</span>
-            <span className="text-slate-400 text-xs mb-1">Like Received</span>
-            <span className="text-slate-400 text-[10px]">Get likes on your content</span>
-          </div>
-
-          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
-            <div className="w-12 h-12 rounded-full bg-[#ff6900]/10 flex items-center justify-center mb-3">
-              <Flame className="w-6 h-6 text-[#ff6900]" />
-            </div>
-            <span className="text-2xl font-bold text-[#ff6900] mb-1">+15 XP</span>
-            <span className="text-slate-400 text-xs mb-1">Fire Reaction</span>
-            <span className="text-slate-400 text-[10px]">Get fire reactions on clips</span>
-          </div>
-
-          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
-            <div className="w-12 h-12 rounded-full bg-[#38bdf8]/10 flex items-center justify-center mb-3">
-              <MessageCircle className="w-6 h-6 text-[#38bdf8]" />
-            </div>
-            <span className="text-2xl font-bold text-[#38bdf8] mb-1">+20 XP</span>
-            <span className="text-slate-400 text-xs mb-1">Comment Received</span>
-            <span className="text-slate-400 text-[10px]">Get comments on your clips</span>
-          </div>
-
-          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
-            <div className="w-12 h-12 rounded-full bg-[#2dd4bf]/10 flex items-center justify-center mb-3">
-              <Share2 className="w-6 h-6 text-[#2dd4bf]" />
-            </div>
-            <span className="text-2xl font-bold text-[#2dd4bf] mb-1">+40 XP</span>
-            <span className="text-slate-400 text-xs mb-1">Share Received</span>
-            <span className="text-slate-400 text-[10px]">When others share your clip</span>
-          </div>
-
-          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
-            <div className="w-12 h-12 rounded-full bg-[#a78bfa]/10 flex items-center justify-center mb-3">
-              <UserPlus className="w-6 h-6 text-[#a78bfa]" />
-            </div>
-            <span className="text-2xl font-bold text-[#a78bfa] mb-1">+50 XP</span>
-            <span className="text-slate-400 text-xs mb-1">Follow Received</span>
-            <span className="text-slate-400 text-[10px]">Gain a new follower</span>
-          </div>
-
-          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
-            <div className="w-12 h-12 rounded-full bg-[#eab308]/10 flex items-center justify-center mb-3">
-              <LogIn className="w-6 h-6 text-[#eab308]" />
-            </div>
-            <span className="text-2xl font-bold text-[#eab308] mb-1">+25 XP</span>
-            <span className="text-slate-400 text-xs mb-1">Daily Login</span>
-            <span className="text-slate-400 text-[10px]">Log in every day for streaks</span>
-          </div>
-
-          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
-            <div className="w-12 h-12 rounded-full bg-[#a855f7]/10 flex items-center justify-center mb-3">
-              <Gift className="w-6 h-6 text-[#a855f7]" />
-            </div>
-            <span className="text-2xl font-bold text-[#a855f7] mb-1">+100 XP</span>
-            <span className="text-slate-400 text-xs mb-1">Daily Lootbox</span>
-            <span className="text-slate-400 text-[10px]">Open your daily lootbox</span>
-          </div>
-
-          <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
-            <div className="w-12 h-12 rounded-full bg-[#f59e0b]/10 flex items-center justify-center mb-3">
-              <Star className="w-6 h-6 text-[#f59e0b]" />
-            </div>
-            <span className="text-2xl font-bold text-[#f59e0b] mb-1">+50 XP</span>
-            <span className="text-slate-400 text-xs mb-1">Streak Milestones</span>
-            <span className="text-slate-400 text-[10px]">Hit login streak milestones</span>
-          </div>
-        </div>
-      </div>
-
-      {/* XP History */}
-      <Card className="bg-background/50 border-border/50">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Zap className="w-5 h-5 text-primary" />
-            <span className="text-primary">XP History</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {historyLoading ? (
-            <div className="space-y-2">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : xpHistory && xpHistory.length > 0 ? (
-            <div className="space-y-2">
-              {(showAll ? xpHistory : xpHistory.slice(0, INITIAL_DISPLAY_COUNT)).map((item: XPHistoryItem) => {
-                const Icon = sourceIcons[item.source] || Zap;
-                const label = sourceLabels[item.source] || item.source;
-
-                return (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-card/50 border border-border/30 hover:border-border/50 transition-colors overflow-hidden"
-                  >
-                    <div className="p-2 rounded-full bg-background text-primary shrink-0">
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <span className="font-medium text-sm whitespace-nowrap shrink-0">{label}</span>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatSimpleDate(new Date(item.createdAt))}
-                    </span>
-                    <span className="flex-1" />
-                    <span className="font-bold text-primary whitespace-nowrap shrink-0">+{item.xpAmount} XP</span>
-                  </div>
-                );
-              })}
-              {!showAll && xpHistory.length > INITIAL_DISPLAY_COUNT && (
-                <Button
-                  variant="outline"
-                  className="w-full mt-3 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
-                  onClick={() => setShowAll(true)}
-                >
-                  See More
-                </Button>
+                  {xpHistory.length > INITIAL_DISPLAY_COUNT && (
+                    <button
+                      onClick={() => setShowAll(!showAll)}
+                      className="w-full text-center text-sm text-primary hover:text-primary/80 py-2 transition-colors"
+                    >
+                      {showAll ? "Show less" : `Show all ${xpHistory.length} entries`}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">No XP history yet. Start earning!</p>
               )}
-              {showAll && xpHistory.length > INITIAL_DISPLAY_COUNT && (
-                <Button
-                  variant="outline"
-                  className="w-full mt-3 mb-4 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
-                  onClick={() => setShowAll(false)}
-                >
-                  Show Less
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Zap className="w-12 h-12 mx-auto mb-3 opacity-30 text-primary" />
-              <p>No XP history yet.</p>
-              <p className="text-sm">Start earning XP by uploading clips, getting engagement, and logging in daily!</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

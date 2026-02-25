@@ -418,7 +418,7 @@ const PostUploadSuccessPage = () => {
                   <Button
                     variant="outline"
                     onClick={() => handleSocialShare('facebook', uploadedContent.socialMediaLinks!.facebook)}
-                    className="flex items-center justify-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    className="flex items-center justify-center gap-2 hover:bg-muted"
                   >
                     <Facebook className="h-4 w-4 text-blue-600" />
                     Facebook

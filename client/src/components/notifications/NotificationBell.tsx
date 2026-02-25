@@ -162,7 +162,7 @@ export function NotificationBell() {
         return <Heart className="h-4 w-4 text-red-500" />;
       case 'comment':
       case 'reply':
-        return <MessageCircle className="h-4 w-4 text-blue-500" />;
+        return <MessageCircle className="h-4 w-4 text-[#4ade80]" />;
       case 'follow':
         return <UserPlus className="h-4 w-4 text-green-500" />;
       case 'follow_request':

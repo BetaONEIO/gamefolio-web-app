@@ -123,7 +123,7 @@ export function NotificationPanel({
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'clip_mention':
-        return <Video className="h-4 w-4 text-blue-500" />;
+        return <Video className="h-4 w-4 text-[#4ade80]" />;
       case 'comment_mention':
         return <MessageCircle className="h-4 w-4 text-green-500" />;
       case 'like':
@@ -236,7 +236,7 @@ export function NotificationPanel({
                       key={notification.id}
                       className={cn(
                         "p-4 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors",
-                        !notification.isRead && "bg-blue-50 dark:bg-blue-900/20"
+                        !notification.isRead && "bg-[#4ade80]/5 dark:bg-[#4ade80]/5"
                       )}
                       onClick={() => handleNotificationClick(notification)}
                       data-testid={`notification-${notification.id}`}
@@ -264,7 +264,7 @@ export function NotificationPanel({
                               {notification.title}
                             </p>
                             {!notification.isRead && (
-                              <Badge variant="secondary" className="ml-2 bg-blue-500 text-white">
+                              <Badge variant="secondary" className="ml-2 bg-[#4ade80] text-black">
                                 New
                               </Badge>
                             )}

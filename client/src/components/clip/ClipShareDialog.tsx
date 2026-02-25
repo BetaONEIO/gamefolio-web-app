@@ -128,12 +128,19 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
     retryDelay: 1000,
   });
 
+  const trackShare = async () => {
+    try {
+      await fetch(`/api/clips/${clipId}/track-share`, { method: "POST", credentials: "include" });
+    } catch (_) {}
+  };
+
   const handleCopyLink = async () => {
     if (!shareData?.clipUrl) return;
 
     try {
       await navigator.clipboard.writeText(shareData.clipUrl);
       setCopySuccess(true);
+      trackShare();
       toast({
         title: "Link Copied!",
         description: "The clip link has been copied to your clipboard.",
@@ -164,6 +171,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
           text: shareData.description || 'Amazing gaming content from Gamefolio',
           url: shareData.clipUrl
         });
+        trackShare();
         toast({
           title: "Shared successfully",
           description: "Content shared using your device's share menu.",
@@ -180,6 +188,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
     if (!url) return;
 
     window.open(url, '_blank', 'noopener,noreferrer');
+    trackShare();
     toast({
       title: `Sharing on ${platform}`,
       description: isOwnContent ? `🎮 Sharing your gaming ${label} from your Gamefolio! Your followers will see your epic gameplay and can visit your profile to see more content.` : `🎮 Sharing this gaming ${label}! Check out this epic gameplay on Gamefolio.`,
@@ -273,7 +282,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
                     size="sm"
                     onClick={handleCopyLink}
                     className={`flex-1 sm:flex-none px-3 sm:px-4 transition-colors ${
-                      copySuccess ? 'text-white bg-blue-600 border-blue-500' : 'text-blue-400 border-blue-500 bg-gray-800 hover:bg-blue-500 hover:text-white'
+                      copySuccess ? 'text-black bg-[#4ade80] border-[#4ade80]' : 'text-[#4ade80] border-[#4ade80]/50 bg-transparent hover:bg-[#4ade80] hover:text-black'
                     }`}
                     aria-label="Copy clip URL to clipboard"
                   >
@@ -286,7 +295,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
                       variant="outline"
                       size="sm"
                       onClick={handleNativeShare}
-                      className="flex-1 sm:flex-none px-3 sm:px-4 bg-blue-500 text-white hover:bg-blue-600 border-blue-500"
+                      className="flex-1 sm:flex-none px-3 sm:px-4 bg-[#4ade80] text-black hover:bg-[#22c55e] border-[#4ade80]"
                       aria-label="Share using device's native share menu"
                     >
                       <Share2 className="h-4 w-4 mr-1" />

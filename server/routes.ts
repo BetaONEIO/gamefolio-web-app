@@ -4332,6 +4332,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Track a share action for a clip — awards share_given XP to sharer (once/day) and share_received to owner
+  app.post("/api/clips/:id/track-share", optionalHybridAuth, async (req, res) => {
+    try {
+      const clipId = parseInt(req.params.id);
+      if (isNaN(clipId)) return res.status(400).json({ message: "Invalid clip ID" });
+
+      const sharerId = (req.user as any)?.id;
+      if (!sharerId) return res.json({ awarded: false });
+
+      const clip = await storage.getClip(clipId);
+      if (!clip) return res.status(404).json({ message: "Clip not found" });
+
+      // Award share_given XP to sharer (once per day)
+      const recentPts = await storage.getUserPointsHistory(sharerId, 200);
+      const today = new Date();
+      const isSameDay = (d1: Date, d2: Date) =>
+        d1.getFullYear() === d2.getFullYear() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate();
+
+      const sharedToday = recentPts.some(
+        (h) => h.action === "share_given" && isSameDay(new Date(h.createdAt), today)
+      );
+
+      if (!sharedToday) {
+        await LeaderboardService.awardPoints(sharerId, 'share_given', `Shared clip #${clipId}`);
+      }
+
+      // Award share_received XP to clip owner (no daily limit — each share counts)
+      if (clip.userId !== sharerId) {
+        await LeaderboardService.awardCustomPoints(
+          clip.userId,
+          'share_received',
+          40,
+          `Clip #${clipId} was shared`
+        );
+      }
+
+      res.json({ awarded: !sharedToday });
+    } catch (err) {
+      console.error("Error tracking clip share:", err);
+      res.status(500).json({ message: "Error tracking share" });
+    }
+  });
+
+  // Track a share action for a screenshot
+  app.post("/api/screenshots/:id/track-share", optionalHybridAuth, async (req, res) => {
+    try {
+      const screenshotId = parseInt(req.params.id);
+      if (isNaN(screenshotId)) return res.status(400).json({ message: "Invalid screenshot ID" });
+
+      const sharerId = (req.user as any)?.id;
+      if (!sharerId) return res.json({ awarded: false });
+
+      const screenshot = await storage.getScreenshot(screenshotId);
+      if (!screenshot) return res.status(404).json({ message: "Screenshot not found" });
+
+      const recentPts = await storage.getUserPointsHistory(sharerId, 200);
+      const today = new Date();
+      const isSameDay = (d1: Date, d2: Date) =>
+        d1.getFullYear() === d2.getFullYear() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate();
+
+      const sharedToday = recentPts.some(
+        (h) => h.action === "share_given" && isSameDay(new Date(h.createdAt), today)
+      );
+
+      if (!sharedToday) {
+        await LeaderboardService.awardPoints(sharerId, 'share_given', `Shared screenshot #${screenshotId}`);
+      }
+
+      if (screenshot.userId !== sharerId) {
+        await LeaderboardService.awardCustomPoints(
+          screenshot.userId,
+          'share_received',
+          40,
+          `Screenshot #${screenshotId} was shared`
+        );
+      }
+
+      res.json({ awarded: !sharedToday });
+    } catch (err) {
+      console.error("Error tracking screenshot share:", err);
+      res.status(500).json({ message: "Error tracking share" });
+    }
+  });
+
   // Clips now use Supabase Storage directly - thumbnails are served from database thumbnailUrl field
 
   // Create new clip

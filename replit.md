@@ -9,6 +9,11 @@ Gamefolio is a comprehensive gaming portfolio and social platform for gamers to 
 - Prioritize data integrity and security
 - Prefer comprehensive solutions over quick fixes
 
+## Recent Changes (Feb 2026 - XP System & Level Tracker Full Overhaul)
+- **Level Tracker Page Redesigned** with 5 navigable tabs (Today, Streaks, Milestones, Earn XP, History); 24hr reset countdown clock; progress bars for daily tasks; navy gradient colors replaced with `bg-card`/`bg-muted`
+- **Share XP Tracking**: Added `POST /api/clips/:id/track-share` and `POST /api/screenshots/:id/track-share` endpoints; now awards `share_given` XP once/day to sharer and `share_received` XP to content owner on every share. Wired into ClipShareDialog and ScreenshotShareDialog copy/native/social share actions.
+- **Green Color Sweep**: Replaced all functional blue (`text-blue-400`, `bg-blue-500`, `bg-blue-50 dark:bg-blue-900/20`) with app green (`#4ade80`) across: ClipShareDialog buttons, ScreenshotShareDialog buttons, GamefolioShareDialog content_creator badge, NotificationPanel (New badge, unread bg, clip_mention icon), NotificationBell (comment icon), UserClipItem (comment hover), PostUploadSuccessPage (Facebook hover)
+
 ## Recent Changes (Feb 2026 - XP System Overhaul)
 - **Overhauled XP Reward Structure** in `server/leaderboard-service.ts`: Clip/Reel Upload +200 XP, Screenshot +100 XP, Daily Login +25 XP, View +2 XP, Like Received +10 XP, Fire Reaction +15 XP, Comment Received +20 XP, Share Received +40 XP, Follow Received +50 XP
 - **New Streak Milestone System** in `server/streak-service.ts`: Day 2 (+50), Day 3 (+75), Day 5 (+150), Day 7 (+300), Day 14 (+500), Day 30 (+1,000), then doubles every 30 days
