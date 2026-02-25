@@ -460,7 +460,8 @@ export default function SettingsPage() {
     profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
     profileFont: (user as any)?.profileFont || "default",
     profileFontEffect: (user as any)?.profileFontEffect || "none",
-    profileFontAnimation: (user as any)?.profileFontAnimation || "none"
+    profileFontAnimation: (user as any)?.profileFontAnimation || "none",
+    profileFontColor: (user as any)?.profileFontColor || "#FFFFFF"
   });
   
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -597,6 +598,7 @@ export default function SettingsPage() {
     profileData.profileFont !== ((user as any)?.profileFont || "default") ||
     profileData.profileFontEffect !== ((user as any)?.profileFontEffect || "none") ||
     profileData.profileFontAnimation !== ((user as any)?.profileFontAnimation || "none") ||
+    profileData.profileFontColor !== ((user as any)?.profileFontColor || "#FFFFFF") ||
     avatarFile !== null ||
     selectedPreviousAvatar !== null ||
     (pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId) ||
@@ -2104,8 +2106,8 @@ export default function SettingsPage() {
                             return (
                               <div ref={fontPreviewRef} className="p-4 bg-muted/30 rounded-lg w-full flex flex-col items-center">
                                 <p
-                                  className={`font-bold text-white text-center ${animClass}`}
-                                  style={{ fontFamily, textShadow, fontSize: `${1.875 * fontScale}rem`, lineHeight: `${2.25 * fontScale}rem` }}
+                                  className={`font-bold text-center ${animClass}`}
+                                  style={{ fontFamily, textShadow, fontSize: `${1.875 * fontScale}rem`, lineHeight: `${2.25 * fontScale}rem`, color: profileData.profileFontColor }}
                                 >
                                   {user?.displayName || user?.username || 'Your Name'}
                                 </p>
@@ -2117,10 +2119,11 @@ export default function SettingsPage() {
                           })()}
 
                           <Tabs defaultValue="font-list" className="w-full">
-                            <TabsList className="w-full grid grid-cols-3">
+                            <TabsList className="w-full grid grid-cols-4">
                               <TabsTrigger value="font-list">Fonts</TabsTrigger>
                               <TabsTrigger value="effect-list">Effects</TabsTrigger>
                               <TabsTrigger value="animation-list">Animation</TabsTrigger>
+                              <TabsTrigger value="fill-list">Fill</TabsTrigger>
                             </TabsList>
 
                             <TabsContent value="font-list" className="mt-4">
@@ -2204,6 +2207,52 @@ export default function SettingsPage() {
                                     </button>
                                   );
                                 })}
+                              </div>
+                            </TabsContent>
+
+                            <TabsContent value="fill-list" className="mt-4">
+                              <div className="flex flex-col items-center gap-4">
+                                <HexColorPicker
+                                  color={profileData.profileFontColor}
+                                  onChange={(color) => { setProfileData(prev => ({ ...prev, profileFontColor: color })); scrollToFontPreview(); }}
+                                  style={{ width: '100%', maxWidth: '280px' }}
+                                />
+                                <div className="flex items-center gap-3 w-full max-w-xs">
+                                  <div className="w-8 h-8 rounded border border-border flex-shrink-0" style={{ backgroundColor: profileData.profileFontColor }} />
+                                  <input
+                                    type="text"
+                                    value={profileData.profileFontColor}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) {
+                                        setProfileData(prev => ({ ...prev, profileFontColor: val }));
+                                        if (val.length === 7) scrollToFontPreview();
+                                      }
+                                    }}
+                                    className="flex-1 bg-background border border-border rounded px-3 py-1.5 text-sm font-mono"
+                                    placeholder="#FFFFFF"
+                                    maxLength={7}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => { setProfileData(prev => ({ ...prev, profileFontColor: '#FFFFFF' })); scrollToFontPreview(); }}
+                                    className="text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 border border-border rounded"
+                                  >
+                                    Reset
+                                  </button>
+                                </div>
+                                <div className="flex flex-wrap gap-2 justify-center">
+                                  {['#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0099FF', '#FF00FF', '#FFFF00', '#FF8800', '#00FFFF', '#FF69B4', '#7B68EE', '#4ADE80'].map(preset => (
+                                    <button
+                                      key={preset}
+                                      type="button"
+                                      onClick={() => { setProfileData(prev => ({ ...prev, profileFontColor: preset })); scrollToFontPreview(); }}
+                                      className="w-7 h-7 rounded-full border-2 transition-transform hover:scale-110"
+                                      style={{ backgroundColor: preset, borderColor: profileData.profileFontColor === preset ? 'white' : 'transparent' }}
+                                      title={preset}
+                                    />
+                                  ))}
+                                </div>
                               </div>
                             </TabsContent>
                           </Tabs>

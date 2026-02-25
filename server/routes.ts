@@ -3244,7 +3244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "dateOfBirth", "avatarUrl", "bannerUrl", "activeProfilePicType",
         "avatarBorderColor", "primaryColor", "secondaryColor", "accentColor",
         "backgroundColor", "cardColor", "layoutStyle", "showUserType",
-        "profileFont", "profileFontEffect", "profileFontAnimation",
+        "profileFont", "profileFontEffect", "profileFontAnimation", "profileFontColor",
         "profileBackgroundType", "profileBackgroundTheme", "profileBackgroundAnimation",
         "steamUsername", "xboxUsername", "playstationUsername",
         "discordUsername", "epicUsername", "twitchUsername", "youtubeUsername",
