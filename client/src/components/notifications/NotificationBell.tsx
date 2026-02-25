@@ -137,7 +137,18 @@ export function NotificationBell() {
     mutationFn: async () => {
       await apiRequest("DELETE", "/api/notifications/delete-all");
     },
-    onSuccess: () => {
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['/api/notifications'] });
+      const previous = queryClient.getQueryData(['/api/notifications']);
+      queryClient.setQueryData(['/api/notifications'], []);
+      queryClient.setQueryData(['/api/notifications/unread-count'], 0);
+      return { previous };
+    },
+    onError: (_err, _vars, context: any) => {
+      queryClient.setQueryData(['/api/notifications'], context?.previous);
+      toast({ title: "Failed to clear notifications", variant: "destructive" });
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
     },
