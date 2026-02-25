@@ -552,7 +552,11 @@ export default function SettingsPage() {
           avatarUrl: user.avatarUrl || "",
           profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
           profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
-          profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none"
+          profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
+          profileFont: (user as any)?.profileFont || "default",
+          profileFontEffect: (user as any)?.profileFontEffect || "none",
+          profileFontAnimation: (user as any)?.profileFontAnimation || "none",
+          profileFontColor: (user as any)?.profileFontColor || "#FFFFFF",
         };
       });
       
