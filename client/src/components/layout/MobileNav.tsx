@@ -127,10 +127,14 @@ const MobileNav = () => {
               >
                 <item.icon className={cn(
                   "mb-1 w-6 h-6",
-                  location === item.href ? "text-primary" : "text-muted-foreground"
+                  location === item.href
+                    ? item.label === "Trending" ? "text-orange-500" : "text-primary"
+                    : "text-muted-foreground"
                 )} />
                 <span className={cn(
-                  location === item.href ? "text-white" : "text-muted-foreground"
+                  location === item.href
+                    ? item.label === "Trending" ? "text-orange-500" : "text-white"
+                    : "text-muted-foreground"
                 )}>{item.label}</span>
               </Link>
             );
