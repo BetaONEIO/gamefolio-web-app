@@ -1355,6 +1355,12 @@ export interface UploadLimits {
   canUploadClip: boolean;
   canUploadReel: boolean;
   canUploadScreenshot: boolean;
+  totalClipsExisting: number;
+  totalReelsExisting: number;
+  totalScreenshotsExisting: number;
+  maxClipsTotal: number;
+  maxReelsTotal: number;
+  maxScreenshotsTotal: number;
 }
 
 // GF Token Orders table - for tracking GF token purchases via Stripe

@@ -2551,41 +2551,70 @@ const ProfilePage = () => {
           onValueChange={setActiveTab}
           className="w-full"
         >
+          {(() => {
+            const clipsCount = clips?.filter(c => c.videoType === 'clip').length ?? 0;
+            const reelsCount = clips?.filter(c => c.videoType === 'reel').length ?? 0;
+            const screenshotsCount = screenshots?.length ?? 0;
+            const showLimits = isOwnProfile && !currentUser?.isPro;
+            return (
           <TabsList 
-            className="w-full max-w-lg lg:max-w-full mx-auto justify-center rounded-full h-11 md:h-12 p-1 relative flex gap-0.5 bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg"
+            className={`w-full max-w-lg lg:max-w-full mx-auto justify-center rounded-full p-1 relative flex gap-0.5 bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
           >
             <TabsTrigger 
               ref={clipsTabRef}
               value="clips" 
-              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${activeTab === 'clips' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+              className={`relative rounded-full transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'clips' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
             >
-              Clips
+              <span className="flex flex-col items-center leading-none gap-0.5">
+                <span>Clips</span>
+                {showLimits && (
+                  <span className={`text-[10px] font-normal ${clipsCount >= 15 ? 'text-red-400' : activeTab === 'clips' ? 'text-white/70' : 'text-gray-500'}`}>
+                    {clipsCount}/15
+                  </span>
+                )}
+              </span>
             </TabsTrigger>
 
             <TabsTrigger 
               ref={reelsTabRef}
               value="reels" 
-              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${activeTab === 'reels' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+              className={`relative rounded-full transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'reels' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
             >
-              Reels
+              <span className="flex flex-col items-center leading-none gap-0.5">
+                <span>Reels</span>
+                {showLimits && (
+                  <span className={`text-[10px] font-normal ${reelsCount >= 15 ? 'text-red-400' : activeTab === 'reels' ? 'text-white/70' : 'text-gray-500'}`}>
+                    {reelsCount}/15
+                  </span>
+                )}
+              </span>
             </TabsTrigger>
 
             <TabsTrigger 
               ref={screenshotsTabRef}
               value="screenshots" 
-              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-2 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${activeTab === 'screenshots' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+              className={`relative rounded-full transition-all duration-200 flex-1 px-2 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'screenshots' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
             >
-              Screenshots
+              <span className="flex flex-col items-center leading-none gap-0.5">
+                <span>Screenshots</span>
+                {showLimits && (
+                  <span className={`text-[10px] font-normal ${screenshotsCount >= 10 ? 'text-red-400' : activeTab === 'screenshots' ? 'text-white/70' : 'text-gray-500'}`}>
+                    {screenshotsCount}/10
+                  </span>
+                )}
+              </span>
             </TabsTrigger>
 
             <TabsTrigger 
               ref={favoritesTabRef}
               value="favorites" 
-              className={`relative rounded-full h-9 md:h-10 transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${activeTab === 'favorites' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+              className={`relative rounded-full transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'favorites' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
             >
               Favorites
             </TabsTrigger>
           </TabsList>
+            );
+          })()}
 
           {/* Clips Tab */}
           <TabsContent value="clips" className="pt-4 px-1 md:px-4">

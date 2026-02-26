@@ -171,25 +171,42 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
     const isReel = uploadType === 'reel';
     const contentType = isReel ? 'reel' : 'clip';
     
-    // Check daily quota (if not unlimited)
+    // Check daily and concurrent content limits
     if (!limits.isPro) {
-      if (isReel && !limits.canUploadReel) {
-        // Clean up temp file
-        if (req.file?.path) fs.unlink(req.file.path, () => {});
-        return res.status(403).json({ 
-          error: 'Daily reel upload limit reached',
-          message: `Free users can upload ${limits.maxReelsPerDay} reels per day. Upgrade to Pro for unlimited uploads.`,
-          limits
-        });
-      }
-      if (!isReel && !limits.canUploadClip) {
-        // Clean up temp file
-        if (req.file?.path) fs.unlink(req.file.path, () => {});
-        return res.status(403).json({ 
-          error: 'Daily clip upload limit reached',
-          message: `Free users can upload ${limits.maxClipsPerDay} clips per day. Upgrade to Pro for unlimited uploads.`,
-          limits
-        });
+      if (isReel) {
+        if (limits.totalReelsExisting >= limits.maxReelsTotal) {
+          if (req.file?.path) fs.unlink(req.file.path, () => {});
+          return res.status(403).json({
+            error: 'Reel storage limit reached',
+            message: `You have reached the limit of ${limits.maxReelsTotal} reels. Delete some reels to upload more, or upgrade to Gamefolio Pro for unlimited uploads.`,
+            limits
+          });
+        }
+        if (!limits.canUploadReel) {
+          if (req.file?.path) fs.unlink(req.file.path, () => {});
+          return res.status(403).json({ 
+            error: 'Daily reel upload limit reached',
+            message: `Free users can upload ${limits.maxReelsPerDay} reels per day. Upgrade to Pro for unlimited uploads.`,
+            limits
+          });
+        }
+      } else {
+        if (limits.totalClipsExisting >= limits.maxClipsTotal) {
+          if (req.file?.path) fs.unlink(req.file.path, () => {});
+          return res.status(403).json({
+            error: 'Clip storage limit reached',
+            message: `You have reached the limit of ${limits.maxClipsTotal} clips. Delete some clips to upload more, or upgrade to Gamefolio Pro for unlimited uploads.`,
+            limits
+          });
+        }
+        if (!limits.canUploadClip) {
+          if (req.file?.path) fs.unlink(req.file.path, () => {});
+          return res.status(403).json({ 
+            error: 'Daily clip upload limit reached',
+            message: `Free users can upload ${limits.maxClipsPerDay} clips per day. Upgrade to Pro for unlimited uploads.`,
+            limits
+          });
+        }
       }
     }
     
@@ -306,15 +323,25 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
     // Check upload limits before processing
     const limits = await storage.getUploadLimits(req.user!.id);
     
-    // Check daily quota (if not unlimited)
-    if (!limits.isPro && !limits.canUploadScreenshot) {
-      // Clean up temp file
-      if (req.file?.path) fs.unlink(req.file.path, () => {});
-      return res.status(403).json({ 
-        error: 'Daily screenshot upload limit reached',
-        message: `Free users can upload ${limits.maxScreenshotsPerDay} screenshots per day. Upgrade to Pro for unlimited uploads.`,
-        limits
-      });
+    // Check daily and concurrent content limits
+    if (!limits.isPro) {
+      if (limits.totalScreenshotsExisting >= limits.maxScreenshotsTotal) {
+        if (req.file?.path) fs.unlink(req.file.path, () => {});
+        return res.status(403).json({
+          error: 'Screenshot storage limit reached',
+          message: `You have reached the limit of ${limits.maxScreenshotsTotal} screenshots. Delete some screenshots to upload more, or upgrade to Gamefolio Pro for unlimited uploads.`,
+          limits
+        });
+      }
+      if (!limits.canUploadScreenshot) {
+        // Clean up temp file
+        if (req.file?.path) fs.unlink(req.file.path, () => {});
+        return res.status(403).json({ 
+          error: 'Daily screenshot upload limit reached',
+          message: `Free users can upload ${limits.maxScreenshotsPerDay} screenshots per day. Upgrade to Pro for unlimited uploads.`,
+          limits
+        });
+      }
     }
     
     // Check file size limit
@@ -589,21 +616,38 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
     const limits = await storage.getUploadLimits(req.user!.id);
     const isReel = videoType === 'reel';
     
-    // Check daily quota (if not unlimited)
+    // Check daily and concurrent content limits
     if (!limits.isPro) {
-      if (isReel && !limits.canUploadReel) {
-        return res.status(403).json({ 
-          error: 'Daily reel upload limit reached',
-          message: `Free users can upload ${limits.maxReelsPerDay} reels per day. Upgrade to Pro for unlimited uploads.`,
-          limits
-        });
-      }
-      if (!isReel && !limits.canUploadClip) {
-        return res.status(403).json({ 
-          error: 'Daily clip upload limit reached',
-          message: `Free users can upload ${limits.maxClipsPerDay} clips per day. Upgrade to Pro for unlimited uploads.`,
-          limits
-        });
+      if (isReel) {
+        if (limits.totalReelsExisting >= limits.maxReelsTotal) {
+          return res.status(403).json({
+            error: 'Reel storage limit reached',
+            message: `You have reached the limit of ${limits.maxReelsTotal} reels. Delete some reels to upload more, or upgrade to Gamefolio Pro for unlimited uploads.`,
+            limits
+          });
+        }
+        if (!limits.canUploadReel) {
+          return res.status(403).json({ 
+            error: 'Daily reel upload limit reached',
+            message: `Free users can upload ${limits.maxReelsPerDay} reels per day. Upgrade to Pro for unlimited uploads.`,
+            limits
+          });
+        }
+      } else {
+        if (limits.totalClipsExisting >= limits.maxClipsTotal) {
+          return res.status(403).json({
+            error: 'Clip storage limit reached',
+            message: `You have reached the limit of ${limits.maxClipsTotal} clips. Delete some clips to upload more, or upgrade to Gamefolio Pro for unlimited uploads.`,
+            limits
+          });
+        }
+        if (!limits.canUploadClip) {
+          return res.status(403).json({ 
+            error: 'Daily clip upload limit reached',
+            message: `Free users can upload ${limits.maxClipsPerDay} clips per day. Upgrade to Pro for unlimited uploads.`,
+            limits
+          });
+        }
       }
     }
 
