@@ -4991,8 +4991,8 @@ export class DatabaseStorage implements IStorage {
   // ==================== DAILY UPLOAD QUOTA OPERATIONS ====================
 
   // Upload limit constants
-  private readonly FREE_MAX_CLIPS_PER_DAY = 2;
-  private readonly FREE_MAX_REELS_PER_DAY = 2;
+  private readonly FREE_MAX_CLIPS_PER_DAY = 3;
+  private readonly FREE_MAX_REELS_PER_DAY = 3;
   private readonly FREE_MAX_SCREENSHOTS_PER_DAY = 3;
   private readonly FREE_MAX_VIDEO_SIZE_MB = 100;
   private readonly FREE_MAX_IMAGE_SIZE_MB = 10;
