@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -478,35 +479,16 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
 
   return (
     <Dialog open={!!screenshot} onOpenChange={() => onClose()}>
-      <DialogContent
-        className="max-w-[80%] w-[80%] p-0 bg-background text-foreground max-h-[76vh] h-[76vh] overflow-hidden screenshot-lightbox-close"
-      >
-        <style>{`
-          .screenshot-lightbox-close > button[type="button"] {
-            background: rgba(0,0,0,0.4) !important;
-            color: white !important;
-            border-radius: 0.5rem !important;
-            padding: 0 !important;
-            opacity: 1 !important;
-            right: 12px !important;
-            top: 12px !important;
-            width: 32px !important;
-            height: 32px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            z-index: 100 !important;
-          }
-          .screenshot-lightbox-close > button[type="button"]:hover {
-            background: rgba(0,0,0,0.6) !important;
-          }
-          .screenshot-lightbox-close > button[type="button"] svg {
-            width: 16px !important;
-            height: 16px !important;
-          }
-        `}</style>
+      <DialogPortal>
+        <DialogOverlay />
+        <DialogPrimitive.Content
+          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] max-w-[80%] w-[80%] p-0 bg-background text-foreground max-h-[76vh] h-[76vh] overflow-hidden rounded-lg border shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]"
+        >
+          <DialogPrimitive.Close className="absolute right-3 top-3 z-[100] w-8 h-8 flex items-center justify-center rounded-lg bg-black/40 hover:bg-black/60 text-white opacity-100 transition-colors">
+            <X className="h-4 w-4" />
+          </DialogPrimitive.Close>
 
-        <div className="flex flex-row h-full">
+          <div className="flex flex-row h-full">
           <div className="bg-black flex items-center justify-center w-[75%] h-full flex-shrink-0">
             <img
               src={signedUrl || screenshot.imageUrl}
@@ -661,27 +643,28 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
           </div>
         </div>
 
-      </DialogContent>
-      {hasPrevious && createPortal(
-        <button
-          onPointerDown={(e) => { e.stopPropagation(); handlePrevious(); }}
-          className="fixed left-[2%] top-1/2 -translate-y-1/2 z-[200] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors cursor-pointer"
-          aria-label="Previous screenshot"
-        >
-          <ChevronLeft className="h-7 w-7" />
-        </button>,
-        document.body
-      )}
-      {hasNext && createPortal(
-        <button
-          onPointerDown={(e) => { e.stopPropagation(); handleNext(); }}
-          className="fixed right-[2%] top-1/2 -translate-y-1/2 z-[200] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors cursor-pointer"
-          aria-label="Next screenshot"
-        >
-          <ChevronRight className="h-7 w-7" />
-        </button>,
-        document.body
-      )}
+        </DialogPrimitive.Content>
+        {hasPrevious && (
+          <button
+            onClick={(e) => { e.stopPropagation(); e.preventDefault(); handlePrevious(); }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="fixed left-[2%] top-1/2 -translate-y-1/2 z-[200] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors cursor-pointer"
+            aria-label="Previous screenshot"
+          >
+            <ChevronLeft className="h-7 w-7" />
+          </button>
+        )}
+        {hasNext && (
+          <button
+            onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleNext(); }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="fixed right-[2%] top-1/2 -translate-y-1/2 z-[200] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors cursor-pointer"
+            aria-label="Next screenshot"
+          >
+            <ChevronRight className="h-7 w-7" />
+          </button>
+        )}
+      </DialogPortal>
     </Dialog>
   );
 }
