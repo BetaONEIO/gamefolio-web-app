@@ -90,6 +90,20 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Guard: block a new PaymentIntent if the user already has an active subscription
+    if (user.isPro && user.stripeSubscriptionId) {
+      const stripe = await getUncachableStripeClient();
+      try {
+        const existing = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+        if (existing.status === 'active' || existing.status === 'trialing') {
+          console.warn(`⚠️ User ${userId} already has active subscription ${user.stripeSubscriptionId} — blocking new PaymentIntent`);
+          return res.status(409).json({ error: 'You already have an active Pro subscription.' });
+        }
+      } catch {
+        // Subscription not found in Stripe — allow proceeding
+      }
+    }
+
     const stripe = await getUncachableStripeClient();
 
     const email = user.email;
@@ -98,15 +112,19 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
     }
 
     let customerId: string;
-    const existingCustomers = await stripe.customers.list({ email, limit: 1 });
-    if (existingCustomers.data.length > 0) {
-      customerId = existingCustomers.data[0].id;
+    if (user.stripeCustomerId) {
+      customerId = user.stripeCustomerId;
     } else {
-      const newCustomer = await stripe.customers.create({
-        email,
-        metadata: { userId: String(userId) },
-      });
-      customerId = newCustomer.id;
+      const existingCustomers = await stripe.customers.list({ email, limit: 1 });
+      if (existingCustomers.data.length > 0) {
+        customerId = existingCustomers.data[0].id;
+      } else {
+        const newCustomer = await stripe.customers.create({
+          email,
+          metadata: { userId: String(userId) },
+        });
+        customerId = newCustomer.id;
+      }
     }
 
     const priceId = await getOrCreatePriceId(stripe, plan);
@@ -165,7 +183,43 @@ router.post('/api/stripe/confirm-pro-subscription', hybridAuth, async (req: Requ
       return res.status(403).json({ error: 'Payment does not belong to this user' });
     }
 
+    // Idempotency guard: if this user already has a subscription tied to this exact PaymentIntent,
+    // return success without creating a duplicate
+    const [currentUser] = await db.select().from(users).where(eq(users.id, userId));
+    if (currentUser?.stripeSubscriptionId) {
+      try {
+        const existingSub = await stripe.subscriptions.retrieve(currentUser.stripeSubscriptionId);
+        if (existingSub.status === 'active' || existingSub.status === 'trialing') {
+          console.log(`ℹ️ confirm-pro-subscription called for user ${userId} who already has active sub ${currentUser.stripeSubscriptionId} — returning success without creating duplicate`);
+          return res.json({ success: true, isPro: true, subscriptionId: currentUser.stripeSubscriptionId });
+        }
+      } catch {
+        // Subscription not found in Stripe — proceed to create a new one
+      }
+    }
+
+    // Also check Stripe directly: look for any existing active subscription on this customer
+    // where the payment_intent metadata matches, to catch race conditions
     const customerId = paymentIntent.customer as string;
+    const existingSubscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      status: 'active',
+      limit: 10,
+    });
+    const alreadyLinked = existingSubscriptions.data.find(
+      (s: any) => s.metadata?.paymentIntentId === paymentIntentId
+    );
+    if (alreadyLinked) {
+      console.log(`ℹ️ confirm-pro-subscription: found existing sub ${alreadyLinked.id} linked to PI ${paymentIntentId} — skipping duplicate creation`);
+      await db.update(users).set({
+        isPro: true,
+        stripeCustomerId: customerId,
+        stripeSubscriptionId: alreadyLinked.id,
+        updatedAt: new Date(),
+      }).where(eq(users.id, userId));
+      return res.json({ success: true, isPro: true, subscriptionId: alreadyLinked.id });
+    }
+
     const paymentMethodId = paymentIntent.payment_method as string;
     const priceId = paymentIntent.metadata.priceId;
 
@@ -179,7 +233,7 @@ router.post('/api/stripe/confirm-pro-subscription', hybridAuth, async (req: Requ
       customer: customerId,
       items: [{ price: priceId }],
       default_payment_method: paymentMethodId,
-      metadata: { userId: String(userId), plan },
+      metadata: { userId: String(userId), plan, paymentIntentId },
     });
 
     await db.update(users).set({
