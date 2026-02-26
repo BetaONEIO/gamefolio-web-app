@@ -187,10 +187,10 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   if (!currentReel) return null;
 
   return (
-    <div className="fixed inset-0 bg-black z-50">
+    <div className="fixed inset-0 bg-black z-[60]">
       {/* Ad overlay - shows every 5 reels for non-Pro users */}
       {showAd && (
-        <div className="fixed inset-0 bg-black z-[60] flex items-center justify-center">
+        <div className="fixed inset-0 bg-black z-[70] flex items-center justify-center">
           <VideoAdPlayer 
             onAdComplete={onAdFinished}
             onAdError={onAdFinished}
@@ -306,7 +306,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       {currentReel && (
         <div className="fixed inset-0 pointer-events-none z-30">
           {/* Right side - Engagement buttons (TikTok-style) */}
-          <div className="absolute right-3 md:right-4 flex flex-col items-center gap-5 pointer-events-auto" style={{ bottom: 'calc(7rem + env(safe-area-inset-bottom, 0px))' }}>
+          <div className="absolute right-3 md:right-4 flex flex-col items-center gap-5 pointer-events-auto" style={{ bottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }}>
             {/* Fire/Reactions */}
             <div className="flex flex-col items-center">
               <FireButton
@@ -366,7 +366,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           </div>
 
           {/* Bottom left - User info and title */}
-          <div className="absolute left-3 md:left-4 right-20 md:right-24 pointer-events-auto" style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}>
+          <div className="absolute left-3 md:left-4 right-20 md:right-24 pointer-events-auto" style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
             {/* User row with avatar and username */}
             <div className="flex items-center gap-2 mb-2">
               <Link href={`/profile/${currentReel.user.username}`} onClick={onClose}>
@@ -430,7 +430,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           </div>
 
           {/* Report button - subtle, bottom right corner */}
-          <div className="absolute right-3 md:right-4 pointer-events-auto" style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}>
+          <div className="absolute right-3 md:right-4 pointer-events-auto" style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
             <ReportDialog
               contentType="clip"
               contentId={currentReel.id}

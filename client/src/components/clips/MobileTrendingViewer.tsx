@@ -209,7 +209,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   return (
     <div 
       ref={containerRef}
-      className={embedded ? "relative w-full h-full bg-black" : "fixed inset-0 z-50 bg-black flex items-center justify-center"}
+      className={embedded ? "relative w-full h-full bg-black" : "fixed inset-0 z-[60] bg-black flex items-center justify-center"}
       data-testid="mobile-trending-viewer"
     >
       {/* Content - Full mobile screen 9:16 format */}
@@ -240,7 +240,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
         )}
 
         {/* Bottom overlay with user info and controls */}
-        <div className="absolute bottom-16 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
+        <div className="absolute bottom-4 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
           <div className="flex justify-between items-end">
             {/* Left side - User info and content details */}
             <div className="flex-1 pr-4">
