@@ -75,6 +75,7 @@ import { ReportButton } from "@/components/reporting/ReportButton";
 import { useProfilePictureLightbox } from "@/components/ui/profile-picture-lightbox";
 import { BannerLightbox, useBannerLightbox } from "@/components/ui/banner-lightbox";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
@@ -230,6 +231,7 @@ const ProfilePage = () => {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareDialogType, setShareDialogType] = useState<'clip' | 'reel' | 'screenshot' | null>(null);
   const [shareDialogId, setShareDialogId] = useState<number | null>(null);
+  const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
 
   // Profile theme scope ref for dynamic styling
   const profileThemeScopeRef = useRef<HTMLDivElement>(null);
@@ -2753,6 +2755,17 @@ const ProfilePage = () => {
                 )}
               </div>
             )}
+            {isOwnProfile && !currentUser?.isPro && (clips?.filter(c => c.videoType !== 'reel').length ?? 0) > 0 && (
+              <div className="mt-8 flex flex-col items-center gap-3 py-6 border-t border-border/40">
+                <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(15 clip limit on free)</span></p>
+                <Button
+                  onClick={() => setProUpgradeOpen(true)}
+                  className="bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white font-semibold px-8"
+                >
+                  Go PRO
+                </Button>
+              </div>
+            )}
           </TabsContent>
 
           {/* Reels Tab */}
@@ -2892,6 +2905,17 @@ const ProfilePage = () => {
                 )}
               </div>
             )}
+            {isOwnProfile && !currentUser?.isPro && (clips?.filter(c => c.videoType === 'reel').length ?? 0) > 0 && (
+              <div className="mt-8 flex flex-col items-center gap-3 py-6 border-t border-border/40">
+                <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(15 reel limit on free)</span></p>
+                <Button
+                  onClick={() => setProUpgradeOpen(true)}
+                  className="bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white font-semibold px-8"
+                >
+                  Go PRO
+                </Button>
+              </div>
+            )}
           </TabsContent>
 
           {/* Screenshots Tab */}
@@ -3028,6 +3052,17 @@ const ProfilePage = () => {
                     </Button>
                   </Link>
                 )}
+              </div>
+            )}
+            {isOwnProfile && !currentUser?.isPro && (screenshots?.length ?? 0) > 0 && (
+              <div className="mt-8 flex flex-col items-center gap-3 py-6 border-t border-border/40">
+                <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(10 screenshot limit on free)</span></p>
+                <Button
+                  onClick={() => setProUpgradeOpen(true)}
+                  className="bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white font-semibold px-8"
+                >
+                  Go PRO
+                </Button>
               </div>
             )}
           </TabsContent>
@@ -3560,6 +3595,11 @@ const ProfilePage = () => {
         open={isOpen}
         onOpenChange={closeDialog}
         actionType={actionType}
+      />
+
+      <ProUpgradeDialog
+        open={proUpgradeOpen}
+        onOpenChange={setProUpgradeOpen}
       />
 
       {/* Profile Picture Action Dialog */}
