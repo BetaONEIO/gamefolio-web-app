@@ -145,7 +145,7 @@ export default function ExplorePage() {
   const isMobileView = window.innerWidth <= 768;
 
   return (
-    <div className={`min-h-screen bg-background ${isMobileView ? 'pb-24' : ''}`}>
+    <div className={`bg-background ${isMobileView ? 'pb-24' : ''}`}>
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
