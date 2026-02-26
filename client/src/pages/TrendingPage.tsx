@@ -169,6 +169,10 @@ const TrendingPage: React.FC = () => {
   const [isFollowingAuthor, setIsFollowingAuthor] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const isAcceptingRef = useRef(false);
+  const screenshotsScrollRef = useRef<HTMLDivElement>(null);
+  const [screenshotsDragging, setScreenshotsDragging] = useState(false);
+  const [screenshotsDragStart, setScreenshotsDragStart] = useState(0);
+  const [screenshotsScrollStart, setScreenshotsScrollStart] = useState(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -375,18 +379,51 @@ const TrendingPage: React.FC = () => {
       }
 
       return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {trendingScreenshots.map((screenshot) => (
-            <ScreenshotCard 
-              key={screenshot.id} 
-              screenshot={screenshot}
-              isOwnProfile={user?.id === screenshot.userId}
-              profile={screenshot.user}
-              onDelete={(id) => deleteScreenshotMutation.mutate(id)}
-              onSelect={setSelectedScreenshot}
-              showUserInfo={true}
-            />
-          ))}
+        <div className="relative">
+          <button
+            onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft -= 480; } }}
+            className="absolute -left-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft += 480; } }}
+            className="absolute -right-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+          <div
+            ref={screenshotsScrollRef}
+            className={`flex gap-5 overflow-x-auto scrollbar-hide pb-4 select-none ${screenshotsDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            style={{ scrollBehavior: screenshotsDragging ? 'auto' : 'smooth' }}
+            onMouseDown={(e) => {
+              if (!screenshotsScrollRef.current) return;
+              setScreenshotsDragging(true);
+              setScreenshotsDragStart(e.clientX);
+              setScreenshotsScrollStart(screenshotsScrollRef.current.scrollLeft);
+              e.preventDefault();
+            }}
+            onMouseMove={(e) => {
+              if (!screenshotsDragging || !screenshotsScrollRef.current) return;
+              e.preventDefault();
+              screenshotsScrollRef.current.scrollLeft = screenshotsScrollStart - (e.clientX - screenshotsDragStart);
+            }}
+            onMouseUp={() => setScreenshotsDragging(false)}
+            onMouseLeave={() => setScreenshotsDragging(false)}
+          >
+            {trendingScreenshots.map((screenshot) => (
+              <div key={screenshot.id} className="flex-shrink-0 w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px]">
+                <ScreenshotCard
+                  screenshot={screenshot}
+                  isOwnProfile={user?.id === screenshot.userId}
+                  profile={screenshot.user}
+                  onDelete={(id) => deleteScreenshotMutation.mutate(id)}
+                  onSelect={setSelectedScreenshot}
+                  showUserInfo={true}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       );
     }

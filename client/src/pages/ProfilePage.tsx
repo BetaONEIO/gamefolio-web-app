@@ -994,6 +994,12 @@ const ProfilePage = () => {
   const screenshotsTabRef = useRef<HTMLButtonElement>(null);
   const favoritesTabRef = useRef<HTMLButtonElement>(null);
 
+  // Screenshot carousel
+  const screenshotsScrollRef = useRef<HTMLDivElement>(null);
+  const [screenshotsDragging, setScreenshotsDragging] = useState(false);
+  const [screenshotsDragStart, setScreenshotsDragStart] = useState(0);
+  const [screenshotsScrollStart, setScreenshotsScrollStart] = useState(0);
+
   // Calculate tab positions using percentage-based approach
   const getTabPosition = (tabName: string) => {
     const tabIndex = ['clips', 'reels', 'screenshots', 'favorites'].indexOf(tabName);
@@ -2976,63 +2982,96 @@ const ProfilePage = () => {
                 </div>
               </div>
             ) : isLoadingScreenshots ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <Skeleton key={i} className="aspect-video w-full rounded-lg" />
+              <div className="flex gap-5 overflow-hidden pb-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex-shrink-0 w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px]">
+                    <Skeleton className="aspect-video w-full rounded-xl" />
+                  </div>
                 ))}
               </div>
             ) : screenshots && screenshots.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                {[...screenshots]
-                  .sort((a, b) => {
-                    if (a.pinnedAt && !b.pinnedAt) return -1;
-                    if (!a.pinnedAt && b.pinnedAt) return 1;
-                    return 0;
-                  })
-                  .map((screenshot) => {
-                  const isHighlighted = highlightedContent?.type === 'screenshot' && highlightedContent.id === screenshot.id.toString();
-                  const isPinned = !!screenshot.pinnedAt;
-                  
-                  return (
-                    <div 
-                      key={`screenshot-${screenshot.id}`}
-                      className="relative group"
-                    >
-                      {isPinned && !isOwnProfile && (
-                        <div className="absolute top-1.5 left-1.5 z-10 bg-primary/90 text-primary-foreground p-1 rounded-md">
-                          <Pin className="w-2.5 h-2.5" />
-                        </div>
-                      )}
-                      {isOwnProfile && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            pinScreenshotMutation.mutate(screenshot.id);
+              <div className="relative">
+                <button
+                  onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft -= 480; } }}
+                  className="absolute -left-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft += 480; } }}
+                  className="absolute -right-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+                <div
+                  ref={screenshotsScrollRef}
+                  className={`flex gap-5 overflow-x-auto scrollbar-hide pb-4 select-none ${screenshotsDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                  style={{ scrollBehavior: screenshotsDragging ? 'auto' : 'smooth' }}
+                  onMouseDown={(e) => {
+                    if (!screenshotsScrollRef.current) return;
+                    setScreenshotsDragging(true);
+                    setScreenshotsDragStart(e.clientX);
+                    setScreenshotsScrollStart(screenshotsScrollRef.current.scrollLeft);
+                    e.preventDefault();
+                  }}
+                  onMouseMove={(e) => {
+                    if (!screenshotsDragging || !screenshotsScrollRef.current) return;
+                    e.preventDefault();
+                    screenshotsScrollRef.current.scrollLeft = screenshotsScrollStart - (e.clientX - screenshotsDragStart);
+                  }}
+                  onMouseUp={() => setScreenshotsDragging(false)}
+                  onMouseLeave={() => setScreenshotsDragging(false)}
+                >
+                  {[...screenshots]
+                    .sort((a, b) => {
+                      if (a.pinnedAt && !b.pinnedAt) return -1;
+                      if (!a.pinnedAt && b.pinnedAt) return 1;
+                      return 0;
+                    })
+                    .map((screenshot) => {
+                    const isHighlighted = highlightedContent?.type === 'screenshot' && highlightedContent.id === screenshot.id.toString();
+                    const isPinned = !!screenshot.pinnedAt;
+                    return (
+                      <div
+                        key={`screenshot-${screenshot.id}`}
+                        className="flex-shrink-0 w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px] relative group"
+                      >
+                        {isPinned && !isOwnProfile && (
+                          <div className="absolute top-1.5 left-1.5 z-10 bg-primary/90 text-primary-foreground p-1 rounded-md">
+                            <Pin className="w-2.5 h-2.5" />
+                          </div>
+                        )}
+                        {isOwnProfile && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              pinScreenshotMutation.mutate(screenshot.id);
+                            }}
+                            disabled={pinScreenshotMutation.isPending}
+                            className={`absolute top-1.5 left-1.5 z-10 p-1 rounded-full transition-all ${
+                              isPinned
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-black/50 text-white opacity-0 group-hover:opacity-100'
+                            } hover:scale-110`}
+                            title={isPinned ? 'Unpin from profile' : 'Pin to profile'}
+                          >
+                            <Pin className="w-3 h-3" />
+                          </button>
+                        )}
+                        <ScreenshotCard
+                          screenshot={screenshot}
+                          isHighlighted={isHighlighted}
+                          isOwnProfile={isOwnProfile}
+                          profile={profile}
+                          onDelete={(id) => deleteScreenshotMutation.mutate(id)}
+                          onSelect={(screenshot) => {
+                            setSelectedScreenshot(screenshot);
                           }}
-                          disabled={pinScreenshotMutation.isPending}
-                          className={`absolute top-1.5 left-1.5 z-10 p-1 rounded-full transition-all ${
-                            isPinned 
-                              ? 'bg-primary text-primary-foreground' 
-                              : 'bg-black/50 text-white opacity-0 group-hover:opacity-100'
-                          } hover:scale-110`}
-                          title={isPinned ? 'Unpin from profile' : 'Pin to profile'}
-                        >
-                          <Pin className="w-3 h-3" />
-                        </button>
-                      )}
-                      <ScreenshotCard
-                        screenshot={screenshot}
-                        isHighlighted={isHighlighted}
-                        isOwnProfile={isOwnProfile}
-                        profile={profile}
-                        onDelete={(id) => deleteScreenshotMutation.mutate(id)}
-                        onSelect={(screenshot) => {
-                          setSelectedScreenshot(screenshot);
-                        }}
-                      />
-                    </div>
-                  );
-                })}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             ) : (
               <div className="py-12 text-center">
