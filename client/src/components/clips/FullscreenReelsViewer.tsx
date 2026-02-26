@@ -20,6 +20,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { VideoAdPlayer } from "@/components/ads/VideoAdPlayer";
 import { useReelAdTracker } from "@/hooks/use-ad-manager";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 
 interface FullscreenReelsViewerProps {
   reels: ClipWithUser[];
@@ -44,6 +45,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   const { showAd, isPro, onReelChange, onAdFinished, reset: resetAdTracker } = useReelAdTracker();
 
   const currentReel = reels[currentIndex];
+
+  const { signedUrl: avatarSignedUrl } = useSignedUrl(currentReel?.user?.avatarUrl);
 
   // Follow status for current user
   const { data: followStatus } = useQuery<{ following: boolean; requested: boolean }>({
@@ -96,7 +99,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   // Scroll to initial reel on mount
   useEffect(() => {
     if (containerRef.current) {
-      const scrollPosition = initialIndex * window.innerHeight;
+      const itemHeight = containerRef.current.clientHeight;
+      const scrollPosition = initialIndex * itemHeight;
       containerRef.current.scrollTop = scrollPosition;
     }
   }, []);
@@ -107,8 +111,9 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
     if (!container) return;
 
     const handleScroll = () => {
+      const itemHeight = container.clientHeight;
       const scrollTop = container.scrollTop;
-      const newIndex = Math.round(scrollTop / window.innerHeight);
+      const newIndex = Math.round(scrollTop / itemHeight);
       if (newIndex !== currentIndex && newIndex >= 0 && newIndex < reels.length) {
         setCurrentIndex(newIndex);
         if (!isPro) {
@@ -126,17 +131,19 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
     const container = containerRef.current;
     if (!container) return;
 
+    const itemHeight = container.clientHeight;
+
     switch (e.key) {
       case 'ArrowUp':
         e.preventDefault();
         if (currentIndex > 0) {
-          container.scrollTo({ top: (currentIndex - 1) * window.innerHeight, behavior: 'smooth' });
+          container.scrollTo({ top: (currentIndex - 1) * itemHeight, behavior: 'smooth' });
         }
         break;
       case 'ArrowDown':
         e.preventDefault();
         if (currentIndex < reels.length - 1) {
-          container.scrollTo({ top: (currentIndex + 1) * window.innerHeight, behavior: 'smooth' });
+          container.scrollTo({ top: (currentIndex + 1) * itemHeight, behavior: 'smooth' });
         }
         break;
       case 'Escape':
@@ -247,13 +254,13 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       {/* Scrollable reels container */}
       <div 
         ref={containerRef}
-        className="h-screen w-full overflow-y-scroll overflow-x-hidden snap-y snap-mandatory [&::-webkit-scrollbar]:hidden"
+        className="h-[100dvh] w-full overflow-y-scroll overflow-x-hidden snap-y snap-mandatory [&::-webkit-scrollbar]:hidden"
         style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
       >
         {reels.map((reel, index) => (
           <div 
             key={reel.id}
-            className="snap-start snap-always h-screen w-full flex items-center justify-center relative"
+            className="snap-start snap-always h-[100dvh] w-full flex items-center justify-center relative"
             style={{ scrollSnapStop: 'always' }}
           >
             {/* Video player - full screen on mobile */}
@@ -275,7 +282,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                     onMutedChange={index === currentIndex ? (muted) => setIsMuted(muted) : undefined}
                     onEnded={() => {
                       if (index < reels.length - 1 && containerRef.current) {
-                        containerRef.current.scrollTo({ top: (index + 1) * window.innerHeight, behavior: 'smooth' });
+                        const itemHeight = containerRef.current.clientHeight;
+                        containerRef.current.scrollTo({ top: (index + 1) * itemHeight, behavior: 'smooth' });
                       }
                     }}
                   />
@@ -298,7 +306,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       {currentReel && (
         <div className="fixed inset-0 pointer-events-none z-30">
           {/* Right side - Engagement buttons (TikTok-style) */}
-          <div className="absolute right-3 md:right-4 bottom-28 md:bottom-24 flex flex-col items-center gap-5 pointer-events-auto">
+          <div className="absolute right-3 md:right-4 flex flex-col items-center gap-5 pointer-events-auto" style={{ bottom: 'calc(7rem + env(safe-area-inset-bottom, 0px))' }}>
             {/* Fire/Reactions */}
             <div className="flex flex-col items-center">
               <FireButton
@@ -358,13 +366,13 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           </div>
 
           {/* Bottom left - User info and title */}
-          <div className="absolute bottom-20 md:bottom-16 left-3 md:left-4 right-20 md:right-24 pointer-events-auto">
+          <div className="absolute left-3 md:left-4 right-20 md:right-24 pointer-events-auto" style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}>
             {/* User row with avatar and username */}
             <div className="flex items-center gap-2 mb-2">
               <Link href={`/profile/${currentReel.user.username}`} onClick={onClose}>
                 <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-white/40 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0">
                   <img
-                    src={currentReel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                    src={avatarSignedUrl || currentReel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
                     alt={currentReel.user.displayName}
                     className="w-full h-full object-cover"
                   />
@@ -422,7 +430,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           </div>
 
           {/* Report button - subtle, bottom right corner */}
-          <div className="absolute bottom-20 md:bottom-16 right-3 md:right-4 pointer-events-auto">
+          <div className="absolute right-3 md:right-4 pointer-events-auto" style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}>
             <ReportDialog
               contentType="clip"
               contentId={currentReel.id}
