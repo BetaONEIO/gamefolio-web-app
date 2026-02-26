@@ -1,11 +1,31 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Gift, Star, Crown, Gem, Package, Zap } from "lucide-react";
 import proHeroImage from "@assets/gamefolio_pro_banner_1770379359049.png";
+
+interface LootboxReward {
+  reward: { name: string; rarity: string; assetType: string; imageUrl?: string | null };
+  isDuplicate: boolean;
+}
 
 interface ProOnboardingScreenProps {
   onComplete: () => void;
+  lootboxReward?: LootboxReward | null;
 }
+
+const rarityColors: Record<string, { bg: string; border: string; text: string }> = {
+  common: { bg: "bg-gray-500/20", border: "border-gray-400", text: "text-gray-300" },
+  rare: { bg: "bg-blue-500/20", border: "border-blue-400", text: "text-blue-300" },
+  epic: { bg: "bg-purple-500/20", border: "border-purple-400", text: "text-purple-300" },
+  legendary: { bg: "bg-amber-500/20", border: "border-amber-400", text: "text-amber-300" },
+};
+
+const rarityIcons: Record<string, typeof Star> = {
+  common: Package,
+  rare: Gem,
+  epic: Crown,
+  legendary: Star,
+};
 
 const slides = [
   {
@@ -51,7 +71,7 @@ const slides = [
   },
 ];
 
-export default function ProOnboardingScreen({ onComplete }: ProOnboardingScreenProps) {
+export default function ProOnboardingScreen({ onComplete, lootboxReward }: ProOnboardingScreenProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -68,16 +88,20 @@ export default function ProOnboardingScreen({ onComplete }: ProOnboardingScreenP
   };
 
   if (showSuccess) {
+    const rarity = lootboxReward?.reward.rarity || 'common';
+    const rarityStyle = rarityColors[rarity] || rarityColors.common;
+    const RarityIcon = rarityIcons[rarity] || Package;
+
     return (
       <div className="flex flex-col w-full h-full min-h-[500px] md:min-h-[600px] bg-[#101D27] relative overflow-hidden">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[344px] h-[746px] rounded-full bg-[#4ade8033] blur-[60px]" />
         <div className="absolute top-1/4 left-1/3 -translate-x-1/2 w-[344px] h-[746px] rounded-full bg-[#2b7fff1a] blur-[60px]" />
 
-        <div className="flex-1 flex flex-col items-center justify-center gap-12 px-6 relative z-10">
+        <div className="flex-1 flex flex-col items-center justify-center gap-8 px-6 relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center gap-4"
+            className="flex flex-col items-center gap-3"
           >
             <div className="bg-[#4ade801a] border border-[#4ade804d] rounded-full px-4 py-1.5">
               <span className="text-[10px] font-black text-[#4ade80] uppercase tracking-[2px]">
@@ -92,21 +116,53 @@ export default function ProOnboardingScreen({ onComplete }: ProOnboardingScreenP
             </p>
           </motion.div>
 
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2, type: "spring" }}
-            className="relative w-64 h-64 flex items-center justify-center"
-          >
-            <div className="absolute inset-0 rounded-full bg-[#4ade804d] blur-[30px]" />
-            <div className="relative w-56 h-56 flex items-center justify-center">
-              <img
-                src={proHeroImage}
-                alt="Pro"
-                className="w-56 h-56 object-cover rounded-2xl"
-              />
-            </div>
-          </motion.div>
+          {lootboxReward ? (
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, type: "spring" }}
+              className="flex flex-col items-center gap-3"
+            >
+              <div className="flex items-center gap-2 text-[#4ade80]">
+                <Gift className="w-4 h-4" />
+                <span className="text-sm font-bold uppercase tracking-wider">Welcome Bonus Lootbox</span>
+              </div>
+              <div className={`relative p-1 rounded-2xl ${rarityStyle.bg} border-2 ${rarityStyle.border}`}>
+                <div className="w-28 h-28 rounded-xl overflow-hidden flex items-center justify-center bg-[#1a1a2e]">
+                  {lootboxReward.reward.assetType === 'xp_reward' ? (
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 flex items-center justify-center">
+                      <Zap className="w-8 h-8 text-yellow-900" />
+                    </div>
+                  ) : lootboxReward.reward.imageUrl ? (
+                    <img src={lootboxReward.reward.imageUrl} alt={lootboxReward.reward.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <RarityIcon className={`w-14 h-14 ${rarityStyle.text}`} />
+                  )}
+                </div>
+                <div className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-white text-[#1a1a1a] border border-gray-200">
+                  {rarity}
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-white font-semibold">{lootboxReward.reward.name}</p>
+                {lootboxReward.isDuplicate && (
+                  <p className="text-xs text-yellow-500 mt-0.5">You already had this one!</p>
+                )}
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, type: "spring" }}
+              className="relative w-48 h-48 flex items-center justify-center"
+            >
+              <div className="absolute inset-0 rounded-full bg-[#4ade804d] blur-[30px]" />
+              <div className="relative w-44 h-44 flex items-center justify-center">
+                <img src={proHeroImage} alt="Pro" className="w-44 h-44 object-cover rounded-2xl" />
+              </div>
+            </motion.div>
+          )}
         </div>
 
         <div className="px-8 pb-8 md:pb-10 relative z-10">

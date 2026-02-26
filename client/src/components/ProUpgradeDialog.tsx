@@ -100,6 +100,11 @@ function formatCurrency(amount: number, currency: string): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
 }
 
+interface LootboxReward {
+  reward: { name: string; rarity: string; assetType: string; imageUrl?: string | null };
+  isDuplicate: boolean;
+}
+
 interface CheckoutFormProps {
   plan: "monthly" | "yearly";
   planLabel: string;
@@ -107,7 +112,7 @@ interface CheckoutFormProps {
   periodLabel: string;
   paymentIntentId: string;
   onBack: () => void;
-  onSuccess: () => void;
+  onSuccess: (lootboxReward: LootboxReward | null) => void;
 }
 
 function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, paymentIntentId, onBack, onSuccess }: CheckoutFormProps) {
@@ -143,15 +148,18 @@ function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, paymentInt
       }
 
       if (result.paymentIntent?.status === "succeeded") {
+        let lootboxReward: LootboxReward | null = null;
         try {
-          await apiRequest("POST", "/api/stripe/confirm-pro-subscription", { paymentIntentId, plan });
+          const confirmRes = await apiRequest("POST", "/api/stripe/confirm-pro-subscription", { paymentIntentId, plan });
+          const confirmData = await confirmRes.json();
+          lootboxReward = confirmData.lootboxReward || null;
         } catch {
         }
         await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-        onSuccess();
+        onSuccess(lootboxReward);
       } else if (result.paymentIntent?.status === "processing") {
         toast({ title: "Payment processing", description: "You'll be notified when complete." });
-        onSuccess();
+        onSuccess(null);
       } else {
         throw new Error("Payment could not be completed. Please try again.");
       }
@@ -233,6 +241,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   const [purchasing, setPurchasing] = useState(false);
   const [step, setStep] = useState<"plans" | "checkout" | "success">("plans");
   const [purchaseInProgress, setPurchaseInProgress] = useState(false);
+  const [proLootboxReward, setProLootboxReward] = useState<LootboxReward | null>(null);
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
   const [checkoutPaymentIntentId, setCheckoutPaymentIntentId] = useState<string | null>(null);
@@ -295,6 +304,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
       setCheckoutClientSecret(null);
       setCheckoutPaymentIntentId(null);
       setCheckoutError(null);
+      setProLootboxReward(null);
     }
   }, [open]);
 
@@ -564,7 +574,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
   );
 
   const successScreen = (
-    <ProOnboardingScreen onComplete={() => onOpenChange(false)} />
+    <ProOnboardingScreen onComplete={() => onOpenChange(false)} lootboxReward={proLootboxReward} />
   );
 
   const checkoutScreen = stripePromise && checkoutClientSecret && checkoutPaymentIntentId ? (
@@ -626,7 +636,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
         periodLabel={checkoutPeriodLabel}
         paymentIntentId={checkoutPaymentIntentId}
         onBack={() => setStep("plans")}
-        onSuccess={() => setStep("success")}
+        onSuccess={(lootboxReward) => { setProLootboxReward(lootboxReward); setStep("success"); }}
       />
     </Elements>
   ) : (

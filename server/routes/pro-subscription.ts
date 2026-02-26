@@ -5,6 +5,7 @@ import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { hybridAuth } from '../middleware/hybrid-auth';
 import { EmailService } from '../email-service';
+import { storage } from '../storage';
 
 const router = Router();
 
@@ -257,7 +258,18 @@ router.post('/api/stripe/confirm-pro-subscription', hybridAuth, async (req: Requ
       ).catch(err => console.error('Failed to send Pro welcome email:', err));
     }
 
-    return res.json({ success: true, isPro: true, subscriptionId: subscription.id });
+    let lootboxReward = null;
+    try {
+      const initialGrant = await storage.grantProLootbox(userId, 'initial');
+      if (initialGrant) {
+        lootboxReward = { reward: initialGrant.reward, isDuplicate: initialGrant.isDuplicate };
+        console.log(`🎁 Initial Pro lootbox granted on subscription confirm: ${initialGrant.reward.name}`);
+      }
+    } catch (lootboxErr) {
+      console.error('Failed to grant initial pro lootbox:', lootboxErr);
+    }
+
+    return res.json({ success: true, isPro: true, subscriptionId: subscription.id, lootboxReward });
   } catch (error: any) {
     console.error('Confirm pro subscription error:', error);
     return res.status(500).json({
