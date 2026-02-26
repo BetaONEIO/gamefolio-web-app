@@ -528,10 +528,10 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           {clip ? `Video by ${clip.user?.displayName || clip.user?.username || 'Unknown user'}` : 'Video content viewer'}
         </DialogDescription>
         {/* Top right action buttons */}
-        <div className={cn(
-          "absolute z-[60] flex items-center gap-2",
-          isMobile ? "right-2 top-2" : "right-4 top-4"
-        )}>
+        <div
+          className={cn("absolute z-[60] flex items-center gap-2", !isMobile && "right-4 top-4")}
+          style={isMobile ? { top: 'max(8px, env(safe-area-inset-top, 8px))', right: '8px' } : undefined}
+        >
           {/* Delete button - only show for clip owner */}
           {isOwnClip && clip && (
             <button
@@ -553,10 +553,10 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           )}
           {/* Close button */}
           <DialogClose className={cn(
-            "rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
+            "rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
             isMobile 
-              ? "p-3 bg-black/30 backdrop-blur-sm hover:bg-black/50"
-              : "p-2"
+              ? "p-3 bg-black/60 backdrop-blur-sm hover:bg-black/80 opacity-100"
+              : "p-2 opacity-70 hover:opacity-100"
           )}>
             <X className={cn("text-white", isMobile ? "h-6 w-6" : "h-5 w-5")} />
             <span className="sr-only">Close</span>
@@ -1112,30 +1112,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                 aria-label="Next"
               >
                 <ChevronRight className="h-7 w-7" />
-              </button>
-            )}
-          </>
-        )}
-        {showNavigation && isMobile && clip?.videoType !== 'reel' && (
-          <>
-            {onPrevious && (
-              <button
-                onClick={(e) => { e.stopPropagation(); e.preventDefault(); handlePreviousWithTransition(); }}
-                onPointerDown={(e) => e.stopPropagation()}
-                className="fixed left-3 top-3 z-[70] bg-black/60 hover:bg-black/80 text-white p-2.5 rounded-full transition-colors pointer-events-auto"
-                aria-label="Previous clip"
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </button>
-            )}
-            {onNext && (
-              <button
-                onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleNextWithTransition(); }}
-                onPointerDown={(e) => e.stopPropagation()}
-                className="fixed right-14 top-3 z-[70] bg-black/60 hover:bg-black/80 text-white p-2.5 rounded-full transition-colors pointer-events-auto"
-                aria-label="Next clip"
-              >
-                <ChevronRight className="h-6 w-6" />
               </button>
             )}
           </>
