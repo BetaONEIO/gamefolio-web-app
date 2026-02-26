@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useParams, Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
@@ -3511,12 +3512,13 @@ const ProfilePage = () => {
           const currentIdx = screenshots ? screenshots.findIndex(s => s.id === selectedScreenshot.id) : -1;
           const hasPrev = screenshots && screenshots.length > 1 && currentIdx > 0;
           const hasNextItem = screenshots && screenshots.length > 1 && currentIdx < (screenshots?.length || 0) - 1;
-          return (
+          return createPortal(
             <>
               {hasPrev && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setSelectedScreenshot(screenshots![currentIdx - 1]); }}
-                  className="fixed left-[calc(10%-80px)] top-1/2 -translate-y-1/2 z-[60] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="fixed left-[2%] top-1/2 -translate-y-1/2 z-[200] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors cursor-pointer"
                   aria-label="Previous screenshot"
                 >
                   <ChevronLeft className="h-7 w-7" />
@@ -3525,13 +3527,15 @@ const ProfilePage = () => {
               {hasNextItem && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setSelectedScreenshot(screenshots![currentIdx + 1]); }}
-                  className="fixed right-[calc(10%-80px)] top-1/2 -translate-y-1/2 z-[60] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="fixed right-[2%] top-1/2 -translate-y-1/2 z-[200] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors cursor-pointer"
                   aria-label="Next screenshot"
                 >
                   <ChevronRight className="h-7 w-7" />
                 </button>
               )}
-            </>
+            </>,
+            document.body
           );
         })()}
       </Dialog>
