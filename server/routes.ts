@@ -2156,12 +2156,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper to sign avatar URLs for leaderboard entries
+  async function signLeaderboardAvatars<T extends { user: { avatarUrl?: string | null } }>(entries: T[]): Promise<T[]> {
+    return Promise.all(
+      entries.map(async (entry) => {
+        if (entry.user?.avatarUrl && entry.user.avatarUrl.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(entry.user.avatarUrl, 3600);
+          if (signed) {
+            return { ...entry, user: { ...entry.user, avatarUrl: signed } };
+          }
+        }
+        return entry;
+      })
+    );
+  }
+
   // Get all-time points leaderboard endpoint
   app.get("/api/leaderboard", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
       const leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
-      res.json(leaderboardData);
+      res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
       console.error("Error fetching all-time leaderboard:", error);
       res.status(500).json({ message: "Error fetching all-time leaderboard data" });
@@ -2173,7 +2188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
       const leaderboardData = await LeaderboardService.getCurrentMonthLeaderboard(limit);
-      res.json(leaderboardData);
+      res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
       console.error("Error fetching current month leaderboard:", error);
       res.status(500).json({ message: "Error fetching current month leaderboard" });
@@ -2184,7 +2199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
       const leaderboardData = await LeaderboardService.getPreviousMonthLeaderboard(limit);
-      res.json(leaderboardData);
+      res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
       console.error("Error fetching previous month leaderboard:", error);
       res.status(500).json({ message: "Error fetching previous month leaderboard" });
@@ -2196,7 +2211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
       const leaderboardData = await LeaderboardService.getCurrentWeekLeaderboard(limit);
-      res.json(leaderboardData);
+      res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
       console.error("Error fetching current week leaderboard:", error);
       res.status(500).json({ message: "Error fetching current week leaderboard" });
@@ -2207,7 +2222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
       const leaderboardData = await LeaderboardService.getPreviousWeekLeaderboard(limit);
-      res.json(leaderboardData);
+      res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
       console.error("Error fetching previous week leaderboard:", error);
       res.status(500).json({ message: "Error fetching previous week leaderboard" });
@@ -2252,7 +2267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const limit = parseInt(req.query.limit as string) || 10;
       const topContributors = await LeaderboardService.getTopContributors(periodType, limit);
-      res.json(topContributors);
+      res.json(await signLeaderboardAvatars(topContributors));
     } catch (error) {
       console.error("Error fetching top contributors:", error);
       res.status(500).json({ message: "Error fetching top contributors" });
@@ -2273,7 +2288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const topContributors = await LeaderboardService.getTopContributorsByPeriod(periodType, period, year);
-      res.json(topContributors);
+      res.json(await signLeaderboardAvatars(topContributors));
     } catch (error) {
       console.error("Error fetching top contributors by period:", error);
       res.status(500).json({ message: "Error fetching top contributors by period" });
