@@ -19,6 +19,7 @@ import ProOnboardingScreen from "@/components/pro/ProOnboardingScreen";
 interface ProUpgradeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  subtitle?: string;
 }
 
 const premiumBenefits = [
@@ -235,7 +236,7 @@ function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, paymentInt
   );
 }
 
-export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialogProps) {
+export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUpgradeDialogProps) {
   const { isInitialized, isLoading, isPro, getCurrentOffering, purchasePackage } = useRevenueCat();
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
   const [purchasing, setPurchasing] = useState(false);
@@ -502,7 +503,7 @@ export default function ProUpgradeDialog({ open, onOpenChange }: ProUpgradeDialo
         </div>
 
         <p className="text-[#94a3b8] text-sm text-center md:text-left leading-relaxed hidden md:block max-w-[280px]">
-          Elevate your gaming identity with premium features designed for elite creators
+          {subtitle || "Elevate your gaming identity with premium features designed for elite creators"}
         </p>
       </div>
     </div>
