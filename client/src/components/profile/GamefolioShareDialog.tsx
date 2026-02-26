@@ -12,7 +12,6 @@ import { FaXTwitter } from 'react-icons/fa6';
 import { toast } from '@/hooks/use-toast';
 import { CustomAvatar } from '@/components/ui/custom-avatar';
 import { VerificationBadge } from '@/components/ui/verification-badge';
-import { ProBadge } from '@/components/ui/pro-badge';
 import { Badge } from '@/components/ui/badge';
 import { useSignedUrl } from '@/hooks/use-signed-url';
 
@@ -109,7 +108,7 @@ export function GamefolioShareDialog({
       if (!response.ok) return { verificationBadge: null };
       return response.json();
     },
-    enabled: !!userId && !!userProfile?.selectedVerificationBadgeId,
+    enabled: !!userId && (!!userProfile?.selectedVerificationBadgeId || !!userProfile?.isPro),
   });
 
   useEffect(() => {
@@ -186,8 +185,6 @@ export function GamefolioShareDialog({
   const bannerUrl = bannerSignedUrl || userProfile?.bannerUrl;
   const themeAccent = userProfile?.accentColor || '#4ADE80';
   const themeBg = userProfile?.backgroundColor || '#0B2232';
-  const themeCard = userProfile?.cardColor || '#1E3A8A';
-  const themePrimary = userProfile?.primaryColor || '#02172C';
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -230,16 +227,21 @@ export function GamefolioShareDialog({
           ) : shareData ? (
             <>
               {/* Profile Preview Card */}
-              <div className="rounded-2xl overflow-hidden" style={{ background: `linear-gradient(180deg, ${themePrimary} 0%, ${themeBg} 60%, ${themeBg} 100%)`, border: `1px solid ${themeAccent}20` }}>
+              <div className="rounded-2xl overflow-hidden" style={{ background: `linear-gradient(180deg, ${themeAccent}28 0%, ${themeBg} 45%, ${themeBg} 100%)`, border: `1px solid ${themeAccent}30` }}>
                 {/* Banner */}
                 <div 
-                  className="h-20 bg-cover bg-center"
+                  className="h-20 relative overflow-hidden"
                   style={{
-                    backgroundImage: bannerUrl
-                      ? `url(${bannerUrl})`
-                      : `linear-gradient(270deg, ${themeAccent}, ${themeBg})`,
+                    background: bannerUrl
+                      ? `url(${bannerUrl}) center/cover no-repeat`
+                      : `linear-gradient(135deg, ${themeAccent}, ${themeBg})`,
                   }}
-                />
+                >
+                  <div
+                    className="absolute inset-0"
+                    style={{ background: `linear-gradient(135deg, ${themeAccent}66 0%, transparent 60%, ${themeBg}99 100%)` }}
+                  />
+                </div>
 
                 {/* Profile Info Area */}
                 <div className="relative px-4 pb-4">
@@ -296,8 +298,8 @@ export function GamefolioShareDialog({
                         badgeName={verificationBadgeData.verificationBadge.name}
                         size="sm" 
                       />
-                    ) : userProfile?.selectedVerificationBadgeId ? (
-                      <ProBadge selectedVerificationBadgeId={userProfile.selectedVerificationBadgeId} size="sm" />
+                    ) : (userProfile?.isPro || userProfile?.selectedVerificationBadgeId) ? (
+                      <VerificationBadge isVerified={true} size="sm" />
                     ) : null}
                   </div>
                   <span className="text-[#94a3b8] text-sm leading-5">@{username}</span>
