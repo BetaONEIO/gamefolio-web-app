@@ -1992,6 +1992,184 @@ adminRouter.put("/xp-config", async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/admin/retroactive-points-migration - Retroactively fix historical upload point records
+adminRouter.post("/retroactive-points-migration", async (req: Request, res: Response) => {
+  try {
+    const { db } = await import('../db');
+    const { sql } = await import('drizzle-orm');
+
+    // Current (new) point values
+    const NEW_CLIP_REEL_XP = 200;
+    const NEW_SCREENSHOT_XP = 100;
+
+    // Old point values that need to be updated
+    const OLD_CLIP_REEL_VALUES = [5, 10, 20];
+    const OLD_SCREENSHOT_VALUES = [2];
+
+    // Step 1: Get all affected records from user_points_history (uploads & their deletions)
+    const affectedRecords = await db.execute(sql`
+      SELECT id, user_id, action, points, created_at
+      FROM user_points_history
+      WHERE 
+        (action = 'upload' AND points IN (5, 10, 20, -5, -10, -20))
+        OR (action = 'screenshot_upload' AND points IN (2, -2))
+      ORDER BY user_id, created_at
+    `);
+
+    if (affectedRecords.rows.length === 0) {
+      return res.json({ message: "No records to migrate", recordsUpdated: 0, usersAffected: 0, totalXPAdded: 0 });
+    }
+
+    // Step 2: Calculate per-user XP adjustment and per-week/month leaderboard adjustments
+    const userAdjustments: Record<number, number> = {};
+    const weeklyAdjustments: Record<string, number> = {}; // "userId:week:year" -> delta
+    const monthlyAdjustments: Record<string, number> = {}; // "userId:month:year" -> delta
+
+    for (const row of affectedRecords.rows as any[]) {
+      const userId = Number(row.user_id);
+      const oldPoints = Number(row.points);
+      const action = row.action as string;
+      const createdAt = new Date(row.created_at);
+
+      // Determine new points value
+      let newPoints: number;
+      if (action === 'upload') {
+        newPoints = oldPoints > 0 ? NEW_CLIP_REEL_XP : -NEW_CLIP_REEL_XP;
+      } else {
+        newPoints = oldPoints > 0 ? NEW_SCREENSHOT_XP : -NEW_SCREENSHOT_XP;
+      }
+
+      const delta = newPoints - oldPoints;
+
+      // Accumulate per-user adjustment
+      userAdjustments[userId] = (userAdjustments[userId] || 0) + delta;
+
+      // Only count positive uploads (not deletions) toward leaderboard adjustments,
+      // since leaderboard total_points tracks cumulative earned points
+      if (oldPoints > 0) {
+        // Calculate ISO week
+        const dayOfWeek = createdAt.getDay();
+        const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const startOfWeek = new Date(createdAt);
+        startOfWeek.setDate(createdAt.getDate() - daysFromMonday);
+        startOfWeek.setHours(0, 0, 0, 0);
+        const startOfYear = new Date(createdAt.getFullYear(), 0, 1);
+        const days = Math.floor((startOfWeek.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+        const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
+        const week = `${createdAt.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
+        const year = createdAt.getFullYear();
+        const month = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`;
+
+        const weekKey = `${userId}:${week}:${year}`;
+        weeklyAdjustments[weekKey] = (weeklyAdjustments[weekKey] || 0) + delta;
+
+        const monthKey = `${userId}:${month}:${year}`;
+        monthlyAdjustments[monthKey] = (monthlyAdjustments[monthKey] || 0) + delta;
+      }
+    }
+
+    // Step 3: Apply all updates in sequence
+    let recordsUpdated = 0;
+
+    // Update clip/reel upload records (positive)
+    const clipReelPositiveResult = await db.execute(sql`
+      UPDATE user_points_history
+      SET points = ${NEW_CLIP_REEL_XP}
+      WHERE action = 'upload' AND points IN (5, 10, 20)
+    `);
+    recordsUpdated += Number(clipReelPositiveResult.rowCount ?? 0);
+
+    // Update clip/reel deletion records (negative)
+    await db.execute(sql`
+      UPDATE user_points_history
+      SET points = ${-NEW_CLIP_REEL_XP}
+      WHERE action = 'upload' AND points IN (-5, -10, -20)
+    `);
+
+    // Update screenshot upload records (positive)
+    const screenshotPositiveResult = await db.execute(sql`
+      UPDATE user_points_history
+      SET points = ${NEW_SCREENSHOT_XP}
+      WHERE action = 'screenshot_upload' AND points = 2
+    `);
+    recordsUpdated += Number(screenshotPositiveResult.rowCount ?? 0);
+
+    // Update screenshot deletion records (negative)
+    await db.execute(sql`
+      UPDATE user_points_history
+      SET points = ${-NEW_SCREENSHOT_XP}
+      WHERE action = 'screenshot_upload' AND points = -2
+    `);
+
+    // Step 4: Update user totalXP
+    const usersAffected = Object.keys(userAdjustments).length;
+    for (const [userIdStr, delta] of Object.entries(userAdjustments)) {
+      const userId = Number(userIdStr);
+      await db.execute(sql`
+        UPDATE users
+        SET total_xp = GREATEST(0, total_xp + ${delta})
+        WHERE id = ${userId}
+      `);
+    }
+
+    // Step 5: Update weekly leaderboard total_points
+    for (const [key, delta] of Object.entries(weeklyAdjustments)) {
+      const [userIdStr, week, yearStr] = key.split(':');
+      const userId = Number(userIdStr);
+      const year = Number(yearStr);
+      await db.execute(sql`
+        UPDATE weekly_leaderboard
+        SET total_points = GREATEST(0, total_points + ${delta})
+        WHERE user_id = ${userId} AND week = ${week} AND year = ${year}
+      `);
+    }
+
+    // Step 6: Update monthly leaderboard total_points
+    for (const [key, delta] of Object.entries(monthlyAdjustments)) {
+      const [userIdStr, month, yearStr] = key.split(':');
+      const userId = Number(userIdStr);
+      const year = Number(yearStr);
+      await db.execute(sql`
+        UPDATE monthly_leaderboard
+        SET total_points = GREATEST(0, total_points + ${delta})
+        WHERE user_id = ${userId} AND month = ${month} AND year = ${year}
+      `);
+    }
+
+    // Step 7: Seed xp_settings if empty
+    const existing = await db.execute(sql`SELECT COUNT(*) as count FROM xp_settings`);
+    const count = Number((existing.rows[0] as any)?.count ?? 0);
+    if (count === 0) {
+      const adminUser = req.user as any;
+      for (const def of XP_SETTINGS_DEFINITION) {
+        await storage.upsertXpSetting({
+          key: def.key,
+          value: POINT_VALUES[def.key] ?? 0,
+          label: def.label,
+          description: def.description,
+          category: def.category,
+          updatedBy: adminUser?.id ?? null,
+        });
+      }
+    }
+
+    const totalXPAdded = Object.values(userAdjustments).reduce((sum, v) => sum + v, 0);
+
+    res.json({
+      message: "Retroactive points migration completed successfully",
+      recordsUpdated,
+      usersAffected,
+      totalXPAdded,
+      weeklyPeriodsUpdated: Object.keys(weeklyAdjustments).length,
+      monthlyPeriodsUpdated: Object.keys(monthlyAdjustments).length,
+      xpSettingsSeeded: count === 0,
+    });
+  } catch (err) {
+    console.error("Error running retroactive points migration:", err);
+    res.status(500).json({ message: "Error running retroactive points migration", error: String(err) });
+  }
+});
+
 // POST /api/admin/xp-config/seed - Seed DB with current defaults (idempotent)
 adminRouter.post("/xp-config/seed", async (req: Request, res: Response) => {
   try {
