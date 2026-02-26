@@ -146,11 +146,8 @@ export function NotificationBell() {
     },
     onError: (_err, _vars, context: any) => {
       queryClient.setQueryData(['/api/notifications'], context?.previous);
+      queryClient.setQueryData(['/api/notifications/unread-count'], (context?.previous as any[])?.filter((n: any) => !n.isRead).length ?? 0);
       toast({ title: "Failed to clear notifications", variant: "destructive" });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
     },
   });
 
