@@ -13,7 +13,7 @@ import { nanoid } from 'nanoid';
 import QRCode from 'qrcode';
 import { fullAccessMiddleware } from '../middleware/full-access';
 import { hybridFullAccess } from '../middleware/hybrid-auth';
-import { LeaderboardService } from '../leaderboard-service';
+import { LeaderboardService, POINT_VALUES } from '../leaderboard-service';
 import { BonusEventsService } from '../bonus-events-service';
 import { CreatorMilestoneService } from '../creator-milestone-service';
 
@@ -534,7 +534,7 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
         shareUrl: screenshotUrl,
         socialMediaLinks
       },
-      xpGained: 100,
+      xpGained: POINT_VALUES['screenshot_upload'] ?? 100,
       userXP: user?.totalXP || 0,
       userLevel: user?.level || 1,
       message: 'Screenshot uploaded successfully'
@@ -964,7 +964,7 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
         shareUrl: clipUrl,
         socialMediaLinks
       },
-      xpGained: 5,
+      xpGained: POINT_VALUES['upload'] ?? 200,
       userXP: user?.totalXP || 0,
       userLevel: user?.level || 1,
       message: 'Video processed successfully'
