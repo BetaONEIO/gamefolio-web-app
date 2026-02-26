@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { createPortal } from "react-dom";
 import { useParams, Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
@@ -3352,7 +3351,7 @@ const ProfilePage = () => {
       <Dialog open={!!selectedScreenshot} onOpenChange={() => {
         setSelectedScreenshot(null);
       }}>
-        <DialogContent className="max-w-[80%] w-[80%] p-0 bg-background text-foreground max-h-[76vh] h-[76vh] overflow-y-auto lg:overflow-hidden screenshot-dialog-close">
+        <DialogContent className="max-w-[80%] w-[80%] p-0 bg-background text-foreground max-h-[76vh] h-[76vh] overflow-y-auto overflow-x-hidden lg:overflow-hidden screenshot-dialog-close">
           <style>{`
             .screenshot-dialog-close > button[type="button"] {
               background: rgba(0,0,0,0.4) !important;
@@ -3379,12 +3378,39 @@ const ProfilePage = () => {
           `}</style>
           {selectedScreenshot && (
             <div className="flex flex-col lg:flex-row h-auto lg:h-full min-h-full">
-              <div className="bg-black flex items-center justify-center w-full lg:w-[75%] h-[50vh] lg:h-full flex-shrink-0">
+              <div className="relative bg-black flex items-center justify-center w-full lg:w-[75%] h-[50vh] lg:h-full flex-shrink-0">
                 <img
                   src={screenshotSignedUrl || selectedScreenshot.imageUrl}
                   alt={selectedScreenshot.title}
                   className="max-w-full max-h-full object-contain"
                 />
+                {(() => {
+                  const currentIdx = screenshots ? screenshots.findIndex(s => s.id === selectedScreenshot.id) : -1;
+                  const hasPrev = screenshots && screenshots.length > 1 && currentIdx > 0;
+                  const hasNextItem = screenshots && screenshots.length > 1 && currentIdx < (screenshots?.length || 0) - 1;
+                  return (
+                    <>
+                      {hasPrev && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSelectedScreenshot(screenshots![currentIdx - 1]); }}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors flex items-center justify-center"
+                          aria-label="Previous screenshot"
+                        >
+                          <ChevronLeft className="h-6 w-6" />
+                        </button>
+                      )}
+                      {hasNextItem && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSelectedScreenshot(screenshots![currentIdx + 1]); }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors flex items-center justify-center"
+                          aria-label="Next screenshot"
+                        >
+                          <ChevronRight className="h-6 w-6" />
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
               <div className="flex flex-col w-full lg:w-[25%] lg:h-full">
@@ -3508,36 +3534,6 @@ const ProfilePage = () => {
             </div>
           )}
         </DialogContent>
-        {selectedScreenshot && (() => {
-          const currentIdx = screenshots ? screenshots.findIndex(s => s.id === selectedScreenshot.id) : -1;
-          const hasPrev = screenshots && screenshots.length > 1 && currentIdx > 0;
-          const hasNextItem = screenshots && screenshots.length > 1 && currentIdx < (screenshots?.length || 0) - 1;
-          return createPortal(
-            <>
-              {hasPrev && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setSelectedScreenshot(screenshots![currentIdx - 1]); }}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  className="fixed left-[2%] top-1/2 -translate-y-1/2 z-[200] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors cursor-pointer"
-                  aria-label="Previous screenshot"
-                >
-                  <ChevronLeft className="h-7 w-7" />
-                </button>
-              )}
-              {hasNextItem && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setSelectedScreenshot(screenshots![currentIdx + 1]); }}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  className="fixed right-[2%] top-1/2 -translate-y-1/2 z-[200] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors cursor-pointer"
-                  aria-label="Next screenshot"
-                >
-                  <ChevronRight className="h-7 w-7" />
-                </button>
-              )}
-            </>,
-            document.body
-          );
-        })()}
       </Dialog>
 
       {/* Share Dialogs for newly uploaded content */}
