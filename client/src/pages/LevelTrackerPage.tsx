@@ -214,7 +214,11 @@ function ActivityItem({
   color?: string;
 }) {
   return (
-    <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 border border-border/50">
+    <div className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+      done
+        ? "bg-[#4ade80]/8 border-[#4ade80]/20 opacity-70"
+        : "bg-muted/40 border-border/50"
+    }`}>
       <div className="shrink-0">
         {done ? (
           <CheckCircle2 className="w-5 h-5 text-[#4ade80]" />
@@ -458,8 +462,15 @@ export default function LevelTrackerPage() {
                   </div>
                   <span className="text-sm font-bold text-purple-400">+500 XP</span>
                 </div>
-                <div className={`flex items-center justify-between px-3 py-3 rounded-xl border ${lootboxStatus?.canOpen === false ? "bg-purple-500/10 border-purple-500/20" : "bg-muted/40 border-border/50"}`}>
-                  <div>
+                <div className={`flex items-center gap-3 px-3 py-3 rounded-xl border transition-colors ${lootboxStatus?.canOpen === false ? "bg-[#4ade80]/8 border-[#4ade80]/20 opacity-70" : "bg-muted/40 border-border/50"}`}>
+                  <div className="shrink-0">
+                    {lootboxStatus?.canOpen === false ? (
+                      <CheckCircle2 className="w-5 h-5 text-[#4ade80]" />
+                    ) : (
+                      <Circle className="w-5 h-5 text-muted-foreground/50" />
+                    )}
+                  </div>
+                  <div className="flex-1">
                     <p className={`text-sm font-medium ${lootboxStatus?.canOpen === false ? "text-muted-foreground line-through" : "text-foreground"}`}>
                       Daily Lootbox
                     </p>
@@ -467,18 +478,27 @@ export default function LevelTrackerPage() {
                       {lootboxStatus?.canOpen === false ? "Already opened today" : "Open your daily lootbox"}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {lootboxStatus?.canOpen === false && <CheckCircle2 className="w-4 h-4 text-[#4ade80]" />}
-                    <span className={`text-sm font-bold ${lootboxStatus?.canOpen === false ? "text-muted-foreground" : "text-purple-400"}`}>+100 XP</span>
-                  </div>
+                  <span className={`text-sm font-bold shrink-0 ${lootboxStatus?.canOpen === false ? "text-muted-foreground" : "text-purple-400"}`}>+100 XP</span>
                 </div>
-                <div className="flex items-center justify-between px-3 py-3 rounded-xl bg-muted/40 border border-border/50">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Upload Within 24h of Last Upload</p>
-                    <p className="text-xs text-muted-foreground">Keep the momentum going</p>
-                  </div>
-                  <span className="text-sm font-bold text-lime-400">+75 XP</span>
-                </div>
+                {(() => {
+                  const consecutiveDone = !!(xpHistory && xpHistory.some((h) => h.source === "consecutive_upload_bonus" && isToday(new Date(h.createdAt))));
+                  return (
+                    <div className={`flex items-center gap-3 px-3 py-3 rounded-xl border transition-colors ${consecutiveDone ? "bg-[#4ade80]/8 border-[#4ade80]/20 opacity-70" : "bg-muted/40 border-border/50"}`}>
+                      <div className="shrink-0">
+                        {consecutiveDone ? (
+                          <CheckCircle2 className="w-5 h-5 text-[#4ade80]" />
+                        ) : (
+                          <Circle className="w-5 h-5 text-muted-foreground/50" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className={`text-sm font-medium ${consecutiveDone ? "text-muted-foreground line-through" : "text-foreground"}`}>Upload Within 24h of Last Upload</p>
+                        <p className="text-xs text-muted-foreground">Keep the momentum going</p>
+                      </div>
+                      <span className={`text-sm font-bold shrink-0 ${consecutiveDone ? "text-muted-foreground" : "text-lime-400"}`}>+75 XP</span>
+                    </div>
+                  );
+                })()}
               </div>
             </CardContent>
           </Card>
