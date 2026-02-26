@@ -35,7 +35,6 @@ export class CreatorMilestoneService {
 
   private static async hasSourceThisWeek(userId: number, source: string): Promise<boolean> {
     const history = await storage.getUserXPHistory(userId, 500);
-    const currentWeek = this.getCurrentISOWeek();
     const now = new Date();
     const dayOfWeek = now.getDay();
     const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -164,18 +163,72 @@ export class CreatorMilestoneService {
     const [
       firstUploadOfDayDone,
       weeklyUploadsCount,
-      weekly5Done,
-      weekly10Done,
-      first100ViewsDone,
-      first1000ViewsDone,
+      xpHas100Views,
+      xpHas1000Views,
     ] = await Promise.all([
       this.hasSourceToday(userId, "first_upload_of_day"),
       this.countUploadsThisWeek(userId),
-      this.hasSourceThisWeek(userId, "weekly_uploads_5"),
-      this.hasSourceThisWeek(userId, "weekly_uploads_10"),
       this.hasSourceEver(userId, "first_100_views"),
       this.hasSourceEver(userId, "first_1000_views"),
     ]);
+
+    // Weekly upload milestones: award retroactively if count met but XP not recorded yet
+    let weekly5Done = false;
+    let weekly10Done = false;
+
+    if (weeklyUploadsCount >= 5) {
+      const xpAwarded5 = await this.hasSourceThisWeek(userId, "weekly_uploads_5");
+      if (!xpAwarded5) {
+        // Retroactively award — fire and forget so status page doesn't block
+        LeaderboardService.awardCustomPoints(userId, "weekly_uploads_5", 300, "5 uploads in a week!").catch(() => {});
+      }
+      weekly5Done = true;
+    }
+
+    if (weeklyUploadsCount >= 10) {
+      const xpAwarded10 = await this.hasSourceThisWeek(userId, "weekly_uploads_10");
+      if (!xpAwarded10) {
+        LeaderboardService.awardCustomPoints(userId, "weekly_uploads_10", 750, "10 uploads in a week!").catch(() => {});
+      }
+      weekly10Done = true;
+    }
+
+    // View milestones: check actual clip data if XP history entry is missing
+    let first100ViewsDone = xpHas100Views;
+    let first1000ViewsDone = xpHas1000Views;
+
+    if (!xpHas100Views || !xpHas1000Views) {
+      try {
+        const clips = await storage.getClipsByUserId(userId);
+        for (const clip of clips) {
+          const views = (clip as any).viewCount ?? 0;
+
+          if (!first100ViewsDone && views >= 100) {
+            first100ViewsDone = true;
+            LeaderboardService.awardCustomPoints(
+              userId,
+              "first_100_views",
+              250,
+              `First clip to reach 100 views (clip #${clip.id})!`
+            ).catch(() => {});
+          }
+
+          if (!first1000ViewsDone && views >= 1000) {
+            first1000ViewsDone = true;
+            LeaderboardService.awardCustomPoints(
+              userId,
+              "first_1000_views",
+              1000,
+              `First clip to reach 1,000 views (clip #${clip.id})!`
+            ).catch(() => {});
+          }
+
+          if (first100ViewsDone && first1000ViewsDone) break;
+        }
+      } catch (error) {
+        console.error("Error checking clips for view milestones:", error);
+      }
+    }
 
     return {
       firstUploadOfDayDone,

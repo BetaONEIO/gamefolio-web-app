@@ -627,25 +627,34 @@ export default function LevelTrackerPage() {
               </div>
               <div className="space-y-1.5">
                 {[
-                  { views: 50, xp: 50 },
-                  { views: 100, xp: 100 },
-                  { views: 250, xp: 200 },
-                  { views: 500, xp: 400 },
-                  { views: 1000, xp: 800 },
-                  { views: 5000, xp: 1500 },
-                  { views: 10000, xp: 3000 },
-                ].map((m) => (
-                  <div
-                    key={m.views}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-muted/40 border border-border/40"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Eye className="w-4 h-4 text-cyan-500" />
-                      <span className="text-sm text-foreground">{m.views.toLocaleString()} Views</span>
+                  { views: 50, xp: 50, source: "view_milestone_50" },
+                  { views: 100, xp: 100, source: "view_milestone_100" },
+                  { views: 250, xp: 200, source: "view_milestone_250" },
+                  { views: 500, xp: 400, source: "view_milestone_500" },
+                  { views: 1000, xp: 800, source: "view_milestone_1000" },
+                  { views: 5000, xp: 1500, source: "view_milestone_5000" },
+                  { views: 10000, xp: 3000, source: "view_milestone_10000" },
+                ].map((m) => {
+                  const earned = !!(xpHistory && xpHistory.some((h) => h.source === m.source));
+                  return (
+                    <div
+                      key={m.views}
+                      className={`flex items-center justify-between px-3 py-2.5 rounded-lg border ${earned ? "bg-cyan-500/10 border-cyan-500/20" : "bg-muted/40 border-border/40"}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {earned ? (
+                          <CheckCircle2 className="w-4 h-4 text-cyan-400" />
+                        ) : (
+                          <Eye className="w-4 h-4 text-cyan-500" />
+                        )}
+                        <span className={`text-sm ${earned ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                          {m.views.toLocaleString()} Views
+                        </span>
+                      </div>
+                      <span className={`text-sm font-bold ${earned ? "text-cyan-700" : "text-cyan-400"}`}>+{m.xp.toLocaleString()} XP</span>
                     </div>
-                    <span className="text-sm font-bold text-cyan-400">+{m.xp.toLocaleString()} XP</span>
-                  </div>
-                ))}
+                  );
+                })}
                 <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-muted/40 border border-border/40">
                   <div className="flex items-center gap-2">
                     <Eye className="w-4 h-4 text-cyan-500" />
