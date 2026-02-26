@@ -480,12 +480,6 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
     <Dialog open={!!screenshot} onOpenChange={() => onClose()}>
       <DialogContent
         className="max-w-[80%] w-[80%] p-0 bg-background text-foreground max-h-[76vh] h-[76vh] overflow-hidden screenshot-lightbox-close"
-        onInteractOutside={(e) => {
-          const target = e.target as HTMLElement;
-          if (target.closest('[data-navigation-arrow]')) {
-            e.preventDefault();
-          }
-        }}
       >
         <style>{`
           .screenshot-lightbox-close > button[type="button"] {
@@ -513,12 +507,51 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
         `}</style>
 
         <div className="flex flex-row h-full">
-          <div className="bg-black flex items-center justify-center w-[75%] h-full flex-shrink-0">
+          <div className="relative bg-black flex items-center justify-center w-[75%] h-full flex-shrink-0">
             <img
               src={signedUrl || screenshot.imageUrl}
               alt={screenshot.title}
               className="max-w-full max-h-full object-contain"
             />
+            {hasPrevious && (
+              <button
+                onClick={(e) => { e.stopPropagation(); handlePrevious(); }}
+                className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/70 hover:bg-black/90 text-white transition-colors flex items-center justify-center"
+                aria-label="Previous screenshot"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+            )}
+            {hasNext && (
+              <button
+                onClick={(e) => { e.stopPropagation(); handleNext(); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/70 hover:bg-black/90 text-white transition-colors flex items-center justify-center"
+                aria-label="Next screenshot"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            )}
+            {hasNavigation && totalSlides > 1 && (() => {
+              const visibleDots = getVisibleDots(totalSlides, currentIndex);
+              return (
+                <div className="absolute bottom-3 left-0 right-0 flex justify-center pointer-events-none">
+                  <div className="flex items-center gap-1.5">
+                    {visibleDots.map((dotIndex, pos) => {
+                      const isActive = dotIndex === currentIndex;
+                      const isFaded = (pos === 0 && dotIndex > 0) || (pos === visibleDots.length - 1 && dotIndex < totalSlides - 1);
+                      return (
+                        <div
+                          key={dotIndex}
+                          className={`rounded-full transition-all duration-300 ${
+                            isActive ? "w-2 h-2 bg-green-500" : isFaded ? "w-1.5 h-1.5 bg-white/20" : "w-1.5 h-1.5 bg-white/60"
+                          }`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           <div className="flex flex-col w-[25%] h-full">
@@ -668,28 +701,6 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
         </div>
 
       </DialogContent>
-      {hasPrevious && createPortal(
-        <button
-          data-navigation-arrow
-          onClick={(e) => { e.stopPropagation(); handlePrevious(); }}
-          className="fixed left-[2%] top-1/2 -translate-y-1/2 z-[200] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors"
-          aria-label="Previous screenshot"
-        >
-          <ChevronLeft className="h-7 w-7" />
-        </button>,
-        document.body
-      )}
-      {hasNext && createPortal(
-        <button
-          data-navigation-arrow
-          onClick={(e) => { e.stopPropagation(); handleNext(); }}
-          className="fixed right-[2%] top-1/2 -translate-y-1/2 z-[200] bg-black/80 hover:bg-black/90 text-white p-3 rounded-full transition-colors"
-          aria-label="Next screenshot"
-        >
-          <ChevronRight className="h-7 w-7" />
-        </button>,
-        document.body
-      )}
     </Dialog>
   );
 }
