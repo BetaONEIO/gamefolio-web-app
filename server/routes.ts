@@ -6970,14 +6970,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const user = await storage.getUserById(req.user.id);
-      if (user?.isPro) {
-        // Pro users get all name tags
-        const allTags = await storage.getAllNameTags();
-        return res.json(allTags);
-      }
-      
-      // Non-Pro users get default tags + their unlocked tags
+      // All users get default tags + their individually unlocked tags
       const allTags = await storage.getAllNameTags();
       const defaultTags = allTags.filter(t => t.isDefault);
       const unlockedTags = await storage.getUserUnlockedNameTags(req.user.id);
@@ -7008,14 +7001,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Invalid name tag" });
         }
         
-        // Default tags are available to everyone
+        // Default tags are available to everyone; all others must be purchased from the store
         if (!nameTag.isDefault) {
-          const user = await storage.getUserById(req.user.id);
-          if (!user?.isPro) {
-            const hasUnlocked = await storage.userHasUnlockedNameTag(req.user.id, nameTagId);
-            if (!hasUnlocked) {
-              return res.status(403).json({ message: "You haven't unlocked this name tag" });
-            }
+          const hasUnlocked = await storage.userHasUnlockedNameTag(req.user.id, nameTagId);
+          if (!hasUnlocked) {
+            return res.status(403).json({ message: "You haven't unlocked this name tag" });
           }
         }
       }
