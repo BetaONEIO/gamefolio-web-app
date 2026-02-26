@@ -3985,7 +3985,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gameId ? parseInt(gameId as string) : undefined,
         currentUserId
       );
-      res.json(reels);
+      const reelsWithSignedThumbnails = await Promise.all(
+        reels.map(async (reel) => {
+          if (reel.thumbnailUrl) {
+            const signedUrl = await supabaseStorage.convertToSignedUrl(reel.thumbnailUrl, 3600);
+            return { ...reel, thumbnailUrl: signedUrl || reel.thumbnailUrl };
+          }
+          return reel;
+        })
+      );
+      res.json(reelsWithSignedThumbnails);
     } catch (err) {
       console.error("Error fetching trending reels:", err);
       res.status(500).json({ message: "Internal server error" });

@@ -115,17 +115,14 @@ export default function LatestReelsPage() {
         {filteredReels.length > 0 ? (
           isMobile ? (
             <div className="columns-2 gap-1 space-y-1">
-              {filteredReels.map((reel, index) => {
-                const aspectRatios = ['aspect-[9/16]', 'aspect-[3/4]', 'aspect-[2/3]', 'aspect-[9/14]', 'aspect-[3/5]', 'aspect-[4/5]'];
-                const aspectRatio = aspectRatios[index % aspectRatios.length];
-
+              {filteredReels.map((reel) => {
                 return (
                   <div 
                     key={reel.id}
                     onClick={() => openClipDialog(reel.id, filteredReels)}
                     className="break-inside-avoid mb-1"
                   >
-                    <div className={`relative ${aspectRatio} w-full rounded-sm overflow-hidden cursor-pointer group`}>
+                    <div className="relative aspect-[9/16] w-full rounded-sm overflow-hidden cursor-pointer group">
                       <img
                         src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
                         alt={reel.title}
