@@ -18,24 +18,24 @@ export default function DailyStreak() {
     : `You've hit your ${streak}-day milestone!`;
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-[#020617] flex flex-col">
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 md:py-20">
+    <div className="fixed inset-0 z-[9999] bg-[#020617] flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-6 py-8 md:py-10">
         <div className="flex flex-col items-center max-w-md w-full">
           {/* Streak Count */}
-          <div className="flex items-start justify-center mb-2">
+          <div className="flex items-start justify-center mb-1">
             <span
               className="text-white font-black leading-none tracking-[-0.05em]"
               style={{
-                fontSize: "clamp(120px, 25vw, 192px)",
+                fontSize: "clamp(80px, 18vw, 140px)",
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
               }}
             >
               {streak}
             </span>
             <span
-              className="text-white font-black mt-2 md:mt-4"
+              className="text-white font-black mt-2 md:mt-3"
               style={{
-                fontSize: "clamp(32px, 6vw, 48px)",
+                fontSize: "clamp(24px, 4.5vw, 40px)",
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
               }}
             >
@@ -45,7 +45,7 @@ export default function DailyStreak() {
 
           {/* Consecutive Streak label */}
           <p
-            className="text-[#ff6900] text-center font-black uppercase tracking-[0.4em] mb-10 md:mb-14"
+            className="text-[#ff6900] text-center font-black uppercase tracking-[0.4em] mb-6 md:mb-8"
             style={{
               fontSize: "clamp(11px, 2vw, 14px)",
               fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -55,13 +55,13 @@ export default function DailyStreak() {
           </p>
 
           {/* Fire Icon with orange glow */}
-          <div className="relative w-32 h-32 md:w-40 md:h-40 mb-8 md:mb-10 flex items-center justify-center">
+          <div className="relative w-24 h-24 md:w-32 md:h-32 mb-6 md:mb-8 flex items-center justify-center">
             <div className="absolute inset-0 rounded-full bg-[#ff6900]/20 blur-[40px] scale-150" />
             <div className="absolute inset-0 blur-[20px] scale-[1.4]" style={{ background: "linear-gradient(to bottom, rgba(245,73,0,0.4), rgba(251,44,54,0.4), rgba(255,185,0,0.2))" }} />
             <svg
               className="relative z-10"
-              width="128"
-              height="128"
+              width="100%"
+              height="100%"
               viewBox="0 0 128 128"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
@@ -84,9 +84,9 @@ export default function DailyStreak() {
 
           {/* You're on fire section */}
           <h2
-            className="text-white text-center font-bold uppercase tracking-[-0.025em] mb-3"
+            className="text-white text-center font-bold uppercase tracking-[-0.025em] mb-2"
             style={{
-              fontSize: "clamp(18px, 3vw, 24px)",
+              fontSize: "clamp(16px, 2.5vw, 22px)",
               fontFamily: "'Plus Jakarta Sans', sans-serif",
             }}
           >
@@ -111,7 +111,7 @@ export default function DailyStreak() {
 
           {/* Personal Best badge */}
           <div
-            className="mt-4 mb-8 md:mb-10 px-6 py-3 rounded-full border border-[#ff6900]/20 bg-[#ff6900]/10 flex items-center gap-3"
+            className="mt-4 mb-6 md:mb-8 px-6 py-3 rounded-full border border-[#ff6900]/20 bg-[#ff6900]/10 flex items-center gap-3"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <g clipPath="url(#clip_pb)">
@@ -158,10 +158,10 @@ export default function DailyStreak() {
       </div>
 
       {/* Bottom button */}
-      <div className="backdrop-blur-xl bg-[#020617]/80 border-t border-slate-700/10 p-6 md:p-8 flex justify-center">
+      <div className="shrink-0 backdrop-blur-xl bg-[#020617]/80 border-t border-slate-700/10 p-5 md:p-6 flex justify-center">
         <button
           onClick={dismiss}
-          className="w-full max-w-[400px] h-14 md:h-16 bg-[#4ade80] hover:bg-[#22c55e] active:scale-[0.98] transition-all rounded-full flex items-center justify-center gap-3 cursor-pointer"
+          className="w-full max-w-[400px] h-13 md:h-14 bg-[#4ade80] hover:bg-[#22c55e] active:scale-[0.98] transition-all rounded-full flex items-center justify-center gap-3 cursor-pointer"
           style={{ boxShadow: "0 15px 30px rgba(74, 222, 128, 0.2)" }}
         >
           <span

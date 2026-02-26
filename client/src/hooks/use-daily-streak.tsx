@@ -32,7 +32,7 @@ export function DailyStreakProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const advanceToStreak = useCallback(() => {
-    if (streakData && streakData.currentStreak >= 2) {
+    if (streakData) {
       setOverlayStep("streak");
     } else {
       setOverlayStep("hidden");
