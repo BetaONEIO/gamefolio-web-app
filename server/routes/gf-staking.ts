@@ -6,6 +6,7 @@ import { parseUnits, formatUnits, maxUint256, type Address } from 'viem';
 import { writeContractWithPoW, publicClient } from '../skale-pow';
 import { GF_STAKING_ADDRESS, GF_STAKING_ABI, GF_TOKEN_ADDRESS, GF_TOKEN_ABI } from '../../shared/contracts';
 import { getStakingStats, getStakePosition } from '../gf-staking-service';
+import { transferGfTokens } from '../gf-token-service';
 
 const router = Router();
 const GF_DECIMALS = 18;
@@ -85,6 +86,16 @@ router.post('/api/staking/stake', async (req: Request, res: Response) => {
     }
 
     const userAddress = user.walletAddress as Address;
+
+    console.log(`[Staking] Transferring ${amountFloat} GFT from treasury to user wallet ${userAddress}`);
+    const transferResult = await transferGfTokens(userAddress, amountFloat);
+    if (!transferResult.success) {
+      return res.status(400).json({
+        error: `Treasury transfer failed: ${transferResult.error}`,
+        code: 'TREASURY_TRANSFER_FAILED',
+      });
+    }
+    console.log(`[Staking] Treasury transfer confirmed. TX: ${transferResult.txHash}`);
 
     const allowance = await publicClient.readContract({
       address: GF_TOKEN_ADDRESS as Address,
