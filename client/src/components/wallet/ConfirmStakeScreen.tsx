@@ -116,7 +116,7 @@ export default function ConfirmStakeScreen({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto flex flex-col gap-8 px-6 py-8 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full">
+      <div className="scrollbar-hide flex-1 overflow-y-auto flex flex-col gap-8 px-6 py-8 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full">
         {/* Stake Amount Section */}
         <div className="flex flex-col gap-4">
           {/* Label Row */}
@@ -262,30 +262,23 @@ export default function ConfirmStakeScreen({
             </span>
           </div>
         </div>
-      </div>
 
-      {/* Bottom Button */}
-      <div
-        className="px-6 py-6 pb-10"
-        style={{
-          background: "rgba(2, 6, 23, 0.8)",
-          backdropFilter: "blur(6px)",
-          borderTop: "1px solid rgba(30, 41, 59, 0.3)",
-        }}
-      >
-        <button
-          onClick={handleConfirm}
-          disabled={!isValidAmount}
-          className="w-full h-[68px] rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{
-            background: isValidAmount ? "#4ade80" : "rgba(74, 222, 128, 0.3)",
-            color: "#022c22",
-            boxShadow: isValidAmount ? "0 0 20px -5px #4ade80" : "none",
-          }}
-        >
-          <Lock className="w-6 h-6" />
-          <span>Confirm Stake</span>
-        </button>
+        {/* Confirm Button */}
+        <div className="pb-6">
+          <button
+            onClick={handleConfirm}
+            disabled={!isValidAmount}
+            className="w-full h-[68px] rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: isValidAmount ? "#4ade80" : "rgba(74, 222, 128, 0.3)",
+              color: "#022c22",
+              boxShadow: isValidAmount ? "0 0 20px -5px #4ade80" : "none",
+            }}
+          >
+            <Lock className="w-6 h-6" />
+            <span>Confirm Stake</span>
+          </button>
+        </div>
       </div>
     </div>
   );

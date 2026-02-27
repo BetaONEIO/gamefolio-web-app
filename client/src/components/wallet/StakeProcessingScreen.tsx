@@ -127,7 +127,7 @@ export default function StakeProcessingScreen({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center gap-12 px-6 py-8 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full">
+      <div className="scrollbar-hide flex-1 overflow-y-auto flex flex-col items-center justify-center gap-12 px-6 py-8 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full">
         {/* Title Section */}
         <div className="flex flex-col items-center gap-3 text-center">
           <span className="text-2xl font-bold" style={{ color: "#f8fafc" }}>
@@ -232,25 +232,18 @@ export default function StakeProcessingScreen({
             </span>
           </div>
         </div>
-      </div>
 
-      {/* Bottom Button */}
-      <div
-        className="px-6 py-6 pb-10"
-        style={{
-          background: "rgba(2, 6, 23, 0.8)",
-          backdropFilter: "blur(6px)",
-          borderTop: "1px solid rgba(30, 41, 59, 0.3)",
-        }}
-      >
-        <button
-          disabled
-          className="w-full h-[68px] rounded-2xl font-bold text-lg flex items-center justify-center gap-3 cursor-not-allowed"
-          style={{ background: "#1e293b", color: "#94a3b8" }}
-        >
-          <Loader2 className="w-6 h-6 animate-spin" />
-          <span>Processing...</span>
-        </button>
+        {/* Processing Button */}
+        <div className="w-full max-w-[382px] pb-6">
+          <button
+            disabled
+            className="w-full h-[68px] rounded-2xl font-bold text-lg flex items-center justify-center gap-3 cursor-not-allowed"
+            style={{ background: "#1e293b", color: "#94a3b8" }}
+          >
+            <Loader2 className="w-6 h-6 animate-spin" />
+            <span>Processing...</span>
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -98,7 +98,7 @@ export default function StakingHubScreen({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto flex flex-col gap-6 px-6 py-8 max-w-[430px] mx-auto w-full">
+        <div className="scrollbar-hide flex-1 overflow-y-auto flex flex-col gap-6 px-6 py-8 max-w-[430px] mx-auto w-full">
           <div
             className="flex flex-col gap-4 p-5 rounded-2xl"
             style={{ background: "#0f172a", border: "1px solid rgba(30, 41, 59, 0.5)" }}
@@ -235,7 +235,7 @@ export default function StakingHubScreen({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto flex flex-col px-6 py-6 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full gap-6">
+      <div className="scrollbar-hide flex-1 overflow-y-auto flex flex-col px-6 py-6 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full gap-6 pb-10">
         <div className="flex gap-4">
           <div
             className="flex-1 min-w-0 flex flex-col gap-1 p-4 rounded-2xl"
@@ -270,14 +270,14 @@ export default function StakingHubScreen({
 
         <button
           onClick={() => setShowConfirmStake(true)}
-          className="w-full h-14 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98]"
+          className="w-full py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all hover:opacity-90 active:scale-[0.98]"
           style={{
             background: "#4ade80",
             color: "#022c22",
             boxShadow: "0 0 20px -5px #4ade80",
           }}
         >
-          <TrendingUp className="w-5 h-5" />
+          <TrendingUp className="w-6 h-6" />
           Stake New GFT
         </button>
 
