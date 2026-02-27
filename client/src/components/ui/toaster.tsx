@@ -10,13 +10,13 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export function Toaster() {
-  const { toasts } = useToast()
+  const { toasts, dismiss } = useToast()
 
   return (
     <ToastProvider>
       {toasts.map(function ({ id, title, description, action, avatarUrl, username, ...props }) {
         return (
-          <Toast key={id} {...props}>
+          <Toast key={id} {...props} onClick={() => dismiss(id)} className="cursor-pointer">
             <div className="flex items-start gap-3">
               {avatarUrl && (
                 <Avatar className="h-10 w-10 flex-shrink-0">

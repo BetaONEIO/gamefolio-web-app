@@ -477,6 +477,7 @@ export default function SettingsPage() {
   });
   
   const [avatarBorderColor, setAvatarBorderColor] = useState<string>(user?.avatarBorderColor || '#4ADE80');
+  const [selectedBorderId, setSelectedBorderId] = useState<number | null>(user?.selectedAvatarBorderId ?? -1);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -840,8 +841,7 @@ export default function SettingsPage() {
     },
   });
 
-  // Track selected avatar border ID
-  const [selectedBorderId, setSelectedBorderId] = useState<number | null>(user?.selectedAvatarBorderId ?? -1);
+  // Border colour picker visibility
   const [showBorderColorPicker, setShowBorderColorPicker] = useState(false);
   
   // Update selected border when user data loads
