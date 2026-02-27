@@ -629,13 +629,6 @@ export default function SettingsPage() {
     (pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId) ||
     (pendingVerificationBadgeId !== undefined && pendingVerificationBadgeId !== (user as any)?.selectedVerificationBadgeId);
   
-  // Debug logging
-  console.log('💾 Save button state:', { 
-    hasUnsavedChanges, 
-    avatarFile: avatarFile?.name || 'none',
-    displayNameChanged: normalizeValue(profileData.displayName) !== normalizeValue(user?.displayName),
-    bioChanged: normalizeValue(profileData.bio) !== normalizeValue(user?.bio)
-  });
 
   // Handle crop complete callback
   const onCropComplete = useCallback(
@@ -3031,17 +3024,19 @@ export default function SettingsPage() {
         </Tabs>
 
         {/* Save Button */}
-        <div className="flex justify-end items-center mt-6 mb-4">
-          <Button
-            onClick={handleSave}
-            disabled={updateProfileMutation.isPending || !hasUnsavedChanges}
-            className="flex items-center gap-2 text-white font-medium px-6 py-2"
-            style={{ backgroundColor: hasUnsavedChanges ? profileData.accentColor : '#6B7280' }}
-          >
-            <Save className="h-4 w-4" />
-            {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
-          </Button>
-        </div>
+        {(hasUnsavedChanges || updateProfileMutation.isPending) && (
+          <div className="flex justify-end items-center mt-6 mb-4">
+            <Button
+              onClick={handleSave}
+              disabled={updateProfileMutation.isPending}
+              className="flex items-center gap-2 text-white font-medium px-6 py-2"
+              style={{ backgroundColor: profileData.accentColor }}
+            >
+              <Save className="h-4 w-4" />
+              {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Avatar Crop Modal */}
