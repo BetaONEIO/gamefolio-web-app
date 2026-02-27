@@ -556,14 +556,7 @@ export default function StakingPage() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Estimated APY</p>
-                  <p className="font-semibold text-green-500">
-                    {(() => {
-                      const rate = parseFloat(stakingStats.rewardRate || "0");
-                      const total = parseFloat(stakingStats.totalStaked || "0");
-                      if (total <= 0 || rate <= 0) return "—";
-                      return `${(Math.round((rate * 31536000 / total) * 100 * 10) / 10).toLocaleString()}%`;
-                    })()}
-                  </p>
+                  <p className="font-semibold text-green-500">12.5%</p>
                 </div>
               </div>
             </CardContent>
