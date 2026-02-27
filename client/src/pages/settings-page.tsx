@@ -476,6 +476,7 @@ export default function SettingsPage() {
     profileFontColor: (user as any)?.profileFontColor || "#FFFFFF"
   });
   
+  const [avatarBorderColor, setAvatarBorderColor] = useState<string>(user?.avatarBorderColor || '#4ADE80');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -840,9 +841,6 @@ export default function SettingsPage() {
 
   // Track selected avatar border ID
   const [selectedBorderId, setSelectedBorderId] = useState<number | null>(user?.selectedAvatarBorderId ?? -1);
-  
-  // Track avatar border color for SVG customization
-  const [avatarBorderColor, setAvatarBorderColor] = useState<string>(user?.avatarBorderColor || '#4ADE80');
   const [showBorderColorPicker, setShowBorderColorPicker] = useState(false);
   
   // Update selected border when user data loads
