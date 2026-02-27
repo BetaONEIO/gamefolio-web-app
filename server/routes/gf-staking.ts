@@ -5,7 +5,7 @@ import { eq, sql, desc } from 'drizzle-orm';
 import { parseUnits, formatUnits, maxUint256, type Address } from 'viem';
 import { writeContractWithPoW, publicClient } from '../skale-pow';
 import { GF_STAKING_ADDRESS, GF_STAKING_ABI, GF_TOKEN_ADDRESS, GF_TOKEN_ABI } from '../../shared/contracts';
-import { getStakingStats, getStakePosition, calculateEarnedAt12_5Apy } from '../gf-staking-service';
+import { getStakingStats, getStakePosition } from '../gf-staking-service';
 import { transferGfTokens } from '../gf-token-service';
 
 const router = Router();
@@ -214,22 +214,49 @@ router.post('/api/staking/unstake', async (req: Request, res: Response) => {
     const onChainStakedRaw = stakesResult[0];
     const onChainStaked = parseFloat(formatUnits(onChainStakedRaw, GF_DECIMALS));
 
-    console.log(`[Staking] On-chain staked for user ${userId}: ${onChainStaked} GFT`);
+    console.log(`[Staking] On-chain staked for user ${userId}: ${onChainStaked} GFT (raw: ${onChainStakedRaw})`);
 
-    if (onChainStakedRaw < amountRaw) {
+    if (onChainStakedRaw === 0n) {
+      return res.status(400).json({ error: 'No active staking position on-chain', code: 'NO_POSITION' });
+    }
+
+    if (amountRaw > onChainStakedRaw) {
       return res.status(400).json({
-        error: `Insufficient staked amount on-chain. Staked: ${onChainStaked.toFixed(2)} GFT, Requested: ${amountFloat} GFT`,
+        error: `Insufficient staked amount on-chain. Staked: ${onChainStaked.toFixed(6)} GFT, Requested: ${amountFloat} GFT`,
         code: 'INSUFFICIENT_STAKED',
       });
     }
 
-    console.log(`[Staking] Unstaking ${amountFloat} GFT on-chain for user ${userId}`);
+    // Use the exact on-chain raw amount when user is unstaking their full position
+    // (avoids 1-wei precision mismatch from float→string→parseUnits conversion)
+    const ONE_GFT = parseUnits('1', GF_DECIMALS);
+    const diff = onChainStakedRaw > amountRaw ? onChainStakedRaw - amountRaw : amountRaw - onChainStakedRaw;
+    const finalAmountRaw = diff < ONE_GFT ? onChainStakedRaw : amountRaw;
+    const finalAmountFloat = parseFloat(formatUnits(finalAmountRaw, GF_DECIMALS));
+
+    console.log(`[Staking] Unstaking ${finalAmountFloat} GFT (raw: ${finalAmountRaw}) on-chain for user ${userId}`);
+
+    // Simulate first to surface revert reason
+    try {
+      await publicClient.simulateContract({
+        address: GF_STAKING_ADDRESS as Address,
+        abi: GF_STAKING_ABI,
+        functionName: 'unstake',
+        args: [finalAmountRaw],
+        account: user.walletAddress as Address,
+      });
+    } catch (simErr: any) {
+      const reason = simErr?.cause?.reason || simErr?.shortMessage || simErr?.message || 'Unknown revert reason';
+      console.error(`[Staking] Unstake simulation failed: ${reason}`);
+      return res.status(400).json({ error: `Unstake would fail: ${reason}`, code: 'SIMULATE_FAILED' });
+    }
+
     const txHash = await writeContractWithPoW({
       encryptedPrivateKey: user.encryptedPrivateKey,
       contractAddress: GF_STAKING_ADDRESS as Address,
       abi: GF_STAKING_ABI,
       functionName: 'unstake',
-      args: [amountRaw],
+      args: [finalAmountRaw],
     });
 
     const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash, timeout: 60_000 });
@@ -239,18 +266,18 @@ router.post('/api/staking/unstake', async (req: Request, res: Response) => {
 
     console.log(`[Staking] On-chain unstake confirmed. TX: ${txHash}`);
 
-    const newOnChainStaked = onChainStaked - amountFloat;
+    const remainingStakedFloat = parseFloat(formatUnits(onChainStakedRaw - finalAmountRaw, GF_DECIMALS));
     const now = new Date();
 
     const [existing] = await db.select().from(userStaking).where(eq(userStaking.userId, userId)).limit(1);
     if (existing) {
       await db.update(userStaking)
-        .set({ stakedAmount: newOnChainStaked, lastClaimAt: now })
+        .set({ stakedAmount: Math.max(0, remainingStakedFloat), lastClaimAt: now })
         .where(eq(userStaking.userId, userId));
     }
 
     await db.update(users)
-      .set({ gfTokenBalance: sql`${users.gfTokenBalance} + ${amountFloat}` })
+      .set({ gfTokenBalance: sql`${users.gfTokenBalance} + ${finalAmountFloat}` })
       .where(eq(users.id, userId));
 
     const [updated] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
@@ -258,7 +285,7 @@ router.post('/api/staking/unstake', async (req: Request, res: Response) => {
     await db.insert(userStakingHistory).values({
       userId,
       type: 'unstake',
-      amount: amountFloat,
+      amount: finalAmountFloat,
       balanceAfter: updated.gfTokenBalance || 0,
       createdAt: now,
     });
@@ -266,7 +293,7 @@ router.post('/api/staking/unstake', async (req: Request, res: Response) => {
     return res.json({
       success: true,
       txHash,
-      unstaked: amountFloat,
+      unstaked: finalAmountFloat,
       balance: updated.gfTokenBalance,
     });
   } catch (error: any) {
@@ -289,27 +316,33 @@ router.post('/api/staking/claim', async (req: Request, res: Response) => {
 
     const [position] = await db.select().from(userStaking).where(eq(userStaking.userId, userId)).limit(1);
 
-    const onChainStakesResult = await publicClient.readContract({
-      address: GF_STAKING_ADDRESS as Address,
-      abi: GF_STAKING_ABI,
-      functionName: 'stakes',
-      args: [user.walletAddress as Address],
-    }) as readonly [bigint, bigint, bigint];
+    const [onChainStakesResult, pendingRewardsRaw] = await Promise.all([
+      publicClient.readContract({
+        address: GF_STAKING_ADDRESS as Address,
+        abi: GF_STAKING_ABI,
+        functionName: 'stakes',
+        args: [user.walletAddress as Address],
+      }) as Promise<readonly [bigint, bigint, bigint]>,
+      publicClient.readContract({
+        address: GF_STAKING_ADDRESS as Address,
+        abi: GF_STAKING_ABI,
+        functionName: 'pendingRewards',
+        args: [user.walletAddress as Address],
+      }) as Promise<bigint>,
+    ]);
     const onChainStakedRaw = onChainStakesResult[0];
-    const lastClaimTimestamp = Number(onChainStakesResult[2]);
 
     if (onChainStakedRaw === 0n) {
       return res.status(400).json({ error: 'No active staking position on-chain', code: 'NO_POSITION' });
     }
 
-    const stakedFloat = parseFloat(formatUnits(onChainStakedRaw, GF_DECIMALS));
-    const rewards = calculateEarnedAt12_5Apy(stakedFloat, lastClaimTimestamp);
+    const rewards = parseFloat(formatUnits(pendingRewardsRaw, GF_DECIMALS));
 
     if (rewards < 0.000001) {
       return res.status(400).json({ error: 'No rewards available to claim', code: 'NO_REWARDS' });
     }
 
-    console.log(`[Staking] Claiming ${rewards.toFixed(6)} GFT rewards (12.5% APY calc) on-chain for user ${userId}`);
+    console.log(`[Staking] Claiming ${rewards.toFixed(6)} GFT rewards (pendingRewards from contract) on-chain for user ${userId}`);
     const txHash = await writeContractWithPoW({
       encryptedPrivateKey: user.encryptedPrivateKey,
       contractAddress: GF_STAKING_ADDRESS as Address,
