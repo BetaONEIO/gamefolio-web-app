@@ -370,13 +370,11 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
               </div>
 
               {activeTab === 'mobile' && (
-                <div
-                  className="relative overflow-hidden bg-black select-none cursor-move mx-auto"
-                  style={{ aspectRatio: '9/16', width: 'min(100%, calc(78vh * 9 / 16))' }}
-                >
+                <div className="bg-black flex items-center justify-center" style={{ height: '72svh' }}>
                   <div
                     ref={mobileStageRef}
-                    className="absolute inset-0"
+                    className="relative overflow-hidden select-none cursor-move"
+                    style={{ height: '100%', aspectRatio: '9/16' }}
                     onMouseDown={showEditor ? handleMobileMouseDown : undefined}
                     onTouchStart={showEditor ? handleMobileTouchStart : undefined}
                   >
