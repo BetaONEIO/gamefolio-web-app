@@ -51,10 +51,10 @@ export default function StakingHubScreen({
   const [unstakeAmount, setUnstakeAmount] = useState("");
   const [isUnstaking, setIsUnstaking] = useState(false);
 
-  const handleStakeConfirm = async (amount: number) => {
-    if (!onStake || amount <= 0) return;
+  const handleStakeConfirm = async (amount: number): Promise<boolean> => {
+    if (!onStake || amount <= 0) return false;
     const success = await onStake(amount);
-    if (success) setShowConfirmStake(false);
+    return !!success;
   };
 
   const handleUnstakeConfirm = async () => {

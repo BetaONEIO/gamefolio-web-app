@@ -74,7 +74,6 @@ export default function ConfirmStakeScreen({
           setFlowStep("confirm");
         }}
         amount={stakedAmount}
-        newTotalStaked={currentStake + stakedAmount}
         apy={apy}
       />
     );
