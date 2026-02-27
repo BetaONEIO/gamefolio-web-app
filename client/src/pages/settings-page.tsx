@@ -1186,7 +1186,7 @@ export default function SettingsPage() {
                           <button
                             type="button"
                             onClick={() => setProfilePicTab('upload')}
-                            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 mb-[-1px] transition-colors ${
                               profilePicTab === 'upload'
                                 ? 'border-green-500 text-green-400'
                                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -1201,7 +1201,7 @@ export default function SettingsPage() {
                           <button
                             type="button"
                             onClick={() => setProfilePicTab('nft')}
-                            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 mb-[-1px] transition-colors ${
                               profilePicTab === 'nft'
                                 ? 'border-green-500 text-green-400'
                                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -1581,21 +1581,21 @@ export default function SettingsPage() {
                             }
                             return null;
                           })()}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setShowNftSelector(true)}
+                            className="border-green-500/30 text-green-400 hover:bg-green-500/10 w-full"
+                          >
+                            <Hexagon className="h-4 w-4 mr-2" />
+                            {user?.activeProfilePicType === 'nft' ? 'Change NFT' : 'Select NFT'}
+                          </Button>
                         </div>
 
                         <div className="flex-1 space-y-3">
                           {user?.activeProfilePicType !== 'nft' && (
                             <p className="text-sm text-muted-foreground">Select an NFT from your collection to use as your profile picture. Your NFT will be displayed as a square image with rounded corners.</p>
                           )}
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setShowNftSelector(true)}
-                            className="border-green-500/30 text-green-400 hover:bg-green-500/10"
-                          >
-                            <Hexagon className="h-4 w-4 mr-2" />
-                            {user?.activeProfilePicType === 'nft' ? 'Change NFT' : 'Select NFT to use as Profile Picture'}
-                          </Button>
                           <div className="text-xs text-muted-foreground space-y-1">
                             <div>• NFT profile pictures appear as square with rounded corners</div>
                             <div>• Only unsold NFTs from your collection can be used</div>
