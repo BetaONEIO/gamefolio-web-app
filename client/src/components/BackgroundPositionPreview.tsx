@@ -41,10 +41,13 @@ export function BackgroundPositionPreview({
     const container = containerRef.current;
     const image = imageRef.current;
     const containerWidth = container.offsetWidth;
+    const containerHeight = container.offsetHeight;
     const imageNaturalWidth = image.naturalWidth;
-    if (imageNaturalWidth === 0) return 1;
+    const imageNaturalHeight = image.naturalHeight;
+    if (imageNaturalWidth === 0 || imageNaturalHeight === 0) return 1;
     const widthScale = containerWidth / imageNaturalWidth;
-    return Math.max(widthScale * 1.1, 1);
+    const heightScale = containerHeight / imageNaturalHeight;
+    return Math.max(widthScale, heightScale) * 1.05;
   }, []);
 
   const handleImageLoad = useCallback(() => {

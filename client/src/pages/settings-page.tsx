@@ -2207,15 +2207,18 @@ export default function SettingsPage() {
                           ) : (
                             <>
                               {(signedBgImageUrl || profileData.profileBackgroundImageUrl) ? (
-                                <div className="relative w-full h-40 rounded-lg overflow-hidden border border-border">
+                                <div className="relative w-full h-40 rounded-lg overflow-hidden border-2 border-primary">
                                   <img
                                     src={signedBgImageUrl || profileData.profileBackgroundImageUrl}
                                     alt="Background preview"
                                     className="w-full h-full object-cover"
                                     style={{ objectPosition: `${profileData.profileBackgroundPositionX || 50}% ${profileData.profileBackgroundPositionY || 50}%` }}
                                   />
-                                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                    <p className="text-white text-sm font-medium">Current background</p>
+                                  <div className="absolute top-2 left-2">
+                                    <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
+                                      <Check className="h-3 w-3" />
+                                      Active
+                                    </span>
                                   </div>
                                 </div>
                               ) : (
@@ -2794,6 +2797,16 @@ export default function SettingsPage() {
                 </Card>
               )}
 
+              <div
+                className="transition-opacity duration-300 space-y-6"
+                style={{ opacity: profileData.hideBanner ? 0.4 : 1, pointerEvents: profileData.hideBanner ? 'none' : 'auto' }}
+              >
+              {profileData.hideBanner && (
+                <div className="px-3 py-2 rounded-md bg-muted text-xs text-muted-foreground border border-border">
+                  Your banner is hidden — disable "Hide Banner" above to make changes.
+                </div>
+              )}
+
               {showBannerUpload && (
                 <BannerUploadPreview
                   currentBannerUrl={profileData.bannerUrl}
@@ -2892,6 +2905,7 @@ export default function SettingsPage() {
                   </div>
                 </CardContent>
               </Card>
+              </div>
             </div>
             
 
