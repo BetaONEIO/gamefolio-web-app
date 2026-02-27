@@ -2127,8 +2127,8 @@ export default function SettingsPage() {
                             <div className="space-y-3">
                               <Tabs value={bgCropTab} onValueChange={(v) => setBgCropTab(v as 'mobile' | 'desktop')}>
                                 <TabsList className="w-full">
-                                  <TabsTrigger value="mobile" className="flex-1">Mobile Crop</TabsTrigger>
                                   <TabsTrigger value="desktop" className="flex-1">Desktop Crop</TabsTrigger>
+                                  <TabsTrigger value="mobile" className="flex-1">Mobile Crop</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="mobile" className="mt-3">
                                   <BackgroundPositionPreview
@@ -2158,10 +2158,10 @@ export default function SettingsPage() {
                             </div>
                           ) : (
                             <>
-                              <Tabs defaultValue="mobile">
+                              <Tabs defaultValue={isMobile ? "mobile" : "desktop"}>
                                 <TabsList className="w-full">
-                                  <TabsTrigger value="mobile" className="flex-1">Mobile</TabsTrigger>
                                   <TabsTrigger value="desktop" className="flex-1">Desktop</TabsTrigger>
+                                  <TabsTrigger value="mobile" className="flex-1">Mobile</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="mobile" className="mt-3 flex justify-center">
                                   {(signedBgImageUrl || profileData.profileBackgroundImageUrl) ? (
@@ -2224,7 +2224,7 @@ export default function SettingsPage() {
                                     size="sm"
                                     onClick={() => {
                                       setPendingBgImageUrl(profileData.profileBackgroundImageUrl);
-                                      setBgCropTab('mobile');
+                                      setBgCropTab(isMobile ? 'mobile' : 'desktop');
                                       setShowBgPositionPreview(true);
                                     }}
                                   >

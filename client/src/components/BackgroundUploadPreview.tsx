@@ -44,7 +44,7 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [phase, setPhase] = useState<'selecting' | 'uploading' | 'editing'>('selecting');
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'mobile' | 'desktop'>('mobile');
+  const [activeTab, setActiveTab] = useState<'mobile' | 'desktop'>(() => typeof window !== 'undefined' && window.innerWidth > 768 ? 'desktop' : 'mobile');
   const [isMobileViewport, setIsMobileViewport] = useState(() => typeof window !== 'undefined' ? window.innerWidth <= 768 : true);
   const [imageNaturalSize, setImageNaturalSize] = useState({ w: 0, h: 0 });
   const [showEditor, setShowEditor] = useState(false);
@@ -331,13 +331,6 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
             <>
               <div className="flex border-b">
                 <button
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors border-b-2 ${activeTab === 'mobile' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
-                  onClick={() => setActiveTab('mobile')}
-                >
-                  <Smartphone className="h-4 w-4" />
-                  Mobile
-                </button>
-                <button
                   className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors border-b-2 ${activeTab === 'desktop' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'} ${isMobileViewport ? 'opacity-40 cursor-not-allowed' : 'hover:text-foreground'}`}
                   onClick={() => { if (!isMobileViewport) setActiveTab('desktop'); }}
                   title={isMobileViewport ? 'Use a desktop device to set the desktop crop' : undefined}
@@ -345,6 +338,13 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
                   <Monitor className="h-4 w-4" />
                   Desktop
                   {isMobileViewport && <span className="text-xs ml-1 opacity-70">(desktop only)</span>}
+                </button>
+                <button
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors border-b-2 ${activeTab === 'mobile' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                  onClick={() => setActiveTab('mobile')}
+                >
+                  <Smartphone className="h-4 w-4" />
+                  Mobile
                 </button>
               </div>
 
