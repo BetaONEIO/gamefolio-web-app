@@ -662,12 +662,12 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
               exit={{ opacity: 0 }}
             >
               <div ref={scrollContainerRef} className="flex flex-col md:hidden h-[100dvh] overflow-y-auto" style={{ scrollbarWidth: "none" }}>
-                <div className="relative w-full flex-shrink-0">
+                <div className="relative w-full flex-shrink-0" style={{ maxHeight: "42vh" }}>
                   <img
                     src={proHeroImage}
                     alt="Gamefolio Pro"
-                    className="w-full"
-                    style={{ maxHeight: "42vh", objectFit: "contain" }}
+                    className="w-full h-full object-cover object-top"
+                    style={{ maxHeight: "42vh" }}
                   />
                   <button
                     onClick={() => onOpenChange(false)}
