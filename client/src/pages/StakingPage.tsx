@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAccount, useWalletClient, usePublicClient } from "wagmi";
-import { useOpenConnectModal } from "@0xsequence/connect";
+import { useWalletClient } from "wagmi";
+import { useWallet } from "@/hooks/use-wallet";
 import { parseUnits, formatUnits, type Address } from "viem";
 import { GF_STAKING_ADDRESS, GF_STAKING_ABI, GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } from "@shared/contracts";
 import { apiRequest } from "@/lib/queryClient";
@@ -21,10 +21,14 @@ export default function StakingPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { address: externalAddress, isConnected, chainId } = useAccount();
+  const { walletAddress, publicClient, isReady, chainId, connect: connectWallet } = useWallet();
   const { data: walletClient } = useWalletClient();
-  const publicClient = usePublicClient();
-  const { setOpenConnectModal } = useOpenConnectModal();
+
+  const effectiveAddress = walletAddress || null;
+  const useServerSigning = !!effectiveAddress && !walletClient;
+  const isConnected = isReady || !!effectiveAddress;
+  const wrongNetwork = isReady && !useServerSigning && chainId !== SKALE_CHAIN_ID;
+  const canTransact = isConnected && !wrongNetwork;
 
   const [stakeAmount, setStakeAmount] = useState("");
   const [unstakeAmount, setUnstakeAmount] = useState("");
@@ -33,9 +37,6 @@ export default function StakingPage() {
   const [isClaiming, setIsClaiming] = useState(false);
   const [tokenBalance, setTokenBalance] = useState<string>("0");
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
-
-  const useServerSigning = !!user?.walletAddress && !walletClient;
-  const effectiveAddress = externalAddress || (user?.walletAddress as Address | undefined);
 
   const { data: stakePosition, isLoading: isLoadingPosition, refetch: refetchPosition } = useQuery({
     queryKey: ["/api/staking/position", effectiveAddress],
@@ -91,13 +92,8 @@ export default function StakingPage() {
     fetchBalance();
   }, [effectiveAddress, publicClient, useServerSigning]);
 
-  const handleMaxClick = () => {
-    setStakeAmount(tokenBalance);
-  };
-
-  const handleMaxUnstake = () => {
-    setUnstakeAmount(parseFloat(stakePosition?.staked || "0").toString());
-  };
+  const handleMaxClick = () => setStakeAmount(tokenBalance);
+  const handleMaxUnstake = () => setUnstakeAmount(parseFloat(stakePosition?.staked || "0").toString());
 
   const handleError = (error: any, action: string) => {
     let title = `${action} failed`;
@@ -114,23 +110,20 @@ export default function StakingPage() {
     } else if (error.message?.includes("chain") || error.message?.includes("network")) {
       title = "Wrong network";
       description = "Please switch to SKALE Nebula Testnet";
-    } else if (error.message?.includes("CONTRACT_ERROR")) {
-      title = "Contract not available";
-      description = "The staking contract is not deployed yet";
     }
 
     toast({ title, description, variant: "destructive" });
   };
 
   const handleStake = async () => {
-    const amount = parseFloat(stakeAmount);
-    if (!amount || amount <= 0) {
-      toast({ title: "Invalid amount", description: "Please enter a valid amount to stake", variant: "destructive" });
+    if (!effectiveAddress) {
+      connectWallet();
       return;
     }
 
-    if (!effectiveAddress) {
-      toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
+    const amount = parseFloat(stakeAmount);
+    if (!amount || amount <= 0) {
+      toast({ title: "Invalid amount", description: "Please enter a valid amount to stake", variant: "destructive" });
       return;
     }
 
@@ -142,18 +135,14 @@ export default function StakingPage() {
     setIsStaking(true);
     try {
       if (useServerSigning) {
-        toast({ title: "Staking tokens...", description: "Processing transaction server-side" });
+        toast({ title: "Staking tokens...", description: "Processing via Sequence wallet" });
         const result = await apiRequest("POST", "/api/staking/stake", { amount: stakeAmount });
         const data = await result.json();
         if (!result.ok) throw new Error(data.error || "Stake failed");
         toast({ title: "Staked successfully!", description: `You staked ${amount.toLocaleString()} GF tokens` });
       } else {
         if (!walletClient || !publicClient) {
-          toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
-          return;
-        }
-        if (chainId !== SKALE_CHAIN_ID) {
-          toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
+          connectWallet();
           return;
         }
 
@@ -167,7 +156,7 @@ export default function StakingPage() {
         }) as bigint;
 
         if (allowance < amountRaw) {
-          toast({ title: "Approving tokens...", description: "Please confirm the approval in your wallet" });
+          toast({ title: "Approving tokens...", description: "Please confirm in your Sequence wallet" });
           const approveHash = await walletClient.writeContract({
             address: GF_TOKEN_ADDRESS,
             abi: GF_TOKEN_ABI,
@@ -177,7 +166,7 @@ export default function StakingPage() {
           await publicClient.waitForTransactionReceipt({ hash: approveHash, confirmations: 1 });
         }
 
-        toast({ title: "Staking tokens...", description: "Please confirm the stake transaction" });
+        toast({ title: "Staking tokens...", description: "Please confirm in your Sequence wallet" });
         const stakeHash = await walletClient.writeContract({
           address: GF_STAKING_ADDRESS,
           abi: GF_STAKING_ABI,
@@ -206,6 +195,11 @@ export default function StakingPage() {
   };
 
   const handleUnstake = async () => {
+    if (!effectiveAddress) {
+      connectWallet();
+      return;
+    }
+
     const amount = parseFloat(unstakeAmount);
     if (!amount || amount <= 0) {
       toast({ title: "Invalid amount", description: "Please enter a valid amount to unstake", variant: "destructive" });
@@ -218,30 +212,21 @@ export default function StakingPage() {
       return;
     }
 
-    if (!effectiveAddress) {
-      toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
-      return;
-    }
-
     setIsUnstaking(true);
     try {
       if (useServerSigning) {
-        toast({ title: "Unstaking tokens...", description: "Processing transaction server-side" });
+        toast({ title: "Unstaking tokens...", description: "Processing via Sequence wallet" });
         const result = await apiRequest("POST", "/api/staking/unstake", { amount: unstakeAmount });
         const data = await result.json();
         if (!result.ok) throw new Error(data.error || "Unstake failed");
         toast({ title: "Unstaked successfully!", description: `You unstaked ${amount.toLocaleString()} GF tokens` });
       } else {
         if (!walletClient || !publicClient) {
-          toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
-          return;
-        }
-        if (chainId !== SKALE_CHAIN_ID) {
-          toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
+          connectWallet();
           return;
         }
 
-        toast({ title: "Unstaking tokens...", description: "Please confirm the transaction" });
+        toast({ title: "Unstaking tokens...", description: "Please confirm in your Sequence wallet" });
         const txHash = await walletClient.writeContract({
           address: GF_STAKING_ADDRESS,
           abi: GF_STAKING_ABI,
@@ -271,7 +256,7 @@ export default function StakingPage() {
 
   const handleClaim = async () => {
     if (!effectiveAddress) {
-      toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
+      connectWallet();
       return;
     }
 
@@ -284,22 +269,18 @@ export default function StakingPage() {
     setIsClaiming(true);
     try {
       if (useServerSigning) {
-        toast({ title: "Claiming rewards...", description: "Processing transaction server-side" });
+        toast({ title: "Claiming rewards...", description: "Processing via Sequence wallet" });
         const result = await apiRequest("POST", "/api/staking/claim", {});
         const data = await result.json();
         if (!result.ok) throw new Error(data.error || "Claim failed");
         toast({ title: "Rewards claimed!", description: `You claimed ${earned.toLocaleString()} GF tokens` });
       } else {
         if (!walletClient || !publicClient) {
-          toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
-          return;
-        }
-        if (chainId !== SKALE_CHAIN_ID) {
-          toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
+          connectWallet();
           return;
         }
 
-        toast({ title: "Claiming rewards...", description: "Please confirm the transaction" });
+        toast({ title: "Claiming rewards...", description: "Please confirm in your Sequence wallet" });
         const claimHash = await walletClient.writeContract({
           address: GF_STAKING_ADDRESS,
           abi: GF_STAKING_ABI,
@@ -340,9 +321,7 @@ export default function StakingPage() {
             <CardContent>
               <Coins className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
               <h2 className="text-2xl font-bold mb-2">Sign in to Stake</h2>
-              <p className="text-muted-foreground mb-6">
-                Connect your account to start staking GF tokens and earn rewards
-              </p>
+              <p className="text-muted-foreground mb-6">Connect your account to start staking GF tokens and earn rewards</p>
               <Link href="/auth">
                 <Button>Sign In</Button>
               </Link>
@@ -352,10 +331,6 @@ export default function StakingPage() {
       </div>
     );
   }
-
-  const needsExternalWallet = !useServerSigning && !isConnected;
-  const wrongNetwork = !useServerSigning && isConnected && chainId !== SKALE_CHAIN_ID;
-  const canTransact = useServerSigning || (isConnected && chainId === SKALE_CHAIN_ID);
 
   return (
     <div className="min-h-screen bg-background">
@@ -381,23 +356,21 @@ export default function StakingPage() {
               <div className="flex items-center gap-3">
                 <Server className="w-5 h-5 text-primary" />
                 <div>
-                  <p className="font-medium text-sm">Using Gamefolio Wallet</p>
-                  <p className="text-xs text-muted-foreground">Transactions are signed server-side using your Gamefolio wallet</p>
+                  <p className="font-medium text-sm">Using Sequence Wallet</p>
+                  <p className="text-xs text-muted-foreground">Transactions are signed via your Sequence embedded wallet</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {needsExternalWallet && (
+        {!isConnected && (
           <Card className="mb-6">
             <CardContent className="py-8 text-center">
               <Wallet className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-lg font-semibold mb-2">Connect Your Wallet</h3>
-              <p className="text-muted-foreground mb-4">
-                Connect your wallet to view and manage your stakes
-              </p>
-              <Button onClick={() => setOpenConnectModal(true)}>
+              <p className="text-muted-foreground mb-4">Connect your Sequence wallet to view and manage your stakes</p>
+              <Button onClick={connectWallet}>
                 Connect Wallet
               </Button>
             </CardContent>
@@ -411,9 +384,7 @@ export default function StakingPage() {
                 <AlertCircle className="w-6 h-6 text-orange-500" />
                 <div>
                   <h3 className="font-semibold text-orange-500">Wrong Network</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Please switch to SKALE Nebula Testnet to stake
-                  </p>
+                  <p className="text-sm text-muted-foreground">Please switch to SKALE Nebula Testnet to stake</p>
                 </div>
               </div>
             </CardContent>
@@ -480,24 +451,22 @@ export default function StakingPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  type="number"
-                  placeholder="Enter amount to stake"
-                  value={stakeAmount}
-                  onChange={(e) => setStakeAmount(e.target.value)}
-                  className="pr-16"
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 px-2 text-xs"
-                  onClick={handleMaxClick}
-                >
-                  MAX
-                </Button>
-              </div>
+            <div className="relative">
+              <Input
+                type="number"
+                placeholder="Enter amount to stake"
+                value={stakeAmount}
+                onChange={(e) => setStakeAmount(e.target.value)}
+                className="pr-16"
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 px-2 text-xs"
+                onClick={handleMaxClick}
+              >
+                MAX
+              </Button>
             </div>
 
             <Button
@@ -510,6 +479,11 @@ export default function StakingPage() {
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Staking...
+                </>
+              ) : !isConnected ? (
+                <>
+                  <Wallet className="w-4 h-4 mr-2" />
+                  Connect Wallet to Stake
                 </>
               ) : (
                 <>
@@ -530,24 +504,22 @@ export default function StakingPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    type="number"
-                    placeholder="Enter amount to unstake"
-                    value={unstakeAmount}
-                    onChange={(e) => setUnstakeAmount(e.target.value)}
-                    className="pr-16"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 px-2 text-xs"
-                    onClick={handleMaxUnstake}
-                  >
-                    MAX
-                  </Button>
-                </div>
+              <div className="relative">
+                <Input
+                  type="number"
+                  placeholder="Enter amount to unstake"
+                  value={unstakeAmount}
+                  onChange={(e) => setUnstakeAmount(e.target.value)}
+                  className="pr-16"
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 px-2 text-xs"
+                  onClick={handleMaxUnstake}
+                >
+                  MAX
+                </Button>
               </div>
 
               <Button
@@ -579,15 +551,11 @@ export default function StakingPage() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">Total Staked</p>
-                  <p className="font-semibold">
-                    {parseFloat(stakingStats.totalStaked || "0").toLocaleString()} GF
-                  </p>
+                  <p className="font-semibold">{parseFloat(stakingStats.totalStaked || "0").toLocaleString()} GF</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Reward Rate</p>
-                  <p className="font-semibold">
-                    {parseFloat(stakingStats.rewardRate || "0").toLocaleString()} GF/day
-                  </p>
+                  <p className="font-semibold">{parseFloat(stakingStats.rewardRate || "0").toLocaleString()} GF/day</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Estimated APY</p>
