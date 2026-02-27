@@ -103,6 +103,7 @@ export function ThemeProvider({
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
+    root.classList.add("dark");
     
     const hslColor = hexToHsl(accentColor);
     root.style.setProperty('--primary', hslColor);
