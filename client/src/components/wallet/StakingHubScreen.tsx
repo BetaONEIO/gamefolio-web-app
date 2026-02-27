@@ -98,7 +98,7 @@ export default function StakingHubScreen({
           </div>
         </div>
 
-        <div className="scrollbar-hide flex-1 overflow-y-auto flex flex-col gap-6 px-6 py-8 max-w-[430px] mx-auto w-full">
+        <div className="scrollbar-hide flex-1 overflow-y-auto flex flex-col gap-6 px-6 py-8 max-w-[430px] mx-auto w-full pb-28">
           <div
             className="flex flex-col gap-4 p-5 rounded-2xl"
             style={{ background: "#0f172a", border: "1px solid rgba(30, 41, 59, 0.5)" }}
@@ -235,7 +235,7 @@ export default function StakingHubScreen({
         </div>
       </div>
 
-      <div className="scrollbar-hide flex-1 overflow-y-auto flex flex-col px-6 py-6 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full gap-6 pb-10">
+      <div className="scrollbar-hide flex-1 overflow-y-auto flex flex-col px-6 py-6 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full gap-6 pb-28">
         <div className="flex gap-4">
           <div
             className="flex-1 min-w-0 flex flex-col gap-1 p-4 rounded-2xl"

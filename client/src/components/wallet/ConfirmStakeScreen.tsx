@@ -264,7 +264,7 @@ export default function ConfirmStakeScreen({
         </div>
 
         {/* Confirm Button */}
-        <div className="pb-6">
+        <div className="pb-28">
           <button
             onClick={handleConfirm}
             disabled={!isValidAmount}

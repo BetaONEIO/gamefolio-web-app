@@ -234,7 +234,7 @@ export default function StakeProcessingScreen({
         </div>
 
         {/* Processing Button */}
-        <div className="w-full max-w-[382px] pb-6">
+        <div className="w-full max-w-[382px] pb-28">
           <button
             disabled
             className="w-full h-[68px] rounded-2xl font-bold text-lg flex items-center justify-center gap-3 cursor-not-allowed"
