@@ -2,10 +2,11 @@ import { Router, Request, Response } from 'express';
 import { getStakePosition, getStakingStats, StakingError } from '../gf-staking-service';
 import { db } from '../db';
 import { users } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { parseUnits, maxUint256, type Address } from 'viem';
 import { writeContractWithPoW, publicClient } from '../skale-pow';
 import { GF_STAKING_ADDRESS, GF_STAKING_ABI, GF_TOKEN_ADDRESS, GF_TOKEN_ABI } from '../../shared/contracts';
+import { transferGfTokens } from '../gf-token-service';
 
 const router = Router();
 
@@ -59,6 +60,8 @@ router.post('/api/staking/stake', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid amount' });
     }
 
+    const amountFloat = parseFloat(amount);
+
     const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
@@ -66,24 +69,36 @@ router.post('/api/staking/stake', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'No server-side wallet available', code: 'NO_WALLET' });
     }
 
-    const userAddress = user.walletAddress as Address;
-    const amountRaw = parseUnits(String(amount), GF_DECIMALS);
-
-    const onChainBalance = await publicClient.readContract({
-      address: GF_TOKEN_ADDRESS as Address,
-      abi: GF_TOKEN_ABI,
-      functionName: 'balanceOf',
-      args: [userAddress],
-    }) as bigint;
-
-    if (onChainBalance < amountRaw) {
-      const { formatUnits } = await import('viem');
+    // Check in-app balance (treasury-backed)
+    const inAppBalance = user.gfTokenBalance || 0;
+    if (inAppBalance < amountFloat) {
       return res.status(400).json({
-        error: `Insufficient on-chain GFT balance. Have: ${formatUnits(onChainBalance, GF_DECIMALS)} GFT, Need: ${amount} GFT`,
+        error: `Insufficient GFT balance. Have: ${inAppBalance} GFT, Need: ${amountFloat} GFT`,
         code: 'INSUFFICIENT_BALANCE',
       });
     }
 
+    const userAddress = user.walletAddress as Address;
+    const amountRaw = parseUnits(String(amountFloat), GF_DECIMALS);
+
+    // Deduct from in-app balance first
+    await db.update(users)
+      .set({ gfTokenBalance: sql`${users.gfTokenBalance} - ${amountFloat}` })
+      .where(eq(users.id, userId));
+
+    // Transfer GFT from treasury to user's wallet
+    console.log(`[Staking] Transferring ${amountFloat} GFT from treasury to ${userAddress}`);
+    const transfer = await transferGfTokens(userAddress, amountFloat);
+    if (!transfer.success) {
+      // Restore in-app balance on failure
+      await db.update(users)
+        .set({ gfTokenBalance: sql`${users.gfTokenBalance} + ${amountFloat}` })
+        .where(eq(users.id, userId));
+      return res.status(400).json({ error: `Treasury transfer failed: ${transfer.error}`, code: 'TRANSFER_FAILED' });
+    }
+    console.log(`[Staking] Treasury transfer complete. TX: ${transfer.txHash}`);
+
+    // Approve staking contract if needed
     const allowance = await publicClient.readContract({
       address: GF_TOKEN_ADDRESS as Address,
       abi: GF_TOKEN_ABI,
@@ -107,7 +122,7 @@ router.post('/api/staking/stake', async (req: Request, res: Response) => {
       console.log(`[Staking] Approved. TX: ${approveHash}`);
     }
 
-    console.log(`[Staking] Staking ${amount} GFT for user ${userId}`);
+    console.log(`[Staking] Staking ${amountFloat} GFT for user ${userId}`);
     const stakeHash = await writeContractWithPoW({
       encryptedPrivateKey: user.encryptedPrivateKey,
       contractAddress: GF_STAKING_ADDRESS as Address,
@@ -121,8 +136,8 @@ router.post('/api/staking/stake', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Stake transaction reverted', txHash: stakeHash });
     }
 
-    console.log(`[Staking] Staked ${amount} GFT for user ${userId}. TX: ${stakeHash}`);
-    return res.json({ success: true, txHash: stakeHash, amount });
+    console.log(`[Staking] Staked ${amountFloat} GFT for user ${userId}. TX: ${stakeHash}`);
+    return res.json({ success: true, txHash: stakeHash, amount: amountFloat });
   } catch (error: any) {
     console.error('[Staking] Stake error:', error);
     return res.status(500).json({ error: error.message || 'Stake failed' });

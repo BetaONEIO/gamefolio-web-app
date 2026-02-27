@@ -69,11 +69,8 @@ export default function StakingPage() {
       setIsLoadingBalance(true);
       try {
         if (useServerSigning) {
-          const response = await fetch("/api/token/on-chain-balance", { credentials: "include" });
-          if (response.ok) {
-            const data = await response.json();
-            setTokenBalance(data.balance || "0");
-          }
+          // Use in-app GFT balance for server-side wallet (treasury-backed staking)
+          setTokenBalance(String(user?.gfTokenBalance || 0));
         } else if (publicClient) {
           const balance = await publicClient.readContract({
             address: GF_TOKEN_ADDRESS,
@@ -90,7 +87,7 @@ export default function StakingPage() {
       }
     }
     fetchBalance();
-  }, [effectiveAddress, publicClient, useServerSigning]);
+  }, [effectiveAddress, publicClient, useServerSigning, user?.gfTokenBalance]);
 
   const handleMaxClick = () => setStakeAmount(tokenBalance);
   const handleMaxUnstake = () => setUnstakeAmount(parseFloat(stakePosition?.staked || "0").toString());
@@ -128,7 +125,7 @@ export default function StakingPage() {
     }
 
     if (amount > parseFloat(tokenBalance)) {
-      toast({ title: "Insufficient balance", description: `You only have ${parseFloat(tokenBalance).toLocaleString()} GF tokens on-chain`, variant: "destructive" });
+      toast({ title: "Insufficient balance", description: `You only have ${parseFloat(tokenBalance).toLocaleString()} GF tokens available`, variant: "destructive" });
       return;
     }
 
