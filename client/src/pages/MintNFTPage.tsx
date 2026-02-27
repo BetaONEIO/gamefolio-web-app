@@ -786,29 +786,48 @@ export default function MintNFTPage() {
               </div>
             </div>
 
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 flex gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
-              <div className="flex flex-col gap-1">
-                <span className="text-sm font-bold text-[#f8fafc]">Minting Disabled</span>
-                <span className="text-xs text-[#94a3b8] leading-[19.5px]">
-                  Minting currently disabled on Beta! We will be on Mainnet soon!
-                </span>
+            {!user?.canMintNfts && (
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 flex gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-bold text-[#f8fafc]">Minting Disabled</span>
+                  <span className="text-xs text-[#94a3b8] leading-[19.5px]">
+                    Minting currently disabled on Beta! We will be on Mainnet soon!
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex flex-col gap-4">
-              <button
-                disabled
-                className="w-full h-[68px] rounded-2xl bg-[#1e293b] text-[#94a3b8] text-xl font-bold flex items-center justify-center gap-2.5 cursor-not-allowed opacity-50"
-              >
-                <Sparkles className="h-6 w-6" />
-                Mint NFT
-              </button>
+              {user?.canMintNfts ? (
+                <button
+                  onClick={handleMint}
+                  disabled={!canMint || mintState === "processing"}
+                  className={`w-full h-[68px] rounded-2xl text-xl font-bold flex items-center justify-center gap-2.5 transition-all ${
+                    canMint && mintState !== "processing"
+                      ? "bg-[#4ade80] text-[#022c22] hover:bg-[#22c55e]"
+                      : "bg-[#1e293b] text-[#94a3b8] cursor-not-allowed opacity-50"
+                  }`}
+                >
+                  <Sparkles className="h-6 w-6" />
+                  {mintState === "processing" ? "Minting..." : "Mint NFT"}
+                </button>
+              ) : (
+                <button
+                  disabled
+                  className="w-full h-[68px] rounded-2xl bg-[#1e293b] text-[#94a3b8] text-xl font-bold flex items-center justify-center gap-2.5 cursor-not-allowed opacity-50"
+                >
+                  <Sparkles className="h-6 w-6" />
+                  Mint NFT
+                </button>
+              )}
             </div>
 
-            <p className="text-[10px] text-amber-400/70 text-center px-4 leading-[16.25px]">
-              Minting currently disabled on Beta! We will be on Mainnet soon!
-            </p>
+            {!user?.canMintNfts && (
+              <p className="text-[10px] text-amber-400/70 text-center px-4 leading-[16.25px]">
+                Minting currently disabled on Beta! We will be on Mainnet soon!
+              </p>
+            )}
           </div>
         </div>
       </main>

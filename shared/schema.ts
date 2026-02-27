@@ -97,6 +97,9 @@ export const users = pgTable("users", {
   // Birthday
   birthday: text("birthday"), // Stored as MM-DD format for annual birthday checks
   lastBirthdayNotificationYear: integer("last_birthday_notification_year"), // Year when last birthday notification was sent
+  // NFT Permissions (beta bypass)
+  canMintNfts: boolean("can_mint_nfts").default(false).notNull(),
+  canSellNfts: boolean("can_sell_nfts").default(false).notNull(),
   // Welcome Pack
   welcomePackClaimed: boolean("welcome_pack_claimed").default(false).notNull(), // Whether the user has claimed their welcome pack
   // Two-Factor Authentication

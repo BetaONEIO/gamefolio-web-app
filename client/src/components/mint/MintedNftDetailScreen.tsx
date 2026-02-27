@@ -127,6 +127,7 @@ export default function MintedNftDetailScreen({
       <QuickSellScreen
         nft={nft}
         txHash={txHash}
+        canSell={!!user?.canSellNfts}
         onClose={() => setShowQuickSell(false)}
         onSold={(result) => {
           setSold(true);
@@ -383,15 +384,22 @@ export default function MintedNftDetailScreen({
               ) : isOwner ? (
                 <>
                   <button
-                    disabled
-                    className="h-[52px] rounded-xl bg-[#1e293b] flex items-center justify-center gap-2 opacity-50 cursor-not-allowed"
+                    onClick={user?.canSellNfts ? () => setShowQuickSell(true) : undefined}
+                    disabled={!user?.canSellNfts || isNftProfilePic}
+                    className={`h-[52px] rounded-xl flex items-center justify-center gap-2 ${
+                      user?.canSellNfts && !isNftProfilePic
+                        ? "bg-[#1e293b] hover:bg-[#334155] cursor-pointer"
+                        : "bg-[#1e293b] opacity-50 cursor-not-allowed"
+                    }`}
                   >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path fillRule="evenodd" clipRule="evenodd" d="M16.1002 4.62203L17.9414 6.46328C20.647 9.16982 21.9992 10.5221 21.9992 12.2024C21.9992 13.8836 20.647 15.2359 17.9414 17.9414C15.2349 20.648 13.8826 22.0002 12.2014 22.0002C10.5211 22.0002 9.16781 20.648 6.46227 17.9424L4.62102 16.1012C3.06652 14.5457 2.28876 13.7689 2 12.7598C1.71023 11.7506 1.95774 10.679 2.45277 8.53695L2.73751 7.3014C3.15305 5.49838 3.36132 4.59687 3.97809 3.9791C4.59486 3.36132 5.49738 3.15405 7.3004 2.73851L8.53595 2.45277C10.679 1.95875 11.7496 1.71124 12.7588 2C13.7679 2.28977 14.5447 3.06752 16.0992 4.62203M11.0785 14.2811C10.4014 13.6049 10.4064 12.633 10.8119 11.8633C10.6047 11.5641 10.6406 11.1597 10.8972 10.9017C11.1537 10.6436 11.5579 10.6054 11.8583 10.8109C12.2003 10.6297 12.5756 10.5332 12.9499 10.5372C13.3667 10.5411 13.7014 10.8821 13.6975 11.2988C13.6936 11.7156 13.3526 12.0503 12.9358 12.0464C12.7029 12.055 12.4827 12.1552 12.3231 12.3251C11.9337 12.7145 12.0353 13.1049 12.145 13.2145C12.2557 13.3242 12.6451 13.4258 13.0344 13.0365C13.8233 12.2476 15.1856 11.986 16.0579 12.8584C16.7351 13.5355 16.73 14.5074 16.3246 15.2772C16.5303 15.5764 16.4938 15.9797 16.2377 16.2371C15.9815 16.4945 15.5783 16.5329 15.2782 16.3286C14.8267 16.5763 14.3029 16.6589 13.7971 16.562C13.5329 16.5077 13.3177 16.3166 13.2326 16.0607C13.1475 15.8047 13.2054 15.5228 13.3846 15.3212C13.5637 15.1195 13.8368 15.0287 14.101 15.083C14.2791 15.1202 14.5668 15.0618 14.8133 14.8153C15.2027 14.4249 15.1011 14.0356 14.9914 13.9259C14.8807 13.8162 14.4913 13.7146 14.102 14.104C13.3131 14.8928 11.9508 15.1544 11.0785 14.2811ZM9.94556 10.2212C10.4538 9.71279 10.6523 8.97179 10.4661 8.27738C10.2799 7.58296 9.73734 7.04063 9.04286 6.85468C8.34838 6.66873 7.60745 6.8674 7.09917 7.37586C6.31343 8.16187 6.31366 9.43602 7.09967 10.2218C7.88568 11.0075 9.15983 11.0073 9.94556 10.2212Z" fill="#F8FAFC" />
                     </svg>
                     <span className="text-sm font-bold text-[#f8fafc] leading-5">Quick Sell</span>
                   </button>
-                  <p className="text-sm md:text-base text-amber-400 text-center max-w-md mt-3">Currently disabled on Beta! We will be on Mainnet soon!</p>
+                  {!user?.canSellNfts && (
+                    <p className="text-sm md:text-base text-amber-400 text-center max-w-md mt-3">Currently disabled on Beta! We will be on Mainnet soon!</p>
+                  )}
                 </>
               ) : null}
             </div>

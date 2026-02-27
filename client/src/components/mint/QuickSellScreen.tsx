@@ -11,6 +11,7 @@ interface QuickSellNft {
 interface QuickSellScreenProps {
   nft: QuickSellNft;
   txHash: string;
+  canSell?: boolean;
   onClose: () => void;
   onSold: (result: { receivedAmount: number; txHash: string }) => void;
 }
@@ -26,6 +27,7 @@ function getTokenIdPadded(id: number): string {
 export default function QuickSellScreen({
   nft,
   txHash,
+  canSell = false,
   onClose,
   onSold,
 }: QuickSellScreenProps) {
@@ -169,12 +171,19 @@ export default function QuickSellScreen({
       <div className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md bg-[#101D27cc] border-t border-[#1e293b4d]">
         <div className="w-full max-w-[430px] md:max-w-3xl mx-auto flex flex-col md:flex-row-reverse gap-3 px-6 py-6 pb-8 md:pb-6">
           <button
-            disabled
-            className="w-full md:flex-1 h-[60px] rounded-2xl bg-[#4ade80] flex items-center justify-center gap-2 cursor-not-allowed opacity-50"
+            onClick={canSell ? handleConfirmSell : undefined}
+            disabled={!canSell || isProcessing}
+            className={`w-full md:flex-1 h-[60px] rounded-2xl bg-[#4ade80] flex items-center justify-center gap-2 ${
+              canSell && !isProcessing ? "hover:bg-[#22c55e] cursor-pointer" : "cursor-not-allowed opacity-50"
+            }`}
           >
-            <span className="text-lg font-bold text-[#022c22] leading-7">Confirm Quick Sell</span>
+            <span className="text-lg font-bold text-[#022c22] leading-7">
+              {isProcessing ? "Processing..." : "Confirm Quick Sell"}
+            </span>
           </button>
-          <p className="text-sm md:text-base text-amber-400 text-center max-w-md mt-3 mx-auto">Currently disabled on Beta! We will be on Mainnet soon!</p>
+          {!canSell && (
+            <p className="text-sm md:text-base text-amber-400 text-center max-w-md mt-3 mx-auto">Currently disabled on Beta! We will be on Mainnet soon!</p>
+          )}
           <button
             onClick={onClose}
             className="w-full md:flex-1 h-[60px] rounded-2xl flex items-center justify-center hover:bg-[#1e293b] transition-colors"
