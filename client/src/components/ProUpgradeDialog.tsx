@@ -470,6 +470,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
           src={proHeroImage}
           alt="Gamefolio Pro"
           className="w-full h-full object-cover"
+          style={{ objectPosition: "center 25%" }}
         />
       </div>
 
@@ -666,7 +667,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
                   <img
                     src={proHeroImage}
                     alt="Gamefolio Pro"
-                    className="w-full h-full object-cover object-top"
+                    className="w-full h-full object-cover"
+                    style={{ objectPosition: "center 25%" }}
                   />
                   <div className="absolute inset-x-0 bottom-0 h-1/3" style={{ background: "linear-gradient(to top, #101D27 0%, transparent 100%)" }} />
                   <button
