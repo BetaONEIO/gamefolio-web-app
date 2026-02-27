@@ -304,7 +304,7 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
       {previewUrl && <img ref={hiddenImageRef} src={previewUrl} alt="" className="hidden" onLoad={handleImageLoad} />}
 
       <Dialog open={true} onOpenChange={(open) => { if (!open) handleCancel(); }}>
-        <DialogContent className="w-[95vw] max-w-lg p-0 bg-background border overflow-hidden gap-0 [&>button]:hidden">
+        <DialogContent className="w-[95vw] max-w-lg md:max-w-4xl p-0 bg-background border overflow-hidden gap-0 [&>button]:hidden">
           <DialogTitle className="sr-only">Edit background image</DialogTitle>
           <DialogDescription className="sr-only">Drag to position your background image for mobile and desktop, then click Apply.</DialogDescription>
 
