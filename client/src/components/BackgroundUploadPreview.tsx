@@ -1,56 +1,57 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { ZoomIn, ZoomOut, ArrowLeft } from 'lucide-react';
+import { ZoomIn, ZoomOut, ArrowLeft, Smartphone, Monitor } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+export interface CropPos { positionX: number; positionY: number; zoom: number; }
+interface CropState { pos: { x: number; y: number }; scale: number; minScale: number; }
+
 interface BackgroundUploadPreviewProps {
-  onUpload?: (url: string) => void;
+  onUpload?: (url: string, mobilePos: CropPos, desktopPos: CropPos) => void;
   onCancel?: () => void;
-  isUploading?: boolean;
 }
 
 const OVERFLOW_PADDING = 40;
 const MAX_SCALE = 4;
-const CROP_ASPECT = 9 / 16;
+const MOBILE_ASPECT = 9 / 16;
+const DESKTOP_ASPECT = 16 / 9;
 
-export function BackgroundUploadPreview({
-  onUpload,
-  onCancel,
-  isUploading = false,
-}: BackgroundUploadPreviewProps) {
+export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUploadPreviewProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [scale, setScale] = useState(1);
-  const [minScale, setMinScale] = useState(1);
+  const [phase, setPhase] = useState<'selecting' | 'uploading' | 'editing'>('selecting');
+  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'mobile' | 'desktop'>('mobile');
+  const [isMobileViewport, setIsMobileViewport] = useState(() => typeof window !== 'undefined' ? window.innerWidth <= 768 : true);
   const [imageNaturalSize, setImageNaturalSize] = useState({ w: 0, h: 0 });
   const [showEditor, setShowEditor] = useState(false);
-  const [containerHeight, setContainerHeight] = useState(0);
-  const [uploading, setUploading] = useState(false);
+
+  const [mobileState, setMobileState] = useState<CropState>({ pos: { x: 0, y: 0 }, scale: 1, minScale: 1 });
+  const mobileStageRef = useRef<HTMLDivElement>(null);
+  const [mobileStageDims, setMobileStageDims] = useState({ w: 0, h: 0 });
+
+  const [desktopState, setDesktopState] = useState<CropState>({ pos: { x: 0, y: 0 }, scale: 1, minScale: 1 });
+  const desktopStageRef = useRef<HTMLDivElement>(null);
+  const [desktopStageDims, setDesktopStageDims] = useState({ w: 0, h: 0 });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hiddenImageRef = useRef<HTMLImageElement>(null);
-  const visibleImageRef = useRef<HTMLImageElement>(null);
-  const stageRef = useRef<HTMLDivElement>(null);
+  const fileSelectedRef = useRef(false);
   const { toast } = useToast();
 
-  const cropH = containerHeight > 0 ? containerHeight : 400;
-  const cropW = Math.round(cropH * CROP_ASPECT);
-  const stageWidth = cropW + OVERFLOW_PADDING * 2;
-
-  const fileSelectedRef = useRef(false);
+  useEffect(() => {
+    const check = () => setIsMobileViewport(window.innerWidth <= 768);
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   useEffect(() => {
-    if (!previewUrl && fileInputRef.current) {
+    if (phase === 'selecting' && fileInputRef.current) {
       fileSelectedRef.current = false;
       fileInputRef.current.click();
       const handleFocus = () => {
-        setTimeout(() => {
-          if (!fileSelectedRef.current) {
-            onCancel?.();
-          }
-        }, 500);
+        setTimeout(() => { if (!fileSelectedRef.current) onCancel?.(); }, 500);
       };
       window.addEventListener('focus', handleFocus, { once: true });
       return () => window.removeEventListener('focus', handleFocus);
@@ -58,29 +59,34 @@ export function BackgroundUploadPreview({
   }, []);
 
   useEffect(() => {
-    const el = stageRef.current;
-    if (!el) return;
+    const el = mobileStageRef.current;
+    if (!el || !showEditor || activeTab !== 'mobile') return;
     const ro = new ResizeObserver((entries) => {
-      const h = entries[0]?.contentRect.height ?? 0;
-      if (h > 0) setContainerHeight(h);
+      const { width, height } = entries[0]?.contentRect ?? {};
+      if (width && height) setMobileStageDims({ w: width, h: height });
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [showEditor]);
+  }, [showEditor, activeTab]);
 
-  const clampPosition = useCallback(
-    (x: number, y: number, s: number, natW: number, natH: number, cW: number, cH: number) => {
-      const scaledW = natW * s;
-      const scaledH = natH * s;
-      const maxX = Math.max(0, (scaledW - cW) / 2);
-      const maxY = Math.max(0, (scaledH - cH) / 2);
-      return {
-        x: Math.max(-maxX, Math.min(maxX, x)),
-        y: Math.max(-maxY, Math.min(maxY, y)),
-      };
-    },
-    []
-  );
+  useEffect(() => {
+    const el = desktopStageRef.current;
+    if (!el || !showEditor || activeTab !== 'desktop') return;
+    const ro = new ResizeObserver((entries) => {
+      const { width, height } = entries[0]?.contentRect ?? {};
+      if (width && height) setDesktopStageDims({ w: width, h: height });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [showEditor, activeTab]);
+
+  const clampV = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+  const clampPosition = useCallback((x: number, y: number, s: number, natW: number, natH: number, cW: number, cH: number) => {
+    const maxX = Math.max(0, (natW * s - cW) / 2);
+    const maxY = Math.max(0, (natH * s - cH) / 2);
+    return { x: clampV(x, -maxX, maxX), y: clampV(y, -maxY, maxY) };
+  }, []);
 
   const computeMinScale = useCallback((natW: number, natH: number, cW: number, cH: number) => {
     if (!natW || !natH || !cW || !cH) return 1;
@@ -88,34 +94,62 @@ export function BackgroundUploadPreview({
   }, []);
 
   useEffect(() => {
-    if (!showEditor || containerHeight === 0 || imageNaturalSize.w === 0) return;
-    const cW = Math.round(containerHeight * CROP_ASPECT);
-    const fit = computeMinScale(imageNaturalSize.w, imageNaturalSize.h, cW, containerHeight);
-    setMinScale(fit);
-    setScale(fit);
-    setPosition({ x: 0, y: 0 });
-  }, [showEditor, containerHeight, imageNaturalSize, computeMinScale]);
+    if (!showEditor || mobileStageDims.h === 0 || imageNaturalSize.w === 0) return;
+    const cH = mobileStageDims.h;
+    const cW = Math.round(cH * MOBILE_ASPECT);
+    const fit = computeMinScale(imageNaturalSize.w, imageNaturalSize.h, cW, cH);
+    setMobileState({ pos: { x: 0, y: 0 }, scale: fit, minScale: fit });
+  }, [showEditor, mobileStageDims, imageNaturalSize, computeMinScale]);
 
-  const handleFileSelect = useCallback(
-    (file: File) => {
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-      if (!allowedTypes.includes(file.type.toLowerCase())) {
-        toast({ title: 'Invalid file type', description: 'Please select JPEG, PNG, or WebP.', variant: 'destructive' });
-        return;
+  useEffect(() => {
+    if (!showEditor || desktopStageDims.w === 0 || imageNaturalSize.w === 0) return;
+    const cW = desktopStageDims.w;
+    const cH = Math.round(cW / DESKTOP_ASPECT);
+    const fit = computeMinScale(imageNaturalSize.w, imageNaturalSize.h, cW, cH);
+    setDesktopState({ pos: { x: 0, y: 0 }, scale: fit, minScale: fit });
+  }, [showEditor, desktopStageDims, imageNaturalSize, computeMinScale]);
+
+  const handleFileSelect = useCallback((file: File) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type.toLowerCase())) {
+      toast({ title: 'Invalid file type', description: 'Please select JPEG, PNG, or WebP.', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Image must be under 10MB.', variant: 'destructive' });
+      return;
+    }
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setPhase('uploading');
+  }, [toast]);
+
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) { fileSelectedRef.current = true; handleFileSelect(file); }
+  }, [handleFileSelect]);
+
+  useEffect(() => {
+    if (phase !== 'uploading' || !selectedFile) return;
+    const upload = async () => {
+      try {
+        const formData = new FormData();
+        formData.append('backgroundImage', selectedFile, selectedFile.name);
+        const response = await fetch('/api/upload/profile-background', { method: 'POST', body: formData });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'Upload failed');
+        if (!result.url) throw new Error('No URL returned');
+        setUploadedUrl(result.url);
+        setPhase('editing');
+      } catch (err: any) {
+        toast({ title: 'Upload failed', description: err.message || 'Please try again.', variant: 'destructive' });
+        setPhase('selecting');
+        setSelectedFile(null);
+        setPreviewUrl(null);
       }
-      if (file.size > 10 * 1024 * 1024) {
-        toast({ title: 'File too large', description: 'Image must be under 10MB.', variant: 'destructive' });
-        return;
-      }
-      setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
-      setPosition({ x: 0, y: 0 });
-      setScale(1);
-      setImageNaturalSize({ w: 0, h: 0 });
-      setShowEditor(false);
-    },
-    [toast]
-  );
+    };
+    upload();
+  }, [phase, selectedFile]);
 
   const handleImageLoad = useCallback(() => {
     const img = hiddenImageRef.current;
@@ -124,148 +158,133 @@ export function BackgroundUploadPreview({
     setShowEditor(true);
   }, []);
 
-  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      fileSelectedRef.current = true;
-      handleFileSelect(file);
-    }
-  }, [handleFileSelect]);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startPosX = position.x;
-    const startPosY = position.y;
-    const cW = Math.round(containerHeight * CROP_ASPECT);
-
-    const onMove = (ev: MouseEvent) => {
-      ev.preventDefault();
-      setPosition(clampPosition(
-        startPosX + ev.clientX - startX,
-        startPosY + ev.clientY - startY,
-        scale, imageNaturalSize.w, imageNaturalSize.h, cW, containerHeight
-      ));
-    };
-    const onUp = () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-    };
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  }, [position, scale, imageNaturalSize, containerHeight, clampPosition]);
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length !== 1) return;
-    e.preventDefault();
-    const touch = e.touches[0];
-    const startX = touch.clientX;
-    const startY = touch.clientY;
-    const startPosX = position.x;
-    const startPosY = position.y;
-    const cW = Math.round(containerHeight * CROP_ASPECT);
-
-    const onMove = (ev: TouchEvent) => {
-      if (ev.touches.length !== 1) return;
-      ev.preventDefault();
-      const t = ev.touches[0];
-      setPosition(clampPosition(
-        startPosX + t.clientX - startX,
-        startPosY + t.clientY - startY,
-        scale, imageNaturalSize.w, imageNaturalSize.h, cW, containerHeight
-      ));
-    };
-    const onEnd = () => {
-      document.removeEventListener('touchmove', onMove);
-      document.removeEventListener('touchend', onEnd);
-    };
-    document.addEventListener('touchmove', onMove, { passive: false });
-    document.addEventListener('touchend', onEnd);
-  }, [position, scale, imageNaturalSize, containerHeight, clampPosition]);
-
-  const handleScaleChange = useCallback((newScale: number) => {
-    const cW = Math.round(containerHeight * CROP_ASPECT);
-    setScale(newScale);
-    setPosition(prev => clampPosition(prev.x, prev.y, newScale, imageNaturalSize.w, imageNaturalSize.h, cW, containerHeight));
-  }, [imageNaturalSize, containerHeight, clampPosition]);
-
   const handleCancel = useCallback(() => {
     setSelectedFile(null);
     setPreviewUrl(null);
-    setPosition({ x: 0, y: 0 });
-    setScale(1);
+    setUploadedUrl(null);
+    setPhase('selecting');
     setShowEditor(false);
     onCancel?.();
   }, [onCancel]);
 
-  const handleUpload = useCallback(async () => {
-    if (!selectedFile || !onUpload) return;
+  const calcCropPos = (state: CropState, natW: number, natH: number, cW: number, cH: number): CropPos => {
+    const scaledW = natW * state.scale;
+    const scaledH = natH * state.scale;
+    const posX = clampV(((scaledW / 2 - state.pos.x) / scaledW) * 100, 0, 100);
+    const posY = clampV(((scaledH / 2 - state.pos.y) / scaledH) * 100, 0, 100);
+    const zoom = Math.round((scaledW / Math.max(cW, 1)) * 100);
+    return { positionX: Math.round(posX), positionY: Math.round(posY), zoom };
+  };
 
-    try {
-      setUploading(true);
-      const img = hiddenImageRef.current || visibleImageRef.current;
-      if (!img) throw new Error('Image not available');
+  const handleApply = useCallback(() => {
+    if (!uploadedUrl || !onUpload) return;
+    const mCH = mobileStageDims.h > 0 ? mobileStageDims.h : 400;
+    const mCW = Math.round(mCH * MOBILE_ASPECT);
+    const mobilePos = calcCropPos(mobileState, imageNaturalSize.w, imageNaturalSize.h, mCW, mCH);
+    const dCW = desktopStageDims.w > 0 ? desktopStageDims.w : 320;
+    const dCH = Math.round(dCW / DESKTOP_ASPECT);
+    const desktopPos = calcCropPos(desktopState, imageNaturalSize.w, imageNaturalSize.h, dCW, dCH);
+    onUpload(uploadedUrl, mobilePos, desktopPos);
+    handleCancel();
+  }, [uploadedUrl, mobileState, desktopState, mobileStageDims, desktopStageDims, imageNaturalSize, onUpload, handleCancel]);
 
-      const { w: natW, h: natH } = imageNaturalSize;
-      if (!natW || !natH) throw new Error('Image dimensions not available');
+  const makeDragHandler = (
+    getCropDims: () => { cW: number; cH: number },
+    getPos: () => { x: number; y: number },
+    getScale: () => number,
+    setStateFn: (updater: (prev: CropState) => CropState) => void
+  ) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX, startY = e.clientY;
+    const startPos = getPos();
+    const onMove = (ev: MouseEvent) => {
+      ev.preventDefault();
+      const { cW, cH } = getCropDims();
+      setStateFn(prev => ({
+        ...prev,
+        pos: clampPosition(startPos.x + ev.clientX - startX, startPos.y + ev.clientY - startY, getScale(), imageNaturalSize.w, imageNaturalSize.h, cW, cH)
+      }));
+    };
+    const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
 
-      const cW = Math.round(containerHeight * CROP_ASPECT);
-      const cH = containerHeight;
-      if (!cH) throw new Error('Container not measured yet');
+  const makeTouchHandler = (
+    getCropDims: () => { cW: number; cH: number },
+    getPos: () => { x: number; y: number },
+    getScale: () => number,
+    setStateFn: (updater: (prev: CropState) => CropState) => void
+  ) => (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    const startX = t.clientX, startY = t.clientY;
+    const startPos = getPos();
+    const onMove = (ev: TouchEvent) => {
+      if (ev.touches.length !== 1) return;
+      ev.preventDefault();
+      const touch = ev.touches[0];
+      const { cW, cH } = getCropDims();
+      setStateFn(prev => ({
+        ...prev,
+        pos: clampPosition(startPos.x + touch.clientX - startX, startPos.y + touch.clientY - startY, getScale(), imageNaturalSize.w, imageNaturalSize.h, cW, cH)
+      }));
+    };
+    const onEnd = () => { document.removeEventListener('touchmove', onMove); document.removeEventListener('touchend', onEnd); };
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd);
+  };
 
-      const srcW = cW / scale;
-      const srcH = cH / scale;
-      const srcX = natW / 2 - srcW / 2 - position.x / scale;
-      const srcY = natH / 2 - srcH / 2 - position.y / scale;
+  const handleMobileMouseDown = makeDragHandler(
+    () => { const cH = mobileStageDims.h; return { cW: Math.round(cH * MOBILE_ASPECT), cH }; },
+    () => mobileState.pos, () => mobileState.scale, setMobileState
+  );
+  const handleMobileTouchStart = makeTouchHandler(
+    () => { const cH = mobileStageDims.h; return { cW: Math.round(cH * MOBILE_ASPECT), cH }; },
+    () => mobileState.pos, () => mobileState.scale, setMobileState
+  );
+  const handleMobileScale = useCallback((newScale: number) => {
+    const cH = mobileStageDims.h;
+    const cW = Math.round(cH * MOBILE_ASPECT);
+    setMobileState(prev => ({ ...prev, scale: newScale, pos: clampPosition(prev.pos.x, prev.pos.y, newScale, imageNaturalSize.w, imageNaturalSize.h, cW, cH) }));
+  }, [mobileStageDims, imageNaturalSize, clampPosition]);
 
-      const exportW = 1080;
-      const exportH = 1920;
+  const handleDesktopMouseDown = makeDragHandler(
+    () => { const cW = desktopStageDims.w; return { cW, cH: Math.round(cW / DESKTOP_ASPECT) }; },
+    () => desktopState.pos, () => desktopState.scale, setDesktopState
+  );
+  const handleDesktopTouchStart = makeTouchHandler(
+    () => { const cW = desktopStageDims.w; return { cW, cH: Math.round(cW / DESKTOP_ASPECT) }; },
+    () => desktopState.pos, () => desktopState.scale, setDesktopState
+  );
+  const handleDesktopScale = useCallback((newScale: number) => {
+    const cW = desktopStageDims.w;
+    const cH = Math.round(cW / DESKTOP_ASPECT);
+    setDesktopState(prev => ({ ...prev, scale: newScale, pos: clampPosition(prev.pos.x, prev.pos.y, newScale, imageNaturalSize.w, imageNaturalSize.h, cW, cH) }));
+  }, [desktopStageDims, imageNaturalSize, clampPosition]);
 
-      const canvas = document.createElement('canvas');
-      canvas.width = exportW;
-      canvas.height = exportH;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Canvas context unavailable');
-      ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, exportW, exportH);
+  const mobileCropH = mobileStageDims.h > 0 ? mobileStageDims.h : 400;
+  const mobileCropW = Math.round(mobileCropH * MOBILE_ASPECT);
+  const mobileStageW = mobileCropW + OVERFLOW_PADDING * 2;
 
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(b => b ? resolve(b) : reject(new Error('Canvas to blob failed')), 'image/jpeg', 0.95);
-      });
+  const desktopCropW = desktopStageDims.w > 0 ? desktopStageDims.w : 320;
+  const desktopCropH = Math.round(desktopCropW / DESKTOP_ASPECT);
+  const desktopStageH = desktopCropH + OVERFLOW_PADDING * 2;
 
-      const formData = new FormData();
-      formData.append('backgroundImage', blob, 'background.jpg');
-
-      const response = await fetch('/api/upload/profile-background', { method: 'POST', body: formData });
-      const result = await response.json();
-
-      if (!response.ok) throw new Error(result.message || `HTTP ${response.status}: Upload failed`);
-      if (!result.url) throw new Error('No URL returned from server');
-
-      onUpload(result.url);
-      handleCancel();
-    } catch (error) {
-      console.error('Background upload error:', error);
-      toast({ title: 'Upload failed', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
-    } finally {
-      setUploading(false);
-    }
-  }, [selectedFile, position, scale, imageNaturalSize, containerHeight, onUpload, toast, handleCancel]);
-
-  if (!previewUrl) {
-    return (
-      <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileInputChange} className="hidden" />
-    );
+  if (phase === 'selecting') {
+    return <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileInputChange} className="hidden" />;
   }
 
   return (
     <>
-      <img ref={hiddenImageRef} src={previewUrl} alt="" className="hidden" onLoad={handleImageLoad} />
+      {previewUrl && <img ref={hiddenImageRef} src={previewUrl} alt="" className="hidden" onLoad={handleImageLoad} />}
 
-      <Dialog open={!!previewUrl} onOpenChange={(open) => { if (!open) handleCancel(); }}>
-        <DialogContent className="max-w-sm w-[95vw] p-0 bg-background border overflow-hidden gap-0 [&>button]:hidden">
+      <Dialog open={true} onOpenChange={(open) => { if (!open) handleCancel(); }}>
+        <DialogContent className="w-[95vw] max-w-lg p-0 bg-background border overflow-hidden gap-0 [&>button]:hidden">
           <DialogTitle className="sr-only">Edit background image</DialogTitle>
-          <DialogDescription className="sr-only">Drag and zoom to position your background image, then click Apply.</DialogDescription>
+          <DialogDescription className="sr-only">Set the crop position for mobile and desktop views, then click Apply.</DialogDescription>
+
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div className="flex items-center gap-3">
               <button onClick={handleCancel} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -273,103 +292,136 @@ export function BackgroundUploadPreview({
               </button>
               <h2 className="text-lg font-semibold">Edit media</h2>
             </div>
-            <Button
-              onClick={handleUpload}
-              disabled={!selectedFile || uploading || isUploading || !showEditor}
-              size="sm"
-            >
-              {(uploading || isUploading)
-                ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />Uploading...</>
-                : 'Apply'
-              }
-            </Button>
-          </div>
-
-          <div
-            className="relative overflow-hidden bg-black select-none cursor-move mx-auto"
-            style={{ width: stageWidth > 0 ? stageWidth : 280, height: '70vh' }}
-          >
-            <div
-              ref={stageRef}
-              className="absolute"
-              style={{
-                left: OVERFLOW_PADDING,
-                top: 0,
-                width: cropW > 0 ? cropW : 200,
-                height: '100%',
-              }}
-              onMouseDown={showEditor ? handleMouseDown : undefined}
-              onTouchStart={showEditor ? handleTouchStart : undefined}
-            >
-              {showEditor && (
-                <img
-                  ref={visibleImageRef}
-                  src={previewUrl}
-                  alt="Background preview"
-                  className="pointer-events-none absolute"
-                  style={{
-                    left: '50%',
-                    top: '50%',
-                    maxWidth: 'none',
-                    width: imageNaturalSize.w,
-                    height: imageNaturalSize.h,
-                    transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`,
-                    transformOrigin: 'center center',
-                  }}
-                  draggable={false}
-                />
-              )}
-            </div>
-
-            {showEditor && (
-              <>
-                <div
-                  className="absolute top-0 bottom-0 left-0 pointer-events-none bg-black/60"
-                  style={{ width: OVERFLOW_PADDING }}
-                />
-                <div
-                  className="absolute top-0 bottom-0 right-0 pointer-events-none bg-black/60"
-                  style={{ width: OVERFLOW_PADDING }}
-                />
-                <div
-                  className="absolute top-0 bottom-0 pointer-events-none"
-                  style={{
-                    left: OVERFLOW_PADDING,
-                    width: cropW > 0 ? cropW : 200,
-                    border: '2px solid #1d9bf0',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </>
+            {phase === 'editing' && (
+              <Button onClick={handleApply} disabled={!showEditor} size="sm">Apply</Button>
             )}
           </div>
 
-          {showEditor && (
-            <div className="flex items-center gap-3 px-6 py-3 border-t">
-              <button
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => handleScaleChange(Math.max(minScale, scale / 1.15))}
-                aria-label="Zoom out"
-              >
-                <ZoomOut className="h-5 w-5" />
-              </button>
-              <input
-                type="range"
-                min={minScale}
-                max={MAX_SCALE}
-                step={0.001}
-                value={scale}
-                onChange={e => handleScaleChange(parseFloat(e.target.value))}
-                className="flex-1 accent-[#1d9bf0] cursor-pointer"
-              />
-              <button
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => handleScaleChange(Math.min(MAX_SCALE, scale * 1.15))}
-                aria-label="Zoom in"
-              >
-                <ZoomIn className="h-5 w-5" />
-              </button>
+          {phase === 'uploading' && (
+            <div className="flex flex-col items-center justify-center h-64 gap-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+              <p className="text-sm text-muted-foreground">Uploading image…</p>
             </div>
+          )}
+
+          {phase === 'editing' && (
+            <>
+              <div className="flex border-b">
+                <button
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors border-b-2 ${activeTab === 'mobile' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                  onClick={() => setActiveTab('mobile')}
+                >
+                  <Smartphone className="h-4 w-4" />
+                  Mobile
+                </button>
+                <button
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors border-b-2 ${activeTab === 'desktop' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'} ${isMobileViewport ? 'opacity-40 cursor-not-allowed' : 'hover:text-foreground'}`}
+                  onClick={() => { if (!isMobileViewport) setActiveTab('desktop'); }}
+                  title={isMobileViewport ? 'Use a desktop device to set the desktop crop' : undefined}
+                >
+                  <Monitor className="h-4 w-4" />
+                  Desktop
+                  {isMobileViewport && <span className="text-xs ml-1 opacity-70">(desktop only)</span>}
+                </button>
+              </div>
+
+              {activeTab === 'mobile' && (
+                <>
+                  <div
+                    className="relative overflow-hidden bg-black select-none cursor-move mx-auto"
+                    style={{ width: mobileStageW > 80 ? mobileStageW : 280, height: '60vh' }}
+                  >
+                    <div
+                      ref={mobileStageRef}
+                      className="absolute"
+                      style={{ left: OVERFLOW_PADDING, top: 0, width: mobileCropW > 0 ? mobileCropW : 200, height: '100%' }}
+                      onMouseDown={showEditor ? handleMobileMouseDown : undefined}
+                      onTouchStart={showEditor ? handleMobileTouchStart : undefined}
+                    >
+                      {showEditor && (
+                        <img
+                          src={previewUrl!}
+                          alt="Mobile background preview"
+                          className="pointer-events-none absolute"
+                          style={{
+                            left: '50%', top: '50%', maxWidth: 'none',
+                            width: imageNaturalSize.w, height: imageNaturalSize.h,
+                            transform: `translate(calc(-50% + ${mobileState.pos.x}px), calc(-50% + ${mobileState.pos.y}px)) scale(${mobileState.scale})`,
+                            transformOrigin: 'center center',
+                          }}
+                          draggable={false}
+                        />
+                      )}
+                    </div>
+                    {showEditor && (
+                      <>
+                        <div className="absolute top-0 bottom-0 left-0 pointer-events-none bg-black/60" style={{ width: OVERFLOW_PADDING }} />
+                        <div className="absolute top-0 bottom-0 right-0 pointer-events-none bg-black/60" style={{ width: OVERFLOW_PADDING }} />
+                        <div className="absolute top-0 bottom-0 pointer-events-none" style={{ left: OVERFLOW_PADDING, width: mobileCropW > 0 ? mobileCropW : 200, border: '2px solid #1d9bf0', boxSizing: 'border-box' }} />
+                      </>
+                    )}
+                  </div>
+                  {showEditor && (
+                    <div className="flex items-center gap-3 px-6 py-3 border-t">
+                      <button className="text-muted-foreground hover:text-foreground" onClick={() => handleMobileScale(Math.max(mobileState.minScale, mobileState.scale / 1.15))} aria-label="Zoom out"><ZoomOut className="h-5 w-5" /></button>
+                      <input type="range" min={mobileState.minScale} max={MAX_SCALE} step={0.001} value={mobileState.scale} onChange={e => handleMobileScale(parseFloat(e.target.value))} className="flex-1 accent-[#1d9bf0] cursor-pointer" />
+                      <button className="text-muted-foreground hover:text-foreground" onClick={() => handleMobileScale(Math.min(MAX_SCALE, mobileState.scale * 1.15))} aria-label="Zoom in"><ZoomIn className="h-5 w-5" /></button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {activeTab === 'desktop' && (
+                <>
+                  <div
+                    className="relative overflow-hidden bg-black select-none w-full"
+                    style={{ height: desktopStageH > 80 ? desktopStageH : 260, cursor: isMobileViewport ? 'not-allowed' : 'move' }}
+                  >
+                    <div
+                      ref={desktopStageRef}
+                      className="absolute left-0 right-0"
+                      style={{ top: OVERFLOW_PADDING, height: desktopCropH > 0 ? desktopCropH : 200 }}
+                      onMouseDown={showEditor && !isMobileViewport ? handleDesktopMouseDown : undefined}
+                      onTouchStart={showEditor && !isMobileViewport ? handleDesktopTouchStart : undefined}
+                    >
+                      {showEditor && (
+                        <img
+                          src={previewUrl!}
+                          alt="Desktop background preview"
+                          className="pointer-events-none absolute"
+                          style={{
+                            left: '50%', top: '50%', maxWidth: 'none',
+                            width: imageNaturalSize.w, height: imageNaturalSize.h,
+                            transform: `translate(calc(-50% + ${desktopState.pos.x}px), calc(-50% + ${desktopState.pos.y}px)) scale(${desktopState.scale})`,
+                            transformOrigin: 'center center',
+                          }}
+                          draggable={false}
+                        />
+                      )}
+                    </div>
+                    {showEditor && (
+                      <>
+                        <div className="absolute left-0 right-0 top-0 pointer-events-none bg-black/60" style={{ height: OVERFLOW_PADDING }} />
+                        <div className="absolute left-0 right-0 bottom-0 pointer-events-none bg-black/60" style={{ height: OVERFLOW_PADDING }} />
+                        <div className="absolute left-0 right-0 pointer-events-none" style={{ top: OVERFLOW_PADDING, height: desktopCropH > 0 ? desktopCropH : 200, border: '2px solid #1d9bf0', boxSizing: 'border-box' }} />
+                      </>
+                    )}
+                    {isMobileViewport && (
+                      <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-10 pointer-events-none">
+                        <p className="text-white text-sm text-center px-6">Open on a desktop device to set the desktop crop</p>
+                      </div>
+                    )}
+                  </div>
+                  {showEditor && !isMobileViewport && (
+                    <div className="flex items-center gap-3 px-6 py-3 border-t">
+                      <button className="text-muted-foreground hover:text-foreground" onClick={() => handleDesktopScale(Math.max(desktopState.minScale, desktopState.scale / 1.15))} aria-label="Zoom out"><ZoomOut className="h-5 w-5" /></button>
+                      <input type="range" min={desktopState.minScale} max={MAX_SCALE} step={0.001} value={desktopState.scale} onChange={e => handleDesktopScale(parseFloat(e.target.value))} className="flex-1 accent-[#1d9bf0] cursor-pointer" />
+                      <button className="text-muted-foreground hover:text-foreground" onClick={() => handleDesktopScale(Math.min(MAX_SCALE, desktopState.scale * 1.15))} aria-label="Zoom in"><ZoomIn className="h-5 w-5" /></button>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
           )}
         </DialogContent>
       </Dialog>

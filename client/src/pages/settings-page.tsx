@@ -2141,10 +2141,27 @@ export default function SettingsPage() {
 
                     {showBackgroundUpload && (
                       <BackgroundUploadPreview
-                        onUpload={async (url) => {
+                        onUpload={async (url, mobilePos, desktopPos) => {
                           try {
-                            await apiRequest("PATCH", `/api/users/${user?.id}`, { profileBackgroundImageUrl: url });
-                            setProfileData(prev => ({ ...prev, profileBackgroundImageUrl: url }));
+                            await apiRequest("PATCH", `/api/users/${user?.id}`, {
+                              profileBackgroundImageUrl: url,
+                              profileBackgroundPositionX: mobilePos.positionX,
+                              profileBackgroundPositionY: mobilePos.positionY,
+                              profileBackgroundZoom: mobilePos.zoom,
+                              profileBackgroundDesktopX: desktopPos.positionX,
+                              profileBackgroundDesktopY: desktopPos.positionY,
+                              profileBackgroundDesktopZoom: desktopPos.zoom,
+                            });
+                            setProfileData(prev => ({
+                              ...prev,
+                              profileBackgroundImageUrl: url,
+                              profileBackgroundPositionX: mobilePos.positionX,
+                              profileBackgroundPositionY: mobilePos.positionY,
+                              profileBackgroundZoom: mobilePos.zoom,
+                              profileBackgroundDesktopX: desktopPos.positionX,
+                              profileBackgroundDesktopY: desktopPos.positionY,
+                              profileBackgroundDesktopZoom: desktopPos.zoom,
+                            }));
                             queryClient.invalidateQueries({ queryKey: ['/api/user'] });
                             queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
                             toast({ title: "Background uploaded!", description: "Your background image has been saved.", variant: "gamefolioSuccess" });
@@ -2204,7 +2221,7 @@ export default function SettingsPage() {
                           ) : (
                             <>
                               {(signedBgImageUrl || profileData.profileBackgroundImageUrl) ? (
-                                <div className="relative w-full h-40 rounded-lg overflow-hidden border-2 border-primary">
+                                <div className="relative aspect-[9/16] w-36 mx-auto rounded-lg overflow-hidden border-2 border-primary">
                                   <img
                                     src={signedBgImageUrl || profileData.profileBackgroundImageUrl}
                                     alt="Background preview"
@@ -2219,8 +2236,8 @@ export default function SettingsPage() {
                                   </div>
                                 </div>
                               ) : (
-                                <div className="w-full h-40 rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted/20">
-                                  <p className="text-sm text-muted-foreground">No background image set</p>
+                                <div className="aspect-[9/16] w-36 mx-auto rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted/20">
+                                  <p className="text-sm text-muted-foreground text-center px-2">No image set</p>
                                 </div>
                               )}
                               <div className="flex gap-2 flex-wrap">
@@ -2713,48 +2730,53 @@ export default function SettingsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {profileData.bannerUrl && (
-                        <div>
-                          <Label className="text-sm font-medium">Current Banner Preview</Label>
-                          <div className="mt-2 aspect-[3.5/1] w-full rounded-lg border overflow-hidden">
-                            <img
-                              src={signedBannerUrl || profileData.bannerUrl}
-                              alt="Current banner"
-                              className="w-full h-full object-cover"
-                            />
+                      <div
+                        className="space-y-4 transition-opacity duration-300"
+                        style={{ opacity: profileData.hideBanner ? 0.4 : 1, pointerEvents: profileData.hideBanner ? 'none' : 'auto' }}
+                      >
+                        {profileData.bannerUrl && (
+                          <div>
+                            <Label className="text-sm font-medium">Current Banner Preview</Label>
+                            <div className="mt-2 aspect-[3.5/1] w-full rounded-lg border overflow-hidden">
+                              <img
+                                src={signedBannerUrl || profileData.bannerUrl}
+                                alt="Current banner"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
                           </div>
+                        )}
+                        <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+                          <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground mb-4">
+                            {profileData.bannerUrl ? 'Upload a new banner image' : 'Upload your custom banner with preview and positioning'}
+                          </p>
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowBannerUpload(true)}
+                          >
+                            {profileData.bannerUrl ? 'Change Banner' : 'Upload Banner'}
+                          </Button>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Max file size: 5MB
+                          </p>
                         </div>
-                      )}
-                      <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-                        <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground mb-4">
-                          {profileData.bannerUrl ? 'Upload a new banner image' : 'Upload your custom banner with preview and positioning'}
-                        </p>
-                        <Button 
-                          variant="outline"
-                          onClick={() => setShowBannerUpload(true)}
-                        >
-                          {profileData.bannerUrl ? 'Change Banner' : 'Upload Banner'}
-                        </Button>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Max file size: 5MB
-                        </p>
+                        {profileData.bannerUrl && (
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setProfileData(prev => ({ ...prev, bannerUrl: "" }));
+                              toast({
+                                title: "Banner removed!",
+                                description: `Banner has been removed. Click "Save Changes" to apply.`,
+                                variant: "gamefolioSuccess",
+                              });
+                            }}
+                          >
+                            Remove Banner
+                          </Button>
+                        )}
                       </div>
-                      {profileData.bannerUrl && (
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setProfileData(prev => ({ ...prev, bannerUrl: "" }));
-                            toast({
-                              title: "Banner removed!",
-                              description: `Banner has been removed. Click "Save Changes" to apply.`,
-                              variant: "gamefolioSuccess",
-                            });
-                          }}
-                        >
-                          Remove Banner
-                        </Button>
-                      )}
                       <div className="flex items-center justify-between rounded-lg border p-3 mt-2">
                         <div className="space-y-0.5">
                           <Label className="text-sm font-medium">Hide Banner</Label>
