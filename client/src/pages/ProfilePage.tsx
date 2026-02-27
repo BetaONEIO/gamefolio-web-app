@@ -66,6 +66,7 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
+import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import { ModeratorIcon } from "@/components/ui/moderator-icon";
@@ -682,7 +683,10 @@ const ProfilePage = () => {
     
     if (screenshot) {
       // Open the screenshot modal
-      setSelectedScreenshot(screenshot);
+      setSelectedScreenshot({
+        ...screenshot,
+        user: screenshot.user || { id: profile?.id, username: profile?.username, displayName: profile?.displayName, avatarUrl: profile?.avatarUrl },
+      });
       
       // Check for comment-related query parameters
       const urlParams = new URLSearchParams(window.location.search);
@@ -3089,7 +3093,10 @@ const ProfilePage = () => {
                           profile={profile}
                           onDelete={(id) => deleteScreenshotMutation.mutate(id)}
                           onSelect={(screenshot) => {
-                            setSelectedScreenshot(screenshot);
+                            setSelectedScreenshot({
+                              ...screenshot,
+                              user: screenshot.user || { id: profile?.id, username: profile?.username, displayName: profile?.displayName, avatarUrl: profile?.avatarUrl },
+                            });
                           }}
                         />
                       </div>
@@ -3410,194 +3417,14 @@ const ProfilePage = () => {
           </React.Suspense>
         )}
 
-        {/* Screenshot Lightbox Modal - Enhanced to match ClipDialog */}
-      <Dialog open={!!selectedScreenshot} onOpenChange={() => {
-        setSelectedScreenshot(null);
-      }}>
-        <DialogContent className="max-w-[80%] w-[80%] p-0 bg-background text-foreground max-h-[76vh] h-[76vh] overflow-y-auto overflow-x-hidden lg:overflow-hidden screenshot-dialog-close">
-          <style>{`
-            .screenshot-dialog-close > button[type="button"] {
-              background: rgba(0,0,0,0.4) !important;
-              color: white !important;
-              border-radius: 0.5rem !important;
-              padding: 0 !important;
-              opacity: 1 !important;
-              right: 12px !important;
-              top: 12px !important;
-              width: 32px !important;
-              height: 32px !important;
-              display: flex !important;
-              align-items: center !important;
-              justify-content: center !important;
-              z-index: 100 !important;
-            }
-            .screenshot-dialog-close > button[type="button"]:hover {
-              background: rgba(0,0,0,0.6) !important;
-            }
-            .screenshot-dialog-close > button[type="button"] svg {
-              width: 16px !important;
-              height: 16px !important;
-            }
-          `}</style>
-          {selectedScreenshot && (
-            <div className="flex flex-col lg:flex-row h-auto lg:h-full min-h-full">
-              <div className="relative bg-black flex items-center justify-center w-full lg:w-[75%] h-[50vh] lg:h-full flex-shrink-0">
-                <img
-                  src={screenshotSignedUrl || selectedScreenshot.imageUrl}
-                  alt={selectedScreenshot.title}
-                  className="max-w-full max-h-full object-contain"
-                />
-                {(() => {
-                  const currentIdx = screenshots ? screenshots.findIndex(s => s.id === selectedScreenshot.id) : -1;
-                  const hasPrev = screenshots && screenshots.length > 1 && currentIdx > 0;
-                  const hasNextItem = screenshots && screenshots.length > 1 && currentIdx < (screenshots?.length || 0) - 1;
-                  return (
-                    <>
-                      {hasPrev && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setSelectedScreenshot(screenshots![currentIdx - 1]); }}
-                          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors flex items-center justify-center"
-                          aria-label="Previous screenshot"
-                        >
-                          <ChevronLeft className="h-6 w-6" />
-                        </button>
-                      )}
-                      {hasNextItem && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setSelectedScreenshot(screenshots![currentIdx + 1]); }}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors flex items-center justify-center"
-                          aria-label="Next screenshot"
-                        >
-                          <ChevronRight className="h-6 w-6" />
-                        </button>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
-
-              <div className="flex flex-col w-full lg:w-[25%] lg:h-full">
-                <div className="border-b border-border p-4 pr-12">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3">
-                      {profileAvatarSignedUrl ? (
-                        <img 
-                          src={profileAvatarSignedUrl} 
-                          alt={profile?.displayName || ''} 
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <UserIcon className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <Link href={`/profile/${profile?.username}`} onClick={(e: React.MouseEvent) => {
-                      e.stopPropagation();
-                      setSelectedScreenshot(null);
-                    }}>
-                      <div className="text-white flex items-center hover:text-primary transition-colors cursor-pointer font-medium">
-                        {profile?.displayName || profile?.username}
-                      </div>
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Comments and content section - scrollable on desktop only */}
-                <div className="flex-1 lg:overflow-y-auto px-4 py-3 space-y-3">
-                  {/* Title and description */}
-                  <div>
-                    <h1 className="text-lg font-semibold">{selectedScreenshot.title}</h1>
-                    {selectedScreenshot.description && (
-                      <p className="text-sm text-foreground mt-1">{selectedScreenshot.description}</p>
-                    )}
-
-                    {/* Game name above views/time */}
-                    {selectedScreenshot.gameId && games?.find(g => g.id === selectedScreenshot.gameId) && (
-                      <div className="mt-2">
-                        <Link href={`/games/${(games.find(g => g.id === selectedScreenshot.gameId)?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')}`} onClick={(e) => e.stopPropagation()}>
-                          <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold hover:bg-green-500 cursor-pointer transition-colors">
-                            {games.find(g => g.id === selectedScreenshot.gameId)?.name}
-                          </span>
-                        </Link>
-                      </div>
-                    )}
-
-                    <div className="flex items-center mt-2 text-sm text-muted-foreground">
-                      <Eye className="h-4 w-4 mr-1" />
-                      <span className="mr-3">{selectedScreenshot.views || 0} views</span>
-                      <Clock className="h-4 w-4 mr-1" />
-                      <span>{selectedScreenshot.createdAt ? formatDistance(new Date(selectedScreenshot.createdAt), new Date(), { addSuffix: true }) : 'Unknown time'}</span>
-                    </div>
-
-                    {/* Action bar with reaction buttons - moved above comments */}
-                    <div className="border-t border-b border-border py-3 mt-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <LikeButton 
-                            contentId={selectedScreenshot.id}
-                            contentType="screenshot"
-                            contentOwnerId={selectedScreenshot.userId}
-                            initialLiked={false}
-                            initialCount={(selectedScreenshot as any)._count?.likes || 0}
-                            size="lg"
-                          />
-
-                          <FireButton 
-                            contentId={selectedScreenshot.id}
-                            contentType="screenshot"
-                            contentOwnerId={selectedScreenshot.userId}
-                            initialFired={false}
-                            initialCount={(selectedScreenshot as any)._count?.reactions || 0}
-                            size="lg"
-                          />
-
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-muted-foreground hover:text-foreground flex items-center gap-1"
-                            data-testid="button-comment"
-                          >
-                            <MessageSquare className="h-4 w-4" />
-                            <span>{(selectedScreenshot as any)._count?.comments || 0}</span>
-                          </Button>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <React.Suspense fallback={null}>
-                            <ScreenshotShareDialog 
-                              screenshotId={selectedScreenshot.id.toString()} 
-                              isOwnContent={isOwnProfile}
-                              trigger={
-                                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                                  <Share2 className="h-4 w-4" />
-                                </Button>
-                              } 
-                            />
-                          </React.Suspense>
-
-                          <ReportButton
-                            contentType="screenshot"
-                            contentId={selectedScreenshot.id}
-                            contentTitle={selectedScreenshot.title}
-                            variant="ghost"
-                            size="sm"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Comments section */}
-                  <React.Suspense fallback={null}>
-                    <ScreenshotCommentSection 
-                      screenshotId={selectedScreenshot.id}
-                    />
-                  </React.Suspense>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+        {/* Screenshot Lightbox */}
+        <ScreenshotLightbox
+          screenshot={selectedScreenshot}
+          onClose={() => setSelectedScreenshot(null)}
+          currentUserId={user?.id}
+          screenshots={screenshots as any[]}
+          onNavigate={(s: any) => setSelectedScreenshot({ ...s, user: s.user || { id: profile?.id, username: profile?.username, displayName: profile?.displayName, avatarUrl: profile?.avatarUrl } })}
+        />
 
       {/* Share Dialogs for newly uploaded content */}
       <React.Suspense fallback={null}>
