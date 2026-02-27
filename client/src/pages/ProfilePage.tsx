@@ -1244,8 +1244,17 @@ const ProfilePage = () => {
   const backgroundColor = profile.backgroundColor || '#0B2232';
   const cardColor = profile.cardColor || '#1E3A8A';
   const profileBackgroundImageUrl = bgImageSignedUrl || (profile as any).profileBackgroundImageUrl || '';
-  const profileBackgroundPosX = (profile as any).profileBackgroundPositionX || '50';
-  const profileBackgroundPosY = (profile as any).profileBackgroundPositionY || '50';
+  const isMobileViewport = window.innerWidth <= 768;
+  const profileBackgroundPosX = isMobileViewport
+    ? ((profile as any).profileBackgroundPositionX || '50')
+    : ((profile as any).profileBackgroundDesktopX || (profile as any).profileBackgroundPositionX || '50');
+  const profileBackgroundPosY = isMobileViewport
+    ? ((profile as any).profileBackgroundPositionY || '50')
+    : ((profile as any).profileBackgroundDesktopY || (profile as any).profileBackgroundPositionY || '50');
+  const profileBackgroundZoom = isMobileViewport
+    ? ((profile as any).profileBackgroundZoom || '100')
+    : ((profile as any).profileBackgroundDesktopZoom || (profile as any).profileBackgroundZoom || '100');
+  const hideBanner = !!(profile as any).hideBanner;
 
   const PROFILE_FONT_MAP: Record<string, { family: string; scale: number }> = {
     'default': { family: 'system-ui, sans-serif', scale: 1 },
@@ -1386,7 +1395,7 @@ const ProfilePage = () => {
       ref={profileThemeScopeRef}
       style={profileBackgroundImageUrl ? {
         backgroundImage: `url(${profileBackgroundImageUrl})`,
-        backgroundSize: 'cover',
+        backgroundSize: Number(profileBackgroundZoom) !== 100 ? `${profileBackgroundZoom}%` : 'cover',
         backgroundPosition: `${profileBackgroundPosX}% ${profileBackgroundPosY}%`,
         backgroundAttachment: 'fixed',
         position: 'relative',
@@ -1432,7 +1441,7 @@ const ProfilePage = () => {
       })()}
 
       {/* Enhanced Banner with global theme colors */}
-      <div 
+      {!hideBanner && <div 
         className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-1 md:-mx-8 border-b-4 border-primary ${resolvedBannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
         style={{
           ...bannerStyle,
@@ -1519,7 +1528,7 @@ const ProfilePage = () => {
         ></div>
         </>
         )}
-      </div>
+      </div>}
 
       {/* Share button - positioned on banner top right for mobile */}
       <div className="block md:hidden absolute top-4 right-4 z-30">

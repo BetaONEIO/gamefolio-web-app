@@ -26,6 +26,11 @@ export const users = pgTable("users", {
   profileBackgroundImageUrl: text("profile_background_image_url"),
   profileBackgroundPositionX: text("profile_background_position_x").default("50"),
   profileBackgroundPositionY: text("profile_background_position_y").default("50"),
+  profileBackgroundZoom: text("profile_background_zoom").default("100"),
+  profileBackgroundDesktopX: text("profile_background_desktop_x").default("50"),
+  profileBackgroundDesktopY: text("profile_background_desktop_y").default("50"),
+  profileBackgroundDesktopZoom: text("profile_background_desktop_zoom").default("100"),
+  hideBanner: boolean("hide_banner").default(false),
   layoutStyle: text("layout_style").default("grid"), // grid, masonry, classic
   // Platform connections
   steamUsername: text("steam_username"),

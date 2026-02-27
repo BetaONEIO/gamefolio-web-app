@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useMobile } from "@/hooks/use-mobile";
 import { useLocation, Link } from "wouter";
 import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -462,6 +464,11 @@ export default function SettingsPage() {
     profileBackgroundImageUrl: (user as any)?.profileBackgroundImageUrl || "",
     profileBackgroundPositionX: (user as any)?.profileBackgroundPositionX || "50",
     profileBackgroundPositionY: (user as any)?.profileBackgroundPositionY || "50",
+    profileBackgroundZoom: (user as any)?.profileBackgroundZoom || "100",
+    profileBackgroundDesktopX: (user as any)?.profileBackgroundDesktopX || "50",
+    profileBackgroundDesktopY: (user as any)?.profileBackgroundDesktopY || "50",
+    profileBackgroundDesktopZoom: (user as any)?.profileBackgroundDesktopZoom || "100",
+    hideBanner: (user as any)?.hideBanner || false,
     profileFont: (user as any)?.profileFont || "default",
     profileFontEffect: (user as any)?.profileFontEffect || "none",
     profileFontAnimation: (user as any)?.profileFontAnimation || "none",
@@ -474,6 +481,8 @@ export default function SettingsPage() {
   const [uploadingBgImage, setUploadingBgImage] = useState(false);
   const [showBgPositionPreview, setShowBgPositionPreview] = useState(false);
   const [pendingBgImageUrl, setPendingBgImageUrl] = useState<string>('');
+  const [bgCropTab, setBgCropTab] = useState<'mobile' | 'desktop'>('mobile');
+  const isMobile = useMobile();
   const [profilePicTab, setProfilePicTab] = useState<'upload' | 'nft'>(
     user?.activeProfilePicType === 'nft' ? 'nft' : 'upload'
   );
@@ -554,6 +563,11 @@ export default function SettingsPage() {
           profileBackgroundImageUrl: (user as any)?.profileBackgroundImageUrl || "",
           profileBackgroundPositionX: (user as any)?.profileBackgroundPositionX || "50",
           profileBackgroundPositionY: (user as any)?.profileBackgroundPositionY || "50",
+          profileBackgroundZoom: (user as any)?.profileBackgroundZoom || "100",
+          profileBackgroundDesktopX: (user as any)?.profileBackgroundDesktopX || "50",
+          profileBackgroundDesktopY: (user as any)?.profileBackgroundDesktopY || "50",
+          profileBackgroundDesktopZoom: (user as any)?.profileBackgroundDesktopZoom || "100",
+          hideBanner: (user as any)?.hideBanner || false,
           profileFont: (user as any)?.profileFont || "default",
           profileFontEffect: (user as any)?.profileFontEffect || "none",
           profileFontAnimation: (user as any)?.profileFontAnimation || "none",
@@ -1089,19 +1103,22 @@ export default function SettingsPage() {
     }
   };
 
-  const handleBgPositionApply = async (data: { positionX: number; positionY: number }) => {
+  const handleBgPositionApply = async (data: { positionX: number; positionY: number; zoom: number }, target: 'mobile' | 'desktop' = 'mobile') => {
     try {
-      await apiRequest("PATCH", `/api/users/${user?.id}`, {
-        profileBackgroundImageUrl: pendingBgImageUrl,
-        profileBackgroundPositionX: String(data.positionX),
-        profileBackgroundPositionY: String(data.positionY),
-      });
-      setProfileData(prev => ({
-        ...prev,
-        profileBackgroundImageUrl: pendingBgImageUrl,
-        profileBackgroundPositionX: String(data.positionX),
-        profileBackgroundPositionY: String(data.positionY),
-      }));
+      const patch = target === 'mobile'
+        ? {
+            profileBackgroundImageUrl: pendingBgImageUrl,
+            profileBackgroundPositionX: String(data.positionX),
+            profileBackgroundPositionY: String(data.positionY),
+            profileBackgroundZoom: String(data.zoom),
+          }
+        : {
+            profileBackgroundDesktopX: String(data.positionX),
+            profileBackgroundDesktopY: String(data.positionY),
+            profileBackgroundDesktopZoom: String(data.zoom),
+          };
+      await apiRequest("PATCH", `/api/users/${user?.id}`, patch);
+      setProfileData(prev => ({ ...prev, ...patch }));
       setShowBgPositionPreview(false);
       setPendingBgImageUrl('');
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
@@ -2145,13 +2162,37 @@ export default function SettingsPage() {
                       <CardContent>
                         <div className="space-y-4">
                           {showBgPositionPreview && (signedPendingBgImageUrl || pendingBgImageUrl) ? (
-                            <BackgroundPositionPreview
-                              imageUrl={signedPendingBgImageUrl || pendingBgImageUrl}
-                              initialPositionX={Number(profileData.profileBackgroundPositionX) || 50}
-                              initialPositionY={Number(profileData.profileBackgroundPositionY) || 50}
-                              onApply={handleBgPositionApply}
-                              onCancel={handleBgPositionCancel}
-                            />
+                            <div className="space-y-3">
+                              <Tabs value={bgCropTab} onValueChange={(v) => setBgCropTab(v as 'mobile' | 'desktop')}>
+                                <TabsList className="w-full">
+                                  <TabsTrigger value="mobile" className="flex-1">Mobile Crop</TabsTrigger>
+                                  <TabsTrigger value="desktop" className="flex-1">Desktop Crop</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="mobile" className="mt-3">
+                                  <BackgroundPositionPreview
+                                    imageUrl={signedPendingBgImageUrl || pendingBgImageUrl}
+                                    label="Mobile Background Position"
+                                    initialPositionX={Number(profileData.profileBackgroundPositionX) || 50}
+                                    initialPositionY={Number(profileData.profileBackgroundPositionY) || 50}
+                                    initialZoom={Number(profileData.profileBackgroundZoom) || 100}
+                                    onApply={(data) => handleBgPositionApply(data, 'mobile')}
+                                    onCancel={handleBgPositionCancel}
+                                  />
+                                </TabsContent>
+                                <TabsContent value="desktop" className="mt-3">
+                                  <BackgroundPositionPreview
+                                    imageUrl={signedPendingBgImageUrl || pendingBgImageUrl}
+                                    label="Desktop Background Position"
+                                    initialPositionX={Number(profileData.profileBackgroundDesktopX) || 50}
+                                    initialPositionY={Number(profileData.profileBackgroundDesktopY) || 50}
+                                    initialZoom={Number(profileData.profileBackgroundDesktopZoom) || 100}
+                                    readOnly={isMobile}
+                                    onApply={(data) => handleBgPositionApply(data, 'desktop')}
+                                    onCancel={handleBgPositionCancel}
+                                  />
+                                </TabsContent>
+                              </Tabs>
+                            </div>
                           ) : (
                             <>
                               {(signedBgImageUrl || profileData.profileBackgroundImageUrl) ? (
@@ -2188,6 +2229,7 @@ export default function SettingsPage() {
                                     size="sm"
                                     onClick={() => {
                                       setPendingBgImageUrl(profileData.profileBackgroundImageUrl);
+                                      setBgCropTab('mobile');
                                       setShowBgPositionPreview(true);
                                     }}
                                   >
@@ -2714,6 +2756,28 @@ export default function SettingsPage() {
                           Remove Banner
                         </Button>
                       )}
+                      <div className="flex items-center justify-between rounded-lg border p-3 mt-2">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm font-medium">Hide Banner</Label>
+                          <p className="text-xs text-muted-foreground">
+                            Hides your banner so your profile background image shows through more
+                          </p>
+                        </div>
+                        <Switch
+                          checked={!!profileData.hideBanner}
+                          onCheckedChange={async (checked) => {
+                            setProfileData(prev => ({ ...prev, hideBanner: checked }));
+                            try {
+                              await apiRequest("PATCH", `/api/users/${user?.id}`, { hideBanner: checked });
+                              queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+                              queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
+                            } catch (err: any) {
+                              toast({ title: "Failed to save", description: err.message || "Could not update banner visibility.", variant: "destructive" });
+                              setProfileData(prev => ({ ...prev, hideBanner: !checked }));
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
