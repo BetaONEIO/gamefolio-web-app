@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Coins, TrendingUp, Wallet, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Coins, TrendingUp, Wallet, Loader2, AlertCircle, Server } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import { useOpenConnectModal } from "@0xsequence/connect";
 import { parseUnits, formatUnits, type Address } from "viem";
 import { GF_STAKING_ADDRESS, GF_STAKING_ABI, GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } from "@shared/contracts";
+import { apiRequest } from "@/lib/queryClient";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 
 const GF_DECIMALS = 18;
@@ -20,29 +21,34 @@ export default function StakingPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { address, isConnected, chainId } = useAccount();
+  const { address: externalAddress, isConnected, chainId } = useAccount();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
   const { setOpenConnectModal } = useOpenConnectModal();
 
   const [stakeAmount, setStakeAmount] = useState("");
+  const [unstakeAmount, setUnstakeAmount] = useState("");
   const [isStaking, setIsStaking] = useState(false);
+  const [isUnstaking, setIsUnstaking] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
   const [tokenBalance, setTokenBalance] = useState<string>("0");
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
 
+  const useServerSigning = !!user?.walletAddress && !walletClient;
+  const effectiveAddress = externalAddress || (user?.walletAddress as Address | undefined);
+
   const { data: stakePosition, isLoading: isLoadingPosition, refetch: refetchPosition } = useQuery({
-    queryKey: ["/api/staking/position", address],
+    queryKey: ["/api/staking/position", effectiveAddress],
     queryFn: async () => {
-      if (!address) return { staked: "0", earned: "0" };
-      const response = await fetch(`/api/staking/position/${address}`);
+      if (!effectiveAddress) return { staked: "0", earned: "0" };
+      const response = await fetch(`/api/staking/position/${effectiveAddress}`);
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || "Failed to fetch stake position");
       }
       return response.json();
     },
-    enabled: !!address,
+    enabled: !!effectiveAddress,
     refetchInterval: 30000,
   });
 
@@ -58,16 +64,24 @@ export default function StakingPage() {
 
   useEffect(() => {
     async function fetchBalance() {
-      if (!address || !publicClient) return;
+      if (!effectiveAddress) return;
       setIsLoadingBalance(true);
       try {
-        const balance = await publicClient.readContract({
-          address: GF_TOKEN_ADDRESS,
-          abi: GF_TOKEN_ABI,
-          functionName: "balanceOf",
-          args: [address],
-        }) as bigint;
-        setTokenBalance(formatUnits(balance, GF_DECIMALS));
+        if (useServerSigning) {
+          const response = await fetch("/api/token/on-chain-balance", { credentials: "include" });
+          if (response.ok) {
+            const data = await response.json();
+            setTokenBalance(data.balance || "0");
+          }
+        } else if (publicClient) {
+          const balance = await publicClient.readContract({
+            address: GF_TOKEN_ADDRESS,
+            abi: GF_TOKEN_ABI,
+            functionName: "balanceOf",
+            args: [effectiveAddress],
+          }) as bigint;
+          setTokenBalance(formatUnits(balance, GF_DECIMALS));
+        }
       } catch (error) {
         console.error("Failed to fetch token balance:", error);
       } finally {
@@ -75,10 +89,14 @@ export default function StakingPage() {
       }
     }
     fetchBalance();
-  }, [address, publicClient]);
+  }, [effectiveAddress, publicClient, useServerSigning]);
 
   const handleMaxClick = () => {
     setStakeAmount(tokenBalance);
+  };
+
+  const handleMaxUnstake = () => {
+    setUnstakeAmount(parseFloat(stakePosition?.staked || "0").toString());
   };
 
   const handleError = (error: any, action: string) => {
@@ -90,9 +108,9 @@ export default function StakingPage() {
       description = "You rejected the transaction in your wallet";
     } else if (error.message?.includes("insufficient funds") || error.message?.includes("Insufficient")) {
       title = "Insufficient balance";
-      description = error.message?.includes("sFUEL") 
-        ? "You need sFUEL for gas fees" 
-        : "You don't have enough GF tokens";
+      description = error.message?.includes("sFUEL")
+        ? "You need sFUEL for gas fees"
+        : "You don't have enough GF tokens on-chain";
     } else if (error.message?.includes("chain") || error.message?.includes("network")) {
       title = "Wrong network";
       description = "Please switch to SKALE Nebula Testnet";
@@ -105,94 +123,81 @@ export default function StakingPage() {
   };
 
   const handleStake = async () => {
-    if (!walletClient || !address || !publicClient) {
-      toast({
-        title: "Wallet not connected",
-        description: "Please connect your wallet first",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (chainId !== SKALE_CHAIN_ID) {
-      toast({
-        title: "Wrong network",
-        description: "Please switch to SKALE Nebula Testnet",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const amount = parseFloat(stakeAmount);
     if (!amount || amount <= 0) {
-      toast({
-        title: "Invalid amount",
-        description: "Please enter a valid amount to stake",
-        variant: "destructive",
-      });
+      toast({ title: "Invalid amount", description: "Please enter a valid amount to stake", variant: "destructive" });
+      return;
+    }
+
+    if (!effectiveAddress) {
+      toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
       return;
     }
 
     if (amount > parseFloat(tokenBalance)) {
-      toast({
-        title: "Insufficient balance",
-        description: `You only have ${parseFloat(tokenBalance).toLocaleString()} GF tokens`,
-        variant: "destructive",
-      });
+      toast({ title: "Insufficient balance", description: `You only have ${parseFloat(tokenBalance).toLocaleString()} GF tokens on-chain`, variant: "destructive" });
       return;
     }
 
     setIsStaking(true);
     try {
-      const amountRaw = parseUnits(stakeAmount, GF_DECIMALS);
+      if (useServerSigning) {
+        toast({ title: "Staking tokens...", description: "Processing transaction server-side" });
+        const result = await apiRequest("POST", "/api/staking/stake", { amount: stakeAmount });
+        const data = await result.json();
+        if (!result.ok) throw new Error(data.error || "Stake failed");
+        toast({ title: "Staked successfully!", description: `You staked ${amount.toLocaleString()} GF tokens` });
+      } else {
+        if (!walletClient || !publicClient) {
+          toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
+          return;
+        }
+        if (chainId !== SKALE_CHAIN_ID) {
+          toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
+          return;
+        }
 
-      const allowance = await publicClient.readContract({
-        address: GF_TOKEN_ADDRESS,
-        abi: GF_TOKEN_ABI,
-        functionName: "allowance",
-        args: [address, GF_STAKING_ADDRESS],
-      }) as bigint;
+        const amountRaw = parseUnits(stakeAmount, GF_DECIMALS);
 
-      if (allowance < amountRaw) {
-        toast({ title: "Approving tokens...", description: "Please confirm the approval in your wallet" });
-        
-        const approveHash = await walletClient.writeContract({
+        const allowance = await publicClient.readContract({
           address: GF_TOKEN_ADDRESS,
           abi: GF_TOKEN_ABI,
-          functionName: "approve",
-          args: [GF_STAKING_ADDRESS, amountRaw],
+          functionName: "allowance",
+          args: [effectiveAddress, GF_STAKING_ADDRESS],
+        }) as bigint;
+
+        if (allowance < amountRaw) {
+          toast({ title: "Approving tokens...", description: "Please confirm the approval in your wallet" });
+          const approveHash = await walletClient.writeContract({
+            address: GF_TOKEN_ADDRESS,
+            abi: GF_TOKEN_ABI,
+            functionName: "approve",
+            args: [GF_STAKING_ADDRESS, amountRaw],
+          });
+          await publicClient.waitForTransactionReceipt({ hash: approveHash, confirmations: 1 });
+        }
+
+        toast({ title: "Staking tokens...", description: "Please confirm the stake transaction" });
+        const stakeHash = await walletClient.writeContract({
+          address: GF_STAKING_ADDRESS,
+          abi: GF_STAKING_ABI,
+          functionName: "stake",
+          args: [amountRaw],
         });
-        
-        await publicClient.waitForTransactionReceipt({ hash: approveHash, confirmations: 1 });
+        await publicClient.waitForTransactionReceipt({ hash: stakeHash, confirmations: 1 });
+        toast({ title: "Staked successfully!", description: `You staked ${amount.toLocaleString()} GF tokens` });
+
+        const newBalance = await publicClient.readContract({
+          address: GF_TOKEN_ADDRESS,
+          abi: GF_TOKEN_ABI,
+          functionName: "balanceOf",
+          args: [effectiveAddress],
+        }) as bigint;
+        setTokenBalance(formatUnits(newBalance, GF_DECIMALS));
       }
-
-      toast({ title: "Staking tokens...", description: "Please confirm the stake transaction" });
-
-      const stakeHash = await walletClient.writeContract({
-        address: GF_STAKING_ADDRESS,
-        abi: GF_STAKING_ABI,
-        functionName: "stake",
-        args: [amountRaw],
-      });
-
-      await publicClient.waitForTransactionReceipt({ hash: stakeHash, confirmations: 1 });
-
-      toast({
-        title: "Staked successfully!",
-        description: `You staked ${parseFloat(stakeAmount).toLocaleString()} GF tokens`,
-      });
 
       setStakeAmount("");
       refetchPosition();
-      
-      const newBalance = await publicClient.readContract({
-        address: GF_TOKEN_ADDRESS,
-        abi: GF_TOKEN_ABI,
-        functionName: "balanceOf",
-        args: [address],
-      }) as bigint;
-      setTokenBalance(formatUnits(newBalance, GF_DECIMALS));
-
     } catch (error: any) {
       handleError(error, "Stake");
     } finally {
@@ -200,63 +205,120 @@ export default function StakingPage() {
     }
   };
 
-  const handleClaim = async () => {
-    if (!walletClient || !address || !publicClient) {
-      toast({
-        title: "Wallet not connected",
-        description: "Please connect your wallet first",
-        variant: "destructive",
-      });
+  const handleUnstake = async () => {
+    const amount = parseFloat(unstakeAmount);
+    if (!amount || amount <= 0) {
+      toast({ title: "Invalid amount", description: "Please enter a valid amount to unstake", variant: "destructive" });
       return;
     }
 
-    if (chainId !== SKALE_CHAIN_ID) {
-      toast({
-        title: "Wrong network",
-        description: "Please switch to SKALE Nebula Testnet",
-        variant: "destructive",
-      });
+    const staked = parseFloat(stakePosition?.staked || "0");
+    if (amount > staked) {
+      toast({ title: "Insufficient staked amount", description: `You only have ${staked.toLocaleString()} GF staked`, variant: "destructive" });
+      return;
+    }
+
+    if (!effectiveAddress) {
+      toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
+      return;
+    }
+
+    setIsUnstaking(true);
+    try {
+      if (useServerSigning) {
+        toast({ title: "Unstaking tokens...", description: "Processing transaction server-side" });
+        const result = await apiRequest("POST", "/api/staking/unstake", { amount: unstakeAmount });
+        const data = await result.json();
+        if (!result.ok) throw new Error(data.error || "Unstake failed");
+        toast({ title: "Unstaked successfully!", description: `You unstaked ${amount.toLocaleString()} GF tokens` });
+      } else {
+        if (!walletClient || !publicClient) {
+          toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
+          return;
+        }
+        if (chainId !== SKALE_CHAIN_ID) {
+          toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
+          return;
+        }
+
+        toast({ title: "Unstaking tokens...", description: "Please confirm the transaction" });
+        const txHash = await walletClient.writeContract({
+          address: GF_STAKING_ADDRESS,
+          abi: GF_STAKING_ABI,
+          functionName: "unstake",
+          args: [parseUnits(unstakeAmount, GF_DECIMALS)],
+        });
+        await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
+        toast({ title: "Unstaked successfully!", description: `You unstaked ${amount.toLocaleString()} GF tokens` });
+
+        const newBalance = await publicClient.readContract({
+          address: GF_TOKEN_ADDRESS,
+          abi: GF_TOKEN_ABI,
+          functionName: "balanceOf",
+          args: [effectiveAddress],
+        }) as bigint;
+        setTokenBalance(formatUnits(newBalance, GF_DECIMALS));
+      }
+
+      setUnstakeAmount("");
+      refetchPosition();
+    } catch (error: any) {
+      handleError(error, "Unstake");
+    } finally {
+      setIsUnstaking(false);
+    }
+  };
+
+  const handleClaim = async () => {
+    if (!effectiveAddress) {
+      toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
       return;
     }
 
     const earned = parseFloat(stakePosition?.earned || "0");
     if (earned <= 0) {
-      toast({
-        title: "No rewards",
-        description: "You don't have any rewards to claim",
-        variant: "destructive",
-      });
+      toast({ title: "No rewards", description: "You don't have any rewards to claim", variant: "destructive" });
       return;
     }
 
     setIsClaiming(true);
     try {
-      toast({ title: "Claiming rewards...", description: "Please confirm the transaction" });
+      if (useServerSigning) {
+        toast({ title: "Claiming rewards...", description: "Processing transaction server-side" });
+        const result = await apiRequest("POST", "/api/staking/claim", {});
+        const data = await result.json();
+        if (!result.ok) throw new Error(data.error || "Claim failed");
+        toast({ title: "Rewards claimed!", description: `You claimed ${earned.toLocaleString()} GF tokens` });
+      } else {
+        if (!walletClient || !publicClient) {
+          toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
+          return;
+        }
+        if (chainId !== SKALE_CHAIN_ID) {
+          toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
+          return;
+        }
 
-      const claimHash = await walletClient.writeContract({
-        address: GF_STAKING_ADDRESS,
-        abi: GF_STAKING_ABI,
-        functionName: "claim",
-        args: [],
-      });
+        toast({ title: "Claiming rewards...", description: "Please confirm the transaction" });
+        const claimHash = await walletClient.writeContract({
+          address: GF_STAKING_ADDRESS,
+          abi: GF_STAKING_ABI,
+          functionName: "claim",
+          args: [],
+        });
+        await publicClient.waitForTransactionReceipt({ hash: claimHash, confirmations: 1 });
+        toast({ title: "Rewards claimed!", description: `You claimed ${earned.toLocaleString()} GF tokens` });
 
-      await publicClient.waitForTransactionReceipt({ hash: claimHash, confirmations: 1 });
-
-      toast({
-        title: "Rewards claimed!",
-        description: `You claimed ${earned.toLocaleString()} GF tokens`,
-      });
+        const newBalance = await publicClient.readContract({
+          address: GF_TOKEN_ADDRESS,
+          abi: GF_TOKEN_ABI,
+          functionName: "balanceOf",
+          args: [effectiveAddress],
+        }) as bigint;
+        setTokenBalance(formatUnits(newBalance, GF_DECIMALS));
+      }
 
       refetchPosition();
-      
-      const newBalance = await publicClient.readContract({
-        address: GF_TOKEN_ADDRESS,
-        abi: GF_TOKEN_ABI,
-        functionName: "balanceOf",
-        args: [address],
-      }) as bigint;
-      setTokenBalance(formatUnits(newBalance, GF_DECIMALS));
-
     } catch (error: any) {
       handleError(error, "Claim");
     } finally {
@@ -274,7 +336,6 @@ export default function StakingPage() {
               Back to Home
             </Button>
           </Link>
-
           <Card className="text-center py-12">
             <CardContent>
               <Coins className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
@@ -291,6 +352,10 @@ export default function StakingPage() {
       </div>
     );
   }
+
+  const needsExternalWallet = !useServerSigning && !isConnected;
+  const wrongNetwork = !useServerSigning && isConnected && chainId !== SKALE_CHAIN_ID;
+  const canTransact = useServerSigning || (isConnected && chainId === SKALE_CHAIN_ID);
 
   return (
     <div className="min-h-screen bg-background">
@@ -310,7 +375,21 @@ export default function StakingPage() {
           </div>
         </div>
 
-        {!isConnected ? (
+        {useServerSigning && (
+          <Card className="mb-6 border-primary/30 bg-primary/5">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <Server className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="font-medium text-sm">Using Gamefolio Wallet</p>
+                  <p className="text-xs text-muted-foreground">Transactions are signed server-side using your Gamefolio wallet</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {needsExternalWallet && (
           <Card className="mb-6">
             <CardContent className="py-8 text-center">
               <Wallet className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
@@ -323,7 +402,9 @@ export default function StakingPage() {
               </Button>
             </CardContent>
           </Card>
-        ) : chainId !== SKALE_CHAIN_ID ? (
+        )}
+
+        {wrongNetwork && (
           <Card className="mb-6 border-orange-500">
             <CardContent className="py-6">
               <div className="flex items-center gap-3">
@@ -337,7 +418,7 @@ export default function StakingPage() {
               </div>
             </CardContent>
           </Card>
-        ) : null}
+        )}
 
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           <Card>
@@ -374,7 +455,7 @@ export default function StakingPage() {
             <CardContent>
               <Button
                 onClick={handleClaim}
-                disabled={isClaiming || !isConnected || chainId !== SKALE_CHAIN_ID || parseFloat(stakePosition?.earned || "0") <= 0}
+                disabled={isClaiming || !canTransact || parseFloat(stakePosition?.earned || "0") <= 0}
                 className="w-full"
                 variant="secondary"
               >
@@ -391,11 +472,11 @@ export default function StakingPage() {
           </Card>
         </div>
 
-        <Card className="mb-8">
+        <Card className="mb-6">
           <CardHeader>
             <CardTitle>Stake GF Tokens</CardTitle>
             <CardDescription>
-              Available balance: {isLoadingBalance ? "..." : parseFloat(tokenBalance).toLocaleString(undefined, { maximumFractionDigits: 2 })} GF
+              Available on-chain balance: {isLoadingBalance ? "..." : parseFloat(tokenBalance).toLocaleString(undefined, { maximumFractionDigits: 2 })} GF
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -421,7 +502,7 @@ export default function StakingPage() {
 
             <Button
               onClick={handleStake}
-              disabled={isStaking || !isConnected || chainId !== SKALE_CHAIN_ID || !stakeAmount || parseFloat(stakeAmount) <= 0}
+              disabled={isStaking || !canTransact || !stakeAmount || parseFloat(stakeAmount) <= 0}
               className="w-full"
               size="lg"
             >
@@ -439,6 +520,55 @@ export default function StakingPage() {
             </Button>
           </CardContent>
         </Card>
+
+        {parseFloat(stakePosition?.staked || "0") > 0 && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Unstake GF Tokens</CardTitle>
+              <CardDescription>
+                Currently staked: {parseFloat(stakePosition?.staked || "0").toLocaleString(undefined, { maximumFractionDigits: 2 })} GF
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    type="number"
+                    placeholder="Enter amount to unstake"
+                    value={unstakeAmount}
+                    onChange={(e) => setUnstakeAmount(e.target.value)}
+                    className="pr-16"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 px-2 text-xs"
+                    onClick={handleMaxUnstake}
+                  >
+                    MAX
+                  </Button>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleUnstake}
+                disabled={isUnstaking || !canTransact || !unstakeAmount || parseFloat(unstakeAmount) <= 0}
+                className="w-full"
+                variant="outline"
+                size="lg"
+              >
+                {isUnstaking ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Unstaking...
+                  </>
+                ) : (
+                  "Unstake GF Tokens"
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {stakingStats && (
           <Card>
@@ -458,6 +588,10 @@ export default function StakingPage() {
                   <p className="font-semibold">
                     {parseFloat(stakingStats.rewardRate || "0").toLocaleString()} GF/day
                   </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Estimated APY</p>
+                  <p className="font-semibold text-green-500">12.5%</p>
                 </div>
               </div>
             </CardContent>
