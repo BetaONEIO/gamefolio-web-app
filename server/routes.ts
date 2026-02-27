@@ -1693,6 +1693,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           profileFont: userWithoutPassword.profileFont || 'default',
           profileFontEffect: userWithoutPassword.profileFontEffect || 'none',
           profileFontAnimation: userWithoutPassword.profileFontAnimation || 'none',
+          canMintNfts: userWithoutPassword.canMintNfts || false,
+          canSellNfts: userWithoutPassword.canSellNfts || false,
         });
       }
     } catch (error) {
@@ -1747,6 +1749,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           profileFont: fallbackWithoutPassword.profileFont || 'default',
           profileFontEffect: fallbackWithoutPassword.profileFontEffect || 'none',
           profileFontAnimation: fallbackWithoutPassword.profileFontAnimation || 'none',
+          canMintNfts: fallbackWithoutPassword.canMintNfts || false,
+          canSellNfts: fallbackWithoutPassword.canSellNfts || false,
         });
       }
     } catch (fallbackError) {
@@ -1798,6 +1802,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       profileFont: userWithoutPassword.profileFont || 'default',
       profileFontEffect: userWithoutPassword.profileFontEffect || 'none',
       profileFontAnimation: userWithoutPassword.profileFontAnimation || 'none',
+      canMintNfts: userWithoutPassword.canMintNfts || false,
+      canSellNfts: userWithoutPassword.canSellNfts || false,
     });
   });
 
