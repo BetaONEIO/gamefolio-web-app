@@ -622,6 +622,7 @@ export default function SettingsPage() {
     profileData.profileFontColor !== ((user as any)?.profileFontColor || "#FFFFFF") ||
     avatarFile !== null ||
     selectedPreviousAvatar !== null ||
+    avatarBorderColor !== (user?.avatarBorderColor || '#4ADE80') ||
     (pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId) ||
     (pendingVerificationBadgeId !== undefined && pendingVerificationBadgeId !== (user as any)?.selectedVerificationBadgeId);
   
@@ -896,29 +897,6 @@ export default function SettingsPage() {
     },
   });
   
-  // Mutation to save avatar border color
-  const saveBorderColorMutation = useMutation({
-    mutationFn: async (color: string) => {
-      const response = await apiRequest("PATCH", `/api/users/${user?.id}`, { avatarBorderColor: color });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
-      toast({
-        title: "Border color updated!",
-        description: "Your border color has been saved.",
-        variant: "gamefolioSuccess",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Update failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
 
 
 
@@ -1035,7 +1013,7 @@ export default function SettingsPage() {
         }
       }
 
-      updateProfileMutation.mutate(updatedData);
+      updateProfileMutation.mutate({ ...updatedData, avatarBorderColor });
       setSelectedPreviousAvatar(null);
       queryClient.invalidateQueries({ queryKey: ['/api/user/previous-avatars'] });
     } catch (error) {
@@ -1927,25 +1905,14 @@ export default function SettingsPage() {
                             </div>
                             <Button 
                               size="sm"
-                              onClick={() => {
-                                // Validate hex color before saving
-                                if (/^#[0-9A-Fa-f]{6}$/.test(avatarBorderColor)) {
-                                  saveBorderColorMutation.mutate(avatarBorderColor);
-                                  setShowBorderColorPicker(false);
-                                }
-                              }}
-                              disabled={saveBorderColorMutation.isPending || !/^#[0-9A-Fa-f]{6}$/.test(avatarBorderColor)}
+                              onClick={() => setShowBorderColorPicker(false)}
                               data-testid="border-color-save"
                             >
-                              {saveBorderColorMutation.isPending ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                'Apply'
-                              )}
+                              Done
                             </Button>
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            This color will be applied to your SVG border's glow effect.
+                            Click "Save Changes" to apply this colour to your profile.
                           </p>
                         </div>
                       )}
