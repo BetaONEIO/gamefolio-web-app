@@ -2112,6 +2112,15 @@ export default function SettingsPage() {
                 {/* Background Sub-tab */}
                 <TabsContent value="background">
                   <div className="space-y-6">
+                    <div
+                      className="transition-opacity duration-300"
+                      style={{ opacity: profileData.profileBackgroundImageUrl ? 0.4 : 1, pointerEvents: profileData.profileBackgroundImageUrl ? 'none' : 'auto' }}
+                    >
+                    {profileData.profileBackgroundImageUrl && (
+                      <div className="mb-3 px-3 py-2 rounded-md bg-muted text-xs text-muted-foreground border border-border">
+                        Your background image is active — remove it to use a colour instead.
+                      </div>
+                    )}
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -2149,6 +2158,7 @@ export default function SettingsPage() {
                         </div>
                       </CardContent>
                     </Card>
+                    </div>
 
                     <Card>
                       <CardHeader>
@@ -2172,6 +2182,7 @@ export default function SettingsPage() {
                                   <BackgroundPositionPreview
                                     imageUrl={signedPendingBgImageUrl || pendingBgImageUrl}
                                     label="Mobile Background Position"
+                                    aspectRatio="9/16"
                                     initialPositionX={Number(profileData.profileBackgroundPositionX) || 50}
                                     initialPositionY={Number(profileData.profileBackgroundPositionY) || 50}
                                     initialZoom={Number(profileData.profileBackgroundZoom) || 100}

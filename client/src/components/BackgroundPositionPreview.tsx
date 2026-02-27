@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 interface BackgroundPositionPreviewProps {
   imageUrl: string;
   label?: string;
+  aspectRatio?: string;
   initialPositionX?: number;
   initialPositionY?: number;
   initialZoom?: number;
@@ -18,6 +19,7 @@ interface BackgroundPositionPreviewProps {
 export function BackgroundPositionPreview({
   imageUrl,
   label,
+  aspectRatio,
   initialPositionX = 50,
   initialPositionY = 50,
   initialZoom = 100,
@@ -141,7 +143,10 @@ export function BackgroundPositionPreview({
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="relative w-full h-64 bg-muted rounded-lg overflow-hidden border border-border">
+        <div
+          className="relative w-full bg-muted rounded-lg overflow-hidden border border-border"
+          style={aspectRatio ? { aspectRatio } : { height: '16rem' }}
+        >
           <div
             ref={containerRef}
             className={`relative w-full h-full select-none ${readOnly ? 'cursor-default' : 'cursor-move'}`}
