@@ -2120,8 +2120,17 @@ export default function SettingsPage() {
                             <div className="space-y-3">
                               <Tabs value={bgCropTab} onValueChange={(v) => setBgCropTab(v as 'mobile' | 'desktop')}>
                                 <TabsList className="w-full">
-                                  <TabsTrigger value="desktop" className="flex-1">Desktop Crop</TabsTrigger>
-                                  <TabsTrigger value="mobile" className="flex-1">Mobile Crop</TabsTrigger>
+                                  {isMobile ? (
+                                    <>
+                                      <TabsTrigger value="mobile" className="flex-1">Mobile Crop</TabsTrigger>
+                                      <TabsTrigger value="desktop" className="flex-1" disabled>Desktop Crop <span className="text-xs ml-1 opacity-60">(desktop only)</span></TabsTrigger>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <TabsTrigger value="desktop" className="flex-1">Desktop Crop</TabsTrigger>
+                                      <TabsTrigger value="mobile" className="flex-1">Mobile Crop</TabsTrigger>
+                                    </>
+                                  )}
                                 </TabsList>
                                 <TabsContent value="mobile" className="mt-3">
                                   <BackgroundPositionPreview
@@ -2153,8 +2162,17 @@ export default function SettingsPage() {
                             <>
                               <Tabs defaultValue={isMobile ? "mobile" : "desktop"}>
                                 <TabsList className="w-full">
-                                  <TabsTrigger value="desktop" className="flex-1">Desktop</TabsTrigger>
-                                  <TabsTrigger value="mobile" className="flex-1">Mobile</TabsTrigger>
+                                  {isMobile ? (
+                                    <>
+                                      <TabsTrigger value="mobile" className="flex-1">Mobile</TabsTrigger>
+                                      <TabsTrigger value="desktop" className="flex-1" disabled>Desktop <span className="text-xs ml-1 opacity-60">(desktop only)</span></TabsTrigger>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <TabsTrigger value="desktop" className="flex-1">Desktop</TabsTrigger>
+                                      <TabsTrigger value="mobile" className="flex-1">Mobile</TabsTrigger>
+                                    </>
+                                  )}
                                 </TabsList>
                                 <TabsContent value="mobile" className="mt-3 flex justify-center">
                                   {(signedBgImageUrl || profileData.profileBackgroundImageUrl) ? (

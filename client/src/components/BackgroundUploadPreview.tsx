@@ -330,22 +330,43 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
           {phase === 'editing' && (
             <>
               <div className="flex border-b">
-                <button
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors border-b-2 ${activeTab === 'desktop' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'} ${isMobileViewport ? 'opacity-40 cursor-not-allowed' : 'hover:text-foreground'}`}
-                  onClick={() => { if (!isMobileViewport) setActiveTab('desktop'); }}
-                  title={isMobileViewport ? 'Use a desktop device to set the desktop crop' : undefined}
-                >
-                  <Monitor className="h-4 w-4" />
-                  Desktop
-                  {isMobileViewport && <span className="text-xs ml-1 opacity-70">(desktop only)</span>}
-                </button>
-                <button
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors border-b-2 ${activeTab === 'mobile' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
-                  onClick={() => setActiveTab('mobile')}
-                >
-                  <Smartphone className="h-4 w-4" />
-                  Mobile
-                </button>
+                {isMobileViewport ? (
+                  <>
+                    <button
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors border-b-2 ${activeTab === 'mobile' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                      onClick={() => setActiveTab('mobile')}
+                    >
+                      <Smartphone className="h-4 w-4" />
+                      Mobile
+                    </button>
+                    <button
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors border-b-2 border-transparent text-muted-foreground opacity-40 cursor-not-allowed"
+                      disabled
+                      title="Use a desktop device to set the desktop crop"
+                    >
+                      <Monitor className="h-4 w-4" />
+                      Desktop
+                      <span className="text-xs ml-1 opacity-70">(desktop only)</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors border-b-2 ${activeTab === 'desktop' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                      onClick={() => setActiveTab('desktop')}
+                    >
+                      <Monitor className="h-4 w-4" />
+                      Desktop
+                    </button>
+                    <button
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors border-b-2 ${activeTab === 'mobile' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                      onClick={() => setActiveTab('mobile')}
+                    >
+                      <Smartphone className="h-4 w-4" />
+                      Mobile
+                    </button>
+                  </>
+                )}
               </div>
 
               {activeTab === 'mobile' && (
