@@ -5,7 +5,7 @@ import { eq, sql, desc } from 'drizzle-orm';
 import { parseUnits, formatUnits, maxUint256, type Address } from 'viem';
 import { writeContractWithPoW, publicClient } from '../skale-pow';
 import { GF_STAKING_ADDRESS, GF_STAKING_ABI, GF_TOKEN_ADDRESS, GF_TOKEN_ABI } from '../../shared/contracts';
-import { getStakingStats, getStakePosition } from '../gf-staking-service';
+import { getStakingStats, getStakePosition, calculateEarnedAt12_5Apy } from '../gf-staking-service';
 import { transferGfTokens } from '../gf-token-service';
 
 const router = Router();
@@ -296,25 +296,20 @@ router.post('/api/staking/claim', async (req: Request, res: Response) => {
       args: [user.walletAddress as Address],
     }) as readonly [bigint, bigint, bigint];
     const onChainStakedRaw = onChainStakesResult[0];
+    const lastClaimTimestamp = Number(onChainStakesResult[2]);
 
     if (onChainStakedRaw === 0n) {
       return res.status(400).json({ error: 'No active staking position on-chain', code: 'NO_POSITION' });
     }
 
-    const pendingRaw = await publicClient.readContract({
-      address: GF_STAKING_ADDRESS as Address,
-      abi: GF_STAKING_ABI,
-      functionName: 'pendingRewards',
-      args: [user.walletAddress as Address],
-    }) as bigint;
-
-    const rewards = parseFloat(formatUnits(pendingRaw, GF_DECIMALS));
+    const stakedFloat = parseFloat(formatUnits(onChainStakedRaw, GF_DECIMALS));
+    const rewards = calculateEarnedAt12_5Apy(stakedFloat, lastClaimTimestamp);
 
     if (rewards < 0.000001) {
       return res.status(400).json({ error: 'No rewards available to claim', code: 'NO_REWARDS' });
     }
 
-    console.log(`[Staking] Claiming ${rewards.toFixed(6)} GFT rewards on-chain for user ${userId}`);
+    console.log(`[Staking] Claiming ${rewards.toFixed(6)} GFT rewards (12.5% APY calc) on-chain for user ${userId}`);
     const txHash = await writeContractWithPoW({
       encryptedPrivateKey: user.encryptedPrivateKey,
       contractAddress: GF_STAKING_ADDRESS as Address,
