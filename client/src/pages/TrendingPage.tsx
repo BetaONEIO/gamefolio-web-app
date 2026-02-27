@@ -605,15 +605,15 @@ const TrendingPage: React.FC = () => {
 
         {/* Content */}
         <div className="px-0 md:px-4">
-          <TabsContent value="clips" className="mt-0 px-4 md:px-0">
+          <TabsContent value="clips" className="mt-0 pt-4 px-4 md:px-0">
             {renderContent()}
           </TabsContent>
 
-          <TabsContent value="reels" className="mt-0 px-4 md:px-0">
+          <TabsContent value="reels" className="mt-0 pt-4 px-4 md:px-0">
             {renderContent()}
           </TabsContent>
 
-          <TabsContent value="screenshots" className="mt-0 px-4 md:px-0">
+          <TabsContent value="screenshots" className="mt-0 pt-4 px-4 md:px-0">
             {renderContent()}
           </TabsContent>
         </div>
