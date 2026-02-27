@@ -114,7 +114,7 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
 
   const computeMinScale = useCallback((natW: number, natH: number, cW: number, cH: number) => {
     if (!natW || !natH || !cW || !cH) return 1;
-    return Math.max(cW / natW, cH / natH);
+    return Math.min(cW / natW, cH / natH);
   }, []);
 
   // Mobile: init scale to cover the crop box exactly (= minScale), matching CSS object-fit: cover
