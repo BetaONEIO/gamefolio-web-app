@@ -624,6 +624,7 @@ export default function SettingsPage() {
     avatarFile !== null ||
     selectedPreviousAvatar !== null ||
     avatarBorderColor !== (user?.avatarBorderColor || '#4ADE80') ||
+    selectedBorderId !== (user?.selectedAvatarBorderId ?? -1) ||
     (pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId) ||
     (pendingVerificationBadgeId !== undefined && pendingVerificationBadgeId !== (user as any)?.selectedVerificationBadgeId);
   
@@ -868,35 +869,6 @@ export default function SettingsPage() {
     }
   }, [(user as any)?.selectedVerificationBadgeId, pendingVerificationBadgeId]);
   
-  // Mutation to save avatar border selection
-  const saveAvatarBorderMutation = useMutation({
-    mutationFn: async (avatarBorderId: number | null) => {
-      const response = await apiRequest("PUT", `/api/user/avatar-border`, { avatarBorderId });
-      // Handle both JSON and non-JSON responses
-      const text = await response.text();
-      return text ? JSON.parse(text) : { success: true };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/avatar-border`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
-      toast({
-        title: "Border updated!",
-        description: "Your profile picture border has been saved.",
-        variant: "gamefolioSuccess",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Update failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-  
-
-
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -990,6 +962,15 @@ export default function SettingsPage() {
           await apiRequest("POST", "/api/user/previous-avatars", { avatarUrl: user.avatarUrl });
         } catch (e) {
           console.warn("Failed to save previous avatar to history:", e);
+        }
+      }
+
+      // Save avatar border selection if changed
+      if (selectedBorderId !== (user?.selectedAvatarBorderId ?? -1)) {
+        await apiRequest("PUT", `/api/user/avatar-border`, { avatarBorderId: selectedBorderId });
+        await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        if (user?.id) {
+          await queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/avatar-border`] });
         }
       }
 
@@ -1773,7 +1754,6 @@ export default function SettingsPage() {
                                   `}
                                   onClick={() => {
                                     setSelectedBorderId(-1);
-                                    saveAvatarBorderMutation.mutate(-1);
                                   }}
                                 >
                                   <div className="relative w-16 h-16 flex items-center justify-center">
@@ -1804,7 +1784,6 @@ export default function SettingsPage() {
                                   `}
                                   onClick={() => {
                                     setSelectedBorderId(null);
-                                    saveAvatarBorderMutation.mutate(null);
                                   }}
                                 >
                                   <X className="h-8 w-8 text-muted-foreground mb-1" />
@@ -1824,13 +1803,7 @@ export default function SettingsPage() {
                                     `}
                                     onClick={() => {
                                       if (isLocked) return;
-                                      if (selectedBorderId === border.id) {
-                                        setSelectedBorderId(null);
-                                        saveAvatarBorderMutation.mutate(null);
-                                      } else {
-                                        setSelectedBorderId(border.id);
-                                        saveAvatarBorderMutation.mutate(border.id);
-                                      }
+                                      setSelectedBorderId(selectedBorderId === border.id ? null : border.id);
                                     }}
                                   >
                                     <div className="relative w-16 h-16 flex items-center justify-center">

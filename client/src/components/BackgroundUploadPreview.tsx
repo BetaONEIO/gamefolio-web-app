@@ -197,15 +197,15 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
   }, [onCancel]);
 
   // Convert editor drag position → CSS object-position percentages
-  // Uses overflow-based formula so values match CSS object-fit: cover behaviour exactly
+  // Uses overflow-based formula so values match CSS object-fit: cover behaviour exactly.
+  // When the image aspect exactly matches the crop (overflow = 0), default to 50% centre.
   const calcCropPos = (state: CropState, natW: number, natH: number, cW: number, cH: number): CropPos => {
     const scaledW = natW * state.scale;
     const scaledH = natH * state.scale;
-    const overflowX = Math.max(scaledW - cW, 1);
-    const overflowY = Math.max(scaledH - cH, 1);
-    // pos.x is image shift in px: positive = image moved right = focus left of centre
-    const posX = clampV(((scaledW - cW) / 2 - state.pos.x) / overflowX * 100, 0, 100);
-    const posY = clampV(((scaledH - cH) / 2 - state.pos.y) / overflowY * 100, 0, 100);
+    const overflowX = scaledW - cW;
+    const overflowY = scaledH - cH;
+    const posX = overflowX <= 0 ? 50 : clampV(((scaledW - cW) / 2 - state.pos.x) / overflowX * 100, 0, 100);
+    const posY = overflowY <= 0 ? 50 : clampV(((scaledH - cH) / 2 - state.pos.y) / overflowY * 100, 0, 100);
     return { positionX: Math.round(posX), positionY: Math.round(posY), zoom: 100 };
   };
 
