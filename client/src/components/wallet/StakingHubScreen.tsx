@@ -10,7 +10,7 @@ interface StakingHubScreenProps {
   availableGft?: number;
   estimatedApy?: number;
   stakeHistory?: UserStakingHistory[];
-  onStake?: (amount: number) => Promise<boolean>;
+  onStake?: (amount: number) => Promise<string | null>;
   onUnstake?: (amount: number) => Promise<boolean>;
   onClaimRewards?: () => Promise<boolean>;
 }
@@ -51,10 +51,9 @@ export default function StakingHubScreen({
   const [unstakeAmount, setUnstakeAmount] = useState("");
   const [isUnstaking, setIsUnstaking] = useState(false);
 
-  const handleStakeConfirm = async (amount: number): Promise<boolean> => {
-    if (!onStake || amount <= 0) return false;
-    const success = await onStake(amount);
-    return !!success;
+  const handleStakeConfirm = async (amount: number): Promise<string | null> => {
+    if (!onStake || amount <= 0) return null;
+    return await onStake(amount);
   };
 
   const handleUnstakeConfirm = async () => {

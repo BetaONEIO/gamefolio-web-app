@@ -5,7 +5,7 @@ import StakeSuccessScreen from "./StakeSuccessScreen";
 
 interface ConfirmStakeScreenProps {
   onBack: () => void;
-  onConfirm: (amount: number) => Promise<boolean>;
+  onConfirm: (amount: number) => Promise<string | null>;
   availableBalance?: number;
   currentStake?: number;
   apy?: number;
@@ -26,6 +26,7 @@ export default function ConfirmStakeScreen({
   const [flowStep, setFlowStep] = useState<StakeFlowStep>("confirm");
   const [stakedAmount, setStakedAmount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [txHash, setTxHash] = useState<string>("");
 
   const numericAmount = parseFloat(amount) || 0;
   const newTotalBalance = currentStake + numericAmount;
@@ -41,10 +42,11 @@ export default function ConfirmStakeScreen({
     setFlowStep("processing");
     setIsProcessing(true);
     
-    const success = await onConfirm(numericAmount);
+    const result = await onConfirm(numericAmount);
     setIsProcessing(false);
     
-    if (success) {
+    if (result !== null) {
+      setTxHash(result);
       setFlowStep("success");
     } else {
       setFlowStep("confirm");
@@ -74,6 +76,7 @@ export default function ConfirmStakeScreen({
           setFlowStep("confirm");
         }}
         amount={stakedAmount}
+        transactionHash={txHash}
         apy={apy}
       />
     );

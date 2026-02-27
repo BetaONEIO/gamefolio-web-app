@@ -118,10 +118,10 @@ export function useStaking() {
     queryClient.invalidateQueries({ queryKey: ['/api/user/me'] });
   }, [refetchPosition, refetchHistory, queryClient]);
 
-  const stake = useCallback(async (amount: number): Promise<boolean> => {
+  const stake = useCallback(async (amount: number): Promise<string | null> => {
     if (!effectiveAddress) {
       toast({ title: 'Wallet not connected', description: 'Please connect your wallet first', variant: 'destructive' });
-      return false;
+      return null;
     }
 
     setIsTransacting(true);
@@ -132,14 +132,16 @@ export function useStaking() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Stake failed');
         toast({ title: 'Stake successful!', description: `Successfully staked ${amount} GFT` });
+        await invalidateAll();
+        return data.txHash || '';
       } else {
         if (!walletClient || !publicClient) {
           toast({ title: 'Wallet not connected', description: 'Please connect your wallet first', variant: 'destructive' });
-          return false;
+          return null;
         }
         const amountRaw = parseUnits(amount.toString(), 18);
         const approved = await checkAndApprove(amountRaw);
-        if (!approved) return false;
+        if (!approved) return null;
 
         toast({ title: 'Staking GFT...', description: 'Please confirm in your Sequence wallet' });
         const txHash = await walletClient.writeContract({
@@ -151,17 +153,16 @@ export function useStaking() {
         setPendingTxHash(txHash);
         await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
         toast({ title: 'Stake successful!', description: `Successfully staked ${amount} GFT` });
+        await invalidateAll();
+        return txHash;
       }
-
-      await invalidateAll();
-      return true;
     } catch (error: any) {
       if (error.message?.includes('User rejected')) {
         toast({ title: 'Transaction rejected', description: 'You rejected the staking transaction', variant: 'destructive' });
       } else {
         toast({ title: 'Staking failed', description: error.message || 'Failed to stake GFT', variant: 'destructive' });
       }
-      return false;
+      return null;
     } finally {
       setIsTransacting(false);
       setPendingTxHash(undefined);
