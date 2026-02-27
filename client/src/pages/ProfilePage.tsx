@@ -374,6 +374,7 @@ const ProfilePage = () => {
   const { signedUrl: profileAvatarSignedUrl } = useSignedUrl(profile?.avatarUrl);
   const { signedUrl: screenshotSignedUrl } = useSignedUrl(selectedScreenshot?.imageUrl);
   const { signedUrl: bannerSignedUrl } = useSignedUrl(profile?.bannerUrl);
+  const { signedUrl: bgImageSignedUrl } = useSignedUrl((profile as any)?.profileBackgroundImageUrl || null);
 
   // Fetch user's selected verification badge
   const { data: verificationBadgeData } = useQuery<{ verificationBadge: { id: number; name: string; imageUrl: string } | null }>({
@@ -1242,7 +1243,9 @@ const ProfilePage = () => {
   const accentColor = profile.accentColor || '#4ADE80';
   const backgroundColor = profile.backgroundColor || '#0B2232';
   const cardColor = profile.cardColor || '#1E3A8A';
-  const profileBackgroundImageUrl = (profile as any).profileBackgroundImageUrl || '';
+  const profileBackgroundImageUrl = bgImageSignedUrl || (profile as any).profileBackgroundImageUrl || '';
+  const profileBackgroundPosX = (profile as any).profileBackgroundPositionX || '50';
+  const profileBackgroundPosY = (profile as any).profileBackgroundPositionY || '50';
 
   const PROFILE_FONT_MAP: Record<string, { family: string; scale: number }> = {
     'default': { family: 'system-ui, sans-serif', scale: 1 },
@@ -1384,7 +1387,7 @@ const ProfilePage = () => {
       style={profileBackgroundImageUrl ? {
         backgroundImage: `url(${profileBackgroundImageUrl})`,
         backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        backgroundPosition: `${profileBackgroundPosX}% ${profileBackgroundPosY}%`,
         backgroundAttachment: 'fixed',
         position: 'relative',
         zIndex: 1

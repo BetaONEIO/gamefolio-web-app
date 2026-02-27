@@ -18,6 +18,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { BannerUploadPreview } from "@/components/BannerUploadPreview";
 import { BannerPositionPreview } from "@/components/BannerPositionPreview";
+import { BackgroundPositionPreview } from "@/components/BackgroundPositionPreview";
 import { useUpdateProfile } from "@/hooks/use-profile";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -459,6 +460,8 @@ export default function SettingsPage() {
     profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
     profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
     profileBackgroundImageUrl: (user as any)?.profileBackgroundImageUrl || "",
+    profileBackgroundPositionX: (user as any)?.profileBackgroundPositionX || "50",
+    profileBackgroundPositionY: (user as any)?.profileBackgroundPositionY || "50",
     profileFont: (user as any)?.profileFont || "default",
     profileFontEffect: (user as any)?.profileFontEffect || "none",
     profileFontAnimation: (user as any)?.profileFontAnimation || "none",
@@ -469,6 +472,8 @@ export default function SettingsPage() {
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingBgImage, setUploadingBgImage] = useState(false);
+  const [showBgPositionPreview, setShowBgPositionPreview] = useState(false);
+  const [pendingBgImageUrl, setPendingBgImageUrl] = useState<string>('');
   const [profilePicTab, setProfilePicTab] = useState<'upload' | 'nft'>(
     user?.activeProfilePicType === 'nft' ? 'nft' : 'upload'
   );
@@ -547,6 +552,8 @@ export default function SettingsPage() {
           profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
           profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
           profileBackgroundImageUrl: (user as any)?.profileBackgroundImageUrl || "",
+          profileBackgroundPositionX: (user as any)?.profileBackgroundPositionX || "50",
+          profileBackgroundPositionY: (user as any)?.profileBackgroundPositionY || "50",
           profileFont: (user as any)?.profileFont || "default",
           profileFontEffect: (user as any)?.profileFontEffect || "none",
           profileFontAnimation: (user as any)?.profileFontAnimation || "none",
@@ -751,6 +758,8 @@ export default function SettingsPage() {
   const { signedUrl: signedDeactivatedAvatarUrl } = useSignedUrl(deactivatedAvatarUrl);
   const { signedUrl: signedSelectedPrevAvatar } = useSignedUrl(selectedPreviousAvatar);
   const { signedUrl: signedBannerUrl } = useSignedUrl(profileData.bannerUrl || null);
+  const { signedUrl: signedBgImageUrl } = useSignedUrl(profileData.profileBackgroundImageUrl || null);
+  const { signedUrl: signedPendingBgImageUrl } = useSignedUrl(pendingBgImageUrl || null);
   const previousAvatarUrls = React.useMemo(
     () => (previousAvatarsData?.avatars || []).map(a => a.avatarUrl),
     [previousAvatarsData]
@@ -1071,15 +1080,40 @@ export default function SettingsPage() {
         throw new Error(err.message || 'Upload failed');
       }
       const result = await response.json();
-      setProfileData(prev => ({ ...prev, profileBackgroundImageUrl: result.url }));
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
-      toast({ title: "Background image uploaded!", description: "Your background image has been saved.", variant: "gamefolioSuccess" });
+      setPendingBgImageUrl(result.url);
+      setShowBgPositionPreview(true);
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message || "Could not upload background image.", variant: "destructive" });
     } finally {
       setUploadingBgImage(false);
     }
+  };
+
+  const handleBgPositionApply = async (data: { positionX: number; positionY: number }) => {
+    try {
+      await apiRequest("PATCH", `/api/users/${user?.id}`, {
+        profileBackgroundImageUrl: pendingBgImageUrl,
+        profileBackgroundPositionX: String(data.positionX),
+        profileBackgroundPositionY: String(data.positionY),
+      });
+      setProfileData(prev => ({
+        ...prev,
+        profileBackgroundImageUrl: pendingBgImageUrl,
+        profileBackgroundPositionX: String(data.positionX),
+        profileBackgroundPositionY: String(data.positionY),
+      }));
+      setShowBgPositionPreview(false);
+      setPendingBgImageUrl('');
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
+    } catch (err: any) {
+      toast({ title: "Failed to save position", description: err.message || "Could not save background position.", variant: "destructive" });
+    }
+  };
+
+  const handleBgPositionCancel = () => {
+    setShowBgPositionPreview(false);
+    setPendingBgImageUrl('');
   };
 
   const handleRemoveBackgroundImage = async () => {
@@ -2110,58 +2144,84 @@ export default function SettingsPage() {
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-4">
-                          {profileData.profileBackgroundImageUrl ? (
-                            <div className="relative w-full h-40 rounded-lg overflow-hidden border border-border">
-                              <img
-                                src={profileData.profileBackgroundImageUrl}
-                                alt="Background preview"
-                                className="w-full h-full object-cover"
-                              />
-                              <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                <p className="text-white text-sm font-medium">Current background</p>
-                              </div>
-                            </div>
+                          {showBgPositionPreview && (signedPendingBgImageUrl || pendingBgImageUrl) ? (
+                            <BackgroundPositionPreview
+                              imageUrl={signedPendingBgImageUrl || pendingBgImageUrl}
+                              initialPositionX={Number(profileData.profileBackgroundPositionX) || 50}
+                              initialPositionY={Number(profileData.profileBackgroundPositionY) || 50}
+                              onApply={handleBgPositionApply}
+                              onCancel={handleBgPositionCancel}
+                            />
                           ) : (
-                            <div className="w-full h-40 rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted/20">
-                              <p className="text-sm text-muted-foreground">No background image set</p>
-                            </div>
+                            <>
+                              {(signedBgImageUrl || profileData.profileBackgroundImageUrl) ? (
+                                <div className="relative w-full h-40 rounded-lg overflow-hidden border border-border">
+                                  <img
+                                    src={signedBgImageUrl || profileData.profileBackgroundImageUrl}
+                                    alt="Background preview"
+                                    className="w-full h-full object-cover"
+                                    style={{ objectPosition: `${profileData.profileBackgroundPositionX || 50}% ${profileData.profileBackgroundPositionY || 50}%` }}
+                                  />
+                                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                    <p className="text-white text-sm font-medium">Current background</p>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="w-full h-40 rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted/20">
+                                  <p className="text-sm text-muted-foreground">No background image set</p>
+                                </div>
+                              )}
+                              <div className="flex gap-2 flex-wrap">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={uploadingBgImage}
+                                  onClick={() => document.getElementById('bg-image-upload')?.click()}
+                                >
+                                  {uploadingBgImage ? 'Uploading...' : profileData.profileBackgroundImageUrl ? 'Change Image' : 'Upload Image'}
+                                </Button>
+                                {profileData.profileBackgroundImageUrl && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setPendingBgImageUrl(profileData.profileBackgroundImageUrl);
+                                      setShowBgPositionPreview(true);
+                                    }}
+                                  >
+                                    Adjust Position
+                                  </Button>
+                                )}
+                                {profileData.profileBackgroundImageUrl && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive"
+                                    onClick={handleRemoveBackgroundImage}
+                                  >
+                                    Remove Image
+                                  </Button>
+                                )}
+                              </div>
+                              <input
+                                id="bg-image-upload"
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleBackgroundImageUpload(file);
+                                  e.target.value = '';
+                                }}
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                Supports JPG, PNG, WebP. Recommended size: 1920×1080 or larger.
+                              </p>
+                            </>
                           )}
-                          <div className="flex gap-2 flex-wrap">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              disabled={uploadingBgImage}
-                              onClick={() => document.getElementById('bg-image-upload')?.click()}
-                            >
-                              {uploadingBgImage ? 'Uploading...' : profileData.profileBackgroundImageUrl ? 'Change Image' : 'Upload Image'}
-                            </Button>
-                            {profileData.profileBackgroundImageUrl && (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="text-destructive hover:text-destructive"
-                                onClick={handleRemoveBackgroundImage}
-                              >
-                                Remove Image
-                              </Button>
-                            )}
-                          </div>
-                          <input
-                            id="bg-image-upload"
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleBackgroundImageUpload(file);
-                              e.target.value = '';
-                            }}
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Supports JPG, PNG, WebP. Recommended size: 1920×1080 or larger.
-                          </p>
                         </div>
                       </CardContent>
                     </Card>
