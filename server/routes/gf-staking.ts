@@ -189,8 +189,14 @@ router.post('/api/staking/unstake', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid amount' });
     }
 
-    const amountFloat = parseFloat(amount);
-    const amountRaw = parseUnits(String(amountFloat), GF_DECIMALS);
+    const amountStr = String(amount).trim();
+    const amountFloat = parseFloat(amountStr);
+    let amountRaw: bigint;
+    try {
+      amountRaw = parseUnits(amountStr, GF_DECIMALS);
+    } catch {
+      return res.status(400).json({ error: 'Invalid amount format' });
+    }
 
     const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -199,10 +205,20 @@ router.post('/api/staking/unstake', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'No server-side wallet available', code: 'NO_WALLET' });
     }
 
-    const [position] = await db.select().from(userStaking).where(eq(userStaking.userId, userId)).limit(1);
-    if (!position || position.stakedAmount < amountFloat) {
+    const stakesResult = await publicClient.readContract({
+      address: GF_STAKING_ADDRESS as Address,
+      abi: GF_STAKING_ABI,
+      functionName: 'stakes',
+      args: [user.walletAddress as Address],
+    }) as readonly [bigint, bigint, bigint];
+    const onChainStakedRaw = stakesResult[0];
+    const onChainStaked = parseFloat(formatUnits(onChainStakedRaw, GF_DECIMALS));
+
+    console.log(`[Staking] On-chain staked for user ${userId}: ${onChainStaked} GFT`);
+
+    if (onChainStakedRaw < amountRaw) {
       return res.status(400).json({
-        error: `Insufficient staked amount. Staked: ${position?.stakedAmount || 0} GFT, Requested: ${amountFloat} GFT`,
+        error: `Insufficient staked amount on-chain. Staked: ${onChainStaked.toFixed(2)} GFT, Requested: ${amountFloat} GFT`,
         code: 'INSUFFICIENT_STAKED',
       });
     }
@@ -223,12 +239,15 @@ router.post('/api/staking/unstake', async (req: Request, res: Response) => {
 
     console.log(`[Staking] On-chain unstake confirmed. TX: ${txHash}`);
 
-    const newStaked = position.stakedAmount - amountFloat;
+    const newOnChainStaked = onChainStaked - amountFloat;
     const now = new Date();
 
-    await db.update(userStaking)
-      .set({ stakedAmount: newStaked, lastClaimAt: now })
-      .where(eq(userStaking.userId, userId));
+    const [existing] = await db.select().from(userStaking).where(eq(userStaking.userId, userId)).limit(1);
+    if (existing) {
+      await db.update(userStaking)
+        .set({ stakedAmount: newOnChainStaked, lastClaimAt: now })
+        .where(eq(userStaking.userId, userId));
+    }
 
     await db.update(users)
       .set({ gfTokenBalance: sql`${users.gfTokenBalance} + ${amountFloat}` })
@@ -269,8 +288,17 @@ router.post('/api/staking/claim', async (req: Request, res: Response) => {
     }
 
     const [position] = await db.select().from(userStaking).where(eq(userStaking.userId, userId)).limit(1);
-    if (!position || position.stakedAmount <= 0) {
-      return res.status(400).json({ error: 'No active staking position', code: 'NO_POSITION' });
+
+    const onChainStakesResult = await publicClient.readContract({
+      address: GF_STAKING_ADDRESS as Address,
+      abi: GF_STAKING_ABI,
+      functionName: 'stakes',
+      args: [user.walletAddress as Address],
+    }) as readonly [bigint, bigint, bigint];
+    const onChainStakedRaw = onChainStakesResult[0];
+
+    if (onChainStakedRaw === 0n) {
+      return res.status(400).json({ error: 'No active staking position on-chain', code: 'NO_POSITION' });
     }
 
     const pendingRaw = await publicClient.readContract({
