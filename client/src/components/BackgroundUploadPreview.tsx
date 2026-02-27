@@ -119,9 +119,9 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
 
   // Mobile: init scale to cover the crop box exactly (= minScale), matching CSS object-fit: cover
   useEffect(() => {
-    if (!showEditor || mobileStageDims.h === 0 || imageNaturalSize.w === 0) return;
-    const cH = mobileStageDims.h;
-    const cW = Math.round(cH * MOBILE_ASPECT);
+    if (!showEditor || mobileStageDims.w === 0 || imageNaturalSize.w === 0) return;
+    const cW = mobileStageDims.w;
+    const cH = mobileStageDims.h > 0 ? mobileStageDims.h : Math.round(cW / MOBILE_ASPECT);
     const fit = computeMinScale(imageNaturalSize.w, imageNaturalSize.h, cW, cH);
     setMobileState({ pos: { x: 0, y: 0 }, scale: fit, minScale: fit });
   }, [showEditor, mobileStageDims, imageNaturalSize, computeMinScale]);
@@ -211,8 +211,8 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
 
   const handleApply = useCallback(() => {
     if (!uploadedUrl || !onUpload) return;
-    const mCH = mobileStageDims.h > 0 ? mobileStageDims.h : 400;
-    const mCW = Math.round(mCH * MOBILE_ASPECT);
+    const mCW = mobileStageDims.w > 0 ? mobileStageDims.w : 300;
+    const mCH = mobileStageDims.h > 0 ? mobileStageDims.h : Math.round(mCW / MOBILE_ASPECT);
     const mobilePos = calcCropPos(mobileState, imageNaturalSize.w, imageNaturalSize.h, mCW, mCH);
     const dCW = desktopStageDims.w > 0 ? desktopStageDims.w : 320;
     const dCH = Math.round(dCW / DESKTOP_ASPECT);
@@ -270,11 +270,11 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
   };
 
   const handleMobileMouseDown = makeDragHandler(
-    () => { const cH = mobileStageDims.h; return { cW: Math.round(cH * MOBILE_ASPECT), cH }; },
+    () => { const cW = mobileStageDims.w; return { cW, cH: mobileStageDims.h > 0 ? mobileStageDims.h : Math.round(cW / MOBILE_ASPECT) }; },
     () => mobileState.pos, () => mobileState.scale, setMobileState
   );
   const handleMobileTouchStart = makeTouchHandler(
-    () => { const cH = mobileStageDims.h; return { cW: Math.round(cH * MOBILE_ASPECT), cH }; },
+    () => { const cW = mobileStageDims.w; return { cW, cH: mobileStageDims.h > 0 ? mobileStageDims.h : Math.round(cW / MOBILE_ASPECT) }; },
     () => mobileState.pos, () => mobileState.scale, setMobileState
   );
 
@@ -372,7 +372,7 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
               {activeTab === 'mobile' && (
                 <div
                   className="relative overflow-hidden bg-black select-none cursor-move mx-auto"
-                  style={{ width: mobileCropW > 0 ? mobileCropW : 280, height: '60vh' }}
+                  style={{ aspectRatio: '9/16', width: 'min(100%, calc(78vh * 9 / 16))' }}
                 >
                   <div
                     ref={mobileStageRef}
