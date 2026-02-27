@@ -372,12 +372,11 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
               {activeTab === 'mobile' && (
                 <div
                   className="relative overflow-hidden bg-black select-none cursor-move mx-auto"
-                  style={{ width: mobileStageW > 80 ? mobileStageW : 280, height: '60vh' }}
+                  style={{ width: mobileCropW > 0 ? mobileCropW : 280, height: '60vh' }}
                 >
                   <div
                     ref={mobileStageRef}
-                    className="absolute"
-                    style={{ left: OVERFLOW_PADDING, top: 0, width: mobileCropW > 0 ? mobileCropW : 200, height: '100%' }}
+                    className="absolute inset-0"
                     onMouseDown={showEditor ? handleMobileMouseDown : undefined}
                     onTouchStart={showEditor ? handleMobileTouchStart : undefined}
                   >
@@ -396,13 +395,6 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
                       />
                     )}
                   </div>
-                  {showEditor && (
-                    <>
-                      <div className="absolute top-0 bottom-0 left-0 pointer-events-none bg-black/60" style={{ width: OVERFLOW_PADDING }} />
-                      <div className="absolute top-0 bottom-0 right-0 pointer-events-none bg-black/60" style={{ width: OVERFLOW_PADDING }} />
-                      <div className="absolute top-0 bottom-0 pointer-events-none" style={{ left: OVERFLOW_PADDING, width: mobileCropW > 0 ? mobileCropW : 200, border: '2px solid #1d9bf0', boxSizing: 'border-box' }} />
-                    </>
-                  )}
                 </div>
               )}
 
