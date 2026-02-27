@@ -82,8 +82,8 @@ export default function ConfirmStakeScreen({
 
   return (
     <div
-      className="flex flex-col min-h-screen w-full"
-      style={{ background: "#101D27", fontFamily: "Plus Jakarta Sans, sans-serif" }}
+      className="flex flex-col w-full"
+      style={{ background: "#101D27", fontFamily: "Plus Jakarta Sans, sans-serif", height: "100dvh" }}
     >
       {/* Header */}
       <div
@@ -116,7 +116,7 @@ export default function ConfirmStakeScreen({
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex flex-col gap-8 px-6 py-8 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full">
+      <div className="flex-1 overflow-y-auto flex flex-col gap-8 px-6 py-8 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full">
         {/* Stake Amount Section */}
         <div className="flex flex-col gap-4">
           {/* Label Row */}

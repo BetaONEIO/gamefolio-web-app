@@ -95,8 +95,8 @@ export default function StakeProcessingScreen({
 
   return (
     <div
-      className="flex flex-col min-h-screen w-full"
-      style={{ background: "#101D27", fontFamily: "Plus Jakarta Sans, sans-serif" }}
+      className="flex flex-col w-full"
+      style={{ background: "#101D27", fontFamily: "Plus Jakarta Sans, sans-serif", height: "100dvh" }}
     >
       {/* Header */}
       <div
@@ -127,7 +127,7 @@ export default function StakeProcessingScreen({
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-12 px-6 py-8 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full">
+      <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center gap-12 px-6 py-8 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full">
         {/* Title Section */}
         <div className="flex flex-col items-center gap-3 text-center">
           <span className="text-2xl font-bold" style={{ color: "#f8fafc" }}>
