@@ -7,10 +7,13 @@ import { useWalletClient } from 'wagmi';
 import { parseUnits, type Address } from 'viem';
 import { GF_STAKING_ADDRESS, GF_STAKING_ABI, GF_TOKEN_ADDRESS, GF_TOKEN_ABI } from '../../../shared/contracts';
 import { apiRequest } from '@/lib/queryClient';
+import type { UserStakingHistory } from '@shared/schema';
 
 interface StakingInfo {
   staked: string;
   earned: string;
+  stakedAt?: string;
+  totalEarned?: string;
 }
 
 interface StakingStats {
@@ -60,6 +63,20 @@ export function useStaking() {
     },
   });
 
+  const { data: stakeHistory = [], refetch: refetchHistory } = useQuery<UserStakingHistory[]>({
+    queryKey: ['/api/staking/history'],
+    enabled: !!user,
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/staking/history', { credentials: 'include' });
+        if (!response.ok) return [];
+        return await response.json();
+      } catch {
+        return [];
+      }
+    },
+  });
+
   const checkAndApprove = useCallback(async (amount: bigint): Promise<boolean> => {
     if (!effectiveAddress || !publicClient || !walletClient) return false;
 
@@ -94,6 +111,13 @@ export function useStaking() {
     }
   }, [effectiveAddress, publicClient, walletClient, toast]);
 
+  const invalidateAll = useCallback(async () => {
+    await refetchPosition();
+    await refetchHistory();
+    queryClient.invalidateQueries({ queryKey: ['/api/token/balance'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/user/me'] });
+  }, [refetchPosition, refetchHistory, queryClient]);
+
   const stake = useCallback(async (amount: number): Promise<boolean> => {
     if (!effectiveAddress) {
       toast({ title: 'Wallet not connected', description: 'Please connect your wallet first', variant: 'destructive' });
@@ -103,7 +127,7 @@ export function useStaking() {
     setIsTransacting(true);
     try {
       if (useServerSigning) {
-        toast({ title: 'Staking GFT...', description: 'Processing via Sequence wallet' });
+        toast({ title: 'Staking GFT...', description: 'Processing your stake' });
         const res = await apiRequest('POST', '/api/staking/stake', { amount: amount.toString() });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Stake failed');
@@ -129,8 +153,7 @@ export function useStaking() {
         toast({ title: 'Stake successful!', description: `Successfully staked ${amount} GFT` });
       }
 
-      await refetchPosition();
-      queryClient.invalidateQueries({ queryKey: ['/api/token/balance'] });
+      await invalidateAll();
       return true;
     } catch (error: any) {
       if (error.message?.includes('User rejected')) {
@@ -143,7 +166,7 @@ export function useStaking() {
       setIsTransacting(false);
       setPendingTxHash(undefined);
     }
-  }, [effectiveAddress, useServerSigning, walletClient, publicClient, checkAndApprove, toast, refetchPosition, queryClient]);
+  }, [effectiveAddress, useServerSigning, walletClient, publicClient, checkAndApprove, toast, invalidateAll]);
 
   const unstake = useCallback(async (amount: number): Promise<boolean> => {
     if (!effectiveAddress) {
@@ -154,7 +177,7 @@ export function useStaking() {
     setIsTransacting(true);
     try {
       if (useServerSigning) {
-        toast({ title: 'Unstaking GFT...', description: 'Processing via Sequence wallet' });
+        toast({ title: 'Unstaking GFT...', description: 'Processing your unstake' });
         const res = await apiRequest('POST', '/api/staking/unstake', { amount: amount.toString() });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Unstake failed');
@@ -177,8 +200,7 @@ export function useStaking() {
         toast({ title: 'Unstake successful!', description: `Successfully unstaked ${amount} GFT` });
       }
 
-      await refetchPosition();
-      queryClient.invalidateQueries({ queryKey: ['/api/token/balance'] });
+      await invalidateAll();
       return true;
     } catch (error: any) {
       if (error.message?.includes('User rejected')) {
@@ -191,7 +213,7 @@ export function useStaking() {
       setIsTransacting(false);
       setPendingTxHash(undefined);
     }
-  }, [effectiveAddress, useServerSigning, walletClient, publicClient, toast, refetchPosition, queryClient]);
+  }, [effectiveAddress, useServerSigning, walletClient, publicClient, toast, invalidateAll]);
 
   const claimRewards = useCallback(async (): Promise<boolean> => {
     if (!effectiveAddress) {
@@ -202,11 +224,11 @@ export function useStaking() {
     setIsTransacting(true);
     try {
       if (useServerSigning) {
-        toast({ title: 'Claiming rewards...', description: 'Processing via Sequence wallet' });
+        toast({ title: 'Claiming rewards...', description: 'Processing your claim' });
         const res = await apiRequest('POST', '/api/staking/claim', {});
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Claim failed');
-        toast({ title: 'Rewards claimed!', description: 'Successfully claimed your GFT rewards' });
+        toast({ title: 'Rewards claimed!', description: `${parseFloat(data.rewards || '0').toFixed(4)} GFT added to your balance` });
       } else {
         if (!walletClient || !publicClient) {
           toast({ title: 'Wallet not connected', description: 'Please connect your wallet first', variant: 'destructive' });
@@ -224,8 +246,7 @@ export function useStaking() {
         toast({ title: 'Rewards claimed!', description: 'Successfully claimed your GFT rewards' });
       }
 
-      await refetchPosition();
-      queryClient.invalidateQueries({ queryKey: ['/api/token/balance'] });
+      await invalidateAll();
       return true;
     } catch (error: any) {
       if (error.message?.includes('User rejected')) {
@@ -238,7 +259,7 @@ export function useStaking() {
       setIsTransacting(false);
       setPendingTxHash(undefined);
     }
-  }, [effectiveAddress, useServerSigning, walletClient, publicClient, toast, refetchPosition, queryClient]);
+  }, [effectiveAddress, useServerSigning, walletClient, publicClient, toast, invalidateAll]);
 
   const stakedAmount = parseFloat(stakingPosition?.staked || '0');
   const earnedRewards = parseFloat(stakingPosition?.earned || '0');
@@ -256,6 +277,7 @@ export function useStaking() {
     isClaiming: isTransacting,
     effectiveAddress,
     useServerSigning,
+    stakeHistory,
     stake,
     unstake,
     claimRewards,

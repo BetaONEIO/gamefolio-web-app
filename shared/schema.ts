@@ -1487,4 +1487,25 @@ export const xpSettings = pgTable("xp_settings", {
 
 export const insertXpSettingsSchema = createInsertSchema(xpSettings).omit({ id: true, updatedAt: true });
 export type InsertXpSetting = z.infer<typeof insertXpSettingsSchema>;
+
+export const userStaking = pgTable("user_staking", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id).unique(),
+  stakedAmount: real("staked_amount").notNull().default(0),
+  stakedAt: timestamp("staked_at").defaultNow().notNull(),
+  lastClaimAt: timestamp("last_claim_at").defaultNow().notNull(),
+  totalEarned: real("total_earned").notNull().default(0),
+});
+
+export const userStakingHistory = pgTable("user_staking_history", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  type: text("type").notNull(),
+  amount: real("amount").notNull(),
+  balanceAfter: real("balance_after").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type UserStaking = typeof userStaking.$inferSelect;
+export type UserStakingHistory = typeof userStakingHistory.$inferSelect;
 export type XpSetting = typeof xpSettings.$inferSelect;

@@ -43,7 +43,7 @@ export default function WalletPage() {
   const [purchaseAmount, setPurchaseAmount] = useState(0);
   const [gftAmount, setGftAmount] = useState(0);
   const userGftBalance = user?.gfTokenBalance || 0;
-  const { stakedAmount, earnedRewards, estimatedApy, stake, unstake, claimRewards, isStaking } = useStaking();
+  const { stakedAmount, earnedRewards, estimatedApy, stake, unstake, claimRewards, isStaking, stakeHistory } = useStaking();
   const { createOrder, isCreatingOrder, checkOrderStatus, refreshBalances } = usePurchaseGFT();
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
@@ -223,6 +223,7 @@ export default function WalletPage() {
         rewardsEarned={earnedRewards}
         estimatedApy={estimatedApy}
         availableGft={userGftBalance}
+        stakeHistory={stakeHistory}
         onStake={stake}
         onUnstake={unstake}
         onClaimRewards={claimRewards}
