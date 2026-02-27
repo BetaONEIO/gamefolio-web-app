@@ -264,7 +264,10 @@ export function useStaking() {
   const stakedAmount = parseFloat(stakingPosition?.staked || '0');
   const earnedRewards = parseFloat(stakingPosition?.earned || '0');
   const totalStakedInContract = parseFloat(stakingStats?.totalStaked || '0');
-  const estimatedApy = 12.5;
+  const rewardRatePerSecond = parseFloat(stakingStats?.rewardRate || '0');
+  const estimatedApy = totalStakedInContract > 0
+    ? Math.round((rewardRatePerSecond * 31536000 / totalStakedInContract) * 100 * 10) / 10
+    : 0;
 
   return {
     stakedAmount,

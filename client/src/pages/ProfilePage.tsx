@@ -3421,7 +3421,7 @@ const ProfilePage = () => {
         <ScreenshotLightbox
           screenshot={selectedScreenshot}
           onClose={() => setSelectedScreenshot(null)}
-          currentUserId={user?.id}
+          currentUserId={currentUser?.id}
           screenshots={screenshots as any[]}
           onNavigate={(s: any) => setSelectedScreenshot({ ...s, user: s.user || { id: profile?.id, username: profile?.username, displayName: profile?.displayName, avatarUrl: profile?.avatarUrl } })}
         />
