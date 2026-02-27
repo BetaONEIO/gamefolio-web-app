@@ -2158,26 +2158,56 @@ export default function SettingsPage() {
                             </div>
                           ) : (
                             <>
-                              {(signedBgImageUrl || profileData.profileBackgroundImageUrl) ? (
-                                <div className="relative aspect-[9/16] w-36 mx-auto rounded-lg overflow-hidden border-2 border-primary">
-                                  <img
-                                    src={signedBgImageUrl || profileData.profileBackgroundImageUrl}
-                                    alt="Background preview"
-                                    className="w-full h-full object-cover"
-                                    style={{ objectPosition: `${profileData.profileBackgroundPositionX || 50}% ${profileData.profileBackgroundPositionY || 50}%` }}
-                                  />
-                                  <div className="absolute top-2 left-2">
-                                    <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
-                                      <Check className="h-3 w-3" />
-                                      Active
-                                    </span>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="aspect-[9/16] w-36 mx-auto rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted/20">
-                                  <p className="text-sm text-muted-foreground text-center px-2">No image set</p>
-                                </div>
-                              )}
+                              <Tabs defaultValue="mobile">
+                                <TabsList className="w-full">
+                                  <TabsTrigger value="mobile" className="flex-1">Mobile</TabsTrigger>
+                                  <TabsTrigger value="desktop" className="flex-1">Desktop</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="mobile" className="mt-3 flex justify-center">
+                                  {(signedBgImageUrl || profileData.profileBackgroundImageUrl) ? (
+                                    <div className="relative aspect-[9/16] w-36 rounded-lg overflow-hidden border-2 border-primary">
+                                      <img
+                                        src={signedBgImageUrl || profileData.profileBackgroundImageUrl}
+                                        alt="Mobile background preview"
+                                        className="w-full h-full object-cover"
+                                        style={{ objectPosition: `${profileData.profileBackgroundPositionX || 50}% ${profileData.profileBackgroundPositionY || 50}%` }}
+                                      />
+                                      <div className="absolute top-2 left-2">
+                                        <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
+                                          <Check className="h-3 w-3" />
+                                          Active
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="aspect-[9/16] w-36 rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted/20">
+                                      <p className="text-sm text-muted-foreground text-center px-2">No image set</p>
+                                    </div>
+                                  )}
+                                </TabsContent>
+                                <TabsContent value="desktop" className="mt-3 flex justify-center">
+                                  {(signedBgImageUrl || profileData.profileBackgroundImageUrl) ? (
+                                    <div className="relative aspect-[16/9] w-full max-w-sm rounded-lg overflow-hidden border-2 border-primary">
+                                      <img
+                                        src={signedBgImageUrl || profileData.profileBackgroundImageUrl}
+                                        alt="Desktop background preview"
+                                        className="w-full h-full object-cover"
+                                        style={{ objectPosition: `${profileData.profileBackgroundDesktopX || 50}% ${profileData.profileBackgroundDesktopY || 50}%` }}
+                                      />
+                                      <div className="absolute top-2 left-2">
+                                        <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
+                                          <Check className="h-3 w-3" />
+                                          Active
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="aspect-[16/9] w-full max-w-sm rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted/20">
+                                      <p className="text-sm text-muted-foreground text-center px-2">No image set</p>
+                                    </div>
+                                  )}
+                                </TabsContent>
+                              </Tabs>
                               <div className="flex gap-2 flex-wrap">
                                 <Button
                                   type="button"
