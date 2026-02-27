@@ -172,7 +172,7 @@ export default function StakingHubScreen({
 
   return (
     <div
-      className="flex flex-col min-h-screen w-full"
+      className="flex flex-col min-h-screen w-full overflow-x-hidden"
       style={{ background: "#101D27", fontFamily: "Plus Jakarta Sans, sans-serif" }}
     >
       <div
@@ -238,13 +238,13 @@ export default function StakingHubScreen({
       <div className="flex-1 flex flex-col px-6 py-6 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full gap-6">
         <div className="flex gap-4">
           <div
-            className="flex-1 flex flex-col gap-1 p-4 rounded-2xl"
+            className="flex-1 min-w-0 flex flex-col gap-1 p-4 rounded-2xl"
             style={{ background: "#0f172a", border: "1px solid rgba(30, 41, 59, 0.5)" }}
           >
             <span className="text-[10px] font-bold uppercase" style={{ color: "#94a3b8" }}>
               Rewards Earned
             </span>
-            <span className="text-xl font-bold" style={{ color: "#4ade80" }}>
+            <span className="text-lg font-bold truncate" style={{ color: "#4ade80" }}>
               +{rewardsEarned.toFixed(4)}
             </span>
             <span className="text-[10px]" style={{ color: "#94a3b8" }}>
@@ -253,14 +253,14 @@ export default function StakingHubScreen({
           </div>
 
           <div
-            className="flex-1 flex flex-col gap-1 p-4 rounded-2xl"
+            className="flex-1 min-w-0 flex flex-col gap-1 p-4 rounded-2xl"
             style={{ background: "#0f172a", border: "1px solid rgba(30, 41, 59, 0.5)" }}
           >
             <span className="text-[10px] font-bold uppercase" style={{ color: "#94a3b8" }}>
               Available GFT
             </span>
-            <span className="text-xl font-bold" style={{ color: "#fff" }}>
-              {availableGft.toFixed(2)}
+            <span className="text-lg font-bold truncate" style={{ color: "#fff" }}>
+              {availableGft.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </span>
             <span className="text-[10px]" style={{ color: "#94a3b8" }}>
               In wallet
@@ -309,7 +309,7 @@ export default function StakingHubScreen({
             }}
           >
             <Gift className="w-5 h-5" style={{ color: "#f8fafc" }} />
-            Claim Rewards
+            Claim
           </button>
         </div>
 

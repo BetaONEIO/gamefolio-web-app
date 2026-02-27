@@ -433,7 +433,7 @@ export default function StakingPage() {
                     Claiming...
                   </>
                 ) : (
-                  "Claim Rewards"
+                  "Claim"
                 )}
               </Button>
             </CardContent>
