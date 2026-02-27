@@ -1,0 +1,107 @@
+Add Sequence + ethers staking integration (read stake + rewards + claim)
+ *
+ * Requirements:
+ * - Use Sequence embedded wallet signer for transactions
+ * - Read staked amount + earned rewards on-chain
+ * - Allow user to claim rewards with one button
+ *
+ * Assumptions:
+ * - Token has 18 decimals
+ * - SKALE testnet RPC used
+ */
+
+import { ethers } from "ethers";
+
+// ✅ Replace with your values:
+const SKALE_RPC_URL = "https://testnet.skalenodes.com/v1/lanky-ill-funny-testnet";
+const STAKING_ADDRESS = "0x52D214f32584C7a7F08C7014F24C02ba38Fc7dD6"; // your new staking proxy
+const TOKEN_DECIMALS = 18;
+
+// Minimal ABI (only what we need)
+const STAKING_ABI = [
+  "function stakes(address) view returns (uint256 amount, uint256 rewardDebt, uint256 lastClaim)",
+  "function totalStaked() view returns (uint256)",
+  "function earned(address) view returns (uint256)",
+  "function pendingRewards(address) view returns (uint256)",
+  "function claimRewards()",
+];
+
+// Format helper
+const fmt = (v: ethers.BigNumberish) => Number(ethers.formatUnits(v, TOKEN_DECIMALS));
+
+/**
+ * 1) READ ONLY: staked amount + earned + pending
+ *    Uses public RPC provider (no wallet popups, minimal UX)
+ */
+export async function getStakingSnapshot(userAddress: string) {
+  const provider = new ethers.JsonRpcProvider(SKALE_RPC_URL);
+  const staking = new ethers.Contract(STAKING_ADDRESS, STAKING_ABI, provider);
+
+  const [stakeInfo, earned, pending, totalStaked] = await Promise.all([
+    staking.stakes(userAddress),
+    staking.earned(userAddress),
+    staking.pendingRewards(userAddress),
+    staking.totalStaked(),
+  ]);
+
+  // stakeInfo: { amount, rewardDebt, lastClaim }
+  return {
+    staked: fmt(stakeInfo.amount),
+    rewardDebt: fmt(stakeInfo.rewardDebt),
+    lastClaim: Number(stakeInfo.lastClaim),
+    earned: fmt(earned),
+    pending: fmt(pending),
+    totalStaked: fmt(totalStaked),
+  };
+}
+
+/**
+ * 2) WRITE: claim rewards
+ *    Uses Sequence signer (wallet popup only when user clicks Claim)
+ *
+ * Replit AI: replace getSequenceSigner() with your actual Sequence wallet signer getter.
+ * It must return an ethers Signer connected to Skale testnet.
+ */
+async function getSequenceSigner(): Promise<ethers.Signer> {
+  // Example placeholder:
+  // const wallet = await sequence.getWallet(); // however your app obtains it
+  // const provider = new ethers.BrowserProvider(wallet.getProvider());
+  // return await provider.getSigner();
+
+  throw new Error("Implement getSequenceSigner() using your existing Sequence integration.");
+}
+
+export async function claimStakingRewards() {
+  const signer = await getSequenceSigner();
+  const staking = new ethers.Contract(STAKING_ADDRESS, STAKING_ABI, signer);
+
+  const tx = await staking.claimRewards();
+  // Minimal UX: show a single “Claiming…” state until confirmed
+  const receipt = await tx.wait();
+
+  return {
+    hash: receipt?.hash ?? tx.hash,
+    status: receipt?.status ?? 1,
+  };
+}
+
+/**
+ * Example React usage pattern:
+ *
+ * const [snapshot, setSnapshot] = useState(null);
+ * useEffect(() => {
+ *   if (!userAddress) return;
+ *   getStakingSnapshot(userAddress).then(setSnapshot);
+ * }, [userAddress]);
+ *
+ * async function onClaim() {
+ *   setIsClaiming(true);
+ *   try {
+ *     const { hash } = await claimStakingRewards();
+ *     // after confirmed: refetch
+ *     const snap = await getStakingSnapshot(userAddress);
+ *     setSnapshot(snap);
+ *   } finally {
+ *     setIsClaiming(false);
+ *   }
+ * }
