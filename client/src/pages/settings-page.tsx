@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { BannerUploadPreview } from "@/components/BannerUploadPreview";
+import { BackgroundUploadPreview } from "@/components/BackgroundUploadPreview";
 import { BannerPositionPreview } from "@/components/BannerPositionPreview";
 import { BackgroundPositionPreview } from "@/components/BackgroundPositionPreview";
 import { useUpdateProfile } from "@/hooks/use-profile";
@@ -478,7 +479,7 @@ export default function SettingsPage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [uploadingBgImage, setUploadingBgImage] = useState(false);
+  const [showBackgroundUpload, setShowBackgroundUpload] = useState(false);
   const [showBgPositionPreview, setShowBgPositionPreview] = useState(false);
   const [pendingBgImageUrl, setPendingBgImageUrl] = useState<string>('');
   const [bgCropTab, setBgCropTab] = useState<'mobile' | 'desktop'>('mobile');
@@ -1080,28 +1081,6 @@ export default function SettingsPage() {
     setSelectedBannerForPosition(null);
   };
 
-  const handleBackgroundImageUpload = async (file: File) => {
-    setUploadingBgImage(true);
-    try {
-      const formData = new FormData();
-      formData.append('backgroundImage', file);
-      const response = await fetch('/api/upload/profile-background', {
-        method: 'POST',
-        body: formData,
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.message || 'Upload failed');
-      }
-      const result = await response.json();
-      setPendingBgImageUrl(result.url);
-      setShowBgPositionPreview(true);
-    } catch (err: any) {
-      toast({ title: "Upload failed", description: err.message || "Could not upload background image.", variant: "destructive" });
-    } finally {
-      setUploadingBgImage(false);
-    }
-  };
 
   const handleBgPositionApply = async (data: { positionX: number; positionY: number; zoom: number }, target: 'mobile' | 'desktop' = 'mobile') => {
     try {
@@ -2160,6 +2139,24 @@ export default function SettingsPage() {
                     </Card>
                     </div>
 
+                    {showBackgroundUpload && (
+                      <BackgroundUploadPreview
+                        onUpload={async (url) => {
+                          try {
+                            await apiRequest("PATCH", `/api/users/${user?.id}`, { profileBackgroundImageUrl: url });
+                            setProfileData(prev => ({ ...prev, profileBackgroundImageUrl: url }));
+                            queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+                            queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
+                            toast({ title: "Background uploaded!", description: "Your background image has been saved.", variant: "gamefolioSuccess" });
+                          } catch (err: any) {
+                            toast({ title: "Failed to save", description: err.message || "Could not save background image.", variant: "destructive" });
+                          }
+                          setShowBackgroundUpload(false);
+                        }}
+                        onCancel={() => setShowBackgroundUpload(false)}
+                      />
+                    )}
+
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -2231,10 +2228,9 @@ export default function SettingsPage() {
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  disabled={uploadingBgImage}
-                                  onClick={() => document.getElementById('bg-image-upload')?.click()}
+                                  onClick={() => setShowBackgroundUpload(true)}
                                 >
-                                  {uploadingBgImage ? 'Uploading...' : profileData.profileBackgroundImageUrl ? 'Change Image' : 'Upload Image'}
+                                  {profileData.profileBackgroundImageUrl ? 'Change Image' : 'Upload Image'}
                                 </Button>
                                 {profileData.profileBackgroundImageUrl && (
                                   <Button
@@ -2262,19 +2258,8 @@ export default function SettingsPage() {
                                   </Button>
                                 )}
                               </div>
-                              <input
-                                id="bg-image-upload"
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) handleBackgroundImageUpload(file);
-                                  e.target.value = '';
-                                }}
-                              />
                               <p className="text-xs text-muted-foreground">
-                                Supports JPG, PNG, WebP. Recommended size: 1920×1080 or larger.
+                                Supports JPG, PNG, WebP. Recommended size: 1080×1920 (9:16 portrait).
                               </p>
                             </>
                           )}
