@@ -2089,7 +2089,7 @@ export default function SettingsPage() {
                                   className={`font-bold text-center ${animClass}`}
                                   style={{ fontFamily, textShadow, fontSize: `${1.875 * fontScale}rem`, lineHeight: `${2.25 * fontScale}rem`, color: profileData.profileFontColor }}
                                 >
-                                  {user?.displayName || user?.username || 'Your Name'}
+                                  {profileData.displayName || user?.displayName || user?.username || 'Your Name'}
                                 </p>
                                 <p className="text-xs text-muted-foreground mt-3">
                                   {selectedFont?.label || 'Default'}{selectedEffect && selectedEffect.value !== 'none' ? ` · ${selectedEffect.label}` : ''}{selectedAnim && selectedAnim.value !== 'none' ? ` · ${selectedAnim.label}` : ''}
@@ -2107,7 +2107,7 @@ export default function SettingsPage() {
                             </TabsList>
 
                             <TabsContent value="font-list" className="mt-4">
-                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                                 {FONT_OPTIONS.map((font) => {
                                   const isSelected = profileData.profileFont === font.value;
                                   return (
@@ -2115,14 +2115,14 @@ export default function SettingsPage() {
                                       key={font.value}
                                       type="button"
                                       onClick={() => { setProfileData(prev => ({ ...prev, profileFont: font.value })); scrollToFontPreview(); }}
-                                      className={`p-4 rounded-lg border-2 text-left transition-all ${
+                                      className={`p-2 sm:p-4 rounded-lg border-2 text-left transition-all ${
                                         isSelected
                                           ? 'border-primary bg-primary/10'
                                           : 'border-border hover:border-primary/50 hover:bg-muted/50'
                                       }`}
                                     >
                                       <p
-                                        className="text-lg font-semibold mb-1 truncate"
+                                        className="text-sm sm:text-lg font-semibold mb-1 truncate"
                                         style={{ fontFamily: font.family }}
                                       >
                                         {font.label}
@@ -2131,7 +2131,7 @@ export default function SettingsPage() {
                                         className="text-xs text-muted-foreground truncate"
                                         style={{ fontFamily: font.family }}
                                       >
-                                        {user?.displayName || 'Your Name'}
+                                        {profileData.displayName || user?.displayName || 'Your Name'}
                                       </p>
                                     </button>
                                   );
