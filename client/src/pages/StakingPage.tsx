@@ -24,7 +24,7 @@ export default function StakingPage() {
   const { walletAddress, publicClient, isReady, chainId, connect: connectWallet } = useWallet();
   const { data: walletClient } = useWalletClient();
 
-  const effectiveAddress = walletAddress || null;
+  const effectiveAddress = walletAddress || (user?.walletAddress as Address | undefined) || null;
   const useServerSigning = !!effectiveAddress && !walletClient;
   const isConnected = isReady || !!effectiveAddress;
   const wrongNetwork = isReady && !useServerSigning && chainId !== SKALE_CHAIN_ID;
