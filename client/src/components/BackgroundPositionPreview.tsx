@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Move, RotateCcw, X, Smartphone } from "lucide-react";
+import { Move, RotateCcw, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface BackgroundPositionPreviewProps {
@@ -26,136 +26,107 @@ export function BackgroundPositionPreview({
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  const startDrag = useCallback((clientX: number, clientY: number) => {
+    setIsDragging(true);
+    setDragStart({ x: clientX, y: clientY, posX, posY });
+  }, [posX, posY]);
+
+  const moveDrag = useCallback((clientX: number, clientY: number) => {
+    if (!isDragging || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const dx = clientX - dragStart.x;
+    const dy = clientY - dragStart.y;
+    const pxPercent = (dx / rect.width) * 100;
+    const pyPercent = (dy / rect.height) * 100;
+    setPosX(Math.max(0, Math.min(100, dragStart.posX - pxPercent)));
+    setPosY(Math.max(0, Math.min(100, dragStart.posY - pyPercent)));
+  }, [isDragging, dragStart]);
+
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
-    setIsDragging(true);
-    setDragStart({ x: e.clientX, y: e.clientY, posX, posY });
-  }, [posX, posY]);
+    startDrag(e.clientX, e.clientY);
+  }, [startDrag]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    setIsDragging(true);
-    setDragStart({ x: touch.clientX, y: touch.clientY, posX, posY });
-  }, [posX, posY]);
+    startDrag(e.touches[0].clientX, e.touches[0].clientY);
+  }, [startDrag]);
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const dx = e.clientX - dragStart.x;
-    const dy = e.clientY - dragStart.y;
-    // Convert pixel drag to percentage change (inverted: drag right → moves focal point left)
-    const pxPercent = (dx / rect.width) * 100;
-    const pyPercent = (dy / rect.height) * 100;
-    setPosX(Math.max(0, Math.min(100, dragStart.posX - pxPercent)));
-    setPosY(Math.max(0, Math.min(100, dragStart.posY - pyPercent)));
-  }, [isDragging, dragStart]);
-
-  const handleTouchMove = useCallback((e: TouchEvent) => {
-    if (!isDragging || !containerRef.current) return;
-    const touch = e.touches[0];
-    const rect = containerRef.current.getBoundingClientRect();
-    const dx = touch.clientX - dragStart.x;
-    const dy = touch.clientY - dragStart.y;
-    const pxPercent = (dx / rect.width) * 100;
-    const pyPercent = (dy / rect.height) * 100;
-    setPosX(Math.max(0, Math.min(100, dragStart.posX - pxPercent)));
-    setPosY(Math.max(0, Math.min(100, dragStart.posY - pyPercent)));
-  }, [isDragging, dragStart]);
-
-  const handleMouseUp = useCallback(() => setIsDragging(false), []);
+  const handleMouseMove = useCallback((e: MouseEvent) => moveDrag(e.clientX, e.clientY), [moveDrag]);
+  const handleTouchMove = useCallback((e: TouchEvent) => moveDrag(e.touches[0].clientX, e.touches[0].clientY), [moveDrag]);
+  const handleDragEnd = useCallback(() => setIsDragging(false), []);
 
   useEffect(() => {
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.addEventListener('touchmove', handleTouchMove);
-      document.addEventListener('touchend', handleMouseUp);
+      document.addEventListener('mouseup', handleDragEnd);
+      document.addEventListener('touchmove', handleTouchMove, { passive: true });
+      document.addEventListener('touchend', handleDragEnd);
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('mouseup', handleDragEnd);
         document.removeEventListener('touchmove', handleTouchMove);
-        document.removeEventListener('touchend', handleMouseUp);
+        document.removeEventListener('touchend', handleDragEnd);
       };
     }
-  }, [isDragging, handleMouseMove, handleTouchMove, handleMouseUp]);
+  }, [isDragging, handleMouseMove, handleTouchMove, handleDragEnd]);
 
-  const handleReset = useCallback(() => {
-    setPosX(50);
-    setPosY(50);
-  }, []);
+  const handleReset = useCallback(() => { setPosX(50); setPosY(50); }, []);
 
   const handleApply = useCallback(() => {
     onApply?.({ positionX: Math.round(posX), positionY: Math.round(posY) });
-    toast({
-      title: "Position saved!",
-      description: "Your background image position has been applied.",
-      variant: "gamefolioSuccess",
-    });
+    toast({ title: "Position saved!", description: "Your background image position has been applied.", variant: "gamefolioSuccess" });
   }, [posX, posY, onApply, toast]);
 
   return (
     <Card className="w-full">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Smartphone className="h-4 w-4" />
+          <Move className="h-4 w-4" />
           Adjust Background Position
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Drag the preview to choose which part of the image is shown on your profile. The frame shows the mobile view.
+          Drag to choose which part of the image shows on your profile.
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Mobile frame preview */}
-        <div className="flex justify-center">
-          <div className="relative" style={{ width: 200, height: 360 }}>
-            {/* Phone bezel */}
-            <div className="absolute inset-0 rounded-3xl border-4 border-foreground/30 bg-black z-10 pointer-events-none" />
-            {/* Notch */}
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-2 bg-foreground/20 rounded-full z-20 pointer-events-none" />
-            {/* Image container — clips to phone frame */}
-            <div
-              ref={containerRef}
-              className="absolute inset-1 rounded-2xl overflow-hidden cursor-move select-none"
-              onMouseDown={handleMouseDown}
-              onTouchStart={handleTouchStart}
-            >
-              <div
-                className="w-full h-full"
-                style={{
-                  backgroundImage: `url(${imageUrl})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: `${posX}% ${posY}%`,
-                }}
-              />
-              {/* Drag hint overlay */}
-              <div className={`absolute inset-0 bg-black/25 flex items-end justify-center pb-4 transition-opacity ${isDragging ? 'opacity-0' : 'opacity-100'}`}>
-                <div className="bg-black/70 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
-                  <Move className="h-3 w-3" />
-                  Drag to reposition
-                </div>
-              </div>
+        {/* 9:16 crop preview — full width, portrait */}
+        <div
+          ref={containerRef}
+          className="relative w-full overflow-hidden rounded-lg border border-border cursor-move select-none"
+          style={{ aspectRatio: '9 / 16' }}
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+        >
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url(${imageUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: `${posX}% ${posY}%`,
+            }}
+          />
+          {/* Hint overlay */}
+          <div className={`absolute inset-0 bg-black/20 flex items-end justify-center pb-4 transition-opacity pointer-events-none ${isDragging ? 'opacity-0' : 'opacity-100'}`}>
+            <div className="bg-black/70 text-white px-3 py-1 rounded-md text-xs flex items-center gap-1">
+              <Move className="h-3 w-3" />
+              {isDragging ? 'Dragging…' : 'Drag to reposition'}
             </div>
           </div>
         </div>
 
-        {/* Position readout */}
-        <p className="text-center text-xs text-muted-foreground">
-          Position: {Math.round(posX)}% × {Math.round(posY)}%
-        </p>
-
-        {/* Controls */}
-        <div className="flex items-center justify-between gap-2">
-          <Button variant="outline" size="sm" onClick={handleReset} className="gap-1">
+        {/* Controls — same layout as BannerPositionPreview */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <Button variant="outline" size="sm" onClick={handleReset} className="gap-1 w-full sm:w-auto">
             <RotateCcw className="h-3 w-3" />
-            Reset
+            Reset to Centre
           </Button>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={onCancel} className="gap-1">
-              <X className="h-3 w-3" />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button variant="outline" size="sm" onClick={onCancel} className="flex-1 sm:flex-none gap-1">
+              <X className="h-4 w-4" />
               Cancel
             </Button>
-            <Button size="sm" onClick={handleApply}>
-              Apply
+            <Button size="sm" onClick={handleApply} className="flex-1 sm:flex-none">
+              Apply Position
             </Button>
           </div>
         </div>
