@@ -458,6 +458,7 @@ export default function SettingsPage() {
     profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
     profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
     profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
+    profileBackgroundImageUrl: (user as any)?.profileBackgroundImageUrl || "",
     profileFont: (user as any)?.profileFont || "default",
     profileFontEffect: (user as any)?.profileFontEffect || "none",
     profileFontAnimation: (user as any)?.profileFontAnimation || "none",
@@ -467,6 +468,7 @@ export default function SettingsPage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingBgImage, setUploadingBgImage] = useState(false);
   const [profilePicTab, setProfilePicTab] = useState<'upload' | 'nft'>(
     user?.activeProfilePicType === 'nft' ? 'nft' : 'upload'
   );
@@ -544,6 +546,7 @@ export default function SettingsPage() {
           profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
           profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
           profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
+          profileBackgroundImageUrl: (user as any)?.profileBackgroundImageUrl || "",
           profileFont: (user as any)?.profileFont || "default",
           profileFontEffect: (user as any)?.profileFontEffect || "none",
           profileFontAnimation: (user as any)?.profileFontAnimation || "none",
@@ -590,6 +593,7 @@ export default function SettingsPage() {
     profileData.profileBackgroundType !== ((user as any)?.profileBackgroundType || "solid") ||
     profileData.profileBackgroundTheme !== ((user as any)?.profileBackgroundTheme || "default") ||
     profileData.profileBackgroundAnimation !== ((user as any)?.profileBackgroundAnimation || "none") ||
+    normalizeValue(profileData.profileBackgroundImageUrl) !== normalizeValue((user as any)?.profileBackgroundImageUrl) ||
     profileData.profileFont !== ((user as any)?.profileFont || "default") ||
     profileData.profileFontEffect !== ((user as any)?.profileFontEffect || "none") ||
     profileData.profileFontAnimation !== ((user as any)?.profileFontAnimation || "none") ||
@@ -1051,6 +1055,43 @@ export default function SettingsPage() {
   const handleBannerPositionCancel = () => {
     setShowBannerPosition(false);
     setSelectedBannerForPosition(null);
+  };
+
+  const handleBackgroundImageUpload = async (file: File) => {
+    setUploadingBgImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('backgroundImage', file);
+      const response = await fetch('/api/upload/profile-background', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || 'Upload failed');
+      }
+      const result = await response.json();
+      setProfileData(prev => ({ ...prev, profileBackgroundImageUrl: result.url }));
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
+      toast({ title: "Background image uploaded!", description: "Your background image has been saved.", variant: "gamefolioSuccess" });
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message || "Could not upload background image.", variant: "destructive" });
+    } finally {
+      setUploadingBgImage(false);
+    }
+  };
+
+  const handleRemoveBackgroundImage = async () => {
+    try {
+      await apiRequest("PATCH", `/api/users/${user?.id}`, { profileBackgroundImageUrl: "" });
+      setProfileData(prev => ({ ...prev, profileBackgroundImageUrl: "" }));
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
+      toast({ title: "Background removed", description: "Your profile background image has been removed.", variant: "gamefolioSuccess" });
+    } catch (err: any) {
+      toast({ title: "Failed to remove", description: err.message || "Could not remove background image.", variant: "destructive" });
+    }
   };
 
   const applyPresetTheme = (theme: typeof PRESET_THEMES[0]) => {
@@ -2054,6 +2095,73 @@ export default function SettingsPage() {
                               This color will be used as the background gradient on your profile.
                             </p>
                           </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          Background Image
+                        </CardTitle>
+                        <CardDescription>
+                          Upload a custom image to use as your profile background. This will replace the color gradient.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {profileData.profileBackgroundImageUrl ? (
+                            <div className="relative w-full h-40 rounded-lg overflow-hidden border border-border">
+                              <img
+                                src={profileData.profileBackgroundImageUrl}
+                                alt="Background preview"
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                <p className="text-white text-sm font-medium">Current background</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-full h-40 rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted/20">
+                              <p className="text-sm text-muted-foreground">No background image set</p>
+                            </div>
+                          )}
+                          <div className="flex gap-2 flex-wrap">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={uploadingBgImage}
+                              onClick={() => document.getElementById('bg-image-upload')?.click()}
+                            >
+                              {uploadingBgImage ? 'Uploading...' : profileData.profileBackgroundImageUrl ? 'Change Image' : 'Upload Image'}
+                            </Button>
+                            {profileData.profileBackgroundImageUrl && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={handleRemoveBackgroundImage}
+                              >
+                                Remove Image
+                              </Button>
+                            )}
+                          </div>
+                          <input
+                            id="bg-image-upload"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleBackgroundImageUpload(file);
+                              e.target.value = '';
+                            }}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Supports JPG, PNG, WebP. Recommended size: 1920×1080 or larger.
+                          </p>
                         </div>
                       </CardContent>
                     </Card>

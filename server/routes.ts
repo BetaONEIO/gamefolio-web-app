@@ -3260,7 +3260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "avatarBorderColor", "primaryColor", "secondaryColor", "accentColor",
         "backgroundColor", "cardColor", "layoutStyle", "showUserType",
         "profileFont", "profileFontEffect", "profileFontAnimation", "profileFontColor",
-        "profileBackgroundType", "profileBackgroundTheme", "profileBackgroundAnimation",
+        "profileBackgroundType", "profileBackgroundTheme", "profileBackgroundAnimation", "profileBackgroundImageUrl",
         "steamUsername", "xboxUsername", "playstationUsername",
         "discordUsername", "epicUsername", "twitchUsername", "youtubeUsername",
         "twitterUsername", "instagramUsername", "facebookUsername", "nintendoUsername",
@@ -6758,6 +6758,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Error uploading banner" });
     }
   });
+
+  // Upload profile background image
+  app.post("/api/upload/profile-background", upload.single('backgroundImage'), async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      if (!req.file.path || !fs.existsSync(req.file.path)) {
+        return res.status(400).json({ message: "Uploaded file not found" });
+      }
+      const sharpInstance = sharp(req.file.path);
+      const metadata = await sharpInstance.metadata();
+      if (!metadata.width || !metadata.height) {
+        return res.status(400).json({ message: "Invalid image file" });
+      }
+      const processedBuffer = await sharpInstance
+        .resize(1920, undefined, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+      const fileName = `profile-bg-${req.user.id}-${Date.now()}.jpg`;
+      const { url: imageUrl } = await supabaseStorage.uploadBuffer(
+        processedBuffer,
+        fileName,
+        'image/jpeg',
+        'image',
+        req.user.id
+      );
+      await storage.updateUser(req.user.id, { profileBackgroundImageUrl: imageUrl } as any);
+      try { await fsPromises.unlink(req.file.path); } catch {}
+      res.json({ url: imageUrl, message: "Background image uploaded successfully" });
+    } catch (err) {
+      console.error("Error uploading profile background image:", err);
+      return res.status(500).json({ message: "Error uploading background image" });
+    }
+  });
+
 
   // Get user's uploaded banners
   app.get("/api/user/banners", async (req, res) => {

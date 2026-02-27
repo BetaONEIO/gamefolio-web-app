@@ -1242,6 +1242,7 @@ const ProfilePage = () => {
   const accentColor = profile.accentColor || '#4ADE80';
   const backgroundColor = profile.backgroundColor || '#0B2232';
   const cardColor = profile.cardColor || '#1E3A8A';
+  const profileBackgroundImageUrl = (profile as any).profileBackgroundImageUrl || '';
 
   const PROFILE_FONT_MAP: Record<string, { family: string; scale: number }> = {
     'default': { family: 'system-ui, sans-serif', scale: 1 },
@@ -1380,12 +1381,23 @@ const ProfilePage = () => {
     <div 
       className="min-h-screen pb-12 px-1 md:px-6 relative profile-theme-scope" 
       ref={profileThemeScopeRef}
-      style={{ 
+      style={profileBackgroundImageUrl ? {
+        backgroundImage: `url(${profileBackgroundImageUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+        position: 'relative',
+        zIndex: 1
+      } : { 
         background: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
         position: 'relative',
         zIndex: 1
       }}
     >
+      {/* Dark overlay for background image readability */}
+      {profileBackgroundImageUrl && (
+        <div className="fixed inset-0 bg-black/50 pointer-events-none" style={{ zIndex: 0 }} />
+      )}
       {/* Birthday Banner */}
       {(() => {
         if (!profile?.birthday) return null;

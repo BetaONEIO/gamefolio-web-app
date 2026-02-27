@@ -23,6 +23,7 @@ export const users = pgTable("users", {
   profileFontEffect: text("profile_font_effect").default("none"),
   profileFontAnimation: text("profile_font_animation").default("none"),
   profileFontColor: text("profile_font_color").default("#FFFFFF"),
+  profileBackgroundImageUrl: text("profile_background_image_url"),
   layoutStyle: text("layout_style").default("grid"), // grid, masonry, classic
   // Platform connections
   steamUsername: text("steam_username"),
