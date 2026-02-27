@@ -139,12 +139,11 @@ export function useMintNFT(fallbackAddress?: string | null) {
   }, [publicClient, fetchContractConfig]);
 
   useEffect(() => {
-    if (effectiveAddress && publicClient) {
-      if (useServerSigning) {
-        setAllowanceState('approved');
-      } else {
-        checkAllowance();
-      }
+    if (useServerSigning && effectiveAddress) {
+      setAllowanceState('approved');
+      if (publicClient) fetchOnChainData();
+    } else if (effectiveAddress && publicClient) {
+      checkAllowance();
       fetchOnChainData();
     } else {
       setAllowanceState('none');

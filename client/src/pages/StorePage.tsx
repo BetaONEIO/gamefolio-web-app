@@ -1913,9 +1913,15 @@ export default function StorePage() {
               <h3 className="text-xl md:text-2xl font-semibold mb-2 text-center" data-testid="heading-sell-coming-soon">
                 Sell Your NFTs
               </h3>
-              <p className="text-sm md:text-base text-amber-400 text-center max-w-md" data-testid="text-sell-description">
-                Selling currently disabled on Beta! We will be on Mainnet soon!
-              </p>
+              {user?.canSellNfts ? (
+                <p className="text-sm md:text-base text-[#4ade80] text-center max-w-md" data-testid="text-sell-description">
+                  Go to your collection to quick-sell any NFT you own.
+                </p>
+              ) : (
+                <p className="text-sm md:text-base text-amber-400 text-center max-w-md" data-testid="text-sell-description">
+                  Selling currently disabled on Beta! We will be on Mainnet soon!
+                </p>
+              )}
               <Link href="/collection">
                 <Button className="mt-6" variant="outline" size="sm" data-testid="button-view-inventory">
                   View Collection
@@ -1924,19 +1930,34 @@ export default function StorePage() {
             </div>
           )}
 
-          {/* Mint NFT Section - Currently Disabled */}
+          {/* Mint NFT Section */}
           {activeTab === "mint" && (
             <div className="flex flex-col items-center justify-center min-h-[50vh] md:min-h-[60vh] px-4">
-              <Sparkles className="h-16 w-16 md:h-20 md:w-20 text-[#94a3b8] mb-4 opacity-50" />
+              <Sparkles className={`h-16 w-16 md:h-20 md:w-20 mb-4 ${user?.canMintNfts ? 'text-[#4ade80]' : 'text-[#94a3b8] opacity-50'}`} />
               <h3 className="text-xl md:text-2xl font-semibold mb-2 text-center text-[#94a3b8]" data-testid="heading-mint-coming-soon">
                 Mint Your Own NFT
               </h3>
-              <p className="text-sm md:text-base text-amber-400 text-center max-w-md" data-testid="text-mint-description">
-                Minting currently disabled on Beta! We will be on Mainnet soon!
-              </p>
-              <Button className="mt-6 bg-[#1e293b] text-[#94a3b8] cursor-not-allowed opacity-50" size="sm" disabled data-testid="button-start-minting">
-                Start Minting
-              </Button>
+              {user?.canMintNfts ? (
+                <>
+                  <p className="text-sm md:text-base text-[#4ade80] text-center max-w-md" data-testid="text-mint-description">
+                    You have access to the NFT minting page.
+                  </p>
+                  <Link href="/mint">
+                    <Button className="mt-6 bg-[#4ade80] text-[#022c22] hover:bg-[#22c55e]" size="sm" data-testid="button-start-minting">
+                      Start Minting
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm md:text-base text-amber-400 text-center max-w-md" data-testid="text-mint-description">
+                    Minting currently disabled on Beta! We will be on Mainnet soon!
+                  </p>
+                  <Button className="mt-6 bg-[#1e293b] text-[#94a3b8] cursor-not-allowed opacity-50" size="sm" disabled data-testid="button-start-minting">
+                    Start Minting
+                  </Button>
+                </>
+              )}
             </div>
           )}
 
