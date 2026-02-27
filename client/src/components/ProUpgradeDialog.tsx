@@ -662,13 +662,13 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
               exit={{ opacity: 0 }}
             >
               <div ref={scrollContainerRef} className="flex flex-col md:hidden h-[100dvh] overflow-y-auto" style={{ scrollbarWidth: "none" }}>
-                <div className="relative w-full flex-shrink-0" style={{ maxHeight: "42vh" }}>
+                <div className="relative w-full flex-shrink-0" style={{ height: "52vh" }}>
                   <img
                     src={proHeroImage}
                     alt="Gamefolio Pro"
                     className="w-full h-full object-cover object-top"
-                    style={{ maxHeight: "42vh" }}
                   />
+                  <div className="absolute inset-x-0 bottom-0 h-1/3" style={{ background: "linear-gradient(to top, #101D27 0%, transparent 100%)" }} />
                   <button
                     onClick={() => onOpenChange(false)}
                     className="absolute top-3 right-3 w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center transition-colors hover:bg-black/60 z-10"
@@ -677,7 +677,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
                   </button>
                 </div>
 
-                <div className="px-5 pt-5 pb-5 relative z-10">
+                <div className="px-5 pt-3 pb-5 relative z-10">
                   <div className="flex justify-center mb-2">
                     <div className="inline-flex items-center gap-1.5 bg-[#14532d4d] border border-[#4ade8033] rounded-full px-3 py-1">
                       <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
