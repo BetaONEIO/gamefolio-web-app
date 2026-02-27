@@ -238,7 +238,7 @@ export function useStaking() {
         const txHash = await walletClient.writeContract({
           address: GF_STAKING_ADDRESS as Address,
           abi: GF_STAKING_ABI,
-          functionName: 'claim',
+          functionName: 'claimRewards',
           args: [],
         });
         setPendingTxHash(txHash);

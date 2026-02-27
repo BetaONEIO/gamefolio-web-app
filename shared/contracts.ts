@@ -272,19 +272,30 @@ export const MINT_CONFIG = {
   baseURI: "ipfs://bafybeiasmj6gw6hh53br2qwnpdvwozs3uhhaxrjdz6wnlzupptiqfdn7um/",
 } as const;
 
-export const GF_STAKING_ADDRESS = "0x589C36a839434ae674Ba795dBb5B06B387110172" as const;
+export const GF_STAKING_ADDRESS = "0x52D214f32584C7a7F08C7014F24C02ba38Fc7dD6" as const;
 
 export const GF_STAKING_ABI = [
   {
     "inputs": [{"internalType": "address", "name": "account", "type": "address"}],
-    "name": "stakeOf",
-    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "name": "stakes",
+    "outputs": [
+      {"internalType": "uint256", "name": "amount", "type": "uint256"},
+      {"internalType": "uint256", "name": "rewardDebt", "type": "uint256"},
+      {"internalType": "uint256", "name": "lastClaim", "type": "uint256"}
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [{"internalType": "address", "name": "account", "type": "address"}],
     "name": "earned",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "account", "type": "address"}],
+    "name": "pendingRewards",
     "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
     "stateMutability": "view",
     "type": "function"
@@ -304,6 +315,13 @@ export const GF_STAKING_ABI = [
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "stakingToken",
+    "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [{"internalType": "uint256", "name": "amount", "type": "uint256"}],
     "name": "stake",
     "outputs": [],
@@ -319,14 +337,7 @@ export const GF_STAKING_ABI = [
   },
   {
     "inputs": [],
-    "name": "claim",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "exit",
+    "name": "claimRewards",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
