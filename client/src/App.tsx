@@ -43,6 +43,7 @@ import { Button } from "@/components/ui/button";
 import React, { Suspense } from 'react';
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { DiscordCallback } from "./components/auth/DiscordCallback";
+import { XboxCallback } from "./components/auth/XboxCallback";
 
 const HomePage = React.lazy(() => import("./pages/HomePageSimple"));
 const ProfilePage = React.lazy(() => import("./pages/ProfilePage"));
@@ -324,6 +325,7 @@ function Router() {
           {/* Routes that bypass onboarding guard */}
           <Route path="/auth" component={AuthRedirect} />
           <Route path="/auth/discord/callback" component={DiscordCallback} />
+          <Route path="/auth/xbox/callback" component={XboxCallback} />
           <Route path="/onboarding" component={OnboardingPage} />
           <Route path="/verify-email" component={VerifyEmailPage} />
           <Route path="/verify-code" component={VerifyCodePage} />

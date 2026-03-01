@@ -199,6 +199,13 @@ export class DatabaseStorage implements IStorage {
     return user || null;
   }
 
+  async getUserByExternalId(externalId: string, authProvider: string): Promise<User | null> {
+    const [user] = await db.select().from(users).where(
+      sql`${users.externalId} = ${externalId} AND ${users.authProvider} = ${authProvider}`
+    );
+    return user || null;
+  }
+
   async createUser(userData: InsertUser): Promise<User> {
     try {
       // CRITICAL SECURITY: Hash password before storing

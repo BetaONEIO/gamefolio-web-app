@@ -1126,6 +1126,186 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Xbox OAuth token exchange route — exchanges auth code for Xbox profile via xbl.io
+  app.post("/api/auth/xbox/token", async (req, res) => {
+    try {
+      const { code, redirectUri } = req.body;
+
+      if (!code || !redirectUri) {
+        return res.status(400).json({ message: "Missing authorization code or redirect URI" });
+      }
+
+      const xblApiKey = process.env.XBL_API_KEY;
+      if (!xblApiKey) {
+        return res.status(500).json({ message: "Xbox authentication is not configured on the server" });
+      }
+
+      // Exchange the Microsoft auth code for an Xbox Live profile via xbl.io
+      const xblResponse = await fetch('https://xbl.io/api/v2/auth/oauth', {
+        method: 'POST',
+        headers: {
+          'x-authorization': xblApiKey,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          code,
+          redirect_uri: redirectUri
+        })
+      });
+
+      if (!xblResponse.ok) {
+        const errorText = await xblResponse.text().catch(() => 'Unknown error');
+        console.error("xbl.io token exchange error:", xblResponse.status, errorText);
+        throw new Error('Failed to exchange authorization code with Xbox Live');
+      }
+
+      const xblData = await xblResponse.json();
+
+      // xbl.io returns profile data including xuid and gamertag
+      const xuid = xblData.xuid || xblData.data?.xuid;
+      const gamertag = xblData.gamertag || xblData.data?.gamertag || xblData.settings?.find((s: any) => s.id === 'Gamertag')?.value;
+      const gamerpic = xblData.displayPicRaw || xblData.data?.displayPicRaw || xblData.settings?.find((s: any) => s.id === 'GameDisplayPicRaw')?.value;
+
+      if (!xuid || !gamertag) {
+        console.error("xbl.io response missing required fields:", JSON.stringify(xblData));
+        throw new Error('Could not retrieve Xbox profile information');
+      }
+
+      res.status(200).json({ xuid, gamertag, gamerpic });
+
+    } catch (error) {
+      console.error("Xbox token exchange error:", error);
+      res.status(500).json({ message: "Failed to authenticate with Xbox" });
+    }
+  });
+
+  // Xbox authentication route — create or log in a user from their Xbox profile
+  app.post("/api/auth/xbox", async (req, res) => {
+    try {
+      const { xuid, gamertag, gamerpic } = req.body;
+
+      if (!xuid || !gamertag) {
+        return res.status(400).json({ message: "Missing required Xbox auth data" });
+      }
+
+      // Check if user already exists by their Xbox XUID
+      let user = await storage.getUserByExternalId?.(xuid, "xbox");
+
+      if (!user) {
+        // New user — create account from their Xbox profile
+        const timestamp = Date.now().toString().slice(-6);
+        const tempUsername = `temp_xbox_${xuid.substring(0, 8)}_${timestamp}`;
+        const avatarUrl = gamerpic || "/attached_assets/gamefolio social logo 3d circle web.png";
+
+        user = await storage.createUser({
+          username: tempUsername.toLowerCase(),
+          displayName: gamertag,
+          email: `${xuid}@xbox.placeholder`,
+          password: xuid, // Placeholder — Xbox users won't use password login
+          emailVerified: true,
+          avatarUrl,
+          bannerUrl: "/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg",
+          authProvider: "xbox",
+          externalId: xuid,
+          xboxUsername: gamertag,
+          userType: null,
+          ageRange: null
+        });
+
+        // Send new user notification to admin
+        try {
+          await EmailService.sendNewUserNotification({
+            username: user.username,
+            email: user.email,
+            displayName: user.displayName,
+            authProvider: 'xbox'
+          });
+        } catch (error) {
+          console.error('Failed to send new user notification:', error);
+        }
+
+        req.login(user as any, async (err) => {
+          if (err) {
+            console.error("Xbox login error:", err);
+            return res.status(500).json({ message: "Login failed" });
+          }
+
+          let streakInfo;
+          try {
+            streakInfo = await StreakService.updateLoginStreak(user!.id);
+          } catch (error) {
+            console.error("Error updating login streak:", error);
+          }
+
+          const updatedUser = await storage.getUserById(user!.id);
+          const userToReturn = updatedUser || user;
+
+          res.status(200).json({
+            ...userToReturn,
+            needsOnboarding: true,
+            isNewXboxUser: true,
+            ...(streakInfo && {
+              streakInfo: {
+                currentStreak: streakInfo.currentStreak,
+                bonusAwarded: streakInfo.bonusAwarded,
+                dailyXP: streakInfo.dailyXP,
+                longestStreak: userToReturn.longestStreak || 0,
+                nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
+                message: streakInfo.message,
+                isNewMilestone: streakInfo.isNewMilestone
+              }
+            })
+          });
+        });
+      } else {
+        // Existing user
+        const needsOnboarding = !user.userType || user.username.startsWith('temp_');
+
+        // Update gamertag / avatar if changed
+        if (gamertag && user.xboxUsername !== gamertag) {
+          user = await storage.updateUser(user.id, { xboxUsername: gamertag }) || user;
+        }
+
+        req.login(user as any, async (err) => {
+          if (err) {
+            console.error("Xbox login error:", err);
+            return res.status(500).json({ message: "Login failed" });
+          }
+
+          let streakInfo;
+          try {
+            streakInfo = await StreakService.updateLoginStreak(user!.id);
+          } catch (error) {
+            console.error("Error updating login streak:", error);
+          }
+
+          const updatedUser = await storage.getUserById(user!.id);
+          const userToReturn = updatedUser || user;
+
+          res.status(200).json({
+            ...userToReturn,
+            needsOnboarding,
+            ...(streakInfo && {
+              streakInfo: {
+                currentStreak: streakInfo.currentStreak,
+                bonusAwarded: streakInfo.bonusAwarded,
+                dailyXP: streakInfo.dailyXP,
+                longestStreak: userToReturn.longestStreak || 0,
+                nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
+                message: streakInfo.message,
+                isNewMilestone: streakInfo.isNewMilestone
+              }
+            })
+          });
+        });
+      }
+    } catch (error) {
+      console.error("Xbox auth error:", error);
+      handleValidationError(error, res);
+    }
+  });
+
   // Register route
   app.post("/api/register", async (req, res) => {
     try {

@@ -51,7 +51,7 @@ Gamefolio is a comprehensive gaming portfolio and social platform for gamers to 
 ### Technical Implementations
 - **Database**: Supabase PostgreSQL, managed with Drizzle ORM and `postgres` library.
 - **Backend**: Node.js/Express with TypeScript.
-- **Authentication**: Hybrid session-based (`passport-local`) and JWT token-based (`jsonwebtoken`) authentication.
+- **Authentication**: Hybrid session-based (`passport-local`) and JWT token-based (`jsonwebtoken`) authentication. Social OAuth providers: Google (Firebase), Discord, and Xbox Live (xbl.io). Xbox auth requires `VITE_MICROSOFT_CLIENT_ID` (Azure app client ID) and `XBL_API_KEY` (xbl.io API key). The Microsoft Azure app redirect URI must be set to `{app-url}/auth/xbox/callback`.
 - **Content Moderation**: `bad-words` library integrated with a Supabase `banned_words` table for real-time filtering.
 - **File Uploads**: `multer` for general file uploads and Supabase storage. TUS protocol for robust video uploads.
 - **Data Fetching**: TanStack Query for data fetching, caching, and synchronization.
