@@ -3409,7 +3409,6 @@ const ProfilePage = () => {
                             <span className="text-xs font-bold text-[#107C10]">G</span>
                             <span className="text-xs text-slate-300">
                               <span className="font-semibold text-slate-100">{totalGS.toLocaleString()}</span>
-                              {totalMaxGS > 0 && <span className="text-slate-500"> / {totalMaxGS.toLocaleString()}</span>}
                               <span className="text-slate-400"> gamerscore</span>
                             </span>
                           </div>
@@ -3460,7 +3459,7 @@ const ProfilePage = () => {
                                 )}
                                 {gamerscore !== null && (
                                   <span className="text-xs text-amber-400 font-medium">
-                                    {gamerscore.toLocaleString()}{maxGamerscore !== null ? <span className="text-slate-500 font-normal"> / {maxGamerscore.toLocaleString()}G</span> : 'G'}
+                                    {gamerscore.toLocaleString()}G
                                   </span>
                                 )}
                                 {lastPlayedStr && (
