@@ -1129,11 +1129,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Xbox OAuth token exchange route — exchanges auth code for Xbox Live profile
   app.post("/api/auth/xbox/token", async (req, res) => {
     try {
-      console.log("Xbox token exchange - req.body:", JSON.stringify(req.body));
       const { code, redirectUri } = req.body;
 
       if (!code || !redirectUri) {
-        console.log("Xbox token exchange - missing fields: code=", !!code, "redirectUri=", !!redirectUri);
         return res.status(400).json({ message: "Missing authorization code or redirect URI" });
       }
 
