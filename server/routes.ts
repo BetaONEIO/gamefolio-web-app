@@ -1126,7 +1126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Xbox OAuth token exchange route — exchanges auth code for Xbox profile via xbl.io
+  // Xbox OAuth token exchange route — exchanges auth code for Xbox Live profile
   app.post("/api/auth/xbox/token", async (req, res) => {
     try {
       const { code, redirectUri } = req.body;
@@ -1135,41 +1135,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Missing authorization code or redirect URI" });
       }
 
-      const xblApiKey = process.env.XBL_API_KEY;
-      if (!xblApiKey) {
+      const clientId = process.env.VITE_MICROSOFT_CLIENT_ID;
+      const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+
+      if (!clientId || !clientSecret) {
         return res.status(500).json({ message: "Xbox authentication is not configured on the server" });
       }
 
-      // Exchange the Microsoft auth code for an Xbox Live profile via xbl.io
-      const xblResponse = await fetch('https://xbl.io/api/v2/auth/oauth', {
+      // Step 1: Exchange the Microsoft auth code for an access token
+      const tokenParams = new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      });
+
+      const msTokenResponse = await fetch('https://login.live.com/oauth20_token.srf', {
         method: 'POST',
-        headers: {
-          'x-authorization': xblApiKey,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: tokenParams.toString(),
+      });
+
+      if (!msTokenResponse.ok) {
+        const errorText = await msTokenResponse.text().catch(() => 'Unknown');
+        console.error("Microsoft token exchange error:", msTokenResponse.status, errorText);
+        throw new Error('Failed to exchange authorization code with Microsoft');
+      }
+
+      const msTokenData = await msTokenResponse.json();
+      const accessToken = msTokenData.access_token;
+
+      // Step 2: Exchange Microsoft access token for an Xbox Live (XBL) user token
+      const xblResponse = await fetch('https://user.auth.xboxlive.com/user/authenticate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({
-          code,
-          redirect_uri: redirectUri
-        })
+          Properties: {
+            AuthMethod: 'RPS',
+            SiteName: 'user.auth.xboxlive.com',
+            RpsTicket: `d=${accessToken}`,
+          },
+          RelyingParty: 'http://auth.xboxlive.com',
+          TokenType: 'JWT',
+        }),
       });
 
       if (!xblResponse.ok) {
-        const errorText = await xblResponse.text().catch(() => 'Unknown error');
-        console.error("xbl.io token exchange error:", xblResponse.status, errorText);
-        throw new Error('Failed to exchange authorization code with Xbox Live');
+        const errorText = await xblResponse.text().catch(() => 'Unknown');
+        console.error("XBL token error:", xblResponse.status, errorText);
+        throw new Error('Failed to authenticate with Xbox Live');
       }
 
       const xblData = await xblResponse.json();
+      const xblToken = xblData.Token;
 
-      // xbl.io returns profile data including xuid and gamertag
-      const xuid = xblData.xuid || xblData.data?.xuid;
-      const gamertag = xblData.gamertag || xblData.data?.gamertag || xblData.settings?.find((s: any) => s.id === 'Gamertag')?.value;
-      const gamerpic = xblData.displayPicRaw || xblData.data?.displayPicRaw || xblData.settings?.find((s: any) => s.id === 'GameDisplayPicRaw')?.value;
+      // Step 3: Exchange XBL token for an XSTS token (contains gamertag + XUID)
+      const xstsResponse = await fetch('https://xsts.auth.xboxlive.com/xsts/authorize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          Properties: {
+            SandboxId: 'RETAIL',
+            UserTokens: [xblToken],
+          },
+          RelyingParty: 'http://xboxlive.com',
+          TokenType: 'JWT',
+        }),
+      });
+
+      if (!xstsResponse.ok) {
+        const errorText = await xstsResponse.text().catch(() => 'Unknown');
+        console.error("XSTS token error:", xstsResponse.status, errorText);
+        throw new Error('Failed to get Xbox Secure Token');
+      }
+
+      const xstsData = await xstsResponse.json();
+      const claims = xstsData.DisplayClaims?.xui?.[0];
+
+      if (!claims) {
+        throw new Error('Could not retrieve Xbox profile information');
+      }
+
+      const xuid = claims.xid;
+      const gamertag = claims.gtg;
+      const gamerpic = claims.gpd || undefined;
 
       if (!xuid || !gamertag) {
-        console.error("xbl.io response missing required fields:", JSON.stringify(xblData));
-        throw new Error('Could not retrieve Xbox profile information');
+        console.error("XSTS response missing required fields:", JSON.stringify(xstsData));
+        throw new Error('Could not retrieve Xbox gamertag or XUID');
       }
 
       res.status(200).json({ xuid, gamertag, gamerpic });
