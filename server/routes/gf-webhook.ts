@@ -271,6 +271,33 @@ router.post('/api/stripe/webhook',
       }
     }
 
+    if (event.type === 'customer.subscription.updated') {
+      const subscription = event.data.object as Stripe.Subscription;
+      const subscriptionId = subscription.id;
+      const nonActiveStatuses = ['canceled', 'incomplete', 'incomplete_expired', 'past_due', 'unpaid'];
+
+      if (nonActiveStatuses.includes(subscription.status)) {
+        try {
+          console.log(`[GF Webhook] Subscription ${subscriptionId} moved to non-active status: ${subscription.status}`);
+
+          const [user] = await db.select().from(users).where(eq(users.stripeSubscriptionId, subscriptionId));
+
+          if (user) {
+            await db.update(users).set({
+              isPro: false,
+              updatedAt: new Date(),
+            }).where(eq(users.id, user.id));
+
+            console.log(`[GF Webhook] Revoked Pro for user ${user.id} due to subscription status: ${subscription.status}`);
+          } else {
+            console.warn(`[GF Webhook] No user found for subscription: ${subscriptionId}`);
+          }
+        } catch (error) {
+          console.error('[GF Webhook] Error processing subscription update:', error);
+        }
+      }
+    }
+
     if (event.type === 'invoice.payment_failed') {
       const invoice = event.data.object as any;
       const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id;
