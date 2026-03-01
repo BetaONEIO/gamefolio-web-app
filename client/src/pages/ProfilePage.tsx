@@ -619,7 +619,7 @@ const ProfilePage = () => {
   const getInitialTab = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
-    if (tabParam && ['clips', 'reels', 'screenshots', 'favorites'].includes(tabParam)) {
+    if (tabParam && ['clips', 'reels', 'screenshots', 'favorites', 'achievements'].includes(tabParam)) {
       return tabParam;
     }
     return "clips";
@@ -655,7 +655,7 @@ const ProfilePage = () => {
     const handlePopState = () => {
       const urlParams = new URLSearchParams(window.location.search);
       const tabParam = urlParams.get('tab');
-      if (tabParam && ['clips', 'reels', 'screenshots', 'favorites'].includes(tabParam)) {
+      if (tabParam && ['clips', 'reels', 'screenshots', 'favorites', 'achievements'].includes(tabParam)) {
         setActiveTab(tabParam);
       } else {
         setActiveTab('clips');
@@ -2719,6 +2719,18 @@ const ProfilePage = () => {
             >
               Favorites
             </TabsTrigger>
+
+            {profile?.showXboxAchievements && Array.isArray(profile?.xboxAchievements) && profile.xboxAchievements.length > 0 && (
+              <TabsTrigger
+                value="achievements"
+                className={`relative rounded-full transition-all duration-200 flex-1 px-2 md:px-4 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'achievements' ? 'text-white !bg-[#107C10]' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+              >
+                <span className="flex items-center gap-1.5">
+                  <FaXbox className="w-3 h-3 shrink-0" />
+                  <span className="hidden sm:inline">Achievements</span>
+                </span>
+              </TabsTrigger>
+            )}
           </TabsList>
             );
           })()}
@@ -3361,6 +3373,68 @@ const ProfilePage = () => {
               </div>
             )}
           </TabsContent>
+
+          {/* Achievements Tab */}
+          {profile?.showXboxAchievements && Array.isArray(profile?.xboxAchievements) && profile.xboxAchievements.length > 0 && (
+            <TabsContent value="achievements" className="pt-4 px-1 md:px-4">
+              <div className="rounded-xl border border-[#107C10]/30 bg-[#107C10]/5 overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-[#107C10]/20">
+                  <FaXbox className="w-4 h-4 text-[#107C10]" />
+                  <span className="text-sm font-semibold text-slate-200">Xbox Achievements</span>
+                  <span className="text-xs text-slate-400">({profile.xboxAchievements.length} games)</span>
+                </div>
+                <div className="divide-y divide-slate-700/40">
+                  {profile.xboxAchievements.map((item: any, idx: number) => {
+                    const name = item.name || item.modernTitleId || item.titleId || `Game ${idx + 1}`;
+                    const imageUrl = item.displayImage || item.titleImageUrl || item.imageUrl || null;
+                    const earnedCount = item.earnedAchievements ?? item.currentAchievements ?? null;
+                    const totalCount = item.totalAchievements ?? item.maxAchievements ?? null;
+                    const gamerscore = item.currentGamerscore ?? item.earnedGamerscore ?? null;
+                    const maxGamerscore = item.maxGamerscore ?? null;
+                    const pct = earnedCount !== null && totalCount !== null && totalCount > 0
+                      ? Math.round((earnedCount / totalCount) * 100)
+                      : null;
+
+                    return (
+                      <div key={idx} className="flex items-center gap-4 px-4 py-3">
+                        {imageUrl ? (
+                          <img src={imageUrl} alt={name} className="w-11 h-11 rounded-lg object-cover flex-shrink-0 bg-slate-900" />
+                        ) : (
+                          <div className="w-11 h-11 rounded-lg bg-slate-900 flex items-center justify-center flex-shrink-0">
+                            <Trophy className="w-5 h-5 text-amber-400" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-slate-200 truncate">{name}</div>
+                          {earnedCount !== null && totalCount !== null && (
+                            <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
+                              <span>{earnedCount} / {totalCount} achievements</span>
+                              {gamerscore !== null && maxGamerscore !== null && (
+                                <span className="text-amber-400">{gamerscore}G</span>
+                              )}
+                            </div>
+                          )}
+                          {pct !== null && (
+                            <div className="mt-1.5 w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-[#107C10] rounded-full"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                        {pct !== null && (
+                          <div className="flex-shrink-0 text-right">
+                            <span className="text-xs font-semibold text-slate-300">{pct}%</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </TabsContent>
+          )}
 
           {/* About Tab */}
           <TabsContent value="about" className="pt-6">
