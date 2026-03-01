@@ -3392,7 +3392,7 @@ const ProfilePage = () => {
                         <FaXbox className="w-4 h-4 text-[#107C10]" />
                         <span className="text-sm font-semibold text-slate-200">Xbox Achievements</span>
                         <span className="text-xs text-slate-400 ml-auto">
-                          {allGames.length > 10 ? `Showing 10 of ${allGames.length} games` : `${allGames.length} games`}
+                          10 most recent games
                         </span>
                       </div>
                       <div className="flex items-center gap-4 flex-wrap">
