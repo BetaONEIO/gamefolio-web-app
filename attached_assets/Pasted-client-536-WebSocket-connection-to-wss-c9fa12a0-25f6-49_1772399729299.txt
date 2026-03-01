@@ -1,0 +1,70 @@
+client:536  WebSocket connection to 'wss://c9fa12a0-25f6-499c-85a1-3fdaf44e555f-00-2i2gmevrrbqn1.riker.replit.dev/?token=NPX0B529iobe' failed: 
+setupWebSocket @ client:536
+(anonymous) @ client:531
+react-dom.development.js:29895 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+firebase.ts:44 Firebase initialized successfully
+callback?code=M.C548_BL2.2.U.DjOlqBibEnErwqyfQXalZiPhyASsCg8FBi4oUfDKAvKdsX6F6kmqgArCF0h7FiXgyYc5JV…:1  Access to XMLHttpRequest at 'https://cloudflareinsights.com/cdn-cgi/rum' from origin 'https://c9fa12a0-25f6-499c-85a1-3fdaf44e555f-00-2i2gmevrrbqn1.riker.replit.dev' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+beacon.min.js:1   POST https://cloudflareinsights.com/cdn-cgi/rum net::ERR_FAILED 200 (OK)
+n.sendObjectBeacon @ beacon.min.js:1
+C @ beacon.min.js:1
+U @ beacon.min.js:1
+setTimeout
+(anonymous) @ beacon.min.js:1
+xbox.ts:98   POST https://c9fa12a0-25f6-499c-85a1-3fdaf44e555f-00-2i2gmevrrbqn1.riker.replit.dev/api/auth/xbox/token 500 (Internal Server Error)
+handleXboxCallback @ xbox.ts:98
+processXboxCallback @ XboxCallback.tsx:35
+(anonymous) @ XboxCallback.tsx:106
+commitHookEffectListMount @ react-dom.development.js:23189
+commitPassiveMountOnFiber @ react-dom.development.js:24965
+commitPassiveMountEffects_complete @ react-dom.development.js:24930
+commitPassiveMountEffects_begin @ react-dom.development.js:24917
+commitPassiveMountEffects @ react-dom.development.js:24905
+flushPassiveEffectsImpl @ react-dom.development.js:27078
+flushPassiveEffects @ react-dom.development.js:27023
+performSyncWorkOnRoot @ react-dom.development.js:26115
+flushSyncCallbacks @ react-dom.development.js:12042
+commitRootImpl @ react-dom.development.js:26998
+commitRoot @ react-dom.development.js:26721
+finishConcurrentRender @ react-dom.development.js:26020
+performConcurrentWorkOnRoot @ react-dom.development.js:25848
+workLoop @ scheduler.development.js:266
+flushWork @ scheduler.development.js:239
+performWorkUntilDeadline @ scheduler.development.js:533
+XboxCallback.tsx:94  Xbox callback error: Error: Failed to authenticate with Xbox
+    at handleXboxCallback (xbox.ts:109:11)
+    at async processXboxCallback (XboxCallback.tsx:35:26)
+processXboxCallback @ XboxCallback.tsx:94
+await in processXboxCallback
+(anonymous) @ XboxCallback.tsx:106
+commitHookEffectListMount @ react-dom.development.js:23189
+commitPassiveMountOnFiber @ react-dom.development.js:24965
+commitPassiveMountEffects_complete @ react-dom.development.js:24930
+commitPassiveMountEffects_begin @ react-dom.development.js:24917
+commitPassiveMountEffects @ react-dom.development.js:24905
+flushPassiveEffectsImpl @ react-dom.development.js:27078
+flushPassiveEffects @ react-dom.development.js:27023
+performSyncWorkOnRoot @ react-dom.development.js:26115
+flushSyncCallbacks @ react-dom.development.js:12042
+commitRootImpl @ react-dom.development.js:26998
+commitRoot @ react-dom.development.js:26721
+finishConcurrentRender @ react-dom.development.js:26020
+performConcurrentWorkOnRoot @ react-dom.development.js:25848
+workLoop @ scheduler.development.js:266
+flushWork @ scheduler.development.js:239
+performWorkUntilDeadline @ scheduler.development.js:533
+use-revenuecat.tsx:89 RevenueCat initialized successfully
+use-revenuecat.tsx:90 Offerings: {all: {…}, current: {…}}
+use-revenuecat.tsx:91 Current offering: {identifier: 'default', serverDescription: 'Gamefolio Pro Subscription', metadata: null, packagesById: {…}, availablePackages: Array(2), …}
+use-revenuecat.tsx:92 Available packages: (2) [{…}, {…}]
+lockdown-install.js:1 SES Removing unpermitted intrinsics
+lockdown-install.js:1 SES Removing unpermitted intrinsics
+c9fa12a0-25f6-499c-85a1-3fdaf44e555f-00-2i2gmevrrbqn1.riker.replit.dev/:1  Access to XMLHttpRequest at 'https://cloudflareinsights.com/cdn-cgi/rum' from origin 'https://c9fa12a0-25f6-499c-85a1-3fdaf44e555f-00-2i2gmevrrbqn1.riker.replit.dev' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+beacon.min.js:1   POST https://cloudflareinsights.com/cdn-cgi/rum net::ERR_FAILED 200 (OK)
+n.sendObjectBeacon @ beacon.min.js:1
+C @ beacon.min.js:1
+(anonymous) @ beacon.min.js:1
+c9fa12a0-25f6-499c-85a1-3fdaf44e555f-00-2i2gmevrrbqn1.riker.replit.dev/:1  Access to resource at 'https://cloudflareinsights.com/cdn-cgi/rum' from origin 'https://c9fa12a0-25f6-499c-85a1-3fdaf44e555f-00-2i2gmevrrbqn1.riker.replit.dev' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+beacon.min.js:1   POST https://cloudflareinsights.com/cdn-cgi/rum net::ERR_FAILED 200 (OK)
+n.sendObjectBeacon @ beacon.min.js:1
+I @ beacon.min.js:1
+(anonymous) @ beacon.min.js:1
