@@ -3382,8 +3382,8 @@ const ProfilePage = () => {
                 const visibleGames = allGames.slice(0, 10);
                 const totalEarned = allGames.reduce((sum: number, g: any) => sum + (g.achievement?.currentAchievements ?? g.earnedAchievements ?? 0), 0);
                 const totalPossible = allGames.reduce((sum: number, g: any) => sum + (g.achievement?.totalAchievements ?? g.totalAchievements ?? 0), 0);
-                const totalGS = allGames.reduce((sum: number, g: any) => sum + (g.achievement?.currentGamerscore ?? g.currentGamerscore ?? 0), 0);
-                const totalMaxGS = allGames.reduce((sum: number, g: any) => sum + (g.achievement?.totalGamerscore ?? g.maxGamerscore ?? 0), 0);
+                const totalGS = (profile as any).xboxGamerscore
+                  ?? allGames.reduce((sum: number, g: any) => sum + (g.achievement?.currentGamerscore ?? g.currentGamerscore ?? 0), 0);
 
                 return (
                   <div className="rounded-xl border border-[#107C10]/30 bg-[#107C10]/5 overflow-hidden">
@@ -3404,7 +3404,7 @@ const ProfilePage = () => {
                             <span className="text-slate-400"> achievements</span>
                           </span>
                         </div>
-                        {(totalGS > 0 || totalMaxGS > 0) && (
+                        {totalGS > 0 && (
                           <div className="flex items-center gap-1.5">
                             <span className="text-xs font-bold text-[#107C10]">G</span>
                             <span className="text-xs text-slate-300">
