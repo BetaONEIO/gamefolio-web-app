@@ -23,8 +23,8 @@ export function XboxCallback() {
           throw new Error('Missing authorization code or state parameter');
         }
 
-        const isConnectMode = sessionStorage.getItem('xbox_oauth_mode') === 'connect';
-        sessionStorage.removeItem('xbox_oauth_mode');
+        const isConnectMode = localStorage.getItem('xbox_oauth_mode') === 'connect';
+        localStorage.removeItem('xbox_oauth_mode');
 
         toast({
           title: isConnectMode ? "Linking your Xbox account..." : "Processing Xbox authentication...",
@@ -92,8 +92,8 @@ export function XboxCallback() {
         }
       } catch (error: any) {
         console.error('Xbox callback error:', error);
-        const isConnectMode = sessionStorage.getItem('xbox_oauth_mode') === 'connect';
-        sessionStorage.removeItem('xbox_oauth_mode');
+        const isConnectMode = localStorage.getItem('xbox_oauth_mode') === 'connect';
+        localStorage.removeItem('xbox_oauth_mode');
         toast({
           title: isConnectMode ? "Connection failed" : "Authentication failed",
           description: error.message || "There was an error connecting your Xbox account. Please try again.",

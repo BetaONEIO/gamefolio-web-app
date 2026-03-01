@@ -6,13 +6,11 @@ interface XboxUser {
 
 interface XboxOAuthConfig {
   clientId: string;
-  redirectUri: string;
   scope: string;
 }
 
 const xboxConfig: XboxOAuthConfig = {
   clientId: import.meta.env.VITE_MICROSOFT_CLIENT_ID || '',
-  redirectUri: 'https://app.gamefolio.com/auth/xbox/callback',
   scope: 'Xboxlive.signin Xboxlive.offline_access'
 };
 
@@ -22,26 +20,30 @@ if (!isXboxConfigValid) {
   console.warn('Xbox configuration is incomplete. Xbox authentication will not work.');
 }
 
+function getRedirectUri(): string {
+  return `${window.location.origin}/auth/xbox/callback`;
+}
+
 function generateOAuthState(): string {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
 
 function storeOAuthState(state: string): void {
-  sessionStorage.setItem('xbox_oauth_state', state);
+  localStorage.setItem('xbox_oauth_state', state);
 }
 
 function getStoredOAuthState(): string | null {
-  return sessionStorage.getItem('xbox_oauth_state');
+  return localStorage.getItem('xbox_oauth_state');
 }
 
 function clearOAuthState(): void {
-  sessionStorage.removeItem('xbox_oauth_state');
+  localStorage.removeItem('xbox_oauth_state');
 }
 
 function buildXboxAuthUrl(state: string): string {
   const authUrl = new URL('https://login.live.com/oauth20_authorize.srf');
   authUrl.searchParams.set('client_id', xboxConfig.clientId);
-  authUrl.searchParams.set('redirect_uri', xboxConfig.redirectUri);
+  authUrl.searchParams.set('redirect_uri', getRedirectUri());
   authUrl.searchParams.set('response_type', 'code');
   authUrl.searchParams.set('scope', xboxConfig.scope);
   authUrl.searchParams.set('state', state);
@@ -55,9 +57,9 @@ export const signInWithXbox = async (): Promise<void> => {
 
   const state = generateOAuthState();
   storeOAuthState(state);
-  sessionStorage.removeItem('xbox_oauth_mode');
+  localStorage.removeItem('xbox_oauth_mode');
 
-  window.location.href = buildXboxAuthUrl(state);
+  (window.top || window).location.href = buildXboxAuthUrl(state);
 };
 
 export const connectXboxAccount = async (): Promise<void> => {
@@ -67,9 +69,9 @@ export const connectXboxAccount = async (): Promise<void> => {
 
   const state = generateOAuthState();
   storeOAuthState(state);
-  sessionStorage.setItem('xbox_oauth_mode', 'connect');
+  localStorage.setItem('xbox_oauth_mode', 'connect');
 
-  window.location.href = buildXboxAuthUrl(state);
+  (window.top || window).location.href = buildXboxAuthUrl(state);
 };
 
 export const handleXboxCallback = async (code: string, state: string): Promise<XboxUser> => {
@@ -90,7 +92,7 @@ export const handleXboxCallback = async (code: string, state: string): Promise<X
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       code,
-      redirectUri: xboxConfig.redirectUri
+      redirectUri: getRedirectUri()
     })
   });
 
