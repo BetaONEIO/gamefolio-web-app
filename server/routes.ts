@@ -1438,7 +1438,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const data = axiosResponse.data as any;
-      const achievements = (data.titles || data.achievements || data.data || []).slice(0, 100);
+      const allTitles = data.titles || data.achievements || data.data || [];
+      const achievements = allTitles.slice(0, 100);
+
+      // Tally true total achievements across ALL games from ALL devices before slicing
+      const totalAchievementsEarned = allTitles.reduce((sum: number, t: any) => {
+        return sum + (t.achievement?.currentAchievements ?? t.earnedAchievements ?? t.currentAchievements ?? 0);
+      }, 0);
 
       // Fetch real total gamerscore from profile
       let trueGamerscore: number | null = null;
@@ -1463,10 +1469,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUser(user.id, {
         xboxAchievements: achievements,
         xboxAchievementsLastSync: new Date(),
+        xboxTotalAchievements: totalAchievementsEarned,
         ...(trueGamerscore !== null && { xboxGamerscore: trueGamerscore }),
       });
 
-      res.json({ achievements, syncedAt: new Date().toISOString(), gamerscore: trueGamerscore });
+      res.json({ achievements, syncedAt: new Date().toISOString(), gamerscore: trueGamerscore, totalAchievements: totalAchievementsEarned });
     } catch (error) {
       console.error("Xbox achievements sync error:", error);
       res.status(500).json({ message: "Failed to sync achievements" });
@@ -2047,6 +2054,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           xboxAchievements: userWithoutPassword.xboxAchievements || null,
           xboxAchievementsLastSync: userWithoutPassword.xboxAchievementsLastSync || null,
           xboxGamerscore: userWithoutPassword.xboxGamerscore || null,
+          xboxTotalAchievements: userWithoutPassword.xboxTotalAchievements || null,
           playstationUsername: userWithoutPassword.playstationUsername || null,
           discordUsername: userWithoutPassword.discordUsername || null,
           epicUsername: userWithoutPassword.epicUsername || null,
@@ -2165,6 +2173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       xboxAchievements: userWithoutPassword.xboxAchievements || null,
       xboxAchievementsLastSync: userWithoutPassword.xboxAchievementsLastSync || null,
       xboxGamerscore: userWithoutPassword.xboxGamerscore || null,
+      xboxTotalAchievements: userWithoutPassword.xboxTotalAchievements || null,
       playstationUsername: userWithoutPassword.playstationUsername || null,
       discordUsername: userWithoutPassword.discordUsername || null,
       epicUsername: userWithoutPassword.epicUsername || null,

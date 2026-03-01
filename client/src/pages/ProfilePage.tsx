@@ -3380,7 +3380,8 @@ const ProfilePage = () => {
               {(() => {
                 const allGames = profile.xboxAchievements;
                 const visibleGames = allGames.slice(0, 10);
-                const totalEarned = allGames.reduce((sum: number, g: any) => sum + (g.achievement?.currentAchievements ?? g.earnedAchievements ?? 0), 0);
+                const totalEarned = (profile as any).xboxTotalAchievements
+                  ?? allGames.reduce((sum: number, g: any) => sum + (g.achievement?.currentAchievements ?? g.earnedAchievements ?? 0), 0);
                 const totalGS = (profile as any).xboxGamerscore
                   ?? allGames.reduce((sum: number, g: any) => sum + (g.achievement?.currentGamerscore ?? g.currentGamerscore ?? 0), 0);
 

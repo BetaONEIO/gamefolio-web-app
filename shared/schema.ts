@@ -40,6 +40,7 @@ export const users = pgTable("users", {
   xboxAchievements: json("xbox_achievements").$type<any[]>(),
   xboxAchievementsLastSync: timestamp("xbox_achievements_last_sync"),
   xboxGamerscore: integer("xbox_gamerscore"),
+  xboxTotalAchievements: integer("xbox_total_achievements"),
   playstationUsername: text("playstation_username"),
   twitterUsername: text("twitter_username"),  // X/Twitter
   youtubeUsername: text("youtube_username"),  // YouTube
