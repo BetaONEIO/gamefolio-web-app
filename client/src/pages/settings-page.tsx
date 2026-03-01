@@ -443,7 +443,7 @@ export default function SettingsPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Sync failed");
-      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      await refreshUser();
       toast({ title: "Achievements synced", description: `Pulled in ${data.achievements?.length || 0} game${data.achievements?.length !== 1 ? 's' : ''} with achievements from Xbox Live.`, duration: 4000 });
     } catch (error: any) {
       toast({ title: "Sync failed", description: error.message || "Could not fetch achievements. Please try again.", variant: "destructive" });
@@ -462,7 +462,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ show }),
       });
       if (!res.ok) throw new Error("Toggle failed");
-      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      await refreshUser();
       toast({ title: show ? "Achievements shown on profile" : "Achievements hidden from profile", duration: 3000 });
     } catch (error) {
       toast({ title: "Failed to update setting", description: "Please try again.", variant: "destructive" });
