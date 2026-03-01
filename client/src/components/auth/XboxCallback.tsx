@@ -15,6 +15,8 @@ export function XboxCallback() {
       try {
         const { code, state, error } = getXboxCallbackParams();
 
+        console.log("Xbox callback URL params:", { code: code ? `${code.substring(0, 10)}...` : null, state, error, search: window.location.search.substring(0, 50) });
+
         if (error) {
           throw new Error(`Xbox OAuth error: ${error}`);
         }
