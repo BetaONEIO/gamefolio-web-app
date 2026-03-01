@@ -44,42 +44,17 @@ function navigateToXboxAuth(url: string): void {
   window.location.href = url;
 }
 
-async function generateCodeVerifier(): Promise<string> {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return btoa(String.fromCharCode(...array))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
-}
-
-async function generateCodeChallenge(verifier: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(verifier);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return btoa(String.fromCharCode(...new Uint8Array(digest)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
-}
-
-async function buildXboxAuthUrl(state: string): Promise<string> {
-  const codeVerifier = await generateCodeVerifier();
-  const codeChallenge = await generateCodeChallenge(codeVerifier);
-  localStorage.setItem('xbox_code_verifier', codeVerifier);
-
+function buildXboxAuthUrl(state: string): string {
   const authUrl = new URL('https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize');
   authUrl.searchParams.set('client_id', xboxConfig.clientId);
   authUrl.searchParams.set('redirect_uri', getRedirectUri());
   authUrl.searchParams.set('response_type', 'code');
   authUrl.searchParams.set('scope', xboxConfig.scope);
   authUrl.searchParams.set('state', state);
-  authUrl.searchParams.set('code_challenge', codeChallenge);
-  authUrl.searchParams.set('code_challenge_method', 'S256');
   return authUrl.toString();
 }
 
-export const signInWithXbox = async (): Promise<void> => {
+export const signInWithXbox = (): void => {
   if (!isXboxConfigValid) {
     throw new Error('Xbox OAuth not properly configured');
   }
@@ -88,10 +63,10 @@ export const signInWithXbox = async (): Promise<void> => {
   storeOAuthState(state);
   localStorage.removeItem('xbox_oauth_mode');
 
-  navigateToXboxAuth(await buildXboxAuthUrl(state));
+  navigateToXboxAuth(buildXboxAuthUrl(state));
 };
 
-export const connectXboxAccount = async (): Promise<void> => {
+export const connectXboxAccount = (): void => {
   if (!isXboxConfigValid) {
     throw new Error('Xbox OAuth not properly configured');
   }
@@ -100,7 +75,7 @@ export const connectXboxAccount = async (): Promise<void> => {
   storeOAuthState(state);
   localStorage.setItem('xbox_oauth_mode', 'connect');
 
-  navigateToXboxAuth(await buildXboxAuthUrl(state));
+  navigateToXboxAuth(buildXboxAuthUrl(state));
 };
 
 export const handleXboxCallback = async (code: string, state: string): Promise<XboxUser> => {
@@ -116,20 +91,12 @@ export const handleXboxCallback = async (code: string, state: string): Promise<X
 
   clearOAuthState();
 
-  const codeVerifier = localStorage.getItem('xbox_code_verifier');
-  localStorage.removeItem('xbox_code_verifier');
-
-  if (!codeVerifier) {
-    throw new Error('Missing PKCE code verifier');
-  }
-
   const response = await fetch('/api/auth/xbox/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       code,
-      redirectUri: getRedirectUri(),
-      codeVerifier
+      redirectUri: getRedirectUri()
     })
   });
 
