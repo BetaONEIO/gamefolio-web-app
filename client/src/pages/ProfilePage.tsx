@@ -3380,10 +3380,10 @@ const ProfilePage = () => {
               {(() => {
                 const allGames = profile.xboxAchievements;
                 const visibleGames = allGames.slice(0, 10);
-                const totalEarned = allGames.reduce((sum: number, g: any) => sum + (g.earnedAchievements ?? g.currentAchievements ?? 0), 0);
-                const totalPossible = allGames.reduce((sum: number, g: any) => sum + (g.totalAchievements ?? g.maxAchievements ?? 0), 0);
-                const totalGS = allGames.reduce((sum: number, g: any) => sum + (g.currentGamerscore ?? g.earnedGamerscore ?? 0), 0);
-                const totalMaxGS = allGames.reduce((sum: number, g: any) => sum + (g.maxGamerscore ?? 0), 0);
+                const totalEarned = allGames.reduce((sum: number, g: any) => sum + (g.achievement?.currentAchievements ?? g.earnedAchievements ?? 0), 0);
+                const totalPossible = allGames.reduce((sum: number, g: any) => sum + (g.achievement?.totalAchievements ?? g.totalAchievements ?? 0), 0);
+                const totalGS = allGames.reduce((sum: number, g: any) => sum + (g.achievement?.currentGamerscore ?? g.currentGamerscore ?? 0), 0);
+                const totalMaxGS = allGames.reduce((sum: number, g: any) => sum + (g.achievement?.totalGamerscore ?? g.maxGamerscore ?? 0), 0);
 
                 return (
                   <div className="rounded-xl border border-[#107C10]/30 bg-[#107C10]/5 overflow-hidden">
@@ -3404,12 +3404,12 @@ const ProfilePage = () => {
                             <span className="text-slate-400"> achievements</span>
                           </span>
                         </div>
-                        {totalMaxGS > 0 && (
+                        {(totalGS > 0 || totalMaxGS > 0) && (
                           <div className="flex items-center gap-1.5">
                             <span className="text-xs font-bold text-[#107C10]">G</span>
                             <span className="text-xs text-slate-300">
                               <span className="font-semibold text-slate-100">{totalGS.toLocaleString()}</span>
-                              <span className="text-slate-500"> / {totalMaxGS.toLocaleString()}</span>
+                              {totalMaxGS > 0 && <span className="text-slate-500"> / {totalMaxGS.toLocaleString()}</span>}
                               <span className="text-slate-400"> gamerscore</span>
                             </span>
                           </div>
@@ -3420,14 +3420,16 @@ const ProfilePage = () => {
                       {visibleGames.map((item: any, idx: number) => {
                         const name = item.name || item.modernTitleId || item.titleId || `Game ${idx + 1}`;
                         const imageUrl = item.displayImage || item.titleImageUrl || item.imageUrl || null;
-                        const earnedCount = item.earnedAchievements ?? item.currentAchievements ?? null;
-                        const totalCount = item.totalAchievements ?? item.maxAchievements ?? null;
-                        const gamerscore = item.currentGamerscore ?? item.earnedGamerscore ?? null;
-                        const maxGamerscore = item.maxGamerscore ?? null;
-                        const pct = earnedCount !== null && totalCount !== null && totalCount > 0
-                          ? Math.round((earnedCount / totalCount) * 100)
-                          : null;
-                        const lastPlayedRaw = item.lastUnlock || item.lastPlayed || item.titleHistory?.lastTimePlayed || null;
+                        const earnedCount = item.achievement?.currentAchievements ?? item.earnedAchievements ?? null;
+                        const totalCount = item.achievement?.totalAchievements ?? item.totalAchievements ?? null;
+                        const gamerscore = item.achievement?.currentGamerscore ?? item.currentGamerscore ?? null;
+                        const maxGamerscore = item.achievement?.totalGamerscore ?? item.maxGamerscore ?? null;
+                        const pct = item.achievement?.progressPercentage != null
+                          ? Math.round(item.achievement.progressPercentage)
+                          : (earnedCount !== null && totalCount !== null && totalCount > 0
+                            ? Math.round((earnedCount / totalCount) * 100)
+                            : null);
+                        const lastPlayedRaw = item.titleHistory?.lastTimePlayed || item.lastUnlock || item.lastPlayed || null;
                         const lastPlayed = lastPlayedRaw ? new Date(lastPlayedRaw) : null;
                         const lastPlayedStr = lastPlayed && !isNaN(lastPlayed.getTime())
                           ? lastPlayed.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
