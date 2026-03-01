@@ -40,6 +40,14 @@ function clearOAuthState(): void {
   localStorage.removeItem('xbox_oauth_state');
 }
 
+function navigateToXboxAuth(url: string): void {
+  try {
+    (window.top || window).location.href = url;
+  } catch {
+    window.open(url, '_blank', 'noopener');
+  }
+}
+
 function buildXboxAuthUrl(state: string): string {
   const authUrl = new URL('https://login.live.com/oauth20_authorize.srf');
   authUrl.searchParams.set('client_id', xboxConfig.clientId);
@@ -59,7 +67,7 @@ export const signInWithXbox = async (): Promise<void> => {
   storeOAuthState(state);
   localStorage.removeItem('xbox_oauth_mode');
 
-  (window.top || window).location.href = buildXboxAuthUrl(state);
+  navigateToXboxAuth(buildXboxAuthUrl(state));
 };
 
 export const connectXboxAccount = async (): Promise<void> => {
@@ -71,7 +79,7 @@ export const connectXboxAccount = async (): Promise<void> => {
   storeOAuthState(state);
   localStorage.setItem('xbox_oauth_mode', 'connect');
 
-  (window.top || window).location.href = buildXboxAuthUrl(state);
+  navigateToXboxAuth(buildXboxAuthUrl(state));
 };
 
 export const handleXboxCallback = async (code: string, state: string): Promise<XboxUser> => {
