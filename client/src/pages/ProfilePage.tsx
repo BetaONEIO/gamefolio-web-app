@@ -45,7 +45,9 @@ import {
   Pin,
   Hexagon,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -258,6 +260,7 @@ const ProfilePage = () => {
   // Profile section tab state (stats/bio vs collection)
   const [profileSectionTab, setProfileSectionTab] = useState<'stats' | 'collection'>('stats');
   const [selectedProfileNft, setSelectedProfileNft] = useState<OwnedNft | null>(null);
+  const [achievementsExpanded, setAchievementsExpanded] = useState(false);
 
   // Screenshot action handlers
   const handleScreenshotLike = () => {
@@ -2307,6 +2310,74 @@ const ProfilePage = () => {
                     <FaFacebook className="w-3 h-3" />
                     <span>{profile.facebookUsername}</span>
                   </a>
+                )}
+              </div>
+            )}
+
+            {/* Xbox Achievements Section */}
+            {profileSectionTab === 'stats' && profile.showXboxAchievements && Array.isArray(profile.xboxAchievements) && profile.xboxAchievements.length > 0 && (
+              <div className="mt-4">
+                <button
+                  onClick={() => setAchievementsExpanded(prev => !prev)}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-[#107C10]/30 bg-[#107C10]/10 hover:bg-[#107C10]/15 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <FaXbox className="w-4 h-4 text-[#107C10]" />
+                    <span className="text-sm font-semibold text-slate-200">Xbox Achievements</span>
+                    <span className="text-xs text-slate-400">({profile.xboxAchievements.length} games)</span>
+                  </div>
+                  {achievementsExpanded ? (
+                    <ChevronUp className="w-4 h-4 text-slate-400" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                  )}
+                </button>
+
+                {achievementsExpanded && (
+                  <div className="mt-2 rounded-xl border border-slate-700/50 bg-slate-800/30 divide-y divide-slate-700/40 overflow-hidden">
+                    {profile.xboxAchievements.map((item: any, idx: number) => {
+                      const name = item.name || item.modernTitleId || item.titleId || `Game ${idx + 1}`;
+                      const imageUrl = item.displayImage || item.titleImageUrl || item.imageUrl || null;
+                      const earnedCount = item.earnedAchievements ?? item.currentAchievements ?? null;
+                      const totalCount = item.totalAchievements ?? item.maxAchievements ?? null;
+                      const gamerscore = item.currentGamerscore ?? item.earnedGamerscore ?? null;
+                      const maxGamerscore = item.maxGamerscore ?? null;
+
+                      return (
+                        <div key={idx} className="flex items-center gap-3 px-4 py-2.5">
+                          {imageUrl ? (
+                            <img src={imageUrl} alt={name} className="w-9 h-9 rounded-lg object-cover flex-shrink-0 bg-slate-900" />
+                          ) : (
+                            <div className="w-9 h-9 rounded-lg bg-slate-900 flex items-center justify-center flex-shrink-0">
+                              <Trophy className="w-4 h-4 text-amber-400" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-medium text-slate-200 truncate">{name}</div>
+                            {(earnedCount !== null && totalCount !== null) && (
+                              <div className="text-[10px] text-slate-500 mt-0.5">
+                                {earnedCount} / {totalCount} achievements
+                                {gamerscore !== null && maxGamerscore !== null && (
+                                  <span className="ml-2 text-amber-400">{gamerscore}G</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          {(earnedCount !== null && totalCount !== null && totalCount > 0) && (
+                            <div className="flex-shrink-0 text-right">
+                              <div className="text-[10px] text-slate-400">{Math.round((earnedCount / totalCount) * 100)}%</div>
+                              <div className="w-12 h-1 bg-slate-700 rounded-full mt-1 overflow-hidden">
+                                <div
+                                  className="h-full bg-[#107C10] rounded-full"
+                                  style={{ width: `${Math.round((earnedCount / totalCount) * 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             )}

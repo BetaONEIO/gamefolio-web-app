@@ -1209,6 +1209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           authProvider: "xbox",
           externalId: xuid,
           xboxUsername: gamertag,
+          xboxXuid: xuid,
           userType: null,
           ageRange: null
         });
@@ -1262,9 +1263,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Existing user
         const needsOnboarding = !user.userType || user.username.startsWith('temp_');
 
-        // Update gamertag / avatar if changed
-        if (gamertag && user.xboxUsername !== gamertag) {
-          user = await storage.updateUser(user.id, { xboxUsername: gamertag }) || user;
+        // Update gamertag / xuid / avatar if changed
+        const needsXboxUpdate = (gamertag && user.xboxUsername !== gamertag) || !user.xboxXuid;
+        if (needsXboxUpdate) {
+          user = await storage.updateUser(user.id, { xboxUsername: gamertag, xboxXuid: xuid }) || user;
         }
 
         req.login(user as any, async (err) => {
@@ -1303,6 +1305,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Xbox auth error:", error);
       handleValidationError(error, res);
+    }
+  });
+
+  // Xbox Achievements — sync from xbl.io
+  app.post("/api/xbox/achievements/sync", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const user = await storage.getUserById((req.user as any).id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (!user.xboxXuid) return res.status(400).json({ message: "No Xbox account linked. Please connect your Xbox account first." });
+
+      const xblApiKey = process.env.XBL_API_KEY;
+      if (!xblApiKey) return res.status(500).json({ message: "Xbox integration is not configured" });
+
+      const response = await fetch(`https://xbl.io/api/v2/achievements/player/${user.xboxXuid}`, {
+        headers: {
+          'x-authorization': xblApiKey,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        console.error("xbl.io achievements error:", response.status, errText);
+        return res.status(502).json({ message: "Failed to fetch achievements from Xbox Live" });
+      }
+
+      const data = await response.json() as any;
+      const achievements = (data.titles || data.achievements || data.data || []).slice(0, 100);
+
+      await storage.updateUser(user.id, {
+        xboxAchievements: achievements,
+        xboxAchievementsLastSync: new Date(),
+      });
+
+      res.json({ achievements, syncedAt: new Date().toISOString() });
+    } catch (error) {
+      console.error("Xbox achievements sync error:", error);
+      res.status(500).json({ message: "Failed to sync achievements" });
+    }
+  });
+
+  // Xbox Achievements — toggle display on profile
+  app.post("/api/xbox/achievements/toggle", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { show } = req.body;
+      const user = await storage.getUserById((req.user as any).id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const updated = await storage.updateUser(user.id, { showXboxAchievements: !!show });
+      res.json({ showXboxAchievements: updated?.showXboxAchievements });
+    } catch (error) {
+      console.error("Xbox achievements toggle error:", error);
+      res.status(500).json({ message: "Failed to update achievement display setting" });
     }
   });
 
@@ -1859,6 +1916,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gfTokenBalance: userWithoutPassword.gfTokenBalance || 0,
           steamUsername: userWithoutPassword.steamUsername || null,
           xboxUsername: userWithoutPassword.xboxUsername || null,
+          xboxXuid: userWithoutPassword.xboxXuid || null,
+          showXboxAchievements: userWithoutPassword.showXboxAchievements || false,
+          xboxAchievements: userWithoutPassword.xboxAchievements || null,
+          xboxAchievementsLastSync: userWithoutPassword.xboxAchievementsLastSync || null,
           playstationUsername: userWithoutPassword.playstationUsername || null,
           discordUsername: userWithoutPassword.discordUsername || null,
           epicUsername: userWithoutPassword.epicUsername || null,
@@ -1915,6 +1976,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gfTokenBalance: fallbackWithoutPassword.gfTokenBalance || 0,
           steamUsername: fallbackWithoutPassword.steamUsername || null,
           xboxUsername: fallbackWithoutPassword.xboxUsername || null,
+          xboxXuid: fallbackWithoutPassword.xboxXuid || null,
+          showXboxAchievements: fallbackWithoutPassword.showXboxAchievements || false,
+          xboxAchievements: fallbackWithoutPassword.xboxAchievements || null,
+          xboxAchievementsLastSync: fallbackWithoutPassword.xboxAchievementsLastSync || null,
           playstationUsername: fallbackWithoutPassword.playstationUsername || null,
           discordUsername: fallbackWithoutPassword.discordUsername || null,
           epicUsername: fallbackWithoutPassword.epicUsername || null,
@@ -1968,6 +2033,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       gfTokenBalance: userWithoutPassword.gfTokenBalance || 0,
       steamUsername: userWithoutPassword.steamUsername || null,
       xboxUsername: userWithoutPassword.xboxUsername || null,
+      xboxXuid: userWithoutPassword.xboxXuid || null,
+      showXboxAchievements: userWithoutPassword.showXboxAchievements || false,
+      xboxAchievements: userWithoutPassword.xboxAchievements || null,
+      xboxAchievementsLastSync: userWithoutPassword.xboxAchievementsLastSync || null,
       playstationUsername: userWithoutPassword.playstationUsername || null,
       discordUsername: userWithoutPassword.discordUsername || null,
       epicUsername: userWithoutPassword.epicUsername || null,

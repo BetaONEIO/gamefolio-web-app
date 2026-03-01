@@ -35,6 +35,10 @@ export const users = pgTable("users", {
   // Platform connections
   steamUsername: text("steam_username"),
   xboxUsername: text("xbox_username"),
+  xboxXuid: text("xbox_xuid"),
+  showXboxAchievements: boolean("show_xbox_achievements").default(false),
+  xboxAchievements: json("xbox_achievements").$type<any[]>(),
+  xboxAchievementsLastSync: timestamp("xbox_achievements_last_sync"),
   playstationUsername: text("playstation_username"),
   twitterUsername: text("twitter_username"),  // X/Twitter
   youtubeUsername: text("youtube_username"),  // YouTube

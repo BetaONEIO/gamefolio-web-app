@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy } from "lucide-react";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -359,6 +359,8 @@ export default function SettingsPage() {
   const [platformHandle, setPlatformHandle] = useState('');
   const [savingPlatform, setSavingPlatform] = useState(false);
   const [removingPlatform, setRemovingPlatform] = useState<PlatformKey | null>(null);
+  const [syncingAchievements, setSyncingAchievements] = useState(false);
+  const [togglingAchievements, setTogglingAchievements] = useState(false);
 
   const getPlatformIcon = (iconKey: string) => {
     switch (iconKey) {
@@ -411,6 +413,44 @@ export default function SettingsPage() {
       toast({ title: "Failed to remove platform", description: "Please try again.", variant: "destructive" });
     } finally {
       setRemovingPlatform(null);
+    }
+  };
+
+  const handleSyncAchievements = async () => {
+    setSyncingAchievements(true);
+    try {
+      const res = await fetch("/api/xbox/achievements/sync", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Sync failed");
+      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      toast({ title: "Achievements synced", description: `Pulled in ${data.achievements?.length || 0} game${data.achievements?.length !== 1 ? 's' : ''} with achievements from Xbox Live.`, duration: 4000 });
+    } catch (error: any) {
+      toast({ title: "Sync failed", description: error.message || "Could not fetch achievements. Please try again.", variant: "destructive" });
+    } finally {
+      setSyncingAchievements(false);
+    }
+  };
+
+  const handleToggleAchievements = async (show: boolean) => {
+    setTogglingAchievements(true);
+    try {
+      const res = await fetch("/api/xbox/achievements/toggle", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ show }),
+      });
+      if (!res.ok) throw new Error("Toggle failed");
+      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      toast({ title: show ? "Achievements shown on profile" : "Achievements hidden from profile", duration: 3000 });
+    } catch (error) {
+      toast({ title: "Failed to update setting", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setTogglingAchievements(false);
     }
   };
 
@@ -3038,6 +3078,80 @@ export default function SettingsPage() {
                 ) : null}
               </CardContent>
             </Card>
+
+            {/* Xbox Achievements Configuration */}
+            {user?.xboxUsername && (
+              <Card className="mt-4">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-[#107C10]/15 flex items-center justify-center flex-shrink-0">
+                      <FaXbox className="w-5 h-5 text-[#107C10]" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Xbox Achievements</CardTitle>
+                      <CardDescription className="mt-0.5 text-xs">
+                        Pull your game achievements from Xbox Live and display them on your profile.
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Sync Button */}
+                  <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                    <div>
+                      <div className="text-sm font-medium text-slate-200">Sync Achievements</div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        {user?.xboxAchievementsLastSync
+                          ? `Last synced ${new Date(user.xboxAchievementsLastSync).toLocaleDateString()}`
+                          : "Not yet synced"}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleSyncAchievements}
+                      disabled={syncingAchievements}
+                      className="gap-1.5 border-[#107C10]/40 text-[#107C10] hover:bg-[#107C10]/10"
+                    >
+                      {syncingAchievements ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4" />
+                      )}
+                      {syncingAchievements ? "Syncing..." : "Sync Now"}
+                    </Button>
+                  </div>
+
+                  {/* Toggle Display on Profile */}
+                  <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                    <div>
+                      <div className="text-sm font-medium text-slate-200">Show on Profile</div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        Display your Xbox achievements on your public profile page
+                      </div>
+                    </div>
+                    <Switch
+                      checked={!!user?.showXboxAchievements}
+                      disabled={togglingAchievements || !user?.xboxAchievements}
+                      onCheckedChange={handleToggleAchievements}
+                    />
+                  </div>
+                  {!user?.xboxAchievements && (
+                    <p className="text-xs text-slate-500 px-1">Sync your achievements first before enabling profile display.</p>
+                  )}
+
+                  {/* Preview of achievement count */}
+                  {user?.xboxAchievements && Array.isArray(user.xboxAchievements) && user.xboxAchievements.length > 0 && (
+                    <div className="flex items-center gap-2 px-1">
+                      <Trophy className="w-4 h-4 text-amber-400" />
+                      <span className="text-xs text-slate-400">
+                        {user.xboxAchievements.length} game{user.xboxAchievements.length !== 1 ? 's' : ''} with achievements synced
+                      </span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
 
