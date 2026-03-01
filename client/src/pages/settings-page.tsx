@@ -345,7 +345,7 @@ const PLATFORM_DEFINITIONS = [
 type PlatformKey = typeof PLATFORM_DEFINITIONS[number]["key"];
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -383,11 +383,8 @@ export default function SettingsPage() {
     if (!user || !selectedPlatform || !platformHandle.trim()) return;
     setSavingPlatform(true);
     try {
-      await updateProfile.mutateAsync({
-        userId: user.id,
-        userData: { [selectedPlatform]: platformHandle.trim() }
-      });
-      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      await apiRequest("PATCH", `/api/users/${user.id}`, { [selectedPlatform]: platformHandle.trim() });
+      await refreshUser();
       toast({ title: "Platform added", description: "Your platform connection has been saved.", duration: 3000 });
       setShowAddPlatform(false);
       setSelectedPlatform(null);
@@ -403,11 +400,8 @@ export default function SettingsPage() {
     if (!user) return;
     setRemovingPlatform(key);
     try {
-      await updateProfile.mutateAsync({
-        userId: user.id,
-        userData: { [key]: null }
-      });
-      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      await apiRequest("PATCH", `/api/users/${user.id}`, { [key]: null });
+      await refreshUser();
       toast({ title: "Platform removed", description: "Your platform connection has been removed.", duration: 3000 });
     } catch (error) {
       toast({ title: "Failed to remove platform", description: "Please try again.", variant: "destructive" });
