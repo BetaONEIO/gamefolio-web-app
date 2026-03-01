@@ -41,11 +41,7 @@ function clearOAuthState(): void {
 }
 
 function navigateToXboxAuth(url: string): void {
-  try {
-    (window.top || window).location.href = url;
-  } catch {
-    window.open(url, '_blank', 'noopener');
-  }
+  window.location.href = url;
 }
 
 async function generateCodeVerifier(): Promise<string> {
