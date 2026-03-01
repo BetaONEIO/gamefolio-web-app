@@ -1401,6 +1401,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUser(userId, {
         xboxUsername: null,
         xboxXuid: null,
+        showXboxAchievements: false,
+        xboxAchievements: null,
+        xboxAchievementsLastSync: null,
       });
       res.status(200).json({ success: true });
     } catch (error) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMobile } from "@/hooks/use-mobile";
 import { useLocation, Link } from "wouter";
@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink } from "lucide-react";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -363,6 +363,9 @@ export default function SettingsPage() {
   const [connectingXbox, setConnectingXbox] = useState(false);
   const [syncingAchievements, setSyncingAchievements] = useState(false);
   const [togglingAchievements, setTogglingAchievements] = useState(false);
+  const [showXboxDisconnectDialog, setShowXboxDisconnectDialog] = useState(false);
+  const [disconnectingXbox, setDisconnectingXbox] = useState(false);
+  const xboxConfigRef = useRef<HTMLDivElement>(null);
 
   const getPlatformIcon = (iconKey: string) => {
     switch (iconKey) {
@@ -413,6 +416,20 @@ export default function SettingsPage() {
       toast({ title: "Failed to remove platform", description: "Please try again.", variant: "destructive" });
     } finally {
       setRemovingPlatform(null);
+    }
+  };
+
+  const handleXboxDisconnect = async () => {
+    setDisconnectingXbox(true);
+    try {
+      await apiRequest("POST", "/api/xbox/disconnect", {});
+      await refreshUser();
+      setShowXboxDisconnectDialog(false);
+      toast({ title: "Xbox disconnected", description: "Your Xbox account has been disconnected and achievement data cleared.", duration: 3000 });
+    } catch (error) {
+      toast({ title: "Failed to disconnect", description: "Could not disconnect your Xbox account. Please try again.", variant: "destructive" });
+    } finally {
+      setDisconnectingXbox(false);
     }
   };
 
@@ -3084,19 +3101,33 @@ export default function SettingsPage() {
                             <Check className="w-3 h-3" />
                             Connected
                           </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 text-slate-500 hover:text-red-400"
-                            onClick={() => handleRemovePlatform(platform.key)}
-                            disabled={removingPlatform === platform.key}
-                          >
-                            {removingPlatform === platform.key ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="w-4 h-4" />
-                            )}
-                          </Button>
+                          {platform.key === 'xboxUsername' ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-slate-400 hover:text-[#107C10]"
+                              title="Configure Xbox"
+                              onClick={() => {
+                                xboxConfigRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              }}
+                            >
+                              <Settings className="w-4 h-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-slate-500 hover:text-red-400"
+                              onClick={() => handleRemovePlatform(platform.key)}
+                              disabled={removingPlatform === platform.key}
+                            >
+                              {removingPlatform === platform.key ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                            </Button>
+                          )}
                         </div>
                       );
                     })}
@@ -3124,18 +3155,19 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
 
-            {/* Xbox Achievements Configuration */}
+            {/* Xbox Configuration Panel */}
             {user?.xboxUsername && (
+              <div ref={xboxConfigRef}>
               <Card className="mt-4">
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-lg bg-[#107C10]/15 flex items-center justify-center flex-shrink-0">
                       <FaXbox className="w-5 h-5 text-[#107C10]" />
                     </div>
-                    <div>
-                      <CardTitle className="text-base">Xbox Achievements</CardTitle>
+                    <div className="flex-1">
+                      <CardTitle className="text-base">Xbox Configure</CardTitle>
                       <CardDescription className="mt-0.5 text-xs">
-                        Pull your game achievements from Xbox Live and display them on your profile.
+                        Manage your Xbox achievements display and account connection.
                       </CardDescription>
                     </div>
                   </div>
@@ -3194,9 +3226,55 @@ export default function SettingsPage() {
                       </span>
                     </div>
                   )}
+
+                  {/* Disconnect Xbox */}
+                  <div className="flex items-center justify-between rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3">
+                    <div>
+                      <div className="text-sm font-medium text-slate-200">Disconnect Xbox</div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        Remove your Xbox account and clear all achievement data
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowXboxDisconnectDialog(true)}
+                      className="gap-1.5 border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                    >
+                      <Unlink className="w-4 h-4" />
+                      Disconnect
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
+              </div>
             )}
+
+            {/* Xbox Disconnect Confirmation Dialog */}
+            <AlertDialog open={showXboxDisconnectDialog} onOpenChange={setShowXboxDisconnectDialog}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Disconnect Xbox Account?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove your Xbox account link and delete all synced achievement data from your profile. Your achievements will no longer appear publicly. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={disconnectingXbox}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleXboxDisconnect}
+                    disabled={disconnectingXbox}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    {disconnectingXbox ? (
+                      <><Loader2 className="w-4 h-4 animate-spin mr-1" />Disconnecting...</>
+                    ) : (
+                      "Yes, Disconnect"
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </TabsContent>
         </Tabs>
 
