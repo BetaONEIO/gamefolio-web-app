@@ -1339,6 +1339,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Xbox Disconnect — revoke access and clear all Xbox data
+  app.post("/api/xbox/disconnect", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const userId = (req.user as any).id;
+      await storage.updateUser(userId, {
+        xboxUsername: null,
+        xboxXuid: null,
+      });
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Xbox disconnect error:", error);
+      res.status(500).json({ message: "Failed to disconnect Xbox account" });
+    }
+  });
+
   // Xbox Achievements — sync from xbl.io
   app.post("/api/xbox/achievements/sync", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });

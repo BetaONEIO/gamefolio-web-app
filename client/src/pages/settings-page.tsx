@@ -402,7 +402,11 @@ export default function SettingsPage() {
     if (!user) return;
     setRemovingPlatform(key);
     try {
-      await apiRequest("PATCH", `/api/users/${user.id}`, { [key]: null });
+      if (key === 'xboxUsername') {
+        await apiRequest("POST", "/api/xbox/disconnect", {});
+      } else {
+        await apiRequest("PATCH", `/api/users/${user.id}`, { [key]: null });
+      }
       await refreshUser();
       toast({ title: "Platform removed", description: "Your platform connection has been removed.", duration: 3000 });
     } catch (error) {
@@ -3054,37 +3058,48 @@ export default function SettingsPage() {
                 {/* Connected Platforms List */}
                 {connectedPlatforms.length > 0 ? (
                   <div className="space-y-2">
-                    {connectedPlatforms.map((platform) => (
-                      <div
-                        key={platform.key}
-                        className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-700/50 bg-slate-800/30"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
-                          {getPlatformIcon(platform.icon)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-slate-200">{platform.label}</div>
-                          <div className="text-xs text-slate-400 truncate">{user?.[platform.key]}</div>
-                        </div>
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          <Check className="w-3 h-3" />
-                          Connected
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-slate-500 hover:text-red-400"
-                          onClick={() => handleRemovePlatform(platform.key)}
-                          disabled={removingPlatform === platform.key}
+                    {connectedPlatforms.map((platform) => {
+                      const isXboxVerified = platform.key === 'xboxUsername' && !!(user as any)?.xboxXuid;
+                      return (
+                        <div
+                          key={platform.key}
+                          className={`flex items-center gap-3 px-4 py-3 rounded-xl border bg-slate-800/30 ${isXboxVerified ? 'border-[#107C10]/40 bg-[#107C10]/5' : 'border-slate-700/50'}`}
                         >
-                          {removingPlatform === platform.key ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="w-4 h-4" />
-                          )}
-                        </Button>
-                      </div>
-                    ))}
+                          <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
+                            {getPlatformIcon(platform.icon)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm font-medium text-slate-200">{platform.label}</div>
+                              {isXboxVerified && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#107C10]/20 text-[#4ade80] border border-[#107C10]/30">
+                                  <Check className="w-2.5 h-2.5" />
+                                  Verified
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-400 truncate">{user?.[platform.key]}</div>
+                          </div>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <Check className="w-3 h-3" />
+                            Connected
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-slate-500 hover:text-red-400"
+                            onClick={() => handleRemovePlatform(platform.key)}
+                            disabled={removingPlatform === platform.key}
+                          >
+                            {removingPlatform === platform.key ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
+                          </Button>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : !showAddPlatform ? (
                   <div className="text-center py-8 space-y-3">
