@@ -51,7 +51,7 @@ Gamefolio is a comprehensive gaming portfolio and social platform for gamers to 
 ### Technical Implementations
 - **Database**: Supabase PostgreSQL, managed with Drizzle ORM and `postgres` library.
 - **Backend**: Node.js/Express with TypeScript.
-- **Authentication**: Hybrid session-based (`passport-local`) and JWT token-based (`jsonwebtoken`) authentication. Social OAuth providers: Google (Firebase), Discord, and Xbox Live (xbl.io). Xbox auth requires `VITE_MICROSOFT_CLIENT_ID` (Azure app client ID) and `XBL_API_KEY` (xbl.io API key). The Microsoft Azure app redirect URI must be set to `{app-url}/auth/xbox/callback`.
+- **Authentication**: Hybrid session-based (`passport-local`) and JWT token-based (`jsonwebtoken`) authentication. Social OAuth providers: Google (Firebase), Discord, and Xbox Live (xbl.io). Xbox auth requires `VITE_MICROSOFT_CLIENT_ID` (Azure app client ID) and `XBL_API_KEY` (xbl.io API key). Two redirect URIs must be registered in the Azure app: `{app-url}/auth/xbox/callback` (web) and `{app-url}/api/auth/mobile/xbox/callback` (Rork mobile).
 - **Content Moderation**: `bad-words` library integrated with a Supabase `banned_words` table for real-time filtering.
 - **File Uploads**: `multer` for general file uploads and Supabase storage. TUS protocol for robust video uploads.
 - **Data Fetching**: TanStack Query for data fetching, caching, and synchronization.
@@ -100,3 +100,53 @@ Gamefolio is a comprehensive gaming portfolio and social platform for gamers to 
 - **React Hook Form**: Form validation and submission.
 - **Postgres (NPM package)**: Direct PostgreSQL client.
 - **@revenuecat/purchases-js**: RevenueCat Web Billing SDK for subscription management.
+
+## Rork Mobile App — Xbox Auth API Contract
+
+All API calls target the deployed Replit app URL (e.g. `https://your-app.replit.app`).
+
+### Step 1 — Get the Microsoft OAuth URL
+```
+GET /api/auth/mobile/xbox/init
+Response: { authUrl: string, redirectUri: string, state: string }
+```
+Open `authUrl` in an in-app browser. No auth header needed.
+
+### Step 2 — Handle the deep-link callback
+Microsoft redirects to the Replit backend, which then redirects to:
+```
+rork-app://auth/callback?code=<one-time-code>
+```
+Or on error:
+```
+rork-app://auth/error?message=<error-message>
+```
+
+### Step 3 — Exchange the one-time code for JWT tokens
+```
+POST /api/auth/mobile/exchange
+Body: { "code": "<one-time-code>" }
+Response: {
+  success: true,
+  accessToken: string,   // 7-day JWT
+  refreshToken: string,  // 30-day JWT
+  user: { id, username, displayName, avatarUrl, xboxUsername, needsOnboarding, ... }
+}
+```
+
+### Step 4 — Make authenticated API calls
+Include the access token in every request:
+```
+Authorization: Bearer <accessToken>
+```
+
+### Step 5 — Refresh tokens when expired
+```
+POST /api/auth/token/refresh
+Body: { "refreshToken": "<refreshToken>" }
+Response: { accessToken: string, refreshToken: string }
+```
+
+### Azure App Registration — Required Redirect URIs
+- Web login: `{app-url}/auth/xbox/callback`
+- Mobile (Rork): `{app-url}/api/auth/mobile/xbox/callback`
