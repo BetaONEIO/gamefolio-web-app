@@ -3377,62 +3377,114 @@ const ProfilePage = () => {
           {/* Achievements Tab */}
           {profile?.showXboxAchievements && Array.isArray(profile?.xboxAchievements) && profile.xboxAchievements.length > 0 && (
             <TabsContent value="achievements" className="pt-4 px-1 md:px-4">
-              <div className="rounded-xl border border-[#107C10]/30 bg-[#107C10]/5 overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-[#107C10]/20">
-                  <FaXbox className="w-4 h-4 text-[#107C10]" />
-                  <span className="text-sm font-semibold text-slate-200">Xbox Achievements</span>
-                  <span className="text-xs text-slate-400">({profile.xboxAchievements.length} games)</span>
-                </div>
-                <div className="divide-y divide-slate-700/40">
-                  {profile.xboxAchievements.map((item: any, idx: number) => {
-                    const name = item.name || item.modernTitleId || item.titleId || `Game ${idx + 1}`;
-                    const imageUrl = item.displayImage || item.titleImageUrl || item.imageUrl || null;
-                    const earnedCount = item.earnedAchievements ?? item.currentAchievements ?? null;
-                    const totalCount = item.totalAchievements ?? item.maxAchievements ?? null;
-                    const gamerscore = item.currentGamerscore ?? item.earnedGamerscore ?? null;
-                    const maxGamerscore = item.maxGamerscore ?? null;
-                    const pct = earnedCount !== null && totalCount !== null && totalCount > 0
-                      ? Math.round((earnedCount / totalCount) * 100)
-                      : null;
+              {(() => {
+                const allGames = profile.xboxAchievements;
+                const visibleGames = allGames.slice(0, 10);
+                const totalEarned = allGames.reduce((sum: number, g: any) => sum + (g.earnedAchievements ?? g.currentAchievements ?? 0), 0);
+                const totalPossible = allGames.reduce((sum: number, g: any) => sum + (g.totalAchievements ?? g.maxAchievements ?? 0), 0);
+                const totalGS = allGames.reduce((sum: number, g: any) => sum + (g.currentGamerscore ?? g.earnedGamerscore ?? 0), 0);
+                const totalMaxGS = allGames.reduce((sum: number, g: any) => sum + (g.maxGamerscore ?? 0), 0);
 
-                    return (
-                      <div key={idx} className="flex items-center gap-4 px-4 py-3">
-                        {imageUrl ? (
-                          <img src={imageUrl} alt={name} className="w-11 h-11 rounded-lg object-cover flex-shrink-0 bg-slate-900" />
-                        ) : (
-                          <div className="w-11 h-11 rounded-lg bg-slate-900 flex items-center justify-center flex-shrink-0">
-                            <Trophy className="w-5 h-5 text-amber-400" />
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-slate-200 truncate">{name}</div>
-                          {earnedCount !== null && totalCount !== null && (
-                            <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
-                              <span>{earnedCount} / {totalCount} achievements</span>
-                              {gamerscore !== null && maxGamerscore !== null && (
-                                <span className="text-amber-400">{gamerscore}G</span>
-                              )}
-                            </div>
-                          )}
-                          {pct !== null && (
-                            <div className="mt-1.5 w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-[#107C10] rounded-full"
-                                style={{ width: `${pct}%` }}
-                              />
-                            </div>
-                          )}
+                return (
+                  <div className="rounded-xl border border-[#107C10]/30 bg-[#107C10]/5 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-[#107C10]/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FaXbox className="w-4 h-4 text-[#107C10]" />
+                        <span className="text-sm font-semibold text-slate-200">Xbox Achievements</span>
+                        <span className="text-xs text-slate-400 ml-auto">
+                          {allGames.length > 10 ? `Showing 10 of ${allGames.length} games` : `${allGames.length} games`}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <div className="flex items-center gap-1.5">
+                          <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                          <span className="text-xs text-slate-300">
+                            <span className="font-semibold text-slate-100">{totalEarned.toLocaleString()}</span>
+                            {totalPossible > 0 && <span className="text-slate-500"> / {totalPossible.toLocaleString()}</span>}
+                            <span className="text-slate-400"> achievements</span>
+                          </span>
                         </div>
-                        {pct !== null && (
-                          <div className="flex-shrink-0 text-right">
-                            <span className="text-xs font-semibold text-slate-300">{pct}%</span>
+                        {totalMaxGS > 0 && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-bold text-[#107C10]">G</span>
+                            <span className="text-xs text-slate-300">
+                              <span className="font-semibold text-slate-100">{totalGS.toLocaleString()}</span>
+                              <span className="text-slate-500"> / {totalMaxGS.toLocaleString()}</span>
+                              <span className="text-slate-400"> gamerscore</span>
+                            </span>
                           </div>
                         )}
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
+                    </div>
+                    <div className="divide-y divide-slate-700/40">
+                      {visibleGames.map((item: any, idx: number) => {
+                        const name = item.name || item.modernTitleId || item.titleId || `Game ${idx + 1}`;
+                        const imageUrl = item.displayImage || item.titleImageUrl || item.imageUrl || null;
+                        const earnedCount = item.earnedAchievements ?? item.currentAchievements ?? null;
+                        const totalCount = item.totalAchievements ?? item.maxAchievements ?? null;
+                        const gamerscore = item.currentGamerscore ?? item.earnedGamerscore ?? null;
+                        const maxGamerscore = item.maxGamerscore ?? null;
+                        const pct = earnedCount !== null && totalCount !== null && totalCount > 0
+                          ? Math.round((earnedCount / totalCount) * 100)
+                          : null;
+                        const lastPlayedRaw = item.lastUnlock || item.lastPlayed || item.titleHistory?.lastTimePlayed || null;
+                        const lastPlayed = lastPlayedRaw ? new Date(lastPlayedRaw) : null;
+                        const lastPlayedStr = lastPlayed && !isNaN(lastPlayed.getTime())
+                          ? lastPlayed.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                          : null;
+
+                        return (
+                          <div key={idx} className="flex items-center gap-4 px-4 py-3">
+                            {imageUrl ? (
+                              <img src={imageUrl} alt={name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0 bg-slate-900" />
+                            ) : (
+                              <div className="w-12 h-12 rounded-lg bg-slate-900 flex items-center justify-center flex-shrink-0">
+                                <Trophy className="w-5 h-5 text-amber-400" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-slate-200 truncate">{name}</span>
+                                {pct === 100 && (
+                                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#107C10]/20 text-[#107C10] flex-shrink-0">COMPLETE</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                                {earnedCount !== null && totalCount !== null && (
+                                  <span className="text-xs text-slate-400">
+                                    <span className="text-slate-200 font-medium">{earnedCount}</span> / {totalCount} achievements
+                                  </span>
+                                )}
+                                {gamerscore !== null && (
+                                  <span className="text-xs text-amber-400 font-medium">
+                                    {gamerscore.toLocaleString()}{maxGamerscore !== null ? <span className="text-slate-500 font-normal"> / {maxGamerscore.toLocaleString()}G</span> : 'G'}
+                                  </span>
+                                )}
+                                {lastPlayedStr && (
+                                  <span className="text-xs text-slate-500">Last played {lastPlayedStr}</span>
+                                )}
+                              </div>
+                              {pct !== null && (
+                                <div className="mt-1.5 w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-[#107C10] rounded-full transition-all"
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            {pct !== null && (
+                              <div className="flex-shrink-0 text-right min-w-[2.5rem]">
+                                <span className="text-sm font-semibold text-slate-200">{pct}%</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </TabsContent>
           )}
 
