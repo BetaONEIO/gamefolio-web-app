@@ -1308,6 +1308,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Xbox Connect — link an Xbox account to an already-logged-in user via xbl.io
+  app.post("/api/xbox/connect", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { xuid, gamertag, gamerpic } = req.body;
+
+      if (!xuid || !gamertag) {
+        return res.status(400).json({ message: "Missing required Xbox account data" });
+      }
+
+      const userId = (req.user as any).id;
+
+      // Check if this Xbox account is already linked to a different user
+      const existingUser = await storage.getUserByExternalId?.(xuid, "xbox");
+      if (existingUser && existingUser.id !== userId) {
+        return res.status(409).json({ message: "This Xbox account is already connected to another Gamefolio profile" });
+      }
+
+      const updated = await storage.updateUser(userId, {
+        xboxUsername: gamertag,
+        xboxXuid: xuid,
+        ...(gamerpic && !existingUser ? { avatarUrl: gamerpic } : {}),
+      });
+
+      res.status(200).json({ success: true, xboxUsername: gamertag, xboxXuid: xuid });
+    } catch (error) {
+      console.error("Xbox connect error:", error);
+      res.status(500).json({ message: "Failed to link Xbox account" });
+    }
+  });
+
   // Xbox Achievements — sync from xbl.io
   app.post("/api/xbox/achievements/sync", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });

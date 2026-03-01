@@ -28,6 +28,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { FaSteam, FaXbox, FaPlaystation, FaYoutube, FaDiscord } from 'react-icons/fa';
+import { connectXboxAccount, isXboxConfigValid } from '@/lib/xbox';
 import { FaXTwitter } from 'react-icons/fa6';
 import { SiEpicgames, SiNintendo } from 'react-icons/si';
 import Cropper from "react-easy-crop";
@@ -359,6 +360,7 @@ export default function SettingsPage() {
   const [platformHandle, setPlatformHandle] = useState('');
   const [savingPlatform, setSavingPlatform] = useState(false);
   const [removingPlatform, setRemovingPlatform] = useState<PlatformKey | null>(null);
+  const [connectingXbox, setConnectingXbox] = useState(false);
   const [syncingAchievements, setSyncingAchievements] = useState(false);
   const [togglingAchievements, setTogglingAchievements] = useState(false);
 
@@ -2990,26 +2992,60 @@ export default function SettingsPage() {
                             Change
                           </button>
                         </div>
-                        <Input
-                          placeholder={PLATFORM_DEFINITIONS.find(p => p.key === selectedPlatform)?.placeholder || 'Enter your username'}
-                          value={platformHandle}
-                          onChange={(e) => setPlatformHandle(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPlatform(); } }}
-                          autoFocus
-                        />
-                        <div className="flex gap-2 justify-end">
-                          <Button variant="outline" size="sm" onClick={() => setShowAddPlatform(false)}>
-                            Cancel
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={handleAddPlatform}
-                            disabled={!platformHandle.trim() || savingPlatform}
-                          >
-                            {savingPlatform ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Check className="w-4 h-4 mr-1" />}
-                            Save
-                          </Button>
-                        </div>
+                        {selectedPlatform === 'xboxUsername' ? (
+                          <div className="space-y-2">
+                            <p className="text-xs text-slate-400">Sign in with Microsoft to securely link your Xbox account and verify your gamertag.</p>
+                            <div className="flex gap-2 justify-end">
+                              <Button variant="outline" size="sm" onClick={() => setShowAddPlatform(false)}>
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={async () => {
+                                  if (!isXboxConfigValid) {
+                                    toast({ title: "Xbox not configured", description: "Xbox authentication is not set up yet.", variant: "destructive" });
+                                    return;
+                                  }
+                                  setConnectingXbox(true);
+                                  try {
+                                    await connectXboxAccount();
+                                  } catch (err: any) {
+                                    setConnectingXbox(false);
+                                    toast({ title: "Error", description: err.message || "Failed to start Xbox connection.", variant: "destructive" });
+                                  }
+                                }}
+                                disabled={connectingXbox}
+                                className="bg-[#107C10] hover:bg-[#0d6b0d] text-white border-0"
+                              >
+                                {connectingXbox ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <FaXbox className="w-4 h-4 mr-1" />}
+                                Connect with Xbox
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <Input
+                              placeholder={PLATFORM_DEFINITIONS.find(p => p.key === selectedPlatform)?.placeholder || 'Enter your username'}
+                              value={platformHandle}
+                              onChange={(e) => setPlatformHandle(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPlatform(); } }}
+                              autoFocus
+                            />
+                            <div className="flex gap-2 justify-end">
+                              <Button variant="outline" size="sm" onClick={() => setShowAddPlatform(false)}>
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={handleAddPlatform}
+                                disabled={!platformHandle.trim() || savingPlatform}
+                              >
+                                {savingPlatform ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Check className="w-4 h-4 mr-1" />}
+                                Save
+                              </Button>
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>

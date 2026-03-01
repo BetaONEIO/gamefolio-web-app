@@ -38,6 +38,16 @@ function clearOAuthState(): void {
   sessionStorage.removeItem('xbox_oauth_state');
 }
 
+function buildXboxAuthUrl(state: string): string {
+  const authUrl = new URL('https://login.live.com/oauth20_authorize.srf');
+  authUrl.searchParams.set('client_id', xboxConfig.clientId);
+  authUrl.searchParams.set('redirect_uri', xboxConfig.redirectUri);
+  authUrl.searchParams.set('response_type', 'code');
+  authUrl.searchParams.set('scope', xboxConfig.scope);
+  authUrl.searchParams.set('state', state);
+  return authUrl.toString();
+}
+
 export const signInWithXbox = async (): Promise<void> => {
   if (!isXboxConfigValid) {
     throw new Error('Xbox OAuth not properly configured');
@@ -45,15 +55,21 @@ export const signInWithXbox = async (): Promise<void> => {
 
   const state = generateOAuthState();
   storeOAuthState(state);
+  sessionStorage.removeItem('xbox_oauth_mode');
 
-  const authUrl = new URL('https://login.live.com/oauth20_authorize.srf');
-  authUrl.searchParams.set('client_id', xboxConfig.clientId);
-  authUrl.searchParams.set('redirect_uri', xboxConfig.redirectUri);
-  authUrl.searchParams.set('response_type', 'code');
-  authUrl.searchParams.set('scope', xboxConfig.scope);
-  authUrl.searchParams.set('state', state);
+  window.location.href = buildXboxAuthUrl(state);
+};
 
-  window.location.href = authUrl.toString();
+export const connectXboxAccount = async (): Promise<void> => {
+  if (!isXboxConfigValid) {
+    throw new Error('Xbox OAuth not properly configured');
+  }
+
+  const state = generateOAuthState();
+  storeOAuthState(state);
+  sessionStorage.setItem('xbox_oauth_mode', 'connect');
+
+  window.location.href = buildXboxAuthUrl(state);
 };
 
 export const handleXboxCallback = async (code: string, state: string): Promise<XboxUser> => {

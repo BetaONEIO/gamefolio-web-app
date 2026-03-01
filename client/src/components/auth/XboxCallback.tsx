@@ -23,54 +23,83 @@ export function XboxCallback() {
           throw new Error('Missing authorization code or state parameter');
         }
 
+        const isConnectMode = sessionStorage.getItem('xbox_oauth_mode') === 'connect';
+        sessionStorage.removeItem('xbox_oauth_mode');
+
         toast({
-          title: "Processing Xbox authentication...",
-          description: "Setting up your account",
+          title: isConnectMode ? "Linking your Xbox account..." : "Processing Xbox authentication...",
+          description: isConnectMode ? "Verifying your Xbox identity" : "Setting up your account",
           variant: "default"
         });
 
         const xboxUser = await handleXboxCallback(code, state);
 
-        const response = await apiRequest("POST", "/api/auth/xbox", {
-          xuid: xboxUser.xuid,
-          gamertag: xboxUser.gamertag,
-          gamerpic: xboxUser.gamerpic
-        });
+        if (isConnectMode) {
+          const response = await apiRequest("POST", "/api/xbox/connect", {
+            xuid: xboxUser.xuid,
+            gamertag: xboxUser.gamertag,
+            gamerpic: xboxUser.gamerpic
+          });
 
-        const userData = await response.json();
-        queryClient.setQueryData(["/api/user"], userData);
+          const data = await response.json();
 
-        if (userData.needsOnboarding) {
-          if (userData.isNewXboxUser) {
-            toast({
-              title: "Welcome to Gamefolio!",
-              description: "Let's set up your gaming profile.",
-              variant: "gamefolioSuccess"
-            });
-          } else {
-            toast({
-              title: "Complete your profile",
-              description: "Finish setting up your gaming profile to continue.",
-              variant: "gamefolioSuccess"
-            });
+          if (!response.ok) {
+            throw new Error(data.message || 'Failed to link Xbox account');
           }
-          setLocation("/onboarding");
-        } else {
+
+          await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+
           toast({
-            title: "Welcome back!",
-            description: `You're signed in as ${userData.xboxUsername || userData.displayName}.`,
+            title: "Xbox connected!",
+            description: `Your Xbox account (${xboxUser.gamertag}) has been linked to your profile.`,
             variant: "gamefolioSuccess"
           });
-          setLocation("/");
+
+          setLocation("/settings");
+        } else {
+          const response = await apiRequest("POST", "/api/auth/xbox", {
+            xuid: xboxUser.xuid,
+            gamertag: xboxUser.gamertag,
+            gamerpic: xboxUser.gamerpic
+          });
+
+          const userData = await response.json();
+          queryClient.setQueryData(["/api/user"], userData);
+
+          if (userData.needsOnboarding) {
+            if (userData.isNewXboxUser) {
+              toast({
+                title: "Welcome to Gamefolio!",
+                description: "Let's set up your gaming profile.",
+                variant: "gamefolioSuccess"
+              });
+            } else {
+              toast({
+                title: "Complete your profile",
+                description: "Finish setting up your gaming profile to continue.",
+                variant: "gamefolioSuccess"
+              });
+            }
+            setLocation("/onboarding");
+          } else {
+            toast({
+              title: "Welcome back!",
+              description: `You're signed in as ${userData.xboxUsername || userData.displayName}.`,
+              variant: "gamefolioSuccess"
+            });
+            setLocation("/");
+          }
         }
       } catch (error: any) {
         console.error('Xbox callback error:', error);
+        const isConnectMode = sessionStorage.getItem('xbox_oauth_mode') === 'connect';
+        sessionStorage.removeItem('xbox_oauth_mode');
         toast({
-          title: "Authentication failed",
-          description: error.message || "There was an error signing you in with Xbox. Please try again.",
+          title: isConnectMode ? "Connection failed" : "Authentication failed",
+          description: error.message || "There was an error connecting your Xbox account. Please try again.",
           variant: "destructive"
         });
-        setLocation("/auth");
+        setLocation(isConnectMode ? "/settings" : "/auth");
       }
     };
 
