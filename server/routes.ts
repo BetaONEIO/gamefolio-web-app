@@ -1427,6 +1427,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         headers: {
           'x-authorization': xblApiKey,
           'Accept': 'application/json',
+          'Accept-Language': 'en-US',
         },
       });
 
