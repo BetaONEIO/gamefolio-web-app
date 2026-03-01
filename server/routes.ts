@@ -1129,29 +1129,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Xbox OAuth token exchange route — exchanges auth code for Xbox Live profile
   app.post("/api/auth/xbox/token", async (req, res) => {
     try {
-      const { code, redirectUri } = req.body;
+      const { code, redirectUri, codeVerifier } = req.body;
 
-      if (!code || !redirectUri) {
-        return res.status(400).json({ message: "Missing authorization code or redirect URI" });
+      if (!code || !redirectUri || !codeVerifier) {
+        return res.status(400).json({ message: "Missing authorization code, redirect URI, or code verifier" });
       }
 
       const clientId = process.env.VITE_MICROSOFT_CLIENT_ID;
-      const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
 
-      if (!clientId || !clientSecret) {
+      if (!clientId) {
         return res.status(500).json({ message: "Xbox authentication is not configured on the server" });
       }
 
-      // Step 1: Exchange the Microsoft auth code for an access token
+      // Step 1: Exchange the Microsoft auth code for an access token using PKCE
       const tokenParams = new URLSearchParams({
         client_id: clientId,
-        client_secret: clientSecret,
         code,
         redirect_uri: redirectUri,
         grant_type: 'authorization_code',
+        code_verifier: codeVerifier,
       });
 
-      const msTokenResponse = await fetch('https://login.live.com/oauth20_token.srf', {
+      const msTokenResponse = await fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: tokenParams.toString(),
