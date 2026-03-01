@@ -1441,39 +1441,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allTitles = data.titles || data.achievements || data.data || [];
       const achievements = allTitles.slice(0, 100);
 
-      // Tally true total achievements across ALL games from ALL devices before slicing
+      // Tally true totals across ALL games before slicing
       const totalAchievementsEarned = allTitles.reduce((sum: number, t: any) => {
         return sum + (t.achievement?.currentAchievements ?? t.earnedAchievements ?? t.currentAchievements ?? 0);
       }, 0);
 
-      // Fetch real total gamerscore from profile
-      let trueGamerscore: number | null = null;
-      try {
-        const profileResponse = await axios.get(`https://xbl.io/api/v2/profile/xuid/${user.xboxXuid}`, {
-          headers: {
-            'x-authorization': xblApiKey,
-            'Accept': 'application/json',
-            'Accept-Language': 'en-US',
-          },
-          validateStatus: null,
-        });
-        if (profileResponse.status >= 200 && profileResponse.status < 300) {
-          const settings: any[] = profileResponse.data?.profileUsers?.[0]?.settings || [];
-          const gsSetting = settings.find((s: any) => s.id === 'GameDisplayScore');
-          if (gsSetting) trueGamerscore = parseInt(gsSetting.value, 10) || null;
-        }
-      } catch (profileErr) {
-        console.error('Failed to fetch Xbox profile gamerscore:', profileErr);
-      }
+      const totalGamerscoreEarned = allTitles.reduce((sum: number, t: any) => {
+        return sum + (t.achievement?.currentGamerscore ?? t.currentGamerscore ?? 0);
+      }, 0);
 
       await storage.updateUser(user.id, {
         xboxAchievements: achievements,
         xboxAchievementsLastSync: new Date(),
         xboxTotalAchievements: totalAchievementsEarned,
-        ...(trueGamerscore !== null && { xboxGamerscore: trueGamerscore }),
+        xboxGamerscore: totalGamerscoreEarned > 0 ? totalGamerscoreEarned : null,
       });
 
-      res.json({ achievements, syncedAt: new Date().toISOString(), gamerscore: trueGamerscore, totalAchievements: totalAchievementsEarned });
+      res.json({ achievements, syncedAt: new Date().toISOString(), gamerscore: totalGamerscoreEarned, totalAchievements: totalAchievementsEarned });
     } catch (error) {
       console.error("Xbox achievements sync error:", error);
       res.status(500).json({ message: "Failed to sync achievements" });
