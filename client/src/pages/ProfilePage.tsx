@@ -3381,7 +3381,6 @@ const ProfilePage = () => {
                 const allGames = profile.xboxAchievements;
                 const visibleGames = allGames.slice(0, 10);
                 const totalEarned = allGames.reduce((sum: number, g: any) => sum + (g.achievement?.currentAchievements ?? g.earnedAchievements ?? 0), 0);
-                const totalPossible = allGames.reduce((sum: number, g: any) => sum + (g.achievement?.totalAchievements ?? g.totalAchievements ?? 0), 0);
                 const totalGS = (profile as any).xboxGamerscore
                   ?? allGames.reduce((sum: number, g: any) => sum + (g.achievement?.currentGamerscore ?? g.currentGamerscore ?? 0), 0);
 
@@ -3400,7 +3399,6 @@ const ProfilePage = () => {
                           <Trophy className="w-3.5 h-3.5 text-amber-400" />
                           <span className="text-xs text-slate-300">
                             <span className="font-semibold text-slate-100">{totalEarned.toLocaleString()}</span>
-                            {totalPossible > 0 && <span className="text-slate-500"> / {totalPossible.toLocaleString()}</span>}
                             <span className="text-slate-400"> achievements</span>
                           </span>
                         </div>
