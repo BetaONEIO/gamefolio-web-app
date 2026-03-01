@@ -1423,21 +1423,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const xblApiKey = process.env.XBL_API_KEY;
       if (!xblApiKey) return res.status(500).json({ message: "Xbox integration is not configured" });
 
-      const response = await fetch(`https://xbl.io/api/v2/achievements/player/${user.xboxXuid}`, {
+      const axiosResponse = await axios.get(`https://xbl.io/api/v2/achievements/player/${user.xboxXuid}`, {
         headers: {
           'x-authorization': xblApiKey,
           'Accept': 'application/json',
           'Accept-Language': 'en-US',
         },
+        validateStatus: null,
       });
 
-      if (!response.ok) {
-        const errText = await response.text().catch(() => '');
-        console.error("xbl.io achievements error:", response.status, errText);
+      if (axiosResponse.status < 200 || axiosResponse.status >= 300) {
+        console.error("xbl.io achievements error:", axiosResponse.status, JSON.stringify(axiosResponse.data));
         return res.status(502).json({ message: "Failed to fetch achievements from Xbox Live" });
       }
 
-      const data = await response.json() as any;
+      const data = axiosResponse.data as any;
       const achievements = (data.titles || data.achievements || data.data || []).slice(0, 100);
 
       await storage.updateUser(user.id, {
