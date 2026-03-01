@@ -12,7 +12,7 @@ interface XboxOAuthConfig {
 
 const xboxConfig: XboxOAuthConfig = {
   clientId: import.meta.env.VITE_MICROSOFT_CLIENT_ID || '',
-  redirectUri: `${window.location.origin}/auth/xbox/callback`,
+  redirectUri: 'https://app.gamefolio.com/auth/xbox/callback',
   scope: 'Xboxlive.signin Xboxlive.offline_access'
 };
 
