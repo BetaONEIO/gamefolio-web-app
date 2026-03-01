@@ -3419,7 +3419,8 @@ const ProfilePage = () => {
                     <div className="divide-y divide-slate-700/40">
                       {visibleGames.map((item: any, idx: number) => {
                         const name = item.name || item.modernTitleId || item.titleId || `Game ${idx + 1}`;
-                        const imageUrl = item.displayImage || item.titleImageUrl || item.imageUrl || null;
+                        const rawImageUrl = item.displayImage || item.titleImageUrl || item.imageUrl || null;
+                        const imageUrl = rawImageUrl ? rawImageUrl.replace(/^http:\/\//, 'https://') : null;
                         const earnedCount = item.achievement?.currentAchievements ?? item.earnedAchievements ?? null;
                         const totalCount = item.achievement?.totalAchievements ?? item.totalAchievements ?? null;
                         const gamerscore = item.achievement?.currentGamerscore ?? item.currentGamerscore ?? null;
