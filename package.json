@@ -101,6 +101,7 @@
     "passport-local": "^1.0.0",
     "playwright": "^1.55.0",
     "postgres": "^3.4.7",
+    "psn-api": "^2.17.0",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-colorful": "^5.6.1",

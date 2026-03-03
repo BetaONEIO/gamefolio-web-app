@@ -1480,6 +1480,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PSN Trophy Sync
+  app.post("/api/psn/trophies/sync", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const user = await storage.getUserById((req.user as any).id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (!user.playstationUsername) return res.status(400).json({ message: "No PlayStation ID saved. Please add your PSN ID first." });
+
+      const npsso = process.env.PSN_NPSSO_TOKEN;
+      if (!npsso) return res.status(503).json({ message: "PSN integration is not configured on this server." });
+
+      const {
+        exchangeNpssoForCode,
+        exchangeCodeForAccessToken,
+        getProfileFromUserName,
+        getUserPlayedGames,
+        getUserTrophyProfileSummary,
+      } = await import("psn-api");
+
+      let accessToken: string;
+      try {
+        const code = await exchangeNpssoForCode(npsso);
+        const tokens = await exchangeCodeForAccessToken(code);
+        accessToken = tokens.accessToken;
+      } catch (authErr: any) {
+        console.error("PSN auth error:", authErr?.message || authErr);
+        return res.status(503).json({ message: "Failed to authenticate with PSN. The server token may need to be refreshed." });
+      }
+
+      let profile: any;
+      try {
+        profile = await getProfileFromUserName({ accessToken }, user.playstationUsername);
+      } catch (lookupErr: any) {
+        const msg = lookupErr?.message || "";
+        if (msg.includes("not found") || msg.includes("404") || msg.includes("2105023")) {
+          return res.status(404).json({ message: `Could not find PSN user "${user.playstationUsername}". Check the PSN ID is correct and the profile is public.` });
+        }
+        throw lookupErr;
+      }
+
+      const accountId: string = profile?.profile?.accountId;
+      if (!accountId) {
+        return res.status(404).json({ message: `Could not find PSN user "${user.playstationUsername}". Check the PSN ID is correct and the profile is public.` });
+      }
+
+      const trophySummaryData = profile?.profile?.trophySummary ?? null;
+      const trophyLevel: number | null = trophySummaryData?.level ?? null;
+      const earnedTrophies = trophySummaryData?.earnedTrophies ?? {};
+      const totalTrophies = (
+        (earnedTrophies.platinum ?? 0) +
+        (earnedTrophies.gold ?? 0) +
+        (earnedTrophies.silver ?? 0) +
+        (earnedTrophies.bronze ?? 0)
+      ) || null;
+
+      let recentGames: any[] = [];
+      try {
+        const gamesResult = await getUserPlayedGames({ accessToken }, accountId, { limit: 12, categories: "ps4_game,ps5_native_game" });
+        recentGames = gamesResult?.titles ?? [];
+      } catch (gamesErr: any) {
+        console.warn("PSN recent games unavailable:", gamesErr?.message || gamesErr);
+      }
+
+      const trophyData = {
+        earnedTrophies,
+        trophyLevel,
+        recentGames: recentGames.slice(0, 10).map((g: any) => ({
+          titleId: g.titleId,
+          name: g.name,
+          imageUrl: g.imageUrl,
+          category: g.category,
+          playCount: g.playCount,
+          lastPlayedDateTime: g.lastPlayedDateTime,
+        })),
+      };
+
+      await storage.updateUser(user.id, {
+        psnTrophyData: [trophyData],
+        psnTrophiesLastSync: new Date(),
+        psnTrophyLevel: trophyLevel,
+        psnTotalTrophies: totalTrophies,
+      });
+
+      res.json({
+        success: true,
+        trophyLevel,
+        totalTrophies,
+        earnedTrophies,
+        recentGames: trophyData.recentGames,
+        syncedAt: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("PSN sync error:", error?.message || error);
+      res.status(500).json({ message: "Failed to fetch PSN data. Please try again later." });
+    }
+  });
+
+  // PSN Trophies — toggle display on profile
+  app.post("/api/psn/trophies/toggle", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { show } = req.body;
+      const user = await storage.getUserById((req.user as any).id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const updated = await storage.updateUser(user.id, { showPsnTrophies: !!show });
+      res.json({ showPsnTrophies: updated?.showPsnTrophies });
+    } catch (error) {
+      console.error("PSN trophies toggle error:", error);
+      res.status(500).json({ message: "Failed to update trophy display setting" });
+    }
+  });
+
   // Register route
   app.post("/api/register", async (req, res) => {
     try {

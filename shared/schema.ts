@@ -42,6 +42,11 @@ export const users = pgTable("users", {
   xboxGamerscore: integer("xbox_gamerscore"),
   xboxTotalAchievements: integer("xbox_total_achievements"),
   playstationUsername: text("playstation_username"),
+  psnTrophyData: json("psn_trophy_data").$type<any[]>(),
+  psnTrophiesLastSync: timestamp("psn_trophies_last_sync"),
+  showPsnTrophies: boolean("show_psn_trophies").default(false),
+  psnTrophyLevel: integer("psn_trophy_level"),
+  psnTotalTrophies: integer("psn_total_trophies"),
   twitterUsername: text("twitter_username"),  // X/Twitter
   youtubeUsername: text("youtube_username"),  // YouTube
   discordUsername: text("discord_username"),  // Discord

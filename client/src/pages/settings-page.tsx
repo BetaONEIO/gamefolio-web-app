@@ -366,6 +366,11 @@ export default function SettingsPage() {
   const [showXboxDisconnectDialog, setShowXboxDisconnectDialog] = useState(false);
   const [disconnectingXbox, setDisconnectingXbox] = useState(false);
   const xboxConfigRef = useRef<HTMLDivElement>(null);
+  const [syncingPsnTrophies, setSyncingPsnTrophies] = useState(false);
+  const [togglingPsnTrophies, setTogglingPsnTrophies] = useState(false);
+  const [showPsnDisconnectDialog, setShowPsnDisconnectDialog] = useState(false);
+  const [disconnectingPsn, setDisconnectingPsn] = useState(false);
+  const psnConfigRef = useRef<HTMLDivElement>(null);
 
   const getPlatformIcon = (iconKey: string) => {
     switch (iconKey) {
@@ -468,6 +473,71 @@ export default function SettingsPage() {
       toast({ title: "Failed to update setting", description: "Please try again.", variant: "destructive" });
     } finally {
       setTogglingAchievements(false);
+    }
+  };
+
+  const handleSyncPsnTrophies = async () => {
+    setSyncingPsnTrophies(true);
+    try {
+      const res = await fetch("/api/psn/trophies/sync", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Sync failed");
+      await refreshUser();
+      const total = data.totalTrophies ?? 0;
+      const games = data.recentGames?.length ?? 0;
+      toast({
+        title: "PSN data synced",
+        description: `Pulled ${total} trophy${total !== 1 ? 'ies' : 'y'} across all games${games > 0 ? ` · ${games} recent game${games !== 1 ? 's' : ''}` : ''}.`,
+        duration: 4000,
+      });
+    } catch (error: any) {
+      toast({ title: "Sync failed", description: error.message || "Could not fetch PSN data. Please try again.", variant: "destructive" });
+    } finally {
+      setSyncingPsnTrophies(false);
+    }
+  };
+
+  const handleTogglePsnTrophies = async (show: boolean) => {
+    setTogglingPsnTrophies(true);
+    try {
+      const res = await fetch("/api/psn/trophies/toggle", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ show }),
+      });
+      if (!res.ok) throw new Error("Toggle failed");
+      await refreshUser();
+      toast({ title: show ? "Trophies shown on profile" : "Trophies hidden from profile", duration: 3000 });
+    } catch (error) {
+      toast({ title: "Failed to update setting", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setTogglingPsnTrophies(false);
+    }
+  };
+
+  const handlePsnDisconnect = async () => {
+    setDisconnectingPsn(true);
+    try {
+      await apiRequest("PATCH", `/api/users/${user!.id}`, {
+        playstationUsername: null,
+        psnTrophyData: null,
+        psnTrophiesLastSync: null,
+        showPsnTrophies: false,
+        psnTrophyLevel: null,
+        psnTotalTrophies: null,
+      });
+      await refreshUser();
+      setShowPsnDisconnectDialog(false);
+      toast({ title: "PlayStation disconnected", description: "Your PSN account and trophy data have been removed.", duration: 3000 });
+    } catch (error) {
+      toast({ title: "Failed to disconnect", description: "Could not disconnect your PSN account. Please try again.", variant: "destructive" });
+    } finally {
+      setDisconnectingPsn(false);
     }
   };
 
@@ -3077,10 +3147,11 @@ export default function SettingsPage() {
                   <div className="space-y-2">
                     {connectedPlatforms.map((platform) => {
                       const isXboxVerified = platform.key === 'xboxUsername' && !!(user as any)?.xboxXuid;
+                      const isPsnPlatform = platform.key === 'playstationUsername';
                       return (
                         <div
                           key={platform.key}
-                          className={`flex items-center gap-3 px-4 py-3 rounded-xl border bg-slate-800/30 ${isXboxVerified ? 'border-[#107C10]/40 bg-[#107C10]/5' : 'border-slate-700/50'}`}
+                          className={`flex items-center gap-3 px-4 py-3 rounded-xl border bg-slate-800/30 ${isXboxVerified ? 'border-[#107C10]/40 bg-[#107C10]/5' : isPsnPlatform ? 'border-[#003791]/40 bg-[#003791]/5' : 'border-slate-700/50'}`}
                         >
                           <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
                             {getPlatformIcon(platform.icon)}
@@ -3109,6 +3180,18 @@ export default function SettingsPage() {
                               title="Configure Xbox"
                               onClick={() => {
                                 xboxConfigRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              }}
+                            >
+                              <Settings className="w-4 h-4" />
+                            </Button>
+                          ) : isPsnPlatform ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-slate-400 hover:text-[#003791]"
+                              title="Configure PlayStation"
+                              onClick={() => {
+                                psnConfigRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                               }}
                             >
                               <Settings className="w-4 h-4" />
@@ -3267,6 +3350,194 @@ export default function SettingsPage() {
                     className="bg-red-600 hover:bg-red-700 text-white"
                   >
                     {disconnectingXbox ? (
+                      <><Loader2 className="w-4 h-4 animate-spin mr-1" />Disconnecting...</>
+                    ) : (
+                      "Yes, Disconnect"
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            {/* PlayStation Configuration Panel */}
+            {user?.playstationUsername && (
+              <div ref={psnConfigRef}>
+              <Card className="mt-4">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-[#003791]/15 flex items-center justify-center flex-shrink-0">
+                      <FaPlaystation className="w-5 h-5 text-[#003791]" />
+                    </div>
+                    <div className="flex-1">
+                      <CardTitle className="text-base">PlayStation Configure</CardTitle>
+                      <CardDescription className="mt-0.5 text-xs">
+                        Manage your PSN trophy display and account connection.
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Sync Button */}
+                  <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                    <div>
+                      <div className="text-sm font-medium text-slate-200">Sync Trophies & Games</div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        {(user as any)?.psnTrophiesLastSync
+                          ? `Last synced ${new Date((user as any).psnTrophiesLastSync).toLocaleDateString()}`
+                          : "Not yet synced"}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleSyncPsnTrophies}
+                      disabled={syncingPsnTrophies}
+                      className="gap-1.5 border-[#003791]/40 text-[#003791] hover:bg-[#003791]/10"
+                    >
+                      {syncingPsnTrophies ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4" />
+                      )}
+                      {syncingPsnTrophies ? "Syncing..." : "Sync Now"}
+                    </Button>
+                  </div>
+
+                  {/* Trophy summary preview */}
+                  {(user as any)?.psnTrophyData && Array.isArray((user as any).psnTrophyData) && (user as any).psnTrophyData.length > 0 && (() => {
+                    const data = (user as any).psnTrophyData[0];
+                    const earned = data?.earnedTrophies ?? {};
+                    const games = data?.recentGames ?? [];
+                    return (
+                      <div className="space-y-3">
+                        {/* Trophy counts */}
+                        <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3 space-y-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Trophy className="w-4 h-4 text-amber-400" />
+                            <span className="text-sm font-medium text-slate-200">Trophy Summary</span>
+                            {(user as any)?.psnTrophyLevel && (
+                              <span className="ml-auto text-xs text-slate-400">Level {(user as any).psnTrophyLevel}</span>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-4 gap-2 text-center">
+                            <div className="rounded-lg bg-slate-900/60 px-2 py-2">
+                              <div className="text-base font-bold text-yellow-300">{earned.platinum ?? 0}</div>
+                              <div className="text-[10px] text-slate-500 mt-0.5">Platinum</div>
+                            </div>
+                            <div className="rounded-lg bg-slate-900/60 px-2 py-2">
+                              <div className="text-base font-bold text-yellow-400">{earned.gold ?? 0}</div>
+                              <div className="text-[10px] text-slate-500 mt-0.5">Gold</div>
+                            </div>
+                            <div className="rounded-lg bg-slate-900/60 px-2 py-2">
+                              <div className="text-base font-bold text-slate-300">{earned.silver ?? 0}</div>
+                              <div className="text-[10px] text-slate-500 mt-0.5">Silver</div>
+                            </div>
+                            <div className="rounded-lg bg-slate-900/60 px-2 py-2">
+                              <div className="text-base font-bold text-amber-600">{earned.bronze ?? 0}</div>
+                              <div className="text-[10px] text-slate-500 mt-0.5">Bronze</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Recent games */}
+                        {games.length > 0 && (
+                          <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3 space-y-2">
+                            <div className="text-sm font-medium text-slate-200 mb-2">Recent Games</div>
+                            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                              {games.map((game: any, idx: number) => (
+                                <div key={game.titleId ?? idx} className="flex items-center gap-3">
+                                  {game.imageUrl ? (
+                                    <img
+                                      src={game.imageUrl}
+                                      alt={game.name}
+                                      className="w-9 h-9 rounded-lg object-cover flex-shrink-0 bg-slate-700"
+                                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                    />
+                                  ) : (
+                                    <div className="w-9 h-9 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0">
+                                      <Gamepad2 className="w-4 h-4 text-slate-500" />
+                                    </div>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-xs font-medium text-slate-200 truncate">{game.name}</div>
+                                    {game.lastPlayedDateTime && (
+                                      <div className="text-[10px] text-slate-500 mt-0.5">
+                                        {new Date(game.lastPlayedDateTime).toLocaleDateString()}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {games.length === 0 && (
+                          <p className="text-xs text-slate-500 px-1">No recent game data available. This may be due to privacy settings on the PSN account.</p>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {!(user as any)?.psnTrophyData && (
+                    <p className="text-xs text-slate-500 px-1">Sync your trophies first to see your data and enable profile display.</p>
+                  )}
+
+                  {/* Toggle Display on Profile */}
+                  <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                    <div>
+                      <div className="text-sm font-medium text-slate-200">Show on Profile</div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        Display your PSN trophies on your public profile page
+                      </div>
+                    </div>
+                    <Switch
+                      checked={!!(user as any)?.showPsnTrophies}
+                      disabled={togglingPsnTrophies || !(user as any)?.psnTrophyData}
+                      onCheckedChange={handleTogglePsnTrophies}
+                    />
+                  </div>
+
+                  {/* Disconnect PlayStation */}
+                  <div className="flex items-center justify-between rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3">
+                    <div>
+                      <div className="text-sm font-medium text-slate-200">Disconnect PlayStation</div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        Remove your PSN ID and clear all trophy data
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowPsnDisconnectDialog(true)}
+                      className="gap-1.5 border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                    >
+                      <Unlink className="w-4 h-4" />
+                      Disconnect
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              </div>
+            )}
+
+            {/* PlayStation Disconnect Confirmation Dialog */}
+            <AlertDialog open={showPsnDisconnectDialog} onOpenChange={setShowPsnDisconnectDialog}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Disconnect PlayStation Account?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove your PSN ID and delete all synced trophy data from your profile. Your trophies will no longer appear publicly. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={disconnectingPsn}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handlePsnDisconnect}
+                    disabled={disconnectingPsn}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    {disconnectingPsn ? (
                       <><Loader2 className="w-4 h-4 animate-spin mr-1" />Disconnecting...</>
                     ) : (
                       "Yes, Disconnect"
