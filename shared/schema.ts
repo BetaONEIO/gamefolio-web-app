@@ -1522,4 +1522,11 @@ export const userStakingHistory = pgTable("user_staking_history", {
 
 export type UserStaking = typeof userStaking.$inferSelect;
 export type UserStakingHistory = typeof userStakingHistory.$inferSelect;
+
+export const serverSettings = pgTable("server_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+export type ServerSetting = typeof serverSettings.$inferSelect;
 export type XpSetting = typeof xpSettings.$inferSelect;

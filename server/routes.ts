@@ -23,7 +23,7 @@ import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
 import { eq, sql } from "drizzle-orm";
 import { db } from "./db";
-import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars } from "@shared/schema";
+import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings } from "@shared/schema";
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -1480,6 +1480,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PSN helpers — store/retrieve refresh token from server_settings
+  async function getPsnRefreshToken(): Promise<string | null> {
+    try {
+      const rows = await db.select().from(serverSettings).where(eq(serverSettings.key, "psn_refresh_token"));
+      return rows[0]?.value ?? null;
+    } catch { return null; }
+  }
+
+  async function setPsnRefreshToken(token: string): Promise<void> {
+    try {
+      await db.insert(serverSettings).values({ key: "psn_refresh_token", value: token, updatedAt: new Date() })
+        .onConflictDoUpdate({ target: serverSettings.key, set: { value: token, updatedAt: new Date() } });
+    } catch (e) {
+      console.error("Failed to save PSN refresh token:", e);
+    }
+  }
+
   // PSN Trophy Sync
   app.post("/api/psn/trophies/sync", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
@@ -1488,25 +1505,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) return res.status(404).json({ message: "User not found" });
       if (!user.playstationUsername) return res.status(400).json({ message: "No PlayStation ID saved. Please add your PSN ID first." });
 
-      const npsso = process.env.PSN_NPSSO_TOKEN;
-      if (!npsso) return res.status(503).json({ message: "PSN integration is not configured on this server." });
-
       const {
         exchangeNpssoForCode,
         exchangeCodeForAccessToken,
+        exchangeRefreshTokenForAuthTokens,
         getProfileFromUserName,
         getUserPlayedGames,
-        getUserTrophyProfileSummary,
       } = await import("psn-api");
 
       let accessToken: string;
-      try {
-        const code = await exchangeNpssoForCode(npsso);
-        const tokens = await exchangeCodeForAccessToken(code);
-        accessToken = tokens.accessToken;
-      } catch (authErr: any) {
-        console.error("PSN auth error:", authErr?.message || authErr);
-        return res.status(503).json({ message: "Failed to authenticate with PSN. The server token may need to be refreshed." });
+
+      // Try refresh token first (self-renewing — no manual rotation needed)
+      const storedRefreshToken = await getPsnRefreshToken();
+      if (storedRefreshToken) {
+        try {
+          const tokens = await exchangeRefreshTokenForAuthTokens(storedRefreshToken);
+          accessToken = tokens.accessToken;
+          // Save the new refresh token — keeps the chain alive indefinitely
+          if (tokens.refreshToken) await setPsnRefreshToken(tokens.refreshToken);
+        } catch (refreshErr: any) {
+          console.warn("PSN refresh token expired, falling back to NPSSO:", refreshErr?.message);
+          // Fall through to NPSSO below
+          accessToken = "";
+        }
+      } else {
+        accessToken = "";
+      }
+
+      // Fall back to NPSSO (one-time bootstrap)
+      if (!accessToken) {
+        const npsso = process.env.PSN_NPSSO_TOKEN;
+        if (!npsso) {
+          return res.status(503).json({
+            message: "PSN is not configured. Please add a PSN_NPSSO_TOKEN secret to get started. After the first sync, it will self-renew automatically.",
+          });
+        }
+        try {
+          const code = await exchangeNpssoForCode(npsso);
+          const tokens = await exchangeCodeForAccessToken(code);
+          accessToken = tokens.accessToken;
+          if (tokens.refreshToken) await setPsnRefreshToken(tokens.refreshToken);
+        } catch (authErr: any) {
+          console.error("PSN NPSSO auth error:", authErr?.message || authErr);
+          return res.status(503).json({ message: "Failed to authenticate with PSN. The NPSSO token may be expired — please update it in your secrets." });
+        }
       }
 
       let profile: any;
