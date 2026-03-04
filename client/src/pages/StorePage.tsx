@@ -1408,63 +1408,126 @@ export default function StorePage() {
               {/* Marketplace Listings */}
               {storeTab === "nft" && marketplaceData && marketplaceData.listings.length > 0 && accessFilter !== "pro" && (
               <>
-              <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
-                <Tag className="h-4 w-4 text-orange-400" />
-                Marketplace
-                <Badge className="bg-orange-600/30 text-[10px] px-1.5 py-0.5 text-orange-300 ml-1">
-                  Player Listed
-                </Badge>
-              </h3>
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 mb-8">
-                {marketplaceData.listings.map((listing: MarketplaceListing) => (
-                  <div
-                    key={`marketplace-${listing.token_id}-${listing.user_id}`}
-                    className="rounded-2xl overflow-hidden bg-slate-900 transition-all duration-200 hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(249,115,22,0.3)]"
-                  >
-                    <div className="relative aspect-square overflow-hidden">
-                      <MarketplaceNftImage tokenId={listing.token_id} />
-                      <div className="absolute top-2 left-2 bg-orange-500/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
-                        Resale
-                      </div>
-                      <div className="absolute top-2 right-2 backdrop-blur-md bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5">
-                        <span className="text-[10px] font-bold text-green-400">#{listing.token_id}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="p-3 pt-2">
-                      <h3 className="font-bold text-sm text-slate-50 truncate">Genesis #{listing.token_id}</h3>
-                      <p className="text-[11px] text-slate-400 mt-0.5">by {listing.display_name || listing.username}</p>
-                      
-                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800">
-                        <div className="flex items-center gap-1">
-                          <img src={gfTokenLogo} alt="GF" className="w-3.5 h-3.5" />
-                          <span className="text-sm font-bold text-orange-400">{listing.listed_price}</span>
+              {/* Platform store listings */}
+              {marketplaceData.listings.filter((l: MarketplaceListing) => l.username === 'GamefolioStore').length > 0 && (
+                <>
+                <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                  <Tag className="h-4 w-4 text-green-400" />
+                  Official Store
+                  <Badge className="bg-green-600/30 text-[10px] px-1.5 py-0.5 text-green-300 ml-1">
+                    Genesis Guardians
+                  </Badge>
+                </h3>
+                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 mb-8">
+                  {marketplaceData.listings.filter((l: MarketplaceListing) => l.username === 'GamefolioStore').map((listing: MarketplaceListing) => (
+                    <div
+                      key={`store-${listing.token_id}`}
+                      className="rounded-2xl overflow-hidden bg-slate-900 transition-all duration-200 hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(74,222,128,0.3)]"
+                    >
+                      <div className="relative aspect-square overflow-hidden">
+                        <MarketplaceNftImage tokenId={listing.token_id} />
+                        <div className="absolute top-2 left-2 bg-green-500/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+                          Official
                         </div>
-                        <Button
-                          size="sm"
-                          disabled={buyingTokenId === listing.token_id || listing.user_id === user?.id}
-                          className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-[10px] h-7 px-3 rounded-xl disabled:opacity-50"
-                          onClick={() => {
-                            setBuyingTokenId(listing.token_id);
-                            buyMarketplaceNftMutation.mutate({ tokenId: listing.token_id, sellerId: listing.user_id });
-                          }}
-                        >
-                          {buyingTokenId === listing.token_id ? (
-                            <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                          ) : listing.user_id === user?.id ? (
-                            "Your listing"
-                          ) : (
-                            <>
-                              <ShoppingCart className="h-2.5 w-2.5 mr-0.5" />
-                              Buy
-                            </>
-                          )}
-                        </Button>
+                        <div className="absolute top-2 right-2 backdrop-blur-md bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5">
+                          <span className="text-[10px] font-bold text-green-400">#{listing.token_id}</span>
+                        </div>
+                      </div>
+                      <div className="p-3 pt-2">
+                        <h3 className="font-bold text-sm text-slate-50 truncate">Genesis #{listing.token_id}</h3>
+                        <p className="text-[11px] text-slate-400 mt-0.5">Gamefolio Official Store</p>
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800">
+                          <div className="flex items-center gap-1">
+                            <img src={gfTokenLogo} alt="GF" className="w-3.5 h-3.5" />
+                            <span className="text-sm font-bold text-green-400">{listing.listed_price}</span>
+                          </div>
+                          <Button
+                            size="sm"
+                            disabled={buyingTokenId === listing.token_id}
+                            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-[10px] h-7 px-3 rounded-xl disabled:opacity-50"
+                            onClick={() => {
+                              setBuyingTokenId(listing.token_id);
+                              buyMarketplaceNftMutation.mutate({ tokenId: listing.token_id, sellerId: listing.user_id });
+                            }}
+                          >
+                            {buyingTokenId === listing.token_id ? (
+                              <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                            ) : (
+                              <>
+                                <ShoppingCart className="h-2.5 w-2.5 mr-0.5" />
+                                Buy
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+                </>
+              )}
+
+              {/* Player marketplace listings */}
+              {marketplaceData.listings.filter((l: MarketplaceListing) => l.username !== 'GamefolioStore').length > 0 && (
+                <>
+                <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                  <Tag className="h-4 w-4 text-orange-400" />
+                  Marketplace
+                  <Badge className="bg-orange-600/30 text-[10px] px-1.5 py-0.5 text-orange-300 ml-1">
+                    Player Listed
+                  </Badge>
+                </h3>
+                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 mb-8">
+                  {marketplaceData.listings.filter((l: MarketplaceListing) => l.username !== 'GamefolioStore').map((listing: MarketplaceListing) => (
+                    <div
+                      key={`marketplace-${listing.token_id}-${listing.user_id}`}
+                      className="rounded-2xl overflow-hidden bg-slate-900 transition-all duration-200 hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(249,115,22,0.3)]"
+                    >
+                      <div className="relative aspect-square overflow-hidden">
+                        <MarketplaceNftImage tokenId={listing.token_id} />
+                        <div className="absolute top-2 left-2 bg-orange-500/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+                          Resale
+                        </div>
+                        <div className="absolute top-2 right-2 backdrop-blur-md bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5">
+                          <span className="text-[10px] font-bold text-green-400">#{listing.token_id}</span>
+                        </div>
+                      </div>
+                      <div className="p-3 pt-2">
+                        <h3 className="font-bold text-sm text-slate-50 truncate">Genesis #{listing.token_id}</h3>
+                        <p className="text-[11px] text-slate-400 mt-0.5">by {listing.display_name || listing.username}</p>
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800">
+                          <div className="flex items-center gap-1">
+                            <img src={gfTokenLogo} alt="GF" className="w-3.5 h-3.5" />
+                            <span className="text-sm font-bold text-orange-400">{listing.listed_price}</span>
+                          </div>
+                          <Button
+                            size="sm"
+                            disabled={buyingTokenId === listing.token_id || listing.user_id === user?.id}
+                            className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-[10px] h-7 px-3 rounded-xl disabled:opacity-50"
+                            onClick={() => {
+                              setBuyingTokenId(listing.token_id);
+                              buyMarketplaceNftMutation.mutate({ tokenId: listing.token_id, sellerId: listing.user_id });
+                            }}
+                          >
+                            {buyingTokenId === listing.token_id ? (
+                              <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                            ) : listing.user_id === user?.id ? (
+                              "Your listing"
+                            ) : (
+                              <>
+                                <ShoppingCart className="h-2.5 w-2.5 mr-0.5" />
+                                Buy
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                </>
+              )}
+              
               </>
               )}
 
