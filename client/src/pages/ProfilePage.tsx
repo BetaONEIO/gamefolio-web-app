@@ -57,7 +57,7 @@ import {
   SiEpicgames,
   SiNintendo
 } from "react-icons/si";
-import { FaXbox, FaYoutube, FaInstagram, FaFacebook } from "react-icons/fa";
+import { FaXbox, FaPlaystation, FaYoutube, FaInstagram, FaFacebook } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
 import {
   Dialog,
@@ -2731,6 +2731,18 @@ const ProfilePage = () => {
                 </span>
               </TabsTrigger>
             )}
+
+            {profile?.showPsnTrophies && Array.isArray(profile?.psnTrophyData) && profile.psnTrophyData.length > 0 && (
+              <TabsTrigger
+                value="trophies"
+                className={`relative rounded-full transition-all duration-200 flex-1 px-2 md:px-4 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'trophies' ? 'text-white !bg-[#003791]' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+              >
+                <span className="flex items-center gap-1.5">
+                  <FaPlaystation className="w-3 h-3 shrink-0" />
+                  <span className="hidden sm:inline">Trophies</span>
+                </span>
+              </TabsTrigger>
+            )}
           </TabsList>
             );
           })()}
@@ -3483,6 +3495,136 @@ const ProfilePage = () => {
                         );
                       })}
                     </div>
+                  </div>
+                );
+              })()}
+            </TabsContent>
+          )}
+
+          {/* Trophies Tab (PlayStation) */}
+          {profile?.showPsnTrophies && Array.isArray(profile?.psnTrophyData) && profile.psnTrophyData.length > 0 && (
+            <TabsContent value="trophies" className="pt-4 px-1 md:px-4">
+              {(() => {
+                const data = profile.psnTrophyData[0];
+                const earned = data?.earnedTrophies ?? {};
+                const recentGames: any[] = data?.recentGames ?? [];
+                const trophyLevel = (profile as any).psnTrophyLevel ?? data?.trophyLevel ?? null;
+                const totalTrophies = (profile as any).psnTotalTrophies ?? null;
+
+                return (
+                  <div className="rounded-xl border border-[#003791]/30 bg-[#003791]/5 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-[#003791]/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FaPlaystation className="w-4 h-4 text-[#003791]" />
+                        <span className="text-sm font-semibold text-slate-200">PlayStation Trophies</span>
+                        {recentGames.length > 0 && (
+                          <span className="text-xs text-slate-400 ml-auto">
+                            {recentGames.length} recent {recentGames.length === 1 ? 'game' : 'games'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 flex-wrap">
+                        {trophyLevel !== null && (
+                          <div className="flex items-center gap-1.5">
+                            <Trophy className="w-3.5 h-3.5 text-[#003791]" />
+                            <span className="text-xs text-slate-300">
+                              <span className="text-slate-400">Level </span>
+                              <span className="font-semibold text-slate-100">{trophyLevel}</span>
+                            </span>
+                          </div>
+                        )}
+                        {totalTrophies !== null && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs text-slate-300">
+                              <span className="font-semibold text-slate-100">{totalTrophies.toLocaleString()}</span>
+                              <span className="text-slate-400"> total trophies</span>
+                            </span>
+                          </div>
+                        )}
+                        {earned.platinum > 0 && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-bold text-[#b0b0d0]">🏆</span>
+                            <span className="text-xs text-slate-300">
+                              <span className="font-semibold text-slate-100">{earned.platinum}</span>
+                              <span className="text-slate-400"> plat</span>
+                            </span>
+                          </div>
+                        )}
+                        {earned.gold > 0 && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-slate-300">
+                              <span className="font-semibold text-amber-400">{earned.gold}</span>
+                              <span className="text-slate-400"> gold</span>
+                            </span>
+                          </div>
+                        )}
+                        {earned.silver > 0 && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-slate-300">
+                              <span className="font-semibold text-slate-300">{earned.silver}</span>
+                              <span className="text-slate-400"> silver</span>
+                            </span>
+                          </div>
+                        )}
+                        {earned.bronze > 0 && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-slate-300">
+                              <span className="font-semibold text-amber-700">{earned.bronze}</span>
+                              <span className="text-slate-400"> bronze</span>
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {recentGames.length > 0 && (
+                      <div className="divide-y divide-slate-700/40">
+                        {recentGames.map((game: any, idx: number) => {
+                          const name = game.name || game.titleId || `Game ${idx + 1}`;
+                          const rawImageUrl = game.imageUrl || null;
+                          const imageUrl = rawImageUrl ? rawImageUrl.replace(/^http:\/\//, 'https://') : null;
+                          const lastPlayedRaw = game.lastPlayedDateTime || null;
+                          const lastPlayed = lastPlayedRaw ? new Date(lastPlayedRaw) : null;
+                          const lastPlayedStr = lastPlayed && !isNaN(lastPlayed.getTime())
+                            ? lastPlayed.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                            : null;
+                          const playCount = game.playCount ?? null;
+                          const category = game.category || null;
+                          const isPlatinum = false;
+
+                          return (
+                            <div key={idx} className="flex items-center gap-4 px-4 py-3">
+                              {imageUrl ? (
+                                <img src={imageUrl} alt={name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0 bg-slate-900" />
+                              ) : (
+                                <div className="w-12 h-12 rounded-lg bg-slate-900 flex items-center justify-center flex-shrink-0">
+                                  <FaPlaystation className="w-5 h-5 text-[#003791]" />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-slate-200 truncate">{name}</span>
+                                  {category && (
+                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#003791]/20 text-[#6699cc] flex-shrink-0">
+                                      {category === 'ps5_native_game' ? 'PS5' : category === 'ps4_game' ? 'PS4' : category.toUpperCase()}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                                  {playCount !== null && (
+                                    <span className="text-xs text-slate-400">
+                                      <span className="text-slate-300 font-medium">{playCount}</span> {playCount === 1 ? 'play' : 'plays'}
+                                    </span>
+                                  )}
+                                  {lastPlayedStr && (
+                                    <span className="text-xs text-slate-500">Last played {lastPlayedStr}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })()}
