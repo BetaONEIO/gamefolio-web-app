@@ -3436,7 +3436,7 @@ export default function SettingsPage() {
                             <Trophy className="w-4 h-4 text-amber-400" />
                             <span className="text-sm font-medium text-slate-200">Trophy Summary</span>
                             {(user as any)?.psnTrophyLevel && (
-                              <span className="ml-auto text-xs text-slate-400">Level {(user as any).psnTrophyLevel}</span>
+                              <span className="ml-auto text-xs text-slate-400">Trophy Level {(user as any).psnTrophyLevel}</span>
                             )}
                           </div>
                           <div className="grid grid-cols-4 gap-2 text-center">
