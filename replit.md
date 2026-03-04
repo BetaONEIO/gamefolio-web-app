@@ -9,6 +9,13 @@ Gamefolio is a comprehensive gaming portfolio and social platform for gamers to 
 - Prioritize data integrity and security
 - Prefer comprehensive solutions over quick fixes
 
+## Recent Changes (Mar 2026 - Streamer Profile Type)
+- **Streamer Profile Features**: Added dedicated Streamer profile type functionality
+  - **DB**: Added `stream_platform` (text: 'twitch'|'kick'), `stream_channel_name` (text), `show_live_overlay` (boolean) columns to `users` table
+  - **Settings Page** (`ProfileSettingsPage.tsx`): Conditional "Streamer Settings" section appears when user type is "Streamer" — includes platform selector (Twitch/Kick), channel name input, and LIVE overlay toggle
+  - **Profile Page** (`ProfilePage.tsx`): Stream embed (16:9 iframe) displayed above tabs for streamer profiles with a configured channel; supports both Twitch (`player.twitch.tv`) and Kick (`player.kick.com`) embeds
+  - **CustomAvatar** (`custom-avatar.tsx`): Added `showLiveOverlay` prop + red `LIVE` pill badge that renders at the bottom of the avatar for live streamers
+
 ## Recent Changes (Feb 2026 - XP System & Level Tracker Full Overhaul)
 - **Level Tracker Page Redesigned** with 5 navigable tabs (Today, Streaks, Milestones, Earn XP, History); 24hr reset countdown clock; progress bars for daily tasks; navy gradient colors replaced with `bg-card`/`bg-muted`
 - **Share XP Tracking**: Added `POST /api/clips/:id/track-share` and `POST /api/screenshots/:id/track-share` endpoints; now awards `share_given` XP once/day to sharer and `share_received` XP to content owner on every share. Wired into ClipShareDialog and ScreenshotShareDialog copy/native/social share actions.

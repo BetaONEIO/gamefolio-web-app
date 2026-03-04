@@ -1609,6 +1609,7 @@ const ProfilePage = () => {
                   size="mobile-profile"
                   borderIntensity="strong"
                   showAvatarBorderOverlay={true}
+                  showLiveOverlay={!!(profile?.showLiveOverlay && profile?.userType === 'streamer' && profile?.streamChannelName)}
                   className="h-full w-full"
                 />
               </div>
@@ -2042,6 +2043,7 @@ const ProfilePage = () => {
                   size="profile"
                   borderIntensity="strong"
                   showAvatarBorderOverlay={true}
+                  showLiveOverlay={!!(profile?.showLiveOverlay && profile?.userType === 'streamer' && profile?.streamChannelName)}
                 />
               </div>
               {/* Level Badge with Progress */}
@@ -2519,6 +2521,38 @@ const ProfilePage = () => {
 
         {/* Spacer for tabs section */}
         <div className="h-0 md:h-[12px]"></div>
+
+        {/* Stream Embed - shown for streamers with a configured channel */}
+        {profile?.userType === 'streamer' && profile?.streamPlatform && profile?.streamChannelName && (
+          <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-4 mb-2">
+            <div className="rounded-xl overflow-hidden border border-border bg-black shadow-lg">
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-border"
+                style={{
+                  background: profile.streamPlatform === 'kick'
+                    ? 'linear-gradient(90deg, #1a3a1a, #0f2a0f)'
+                    : 'linear-gradient(90deg, #1f1035, #0f0a1e)'
+                }}
+              >
+                <div className={`w-2 h-2 rounded-full animate-pulse ${profile.streamPlatform === 'kick' ? 'bg-green-500' : 'bg-purple-500'}`} />
+                <span className={`text-xs font-semibold ${profile.streamPlatform === 'kick' ? 'text-green-400' : 'text-purple-400'}`}>
+                  {profile.streamPlatform === 'kick' ? 'Kick' : 'Twitch'}
+                </span>
+                <span className="text-xs text-muted-foreground">— {profile.streamChannelName}</span>
+              </div>
+              <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                <iframe
+                  src={profile.streamPlatform === 'kick'
+                    ? `https://player.kick.com/${profile.streamChannelName}?autoplay=false`
+                    : `https://player.twitch.tv/?channel=${profile.streamChannelName}&parent=${window.location.hostname}&autoplay=false`
+                  }
+                  className="absolute inset-0 w-full h-full"
+                  allowFullScreen
+                  title={`${profile.streamChannelName}'s stream`}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Enhanced Tabs section with rounded container style */}
         <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-2 md:mt-8">

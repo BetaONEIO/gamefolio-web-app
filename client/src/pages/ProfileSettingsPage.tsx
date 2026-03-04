@@ -256,6 +256,10 @@ const ProfileSettingsPage: React.FC = () => {
     // User type settings
     userType: z.string().optional().nullable(),
     showUserType: z.boolean().optional(),
+    // Streamer settings
+    streamPlatform: z.string().optional().nullable(),
+    streamChannelName: z.string().optional().nullable(),
+    showLiveOverlay: z.boolean().optional(),
     // Platform connections
     steamUsername: z.string().optional().nullable(),
     xboxUsername: z.string().optional().nullable(),
@@ -280,6 +284,10 @@ const ProfileSettingsPage: React.FC = () => {
       // User type settings
       userType: user?.userType || '',
       showUserType: user?.showUserType !== false,
+      // Streamer settings
+      streamPlatform: user?.streamPlatform || 'twitch',
+      streamChannelName: user?.streamChannelName || '',
+      showLiveOverlay: user?.showLiveOverlay || false,
       // Platform connections
       steamUsername: user?.steamUsername || '',
       xboxUsername: user?.xboxUsername || '',
@@ -303,6 +311,9 @@ const ProfileSettingsPage: React.FC = () => {
         bannerUrl: user.bannerUrl || '',
         userType: user.userType || '',
         showUserType: user.showUserType !== false,
+        streamPlatform: user.streamPlatform || 'twitch',
+        streamChannelName: user.streamChannelName || '',
+        showLiveOverlay: user.showLiveOverlay || false,
         steamUsername: user.steamUsername || '',
         xboxUsername: user.xboxUsername || '',
         playstationUsername: user.playstationUsername || '',
@@ -337,7 +348,10 @@ const ProfileSettingsPage: React.FC = () => {
       normalizeValue(formValues.epicUsername) !== normalizeValue(user?.epicUsername) ||
       normalizeValue(formValues.nintendoUsername) !== normalizeValue(user?.nintendoUsername) ||
       normalizeValue(formValues.userType) !== normalizeValue(user?.userType) ||
-      formValues.showUserType !== (user?.showUserType !== false)
+      formValues.showUserType !== (user?.showUserType !== false) ||
+      normalizeValue(formValues.streamPlatform) !== normalizeValue(user?.streamPlatform) ||
+      normalizeValue(formValues.streamChannelName) !== normalizeValue(user?.streamChannelName) ||
+      (formValues.showLiveOverlay ?? false) !== (user?.showLiveOverlay ?? false)
     );
   };
 
@@ -734,6 +748,103 @@ const ProfileSettingsPage: React.FC = () => {
                       )}
                     />
                   </div>
+
+                  {/* Streamer Settings - only shown when user type is streamer */}
+                  {profileForm.watch('userType') === 'streamer' && (
+                    <div className="space-y-4 rounded-lg border border-purple-500/30 bg-purple-500/5 p-4">
+                      <div>
+                        <h3 className="text-sm font-semibold text-purple-400 flex items-center gap-2">
+                          <Video className="h-4 w-4" />
+                          Streamer Settings
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Configure your stream embed shown on your profile.
+                        </p>
+                      </div>
+
+                      {/* Platform selector */}
+                      <FormField
+                        control={profileForm.control}
+                        name="streamPlatform"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Streaming Platform</FormLabel>
+                            <FormControl>
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => field.onChange('twitch')}
+                                  className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                                    field.value === 'twitch'
+                                      ? 'border-purple-500 bg-purple-500/20 text-purple-300'
+                                      : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
+                                  }`}
+                                >
+                                  Twitch
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => field.onChange('kick')}
+                                  className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                                    field.value === 'kick'
+                                      ? 'border-green-500 bg-green-500/20 text-green-300'
+                                      : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
+                                  }`}
+                                >
+                                  Kick
+                                </button>
+                              </div>
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Channel name */}
+                      <FormField
+                        control={profileForm.control}
+                        name="streamChannelName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Channel Name</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder={profileForm.watch('streamPlatform') === 'kick' ? 'Your Kick channel name' : 'Your Twitch channel name'}
+                                {...field}
+                                value={field.value ?? ''}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Enter your channel username exactly as it appears on {profileForm.watch('streamPlatform') === 'kick' ? 'Kick' : 'Twitch'}.
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* LIVE overlay toggle */}
+                      <FormField
+                        control={profileForm.control}
+                        name="showLiveOverlay"
+                        render={({ field }) => (
+                          <FormItem>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <FormLabel className="text-sm">Show LIVE badge on profile picture</FormLabel>
+                                <FormDescription className="text-xs">
+                                  Displays a red LIVE badge on your avatar so visitors know you're streaming.
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value ?? false}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
                   
                   {/* Email field (disabled, not connected to form) */}
                   <div className="space-y-2">

@@ -57,6 +57,10 @@ export const users = pgTable("users", {
   // Onboarding data for analytics and personalization
   userType: text("user_type"), // User type selection
   showUserType: boolean("show_user_type").default(true), // Whether to show user type badge on profile
+  // Streamer settings
+  streamPlatform: text("stream_platform"), // "twitch" or "kick"
+  streamChannelName: text("stream_channel_name"), // Channel username on the platform
+  showLiveOverlay: boolean("show_live_overlay").default(false), // Show LIVE badge on avatar
   ageRange: text("age_range"), // Age range: 13-17, 18-24, 25-34, 35-44, 45-54, 55+
   // Authentication provider fields
   authProvider: text("auth_provider").default("local"), // "local", "google", "discord", "steam"
