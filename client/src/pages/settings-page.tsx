@@ -486,7 +486,27 @@ export default function SettingsPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Sync failed");
-      await refreshUser();
+
+      // Directly update the query cache with the sync response data so the UI
+      // reflects the new state immediately, without waiting for a secondary fetch.
+      const cachedUser = queryClient.getQueryData<any>(["/api/user"]);
+      if (cachedUser) {
+        const newTrophyData = [{
+          earnedTrophies: data.earnedTrophies ?? {},
+          trophyLevel: data.trophyLevel ?? null,
+          recentGames: data.recentGames ?? [],
+        }];
+        queryClient.setQueryData(["/api/user"], {
+          ...cachedUser,
+          psnTrophyData: newTrophyData,
+          psnTrophiesLastSync: data.syncedAt,
+          psnTrophyLevel: data.trophyLevel ?? null,
+          psnTotalTrophies: data.totalTrophies ?? null,
+        });
+      } else {
+        await refreshUser();
+      }
+
       const total = data.totalTrophies ?? 0;
       const games = data.recentGames?.length ?? 0;
       toast({
