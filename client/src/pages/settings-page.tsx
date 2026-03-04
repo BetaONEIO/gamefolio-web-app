@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink, Video } from "lucide-react";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -676,6 +676,24 @@ export default function SettingsPage() {
   // Track deactivated avatar URL so preview stays visible but greyed out
   const [deactivatedAvatarUrl, setDeactivatedAvatarUrl] = useState<string | null>(null);
 
+  // Streamer state — parsed from user.userType and dedicated streamer fields
+  const parseUserType = (rawType: string | null | undefined) => {
+    const parts = (rawType || '').split(',').map((t: string) => t.trim()).filter(Boolean);
+    return { primary: parts.filter((t: string) => t !== 'streamer').join(','), isStreamer: parts.includes('streamer') };
+  };
+  const buildUserType = (primary: string, isStreamer: boolean): string => {
+    const parts: string[] = [];
+    if (primary) parts.push(primary);
+    if (isStreamer) parts.push('streamer');
+    return parts.join(',');
+  };
+  const { primary: initPrimaryType, isStreamer: initIsStreamer } = parseUserType(user?.userType);
+  const [primaryUserType, setPrimaryUserType] = useState<string>(initPrimaryType);
+  const [isStreamingEnabled, setIsStreamingEnabled] = useState<boolean>(initIsStreamer);
+  const [streamPlatform, setStreamPlatform] = useState<string>((user as any)?.streamPlatform || 'twitch');
+  const [streamChannelName, setStreamChannelName] = useState<string>((user as any)?.streamChannelName || '');
+  const [showLiveOverlay, setShowLiveOverlay] = useState<boolean>((user as any)?.showLiveOverlay || false);
+
   // Update profile data when user data changes (preserve uploaded banners)
   useEffect(() => {
     if (user) {
@@ -724,6 +742,14 @@ export default function SettingsPage() {
           profileFontColor: (user as any)?.profileFontColor || "#FFFFFF",
         };
       });
+
+      // Sync streamer state from updated user data
+      const { primary, isStreamer } = parseUserType(user.userType);
+      setPrimaryUserType(primary);
+      setIsStreamingEnabled(isStreamer);
+      setStreamPlatform((user as any)?.streamPlatform || 'twitch');
+      setStreamChannelName((user as any)?.streamChannelName || '');
+      setShowLiveOverlay((user as any)?.showLiveOverlay || false);
       
       // Only clear avatar upload state if the avatarUrl actually changed (successful upload)
       if (avatarFile && user.avatarUrl && user.avatarUrl !== prevAvatarUrl.current) {
@@ -755,6 +781,7 @@ export default function SettingsPage() {
   };
 
   // Check if there are unsaved changes
+  const { primary: savedPrimary, isStreamer: savedIsStreamer } = parseUserType(user?.userType);
   const hasUnsavedChanges = 
     normalizeValue(profileData.displayName) !== normalizeValue(user?.displayName) ||
     normalizeValue(profileData.bio) !== normalizeValue(user?.bio) ||
@@ -774,7 +801,12 @@ export default function SettingsPage() {
     avatarBorderColor !== (user?.avatarBorderColor || '#4ADE80') ||
     selectedBorderId !== (user?.selectedAvatarBorderId ?? -1) ||
     (pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId) ||
-    (pendingVerificationBadgeId !== undefined && pendingVerificationBadgeId !== (user as any)?.selectedVerificationBadgeId);
+    (pendingVerificationBadgeId !== undefined && pendingVerificationBadgeId !== (user as any)?.selectedVerificationBadgeId) ||
+    primaryUserType !== savedPrimary ||
+    isStreamingEnabled !== savedIsStreamer ||
+    streamPlatform !== ((user as any)?.streamPlatform || 'twitch') ||
+    streamChannelName !== ((user as any)?.streamChannelName || '') ||
+    showLiveOverlay !== ((user as any)?.showLiveOverlay || false);
   
 
   // Handle crop complete callback
@@ -1132,7 +1164,15 @@ export default function SettingsPage() {
         }
       }
 
-      updateProfileMutation.mutate({ ...updatedData, avatarBorderColor });
+      const combinedUserType = buildUserType(primaryUserType, isStreamingEnabled);
+      updateProfileMutation.mutate({
+        ...updatedData,
+        avatarBorderColor,
+        userType: combinedUserType,
+        streamPlatform,
+        streamChannelName,
+        showLiveOverlay,
+      });
       setSelectedPreviousAvatar(null);
       queryClient.invalidateQueries({ queryKey: ['/api/user/previous-avatars'] });
     } catch (error) {
@@ -1273,7 +1313,7 @@ export default function SettingsPage() {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1">
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 gap-1">
             <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <User className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Profile</span>
@@ -1282,7 +1322,7 @@ export default function SettingsPage() {
             <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Appearance</span>
-              <span className="sm:hidden">Appearance</span>
+              <span className="sm:hidden">Look</span>
             </TabsTrigger>
             <TabsTrigger value="banners" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -1293,6 +1333,11 @@ export default function SettingsPage() {
               <Gamepad2 className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Platforms</span>
               <span className="sm:hidden">Platforms</span>
+            </TabsTrigger>
+            <TabsTrigger value="streamer" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Video className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Streamer</span>
+              <span className="sm:hidden">Stream</span>
             </TabsTrigger>
           </TabsList>
 
@@ -3566,6 +3611,114 @@ export default function SettingsPage() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+          </TabsContent>
+
+          {/* Streamer Tab */}
+          <TabsContent value="streamer">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Video className="h-5 w-5 text-purple-400" />
+                  Streamer Settings
+                </CardTitle>
+                <CardDescription>
+                  Enable streaming to add the Streamer badge to your profile and display your live stream embed.
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-6">
+                {/* Enable Streaming toggle */}
+                <div className="flex items-center justify-between rounded-lg border border-purple-500/30 bg-purple-500/5 p-4">
+                  <div>
+                    <p className="text-sm font-semibold text-purple-300">Enable Streaming</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Adds the Streamer badge to your profile and displays your stream embed.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={isStreamingEnabled}
+                    onCheckedChange={setIsStreamingEnabled}
+                  />
+                </div>
+
+                {/* Platform selector */}
+                <div className="space-y-2">
+                  <Label className={!isStreamingEnabled ? 'text-muted-foreground' : ''}>
+                    Streaming Platform
+                  </Label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={!isStreamingEnabled}
+                      onClick={() => setStreamPlatform('twitch')}
+                      className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                        !isStreamingEnabled
+                          ? 'border-muted text-muted-foreground/40 cursor-not-allowed'
+                          : streamPlatform === 'twitch'
+                          ? 'border-purple-500 bg-purple-500/20 text-purple-300'
+                          : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
+                      }`}
+                    >
+                      Twitch
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!isStreamingEnabled}
+                      onClick={() => setStreamPlatform('kick')}
+                      className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                        !isStreamingEnabled
+                          ? 'border-muted text-muted-foreground/40 cursor-not-allowed'
+                          : streamPlatform === 'kick'
+                          ? 'border-green-500 bg-green-500/20 text-green-300'
+                          : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
+                      }`}
+                    >
+                      Kick
+                    </button>
+                  </div>
+                </div>
+
+                {/* Channel name */}
+                <div className="space-y-2">
+                  <Label htmlFor="stream-channel" className={!isStreamingEnabled ? 'text-muted-foreground' : ''}>
+                    Channel Name
+                  </Label>
+                  <Input
+                    id="stream-channel"
+                    disabled={!isStreamingEnabled}
+                    placeholder={
+                      isStreamingEnabled
+                        ? streamPlatform === 'kick'
+                          ? 'Your Kick channel name'
+                          : 'Your Twitch channel name'
+                        : 'Enable streaming to set your channel'
+                    }
+                    value={streamChannelName}
+                    onChange={(e) => setStreamChannelName(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter your channel username exactly as it appears on {streamPlatform === 'kick' ? 'Kick' : 'Twitch'}.
+                  </p>
+                </div>
+
+                {/* LIVE overlay toggle */}
+                <div className={`flex items-center justify-between rounded-lg border p-4 transition-colors ${
+                  !isStreamingEnabled ? 'border-muted opacity-50' : 'border-border'
+                }`}>
+                  <div>
+                    <p className="text-sm font-medium">Show LIVE badge on profile picture</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Displays a red LIVE badge on your avatar so visitors know you're streaming.
+                    </p>
+                  </div>
+                  <Switch
+                    disabled={!isStreamingEnabled}
+                    checked={showLiveOverlay}
+                    onCheckedChange={setShowLiveOverlay}
+                  />
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 
