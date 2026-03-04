@@ -3813,6 +3813,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         Object.entries(req.body).filter(([key]) => ALLOWED_PROFILE_FIELDS.has(key))
       );
 
+      // Prevent the onboarding test account from ever completing onboarding
+      if (req.user?.email === 'onboarding@gamefolio.com') {
+        delete safeBody.userType;
+      }
+
       // Handle demo user separately
       if (userId === 999) {
         console.log("Updating demo user with data:", safeBody);
