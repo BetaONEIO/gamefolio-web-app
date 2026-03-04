@@ -11,6 +11,10 @@ import Stripe from 'stripe';
 const router = Router();
 
 async function getWebhookSecret(): Promise<string> {
+  if (process.env.STRIPE_WEBHOOK_SECRET) {
+    return process.env.STRIPE_WEBHOOK_SECRET;
+  }
+
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
     ? 'repl ' + process.env.REPL_IDENTITY
@@ -19,7 +23,7 @@ async function getWebhookSecret(): Promise<string> {
       : null;
 
   if (!xReplitToken || !hostname) {
-    throw new Error('Replit connector credentials not available');
+    throw new Error('STRIPE_WEBHOOK_SECRET is not set and Replit connector credentials are not available');
   }
 
   const isProduction = process.env.REPLIT_DEPLOYMENT === '1';
@@ -41,7 +45,7 @@ async function getWebhookSecret(): Promise<string> {
   const connectionSettings = data.items?.[0];
   
   if (!connectionSettings?.settings?.webhook_secret) {
-    throw new Error('Stripe webhook secret not found');
+    throw new Error('Stripe webhook secret not found in connector or environment');
   }
 
   return connectionSettings.settings.webhook_secret;

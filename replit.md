@@ -3,6 +3,14 @@
 ## Overview
 Gamefolio is a comprehensive gaming portfolio and social platform for gamers to showcase clips, build portfolios, connect, and compete. It aims to provide a robust, secure, and engaging environment with content sharing, real-time messaging, and moderation, along with a unique GF Token economy for NFTs and a subscription model for premium features. The project envisions significant market potential by integrating Web3 gaming elements and fostering a vibrant gaming community.
 
+## Stripe Configuration (Live/Mainnet)
+- Stripe is configured for **live mode** using `STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABLE_KEY` secrets
+- Webhook signature verification reads from `STRIPE_WEBHOOK_SECRET` env secret first (preferred), then falls back to the Replit Stripe connector
+- The Replit Stripe connector (`ccfg_stripe_01K611P4YQR0SZM11XFRQJC44Y`) was not connected — use `STRIPE_WEBHOOK_SECRET` directly instead
+- Webhook endpoint path: `/api/stripe/webhook`
+- Events required: `checkout.session.completed`, `payment_intent.succeeded`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.deleted`
+- Pro subscription price IDs are auto-provisioned in Stripe on first use (no env var needed)
+
 ## User Preferences
 - Focus on using only authentic Supabase data sources
 - Maintain scalable, cloud-first architecture
