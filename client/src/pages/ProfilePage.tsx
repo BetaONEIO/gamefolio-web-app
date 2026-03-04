@@ -1609,7 +1609,7 @@ const ProfilePage = () => {
                   size="mobile-profile"
                   borderIntensity="strong"
                   showAvatarBorderOverlay={true}
-                  showLiveOverlay={!!(profile?.showLiveOverlay && profile?.userType === 'streamer' && profile?.streamChannelName)}
+                  showLiveOverlay={!!(profile?.showLiveOverlay && profile?.userType?.split(',').map(t => t.trim()).includes('streamer') && profile?.streamChannelName)}
                   className="h-full w-full"
                 />
               </div>
@@ -2043,7 +2043,7 @@ const ProfilePage = () => {
                   size="profile"
                   borderIntensity="strong"
                   showAvatarBorderOverlay={true}
-                  showLiveOverlay={!!(profile?.showLiveOverlay && profile?.userType === 'streamer' && profile?.streamChannelName)}
+                  showLiveOverlay={!!(profile?.showLiveOverlay && profile?.userType?.split(',').map(t => t.trim()).includes('streamer') && profile?.streamChannelName)}
                 />
               </div>
               {/* Level Badge with Progress */}
@@ -2523,7 +2523,7 @@ const ProfilePage = () => {
         <div className="h-0 md:h-[12px]"></div>
 
         {/* Stream Embed - shown for streamers with a configured channel */}
-        {profile?.userType === 'streamer' && profile?.streamPlatform && profile?.streamChannelName && (
+        {profile?.userType?.split(',').map(t => t.trim()).includes('streamer') && profile?.streamPlatform && profile?.streamChannelName && (
           <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-4 mb-2">
             <div className="rounded-xl overflow-hidden border border-border bg-black shadow-lg">
               <div className="flex items-center gap-2 px-3 py-2 border-b border-border"

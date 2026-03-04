@@ -46,7 +46,6 @@ import { ProfilePictureSelector } from '@/components/profile/ProfilePictureSelec
 import { useSignedUrl } from '@/hooks/use-signed-url';
 
 const userTypeOptions = [
-  { id: "streamer", label: "Streamer", description: "I stream games live", icon: Video, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
   { id: "gamer", label: "Gamer", description: "I love playing games", icon: Gamepad2, color: "bg-green-500/20 text-green-400 border-green-500/30" },
   { id: "professional_gamer", label: "Pro Gamer", description: "I compete in esports", icon: Trophy, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
   { id: "content_creator", label: "Creator", description: "I create gaming content", icon: Upload, color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
@@ -55,6 +54,22 @@ const userTypeOptions = [
   { id: "filthy_casual", label: "Casual", description: "I play when I can", icon: Coffee, color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
   { id: "doom_scroller", label: "Doom Scroller", description: "I watch clips all day", icon: Scroll, color: "bg-red-500/20 text-red-400 border-red-500/30" },
 ];
+
+// Helper: parse a stored userType string into primary type and streamer flag
+const parseUserType = (rawType: string | null | undefined) => {
+  const parts = (rawType || '').split(',').map(t => t.trim()).filter(Boolean);
+  const isStreamer = parts.includes('streamer');
+  const primary = parts.filter(t => t !== 'streamer').join(',');
+  return { primary, isStreamer };
+};
+
+// Helper: combine primary type and streamer flag back into a userType string
+const buildUserType = (primary: string, isStreamer: boolean): string => {
+  const parts: string[] = [];
+  if (primary) parts.push(primary);
+  if (isStreamer) parts.push('streamer');
+  return parts.join(',');
+};
 
 type ProfileBanner = {
   id: number;
@@ -253,8 +268,9 @@ const ProfileSettingsPage: React.FC = () => {
     primaryColor: z.string().min(1),
     avatarBorderColor: z.string().min(1),
     bannerUrl: z.string().optional().nullable(),
-    // User type settings
-    userType: z.string().optional().nullable(),
+    // User type settings (split into primary + streamer flag)
+    primaryUserType: z.string().optional().nullable(),
+    isStreamingEnabled: z.boolean().optional(),
     showUserType: z.boolean().optional(),
     // Streamer settings
     streamPlatform: z.string().optional().nullable(),
@@ -270,6 +286,7 @@ const ProfileSettingsPage: React.FC = () => {
   });
 
   // Set up React Hook Form
+  const { primary: initPrimary, isStreamer: initIsStreamer } = parseUserType(user?.userType);
   const profileForm = useForm<z.infer<typeof profileFormSchema>>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
@@ -282,7 +299,8 @@ const ProfileSettingsPage: React.FC = () => {
       avatarBorderColor: user?.avatarBorderColor || '#4ADE80',
       bannerUrl: user?.bannerUrl || '',
       // User type settings
-      userType: user?.userType || '',
+      primaryUserType: initPrimary,
+      isStreamingEnabled: initIsStreamer,
       showUserType: user?.showUserType !== false,
       // Streamer settings
       streamPlatform: user?.streamPlatform || 'twitch',
@@ -300,6 +318,7 @@ const ProfileSettingsPage: React.FC = () => {
 
   useEffect(() => {
     if (user) {
+      const { primary, isStreamer } = parseUserType(user.userType);
       profileForm.reset({
         username: user.username || '',
         displayName: user.displayName || '',
@@ -309,7 +328,8 @@ const ProfileSettingsPage: React.FC = () => {
         primaryColor: user.primaryColor || '#02172C',
         avatarBorderColor: user.avatarBorderColor || '#4ADE80',
         bannerUrl: user.bannerUrl || '',
-        userType: user.userType || '',
+        primaryUserType: primary,
+        isStreamingEnabled: isStreamer,
         showUserType: user.showUserType !== false,
         streamPlatform: user.streamPlatform || 'twitch',
         streamChannelName: user.streamChannelName || '',
@@ -332,7 +352,10 @@ const ProfileSettingsPage: React.FC = () => {
   // Check if there are actual changes
   const hasActualChanges = () => {
     const formValues = profileForm.getValues();
-    
+    const { primary: savedPrimary, isStreamer: savedIsStreamer } = parseUserType(user?.userType);
+    const computedUserType = buildUserType(formValues.primaryUserType || '', formValues.isStreamingEnabled ?? false);
+    const savedUserType = buildUserType(savedPrimary, savedIsStreamer);
+
     return (
       normalizeValue(formValues.displayName) !== normalizeValue(user?.displayName) ||
       normalizeValue(formValues.bio) !== normalizeValue(user?.bio) ||
@@ -347,7 +370,7 @@ const ProfileSettingsPage: React.FC = () => {
       normalizeValue(formValues.discordUsername) !== normalizeValue(user?.discordUsername) ||
       normalizeValue(formValues.epicUsername) !== normalizeValue(user?.epicUsername) ||
       normalizeValue(formValues.nintendoUsername) !== normalizeValue(user?.nintendoUsername) ||
-      normalizeValue(formValues.userType) !== normalizeValue(user?.userType) ||
+      computedUserType !== savedUserType ||
       formValues.showUserType !== (user?.showUserType !== false) ||
       normalizeValue(formValues.streamPlatform) !== normalizeValue(user?.streamPlatform) ||
       normalizeValue(formValues.streamChannelName) !== normalizeValue(user?.streamChannelName) ||
@@ -355,13 +378,15 @@ const ProfileSettingsPage: React.FC = () => {
     );
   };
 
-  // Handle form submission
+  // Handle form submission — reconstruct combined userType before saving
   const onProfileSubmit = (values: z.infer<typeof profileFormSchema>) => {
     if (!user) return;
 
+    const combinedUserType = buildUserType(values.primaryUserType || '', values.isStreamingEnabled ?? false);
+
     updateProfile.mutate({
       userId: user.id,
-      userData: values
+      userData: { ...values, userType: combinedUserType }
     }, {
       onSuccess: () => {
         toast({
@@ -403,6 +428,10 @@ const ProfileSettingsPage: React.FC = () => {
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="connections">Platform Connections</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
+          <TabsTrigger value="streamer" className="flex items-center gap-1.5">
+            <Video className="h-3.5 w-3.5" />
+            Streamer
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="profile">
@@ -710,7 +739,7 @@ const ProfileSettingsPage: React.FC = () => {
                     
                     <FormField
                       control={profileForm.control}
-                      name="userType"
+                      name="primaryUserType"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Select Your Type</FormLabel>
@@ -748,103 +777,6 @@ const ProfileSettingsPage: React.FC = () => {
                       )}
                     />
                   </div>
-
-                  {/* Streamer Settings - only shown when user type is streamer */}
-                  {profileForm.watch('userType') === 'streamer' && (
-                    <div className="space-y-4 rounded-lg border border-purple-500/30 bg-purple-500/5 p-4">
-                      <div>
-                        <h3 className="text-sm font-semibold text-purple-400 flex items-center gap-2">
-                          <Video className="h-4 w-4" />
-                          Streamer Settings
-                        </h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Configure your stream embed shown on your profile.
-                        </p>
-                      </div>
-
-                      {/* Platform selector */}
-                      <FormField
-                        control={profileForm.control}
-                        name="streamPlatform"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Streaming Platform</FormLabel>
-                            <FormControl>
-                              <div className="flex gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => field.onChange('twitch')}
-                                  className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                                    field.value === 'twitch'
-                                      ? 'border-purple-500 bg-purple-500/20 text-purple-300'
-                                      : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
-                                  }`}
-                                >
-                                  Twitch
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => field.onChange('kick')}
-                                  className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                                    field.value === 'kick'
-                                      ? 'border-green-500 bg-green-500/20 text-green-300'
-                                      : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
-                                  }`}
-                                >
-                                  Kick
-                                </button>
-                              </div>
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Channel name */}
-                      <FormField
-                        control={profileForm.control}
-                        name="streamChannelName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Channel Name</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder={profileForm.watch('streamPlatform') === 'kick' ? 'Your Kick channel name' : 'Your Twitch channel name'}
-                                {...field}
-                                value={field.value ?? ''}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Enter your channel username exactly as it appears on {profileForm.watch('streamPlatform') === 'kick' ? 'Kick' : 'Twitch'}.
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* LIVE overlay toggle */}
-                      <FormField
-                        control={profileForm.control}
-                        name="showLiveOverlay"
-                        render={({ field }) => (
-                          <FormItem>
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <FormLabel className="text-sm">Show LIVE badge on profile picture</FormLabel>
-                                <FormDescription className="text-xs">
-                                  Displays a red LIVE badge on your avatar so visitors know you're streaming.
-                                </FormDescription>
-                              </div>
-                              <FormControl>
-                                <Switch
-                                  checked={field.value ?? false}
-                                  onCheckedChange={field.onChange}
-                                />
-                              </FormControl>
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  )}
                   
                   {/* Email field (disabled, not connected to form) */}
                   <div className="space-y-2">
@@ -1131,6 +1063,176 @@ const ProfileSettingsPage: React.FC = () => {
                   </>
                 ) : (
                   'Save Appearance'
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
+        {/* Streamer Tab */}
+        <TabsContent value="streamer">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Video className="h-5 w-5 text-purple-400" />
+                Streamer Settings
+              </CardTitle>
+              <CardDescription>
+                Enable streaming to add the Streamer badge to your profile and display your live stream embed.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent>
+              <Form {...profileForm}>
+                <form
+                  id="streamer-form"
+                  onSubmit={profileForm.handleSubmit(onProfileSubmit)}
+                  className="space-y-6"
+                >
+                  {/* Enable Streaming toggle */}
+                  <div className="flex items-center justify-between rounded-lg border border-purple-500/30 bg-purple-500/5 p-4">
+                    <div>
+                      <p className="text-sm font-semibold text-purple-300">Enable Streaming</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Adds the Streamer badge to your profile and displays your stream embed.
+                      </p>
+                    </div>
+                    <FormField
+                      control={profileForm.control}
+                      name="isStreamingEnabled"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Switch
+                              checked={field.value ?? false}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Platform selector */}
+                  <FormField
+                    control={profileForm.control}
+                    name="streamPlatform"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className={!profileForm.watch('isStreamingEnabled') ? 'text-muted-foreground' : ''}>
+                          Streaming Platform
+                        </FormLabel>
+                        <FormControl>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              disabled={!profileForm.watch('isStreamingEnabled')}
+                              onClick={() => field.onChange('twitch')}
+                              className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                                !profileForm.watch('isStreamingEnabled')
+                                  ? 'border-muted text-muted-foreground/40 cursor-not-allowed'
+                                  : field.value === 'twitch'
+                                  ? 'border-purple-500 bg-purple-500/20 text-purple-300'
+                                  : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
+                              }`}
+                            >
+                              Twitch
+                            </button>
+                            <button
+                              type="button"
+                              disabled={!profileForm.watch('isStreamingEnabled')}
+                              onClick={() => field.onChange('kick')}
+                              className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                                !profileForm.watch('isStreamingEnabled')
+                                  ? 'border-muted text-muted-foreground/40 cursor-not-allowed'
+                                  : field.value === 'kick'
+                                  ? 'border-green-500 bg-green-500/20 text-green-300'
+                                  : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
+                              }`}
+                            >
+                              Kick
+                            </button>
+                          </div>
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Channel name */}
+                  <FormField
+                    control={profileForm.control}
+                    name="streamChannelName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className={!profileForm.watch('isStreamingEnabled') ? 'text-muted-foreground' : ''}>
+                          Channel Name
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            disabled={!profileForm.watch('isStreamingEnabled')}
+                            placeholder={
+                              profileForm.watch('isStreamingEnabled')
+                                ? profileForm.watch('streamPlatform') === 'kick'
+                                  ? 'Your Kick channel name'
+                                  : 'Your Twitch channel name'
+                                : 'Enable streaming to set your channel'
+                            }
+                            {...field}
+                            value={field.value ?? ''}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Enter your channel username exactly as it appears on{' '}
+                          {profileForm.watch('streamPlatform') === 'kick' ? 'Kick' : 'Twitch'}.
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* LIVE overlay toggle */}
+                  <FormField
+                    control={profileForm.control}
+                    name="showLiveOverlay"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className={`flex items-center justify-between rounded-lg border p-4 transition-colors ${
+                          !profileForm.watch('isStreamingEnabled') ? 'border-muted opacity-50' : 'border-border'
+                        }`}>
+                          <div>
+                            <FormLabel className="text-sm">Show LIVE badge on profile picture</FormLabel>
+                            <FormDescription className="text-xs">
+                              Displays a red LIVE badge on your avatar so visitors know you're streaming.
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              disabled={!profileForm.watch('isStreamingEnabled')}
+                              checked={field.value ?? false}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </form>
+              </Form>
+            </CardContent>
+
+            <CardFooter>
+              <Button
+                type="submit"
+                form="streamer-form"
+                disabled={avatarUploading || updateProfile.isPending || !hasActualChanges()}
+                className="px-8"
+              >
+                {updateProfile.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Streamer Settings'
                 )}
               </Button>
             </CardFooter>
