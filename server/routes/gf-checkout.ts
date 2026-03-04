@@ -7,7 +7,7 @@ import { getUncachableStripeClient, getStripePublishableKey } from '../stripeCli
 import { hybridAuth } from '../middleware/hybrid-auth';
 import { getTreasuryBalance, getTreasuryAddress, transferGfTokens } from '../gf-token-service';
 
-const SKALE_NEBULA_TESTNET_CHAIN_ID = 37084624;
+const SKALE_NEBULA_TESTNET_CHAIN_ID = 1187947933;
 
 const router = Router();
 
@@ -498,7 +498,7 @@ router.get('/api/token/on-chain-balance', hybridAuth, async (req: Request, res: 
     }
 
     const { GF_TOKEN_ADDRESS } = await import('@shared/contracts');
-    const explorerBaseUrl = 'https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com';
+    const explorerBaseUrl = 'https://base.explorer.mainnet.skalenodes.com';
 
     const explorerRes = await fetch(
       `${explorerBaseUrl}/api/v2/addresses/${user.walletAddress}/token-balances`
@@ -540,10 +540,10 @@ router.get('/api/token/on-chain-balance', hybridAuth, async (req: Request, res: 
       }
 
       const { createPublicClient, http } = await import('viem');
-      const { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } = await import('@shared/contracts');
+      const { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_BASE_MAINNET } = await import('@shared/contracts');
 
       const publicClient = createPublicClient({
-        chain: SKALE_NEBULA_TESTNET,
+        chain: SKALE_BASE_MAINNET,
         transport: http(),
       });
 
@@ -560,7 +560,7 @@ router.get('/api/token/on-chain-balance', hybridAuth, async (req: Request, res: 
         balance,
         walletAddress: user.walletAddress,
         source: 'rpc-fallback',
-        explorerUrl: `https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com/address/${user.walletAddress}`,
+        explorerUrl: `https://base.explorer.mainnet.skalenodes.com/address/${user.walletAddress}`,
       });
     } catch (fallbackError: any) {
       console.error('RPC fallback also failed:', fallbackError.message);

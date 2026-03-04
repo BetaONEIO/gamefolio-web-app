@@ -45,7 +45,7 @@ function getTokenIdPadded(id: number): string {
   return `#${String(id).padStart(4, "0")}`;
 }
 
-const SKALE_EXPLORER_BASE_URL = "https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com";
+const SKALE_EXPLORER_BASE_URL = "https://base.explorer.mainnet.skalenodes.com";
 
 export default function MultiMintSuccessScreen({
   quantity,

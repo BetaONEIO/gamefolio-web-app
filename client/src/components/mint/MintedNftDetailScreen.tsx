@@ -34,8 +34,8 @@ interface MintedNftDetailScreenProps {
   listingActive?: boolean;
 }
 
-const NFT_CONTRACT_ADDRESS = "0x246624993603fbd8C3Cc60920878D0DF5c764Fb4";
-const SKALE_EXPLORER_BASE_URL = "https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com";
+const NFT_CONTRACT_ADDRESS = "0x6Ca4376A68907A404981e7701055813F9cE13FB3";
+const SKALE_EXPLORER_BASE_URL = "https://base.explorer.mainnet.skalenodes.com";
 
 function getTokenIdPadded(id: number): string {
   return `#${String(id).padStart(3, "0")}`;

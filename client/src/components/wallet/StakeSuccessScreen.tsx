@@ -11,7 +11,7 @@ interface StakeSuccessScreenProps {
 }
 
 const GFT_TO_USD = 0.498;
-const SKALE_EXPLORER = "https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com/tx/";
+const SKALE_EXPLORER = "https://base.explorer.mainnet.skalenodes.com/tx/";
 
 export default function StakeSuccessScreen({
   onBack,

@@ -3,6 +3,18 @@
 ## Overview
 Gamefolio is a comprehensive gaming portfolio and social platform for gamers to showcase clips, build portfolios, connect, and compete. It aims to provide a robust, secure, and engaging environment with content sharing, real-time messaging, and moderation, along with a unique GF Token economy for NFTs and a subscription model for premium features. The project envisions significant market potential by integrating Web3 gaming elements and fostering a vibrant gaming community.
 
+## Blockchain Configuration (SKALE Base Mainnet)
+- Chain: SKALE Base Mainnet, Chain ID `1187947933`
+- RPC URL: `https://skale-base.skalenodes.com/v1/base`
+- Explorer: `https://base.explorer.mainnet.skalenodes.com`
+- GFT Token: `0xe45BeC5A80e6E32852393e77206eAf83160A90AE`
+- NFT Contract: `0x6Ca4376A68907A404981e7701055813F9cE13FB3`
+- NFT Base URI: `ipfs://bafybeigkn2gvxtosshac47qq72gwtfdwfbfigsk4tbsggzceurjv3qhmmi/`
+- Staking Contract: `0x40D7D0bA396eB920BD7f88ac58B4fA768eb52f2D`
+- Sale Contract: not yet deployed (empty string)
+- Source of truth: `shared/contracts.ts` exports `SKALE_BASE_MAINNET`; `SKALE_NEBULA_TESTNET` is aliased to it for backwards compatibility
+- Sequence wallet configured with custom chain via `wagmiConfig` (bypasses built-in chain registry)
+
 ## Stripe Configuration (Live/Mainnet)
 - Stripe is configured for **live mode** using `STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABLE_KEY` secrets
 - Webhook signature verification reads from `STRIPE_WEBHOOK_SECRET` env secret first (preferred), then falls back to the Replit Stripe connector
