@@ -1696,6 +1696,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           profileFontAnimation: userWithoutPassword.profileFontAnimation || 'none',
           canMintNfts: userWithoutPassword.canMintNfts || false,
           canSellNfts: userWithoutPassword.canSellNfts || false,
+          ...(streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0 ? { streakInfo } : {}),
         });
       }
     } catch (error) {
