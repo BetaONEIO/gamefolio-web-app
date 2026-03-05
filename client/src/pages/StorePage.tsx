@@ -1976,13 +1976,9 @@ export default function StorePage() {
               <h3 className="text-xl md:text-2xl font-semibold mb-2 text-center" data-testid="heading-sell-coming-soon">
                 Sell Your NFTs
               </h3>
-              {user?.canSellNfts ? (
+              {user?.canSellNfts && (
                 <p className="text-sm md:text-base text-[#4ade80] text-center max-w-md" data-testid="text-sell-description">
                   Go to your collection to quick-sell any NFT you own.
-                </p>
-              ) : (
-                <p className="text-sm md:text-base text-amber-400 text-center max-w-md" data-testid="text-sell-description">
-                  Selling currently disabled on Beta! We will be on Mainnet soon!
                 </p>
               )}
               <Link href="/collection">
@@ -2013,9 +2009,6 @@ export default function StorePage() {
                 </>
               ) : (
                 <>
-                  <p className="text-sm md:text-base text-amber-400 text-center max-w-md" data-testid="text-mint-description">
-                    Minting currently disabled on Beta! We will be on Mainnet soon!
-                  </p>
                   <Button className="mt-6 bg-[#1e293b] text-[#94a3b8] cursor-not-allowed opacity-50" size="sm" disabled data-testid="button-start-minting">
                     Start Minting
                   </Button>

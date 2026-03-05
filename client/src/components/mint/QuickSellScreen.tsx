@@ -181,9 +181,6 @@ export default function QuickSellScreen({
               {isProcessing ? "Processing..." : "Confirm Quick Sell"}
             </span>
           </button>
-          {!canSell && (
-            <p className="text-sm md:text-base text-amber-400 text-center max-w-md mt-3 mx-auto">Currently disabled on Beta! We will be on Mainnet soon!</p>
-          )}
           <button
             onClick={onClose}
             className="w-full md:flex-1 h-[60px] rounded-2xl flex items-center justify-center hover:bg-[#1e293b] transition-colors"

@@ -397,9 +397,6 @@ export default function MintedNftDetailScreen({
                     </svg>
                     <span className="text-sm font-bold text-[#f8fafc] leading-5">Quick Sell</span>
                   </button>
-                  {!user?.canSellNfts && (
-                    <p className="text-sm md:text-base text-amber-400 text-center max-w-md mt-3">Currently disabled on Beta! We will be on Mainnet soon!</p>
-                  )}
                 </>
               ) : null}
             </div>

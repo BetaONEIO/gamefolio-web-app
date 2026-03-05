@@ -175,7 +175,6 @@ export function NameTagCheckoutDialog({
               >
                 Confirm Purchase
               </Button>
-              <p className="text-sm md:text-base text-amber-400 text-center max-w-md mx-auto mt-3">Currently disabled on Beta! We will be on Mainnet soon!</p>
               <div className="flex items-center justify-center gap-2">
                 <Info className="w-3 h-3 text-[#94a3b8]" />
                 <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-[1px]">

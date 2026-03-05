@@ -792,7 +792,7 @@ export default function MintNFTPage() {
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-bold text-[#f8fafc]">Minting Disabled</span>
                   <span className="text-xs text-[#94a3b8] leading-[19.5px]">
-                    Minting currently disabled on Beta! We will be on Mainnet soon!
+                    Minting is currently disabled for your account.
                   </span>
                 </div>
               </div>
@@ -823,11 +823,6 @@ export default function MintNFTPage() {
               )}
             </div>
 
-            {!user?.canMintNfts && (
-              <p className="text-[10px] text-amber-400/70 text-center px-4 leading-[16.25px]">
-                Minting currently disabled on Beta! We will be on Mainnet soon!
-              </p>
-            )}
           </div>
         </div>
       </main>

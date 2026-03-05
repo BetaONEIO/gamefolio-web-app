@@ -116,18 +116,6 @@ export default function WalletHomepage({
 
   return (
     <div className="w-full min-h-screen pb-24 font-['Plus_Jakarta_Sans']" style={{ background: '#101D27' }}>
-      {/* Beta TestNet Banner */}
-      <div 
-        className="w-full px-4 py-2.5 text-center text-sm font-medium"
-        style={{ 
-          background: 'linear-gradient(90deg, rgba(234, 179, 8, 0.15) 0%, rgba(234, 179, 8, 0.25) 50%, rgba(234, 179, 8, 0.15) 100%)',
-          color: '#fbbf24',
-          borderBottom: '1px solid rgba(234, 179, 8, 0.3)'
-        }}
-      >
-        This app is currently in Beta and running on TestNet. Tokens and assets have no real-world value.
-      </div>
-
       {/* Header Section with Gradient */}
       <div 
         className="w-full"
