@@ -164,15 +164,18 @@ export function BorderCheckoutDialog({
             {/* Bottom Action */}
             <div className="p-6 bg-[#101D27] space-y-4">
               <Button
-                disabled
-                className="w-full h-[68px] rounded-[24px] text-black text-lg font-black uppercase cursor-not-allowed opacity-50"
+                onClick={handleConfirm}
+                disabled={!canAfford || isPurchasing}
+                className="w-full h-[68px] rounded-[24px] text-lg font-black uppercase"
                 style={{
-                  background: '#1e293b',
-                  color: '#475569',
+                  background: canAfford && !isPurchasing ? '#4ade80' : '#1e293b',
+                  color: canAfford && !isPurchasing ? '#022c22' : '#475569',
                   letterSpacing: '-0.9px',
+                  cursor: canAfford && !isPurchasing ? 'pointer' : 'not-allowed',
+                  opacity: canAfford && !isPurchasing ? 1 : 0.5,
                 }}
               >
-                Confirm Purchase
+                {isPurchasing ? "Processing..." : "Confirm Purchase"}
               </Button>
               <div className="flex items-center justify-center gap-2">
                 <Info className="w-3 h-3 text-[#94a3b8]" />

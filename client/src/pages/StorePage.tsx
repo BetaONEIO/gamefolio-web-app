@@ -55,6 +55,7 @@ import nft15 from "@assets/15_1762777399666.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useTokenBalance } from "@/hooks/use-token";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 
 const rarityGradients: Record<string, string> = {
@@ -210,6 +211,7 @@ export default function StorePage() {
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
   const chainId = useChainId();
+  const { data: tokenBalance } = useTokenBalance();
 
   const [brokenNameTagImages, setBrokenNameTagImages] = useState<Set<number>>(new Set());
   const [brokenBorderImages, setBrokenBorderImages] = useState<Set<number>>(new Set());
@@ -264,28 +266,6 @@ export default function StorePage() {
     },
   });
 
-  const purchaseNameTagMutation = useMutation({
-    mutationFn: async (nameTagId: number) => {
-      const response = await apiRequest("POST", "/api/store/purchase-name-tag", { nameTagId });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to purchase name tag");
-      }
-      return response.json();
-    },
-    onSuccess: (data: any) => {
-      toast({ title: "Name Tag Purchased!", description: data.message });
-      queryClient.invalidateQueries({ queryKey: ["/api/store/name-tags"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user/name-tags"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      setPurchasingNameTagId(null);
-    },
-    onError: (error: Error) => {
-      toast({ title: "Purchase Failed", description: error.message, variant: "destructive" });
-      setPurchasingNameTagId(null);
-    },
-  });
-
   interface StoreBorder {
     id: number;
     name: string;
@@ -297,29 +277,6 @@ export default function StorePage() {
     proOnly: boolean;
     shape?: string;
   }
-
-  const purchaseBorderMutation = useMutation({
-    mutationFn: async (borderId: number) => {
-      const response = await apiRequest("POST", "/api/store/purchase-border", { borderId });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to purchase border");
-      }
-      return response.json();
-    },
-    onSuccess: (data: any) => {
-      toast({ title: "Border Purchased!", description: data.message });
-      queryClient.invalidateQueries({ queryKey: ["/api/store/borders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user/avatar-borders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      setPurchasingBorderId(null);
-      setBorderDialogOpen(false);
-    },
-    onError: (error: Error) => {
-      toast({ title: "Purchase Failed", description: error.message, variant: "destructive" });
-      setPurchasingBorderId(null);
-    },
-  });
 
   const hasNftProfile = !!(user?.nftProfileTokenId && user?.nftProfileImageUrl);
   const borderShapeFilter = hasNftProfile ? 'square' : 'circle';
@@ -355,32 +312,74 @@ export default function StorePage() {
 
   const [buyingTokenId, setBuyingTokenId] = useState<number | null>(null);
 
-  const buyMarketplaceNftMutation = useMutation({
-    mutationFn: async ({ tokenId, sellerId }: { tokenId: number; sellerId: number }) => {
-      const response = await apiRequest("POST", "/api/marketplace/buy", { tokenId, sellerId });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to purchase NFT");
+  const handleBuyMarketplaceNft = async ({ tokenId, sellerId }: { tokenId: number; sellerId: number }) => {
+    if (!user) {
+      openModal();
+      return;
+    }
+    if (!isConnected || !walletClient || !publicClient) {
+      toast({ title: "Wallet not connected", description: "Please connect your wallet to purchase", variant: "destructive" });
+      setWalletRedirectOpen(true);
+      return;
+    }
+    if (chainId !== SKALE_CHAIN_ID) {
+      toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
+      return;
+    }
+    setBuyingTokenId(tokenId);
+    try {
+      const intentRes = await fetch("/api/marketplace/buy-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ tokenId, sellerId }),
+      });
+      if (!intentRes.ok) {
+        const error = await intentRes.json();
+        throw new Error(error.error || "Failed to create purchase intent");
       }
-      return response.json();
-    },
-    onSuccess: (data: any) => {
-      toast({ title: "NFT Purchased!", description: data.message });
-      if (data?.price !== undefined) {
-        queryClient.setQueryData(["/api/user"], (old: any) =>
-          old ? { ...old, gfTokenBalance: Math.max(0, (old.gfTokenBalance || 0) - data.price) } : old
-        );
+      const { price, treasuryAddress } = await intentRes.json();
+
+      toast({ title: "Confirm transaction", description: `Sending ${price} GFT tokens...` });
+      const amountRaw = parseUnits(String(price), GF_DECIMALS);
+      const txHash = await walletClient.writeContract({
+        address: GF_TOKEN_ADDRESS,
+        abi: GF_TOKEN_ABI,
+        functionName: "transfer",
+        args: [treasuryAddress as Address, amountRaw],
+      });
+
+      toast({ title: "Verifying purchase...", description: "Please wait while we confirm your transaction" });
+      await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
+
+      const verifyRes = await fetch("/api/marketplace/verify-buy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ tokenId, sellerId, txHash }),
+      });
+      if (!verifyRes.ok) {
+        const error = await verifyRes.json();
+        throw new Error(error.error || "Failed to verify purchase");
       }
+      const result = await verifyRes.json();
+      toast({ title: "NFT Purchased!", description: result.message });
       queryClient.invalidateQueries({ queryKey: ["/api/marketplace/listings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/nfts/owned"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/token/balance"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    } catch (error: any) {
+      let description = error.message || "Transaction failed";
+      if (error.message?.includes("user rejected") || error.message?.includes("User rejected")) {
+        description = "Transaction was cancelled";
+      } else if (error.message?.includes("insufficient")) {
+        description = "Insufficient GFT balance";
+      }
+      toast({ title: "Purchase Failed", description, variant: "destructive" });
+    } finally {
       setBuyingTokenId(null);
-    },
-    onError: (error: Error) => {
-      toast({ title: "Purchase Failed", description: error.message, variant: "destructive" });
-      setBuyingTokenId(null);
-    },
-  });
+    }
+  };
 
   const { openModal } = useAuthModal();
 
@@ -465,6 +464,125 @@ export default function StorePage() {
       toast({ title: "Purchase failed", description, variant: "destructive" });
     } finally {
       setPurchasingItemId(null);
+    }
+  };
+
+  const handlePurchaseNameTagOnChain = async (nameTagId: number) => {
+    if (!user) { openModal(); return; }
+    if (!isConnected || !walletClient || !publicClient) {
+      toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
+      setWalletRedirectOpen(true);
+      return;
+    }
+    if (chainId !== SKALE_CHAIN_ID) {
+      toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
+      return;
+    }
+    setPurchasingNameTagId(nameTagId);
+    try {
+      const intentRes = await fetch("/api/store/name-tag-purchase-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ nameTagId }),
+      });
+      if (!intentRes.ok) {
+        const error = await intentRes.json();
+        throw new Error(error.error || "Failed to create purchase intent");
+      }
+      const { gfCost, treasuryAddress } = await intentRes.json();
+      toast({ title: "Confirm transaction", description: `Sending ${gfCost} GF tokens...` });
+      const amountRaw = parseUnits(String(gfCost), GF_DECIMALS);
+      const txHash = await walletClient.writeContract({
+        address: GF_TOKEN_ADDRESS,
+        abi: GF_TOKEN_ABI,
+        functionName: "transfer",
+        args: [treasuryAddress as Address, amountRaw],
+      });
+      toast({ title: "Verifying purchase...", description: "Please wait while we confirm your transaction" });
+      await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
+      const verifyRes = await fetch("/api/store/verify-name-tag-purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ nameTagId, txHash, gfCost }),
+      });
+      if (!verifyRes.ok) throw new Error("Failed to verify purchase");
+      const result = await verifyRes.json();
+      toast({ title: "Name tag unlocked!", description: result.message || "You now own this name tag" });
+      queryClient.invalidateQueries({ queryKey: ["/api/store/name-tags"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/name-tags"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/token/balance"] });
+    } catch (error: any) {
+      let description = error.message || "Transaction failed";
+      if (error.message?.includes("user rejected") || error.message?.includes("User rejected")) {
+        description = "Transaction was cancelled";
+      } else if (error.message?.includes("insufficient")) {
+        description = "Insufficient GF token balance";
+      }
+      toast({ title: "Purchase failed", description, variant: "destructive" });
+    } finally {
+      setPurchasingNameTagId(null);
+    }
+  };
+
+  const handlePurchaseBorderOnChain = async (borderId: number) => {
+    if (!user) { openModal(); return; }
+    if (!isConnected || !walletClient || !publicClient) {
+      toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
+      setWalletRedirectOpen(true);
+      return;
+    }
+    if (chainId !== SKALE_CHAIN_ID) {
+      toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
+      return;
+    }
+    setPurchasingBorderId(borderId);
+    try {
+      const intentRes = await fetch("/api/store/border-purchase-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ borderId }),
+      });
+      if (!intentRes.ok) {
+        const error = await intentRes.json();
+        throw new Error(error.error || "Failed to create purchase intent");
+      }
+      const { gfCost, treasuryAddress } = await intentRes.json();
+      toast({ title: "Confirm transaction", description: `Sending ${gfCost} GF tokens...` });
+      const amountRaw = parseUnits(String(gfCost), GF_DECIMALS);
+      const txHash = await walletClient.writeContract({
+        address: GF_TOKEN_ADDRESS,
+        abi: GF_TOKEN_ABI,
+        functionName: "transfer",
+        args: [treasuryAddress as Address, amountRaw],
+      });
+      toast({ title: "Verifying purchase...", description: "Please wait while we confirm your transaction" });
+      await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
+      const verifyRes = await fetch("/api/store/verify-border-purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ borderId, txHash, gfCost }),
+      });
+      if (!verifyRes.ok) throw new Error("Failed to verify purchase");
+      const result = await verifyRes.json();
+      toast({ title: "Border unlocked!", description: result.message || "You now own this border" });
+      queryClient.invalidateQueries({ queryKey: ["/api/store/borders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/avatar-borders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/token/balance"] });
+      setBorderDialogOpen(false);
+    } catch (error: any) {
+      let description = error.message || "Transaction failed";
+      if (error.message?.includes("user rejected") || error.message?.includes("User rejected")) {
+        description = "Transaction was cancelled";
+      } else if (error.message?.includes("insufficient")) {
+        description = "Insufficient GF token balance";
+      }
+      toast({ title: "Purchase failed", description, variant: "destructive" });
+    } finally {
+      setPurchasingBorderId(null);
     }
   };
 
@@ -745,7 +863,7 @@ export default function StorePage() {
   const availableIds = new Set(availableCatalog?.map((n: { id: number }) => n.id) || gamefolioNFTs.map(n => n.id));
   const availableNFTs = gamefolioNFTs.filter(nft => availableIds.has(nft.id));
 
-  const gfBalance = user?.gfTokenBalance || 0;
+  const gfBalance = parseFloat(tokenBalance?.balance || '0');
 
   const handleBuyNFT = (nft: NFT) => {
     setSelectedNFT(nft);
@@ -976,7 +1094,7 @@ export default function StorePage() {
               </h2>
               <div className="flex items-center gap-2 bg-gray-800/80 rounded-xl px-3 py-2">
                 <img src={gfTokenLogo} alt="GF" className="w-5 h-5" />
-                <span className="text-sm font-bold text-white">{user?.gfTokenBalance || 0}</span>
+                <span className="text-sm font-bold text-white">{gfBalance.toLocaleString()}</span>
                 <span className="text-xs text-gray-400">GF</span>
               </div>
             </div>
@@ -1452,10 +1570,7 @@ export default function StorePage() {
                             size="sm"
                             disabled={buyingTokenId === listing.token_id}
                             className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-[10px] h-7 px-3 rounded-xl disabled:opacity-50"
-                            onClick={() => {
-                              setBuyingTokenId(listing.token_id);
-                              buyMarketplaceNftMutation.mutate({ tokenId: listing.token_id, sellerId: listing.user_id });
-                            }}
+                            onClick={() => handleBuyMarketplaceNft({ tokenId: listing.token_id, sellerId: listing.user_id })}
                           >
                             {buyingTokenId === listing.token_id ? (
                               <Loader2 className="h-2.5 w-2.5 animate-spin" />
@@ -1511,10 +1626,7 @@ export default function StorePage() {
                             size="sm"
                             disabled={buyingTokenId === listing.token_id || listing.user_id === user?.id}
                             className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-[10px] h-7 px-3 rounded-xl disabled:opacity-50"
-                            onClick={() => {
-                              setBuyingTokenId(listing.token_id);
-                              buyMarketplaceNftMutation.mutate({ tokenId: listing.token_id, sellerId: listing.user_id });
-                            }}
+                            onClick={() => handleBuyMarketplaceNft({ tokenId: listing.token_id, sellerId: listing.user_id })}
                           >
                             {buyingTokenId === listing.token_id ? (
                               <Loader2 className="h-2.5 w-2.5 animate-spin" />
@@ -1770,12 +1882,7 @@ export default function StorePage() {
                             className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white text-[10px] h-6 px-2"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (!user) {
-                                toast({ title: "Login required", description: "Please log in to purchase name tags", variant: "destructive" });
-                                return;
-                              }
-                              setPurchasingNameTagId(tag.id);
-                              purchaseNameTagMutation.mutate(tag.id);
+                              handlePurchaseNameTagOnChain(tag.id);
                             }}
                             disabled={isPurchasing}
                           >
@@ -2152,12 +2259,7 @@ export default function StorePage() {
         open={nameTagDialogOpen}
         onOpenChange={setNameTagDialogOpen}
         onPurchase={(id) => {
-          if (!user) {
-            toast({ title: "Login required", description: "Please log in to purchase name tags", variant: "destructive" });
-            return;
-          }
-          setPurchasingNameTagId(id);
-          purchaseNameTagMutation.mutate(id);
+          handlePurchaseNameTagOnChain(id);
         }}
         isPurchasing={purchasingNameTagId === selectedNameTag?.id}
         brokenImage={selectedNameTag ? brokenNameTagImages.has(selectedNameTag.id) : false}
@@ -2205,12 +2307,7 @@ export default function StorePage() {
         open={borderDialogOpen}
         onOpenChange={setBorderDialogOpen}
         onPurchase={(id) => {
-          if (!user) {
-            toast({ title: "Login required", description: "Please log in to purchase borders", variant: "destructive" });
-            return;
-          }
-          setPurchasingBorderId(id);
-          purchaseBorderMutation.mutate(id);
+          handlePurchaseBorderOnChain(id);
         }}
         isPurchasing={purchasingBorderId === selectedBorder?.id}
         brokenImage={selectedBorder ? brokenBorderImages.has(selectedBorder.id) : false}

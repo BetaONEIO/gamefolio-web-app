@@ -274,15 +274,6 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
 
     console.log(`✅ NFT minted successfully. On-chain GFT was spent via MintSale contract.`);
 
-    try {
-      await db.update(users)
-        .set({ gfTokenBalance: sql`${users.gfTokenBalance} - ${totalCost}` })
-        .where(eq(users.id, userId));
-      console.log(`✅ Deducted ${totalCost} GFT from in-app balance for user ${userId}`);
-    } catch (balanceErr) {
-      console.error('Failed to deduct GFT balance after mint:', balanceErr);
-    }
-
     const tokenIds: number[] = [];
     for (const log of receipt.logs) {
       try {

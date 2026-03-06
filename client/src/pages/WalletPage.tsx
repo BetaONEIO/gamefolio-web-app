@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useStaking } from "@/hooks/use-staking";
+import { useTokenBalance } from "@/hooks/use-token";
 import { usePurchaseGFT } from "@/hooks/use-purchase-gft";
 import { useAutoWallet } from "@/hooks/use-auto-wallet";
 import BuyGFTokenDialog from "@/components/BuyGFTokenDialog";
@@ -42,7 +43,8 @@ export default function WalletPage() {
   const [showStakingHub, setShowStakingHub] = useState(false);
   const [purchaseAmount, setPurchaseAmount] = useState(0);
   const [gftAmount, setGftAmount] = useState(0);
-  const userGftBalance = user?.gfTokenBalance || 0;
+  const { data: tokenBalanceData } = useTokenBalance();
+  const userGftBalance = parseFloat(tokenBalanceData?.balance || '0');
   const { stakedAmount, earnedRewards, estimatedApy, stake, unstake, claimRewards, isStaking, stakeHistory } = useStaking();
   const { createOrder, isCreatingOrder, checkOrderStatus, refreshBalances } = usePurchaseGFT();
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);

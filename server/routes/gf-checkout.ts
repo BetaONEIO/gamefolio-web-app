@@ -308,22 +308,30 @@ router.post('/api/gf/recover-orders', hybridAuth, async (req: Request, res: Resp
         }
 
         if (paymentSucceeded) {
-          await db.update(gfOrders)
-            .set({ status: 'credited', updatedAt: new Date() })
-            .where(eq(gfOrders.id, order.id));
-
-          const [currentUser] = await db.select({ gfTokenBalance: users.gfTokenBalance })
+          const [recoverUser] = await db.select({ walletAddress: users.walletAddress })
             .from(users).where(eq(users.id, userId));
-          
-          if (currentUser) {
-            await db.update(users)
-              .set({ gfTokenBalance: currentUser.gfTokenBalance + order.gfAmount })
-              .where(eq(users.id, userId));
-            totalCredited += order.gfAmount;
+
+          if (recoverUser?.walletAddress) {
+            const result = await transferGfTokens(recoverUser.walletAddress, order.gfAmount);
+            if (result.success) {
+              await db.update(gfOrders)
+                .set({ status: 'delivered', txHash: result.txHash, updatedAt: new Date() })
+                .where(eq(gfOrders.id, order.id));
+              totalCredited += order.gfAmount;
+              console.log(`[GF Recovery] Order ${order.id} recovered and delivered ${order.gfAmount} GFT on-chain to ${recoverUser.walletAddress}`);
+            } else {
+              await db.update(gfOrders)
+                .set({ status: 'credited', updatedAt: new Date() })
+                .where(eq(gfOrders.id, order.id));
+              console.log(`[GF Recovery] Order ${order.id} credited (on-chain transfer failed: ${result.error})`);
+            }
+          } else {
+            await db.update(gfOrders)
+              .set({ status: 'credited', updatedAt: new Date() })
+              .where(eq(gfOrders.id, order.id));
           }
 
           recovered++;
-          console.log(`[GF Recovery] Order ${order.id} recovered and credited ${order.gfAmount} GFT to user ${userId}`);
         }
       } catch (err: any) {
         console.error(`[GF Recovery] Failed to check order ${order.id}:`, err.message);
@@ -368,31 +376,21 @@ router.post('/api/gf/confirm-payment', hybridAuth, async (req: Request, res: Res
     }
 
     if (order.status === 'delivered' || order.status === 'credited') {
-      const [user] = await db.select({ gfTokenBalance: users.gfTokenBalance }).from(users).where(eq(users.id, userId));
       return res.json({ 
         success: true, 
         alreadyProcessed: true, 
         gfAmount: order.gfAmount,
-        newBalance: user?.gfTokenBalance || 0
       });
     }
 
     const [currentUser] = await db.select({ 
-      gfTokenBalance: users.gfTokenBalance, 
       walletAddress: users.walletAddress 
     }).from(users).where(eq(users.id, userId));
-
-    const [updatedUser] = await db.update(users)
-      .set({ 
-        gfTokenBalance: currentUser.gfTokenBalance + order.gfAmount
-      })
-      .where(eq(users.id, userId))
-      .returning({ gfTokenBalance: users.gfTokenBalance });
 
     let txHash: string | undefined;
     let onChainSuccess = false;
 
-    if (currentUser.walletAddress) {
+    if (currentUser?.walletAddress) {
       console.log(`[GF Confirm] Attempting on-chain transfer of ${order.gfAmount} GFT to ${currentUser.walletAddress}`);
       try {
         const result = await transferGfTokens(currentUser.walletAddress, order.gfAmount);
@@ -410,19 +408,18 @@ router.post('/api/gf/confirm-payment', hybridAuth, async (req: Request, res: Res
 
     await db.update(gfOrders)
       .set({ 
-        status: onChainSuccess ? 'delivered' : 'credited', 
+        status: onChainSuccess ? 'delivered' : 'pending', 
         stripePaymentIntentId: paymentIntentId,
         txHash: txHash,
         updatedAt: new Date() 
       })
       .where(eq(gfOrders.id, order.id));
 
-    console.log(`[GF Confirm] Order ${order.id} ${onChainSuccess ? 'delivered' : 'credited'}. User ${userId} received ${order.gfAmount} GFT. New balance: ${updatedUser?.gfTokenBalance}`);
+    console.log(`[GF Confirm] Order ${order.id} ${onChainSuccess ? 'delivered' : 'pending on-chain'}. User ${userId} queued ${order.gfAmount} GFT.`);
 
     return res.json({ 
       success: true, 
       gfAmount: order.gfAmount,
-      newBalance: updatedUser?.gfTokenBalance || 0,
       onChainTransfer: onChainSuccess,
       txHash,
     });

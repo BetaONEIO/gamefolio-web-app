@@ -8,6 +8,7 @@ import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import { useState } from "react";
 import { VerificationBadgeCheckoutDialog } from "./VerificationBadgeCheckoutDialog";
 import { useAuth } from "@/hooks/use-auth";
+import { useTokenBalance } from "@/hooks/use-token";
 
 interface VerificationBadge {
   id: number;
@@ -35,6 +36,8 @@ export function VerificationBadgeDetailDialog({
 }: VerificationBadgeDetailDialogProps) {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const { user } = useAuth();
+  const { balance: tokenBalanceStr } = useTokenBalance();
+  const onChainBalance = parseFloat(tokenBalanceStr || '0');
 
   if (!badge) return null;
 
@@ -204,7 +207,7 @@ export function VerificationBadgeDetailDialog({
         onOpenChange={setCheckoutOpen}
         onConfirm={handleConfirmPurchase}
         isPurchasing={isPurchasing}
-        gfBalance={user?.gfTokenBalance || 0}
+        gfBalance={onChainBalance}
       />
     </Dialog>
   );

@@ -90,20 +90,6 @@ async function processGfOrderDelivery(sessionId: string, paymentIntentId?: strin
   });
   console.log(`[GF Webhook] Order ${order.id} marked as paid`);
 
-  if (order.status !== 'credited') {
-    try {
-      const [currentUser] = await db.select({ gfTokenBalance: users.gfTokenBalance }).from(users).where(eq(users.id, order.userId!));
-      if (currentUser) {
-        await db.update(users)
-          .set({ gfTokenBalance: currentUser.gfTokenBalance + order.gfAmount })
-          .where(eq(users.id, order.userId!));
-        console.log(`[GF Webhook] Credited ${order.gfAmount} GFT to user ${order.userId} (off-chain)`);
-      }
-    } catch (balanceError: any) {
-      console.error(`[GF Webhook] Failed to credit off-chain balance for order ${order.id}:`, balanceError);
-    }
-  }
-
   if (!order.walletAddress) {
     await updateOrderStatus(order.id, 'credited', { 
       stripePaymentIntentId: paymentIntentId || undefined 

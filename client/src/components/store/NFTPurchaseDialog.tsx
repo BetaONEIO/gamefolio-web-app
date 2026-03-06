@@ -12,6 +12,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import { LoginPromptModal } from "@/components/auth/LoginPromptModal";
+import { useAccount, useWalletClient, usePublicClient, useChainId } from "wagmi";
+import { parseUnits, type Address } from "viem";
+import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } from "@shared/contracts";
+import { useTokenBalance } from "@/hooks/use-token";
 
 interface NFT {
   id: number;
@@ -46,36 +50,16 @@ export function NFTPurchaseDialog({
   const [step, setStep] = useState<'details' | 'checkout'>('details');
   const [transactionHash, setTransactionHash] = useState<string>('');
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
 
-  const purchaseMutation = useMutation({
-    mutationFn: async (data: { nftId: number }) => {
-      const response = await apiRequest("POST", "/api/nft/purchase", data);
-      return response.json();
-    },
-    onSuccess: (data: any) => {
-      toast({
-        title: "Purchase Successful!",
-        description: `You've purchased ${nft?.name} for ${nft?.price} GF tokens.`,
-      });
-      if (data?.newBalance !== undefined) {
-        queryClient.setQueryData(["/api/user"], (old: any) =>
-          old ? { ...old, gfTokenBalance: data.newBalance } : old
-        );
-      }
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      setStep('details');
-      onOpenChange(false);
-      onPurchaseComplete?.();
-    },
-    onError: (error: any) => {
-      const errorMessage = error?.message || "There was an error processing your purchase. Please try again.";
-      toast({
-        title: "Purchase Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    },
-  });
+  const { isConnected } = useAccount();
+  const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
+  const chainId = useChainId();
+  const { data: tokenBalance } = useTokenBalance();
+
+  const SKALE_CHAIN_ID = SKALE_NEBULA_TESTNET.id;
+  const GF_DECIMALS = 18;
 
   const quickSellMutation = useMutation({
     mutationFn: async (data: { tokenId: number }) => {
@@ -107,7 +91,7 @@ export function NFTPurchaseDialog({
 
   if (!nft) return null;
 
-  const userBalance = user?.gfTokenBalance || 0;
+  const userBalance = parseFloat(tokenBalance?.balance || '0');
   const networkFee = 0;
   const totalAmount = nft.price + networkFee;
   const hasEnoughBalance = userBalance >= totalAmount;
@@ -118,10 +102,10 @@ export function NFTPurchaseDialog({
       setShowLoginPrompt(true);
       return;
     }
-    if (!wallet?.address) {
+    if (!isConnected || !walletClient) {
       toast({
         title: "Wallet Required",
-        description: "Please create a wallet before purchasing NFTs.",
+        description: "Please connect your wallet to purchase NFTs.",
         variant: "destructive",
       });
       return;
@@ -129,16 +113,72 @@ export function NFTPurchaseDialog({
     setStep('checkout');
   };
 
-  const handleConfirmPurchase = () => {
+  const handleConfirmPurchase = async () => {
     if (!hasEnoughBalance) {
-      toast({
-        title: "Insufficient Balance",
-        description: "You don't have enough GF tokens to purchase this NFT.",
-        variant: "destructive",
-      });
+      toast({ title: "Insufficient Balance", description: "You don't have enough GF tokens to purchase this NFT.", variant: "destructive" });
       return;
     }
-    purchaseMutation.mutate({ nftId: nft.id });
+    if (!isConnected || !walletClient || !publicClient) {
+      toast({ title: "Wallet Required", description: "Please connect your wallet to complete the purchase.", variant: "destructive" });
+      return;
+    }
+    if (chainId !== SKALE_CHAIN_ID) {
+      toast({ title: "Wrong Network", description: "Please switch to SKALE Nebula network.", variant: "destructive" });
+      return;
+    }
+    setIsPurchasing(true);
+    try {
+      const intentRes = await fetch("/api/nft/purchase-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ nftId: nft.id }),
+      });
+      if (!intentRes.ok) {
+        const err = await intentRes.json();
+        throw new Error(err.message || err.error || "Failed to create purchase intent");
+      }
+      const { gfCost, treasuryAddress } = await intentRes.json();
+
+      toast({ title: "Confirm transaction", description: `Sending ${gfCost} GFT tokens...` });
+      const amountRaw = parseUnits(String(gfCost), GF_DECIMALS);
+      const txHash = await walletClient.writeContract({
+        address: GF_TOKEN_ADDRESS,
+        abi: GF_TOKEN_ABI,
+        functionName: "transfer",
+        args: [treasuryAddress as Address, amountRaw],
+      });
+
+      toast({ title: "Verifying purchase...", description: "Please wait while we confirm your transaction" });
+      await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
+
+      const verifyRes = await fetch("/api/nft/verify-purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ nftId: nft.id, txHash }),
+      });
+      if (!verifyRes.ok) {
+        const err = await verifyRes.json();
+        throw new Error(err.message || err.error || "Failed to verify purchase");
+      }
+
+      toast({ title: "Purchase Successful!", description: `You've purchased ${nft.name} for ${gfCost} GFT tokens.` });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/token/balance"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/nfts/owned"] });
+      setStep('details');
+      onOpenChange(false);
+      onPurchaseComplete?.();
+    } catch (error: any) {
+      let description = error.message || "There was an error processing your purchase.";
+      if (error.message?.includes("user rejected") || error.message?.includes("User rejected")) {
+        description = "Transaction was cancelled.";
+      }
+      toast({ title: "Purchase Failed", description, variant: "destructive" });
+    } finally {
+      setIsPurchasing(false);
+    }
   };
 
   const contractAddress = "0x892a...F4e1";
@@ -301,11 +341,11 @@ export function NFTPurchaseDialog({
               <div className="flex flex-col gap-3 pt-4">
                 <Button
                   onClick={handleConfirmPurchase}
-                  disabled={purchaseMutation.isPending || !hasEnoughBalance}
+                  disabled={isPurchasing || !hasEnoughBalance}
                   className="w-full h-[60px] rounded-2xl bg-[#4ade80] text-[#022c22] text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="button-confirm-purchase"
                 >
-                  {purchaseMutation.isPending ? "Processing..." : "Confirm Purchase"}
+                  {isPurchasing ? "Processing..." : "Confirm Purchase"}
                 </Button>
                 <button
                   onClick={() => setStep('details')}
