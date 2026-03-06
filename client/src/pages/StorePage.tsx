@@ -366,6 +366,11 @@ export default function StorePage() {
     },
     onSuccess: (data: any) => {
       toast({ title: "NFT Purchased!", description: data.message });
+      if (data?.price !== undefined) {
+        queryClient.setQueryData(["/api/user"], (old: any) =>
+          old ? { ...old, gfTokenBalance: Math.max(0, (old.gfTokenBalance || 0) - data.price) } : old
+        );
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/marketplace/listings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/nfts/owned"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
@@ -447,6 +452,8 @@ export default function StorePage() {
       toast({ title: "Item unlocked!", description: `You now own ${item.name}` });
       refetchOwned();
       queryClient.invalidateQueries({ queryKey: ["/api/store/owned"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/token/balance"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
 
     } catch (error: any) {
       let description = error.message || "Transaction failed";

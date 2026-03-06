@@ -52,11 +52,16 @@ export function NFTPurchaseDialog({
       const response = await apiRequest("POST", "/api/nft/purchase", data);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       toast({
         title: "Purchase Successful!",
         description: `You've purchased ${nft?.name} for ${nft?.price} GF tokens.`,
       });
+      if (data?.newBalance !== undefined) {
+        queryClient.setQueryData(["/api/user"], (old: any) =>
+          old ? { ...old, gfTokenBalance: data.newBalance } : old
+        );
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       setStep('details');
       onOpenChange(false);
