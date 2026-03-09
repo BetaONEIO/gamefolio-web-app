@@ -1,4 +1,4 @@
-import { ArrowLeft, ExternalLink, Share2, Image } from "lucide-react";
+import { ArrowLeft, ExternalLink, Share2, Image, Hexagon } from "lucide-react";
 import { useState } from "react";
 import QuickSellScreen from "./QuickSellScreen";
 import { useToast } from "@/hooks/use-toast";
@@ -204,8 +204,10 @@ export default function MintedNftDetailScreen({
                     className={`w-full h-full object-cover transition-all duration-300 ${sold ? "grayscale brightness-50" : ""}`}
                   />
                 ) : (
-                  <div className="w-full h-full bg-[#1e293b] flex items-center justify-center">
-                    <div className="w-12 h-12 rounded-full border-2 border-[#4ade80]/30 border-t-[#4ade80] animate-spin" />
+                  <div className="w-full h-full bg-[#1e293b] flex flex-col items-center justify-center p-8 text-center">
+                    <Hexagon className="w-16 h-16 text-slate-600 mb-4" />
+                    <p className="text-slate-400 text-sm font-medium">Image still indexing on IPFS</p>
+                    <p className="text-slate-500 text-xs mt-1">This can take a few minutes for newly minted items</p>
                   </div>
                 )}
                 {sold && (
