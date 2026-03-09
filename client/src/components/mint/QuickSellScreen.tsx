@@ -17,7 +17,6 @@ interface QuickSellScreenProps {
 }
 
 const QUICK_SELL_PRICE = 250;
-const PLATFORM_FEE_PERCENT = 1.5;
 const QUICK_LIST_FEE = 1.25;
 
 function getTokenIdPadded(id: number): string {
@@ -34,9 +33,7 @@ export default function QuickSellScreen({
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
-  const platformFee = QUICK_SELL_PRICE * (PLATFORM_FEE_PERCENT / 100);
-  const totalDeductions = platformFee + QUICK_LIST_FEE;
-  const youReceive = QUICK_SELL_PRICE - totalDeductions;
+  const youReceive = QUICK_SELL_PRICE - QUICK_LIST_FEE;
   const displayName = nft.name || `Gamefolio Genesis ${getTokenIdPadded(nft.id)}`;
   const collectionName = nft.name?.split(" ").slice(0, -1).join(" ") || "Genesis Collection";
 
@@ -121,18 +118,11 @@ export default function QuickSellScreen({
                   {QUICK_SELL_PRICE} GFT
                 </span>
               </div>
-              <span className="text-sm font-normal text-[#94a3b8] leading-5">
-                ≈ $12.50 USD
-              </span>
             </div>
 
             <div className="w-full h-px bg-[#1e293b4d]" />
 
             <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-normal text-[#94a3b8] leading-5">Platform Fee (1.5%)</span>
-                <span className="text-sm font-normal text-[#ef4444] leading-5">-{platformFee.toFixed(2)} GFT</span>
-              </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-normal text-[#94a3b8] leading-5">Quick-List Processing</span>
                 <span className="text-sm font-normal text-[#ef4444] leading-5">-{QUICK_LIST_FEE.toFixed(2)} GFT</span>
