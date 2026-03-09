@@ -260,7 +260,16 @@ export function useMintNFT(fallbackAddress?: string | null) {
         return null;
       }
 
-      const message = err?.message || 'Mint transaction failed';
+      const rawMessage = err?.message || '';
+      const lowerMsg = rawMessage.toLowerCase();
+      let message: string;
+      if (lowerMsg.includes('insufficient funds') || lowerMsg.includes('transfer amount exceeds balance') || lowerMsg.includes('insufficient balance') || lowerMsg.includes('exceeds balance')) {
+        message = `You don't have enough GFT tokens to mint. Please top up your wallet and try again.`;
+      } else if (lowerMsg.includes('user rejected') || lowerMsg.includes('user denied')) {
+        message = 'Transaction was cancelled.';
+      } else {
+        message = 'Mint transaction failed. Please try again.';
+      }
       setError(message);
       toast({
         title: 'Mint Failed',
@@ -391,7 +400,18 @@ export function useMintNFT(fallbackAddress?: string | null) {
     } catch (err: any) {
       console.error('Mint error:', err);
       setMintTxState('error');
-      const message = err?.shortMessage || err?.message || 'Mint transaction failed';
+      const rawMessage = err?.shortMessage || err?.message || '';
+      const lowerMsg = rawMessage.toLowerCase();
+      let message: string;
+      if (lowerMsg.includes('insufficient funds') || lowerMsg.includes('transfer amount exceeds balance') || lowerMsg.includes('insufficient balance') || lowerMsg.includes('exceeds balance')) {
+        message = `You don't have enough GFT tokens to mint. Please top up your wallet and try again.`;
+      } else if (lowerMsg.includes('user rejected') || lowerMsg.includes('user denied')) {
+        message = 'Transaction was cancelled.';
+      } else if (lowerMsg.includes('nonce')) {
+        message = 'Transaction conflict detected. Please try again.';
+      } else {
+        message = 'Mint transaction failed. Please try again.';
+      }
       setError(message);
       toast({
         title: 'Mint Failed',
