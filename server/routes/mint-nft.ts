@@ -3,16 +3,15 @@ import sharp from 'sharp';
 import { db } from '../db';
 import { users, previousAvatars } from '@shared/schema';
 import { eq, sql, desc } from 'drizzle-orm';
-import { maxUint256, parseUnits, type Address, decodeEventLog } from 'viem';
+import { parseUnits, type Address, decodeEventLog } from 'viem';
 import {
   GF_TOKEN_ADDRESS,
   GF_TOKEN_ABI,
-  MINT_SALE_ADDRESS,
-  MINT_SALE_ABI,
   MINT_CONFIG,
   NFT_ABI,
   NFT_CONTRACT_ADDRESS,
 } from '../../shared/contracts';
+import { privateKeyToAccount } from 'viem/accounts';
 import { encryptPrivateKey } from '../wallet-crypto';
 import { writeContractWithPoW, writeContractWithPoWFromRawKey, publicClient } from '../skale-pow';
 
@@ -151,24 +150,7 @@ router.post('/api/mint/approve', async (req: Request, res: Response) => {
       });
     }
 
-    const hash = await writeContractWithPoW({
-      encryptedPrivateKey: user.encryptedPrivateKey,
-      contractAddress: GF_TOKEN_ADDRESS as Address,
-      abi: GF_TOKEN_ABI,
-      functionName: 'approve',
-      args: [MINT_SALE_ADDRESS as Address, maxUint256],
-    });
-
-    const receipt = await publicClient.waitForTransactionReceipt({
-      hash,
-      timeout: 60_000,
-    });
-
-    if (receipt.status !== 'success') {
-      return res.status(400).json({ error: 'Approval transaction reverted', txHash: hash });
-    }
-
-    return res.json({ success: true, txHash: hash });
+    return res.json({ success: true, message: 'No approval needed — minting uses treasury wallet directly.' });
   } catch (error: any) {
     console.error('Server-side approve error:', error);
     return res.status(500).json({ error: error.message || 'Approval failed' });
@@ -231,36 +213,38 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
 
     console.log(`🪙 Minting ${quantity} NFT(s) for user ${userId} (${userAddress}). Cost: ${totalCost} GFT. On-chain balance: ${readableBalance}`);
 
-    const allowance = await publicClient.readContract({
-      address: GF_TOKEN_ADDRESS as Address,
-      abi: GF_TOKEN_ABI,
-      functionName: 'allowance',
-      args: [userAddress, MINT_SALE_ADDRESS as Address],
-    }) as bigint;
-
-    if (allowance < costInWei) {
-      console.log(`🔓 Approving MintSale to spend GFT for user ${userId}`);
-      const approveHash = await writeContractWithPoW({
-        encryptedPrivateKey: user.encryptedPrivateKey,
-        contractAddress: GF_TOKEN_ADDRESS as Address,
-        abi: GF_TOKEN_ABI,
-        functionName: 'approve',
-        args: [MINT_SALE_ADDRESS as Address, maxUint256],
-      });
-      const approveReceipt = await publicClient.waitForTransactionReceipt({ hash: approveHash, timeout: 60_000 });
-      if (approveReceipt.status !== 'success') {
-        return res.status(400).json({ error: 'Approval transaction reverted', txHash: approveHash });
-      }
-      console.log(`✅ Approved MintSale. TX: ${approveHash}`);
+    const treasuryPrivateKey = process.env.TREASURY_PRIVATE_KEY;
+    if (!treasuryPrivateKey) {
+      return res.status(500).json({ error: 'Treasury wallet not configured' });
     }
+    const formattedTreasuryKey = treasuryPrivateKey.startsWith('0x')
+      ? (treasuryPrivateKey as `0x${string}`)
+      : (`0x${treasuryPrivateKey}` as `0x${string}`);
+    const treasuryAccount = privateKeyToAccount(formattedTreasuryKey);
+    const treasuryAddress = treasuryAccount.address;
 
-    console.log(`🛒 Calling buy(${quantity}) from user wallet`);
-    const hash = await writeContractWithPoW({
+    console.log(`💸 Transferring ${totalCost} GFT from user ${userAddress} to treasury ${treasuryAddress}`);
+    const transferHash = await writeContractWithPoW({
       encryptedPrivateKey: user.encryptedPrivateKey,
-      contractAddress: MINT_SALE_ADDRESS as Address,
-      abi: MINT_SALE_ABI,
-      functionName: 'buy',
-      args: [BigInt(quantity)],
+      contractAddress: GF_TOKEN_ADDRESS as Address,
+      abi: GF_TOKEN_ABI,
+      functionName: 'transfer',
+      args: [treasuryAddress, costInWei],
+    });
+
+    const transferReceipt = await publicClient.waitForTransactionReceipt({ hash: transferHash, timeout: 60_000 });
+    if (transferReceipt.status !== 'success') {
+      return res.status(400).json({ error: 'GFT transfer failed', txHash: transferHash });
+    }
+    console.log(`✅ GFT transferred to treasury. TX: ${transferHash}`);
+
+    console.log(`🎨 Treasury minting ${quantity} NFT(s) to ${userAddress}`);
+    const hash = await writeContractWithPoWFromRawKey({
+      privateKeyRaw: treasuryPrivateKey,
+      contractAddress: NFT_CONTRACT_ADDRESS as Address,
+      abi: NFT_ABI,
+      functionName: 'mint',
+      args: [userAddress, BigInt(quantity)],
     });
 
     const receipt = await publicClient.waitForTransactionReceipt({
@@ -272,7 +256,7 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Mint transaction reverted', txHash: hash });
     }
 
-    console.log(`✅ NFT minted successfully. On-chain GFT was spent via MintSale contract.`);
+    console.log(`✅ NFT minted successfully via treasury wallet.`);
 
     const tokenIds: number[] = [];
     for (const log of receipt.logs) {

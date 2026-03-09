@@ -220,6 +220,16 @@ export const MINT_SALE_ABI = [
 
 export const NFT_ABI = [
   {
+    "inputs": [
+      {"internalType": "address", "name": "to", "type": "address"},
+      {"internalType": "uint256", "name": "quantity", "type": "uint256"}
+    ],
+    "name": "mint",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}],
     "name": "tokenURI",
     "outputs": [{"internalType": "string", "name": "", "type": "string"}],
