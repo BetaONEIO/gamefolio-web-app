@@ -76,6 +76,7 @@ import { contentFilterService } from "./services/content-filter";
 import { addPlayButtonOverlay } from "./og-thumbnail";
 import { getTokenBalance, getTokenInfo } from "./blockchain";
 import { transferGfTokens } from "./gf-token-service";
+import { writeContractWithPoW } from "./skale-pow";
 import { createPublicClient, http, parseUnits, decodeEventLog, type Address as ViemAddress } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { GF_TOKEN_ADDRESS as NFT_GF_TOKEN_ADDRESS, GF_TOKEN_ABI as NFT_GF_TOKEN_ABI, SKALE_NEBULA_TESTNET as NFT_SKALE_CHAIN } from "../shared/contracts";
@@ -10280,6 +10281,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error verifying NFT purchase:", error);
       res.status(500).json({ error: "Failed to verify purchase" });
+    }
+  });
+
+  // Server-side NFT purchase (signs transaction using user's stored encrypted private key)
+  app.post("/api/nft/server-purchase", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { nftId } = req.body;
+
+      if (!nftId || typeof nftId !== 'number') {
+        return res.status(400).json({ message: "Invalid NFT ID" });
+      }
+
+      const nft = NFT_CATALOG.find(n => n.id === nftId);
+      if (!nft) return res.status(404).json({ message: "NFT not found" });
+      if (!nft.forSale) return res.status(400).json({ message: "NFT is not for sale" });
+
+      const existingPurchase = await db.execute(
+        sql`SELECT id FROM store_nft_purchases WHERE nft_catalog_id = ${nftId} LIMIT 1`
+      );
+      const existingRows = (existingPurchase as any).rows || existingPurchase || [];
+      if (existingRows.length > 0) {
+        return res.status(400).json({ message: "This NFT has already been sold" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (!user.walletAddress || !user.encryptedPrivateKey) {
+        return res.status(400).json({ message: "No server-side wallet available", code: "NO_WALLET" });
+      }
+
+      const onChainBalance = await getTokenBalance(user.walletAddress);
+      if (parseFloat(onChainBalance) < nft.price) {
+        return res.status(400).json({
+          message: `Insufficient GFT balance. Have: ${parseFloat(onChainBalance).toFixed(2)} GFT, Need: ${nft.price} GFT`,
+          code: "INSUFFICIENT_BALANCE",
+        });
+      }
+
+      const treasuryAddress = getNftTreasuryAddress();
+      const amountRaw = parseUnits(String(nft.price), NFT_GF_DECIMALS);
+
+      console.log(`[NFT Server Purchase] User ${userId} purchasing NFT #${nftId} for ${nft.price} GFT`);
+      const txHash = await writeContractWithPoW({
+        encryptedPrivateKey: user.encryptedPrivateKey,
+        contractAddress: NFT_GF_TOKEN_ADDRESS as ViemAddress,
+        abi: NFT_GF_TOKEN_ABI,
+        functionName: "transfer",
+        args: [treasuryAddress as ViemAddress, amountRaw],
+      });
+
+      const receipt = await nftPublicClient.waitForTransactionReceipt({ hash: txHash, timeout: 60_000 });
+      if (receipt.status !== 'success') {
+        return res.status(400).json({ message: "Transfer transaction reverted on-chain", txHash });
+      }
+
+      let validTransfer = false;
+      for (const log of receipt.logs) {
+        if (log.address.toLowerCase() !== NFT_GF_TOKEN_ADDRESS.toLowerCase()) continue;
+        try {
+          const decoded = decodeEventLog({ abi: NFT_GF_TOKEN_ABI, data: log.data, topics: log.topics });
+          if (decoded.eventName === 'Transfer') {
+            const { from, to, value } = decoded.args as { from: ViemAddress; to: ViemAddress; value: bigint };
+            if (
+              from.toLowerCase() === user.walletAddress.toLowerCase() &&
+              to.toLowerCase() === treasuryAddress.toLowerCase() &&
+              value >= amountRaw
+            ) {
+              validTransfer = true;
+              break;
+            }
+          }
+        } catch { continue; }
+      }
+
+      if (!validTransfer) {
+        return res.status(400).json({ message: "Transfer event not found in receipt", txHash });
+      }
+
+      await db.execute(
+        sql`INSERT INTO store_nft_purchases (nft_catalog_id, buyer_user_id, price_paid) VALUES (${nftId}, ${userId}, ${nft.price})`
+      );
+      await db.execute(
+        sql`INSERT INTO user_nfts (user_id, token_id, tx_hash) VALUES (${userId}, ${nftId}, ${txHash}) ON CONFLICT (user_id, token_id) DO NOTHING`
+      );
+
+      console.log(`[NFT Server Purchase] User ${userId} purchased NFT #${nftId} for ${nft.price} GFT (tx: ${txHash})`);
+      return res.json({ success: true, txHash, nftId, nftName: nft.name, pricePaid: nft.price });
+    } catch (error: any) {
+      console.error("[NFT Server Purchase] Error:", error);
+      return res.status(500).json({ error: error.message || "Failed to process purchase" });
     }
   });
 

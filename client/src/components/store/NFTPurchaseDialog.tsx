@@ -4,7 +4,7 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Check, ExternalLink, CheckCircle, Wallet } from "lucide-react";
+import { ArrowLeft, Check, ExternalLink } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useCrossmint } from "@/hooks/use-crossmint";
 import { useToast } from "@/hooks/use-toast";
@@ -12,8 +12,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import { LoginPromptModal } from "@/components/auth/LoginPromptModal";
-import { useAccount, useWalletClient, usePublicClient, useChainId } from "wagmi";
-import { useOpenConnectModal } from "@0xsequence/connect";
+import { useWalletClient, usePublicClient, useChainId } from "wagmi";
 import { parseUnits, type Address } from "viem";
 import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } from "@shared/contracts";
 import { useTokenBalance } from "@/hooks/use-token";
@@ -53,12 +52,13 @@ export function NFTPurchaseDialog({
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
 
-  const { isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
   const chainId = useChainId();
-  const { setOpenConnectModal } = useOpenConnectModal();
   const { data: tokenBalance } = useTokenBalance();
+
+  const effectiveAddress = user?.walletAddress;
+  const useServerSigning = !!effectiveAddress && !walletClient;
 
   const SKALE_CHAIN_ID = SKALE_NEBULA_TESTNET.id;
   const GF_DECIMALS = 18;
@@ -112,52 +112,64 @@ export function NFTPurchaseDialog({
       toast({ title: "Insufficient Balance", description: "You don't have enough GF tokens to purchase this NFT.", variant: "destructive" });
       return;
     }
-    if (!isConnected || !walletClient || !publicClient) {
-      setOpenConnectModal(true);
-      return;
-    }
-    if (chainId !== SKALE_CHAIN_ID) {
-      toast({ title: "Wrong Network", description: "Please switch to SKALE Nebula network.", variant: "destructive" });
+    if (!effectiveAddress) {
+      toast({ title: "No wallet found", description: "Please set up your wallet first.", variant: "destructive" });
       return;
     }
     setIsPurchasing(true);
     try {
-      const intentRes = await fetch("/api/nft/purchase-intent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ nftId: nft.id }),
-      });
-      if (!intentRes.ok) {
-        const err = await intentRes.json();
-        throw new Error(err.message || err.error || "Failed to create purchase intent");
+      if (useServerSigning) {
+        toast({ title: "Processing purchase...", description: `Sending ${nft.price} GFT tokens...` });
+        const res = await apiRequest("POST", "/api/nft/server-purchase", { nftId: nft.id });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || data.error || "Purchase failed");
+        toast({ title: "Purchase Successful!", description: `You've purchased ${nft.name} for ${nft.price} GFT tokens.` });
+      } else {
+        if (!walletClient || !publicClient) {
+          toast({ title: "Wallet not ready", description: "Please wait for your wallet to connect.", variant: "destructive" });
+          return;
+        }
+        if (chainId !== SKALE_CHAIN_ID) {
+          toast({ title: "Wrong Network", description: "Please switch to SKALE Nebula network.", variant: "destructive" });
+          return;
+        }
+        const intentRes = await fetch("/api/nft/purchase-intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ nftId: nft.id }),
+        });
+        if (!intentRes.ok) {
+          const err = await intentRes.json();
+          throw new Error(err.message || err.error || "Failed to create purchase intent");
+        }
+        const { gfCost, treasuryAddress } = await intentRes.json();
+
+        toast({ title: "Confirm transaction", description: `Sending ${gfCost} GFT tokens...` });
+        const amountRaw = parseUnits(String(gfCost), GF_DECIMALS);
+        const txHash = await walletClient.writeContract({
+          address: GF_TOKEN_ADDRESS,
+          abi: GF_TOKEN_ABI,
+          functionName: "transfer",
+          args: [treasuryAddress as Address, amountRaw],
+        });
+
+        toast({ title: "Verifying purchase...", description: "Please wait while we confirm your transaction" });
+        await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
+
+        const verifyRes = await fetch("/api/nft/verify-purchase", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ nftId: nft.id, txHash }),
+        });
+        if (!verifyRes.ok) {
+          const err = await verifyRes.json();
+          throw new Error(err.message || err.error || "Failed to verify purchase");
+        }
+        toast({ title: "Purchase Successful!", description: `You've purchased ${nft.name} for ${gfCost} GFT tokens.` });
       }
-      const { gfCost, treasuryAddress } = await intentRes.json();
 
-      toast({ title: "Confirm transaction", description: `Sending ${gfCost} GFT tokens...` });
-      const amountRaw = parseUnits(String(gfCost), GF_DECIMALS);
-      const txHash = await walletClient.writeContract({
-        address: GF_TOKEN_ADDRESS,
-        abi: GF_TOKEN_ABI,
-        functionName: "transfer",
-        args: [treasuryAddress as Address, amountRaw],
-      });
-
-      toast({ title: "Verifying purchase...", description: "Please wait while we confirm your transaction" });
-      await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
-
-      const verifyRes = await fetch("/api/nft/verify-purchase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ nftId: nft.id, txHash }),
-      });
-      if (!verifyRes.ok) {
-        const err = await verifyRes.json();
-        throw new Error(err.message || err.error || "Failed to verify purchase");
-      }
-
-      toast({ title: "Purchase Successful!", description: `You've purchased ${nft.name} for ${gfCost} GFT tokens.` });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/token/balance"] });
       queryClient.invalidateQueries({ queryKey: ["/api/nfts/owned"] });
@@ -332,29 +344,14 @@ export function NFTPurchaseDialog({
 
               {/* Action Buttons - inside scrollable content */}
               <div className="flex flex-col gap-3 pt-4">
-                {(!isConnected || !walletClient || !publicClient) ? (
-                  <>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-yellow-500/10 rounded-2xl">
-                      <Wallet className="w-4 h-4 text-yellow-400 flex-shrink-0" />
-                      <span className="text-xs text-yellow-400">Connect your wallet to complete this purchase</span>
-                    </div>
-                    <Button
-                      onClick={() => setOpenConnectModal(true)}
-                      className="w-full h-[60px] rounded-2xl bg-[#4ade80] text-[#022c22] text-lg font-bold hover:opacity-90"
-                    >
-                      Connect Wallet
-                    </Button>
-                  </>
-                ) : (
                   <Button
                     onClick={handleConfirmPurchase}
-                    disabled={isPurchasing || !hasEnoughBalance}
+                    disabled={isPurchasing || !hasEnoughBalance || !effectiveAddress}
                     className="w-full h-[60px] rounded-2xl bg-[#4ade80] text-[#022c22] text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                     data-testid="button-confirm-purchase"
                   >
                     {isPurchasing ? "Processing..." : "Confirm Purchase"}
                   </Button>
-                )}
                 <button
                   onClick={() => setStep('details')}
                   className="w-full h-[52px] text-sm font-bold text-[#94a3b8] hover:text-[#f8fafc] transition-colors"
