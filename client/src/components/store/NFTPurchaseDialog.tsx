@@ -104,10 +104,6 @@ export function NFTPurchaseDialog({
       setShowLoginPrompt(true);
       return;
     }
-    if (!isConnected || !walletClient) {
-      setOpenConnectModal(true);
-      return;
-    }
     setStep('checkout');
   };
 
