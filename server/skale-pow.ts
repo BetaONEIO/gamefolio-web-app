@@ -4,8 +4,8 @@ import { SKALE_BASE_MAINNET } from '../shared/contracts';
 
 const RPC_URL = SKALE_BASE_MAINNET.rpcUrls.default.http[0];
 
-const SFUEL_THRESHOLD = parseEther('0.00001');
-const SFUEL_DISTRIBUTION_AMOUNT = parseEther('0.001');
+const SFUEL_THRESHOLD = parseEther('0.01');
+const SFUEL_DISTRIBUTION_AMOUNT = parseEther('0.1');
 
 const publicClient = createPublicClient({
   chain: SKALE_BASE_MAINNET,
