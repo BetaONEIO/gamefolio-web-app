@@ -386,10 +386,10 @@ export default function MintedNftDetailScreen({
               ) : isOwner ? (
                 <>
                   <button
-                    onClick={user?.canSellNfts ? () => setShowQuickSell(true) : undefined}
-                    disabled={!user?.canSellNfts || isNftProfilePic}
+                    onClick={() => setShowQuickSell(true)}
+                    disabled={isNftProfilePic}
                     className={`h-[52px] rounded-xl flex items-center justify-center gap-2 ${
-                      user?.canSellNfts && !isNftProfilePic
+                      !isNftProfilePic
                         ? "bg-[#1e293b] hover:bg-[#334155] cursor-pointer"
                         : "bg-[#1e293b] opacity-50 cursor-not-allowed"
                     }`}
@@ -400,7 +400,14 @@ export default function MintedNftDetailScreen({
                     <span className="text-sm font-bold text-[#f8fafc] leading-5">Quick Sell</span>
                   </button>
                 </>
-              ) : null}
+              ) : (
+                <button
+                  disabled
+                  className="h-[52px] rounded-xl bg-[#1e293b] flex items-center justify-center gap-2 cursor-not-allowed opacity-50"
+                >
+                  <span className="text-sm font-bold text-[#94a3b8] leading-5">Quick Sell</span>
+                </button>
+              )}
             </div>
 
             <div className="flex flex-col gap-4 pt-2">
