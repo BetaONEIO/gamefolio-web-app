@@ -2104,28 +2104,18 @@ export default function StorePage() {
           {/* Mint NFT Section */}
           {activeTab === "mint" && (
             <div className="flex flex-col items-center justify-center min-h-[50vh] md:min-h-[60vh] px-4">
-              <Sparkles className={`h-16 w-16 md:h-20 md:w-20 mb-4 ${user?.canMintNfts ? 'text-[#4ade80]' : 'text-[#94a3b8] opacity-50'}`} />
+              <Sparkles className="h-16 w-16 md:h-20 md:w-20 mb-4 text-[#4ade80]" />
               <h3 className="text-xl md:text-2xl font-semibold mb-2 text-center text-[#94a3b8]" data-testid="heading-mint-coming-soon">
                 Mint Your Own NFT
               </h3>
-              {user?.canMintNfts ? (
-                <>
-                  <p className="text-sm md:text-base text-[#4ade80] text-center max-w-md" data-testid="text-mint-description">
-                    You have access to the NFT minting page.
-                  </p>
-                  <Link href="/mint">
-                    <Button className="mt-6 bg-[#4ade80] text-[#022c22] hover:bg-[#22c55e]" size="sm" data-testid="button-start-minting">
-                      Start Minting
-                    </Button>
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Button className="mt-6 bg-[#1e293b] text-[#94a3b8] cursor-not-allowed opacity-50" size="sm" disabled data-testid="button-start-minting">
-                    Start Minting
-                  </Button>
-                </>
-              )}
+              <p className="text-sm md:text-base text-[#4ade80] text-center max-w-md" data-testid="text-mint-description">
+                Create and mint your own NFTs on the blockchain.
+              </p>
+              <Link href="/mint">
+                <Button className="mt-6 bg-[#4ade80] text-[#022c22] hover:bg-[#22c55e]" size="sm" data-testid="button-start-minting">
+                  Start Minting
+                </Button>
+              </Link>
             </div>
           )}
 
