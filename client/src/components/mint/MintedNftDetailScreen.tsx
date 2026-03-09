@@ -127,7 +127,7 @@ export default function MintedNftDetailScreen({
       <QuickSellScreen
         nft={nft}
         txHash={txHash}
-        canSell={!!user?.canSellNfts}
+        canSell={true}
         onClose={() => setShowQuickSell(false)}
         onSold={(result) => {
           setSold(true);
