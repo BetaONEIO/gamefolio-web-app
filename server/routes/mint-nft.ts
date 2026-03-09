@@ -634,42 +634,7 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
     const metadataResults = await Promise.allSettled(
       ownedTokenIds.slice(0, 50).map(async (tokenId: number) => {
         const dbRow = rowMap.get(tokenId);
-        try {
-          const tokenURI = await publicClient.readContract({
-            address: NFT_CONTRACT_ADDRESS as `0x${string}`,
-            abi: NFT_ABI,
-            functionName: 'tokenURI',
-            args: [BigInt(tokenId)],
-          });
-
-          for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
-            try {
-              const url = ipfsToHttp(tokenURI as string, i) + '.json';
-              const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
-              if (response.ok) {
-                const metadata = await response.json();
-                if (metadata.image) {
-                  metadata.image = ipfsToProxyUrl(metadata.image);
-                }
-                return {
-                  tokenId,
-                  txHash: dbRow?.txHash || '',
-                  mintedAt: dbRow?.mintedAt || '',
-                  sold: dbRow?.sold || false,
-                  soldAt: dbRow?.soldAt || null,
-                  listedPrice: dbRow?.listedPrice || null,
-                  listingActive: dbRow?.listingActive || false,
-                  ...metadata,
-                };
-              }
-            } catch {
-              continue;
-            }
-          }
-        } catch (contractErr) {
-          console.error(`Error reading contract for token ${tokenId}:`, contractErr);
-        }
-        return {
+        const fallbackData = {
           tokenId,
           name: `Gamefolio Genesis #${tokenId}`,
           image: null,
@@ -680,6 +645,39 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
           listedPrice: dbRow?.listedPrice || null,
           listingActive: dbRow?.listingActive || false,
         };
+
+        try {
+          const tokenURI = await publicClient.readContract({
+            address: NFT_CONTRACT_ADDRESS as `0x${string}`,
+            abi: NFT_ABI,
+            functionName: 'tokenURI',
+            args: [BigInt(tokenId)],
+          });
+
+          if (!tokenURI) return fallbackData;
+
+          for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
+            try {
+              const url = ipfsToHttp(tokenURI as string, i) + '.json';
+              const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+              if (response.ok) {
+                const metadata = await response.json();
+                if (metadata.image) {
+                  metadata.image = ipfsToProxyUrl(metadata.image);
+                }
+                return {
+                  ...fallbackData,
+                  ...metadata,
+                };
+              }
+            } catch {
+              continue;
+            }
+          }
+        } catch (contractErr) {
+          console.error(`Error reading contract for token ${tokenId}:`, contractErr);
+        }
+        return fallbackData;
       })
     );
 
