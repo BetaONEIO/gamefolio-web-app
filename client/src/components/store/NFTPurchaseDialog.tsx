@@ -292,7 +292,6 @@ export function NFTPurchaseDialog({
                     <span className="text-sm font-bold text-[#f8fafc]">Total Payment</span>
                     <div className="flex flex-col items-end">
                       <span className="text-lg font-bold text-[#4ade80] leading-7">{totalAmount.toFixed(2)} GFT</span>
-                      <span className="text-[10px] text-[#94a3b8]">≈ £{(totalAmount * 0.01).toFixed(2)} GBP</span>
                     </div>
                   </div>
                 </div>
@@ -438,7 +437,6 @@ export function NFTPurchaseDialog({
                       <div className="flex items-baseline gap-2">
                         <span className="text-2xl font-bold text-[#f8fafc]">{nft.price} GFT</span>
                       </div>
-                      <span className="text-sm text-[#94a3b8]">£{nft.priceGBP.toFixed(2)}</span>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">

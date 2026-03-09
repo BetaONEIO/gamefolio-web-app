@@ -132,7 +132,6 @@ export function BorderCheckoutDialog({
                     <span className="text-sm font-black text-[#f8fafc] uppercase tracking-[1.4px]">Total</span>
                     <div className="text-right">
                       <div className="text-2xl font-black text-[#4ade80] tracking-[-0.6px]">{totalCost} GF</div>
-                      <div className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-[0.5px]">≈ £{(totalCost * 0.01).toFixed(2)} GBP</div>
                     </div>
                   </div>
                 </div>
