@@ -66,8 +66,8 @@ export default function QuickSellScreen({
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Server sell failed");
 
-        toast({ title: "NFT Listed!", description: `NFT listed at ${QUICK_SELL_PRICE} GFT. Transfer confirmed on-chain.` });
-        onSold({ receivedAmount: data.receivedAmount, txHash: data.txHash });
+        toast({ title: "NFT Listed!", description: `NFT listed on the marketplace at ${QUICK_SELL_PRICE} GFT.` });
+        onSold({ receivedAmount: data.receivedAmount, txHash: data.txHash || '' });
       } else {
         if (!walletClient || !publicClient) {
           toast({ title: "Wallet Required", description: "Please connect your wallet to sell.", variant: "destructive" });
