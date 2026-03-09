@@ -2,9 +2,9 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db';
 import { users } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
-import { createPublicClient, http, parseUnits, decodeEventLog, type Address } from 'viem';
+import { createPublicClient, http, decodeEventLog, type Address } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } from '../../shared/contracts';
+import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, NFT_CONTRACT_ADDRESS, NFT_ABI, SKALE_NEBULA_TESTNET } from '../../shared/contracts';
 import { transferGfTokens } from '../gf-token-service';
 
 const GF_DECIMALS = 18;
@@ -24,8 +24,18 @@ function getTreasuryAddress(): string {
 const router = Router();
 
 const QUICK_SELL_PRICE = 250;
-const PLATFORM_FEE_PERCENT = 1.5;
-const QUICK_LIST_FEE = 1.25;
+
+router.get('/api/nft/quick-sell-intent', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+    const treasuryAddress = getTreasuryAddress();
+    return res.json({ treasuryAddress, sellPrice: QUICK_SELL_PRICE });
+  } catch (error: any) {
+    console.error('[Quick Sell Intent] Error:', error);
+    return res.status(500).json({ error: 'Failed to create sell intent.' });
+  }
+});
 
 router.post('/api/nft/quick-sell', async (req: Request, res: Response) => {
   try {
@@ -34,40 +44,69 @@ router.post('/api/nft/quick-sell', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { tokenId } = req.body;
+    const { tokenId, txHash } = req.body;
     if (tokenId == null || typeof tokenId !== 'number') {
       return res.status(400).json({ error: 'Token ID is required' });
+    }
+    if (!txHash) {
+      return res.status(400).json({ error: 'Transaction hash is required' });
     }
 
     const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-
-    if (user.activeProfilePicType === 'nft' && user.nftProfileTokenId === tokenId) {
-      return res.status(400).json({ error: 'This NFT is currently set as your profile picture. Please remove it as your profile picture before selling.' });
+    if (!user.walletAddress) {
+      return res.status(400).json({ error: 'Wallet address not found for user' });
     }
 
-    const platformFee = QUICK_SELL_PRICE * (PLATFORM_FEE_PERCENT / 100);
-    const totalDeductions = platformFee + QUICK_LIST_FEE;
-    const receivedAmount = QUICK_SELL_PRICE - totalDeductions;
+    if (user.activeProfilePicType === 'nft' && user.nftProfileTokenId === tokenId) {
+      return res.status(400).json({ error: 'This NFT is currently set as your profile picture. Please remove it before selling.' });
+    }
 
-    console.log(`[Quick Sell] User ${userId} listed NFT #${tokenId} for quick sale, will receive ${receivedAmount} GFT`);
+    const treasuryAddress = getTreasuryAddress().toLowerCase();
+
+    const receipt = await marketplacePublicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
+    if (receipt.status !== 'success') {
+      return res.status(400).json({ error: 'Transaction failed on-chain' });
+    }
+
+    let validTransfer = false;
+    for (const log of receipt.logs) {
+      if (log.address.toLowerCase() !== NFT_CONTRACT_ADDRESS.toLowerCase()) continue;
+      try {
+        const decoded = decodeEventLog({ abi: NFT_ABI, data: log.data, topics: log.topics });
+        if (decoded.eventName === 'Transfer') {
+          const { from, to, tokenId: transferredTokenId } = decoded.args as { from: Address; to: Address; tokenId: bigint };
+          if (
+            from.toLowerCase() === user.walletAddress.toLowerCase() &&
+            to.toLowerCase() === treasuryAddress &&
+            Number(transferredTokenId) === tokenId
+          ) {
+            validTransfer = true;
+            break;
+          }
+        }
+      } catch { continue; }
+    }
+
+    if (!validTransfer) {
+      return res.status(400).json({ error: 'On-chain NFT transfer not verified: wrong token, sender, or recipient.' });
+    }
 
     await db.execute(
-      sql`UPDATE user_nfts SET sold = true, sold_at = NOW(), listing_active = true, listed_price = ${QUICK_SELL_PRICE} WHERE user_id = ${userId} AND token_id = ${tokenId}`
+      sql`UPDATE user_nfts SET sold = true, sold_at = NOW(), listing_active = true, listed_price = ${QUICK_SELL_PRICE}, tx_hash = ${txHash} WHERE user_id = ${userId} AND token_id = ${tokenId}`
     );
 
-    console.log(`[Quick Sell] User ${userId} sold NFT #${tokenId} for ${receivedAmount} GFT (price: ${QUICK_SELL_PRICE}, fees: ${totalDeductions})`);
+    console.log(`[Quick Sell] User ${userId} transferred NFT #${tokenId} on-chain to treasury. Tx: ${txHash}`);
 
     return res.json({
       success: true,
       tokenId,
       sellPrice: QUICK_SELL_PRICE,
-      platformFee,
-      quickListFee: QUICK_LIST_FEE,
-      receivedAmount,
-      message: `NFT #${tokenId} listed for quick sale. ${receivedAmount} GFT credited to your balance.`,
+      receivedAmount: QUICK_SELL_PRICE,
+      txHash,
+      message: `NFT #${tokenId} listed for quick sale at ${QUICK_SELL_PRICE} GFT.`,
     });
   } catch (error: any) {
     console.error('[Quick Sell] Error:', error);

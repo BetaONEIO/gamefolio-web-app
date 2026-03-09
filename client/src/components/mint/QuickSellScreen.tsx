@@ -1,6 +1,9 @@
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useAccount, useWalletClient, usePublicClient, useChainId } from "wagmi";
+import { NFT_CONTRACT_ADDRESS, NFT_ABI, SKALE_NEBULA_TESTNET } from "@shared/contracts";
+import type { Address } from "viem";
 
 interface QuickSellNft {
   id: number;
@@ -17,6 +20,7 @@ interface QuickSellScreenProps {
 }
 
 const QUICK_SELL_PRICE = 250;
+const SKALE_CHAIN_ID = SKALE_NEBULA_TESTNET.id;
 
 function getTokenIdPadded(id: number): string {
   return `#${String(id).padStart(3, "0")}`;
@@ -24,41 +28,85 @@ function getTokenIdPadded(id: number): string {
 
 export default function QuickSellScreen({
   nft,
-  txHash,
   canSell = false,
   onClose,
   onSold,
 }: QuickSellScreenProps) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
   const { toast } = useToast();
+
+  const { address, isConnected } = useAccount();
+  const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
+  const chainId = useChainId();
 
   const displayName = nft.name || `Gamefolio Genesis ${getTokenIdPadded(nft.id)}`;
   const collectionName = nft.name?.split(" ").slice(0, -1).join(" ") || "Genesis Collection";
 
   const handleConfirmSell = async () => {
+    if (!isConnected || !walletClient || !publicClient) {
+      toast({ title: "Wallet Required", description: "Please connect your wallet to sell.", variant: "destructive" });
+      return;
+    }
+    if (chainId !== SKALE_CHAIN_ID) {
+      toast({ title: "Wrong Network", description: "Please switch to the SKALE network.", variant: "destructive" });
+      return;
+    }
+
     setIsProcessing(true);
     try {
-      const res = await fetch("/api/nft/quick-sell", {
+      setStatusMessage("Getting sell details...");
+      const intentRes = await fetch("/api/nft/quick-sell-intent", {
+        credentials: "include",
+      });
+      if (!intentRes.ok) {
+        const err = await intentRes.json();
+        throw new Error(err.error || "Failed to get sell details");
+      }
+      const { treasuryAddress } = await intentRes.json();
+
+      setStatusMessage("Confirm the NFT transfer in your wallet...");
+      toast({ title: "Sign transaction", description: "Approve the NFT transfer to the marketplace." });
+
+      const sellTxHash = await walletClient.writeContract({
+        address: NFT_CONTRACT_ADDRESS as Address,
+        abi: NFT_ABI,
+        functionName: "safeTransferFrom",
+        args: [address as Address, treasuryAddress as Address, BigInt(nft.id)],
+      });
+
+      setStatusMessage("Confirming on-chain transfer...");
+      toast({ title: "Verifying transfer...", description: "Waiting for blockchain confirmation." });
+      await publicClient.waitForTransactionReceipt({ hash: sellTxHash, confirmations: 1 });
+
+      setStatusMessage("Recording sale...");
+      const verifyRes = await fetch("/api/nft/quick-sell", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ tokenId: nft.id }),
+        body: JSON.stringify({ tokenId: nft.id, txHash: sellTxHash }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Quick sell failed");
+      const data = await verifyRes.json();
+      if (!verifyRes.ok) {
+        throw new Error(data.error || "Quick sell verification failed");
       }
-      onSold({ receivedAmount: data.receivedAmount, txHash: data.txHash || txHash });
+
+      toast({ title: "NFT Listed!", description: `NFT listed at ${QUICK_SELL_PRICE} GFT. Transfer confirmed on-chain.` });
+      onSold({ receivedAmount: data.receivedAmount, txHash: sellTxHash });
     } catch (err: any) {
-      toast({
-        title: "Quick Sell Failed",
-        description: err.message || "Something went wrong",
-        variant: "destructive",
-      });
+      let description = err.message || "Something went wrong";
+      if (description.includes("user rejected") || description.includes("User rejected")) {
+        description = "Transaction was cancelled.";
+      }
+      toast({ title: "Quick Sell Failed", description, variant: "destructive" });
     } finally {
       setIsProcessing(false);
+      setStatusMessage("");
     }
   };
+
+  const walletReady = isConnected && !!walletClient && chainId === SKALE_CHAIN_ID;
 
   return (
     <div className="fixed inset-0 z-[120] bg-[#101D27] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
@@ -128,6 +176,14 @@ export default function QuickSellScreen({
             </div>
           </div>
 
+          {!walletReady && !isProcessing && (
+            <div className="w-full rounded-2xl bg-[#ef44441a] border border-[#ef444433] p-4 flex gap-3 mt-4">
+              <span className="text-sm font-normal text-[#ef4444] leading-5">
+                {!isConnected ? "Connect your wallet to sell this NFT." : chainId !== SKALE_CHAIN_ID ? "Switch to the SKALE network to continue." : "Wallet not ready."}
+              </span>
+            </div>
+          )}
+
           <div className="w-full rounded-2xl bg-[#14532d1a] border border-[#14532d33] p-[17px] flex gap-4 mt-6">
             <div className="flex-shrink-0 pt-0.5">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -136,17 +192,17 @@ export default function QuickSellScreen({
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-sm font-bold text-[#4ade80] uppercase tracking-[0.35px] leading-5">
-                Rapid Liquidity
+                On-Chain Transfer
               </span>
               <span className="text-sm font-normal text-[#94a3b8] leading-[22.75px]">
-                Quick Sell bypasses the standard auction process. Your NFT is listed at the floor-guaranteed price of {QUICK_SELL_PRICE} GFT and typically settles within minutes.
+                Your NFT will be transferred on-chain to the marketplace treasury. This transaction will be visible on the block explorer. Once sold, GFT is transferred to your wallet.
               </span>
             </div>
           </div>
 
           <div className="py-4">
             <span className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.55px] leading-[16.5px] text-center block">
-              Proceeding will list this asset for immediate purchase
+              Your wallet will prompt you to sign the NFT transfer
             </span>
           </div>
         </div>
@@ -155,19 +211,20 @@ export default function QuickSellScreen({
       <div className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md bg-[#101D27cc] border-t border-[#1e293b4d]">
         <div className="w-full max-w-[430px] md:max-w-3xl mx-auto flex flex-col md:flex-row-reverse gap-3 px-6 py-6 pb-8 md:pb-6">
           <button
-            onClick={canSell ? handleConfirmSell : undefined}
-            disabled={!canSell || isProcessing}
+            onClick={handleConfirmSell}
+            disabled={isProcessing}
             className={`w-full md:flex-1 h-[60px] rounded-2xl bg-[#4ade80] flex items-center justify-center gap-2 ${
-              canSell && !isProcessing ? "hover:bg-[#22c55e] cursor-pointer" : "cursor-not-allowed opacity-50"
+              !isProcessing ? "hover:bg-[#22c55e] cursor-pointer" : "cursor-not-allowed opacity-50"
             }`}
           >
             <span className="text-lg font-bold text-[#022c22] leading-7">
-              {isProcessing ? "Processing..." : "Confirm Quick Sell"}
+              {isProcessing ? (statusMessage || "Processing...") : "Confirm Quick Sell"}
             </span>
           </button>
           <button
             onClick={onClose}
-            className="w-full md:flex-1 h-[60px] rounded-2xl flex items-center justify-center hover:bg-[#1e293b] transition-colors"
+            disabled={isProcessing}
+            className="w-full md:flex-1 h-[60px] rounded-2xl flex items-center justify-center hover:bg-[#1e293b] transition-colors disabled:opacity-50"
           >
             <span className="text-lg font-bold text-[#94a3b8] leading-7">Go Back</span>
           </button>
