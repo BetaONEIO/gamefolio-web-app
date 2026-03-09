@@ -26,6 +26,7 @@ import { BorderDetailDialog } from "@/components/store/BorderDetailDialog";
 import { VerificationBadgeDetailDialog } from "@/components/store/VerificationBadgeDetailDialog";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import { useAccount, useWalletClient, usePublicClient, useChainId } from "wagmi";
+import { useOpenConnectModal } from "@0xsequence/connect";
 import { useLocation } from "wouter";
 import {
   Dialog as WalletDialog,
@@ -211,6 +212,7 @@ export default function StorePage() {
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
   const chainId = useChainId();
+  const { setOpenConnectModal } = useOpenConnectModal();
   const { data: tokenBalance } = useTokenBalance();
 
   const [brokenNameTagImages, setBrokenNameTagImages] = useState<Set<number>>(new Set());
@@ -318,8 +320,7 @@ export default function StorePage() {
       return;
     }
     if (!isConnected || !walletClient || !publicClient) {
-      toast({ title: "Wallet not connected", description: "Please connect your wallet to purchase", variant: "destructive" });
-      setWalletRedirectOpen(true);
+      setOpenConnectModal(true);
       return;
     }
     if (chainId !== SKALE_CHAIN_ID) {
@@ -390,8 +391,7 @@ export default function StorePage() {
     }
 
     if (!isConnected || !walletClient || !publicClient) {
-      toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
-      setWalletRedirectOpen(true);
+      setOpenConnectModal(true);
       return;
     }
 
@@ -470,8 +470,7 @@ export default function StorePage() {
   const handlePurchaseNameTagOnChain = async (nameTagId: number) => {
     if (!user) { openModal(); return; }
     if (!isConnected || !walletClient || !publicClient) {
-      toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
-      setWalletRedirectOpen(true);
+      setOpenConnectModal(true);
       return;
     }
     if (chainId !== SKALE_CHAIN_ID) {
@@ -529,8 +528,7 @@ export default function StorePage() {
   const handlePurchaseBorderOnChain = async (borderId: number) => {
     if (!user) { openModal(); return; }
     if (!isConnected || !walletClient || !publicClient) {
-      toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
-      setWalletRedirectOpen(true);
+      setOpenConnectModal(true);
       return;
     }
     if (chainId !== SKALE_CHAIN_ID) {

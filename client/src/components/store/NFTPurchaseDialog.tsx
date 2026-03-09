@@ -13,6 +13,7 @@ import { apiRequest } from "@/lib/queryClient";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import { LoginPromptModal } from "@/components/auth/LoginPromptModal";
 import { useAccount, useWalletClient, usePublicClient, useChainId } from "wagmi";
+import { useOpenConnectModal } from "@0xsequence/connect";
 import { parseUnits, type Address } from "viem";
 import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } from "@shared/contracts";
 import { useTokenBalance } from "@/hooks/use-token";
@@ -56,6 +57,7 @@ export function NFTPurchaseDialog({
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
   const chainId = useChainId();
+  const { setOpenConnectModal } = useOpenConnectModal();
   const { data: tokenBalance } = useTokenBalance();
 
   const SKALE_CHAIN_ID = SKALE_NEBULA_TESTNET.id;
@@ -103,11 +105,7 @@ export function NFTPurchaseDialog({
       return;
     }
     if (!isConnected || !walletClient) {
-      toast({
-        title: "Wallet Required",
-        description: "Please connect your wallet to purchase NFTs.",
-        variant: "destructive",
-      });
+      setOpenConnectModal(true);
       return;
     }
     setStep('checkout');
@@ -119,7 +117,7 @@ export function NFTPurchaseDialog({
       return;
     }
     if (!isConnected || !walletClient || !publicClient) {
-      toast({ title: "Wallet Required", description: "Please connect your wallet to complete the purchase.", variant: "destructive" });
+      setOpenConnectModal(true);
       return;
     }
     if (chainId !== SKALE_CHAIN_ID) {
