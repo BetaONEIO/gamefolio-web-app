@@ -610,7 +610,7 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
     }
 
     const dbNfts = await db.execute(
-      sql`SELECT token_id, tx_hash, minted_at, sold, sold_at, listed_price, listing_active FROM user_nfts WHERE user_id = ${userId} ORDER BY minted_at DESC`
+      sql`SELECT token_id, tx_hash, minted_at, sold, sold_at, listed_price, listing_active FROM user_nfts WHERE user_id = ${userId} ORDER BY token_id DESC`
     );
 
     const rows = (dbNfts as any).rows || dbNfts;
@@ -679,9 +679,22 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
       })
     );
 
-    const nfts = metadataResults
-      .filter((r) => r.status === 'fulfilled')
-      .map((r) => (r as PromiseFulfilledResult<any>).value);
+    const nfts = metadataResults.map((r, i) => {
+      if (r.status === 'fulfilled') return r.value;
+      const tokenId = ownedTokenIds[i];
+      const dbRow = rowMap.get(tokenId);
+      return {
+        tokenId,
+        name: `Gamefolio Genesis #${tokenId}`,
+        image: null,
+        txHash: dbRow?.txHash || '',
+        mintedAt: dbRow?.mintedAt || '',
+        sold: dbRow?.sold || false,
+        soldAt: dbRow?.soldAt || null,
+        listedPrice: dbRow?.listedPrice || null,
+        listingActive: dbRow?.listingActive || false,
+      };
+    });
 
     return res.json({ nfts, count: ownedTokenIds.length });
   } catch (error: any) {
