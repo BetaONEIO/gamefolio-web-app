@@ -37,6 +37,7 @@ export default function MintNFTPage() {
     mintTxState,
     mintResult,
     onChainBalance,
+    balanceLoaded,
     totalMinted,
     approve,
     mint,
@@ -83,8 +84,8 @@ export default function MintNFTPage() {
   const allowanceApproved = allowanceState === 'approved';
   const isApproving = allowanceState === 'approving';
   const isCheckingAllowance = allowanceState === 'checking';
-  const canMint = isConnected && quantity <= maxPerTx && allowanceApproved && (useServerSigning || onChainBalanceFormatted >= mintPrice);
-  const hasInsufficientBalance = !useServerSigning && onChainBalanceFormatted < mintPrice;
+  const hasInsufficientBalance = isConnected && balanceLoaded && onChainBalanceFormatted < mintPrice;
+  const canMint = isConnected && balanceLoaded && quantity <= maxPerTx && allowanceApproved && onChainBalanceFormatted >= mintPrice;
 
   const handleEnableAllowance = async () => {
     if (!isConnected) {
@@ -696,9 +697,13 @@ export default function MintNFTPage() {
                     <span className="text-[10px] font-bold text-[#94a3b8] uppercase">
                       Your Balance
                     </span>
-                    <span className="text-sm font-bold text-[#f8fafc]">
-                      {onChainBalanceFormatted.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GFT
-                    </span>
+                    {!balanceLoaded ? (
+                      <span className="text-sm font-bold text-[#94a3b8]">Loading...</span>
+                    ) : (
+                      <span className={`text-sm font-bold ${hasInsufficientBalance ? 'text-[#ef4444]' : 'text-[#f8fafc]'}`}>
+                        {onChainBalanceFormatted.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GFT
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -797,7 +802,13 @@ export default function MintNFTPage() {
                   }`}
                 >
                   <Sparkles className="h-6 w-6" />
-                  {mintState === "processing" ? "Minting..." : "Mint NFT"}
+                  {mintState === "processing"
+                    ? "Minting..."
+                    : hasInsufficientBalance
+                    ? "Insufficient GFT Balance"
+                    : !balanceLoaded
+                    ? "Loading..."
+                    : "Mint NFT"}
                 </button>
             </div>
 

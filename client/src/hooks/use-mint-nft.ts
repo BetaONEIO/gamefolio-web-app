@@ -32,6 +32,7 @@ export function useMintNFT(fallbackAddress?: string | null) {
   const [mintTxState, setMintTxState] = useState<MintTxState>('idle');
   const [mintResult, setMintResult] = useState<MintResult | null>(null);
   const [onChainBalance, setOnChainBalance] = useState<bigint>(BigInt(0));
+  const [balanceLoaded, setBalanceLoaded] = useState(false);
   const [totalMinted, setTotalMinted] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [needsWalletRegeneration, setNeedsWalletRegeneration] = useState(false);
@@ -78,6 +79,7 @@ export function useMintNFT(fallbackAddress?: string | null) {
         : BigInt(0);
 
       setOnChainBalance(balance);
+      setBalanceLoaded(true);
 
       try {
         if (effectiveAddress) {
@@ -290,6 +292,7 @@ export function useMintNFT(fallbackAddress?: string | null) {
     mintTxState,
     mintResult,
     onChainBalance,
+    balanceLoaded,
     totalMinted,
     error,
     approve,
