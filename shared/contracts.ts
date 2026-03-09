@@ -23,7 +23,7 @@ export const SKALE_BASE_MAINNET = {
   blockExplorers: {
     default: {
       name: 'SKALE Explorer',
-      url: 'https://base.explorer.mainnet.skalenodes.com',
+      url: 'https://skale-base-explorer.skalenodes.com',
     },
   },
 } as const;

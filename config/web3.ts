@@ -2,7 +2,7 @@ export const SKALE_CHAIN_ID = 1187947933 as const;
 
 export const SKALE_RPC_URL = "https://skale-base.skalenodes.com/v1/base" as const;
 
-export const SKALE_EXPLORER_BASE_URL = "https://base.explorer.mainnet.skalenodes.com" as const;
+export const SKALE_EXPLORER_BASE_URL = "https://skale-base-explorer.skalenodes.com" as const;
 
 export const GF_TOKEN_ADDRESS = "0xe45BeC5A80e6E32852393e77206eAf83160A90AE" as const;
 
