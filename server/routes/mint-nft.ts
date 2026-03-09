@@ -514,19 +514,29 @@ router.get('/api/nft/metadata/:tokenId', async (req: Request, res: Response) => 
       return res.status(400).json({ error: 'Invalid token ID' });
     }
 
-    const tokenURI = await publicClient.readContract({
-      address: NFT_CONTRACT_ADDRESS as `0x${string}`,
-      abi: NFT_ABI,
-      functionName: 'tokenURI',
-      args: [BigInt(tokenId)],
-    });
+    let tokenURI: string | null = null;
+    try {
+      tokenURI = await publicClient.readContract({
+        address: NFT_CONTRACT_ADDRESS as `0x${string}`,
+        abi: NFT_ABI,
+        functionName: 'tokenURI',
+        args: [BigInt(tokenId)],
+      }) as string;
+    } catch (contractErr) {
+      console.warn(`Contract tokenURI failed for ${tokenId}, using default baseURI`);
+      tokenURI = `${MINT_CONFIG.baseURI}${tokenId}`;
+    }
 
-    const metadataUrl = ipfsToHttp(tokenURI as string) + '.json';
+    if (!tokenURI) {
+      return res.status(404).json({ error: 'Token URI not found' });
+    }
+
+    const metadataUrl = ipfsToHttp(tokenURI) + '.json';
 
     let metadata: any = null;
     for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
       try {
-        const url = ipfsToHttp(tokenURI as string, i) + '.json';
+        const url = ipfsToHttp(tokenURI, i) + '.json';
         const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
         if (response.ok) {
           metadata = await response.json();
@@ -647,18 +657,24 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
         };
 
         try {
-          const tokenURI = await publicClient.readContract({
-            address: NFT_CONTRACT_ADDRESS as `0x${string}`,
-            abi: NFT_ABI,
-            functionName: 'tokenURI',
-            args: [BigInt(tokenId)],
-          });
+          let tokenURI: string | null = null;
+          try {
+            tokenURI = await publicClient.readContract({
+              address: NFT_CONTRACT_ADDRESS as `0x${string}`,
+              abi: NFT_ABI,
+              functionName: 'tokenURI',
+              args: [BigInt(tokenId)],
+            }) as string;
+          } catch (contractErr) {
+            console.warn(`Contract tokenURI failed for ${tokenId}, using default baseURI`);
+            tokenURI = `${MINT_CONFIG.baseURI}${tokenId}`;
+          }
 
           if (!tokenURI) return fallbackData;
 
           for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
             try {
-              const url = ipfsToHttp(tokenURI as string, i) + '.json';
+              const url = ipfsToHttp(tokenURI, i) + '.json';
               const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
               if (response.ok) {
                 const metadata = await response.json();
@@ -674,8 +690,8 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
               continue;
             }
           }
-        } catch (contractErr) {
-          console.error(`Error reading contract for token ${tokenId}:`, contractErr);
+        } catch (err) {
+          console.error(`Error processing token ${tokenId}:`, err);
         }
         return fallbackData;
       })
