@@ -25,8 +25,6 @@ interface WalletHomepageProps {
   onChainBalance?: string;
   offChainBalance?: number;
   walletAddress?: string;
-  fiatValue?: number;
-  portfolioValue?: number;
   stakedAmount?: number;
   nftsOwned?: number;
   ownedNFTs?: OwnedNFT[];
@@ -44,8 +42,6 @@ export default function WalletHomepage({
   onChainBalance = "0",
   offChainBalance = 0,
   walletAddress = "",
-  fiatValue,
-  portfolioValue,
   stakedAmount = 0,
   nftsOwned = 0,
   ownedNFTs = [],
@@ -61,8 +57,6 @@ export default function WalletHomepage({
   const [copied, setCopied] = useState(false);
 
   const totalBalance = offChainBalance;
-  const estimatedFiat = fiatValue ?? totalBalance * 0.01;
-  const displayPortfolioValue = portfolioValue ?? estimatedFiat;
 
   const { data: activityData, isLoading: isLoadingActivity } = useQuery<{ activities: any[] }>({
     queryKey: ['/api/wallet/activity'],
@@ -92,7 +86,7 @@ export default function WalletHomepage({
     id: a.id,
     type: 'purchased' as const,
     title: a.title || 'GFT Purchase',
-    subtitle: a.status === 'completed' ? `£${a.gbpAmount?.toFixed(2)} via Card` : a.status === 'pending' ? 'Payment pending' : a.status,
+    subtitle: a.status === 'completed' ? 'Card payment' : a.status === 'pending' ? 'Payment pending' : a.status,
     amount: a.amount,
     time: formatTimeAgo(a.date),
   }));
@@ -155,12 +149,6 @@ export default function WalletHomepage({
                 GFT
               </span>
             </div>
-            <span 
-              className="text-base md:text-lg"
-              style={{ color: '#94a3b8' }}
-            >
-              ≈ £{estimatedFiat.toFixed(2)} GBP
-            </span>
           </div>
         </div>
       </div>
@@ -310,10 +298,6 @@ export default function WalletHomepage({
             >
               <span className="text-lg font-bold" style={{ color: '#f8fafc' }}>Quick Stats</span>
               <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span style={{ color: '#94a3b8', fontSize: '14px' }}>Portfolio Value</span>
-                  <span style={{ color: '#fff', fontSize: '14px', fontWeight: 600 }}>£{displayPortfolioValue.toFixed(2)}</span>
-                </div>
                 <div className="flex items-center justify-between">
                   <span style={{ color: '#94a3b8', fontSize: '14px' }}>GFT Balance</span>
                   <span style={{ color: '#4ade80', fontSize: '14px', fontWeight: 600 }}>{offChainBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} GFT</span>

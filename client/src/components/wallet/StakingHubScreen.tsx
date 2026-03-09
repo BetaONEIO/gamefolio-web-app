@@ -165,8 +165,6 @@ export default function StakingHubScreen({
     );
   }
 
-  const fiatValueStaked = (totalStaked * 0.01).toFixed(2);
-  const fiatValueRewards = (rewardsEarned * 0.01).toFixed(2);
   const hasActiveStake = totalStaked > 0;
 
   return (
@@ -245,9 +243,6 @@ export default function StakingHubScreen({
             </span>
             <span className="text-lg font-bold truncate" style={{ color: "#4ade80" }}>
               +{rewardsEarned.toFixed(4)}
-            </span>
-            <span className="text-[10px]" style={{ color: "#94a3b8" }}>
-              ≈ £{fiatValueRewards} GBP
             </span>
           </div>
 
@@ -369,12 +364,6 @@ export default function StakingHubScreen({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <Clock className="w-3.5 h-3.5" style={{ color: "#94a3b8" }} />
-                  <span className="text-xs" style={{ color: "#94a3b8" }}>
-                    ≈ £{fiatValueStaked} GBP staked value
-                  </span>
-                </div>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 gap-4">
