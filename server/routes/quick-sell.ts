@@ -2,10 +2,11 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db';
 import { users } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
-import { createPublicClient, http, decodeEventLog, type Address } from 'viem';
+import { createPublicClient, http, decodeEventLog, parseUnits, type Address } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, NFT_CONTRACT_ADDRESS, NFT_ABI, SKALE_NEBULA_TESTNET } from '../../shared/contracts';
 import { transferGfTokens } from '../gf-token-service';
+import { writeContractWithPoW } from '../skale-pow';
 
 const GF_DECIMALS = 18;
 
@@ -111,6 +112,85 @@ router.post('/api/nft/quick-sell', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('[Quick Sell] Error:', error);
     return res.status(500).json({ error: 'Quick sell failed. Please try again.' });
+  }
+});
+
+router.post('/api/nft/server-sell', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    const { tokenId } = req.body;
+    if (tokenId == null || typeof tokenId !== 'number') {
+      return res.status(400).json({ error: 'Token ID is required' });
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user.walletAddress) return res.status(400).json({ error: 'No wallet address found for user' });
+    if (!user.encryptedPrivateKey) return res.status(400).json({ error: 'No wallet key found for user' });
+
+    if (user.activeProfilePicType === 'nft' && user.nftProfileTokenId === tokenId) {
+      return res.status(400).json({ error: 'This NFT is currently set as your profile picture. Please remove it before selling.' });
+    }
+
+    const treasuryAddress = getTreasuryAddress();
+    console.log(`[NFT Server Sell] User ${userId} selling NFT #${tokenId} to treasury ${treasuryAddress}`);
+
+    const txHash = await writeContractWithPoW({
+      encryptedPrivateKey: user.encryptedPrivateKey,
+      contractAddress: NFT_CONTRACT_ADDRESS as Address,
+      abi: NFT_ABI,
+      functionName: 'safeTransferFrom',
+      args: [user.walletAddress as Address, treasuryAddress as Address, BigInt(tokenId)],
+    });
+
+    console.log(`[NFT Server Sell] NFT transfer submitted. TX: ${txHash}`);
+    const receipt = await marketplacePublicClient.waitForTransactionReceipt({ hash: txHash, timeout: 60_000 });
+    if (receipt.status !== 'success') {
+      return res.status(500).json({ error: 'NFT transfer transaction failed on-chain' });
+    }
+
+    let validTransfer = false;
+    const treasuryLower = treasuryAddress.toLowerCase();
+    for (const log of receipt.logs) {
+      if (log.address.toLowerCase() !== NFT_CONTRACT_ADDRESS.toLowerCase()) continue;
+      try {
+        const decoded = decodeEventLog({ abi: NFT_ABI, data: log.data, topics: log.topics });
+        if (decoded.eventName === 'Transfer') {
+          const { from, to, tokenId: transferredTokenId } = decoded.args as { from: Address; to: Address; tokenId: bigint };
+          if (
+            from.toLowerCase() === user.walletAddress!.toLowerCase() &&
+            to.toLowerCase() === treasuryLower &&
+            Number(transferredTokenId) === tokenId
+          ) {
+            validTransfer = true;
+            break;
+          }
+        }
+      } catch { continue; }
+    }
+
+    if (!validTransfer) {
+      return res.status(500).json({ error: 'NFT transfer not verified on-chain' });
+    }
+
+    await db.execute(
+      sql`UPDATE user_nfts SET sold = true, sold_at = NOW(), listing_active = true, listed_price = ${QUICK_SELL_PRICE}, tx_hash = ${txHash} WHERE user_id = ${userId} AND token_id = ${tokenId}`
+    );
+
+    console.log(`[NFT Server Sell] NFT #${tokenId} listed for ${QUICK_SELL_PRICE} GFT. TX: ${txHash}`);
+    return res.json({
+      success: true,
+      tokenId,
+      sellPrice: QUICK_SELL_PRICE,
+      receivedAmount: QUICK_SELL_PRICE,
+      txHash,
+      message: `NFT #${tokenId} listed for quick sale at ${QUICK_SELL_PRICE} GFT.`,
+    });
+  } catch (error: any) {
+    console.error('[NFT Server Sell] Error:', error);
+    return res.status(500).json({ error: error.message || 'Server sell failed. Please try again.' });
   }
 });
 
