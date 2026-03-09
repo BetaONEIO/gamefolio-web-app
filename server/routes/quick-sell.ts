@@ -147,6 +147,14 @@ router.post('/api/nft/server-sell', async (req: Request, res: Response) => {
     );
 
     console.log(`[NFT Server Sell] NFT #${tokenId} listed for ${QUICK_SELL_PRICE} GFT by user ${userId}`);
+
+    if (user.walletAddress) {
+      console.log(`[NFT Server Sell] Transferring ${QUICK_SELL_PRICE} GFT to ${user.walletAddress} for NFT #${tokenId}`);
+      transferGfTokens(user.walletAddress, QUICK_SELL_PRICE).catch(err =>
+        console.error(`[NFT Server Sell] Failed to transfer GFT to user ${userId} for NFT #${tokenId}:`, err)
+      );
+    }
+
     return res.json({
       success: true,
       tokenId,
