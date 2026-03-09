@@ -1896,98 +1896,6 @@ const ProfilePage = () => {
                     </div>
                   )}
 
-                  {/* Bio/description - left aligned */}
-                  {profile.bio && (
-                    <p className="text-sm text-foreground/90 mb-4 pr-4">{profile.bio}</p>
-                  )}
-
-                  {/* Platform tags and Social Links - appear below bio */}
-                  <div className="flex flex-wrap gap-1.5 mt-4">
-                    {profile.steamUsername && (
-                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(27, 40, 56, 0.8)', color: '#FFFFFF' }}>
-                        <SiSteam className="w-2.5 h-2.5" />
-                        <span>{profile.steamUsername}</span>
-                      </div>
-                    )}
-                    {profile.nintendoUsername && (
-                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(230, 0, 18, 0.8)', color: '#FFFFFF' }}>
-                        <SiNintendo className="w-2.5 h-2.5" />
-                        <span>{profile.nintendoUsername}</span>
-                      </div>
-                    )}
-                    {profile.xboxUsername && (
-                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(16, 124, 16, 0.8)', color: '#FFFFFF' }}>
-                        <FaXbox className="w-2.5 h-2.5" />
-                        <span>{profile.xboxUsername}</span>
-                      </div>
-                    )}
-                    {profile.playstationUsername && (
-                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(0, 55, 145, 0.8)', color: '#FFFFFF' }}>
-                        <SiPlaystation className="w-2.5 h-2.5" />
-                        <span>{profile.playstationUsername}</span>
-                      </div>
-                    )}
-                    {profile.epicUsername && (
-                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(49, 49, 49, 0.8)', color: '#FFFFFF' }}>
-                        <SiEpicgames className="w-2.5 h-2.5" />
-                        <span>{profile.epicUsername}</span>
-                      </div>
-                    )}
-                    {profile.discordUsername && (
-                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(88, 101, 242, 0.8)', color: '#FFFFFF' }}>
-                        <SiDiscord className="w-2.5 h-2.5" />
-                        <span>{profile.discordUsername}</span>
-                      </div>
-                    )}
-                    {profile.twitterUsername && (
-                      <a 
-                        href={`https://twitter.com/${profile.twitterUsername}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                        style={{ backgroundColor: 'rgba(29, 161, 242, 0.8)', color: '#FFFFFF' }}
-                      >
-                        <FaXTwitter className="w-2.5 h-2.5" />
-                        <span>{profile.twitterUsername}</span>
-                      </a>
-                    )}
-                    {profile.youtubeUsername && (
-                      <a 
-                        href={`https://youtube.com/@${profile.youtubeUsername}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                        style={{ backgroundColor: 'rgba(255, 0, 0, 0.8)', color: '#FFFFFF' }}
-                      >
-                        <FaYoutube className="w-2.5 h-2.5" />
-                        <span>{profile.youtubeUsername}</span>
-                      </a>
-                    )}
-                    {profile.instagramUsername && (
-                      <a 
-                        href={`https://instagram.com/${profile.instagramUsername}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                        style={{ backgroundColor: 'rgba(228, 64, 95, 0.8)', color: '#FFFFFF' }}
-                      >
-                        <FaInstagram className="w-2.5 h-2.5" />
-                        <span>{profile.instagramUsername}</span>
-                      </a>
-                    )}
-                    {profile.facebookUsername && (
-                      <a 
-                        href={`https://facebook.com/${profile.facebookUsername}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                        style={{ backgroundColor: 'rgba(24, 119, 242, 0.8)', color: '#FFFFFF' }}
-                      >
-                        <FaFacebook className="w-2.5 h-2.5" />
-                        <span>{profile.facebookUsername}</span>
-                      </a>
-                    )}
-                  </div>
                 </>
               ) : (
                 <div className="mt-2">
@@ -2001,6 +1909,101 @@ const ProfilePage = () => {
               )}
             </div>
           </div>
+
+          {/* Bio - rendered outside the L-shaped container so it never overlaps */}
+          {profileSectionTab === 'stats' && profile.bio && (
+            <p className="text-sm text-foreground/90 mt-4 mb-3 px-4 break-words">{profile.bio}</p>
+          )}
+
+          {/* Social linked accounts - rendered outside the L-shaped container, always below bio */}
+          {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
+            <div className="flex flex-wrap gap-1.5 px-4 pb-4">
+              {profile.steamUsername && (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(27, 40, 56, 0.8)', color: '#FFFFFF' }}>
+                  <SiSteam className="w-2.5 h-2.5" />
+                  <span>{profile.steamUsername}</span>
+                </div>
+              )}
+              {profile.nintendoUsername && (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(230, 0, 18, 0.8)', color: '#FFFFFF' }}>
+                  <SiNintendo className="w-2.5 h-2.5" />
+                  <span>{profile.nintendoUsername}</span>
+                </div>
+              )}
+              {profile.xboxUsername && (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(16, 124, 16, 0.8)', color: '#FFFFFF' }}>
+                  <FaXbox className="w-2.5 h-2.5" />
+                  <span>{profile.xboxUsername}</span>
+                </div>
+              )}
+              {profile.playstationUsername && (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(0, 55, 145, 0.8)', color: '#FFFFFF' }}>
+                  <SiPlaystation className="w-2.5 h-2.5" />
+                  <span>{profile.playstationUsername}</span>
+                </div>
+              )}
+              {profile.epicUsername && (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(49, 49, 49, 0.8)', color: '#FFFFFF' }}>
+                  <SiEpicgames className="w-2.5 h-2.5" />
+                  <span>{profile.epicUsername}</span>
+                </div>
+              )}
+              {profile.discordUsername && (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(88, 101, 242, 0.8)', color: '#FFFFFF' }}>
+                  <SiDiscord className="w-2.5 h-2.5" />
+                  <span>{profile.discordUsername}</span>
+                </div>
+              )}
+              {profile.twitterUsername && (
+                <a
+                  href={`https://twitter.com/${profile.twitterUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: 'rgba(29, 161, 242, 0.8)', color: '#FFFFFF' }}
+                >
+                  <FaXTwitter className="w-2.5 h-2.5" />
+                  <span>{profile.twitterUsername}</span>
+                </a>
+              )}
+              {profile.youtubeUsername && (
+                <a
+                  href={`https://youtube.com/@${profile.youtubeUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: 'rgba(255, 0, 0, 0.8)', color: '#FFFFFF' }}
+                >
+                  <FaYoutube className="w-2.5 h-2.5" />
+                  <span>{profile.youtubeUsername}</span>
+                </a>
+              )}
+              {profile.instagramUsername && (
+                <a
+                  href={`https://instagram.com/${profile.instagramUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: 'rgba(228, 64, 95, 0.8)', color: '#FFFFFF' }}
+                >
+                  <FaInstagram className="w-2.5 h-2.5" />
+                  <span>{profile.instagramUsername}</span>
+                </a>
+              )}
+              {profile.facebookUsername && (
+                <a
+                  href={`https://facebook.com/${profile.facebookUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: 'rgba(24, 119, 242, 0.8)', color: '#FFFFFF' }}
+                >
+                  <FaFacebook className="w-2.5 h-2.5" />
+                  <span>{profile.facebookUsername}</span>
+                </a>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Desktop Layout - Vertical stacked on left */}
