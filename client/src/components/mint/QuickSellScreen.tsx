@@ -2,6 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAccount, useWalletClient, usePublicClient, useChainId } from "wagmi";
+import { useOpenConnectModal } from "@0xsequence/connect";
 import { NFT_CONTRACT_ADDRESS, NFT_ABI, SKALE_NEBULA_TESTNET } from "@shared/contracts";
 import type { Address } from "viem";
 
@@ -40,6 +41,7 @@ export default function QuickSellScreen({
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
   const chainId = useChainId();
+  const { setOpenConnectModal } = useOpenConnectModal();
 
   const displayName = nft.name || `Gamefolio Genesis ${getTokenIdPadded(nft.id)}`;
   const collectionName = nft.name?.split(" ").slice(0, -1).join(" ") || "Genesis Collection";
@@ -176,10 +178,23 @@ export default function QuickSellScreen({
             </div>
           </div>
 
-          {!walletReady && !isProcessing && (
+          {!isConnected && !isProcessing && (
+            <div className="w-full rounded-2xl bg-[#0f172a] border border-[#1e293b80] p-4 flex flex-col items-center gap-3 mt-4">
+              <span className="text-sm text-[#94a3b8] text-center leading-5">
+                Connect your wallet to sign the NFT transfer
+              </span>
+              <button
+                onClick={() => setOpenConnectModal(true)}
+                className="px-6 py-2.5 rounded-xl bg-[#4ade80] hover:bg-[#22c55e] transition-colors"
+              >
+                <span className="text-sm font-bold text-[#022c22]">Connect Wallet</span>
+              </button>
+            </div>
+          )}
+          {isConnected && chainId !== SKALE_CHAIN_ID && !isProcessing && (
             <div className="w-full rounded-2xl bg-[#ef44441a] border border-[#ef444433] p-4 flex gap-3 mt-4">
               <span className="text-sm font-normal text-[#ef4444] leading-5">
-                {!isConnected ? "Connect your wallet to sell this NFT." : chainId !== SKALE_CHAIN_ID ? "Switch to the SKALE network to continue." : "Wallet not ready."}
+                Switch to the SKALE network to continue.
               </span>
             </div>
           )}
