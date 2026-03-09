@@ -332,14 +332,29 @@ export function NFTPurchaseDialog({
 
               {/* Action Buttons - inside scrollable content */}
               <div className="flex flex-col gap-3 pt-4">
-                <Button
-                  onClick={handleConfirmPurchase}
-                  disabled={isPurchasing || !hasEnoughBalance}
-                  className="w-full h-[60px] rounded-2xl bg-[#4ade80] text-[#022c22] text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-                  data-testid="button-confirm-purchase"
-                >
-                  {isPurchasing ? "Processing..." : "Confirm Purchase"}
-                </Button>
+                {(!isConnected || !walletClient || !publicClient) ? (
+                  <>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-yellow-500/10 rounded-2xl">
+                      <Wallet className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+                      <span className="text-xs text-yellow-400">Connect your wallet to complete this purchase</span>
+                    </div>
+                    <Button
+                      onClick={() => setOpenConnectModal(true)}
+                      className="w-full h-[60px] rounded-2xl bg-[#4ade80] text-[#022c22] text-lg font-bold hover:opacity-90"
+                    >
+                      Connect Wallet
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    onClick={handleConfirmPurchase}
+                    disabled={isPurchasing || !hasEnoughBalance}
+                    className="w-full h-[60px] rounded-2xl bg-[#4ade80] text-[#022c22] text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                    data-testid="button-confirm-purchase"
+                  >
+                    {isPurchasing ? "Processing..." : "Confirm Purchase"}
+                  </Button>
+                )}
                 <button
                   onClick={() => setStep('details')}
                   className="w-full h-[52px] text-sm font-bold text-[#94a3b8] hover:text-[#f8fafc] transition-colors"
