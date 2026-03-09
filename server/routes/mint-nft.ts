@@ -376,6 +376,11 @@ function ipfsToHttp(ipfsUri: string, gatewayIndex = 0): string {
 function ipfsToProxyUrl(ipfsUri: string): string {
   if (!ipfsUri.startsWith('ipfs://')) return ipfsUri;
   const path = ipfsUri.replace('ipfs://', '');
+  // Fix for specific metadata using placeholder CID
+  if (path.startsWith('NewUriToReplace/')) {
+    const fileName = path.split('/').pop();
+    return `/api/nft/image/bafybeihcjav5e6ivjqolmja3wwtbmajf743bmn3larf354edzrr25g7lym/${fileName}`;
+  }
   return `/api/nft/image/${path}`;
 }
 
