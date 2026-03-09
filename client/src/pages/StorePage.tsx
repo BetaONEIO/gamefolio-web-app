@@ -2111,7 +2111,7 @@ export default function StorePage() {
               <p className="text-sm md:text-base text-[#4ade80] text-center max-w-md" data-testid="text-mint-description">
                 Create and mint your own NFTs on the blockchain.
               </p>
-              <Link href="/mint">
+              <Link href="/mint-nft">
                 <Button className="mt-6 bg-[#4ade80] text-[#022c22] hover:bg-[#22c55e]" size="sm" data-testid="button-start-minting">
                   Start Minting
                 </Button>
