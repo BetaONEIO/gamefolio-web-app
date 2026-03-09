@@ -45,7 +45,7 @@ export default function WalletPage() {
   const [gftAmount, setGftAmount] = useState(0);
   const { data: tokenBalanceData } = useTokenBalance();
   const userGftBalance = parseFloat(tokenBalanceData?.balance || '0');
-  const { stakedAmount, earnedRewards, estimatedApy, stake, unstake, claimRewards, isStaking, stakeHistory } = useStaking();
+  const { stakedAmount, earnedRewards, estimatedApy, stake, unstake, claimRewards, isStaking, isClaiming, stakeHistory } = useStaking();
   const { createOrder, isCreatingOrder, checkOrderStatus, refreshBalances } = usePurchaseGFT();
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
@@ -219,6 +219,7 @@ export default function WalletPage() {
         onStake={stake}
         onUnstake={unstake}
         onClaimRewards={claimRewards}
+        isClaiming={isClaiming}
       />
     );
   }

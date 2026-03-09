@@ -13,6 +13,7 @@ interface StakingHubScreenProps {
   onStake?: (amount: number) => Promise<string | null>;
   onUnstake?: (amount: number) => Promise<boolean>;
   onClaimRewards?: () => Promise<boolean>;
+  isClaiming?: boolean;
 }
 
 function formatDate(d: Date | string): string {
@@ -44,6 +45,7 @@ export default function StakingHubScreen({
   onStake,
   onUnstake,
   onClaimRewards,
+  isClaiming = false,
 }: StakingHubScreenProps) {
   const [activeTab, setActiveTab] = useState<"positions" | "history">("positions");
   const [showConfirmStake, setShowConfirmStake] = useState(false);
@@ -294,7 +296,7 @@ export default function StakingHubScreen({
 
           <button
             onClick={onClaimRewards}
-            disabled={!hasActiveStake || rewardsEarned < 0.000001}
+            disabled={!hasActiveStake || rewardsEarned < 0.000001 || isClaiming}
             className="flex-1 h-14 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all hover:bg-slate-700 disabled:opacity-40"
             style={{
               background: "#1e293b",
@@ -303,7 +305,7 @@ export default function StakingHubScreen({
             }}
           >
             <Gift className="w-5 h-5" style={{ color: "#f8fafc" }} />
-            Claim
+            {isClaiming ? "Claiming..." : "Claim"}
           </button>
         </div>
 
