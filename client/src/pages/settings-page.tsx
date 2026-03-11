@@ -349,7 +349,7 @@ export default function SettingsPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { setAccentColor } = useTheme();
+  useTheme();
   const { customerInfo, refreshCustomerInfo } = useRevenueCat();
   
   const updateProfile = useUpdateProfile();
@@ -470,6 +470,7 @@ export default function SettingsPage() {
     profileBackgroundDesktopY: (user as any)?.profileBackgroundDesktopY || "50",
     profileBackgroundDesktopZoom: (user as any)?.profileBackgroundDesktopZoom || "100",
     hideBanner: (user as any)?.hideBanner || false,
+    statsGlassEffect: (user as any)?.statsGlassEffect || false,
     profileFont: (user as any)?.profileFont || "default",
     profileFontEffect: (user as any)?.profileFontEffect || "none",
     profileFontAnimation: (user as any)?.profileFontAnimation || "none",
@@ -543,6 +544,7 @@ export default function SettingsPage() {
     profileBackgroundDesktopY: (user as any)?.profileBackgroundDesktopY || "50",
     profileBackgroundDesktopZoom: (user as any)?.profileBackgroundDesktopZoom || "100",
     hideBanner: (user as any)?.hideBanner || false,
+    statsGlassEffect: (user as any)?.statsGlassEffect || false,
     profileFont: (user as any)?.profileFont || "default",
     profileFontEffect: (user as any)?.profileFontEffect || "none",
     profileFontAnimation: (user as any)?.profileFontAnimation || "none",
@@ -603,8 +605,9 @@ export default function SettingsPage() {
         const newBgDeskX       = (user as any)?.profileBackgroundDesktopX || "50";
         const newBgDeskY       = (user as any)?.profileBackgroundDesktopY || "50";
         const newBgDeskZoom    = (user as any)?.profileBackgroundDesktopZoom || "100";
-        const newHideBanner    = (user as any)?.hideBanner || false;
-        const newFont          = (user as any)?.profileFont || "default";
+        const newHideBanner      = (user as any)?.hideBanner || false;
+        const newStatsGlass      = (user as any)?.statsGlassEffect || false;
+        const newFont            = (user as any)?.profileFont || "default";
         const newFontEffect    = (user as any)?.profileFontEffect || "none";
         const newFontAnim      = (user as any)?.profileFontAnimation || "none";
         const newFontColor     = (user as any)?.profileFontColor || "#FFFFFF";
@@ -624,6 +627,7 @@ export default function SettingsPage() {
           profileBackgroundDesktopY: newBgDeskY,
           profileBackgroundDesktopZoom: newBgDeskZoom,
           hideBanner: newHideBanner,
+          statsGlassEffect: newStatsGlass,
           profileFont: newFont,
           profileFontEffect: newFontEffect,
           profileFontAnimation: newFontAnim,
@@ -648,8 +652,9 @@ export default function SettingsPage() {
           profileBackgroundDesktopX:    pick(prev.profileBackgroundDesktopX, newBgDeskX,   synced.profileBackgroundDesktopX),
           profileBackgroundDesktopY:    pick(prev.profileBackgroundDesktopY, newBgDeskY,   synced.profileBackgroundDesktopY),
           profileBackgroundDesktopZoom: pick(prev.profileBackgroundDesktopZoom, newBgDeskZoom, synced.profileBackgroundDesktopZoom),
-          hideBanner:                   pick(prev.hideBanner,                newHideBanner, synced.hideBanner),
-          profileFont:                  pick(prev.profileFont,               newFont,       synced.profileFont),
+          hideBanner:                   pick(prev.hideBanner,                newHideBanner,  synced.hideBanner),
+          statsGlassEffect:             pick(prev.statsGlassEffect,          newStatsGlass,  synced.statsGlassEffect),
+          profileFont:                  pick(prev.profileFont,               newFont,        synced.profileFont),
           profileFontEffect:            pick(prev.profileFontEffect,         newFontEffect, synced.profileFontEffect),
           profileFontAnimation:         pick(prev.profileFontAnimation,      newFontAnim,   synced.profileFontAnimation),
           profileFontColor:             pick(prev.profileFontColor,          newFontColor,  synced.profileFontColor),
@@ -700,6 +705,7 @@ export default function SettingsPage() {
     profileData.profileFontEffect !== ((user as any)?.profileFontEffect || "none") ||
     profileData.profileFontAnimation !== ((user as any)?.profileFontAnimation || "none") ||
     profileData.profileFontColor !== ((user as any)?.profileFontColor || "#FFFFFF") ||
+    profileData.statsGlassEffect !== ((user as any)?.statsGlassEffect || false) ||
     avatarFile !== null ||
     selectedPreviousAvatar !== null ||
     avatarBorderColor !== (user?.avatarBorderColor || '#4ADE80') ||
@@ -2356,6 +2362,34 @@ export default function SettingsPage() {
                               </p>
                             </>
                           )}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Frosted Glass Stats Bar */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          Frosted Glass Stats Bar
+                        </CardTitle>
+                        <CardDescription>
+                          Apply a frosted glass effect to the uploads, followers and following stats bar on your profile — keeps it readable over any background or image.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">Enable frosted glass</p>
+                            <p className="text-xs text-muted-foreground">
+                              {profileData.statsGlassEffect ? "Stats bar has a frosted glass backdrop" : "Stats bar uses the default background"}
+                            </p>
+                          </div>
+                          <Switch
+                            checked={profileData.statsGlassEffect}
+                            onCheckedChange={(checked) =>
+                              setProfileData(prev => ({ ...prev, statsGlassEffect: checked }))
+                            }
+                          />
                         </div>
                       </CardContent>
                     </Card>

@@ -164,7 +164,7 @@ const ProfileHeader = ({
             </Link>
             
             {/* Profile Stats underneath profile picture */}
-            <div className="flex space-x-4 text-xs mt-3 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 border">
+            <div className={`flex space-x-4 text-xs mt-3 rounded-lg px-3 py-2 border ${(profile as any).statsGlassEffect ? "bg-black/30 backdrop-blur-md border-white/20" : "bg-background/90 backdrop-blur-sm"}`}>
               <div className="text-center">
                 <span className="font-bold block">{(profile._count?.clips || 0) + (profile._count?.screenshots || 0)}</span>
                 <span className="text-muted-foreground">Uploads</span>
