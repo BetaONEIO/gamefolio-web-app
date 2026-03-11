@@ -471,6 +471,7 @@ export default function SettingsPage() {
     profileBackgroundDesktopZoom: (user as any)?.profileBackgroundDesktopZoom || "100",
     hideBanner: (user as any)?.hideBanner || false,
     statsGlassEffect: (user as any)?.statsGlassEffect || false,
+    profileBackgroundGradient: (user as any)?.profileBackgroundGradient !== false,
     profileFont: (user as any)?.profileFont || "default",
     profileFontEffect: (user as any)?.profileFontEffect || "none",
     profileFontAnimation: (user as any)?.profileFontAnimation || "none",
@@ -545,6 +546,7 @@ export default function SettingsPage() {
     profileBackgroundDesktopZoom: (user as any)?.profileBackgroundDesktopZoom || "100",
     hideBanner: (user as any)?.hideBanner || false,
     statsGlassEffect: (user as any)?.statsGlassEffect || false,
+    profileBackgroundGradient: (user as any)?.profileBackgroundGradient !== false,
     profileFont: (user as any)?.profileFont || "default",
     profileFontEffect: (user as any)?.profileFontEffect || "none",
     profileFontAnimation: (user as any)?.profileFontAnimation || "none",
@@ -607,6 +609,7 @@ export default function SettingsPage() {
         const newBgDeskZoom    = (user as any)?.profileBackgroundDesktopZoom || "100";
         const newHideBanner      = (user as any)?.hideBanner || false;
         const newStatsGlass      = (user as any)?.statsGlassEffect || false;
+        const newBgGradient      = (user as any)?.profileBackgroundGradient !== false;
         const newFont            = (user as any)?.profileFont || "default";
         const newFontEffect    = (user as any)?.profileFontEffect || "none";
         const newFontAnim      = (user as any)?.profileFontAnimation || "none";
@@ -628,6 +631,7 @@ export default function SettingsPage() {
           profileBackgroundDesktopZoom: newBgDeskZoom,
           hideBanner: newHideBanner,
           statsGlassEffect: newStatsGlass,
+          profileBackgroundGradient: newBgGradient,
           profileFont: newFont,
           profileFontEffect: newFontEffect,
           profileFontAnimation: newFontAnim,
@@ -652,9 +656,10 @@ export default function SettingsPage() {
           profileBackgroundDesktopX:    pick(prev.profileBackgroundDesktopX, newBgDeskX,   synced.profileBackgroundDesktopX),
           profileBackgroundDesktopY:    pick(prev.profileBackgroundDesktopY, newBgDeskY,   synced.profileBackgroundDesktopY),
           profileBackgroundDesktopZoom: pick(prev.profileBackgroundDesktopZoom, newBgDeskZoom, synced.profileBackgroundDesktopZoom),
-          hideBanner:                   pick(prev.hideBanner,                newHideBanner,  synced.hideBanner),
-          statsGlassEffect:             pick(prev.statsGlassEffect,          newStatsGlass,  synced.statsGlassEffect),
-          profileFont:                  pick(prev.profileFont,               newFont,        synced.profileFont),
+          hideBanner:                   pick(prev.hideBanner,                newHideBanner,   synced.hideBanner),
+          statsGlassEffect:             pick(prev.statsGlassEffect,          newStatsGlass,   synced.statsGlassEffect),
+          profileBackgroundGradient:    pick(prev.profileBackgroundGradient, newBgGradient,   synced.profileBackgroundGradient),
+          profileFont:                  pick(prev.profileFont,               newFont,         synced.profileFont),
           profileFontEffect:            pick(prev.profileFontEffect,         newFontEffect, synced.profileFontEffect),
           profileFontAnimation:         pick(prev.profileFontAnimation,      newFontAnim,   synced.profileFontAnimation),
           profileFontColor:             pick(prev.profileFontColor,          newFontColor,  synced.profileFontColor),
@@ -706,6 +711,7 @@ export default function SettingsPage() {
     profileData.profileFontAnimation !== ((user as any)?.profileFontAnimation || "none") ||
     profileData.profileFontColor !== ((user as any)?.profileFontColor || "#FFFFFF") ||
     profileData.statsGlassEffect !== ((user as any)?.statsGlassEffect || false) ||
+    profileData.profileBackgroundGradient !== ((user as any)?.profileBackgroundGradient !== false) ||
     avatarFile !== null ||
     selectedPreviousAvatar !== null ||
     avatarBorderColor !== (user?.avatarBorderColor || '#4ADE80') ||
@@ -2161,12 +2167,22 @@ export default function SettingsPage() {
                               />
                             </div>
                             <div
-                              className="w-full h-24 rounded-lg border border-border"
-                              style={{ backgroundColor: profileData.backgroundColor }}
+                              className="w-full h-24 rounded-lg border border-border overflow-hidden"
+                              style={profileData.profileBackgroundGradient
+                                ? { background: `linear-gradient(180deg, #0B2232 0%, ${profileData.backgroundColor} 60%, ${profileData.backgroundColor} 100%)` }
+                                : { backgroundColor: profileData.backgroundColor }
+                              }
                             />
-                            <p className="text-xs text-muted-foreground">
-                              This color will be used as the background gradient on your profile.
-                            </p>
+                            <div className="flex items-center justify-between pt-1">
+                              <div>
+                                <p className="text-sm font-medium">Background Gradient</p>
+                                <p className="text-xs text-muted-foreground">Blend from dark to your chosen colour.</p>
+                              </div>
+                              <Switch
+                                checked={profileData.profileBackgroundGradient}
+                                onCheckedChange={(val) => setProfileData(prev => ({ ...prev, profileBackgroundGradient: val }))}
+                              />
+                            </div>
                           </div>
                         </div>
                       </CardContent>
