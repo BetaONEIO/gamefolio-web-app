@@ -2173,22 +2173,22 @@ export default function SettingsPage() {
                           try {
                             await apiRequest("PATCH", `/api/users/${user?.id}`, {
                               profileBackgroundImageUrl: url,
-                              profileBackgroundPositionX: mobilePos.positionX,
-                              profileBackgroundPositionY: mobilePos.positionY,
-                              profileBackgroundZoom: mobilePos.zoom,
-                              profileBackgroundDesktopX: desktopPos.positionX,
-                              profileBackgroundDesktopY: desktopPos.positionY,
-                              profileBackgroundDesktopZoom: desktopPos.zoom,
+                              profileBackgroundPositionX: String(mobilePos.positionX),
+                              profileBackgroundPositionY: String(mobilePos.positionY),
+                              profileBackgroundZoom: String(mobilePos.zoom),
+                              profileBackgroundDesktopX: String(desktopPos.positionX),
+                              profileBackgroundDesktopY: String(desktopPos.positionY),
+                              profileBackgroundDesktopZoom: String(desktopPos.zoom),
                             });
                             setProfileData(prev => ({
                               ...prev,
                               profileBackgroundImageUrl: url,
-                              profileBackgroundPositionX: mobilePos.positionX,
-                              profileBackgroundPositionY: mobilePos.positionY,
-                              profileBackgroundZoom: mobilePos.zoom,
-                              profileBackgroundDesktopX: desktopPos.positionX,
-                              profileBackgroundDesktopY: desktopPos.positionY,
-                              profileBackgroundDesktopZoom: desktopPos.zoom,
+                              profileBackgroundPositionX: String(mobilePos.positionX),
+                              profileBackgroundPositionY: String(mobilePos.positionY),
+                              profileBackgroundZoom: String(mobilePos.zoom),
+                              profileBackgroundDesktopX: String(desktopPos.positionX),
+                              profileBackgroundDesktopY: String(desktopPos.positionY),
+                              profileBackgroundDesktopZoom: String(desktopPos.zoom),
                             }));
                             queryClient.invalidateQueries({ queryKey: ['/api/user'] });
                             queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
@@ -2278,7 +2278,7 @@ export default function SettingsPage() {
                                         src={signedBgImageUrl || profileData.profileBackgroundImageUrl}
                                         alt="Mobile background preview"
                                         className="w-full h-full object-cover"
-                                        style={{ objectPosition: `${profileData.profileBackgroundPositionX || 50}% ${profileData.profileBackgroundPositionY || 50}%` }}
+                                        style={{ objectPosition: `${profileData.profileBackgroundPositionX ?? 50}% ${profileData.profileBackgroundPositionY ?? 50}%` }}
                                       />
                                       <div className="absolute top-2 left-2">
                                         <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
@@ -2300,7 +2300,7 @@ export default function SettingsPage() {
                                         src={signedBgImageUrl || profileData.profileBackgroundImageUrl}
                                         alt="Desktop background preview"
                                         className="w-full h-full object-cover"
-                                        style={{ objectPosition: `${profileData.profileBackgroundDesktopX || 50}% ${profileData.profileBackgroundDesktopY || 50}%` }}
+                                        style={{ objectPosition: `${profileData.profileBackgroundDesktopX ?? 50}% ${profileData.profileBackgroundDesktopY ?? 50}%` }}
                                       />
                                       <div className="absolute top-2 left-2">
                                         <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
