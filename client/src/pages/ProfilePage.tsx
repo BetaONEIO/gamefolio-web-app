@@ -1805,7 +1805,15 @@ const ProfilePage = () => {
           </div>
 
           {/* L-shaped fading border container for profile info */}
-          <div className="relative mt-4 mb-1 mx-4">
+          <div
+            className="relative mt-4 mb-1 mx-4 rounded-lg transition-all duration-300"
+            style={(profile as any).statsGlassEffect ? {
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)',
+              backdropFilter: 'blur(18px) saturate(160%)',
+              WebkitBackdropFilter: 'blur(18px) saturate(160%)',
+              boxShadow: '0 0 20px 0 rgba(255,255,255,0.08), inset 0 1px 0 rgba(255,255,255,0.15)',
+            } : undefined}
+          >
             {/* Curved corner piece */}
             <div 
               className="absolute top-0 -left-4 w-3 h-3 pointer-events-none"
@@ -2103,7 +2111,21 @@ const ProfilePage = () => {
             <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
 
             {/* L-shaped fading border with curved corner and button */}
-            <div className="relative mt-4" style={{ marginLeft: '-32px', height: '140px', width: '100%', maxWidth: '600px' }}>
+            <div
+              className="relative mt-4 rounded-lg transition-all duration-300"
+              style={{
+                marginLeft: '-32px',
+                height: '140px',
+                width: '100%',
+                maxWidth: '600px',
+                ...((profile as any).statsGlassEffect ? {
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)',
+                  backdropFilter: 'blur(18px) saturate(160%)',
+                  WebkitBackdropFilter: 'blur(18px) saturate(160%)',
+                  boxShadow: '0 0 20px 0 rgba(255,255,255,0.08), inset 0 1px 0 rgba(255,255,255,0.15)',
+                } : {}),
+              }}
+            >
               {/* Curved corner piece with glow */}
               <div 
                 className="absolute top-0 left-0 w-4 h-4 pointer-events-none"
