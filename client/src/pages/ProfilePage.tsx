@@ -1808,11 +1808,11 @@ const ProfilePage = () => {
           <div
             className="relative mt-4 mb-1 mx-4 rounded-lg transition-all duration-300"
             style={(profile as any).statsGlassEffect ? {
-              background: 'rgba(255,255,255,0.18)',
-              backdropFilter: 'blur(40px) saturate(180%) brightness(1.1)',
-              WebkitBackdropFilter: 'blur(40px) saturate(180%) brightness(1.1)',
-              border: '1px solid rgba(255,255,255,0.45)',
-              boxShadow: '0 4px 24px rgba(255,255,255,0.10), inset 0 1px 0 rgba(255,255,255,0.55)',
+              background: 'rgba(255,255,255,0.72)',
+              backdropFilter: 'blur(40px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+              border: '1px solid rgba(255,255,255,0.85)',
+              boxShadow: '0 8px 32px rgba(255,255,255,0.15), inset 0 1px 0 rgba(255,255,255,0.9)',
             } : undefined}
           >
             {/* Curved corner piece */}
@@ -1880,23 +1880,23 @@ const ProfilePage = () => {
                   {/* Stats - Horizontal row with uppercase labels */}
                   <div className="flex gap-4 mb-2 mt-2 items-start">
                     <div className="flex flex-col">
-                      <span className="font-bold text-sm">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                      <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>UPLOADS</span>
+                      <span className="font-bold text-sm" style={(profile as any).statsGlassEffect ? { color: '#111827' } : undefined}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                      <span className="text-xs uppercase tracking-wider" style={{ color: (profile as any).statsGlassEffect ? '#374151' : (accentColor || 'hsl(var(--primary))') }}>UPLOADS</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-bold text-sm">{Number(profile._count?.followers || 0)}</span>
-                      <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>FOLLOWERS</span>
+                      <span className="font-bold text-sm" style={(profile as any).statsGlassEffect ? { color: '#111827' } : undefined}>{Number(profile._count?.followers || 0)}</span>
+                      <span className="text-xs uppercase tracking-wider" style={{ color: (profile as any).statsGlassEffect ? '#374151' : (accentColor || 'hsl(var(--primary))') }}>FOLLOWERS</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-bold text-sm">{Number(profile._count?.following || 0)}</span>
-                      <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>FOLLOWING</span>
+                      <span className="font-bold text-sm" style={(profile as any).statsGlassEffect ? { color: '#111827' } : undefined}>{Number(profile._count?.following || 0)}</span>
+                      <span className="text-xs uppercase tracking-wider" style={{ color: (profile as any).statsGlassEffect ? '#374151' : (accentColor || 'hsl(var(--primary))') }}>FOLLOWING</span>
                     </div>
                   </div>
 
                   {/* Member since date - uppercase */}
                   {profile.createdAt && (
                     <div className="mb-2">
-                      <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>
+                      <span className="text-xs uppercase tracking-wider" style={{ color: (profile as any).statsGlassEffect ? '#374151' : (accentColor || 'hsl(var(--primary))') }}>
                         MEMBER SINCE {new Date(profile.createdAt).toLocaleDateString('en-US', { 
                           year: 'numeric', 
                           month: 'long' 
@@ -2120,11 +2120,11 @@ const ProfilePage = () => {
                 width: '100%',
                 maxWidth: '600px',
                 ...((profile as any).statsGlassEffect ? {
-                  background: 'rgba(255,255,255,0.18)',
-                  backdropFilter: 'blur(40px) saturate(180%) brightness(1.1)',
-                  WebkitBackdropFilter: 'blur(40px) saturate(180%) brightness(1.1)',
-                  border: '1px solid rgba(255,255,255,0.45)',
-                  boxShadow: '0 4px 24px rgba(255,255,255,0.10), inset 0 1px 0 rgba(255,255,255,0.55)',
+                  background: 'rgba(255,255,255,0.72)',
+                  backdropFilter: 'blur(40px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+                  border: '1px solid rgba(255,255,255,0.85)',
+                  boxShadow: '0 8px 32px rgba(255,255,255,0.15), inset 0 1px 0 rgba(255,255,255,0.9)',
                 } : {}),
               }}
             >
@@ -2196,23 +2196,23 @@ const ProfilePage = () => {
                     {/* Stats - Uploads, Followers, Following */}
                     <div className="flex gap-6 items-center">
                       <div className="flex flex-col">
-                        <span className="font-bold text-lg">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                        <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>Uploads</span>
+                        <span className="font-bold text-lg" style={(profile as any).statsGlassEffect ? { color: '#111827' } : undefined}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                        <span className="text-xs uppercase tracking-wider" style={{ color: (profile as any).statsGlassEffect ? '#374151' : (accentColor || 'hsl(var(--primary))') }}>Uploads</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-bold text-lg">{Number(profile._count?.followers || 0)}</span>
-                        <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>Followers</span>
+                        <span className="font-bold text-lg" style={(profile as any).statsGlassEffect ? { color: '#111827' } : undefined}>{Number(profile._count?.followers || 0)}</span>
+                        <span className="text-xs uppercase tracking-wider" style={{ color: (profile as any).statsGlassEffect ? '#374151' : (accentColor || 'hsl(var(--primary))') }}>Followers</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-bold text-lg">{Number(profile._count?.following || 0)}</span>
-                        <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>Following</span>
+                        <span className="font-bold text-lg" style={(profile as any).statsGlassEffect ? { color: '#111827' } : undefined}>{Number(profile._count?.following || 0)}</span>
+                        <span className="text-xs uppercase tracking-wider" style={{ color: (profile as any).statsGlassEffect ? '#374151' : (accentColor || 'hsl(var(--primary))') }}>Following</span>
                       </div>
                     </div>
 
                     {/* Member since date */}
                     {profile.createdAt && (
                       <div className="mt-3">
-                        <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>
+                        <span className="text-xs uppercase tracking-wider" style={{ color: (profile as any).statsGlassEffect ? '#374151' : (accentColor || 'hsl(var(--primary))') }}>
                           Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
                             year: 'numeric', 
                             month: 'long' 

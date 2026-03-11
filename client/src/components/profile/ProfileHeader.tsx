@@ -171,24 +171,24 @@ const ProfileHeader = ({
                   : "bg-background/90 border border-border"
               }`}
               style={(profile as any).statsGlassEffect ? {
-                background: 'rgba(255,255,255,0.18)',
-                backdropFilter: 'blur(40px) saturate(180%) brightness(1.1)',
-                WebkitBackdropFilter: 'blur(40px) saturate(180%) brightness(1.1)',
-                border: '1px solid rgba(255,255,255,0.45)',
-                boxShadow: '0 4px 24px rgba(255,255,255,0.10), inset 0 1px 0 rgba(255,255,255,0.55)',
+                background: 'rgba(255,255,255,0.72)',
+                backdropFilter: 'blur(40px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+                border: '1px solid rgba(255,255,255,0.85)',
+                boxShadow: '0 8px 32px rgba(255,255,255,0.15), inset 0 1px 0 rgba(255,255,255,0.9)',
               } : undefined}
             >
               <div className="text-center">
-                <span className="font-bold block">{(profile._count?.clips || 0) + (profile._count?.screenshots || 0)}</span>
-                <span className="text-muted-foreground">Uploads</span>
+                <span className="font-bold block" style={(profile as any).statsGlassEffect ? { color: '#111827' } : undefined}>{(profile._count?.clips || 0) + (profile._count?.screenshots || 0)}</span>
+                <span style={(profile as any).statsGlassEffect ? { color: '#374151' } : undefined} className="text-muted-foreground">Uploads</span>
               </div>
               <div className="text-center">
-                <span className="font-bold block">{profile._count?.followers || 0}</span>
-                <span className="text-muted-foreground">Followers</span>
+                <span className="font-bold block" style={(profile as any).statsGlassEffect ? { color: '#111827' } : undefined}>{profile._count?.followers || 0}</span>
+                <span style={(profile as any).statsGlassEffect ? { color: '#374151' } : undefined} className="text-muted-foreground">Followers</span>
               </div>
               <div className="text-center">
-                <span className="font-bold block">{profile._count?.following || 0}</span>
-                <span className="text-muted-foreground">Following</span>
+                <span className="font-bold block" style={(profile as any).statsGlassEffect ? { color: '#111827' } : undefined}>{profile._count?.following || 0}</span>
+                <span style={(profile as any).statsGlassEffect ? { color: '#374151' } : undefined} className="text-muted-foreground">Following</span>
               </div>
               <div className="text-center" data-testid="stat-likes-received">
                 <span className="font-bold block flex items-center gap-1 justify-center">
