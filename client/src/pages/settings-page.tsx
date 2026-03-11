@@ -2385,10 +2385,18 @@ export default function SettingsPage() {
                             </p>
                           </div>
                           <Switch
-                            checked={profileData.statsGlassEffect}
-                            onCheckedChange={(checked) =>
-                              setProfileData(prev => ({ ...prev, statsGlassEffect: checked }))
-                            }
+                            checked={!!profileData.statsGlassEffect}
+                            onCheckedChange={async (checked) => {
+                              setProfileData(prev => ({ ...prev, statsGlassEffect: checked }));
+                              try {
+                                await apiRequest("PATCH", `/api/users/${user?.id}`, { statsGlassEffect: checked });
+                                queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+                                queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
+                              } catch (err: any) {
+                                toast({ title: "Failed to save", description: err.message || "Could not update frosted glass effect.", variant: "destructive" });
+                                setProfileData(prev => ({ ...prev, statsGlassEffect: !checked }));
+                              }
+                            }}
                           />
                         </div>
                       </CardContent>
