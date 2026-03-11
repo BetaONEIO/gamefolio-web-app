@@ -2075,14 +2075,19 @@ export default function SettingsPage() {
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {PRESET_THEMES.map((theme) => {
                             const defaultThemeColor = '#0B2232';
+                            const isActive = profileData.accentColor === theme.accentColor;
                             return (
                               <div
                                 key={theme.name}
-                                className="cursor-pointer rounded-lg border-2 border-transparent hover:border-primary/50 transition-colors"
+                                className="cursor-pointer rounded-lg border-2 transition-all"
+                                style={{
+                                  borderColor: isActive ? theme.accentColor : 'transparent',
+                                  boxShadow: isActive ? `0 0 10px ${theme.accentColor}50` : 'none',
+                                }}
                                 onClick={() => applyPresetTheme(theme)}
                               >
                                 <div
-                                  className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm"
+                                  className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm relative"
                                   style={{ 
                                     background: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
                                   }}
@@ -2091,6 +2096,14 @@ export default function SettingsPage() {
                                     className="w-8 h-8 rounded-full border-2 border-white"
                                     style={{ backgroundColor: theme.accentColor }}
                                   />
+                                  {isActive && (
+                                    <div
+                                      className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
+                                      style={{ backgroundColor: theme.accentColor }}
+                                    >
+                                      <Check className="w-3 h-3 text-white" />
+                                    </div>
+                                  )}
                                 </div>
                                 <p className="text-center mt-2 text-sm font-medium">{theme.name}</p>
                               </div>
