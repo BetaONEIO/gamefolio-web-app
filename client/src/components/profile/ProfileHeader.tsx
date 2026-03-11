@@ -164,7 +164,18 @@ const ProfileHeader = ({
             </Link>
             
             {/* Profile Stats underneath profile picture */}
-            <div className={`flex space-x-4 text-xs mt-3 rounded-lg px-3 py-2 border ${(profile as any).statsGlassEffect ? "bg-black/30 backdrop-blur-md border-white/20" : "bg-background/90 backdrop-blur-sm"}`}>
+            <div
+              className={`flex space-x-4 text-xs mt-3 rounded-xl px-4 py-2.5 transition-all duration-300 ${
+                (profile as any).statsGlassEffect
+                  ? "border border-white/30 shadow-[0_0_24px_0_rgba(255,255,255,0.12),inset_0_1px_0_rgba(255,255,255,0.2)]"
+                  : "bg-background/90 border border-border"
+              }`}
+              style={(profile as any).statsGlassEffect ? {
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.05) 100%)',
+                backdropFilter: 'blur(20px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+              } : undefined}
+            >
               <div className="text-center">
                 <span className="font-bold block">{(profile._count?.clips || 0) + (profile._count?.screenshots || 0)}</span>
                 <span className="text-muted-foreground">Uploads</span>
