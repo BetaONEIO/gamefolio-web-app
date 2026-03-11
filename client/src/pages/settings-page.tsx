@@ -520,6 +520,30 @@ export default function SettingsPage() {
   const prevAvatarUrl = React.useRef(user?.avatarUrl);
   const fontPreviewRef = React.useRef<HTMLDivElement>(null);
 
+  // Track the last values synced FROM the server so we can tell whether the user
+  // has made local changes. If prev[field] still equals the last-synced server
+  // value the user hasn't touched it — safe to update. If they differ, the user
+  // has an unsaved edit in flight and we must preserve it.
+  const lastSyncedAppearance = React.useRef({
+    backgroundColor: user?.backgroundColor || "#0B2232",
+    accentColor: user?.accentColor || "#4ADE80",
+    profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
+    profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
+    profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
+    profileBackgroundImageUrl: (user as any)?.profileBackgroundImageUrl || "",
+    profileBackgroundPositionX: (user as any)?.profileBackgroundPositionX || "50",
+    profileBackgroundPositionY: (user as any)?.profileBackgroundPositionY || "50",
+    profileBackgroundZoom: (user as any)?.profileBackgroundZoom || "100",
+    profileBackgroundDesktopX: (user as any)?.profileBackgroundDesktopX || "50",
+    profileBackgroundDesktopY: (user as any)?.profileBackgroundDesktopY || "50",
+    profileBackgroundDesktopZoom: (user as any)?.profileBackgroundDesktopZoom || "100",
+    hideBanner: (user as any)?.hideBanner || false,
+    profileFont: (user as any)?.profileFont || "default",
+    profileFontEffect: (user as any)?.profileFontEffect || "none",
+    profileFontAnimation: (user as any)?.profileFontAnimation || "none",
+    profileFontColor: (user as any)?.profileFontColor || "#FFFFFF",
+  });
+
   const scrollToFontPreview = () => {
     if (window.innerWidth < 768) {
       fontPreviewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -552,29 +576,78 @@ export default function SettingsPage() {
         } else {
           finalBannerUrl = user.bannerUrl || "";
         }
-        
+
+        // For appearance/font/background fields: only sync from server if the user
+        // hasn't made a local change. We detect a local change by comparing prev
+        // against the last value we synced from the server. If they still match the
+        // user hasn't touched the field so it is safe to update; otherwise preserve
+        // the in-flight edit.
+        const synced = lastSyncedAppearance.current;
+        const pick = <T,>(prevVal: T, serverVal: T, lastVal: T): T =>
+          prevVal === lastVal ? serverVal : prevVal;
+
+        const newBgColor       = user.backgroundColor || "#0B2232";
+        const newAccent        = user.accentColor || "#4ADE80";
+        const newBgType        = (user as any)?.profileBackgroundType || "solid";
+        const newBgTheme       = (user as any)?.profileBackgroundTheme || "default";
+        const newBgAnim        = (user as any)?.profileBackgroundAnimation || "none";
+        const newBgImageUrl    = (user as any)?.profileBackgroundImageUrl || "";
+        const newBgPosX        = (user as any)?.profileBackgroundPositionX || "50";
+        const newBgPosY        = (user as any)?.profileBackgroundPositionY || "50";
+        const newBgZoom        = (user as any)?.profileBackgroundZoom || "100";
+        const newBgDeskX       = (user as any)?.profileBackgroundDesktopX || "50";
+        const newBgDeskY       = (user as any)?.profileBackgroundDesktopY || "50";
+        const newBgDeskZoom    = (user as any)?.profileBackgroundDesktopZoom || "100";
+        const newHideBanner    = (user as any)?.hideBanner || false;
+        const newFont          = (user as any)?.profileFont || "default";
+        const newFontEffect    = (user as any)?.profileFontEffect || "none";
+        const newFontAnim      = (user as any)?.profileFontAnimation || "none";
+        const newFontColor     = (user as any)?.profileFontColor || "#FFFFFF";
+
+        // Update the ref so the next comparison has the right baseline
+        lastSyncedAppearance.current = {
+          backgroundColor: newBgColor,
+          accentColor: newAccent,
+          profileBackgroundType: newBgType,
+          profileBackgroundTheme: newBgTheme,
+          profileBackgroundAnimation: newBgAnim,
+          profileBackgroundImageUrl: newBgImageUrl,
+          profileBackgroundPositionX: newBgPosX,
+          profileBackgroundPositionY: newBgPosY,
+          profileBackgroundZoom: newBgZoom,
+          profileBackgroundDesktopX: newBgDeskX,
+          profileBackgroundDesktopY: newBgDeskY,
+          profileBackgroundDesktopZoom: newBgDeskZoom,
+          hideBanner: newHideBanner,
+          profileFont: newFont,
+          profileFontEffect: newFontEffect,
+          profileFontAnimation: newFontAnim,
+          profileFontColor: newFontColor,
+        };
+
         return {
           displayName: user.displayName || "",
           bio: user.bio || "",
-          backgroundColor: user.backgroundColor || "#0B2232",
-          accentColor: user.accentColor || "#4ADE80",
-          bannerUrl: finalBannerUrl,
           avatarUrl: user.avatarUrl || "",
-          profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
-          profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
-          profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
-          profileBackgroundImageUrl: (user as any)?.profileBackgroundImageUrl || "",
-          profileBackgroundPositionX: (user as any)?.profileBackgroundPositionX || "50",
-          profileBackgroundPositionY: (user as any)?.profileBackgroundPositionY || "50",
-          profileBackgroundZoom: (user as any)?.profileBackgroundZoom || "100",
-          profileBackgroundDesktopX: (user as any)?.profileBackgroundDesktopX || "50",
-          profileBackgroundDesktopY: (user as any)?.profileBackgroundDesktopY || "50",
-          profileBackgroundDesktopZoom: (user as any)?.profileBackgroundDesktopZoom || "100",
-          hideBanner: (user as any)?.hideBanner || false,
-          profileFont: (user as any)?.profileFont || "default",
-          profileFontEffect: (user as any)?.profileFontEffect || "none",
-          profileFontAnimation: (user as any)?.profileFontAnimation || "none",
-          profileFontColor: (user as any)?.profileFontColor || "#FFFFFF",
+          bannerUrl: finalBannerUrl,
+          // Appearance/font/background — preserve pending user edits
+          backgroundColor:              pick(prev.backgroundColor,           newBgColor,    synced.backgroundColor),
+          accentColor:                  pick(prev.accentColor,               newAccent,     synced.accentColor),
+          profileBackgroundType:        pick(prev.profileBackgroundType,     newBgType,     synced.profileBackgroundType),
+          profileBackgroundTheme:       pick(prev.profileBackgroundTheme,    newBgTheme,    synced.profileBackgroundTheme),
+          profileBackgroundAnimation:   pick(prev.profileBackgroundAnimation,newBgAnim,     synced.profileBackgroundAnimation),
+          profileBackgroundImageUrl:    pick(prev.profileBackgroundImageUrl, newBgImageUrl, synced.profileBackgroundImageUrl),
+          profileBackgroundPositionX:   pick(prev.profileBackgroundPositionX,newBgPosX,    synced.profileBackgroundPositionX),
+          profileBackgroundPositionY:   pick(prev.profileBackgroundPositionY,newBgPosY,    synced.profileBackgroundPositionY),
+          profileBackgroundZoom:        pick(prev.profileBackgroundZoom,     newBgZoom,     synced.profileBackgroundZoom),
+          profileBackgroundDesktopX:    pick(prev.profileBackgroundDesktopX, newBgDeskX,   synced.profileBackgroundDesktopX),
+          profileBackgroundDesktopY:    pick(prev.profileBackgroundDesktopY, newBgDeskY,   synced.profileBackgroundDesktopY),
+          profileBackgroundDesktopZoom: pick(prev.profileBackgroundDesktopZoom, newBgDeskZoom, synced.profileBackgroundDesktopZoom),
+          hideBanner:                   pick(prev.hideBanner,                newHideBanner, synced.hideBanner),
+          profileFont:                  pick(prev.profileFont,               newFont,       synced.profileFont),
+          profileFontEffect:            pick(prev.profileFontEffect,         newFontEffect, synced.profileFontEffect),
+          profileFontAnimation:         pick(prev.profileFontAnimation,      newFontAnim,   synced.profileFontAnimation),
+          profileFontColor:             pick(prev.profileFontColor,          newFontColor,  synced.profileFontColor),
         };
       });
       
@@ -1075,9 +1148,10 @@ export default function SettingsPage() {
   };
 
   const applyPresetTheme = (theme: typeof PRESET_THEMES[0]) => {
+    // Themes only affect the accent colour — background colour and image are
+    // independent and must not be overwritten by a theme selection.
     setProfileData(prev => ({
       ...prev,
-      backgroundColor: theme.backgroundColor,
       accentColor: theme.accentColor
     }));
     
