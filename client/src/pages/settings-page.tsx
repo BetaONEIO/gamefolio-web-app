@@ -524,6 +524,11 @@ export default function SettingsPage() {
   // has made local changes. If prev[field] still equals the last-synced server
   // value the user hasn't touched it — safe to update. If they differ, the user
   // has an unsaved edit in flight and we must preserve it.
+  const lastSyncedBorder = React.useRef({
+    avatarBorderColor: user?.avatarBorderColor || '#4ADE80',
+    selectedBorderId:  user?.selectedAvatarBorderId ?? -1,
+  });
+
   const lastSyncedAppearance = React.useRef({
     backgroundColor: user?.backgroundColor || "#0B2232",
     accentColor: user?.accentColor || "#4ADE80",
@@ -910,13 +915,22 @@ export default function SettingsPage() {
   // Border colour picker visibility
   const [showBorderColorPicker, setShowBorderColorPicker] = useState(false);
   
-  // Update selected border when user data loads
+  // Update selected border when user data loads, but preserve any pending local
+  // changes using the same dirty-state pattern as lastSyncedAppearance.
   useEffect(() => {
     if (user?.selectedAvatarBorderId !== undefined) {
-      setSelectedBorderId(user.selectedAvatarBorderId ?? -1);
+      const newId = user.selectedAvatarBorderId ?? -1;
+      setSelectedBorderId(prev =>
+        prev === lastSyncedBorder.current.selectedBorderId ? newId : prev
+      );
+      lastSyncedBorder.current.selectedBorderId = newId;
     }
     if (user?.avatarBorderColor) {
-      setAvatarBorderColor(user.avatarBorderColor);
+      const newColor = user.avatarBorderColor;
+      setAvatarBorderColor(prev =>
+        prev === lastSyncedBorder.current.avatarBorderColor ? newColor : prev
+      );
+      lastSyncedBorder.current.avatarBorderColor = newColor;
     }
   }, [user?.selectedAvatarBorderId, user?.avatarBorderColor]);
   
