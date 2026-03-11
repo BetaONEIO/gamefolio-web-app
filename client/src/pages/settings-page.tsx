@@ -980,8 +980,6 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       
-      setAccentColor(updatedUser.accentColor || profileData.accentColor);
-      
       toast({
         title: "Settings updated!",
         description: "Your profile has been successfully updated. Check your Gamefolio!",
@@ -1168,8 +1166,6 @@ export default function SettingsPage() {
       ...prev,
       accentColor: theme.accentColor
     }));
-    
-    setAvatarBorderColor(theme.accentColor);
     
     toast({
       title: "Theme Selected",
