@@ -167,13 +167,15 @@ const ProfileHeader = ({
             <div
               className={`flex space-x-4 text-xs mt-3 rounded-xl px-4 py-2.5 transition-all duration-300 ${
                 (profile as any).statsGlassEffect
-                  ? "border border-white/30 shadow-[0_0_24px_0_rgba(255,255,255,0.12),inset_0_1px_0_rgba(255,255,255,0.2)]"
+                  ? ""
                   : "bg-background/90 border border-border"
               }`}
               style={(profile as any).statsGlassEffect ? {
-                background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.05) 100%)',
-                backdropFilter: 'blur(20px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                background: 'rgba(255,255,255,0.18)',
+                backdropFilter: 'blur(40px) saturate(180%) brightness(1.1)',
+                WebkitBackdropFilter: 'blur(40px) saturate(180%) brightness(1.1)',
+                border: '1px solid rgba(255,255,255,0.45)',
+                boxShadow: '0 4px 24px rgba(255,255,255,0.10), inset 0 1px 0 rgba(255,255,255,0.55)',
               } : undefined}
             >
               <div className="text-center">

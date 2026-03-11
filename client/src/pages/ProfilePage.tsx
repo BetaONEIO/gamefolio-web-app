@@ -1808,10 +1808,11 @@ const ProfilePage = () => {
           <div
             className="relative mt-4 mb-1 mx-4 rounded-lg transition-all duration-300"
             style={(profile as any).statsGlassEffect ? {
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)',
-              backdropFilter: 'blur(18px) saturate(160%)',
-              WebkitBackdropFilter: 'blur(18px) saturate(160%)',
-              boxShadow: '0 0 20px 0 rgba(255,255,255,0.08), inset 0 1px 0 rgba(255,255,255,0.15)',
+              background: 'rgba(255,255,255,0.18)',
+              backdropFilter: 'blur(40px) saturate(180%) brightness(1.1)',
+              WebkitBackdropFilter: 'blur(40px) saturate(180%) brightness(1.1)',
+              border: '1px solid rgba(255,255,255,0.45)',
+              boxShadow: '0 4px 24px rgba(255,255,255,0.10), inset 0 1px 0 rgba(255,255,255,0.55)',
             } : undefined}
           >
             {/* Curved corner piece */}
@@ -2119,10 +2120,11 @@ const ProfilePage = () => {
                 width: '100%',
                 maxWidth: '600px',
                 ...((profile as any).statsGlassEffect ? {
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)',
-                  backdropFilter: 'blur(18px) saturate(160%)',
-                  WebkitBackdropFilter: 'blur(18px) saturate(160%)',
-                  boxShadow: '0 0 20px 0 rgba(255,255,255,0.08), inset 0 1px 0 rgba(255,255,255,0.15)',
+                  background: 'rgba(255,255,255,0.18)',
+                  backdropFilter: 'blur(40px) saturate(180%) brightness(1.1)',
+                  WebkitBackdropFilter: 'blur(40px) saturate(180%) brightness(1.1)',
+                  border: '1px solid rgba(255,255,255,0.45)',
+                  boxShadow: '0 4px 24px rgba(255,255,255,0.10), inset 0 1px 0 rgba(255,255,255,0.55)',
                 } : {}),
               }}
             >
