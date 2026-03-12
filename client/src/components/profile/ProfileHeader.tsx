@@ -18,6 +18,18 @@ import { useSignedUrl } from "@/hooks/use-signed-url";
 import NftProfilePopup from "@/components/nft/NftProfilePopup";
 import { useProfilePictureLightbox, ProfilePictureLightbox } from "@/components/ui/profile-picture-lightbox";
 
+const getRelativeLuminance = (hex: string): number => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return 0;
+  const toLinear = (c: number) => {
+    const s = c / 255;
+    return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * toLinear(parseInt(result[1], 16))
+       + 0.7152 * toLinear(parseInt(result[2], 16))
+       + 0.0722 * toLinear(parseInt(result[3], 16));
+};
+
 const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
   streamer: { label: "Streamer", icon: Video, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
   gamer: { label: "Gamer", icon: Gamepad2, color: "bg-green-500/20 text-green-400 border-green-500/30" },
@@ -164,31 +176,23 @@ const ProfileHeader = ({
             </Link>
             
             {/* Profile Stats underneath profile picture */}
-            <div
-              className={`flex space-x-4 text-xs mt-3 rounded-xl px-4 py-2.5 transition-all duration-300 ${
-                (profile as any).statsGlassEffect
-                  ? ""
-                  : "bg-background/90 border border-border"
-              }`}
-              style={(profile as any).statsGlassEffect ? {
-                background: 'rgba(255,255,255,0.72)',
-                backdropFilter: 'blur(40px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-                border: '1px solid rgba(255,255,255,0.85)',
-                boxShadow: '0 8px 32px rgba(255,255,255,0.15), inset 0 1px 0 rgba(255,255,255,0.9)',
-              } : undefined}
-            >
+            {(() => {
+              const isLight = getRelativeLuminance(profile.backgroundColor || '#0B2232') > 0.179;
+              const numColor = isLight ? '#111827' : '#FFFFFF';
+              const lblColor = isLight ? '#374151' : (profile.accentColor || undefined);
+              return (
+            <div className="flex space-x-4 text-xs mt-3 rounded-xl px-4 py-2.5 transition-all duration-300 bg-background/90 border border-border">
               <div className="text-center">
-                <span className="font-bold block" style={(profile as any).statsGlassEffect ? { color: '#111827' } : undefined}>{(profile._count?.clips || 0) + (profile._count?.screenshots || 0)}</span>
-                <span style={(profile as any).statsGlassEffect ? { color: '#374151' } : undefined} className="text-muted-foreground">Uploads</span>
+                <span className="font-bold block" style={{ color: numColor }}>{(profile._count?.clips || 0) + (profile._count?.screenshots || 0)}</span>
+                <span className="text-muted-foreground" style={{ color: lblColor }}>Uploads</span>
               </div>
               <div className="text-center">
-                <span className="font-bold block" style={(profile as any).statsGlassEffect ? { color: '#111827' } : undefined}>{profile._count?.followers || 0}</span>
-                <span style={(profile as any).statsGlassEffect ? { color: '#374151' } : undefined} className="text-muted-foreground">Followers</span>
+                <span className="font-bold block" style={{ color: numColor }}>{profile._count?.followers || 0}</span>
+                <span className="text-muted-foreground" style={{ color: lblColor }}>Followers</span>
               </div>
               <div className="text-center">
-                <span className="font-bold block" style={(profile as any).statsGlassEffect ? { color: '#111827' } : undefined}>{profile._count?.following || 0}</span>
-                <span style={(profile as any).statsGlassEffect ? { color: '#374151' } : undefined} className="text-muted-foreground">Following</span>
+                <span className="font-bold block" style={{ color: numColor }}>{profile._count?.following || 0}</span>
+                <span className="text-muted-foreground" style={{ color: lblColor }}>Following</span>
               </div>
               <div className="text-center" data-testid="stat-likes-received">
                 <span className="font-bold block flex items-center gap-1 justify-center">
@@ -237,6 +241,8 @@ const ProfileHeader = ({
                 </TooltipProvider>
               </div>
             </div>
+              );
+            })()}
           </div>
         </div>
       </div>

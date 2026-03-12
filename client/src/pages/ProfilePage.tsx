@@ -1334,6 +1334,20 @@ const ProfilePage = () => {
     } : null;
   };
 
+  const getRelativeLuminance = (hex: string): number => {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return 0;
+    const toLinear = (c: number) => {
+      const s = c / 255;
+      return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * toLinear(rgb.r) + 0.7152 * toLinear(rgb.g) + 0.0722 * toLinear(rgb.b);
+  };
+
+  const isLightBackground = getRelativeLuminance(backgroundColor) > 0.179;
+  const statsTextColor = isLightBackground ? '#111827' : '#FFFFFF';
+  const statsLabelColor = isLightBackground ? '#374151' : (accentColor || 'hsl(var(--primary))');
+
   // Darken a hex color by a percentage
   const darkenColor = (hex: string, percent: number) => {
     const rgb = hexToRgb(hex);
@@ -1811,13 +1825,6 @@ const ProfilePage = () => {
           {/* L-shaped fading border container for profile info */}
           <div
             className="relative mt-4 mb-1 mx-4 rounded-lg transition-all duration-300"
-            style={(profile as any).statsGlassEffect ? {
-              background: 'rgba(255,255,255,0.72)',
-              backdropFilter: 'blur(40px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-              border: '1px solid rgba(255,255,255,0.85)',
-              boxShadow: '0 8px 32px rgba(255,255,255,0.15), inset 0 1px 0 rgba(255,255,255,0.9)',
-            } : undefined}
           >
             {/* Curved corner piece */}
             <div 
@@ -1884,23 +1891,23 @@ const ProfilePage = () => {
                   {/* Stats - Horizontal row with uppercase labels */}
                   <div className="flex gap-4 mb-2 mt-2 items-start">
                     <div className="flex flex-col">
-                      <span className="font-bold text-sm" style={(profile as any).statsGlassEffect ? { color: '#111827' } : undefined}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                      <span className="text-xs uppercase tracking-wider" style={{ color: (profile as any).statsGlassEffect ? '#374151' : (accentColor || 'hsl(var(--primary))') }}>UPLOADS</span>
+                      <span className="font-bold text-sm" style={{ color: statsTextColor }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                      <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>UPLOADS</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-bold text-sm" style={(profile as any).statsGlassEffect ? { color: '#111827' } : undefined}>{Number(profile._count?.followers || 0)}</span>
-                      <span className="text-xs uppercase tracking-wider" style={{ color: (profile as any).statsGlassEffect ? '#374151' : (accentColor || 'hsl(var(--primary))') }}>FOLLOWERS</span>
+                      <span className="font-bold text-sm" style={{ color: statsTextColor }}>{Number(profile._count?.followers || 0)}</span>
+                      <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>FOLLOWERS</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-bold text-sm" style={(profile as any).statsGlassEffect ? { color: '#111827' } : undefined}>{Number(profile._count?.following || 0)}</span>
-                      <span className="text-xs uppercase tracking-wider" style={{ color: (profile as any).statsGlassEffect ? '#374151' : (accentColor || 'hsl(var(--primary))') }}>FOLLOWING</span>
+                      <span className="font-bold text-sm" style={{ color: statsTextColor }}>{Number(profile._count?.following || 0)}</span>
+                      <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>FOLLOWING</span>
                     </div>
                   </div>
 
                   {/* Member since date - uppercase */}
                   {profile.createdAt && (
                     <div className="mb-2">
-                      <span className="text-xs uppercase tracking-wider" style={{ color: (profile as any).statsGlassEffect ? '#374151' : (accentColor || 'hsl(var(--primary))') }}>
+                      <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>
                         MEMBER SINCE {new Date(profile.createdAt).toLocaleDateString('en-US', { 
                           year: 'numeric', 
                           month: 'long' 
@@ -2123,13 +2130,6 @@ const ProfilePage = () => {
                 height: '140px',
                 width: '100%',
                 maxWidth: '600px',
-                ...((profile as any).statsGlassEffect ? {
-                  background: 'rgba(255,255,255,0.72)',
-                  backdropFilter: 'blur(40px) saturate(180%)',
-                  WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-                  border: '1px solid rgba(255,255,255,0.85)',
-                  boxShadow: '0 8px 32px rgba(255,255,255,0.15), inset 0 1px 0 rgba(255,255,255,0.9)',
-                } : {}),
               }}
             >
               {/* Curved corner piece with glow */}
@@ -2200,23 +2200,23 @@ const ProfilePage = () => {
                     {/* Stats - Uploads, Followers, Following */}
                     <div className="flex gap-6 items-center">
                       <div className="flex flex-col">
-                        <span className="font-bold text-lg" style={(profile as any).statsGlassEffect ? { color: '#111827' } : undefined}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                        <span className="text-xs uppercase tracking-wider" style={{ color: (profile as any).statsGlassEffect ? '#374151' : (accentColor || 'hsl(var(--primary))') }}>Uploads</span>
+                        <span className="font-bold text-lg" style={{ color: statsTextColor }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                        <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>Uploads</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-bold text-lg" style={(profile as any).statsGlassEffect ? { color: '#111827' } : undefined}>{Number(profile._count?.followers || 0)}</span>
-                        <span className="text-xs uppercase tracking-wider" style={{ color: (profile as any).statsGlassEffect ? '#374151' : (accentColor || 'hsl(var(--primary))') }}>Followers</span>
+                        <span className="font-bold text-lg" style={{ color: statsTextColor }}>{Number(profile._count?.followers || 0)}</span>
+                        <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>Followers</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-bold text-lg" style={(profile as any).statsGlassEffect ? { color: '#111827' } : undefined}>{Number(profile._count?.following || 0)}</span>
-                        <span className="text-xs uppercase tracking-wider" style={{ color: (profile as any).statsGlassEffect ? '#374151' : (accentColor || 'hsl(var(--primary))') }}>Following</span>
+                        <span className="font-bold text-lg" style={{ color: statsTextColor }}>{Number(profile._count?.following || 0)}</span>
+                        <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>Following</span>
                       </div>
                     </div>
 
                     {/* Member since date */}
                     {profile.createdAt && (
                       <div className="mt-3">
-                        <span className="text-xs uppercase tracking-wider" style={{ color: (profile as any).statsGlassEffect ? '#374151' : (accentColor || 'hsl(var(--primary))') }}>
+                        <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>
                           Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
                             year: 'numeric', 
                             month: 'long' 

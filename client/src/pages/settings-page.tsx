@@ -2382,42 +2382,6 @@ export default function SettingsPage() {
                       </CardContent>
                     </Card>
 
-                    {/* Frosted Glass Stats Bar */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          Frosted Glass Stats Bar
-                        </CardTitle>
-                        <CardDescription>
-                          Apply a frosted glass effect to the uploads, followers and following stats bar on your profile — keeps it readable over any background or image.
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center justify-between">
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium">Enable frosted glass</p>
-                            <p className="text-xs text-muted-foreground">
-                              {profileData.statsGlassEffect ? "Stats bar has a frosted glass backdrop" : "Stats bar uses the default background"}
-                            </p>
-                          </div>
-                          <Switch
-                            checked={!!profileData.statsGlassEffect}
-                            onCheckedChange={async (checked) => {
-                              setProfileData(prev => ({ ...prev, statsGlassEffect: checked }));
-                              try {
-                                await apiRequest("PATCH", `/api/users/${user?.id}`, { statsGlassEffect: checked });
-                                queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-                                queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
-                              } catch (err: any) {
-                                toast({ title: "Failed to save", description: err.message || "Could not update frosted glass effect.", variant: "destructive" });
-                                setProfileData(prev => ({ ...prev, statsGlassEffect: !checked }));
-                              }
-                            }}
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-
                   </div>
                 </TabsContent>
 
