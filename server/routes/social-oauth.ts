@@ -201,6 +201,11 @@ router.get('/auth/twitch-stream/connect', (req: Request, res: Response) => {
 
   req.session.save(() => {
     const callbackUrl = `${getBaseUrl(req)}/api/auth/twitch-stream/callback`;
+    console.log('[Twitch OAuth] REPLIT_DOMAINS:', process.env.REPLIT_DOMAINS);
+    console.log('[Twitch OAuth] x-forwarded-proto:', req.headers['x-forwarded-proto']);
+    console.log('[Twitch OAuth] x-forwarded-host:', req.headers['x-forwarded-host']);
+    console.log('[Twitch OAuth] host:', req.get('host'));
+    console.log('[Twitch OAuth] callbackUrl:', callbackUrl);
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: clientId,
