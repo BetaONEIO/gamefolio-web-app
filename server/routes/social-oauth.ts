@@ -142,6 +142,7 @@ router.get('/auth/kick/callback', async (req: Request, res: Response) => {
     await db.update(users).set({
       streamPlatform: 'kick',
       streamChannelName: channelName,
+      kickChannelName: channelName,
       kickId,
       kickVerified: true,
     }).where(eq(users.id, userId));
@@ -160,6 +161,7 @@ router.post('/auth/kick/disconnect', async (req: Request, res: Response) => {
   try {
     await db.update(users).set({
       streamChannelName: null,
+      kickChannelName: null,
       kickId: null,
       kickVerified: false,
     }).where(eq(users.id, (req.user as any).id));
@@ -280,6 +282,7 @@ router.get('/auth/twitch-stream/callback', async (req: Request, res: Response) =
     await db.update(users).set({
       streamPlatform: 'twitch',
       streamChannelName: channelName,
+      twitchChannelName: channelName,
       twitchUserId,
       twitchVerified: true,
     }).where(eq(users.id, userId));
@@ -298,6 +301,7 @@ router.post('/auth/twitch-stream/disconnect', async (req: Request, res: Response
   try {
     await db.update(users).set({
       streamChannelName: null,
+      twitchChannelName: null,
       twitchUserId: null,
       twitchVerified: false,
     }).where(eq(users.id, (req.user as any).id));

@@ -7515,6 +7515,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==========================================
+  // Live Status Route
+  // ==========================================
+  app.get("/api/user/:userId/live-status", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const user = await storage.getUser(userId);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      let twitchLive = false;
+      let kickLive = false;
+
+      const twitchChannel = user.twitchChannelName || (user.twitchVerified ? user.streamChannelName : null);
+      const kickChannel = user.kickChannelName || (user.kickVerified ? user.streamChannelName : null);
+
+      if (user.twitchVerified && user.twitchUserId) {
+        twitchLive = await twitchApi.checkUserLive(user.twitchUserId);
+      }
+
+      if (user.kickVerified && user.kickId) {
+        try {
+          const kickRes = await axios.get(`https://api.kick.com/public/v1/channels`, {
+            params: { broadcaster_user_id: user.kickId },
+            headers: { Accept: 'application/json' },
+            timeout: 5000,
+          });
+          const channels = kickRes.data?.data ?? kickRes.data;
+          const channel = Array.isArray(channels) ? channels[0] : channels;
+          kickLive = !!(channel?.is_live || channel?.livestream?.is_live);
+        } catch (e) {
+          console.error("Kick live check failed:", e);
+        }
+      }
+
+      const isLive = twitchLive || kickLive;
+      let activePlatform: string | null = null;
+      let activeChannel: string | null = null;
+
+      if (twitchLive) {
+        activePlatform = 'twitch';
+        activeChannel = twitchChannel || null;
+      } else if (kickLive) {
+        activePlatform = 'kick';
+        activeChannel = kickChannel || null;
+      }
+
+      return res.json({
+        isLive,
+        twitchLive,
+        kickLive,
+        activePlatform,
+        activeChannel,
+        twitchChannel: twitchChannel || null,
+        kickChannel: kickChannel || null,
+      });
+    } catch (err) {
+      console.error("Error checking live status:", err);
+      return res.status(500).json({ message: "Error checking live status" });
+    }
+  });
+
+  // ==========================================
   // Previous Avatars Routes
   // ==========================================
 

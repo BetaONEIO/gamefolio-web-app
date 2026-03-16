@@ -386,6 +386,24 @@ const ProfilePage = () => {
     enabled: !!profile?.id,
   });
 
+  const isStreamer = !!(profile?.userType?.split(',').map(t => t.trim()).includes('streamer'));
+  const hasStreamSetup = !!(isStreamer && (profile?.twitchVerified || profile?.kickVerified));
+  const { data: profileLiveStatus } = useQuery<{
+    isLive: boolean;
+    twitchLive: boolean;
+    kickLive: boolean;
+    activePlatform: string | null;
+    activeChannel: string | null;
+    twitchChannel: string | null;
+    kickChannel: string | null;
+  }>({
+    queryKey: [`/api/user/${profile?.id}/live-status`],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!profile?.id && hasStreamSetup,
+    staleTime: 60 * 1000,
+    refetchInterval: 2 * 60 * 1000,
+  });
+
   const profileNftQueryKey = isOwnProfile ? "/api/nfts/owned" : `/api/nfts/user/${profile?.id}`;
   const { data: profileNftData, isLoading: profileNftsLoading, refetch: refetchProfileNfts } = useQuery<OwnedNftsData>({
     queryKey: [profileNftQueryKey],
@@ -1609,7 +1627,7 @@ const ProfilePage = () => {
                   size="mobile-profile"
                   borderIntensity="strong"
                   showAvatarBorderOverlay={true}
-                  showLiveOverlay={!!(profile?.showLiveOverlay && profile?.userType?.split(',').map(t => t.trim()).includes('streamer') && profile?.streamChannelName)}
+                  showLiveOverlay={!!(profile?.showLiveOverlay && isStreamer && (profile?.twitchVerified || profile?.kickVerified))}
                   className="h-full w-full"
                 />
               </div>
@@ -2043,7 +2061,7 @@ const ProfilePage = () => {
                   size="profile"
                   borderIntensity="strong"
                   showAvatarBorderOverlay={true}
-                  showLiveOverlay={!!(profile?.showLiveOverlay && profile?.userType?.split(',').map(t => t.trim()).includes('streamer') && profile?.streamChannelName)}
+                  showLiveOverlay={!!(profile?.showLiveOverlay && isStreamer && (profile?.twitchVerified || profile?.kickVerified))}
                 />
               </div>
               {/* Level Badge with Progress */}
@@ -2523,35 +2541,56 @@ const ProfilePage = () => {
         <div className="h-0 md:h-[12px]"></div>
 
         {/* Stream Embed - shown for streamers with a configured channel */}
-        {profile?.userType?.split(',').map(t => t.trim()).includes('streamer') && profile?.streamPlatform && profile?.streamChannelName && (
+        {(() => {
+          if (!isStreamer) return null;
+          const twitchChannel = (profile as any)?.twitchChannelName || (profile?.twitchVerified ? profile?.streamChannelName : null);
+          const kickChannel = (profile as any)?.kickChannelName || (profile?.kickVerified ? profile?.streamChannelName : null);
+          let activePlatform: string | null = null;
+          let activeChannel: string | null = null;
+          if (profileLiveStatus) {
+            activePlatform = profileLiveStatus.activePlatform;
+            activeChannel = profileLiveStatus.activeChannel;
+          }
+          if (!activePlatform) {
+            activePlatform = profile?.streamPlatform || (twitchChannel ? 'twitch' : kickChannel ? 'kick' : null);
+            activeChannel = activePlatform === 'twitch' ? twitchChannel : kickChannel;
+          }
+          if (!activePlatform || !activeChannel) return null;
+          const isKick = activePlatform === 'kick';
+          return (
           <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-4 mb-2">
             <div className="rounded-xl overflow-hidden border border-border bg-black shadow-lg">
               <div className="flex items-center gap-2 px-3 py-2 border-b border-border"
                 style={{
-                  background: profile.streamPlatform === 'kick'
+                  background: isKick
                     ? 'linear-gradient(90deg, #1a3a1a, #0f2a0f)'
                     : 'linear-gradient(90deg, #1f1035, #0f0a1e)'
                 }}
               >
-                <div className={`w-2 h-2 rounded-full animate-pulse ${profile.streamPlatform === 'kick' ? 'bg-green-500' : 'bg-purple-500'}`} />
-                <span className={`text-xs font-semibold ${profile.streamPlatform === 'kick' ? 'text-green-400' : 'text-purple-400'}`}>
-                  {profile.streamPlatform === 'kick' ? 'Kick' : 'Twitch'}
+                <div className={`w-2 h-2 rounded-full ${profileLiveStatus?.isLive ? 'animate-pulse' : 'opacity-40'} ${isKick ? 'bg-green-500' : 'bg-purple-500'}`} />
+                <span className={`text-xs font-semibold ${isKick ? 'text-green-400' : 'text-purple-400'}`}>
+                  {isKick ? 'Kick' : 'Twitch'}
                 </span>
-                <span className="text-xs text-muted-foreground">— {profile.streamChannelName}</span>
+                <span className="text-xs text-muted-foreground">— {activeChannel}</span>
+                {profileLiveStatus?.isLive && (
+                  <span className="ml-auto text-[10px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded-full">LIVE</span>
+                )}
               </div>
               <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
                 <iframe
-                  src={profile.streamPlatform === 'kick'
-                    ? `https://player.kick.com/${profile.streamChannelName}?autoplay=false`
-                    : `https://player.twitch.tv/?channel=${profile.streamChannelName}&parent=${window.location.hostname}&autoplay=false`
+                  src={isKick
+                    ? `https://player.kick.com/${activeChannel}?autoplay=false`
+                    : `https://player.twitch.tv/?channel=${activeChannel}&parent=${window.location.hostname}&autoplay=false`
                   }
                   className="absolute inset-0 w-full h-full"
                   allowFullScreen
-                  title={`${profile.streamChannelName}'s stream`}
+                  title={`${activeChannel}'s stream`}
                 />
               </div>
             </div>
           </div>
+          );
+        })()
         )}
 
         {/* Enhanced Tabs section with rounded container style */}

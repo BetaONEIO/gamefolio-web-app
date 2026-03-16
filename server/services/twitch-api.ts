@@ -290,6 +290,27 @@ class TwitchApiService {
       throw new Error('Failed to fetch game from Twitch API');
     }
   }
+
+  /**
+   * Check if a user is currently live streaming
+   */
+  async checkUserLive(userId: string): Promise<boolean> {
+    if (!this.isConfigured()) return false;
+    try {
+      const token = await this.getAccessToken();
+      const response = await axios.get('https://api.twitch.tv/helix/streams', {
+        headers: {
+          'Client-ID': this.clientId,
+          'Authorization': `Bearer ${token}`
+        },
+        params: { user_id: userId }
+      });
+      return Array.isArray(response.data.data) && response.data.data.length > 0;
+    } catch (error) {
+      console.error('Error checking Twitch live status:', error);
+      return false;
+    }
+  }
 }
 
 // Create and export a singleton instance

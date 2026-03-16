@@ -7,6 +7,24 @@ import DOMPurify from "dompurify";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import NftProfilePopup from "@/components/nft/NftProfilePopup";
 
+interface LiveStatusResponse {
+  isLive: boolean;
+  twitchLive: boolean;
+  kickLive: boolean;
+  activePlatform: string | null;
+  activeChannel: string | null;
+}
+
+function useLiveStatus(userId: number | undefined, enabled: boolean) {
+  return useQuery<LiveStatusResponse>({
+    queryKey: [`/api/user/${userId}/live-status`],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: enabled && !!userId,
+    staleTime: 60 * 1000,
+    refetchInterval: 2 * 60 * 1000,
+  });
+}
+
 // Helper to extract clip path from SVG and generate border content
 const useSvgBorderData = (svgUrl: string, color: string) => {
   const [data, setData] = useState<{ borderSvg: string; clipPath: string } | null>(null);
@@ -314,6 +332,9 @@ export const CustomAvatar = ({
   const borderColor = 'hsl(var(--primary))';
   const safeDisplayName = user?.displayName || user?.username || "?";
   const clipId = useMemo(() => `avatar-clip-${user?.id || 'default'}-${Math.random().toString(36).substr(2, 6)}`, [user?.id]);
+
+  const { data: liveStatus } = useLiveStatus(user?.id, showLiveOverlay);
+  const isActuallyLive = showLiveOverlay && !!(liveStatus?.isLive);
   
   const hasNftProfile = !!(user?.nftProfileTokenId && user?.nftProfileImageUrl && (user?.activeProfilePicType === 'nft' || !user?.activeProfilePicType));
   const [showNftPopup, setShowNftPopup] = useState(false);
@@ -389,7 +410,7 @@ export const CustomAvatar = ({
             </div>
           )}
         </div>
-        {showLiveOverlay && <LiveBadge />}
+        {isActuallyLive && <LiveBadge />}
         <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center shadow-sm" style={{ backgroundColor: borderColor }}>
           <svg width="8" height="8" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path fillRule="evenodd" clipRule="evenodd" d="M6.3515 1.97329C6.24341 2.0703 6.13026 2.1615 6.01252 2.24653C5.80845 2.38349 5.57904 2.47799 5.338 2.52593C5.23322 2.54647 5.12365 2.55537 4.9052 2.57249C4.35668 2.61632 4.08208 2.63823 3.85335 2.71904C3.3235 2.9058 2.90677 3.32253 2.72001 3.85238C2.63921 4.0811 2.61729 4.3557 2.57347 4.90423C2.5656 5.04921 2.55006 5.19368 2.5269 5.33702C2.47897 5.57807 2.38446 5.80748 2.2475 6.01154C2.18793 6.10057 2.11671 6.18411 1.97427 6.35052C1.61749 6.76962 1.43876 6.97916 1.33398 7.1983C1.09225 7.70505 1.09225 8.29397 1.33398 8.80072C1.43876 9.01986 1.61749 9.22941 1.97427 9.6485C2.11671 9.81491 2.18793 9.89846 2.2475 9.98748C2.38446 10.1915 2.47897 10.421 2.5269 10.662C2.54745 10.7668 2.55635 10.8763 2.57347 11.0948C2.61729 11.6433 2.63921 11.9179 2.72001 12.1466C2.90677 12.6765 3.3235 13.0932 3.85335 13.28C4.08208 13.3608 4.35668 13.3827 4.9052 13.4265C5.12365 13.4437 5.23322 13.4526 5.338 13.4731C5.57904 13.521 5.80845 13.6162 6.01252 13.7525C6.10154 13.8121 6.18509 13.8833 6.3515 14.0257C6.77059 14.3825 6.98014 14.5612 7.19928 14.666C7.70603 14.9077 8.29495 14.9077 8.8017 14.666C9.02084 14.5612 9.23038 14.3825 9.64948 14.0257C9.81589 13.8833 9.89943 13.8121 9.98846 13.7525C10.1925 13.6155 10.4219 13.521 10.663 13.4731C10.7678 13.4526 10.8773 13.4437 11.0958 13.4265C11.6443 13.3827 11.9189 13.3608 12.1476 13.28C12.6775 13.0932 13.0942 12.6765 13.281 12.1466C13.3618 11.9179 13.3837 11.6433 13.4275 11.0948C13.4446 10.8763 13.4535 10.7668 13.4741 10.662C13.522 10.421 13.6172 10.1915 13.7535 9.98748C13.813 9.89846 13.8843 9.81491 14.0267 9.6485C14.3835 9.22941 14.5622 9.01986 14.667 8.80072C14.9087 8.29397 14.9087 7.70505 14.667 7.1983C14.5622 6.97916 14.3835 6.76962 14.0267 6.35052C13.9297 6.24244 13.8385 6.12929 13.7535 6.01154C13.6164 5.80751 13.5214 5.5782 13.4741 5.33702C13.4509 5.19368 13.4354 5.04921 13.4275 4.90423C13.3837 4.3557 13.3618 4.0811 13.281 3.85238C13.0942 3.32253 12.6775 2.9058 12.1476 2.71904C11.9189 2.63823 11.6443 2.61632 11.0958 2.57249C10.8773 2.55537 10.7678 2.54647 10.663 2.52593C10.4219 2.47799 10.1925 2.38349 9.98846 2.24653C9.89943 2.1869 9.81589 2.11568 9.64948 1.97329C9.23038 1.61651 9.02084 1.43778 8.8017 1.333C8.29495 1.09127 7.70603 1.09127 7.19928 1.333C6.98014 1.43778 6.77059 1.61651 6.3515 1.97329Z" fill="#022C22" />
@@ -431,7 +452,7 @@ export const CustomAvatar = ({
             {safeDisplayName.substring(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
-        {showLiveOverlay && <LiveBadge />}
+        {isActuallyLive && <LiveBadge />}
       </div>
     );
   }
@@ -476,7 +497,7 @@ export const CustomAvatar = ({
             zIndex: 20 
           }}
         />
-        {showLiveOverlay && <LiveBadge />}
+        {isActuallyLive && <LiveBadge />}
       </div>
     );
   }
@@ -500,7 +521,7 @@ export const CustomAvatar = ({
           {displayName.substring(0, 2).toUpperCase()}
         </AvatarFallback>
       </Avatar>
-      {showLiveOverlay && <LiveBadge />}
+      {isActuallyLive && <LiveBadge />}
     </div>
   );
 };

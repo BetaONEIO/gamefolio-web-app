@@ -59,7 +59,9 @@ export const users = pgTable("users", {
   showUserType: boolean("show_user_type").default(true), // Whether to show user type badge on profile
   // Streamer settings
   streamPlatform: text("stream_platform"), // "twitch" or "kick"
-  streamChannelName: text("stream_channel_name"), // Channel username on the platform
+  streamChannelName: text("stream_channel_name"), // Channel username on the platform (legacy, may be overwritten)
+  twitchChannelName: text("twitch_channel_name"), // Twitch login/channel name (separate from streamChannelName)
+  kickChannelName: text("kick_channel_name"),     // Kick slug/channel name (separate from streamChannelName)
   kickId: text("kick_id"),                  // Kick user ID (set when OAuth-connected)
   kickVerified: boolean("kick_verified").default(false), // Connected via OAuth
   twitchUserId: text("twitch_user_id"),     // Twitch user ID (set when OAuth-connected)
