@@ -1789,14 +1789,14 @@ const ProfilePage = () => {
                       <Badge 
                         key={`${type}-${index}`}
                         variant="outline" 
-                        className="border text-xs font-medium px-2 py-0.5"
+                        className="border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.5px]"
                         style={{
-                          backgroundColor: `${accentColor}20`,
-                          color: accentColor,
-                          borderColor: `${accentColor}50`,
+                          backgroundColor: `${accentColor || '#00bba7'}1a`,
+                          color: accentColor || '#00d5be',
+                          borderColor: `${accentColor || '#00bba7'}66`,
                         }}
                       >
-                        <IconComponent className="w-3 h-3 mr-1" />
+                        <IconComponent className="w-3 h-3 mr-1.5" />
                         {config.label}
                       </Badge>
                     );
@@ -1806,90 +1806,37 @@ const ProfilePage = () => {
             )}
           </div>
 
-          {/* L-shaped fading border container for profile info */}
-          <div className="relative mt-4 mb-1 mx-4">
-            {/* Curved corner piece */}
-            <div 
-              className="absolute top-0 -left-4 w-3 h-3 pointer-events-none"
-              style={{
-                borderLeft: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
-                borderTop: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
-                borderTopLeftRadius: '10px',
-              }}
-            />
-            
-            {/* Top horizontal line - fades to right with Collection button */}
-            <div 
-              className="absolute top-0 -left-1 h-[2px] flex items-center"
-              style={{
-                width: 'calc(100% + 4px)',
-                background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, transparent 100%)`,
-              }}
-            >
-              {/* Collection button at the end of top line */}
-              <button 
-                onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
-                className="px-3 py-1 text-xs font-semibold rounded-full hover:opacity-90 hover:scale-105 transition-all"
-                style={{ 
-                  position: 'absolute',
-                  top: '-12px',
-                  right: '0px',
-                  background: profileSectionTab === 'collection'
-                    ? '#1a1a2e'
-                    : 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
-                  color: profileSectionTab === 'collection' ? '#ffffff' : '#1f2937',
-                  border: '2px solid transparent',
-                  backgroundClip: 'padding-box',
-                }}
-              >
-                <span 
-                  className="absolute inset-0 rounded-full pointer-events-none"
-                  style={{
-                    background: 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
-                    padding: '2px',
-                    mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                    maskComposite: 'xor',
-                    WebkitMaskComposite: 'xor',
-                    opacity: profileSectionTab === 'collection' ? 1 : 0,
-                  }}
-                />
-                Collection
-              </button>
-            </div>
-            
-            {/* Left vertical line - fades downward */}
-            <div 
-              className="absolute top-3 -left-4 w-[2px]"
-              style={{
-                height: 'calc(100% - 12px)',
-                background: `linear-gradient(180deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, transparent 100%)`,
-              }}
-            />
-
-            {/* Content */}
-            <div className="pl-0 pt-4 pb-4 pr-4">
+          {/* Profile Info Card - Figma design */}
+          <div 
+            className="mx-4 mt-4 mb-1 rounded-2xl"
+            style={{
+              background: `${accentColor || '#00bba7'}0d`,
+              border: `1px solid ${accentColor || '#00bba7'}33`,
+            }}
+          >
+            <div className="p-4">
               {profileSectionTab === 'stats' ? (
                 <>
-                  {/* Stats - Horizontal row with uppercase labels */}
-                  <div className="flex gap-4 mb-2 mt-2 items-start">
+                  {/* Stats row */}
+                  <div className="flex gap-6 mb-3 mt-1">
                     <div className="flex flex-col">
-                      <span className="font-bold text-sm">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                      <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>UPLOADS</span>
+                      <span className="font-black text-base text-white">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                      <span className="text-[8px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>UPLOADS</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-bold text-sm">{Number(profile._count?.followers || 0)}</span>
-                      <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>FOLLOWERS</span>
+                      <span className="font-black text-base text-white">{Number(profile._count?.followers || 0)}</span>
+                      <span className="text-[8px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>FOLLOWERS</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-bold text-sm">{Number(profile._count?.following || 0)}</span>
-                      <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>FOLLOWING</span>
+                      <span className="font-black text-base text-white">{Number(profile._count?.following || 0)}</span>
+                      <span className="text-[8px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>FOLLOWING</span>
                     </div>
                   </div>
 
-                  {/* Member since date - uppercase */}
+                  {/* Member since date */}
                   {profile.createdAt && (
                     <div className="mb-2">
-                      <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>
+                      <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>
                         MEMBER SINCE {new Date(profile.createdAt).toLocaleDateString('en-US', { 
                           year: 'numeric', 
                           month: 'long' 
@@ -1898,13 +1845,13 @@ const ProfilePage = () => {
                     </div>
                   )}
 
-                  {/* Bio/description - left aligned */}
+                  {/* Bio/description */}
                   {profile.bio && (
-                    <p className="text-sm text-foreground/90 mb-3 pr-4">{profile.bio}</p>
+                    <p className="text-sm text-slate-300 mb-3 pr-4">{profile.bio}</p>
                   )}
                 </>
               ) : (
-                <div className="mt-2">
+                <div className="mb-3">
                   <div className="flex items-center gap-2">
                     <Hexagon className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>
@@ -1913,6 +1860,20 @@ const ProfilePage = () => {
                   </div>
                 </div>
               )}
+
+              {/* Collection toggle button */}
+              <button 
+                onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
+                className="px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
+                style={{ 
+                  background: profileSectionTab === 'collection'
+                    ? '#1a1a2e'
+                    : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                  color: profileSectionTab === 'collection' ? '#ffffff' : '#0f172b',
+                }}
+              >
+                Collection
+              </button>
             </div>
           </div>
 
@@ -2083,14 +2044,14 @@ const ProfilePage = () => {
                     <Badge 
                       key={`${type}-${index}`}
                       variant="outline" 
-                      className="border text-xs font-medium px-2 py-0.5"
+                      className="border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.5px]"
                       style={{
-                        backgroundColor: `${accentColor}20`,
-                        color: accentColor,
-                        borderColor: `${accentColor}50`,
+                        backgroundColor: `${accentColor || '#00bba7'}1a`,
+                        color: accentColor || '#00d5be',
+                        borderColor: `${accentColor || '#00bba7'}66`,
                       }}
                     >
-                      <IconComponent className="w-3 h-3 mr-1" />
+                      <IconComponent className="w-3 h-3 mr-1.5" />
                       {config.label}
                     </Badge>
                   );
@@ -2101,93 +2062,37 @@ const ProfilePage = () => {
             {/* Username */}
             <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
 
-            {/* L-shaped fading border with curved corner and button */}
-            <div className="relative mt-4" style={{ marginLeft: '-32px', height: '140px', width: '100%', maxWidth: '600px' }}>
-              {/* Curved corner piece with glow */}
-              <div 
-                className="absolute top-0 left-0 w-4 h-4 pointer-events-none"
-                style={{
-                  borderLeft: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
-                  borderTop: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
-                  borderTopLeftRadius: '12px',
-                  filter: `drop-shadow(0 0 6px ${accentColor || 'hsl(var(--primary))'})`,
-                }}
-              />
-              
-              {/* Top horizontal line - extends far right and fades with inner glow */}
-              <div 
-                className="absolute top-0 left-4 h-[2px] flex items-center"
-                style={{
-                  width: '550px',
-                  background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 40%, transparent 100%)`,
-                  boxShadow: `0 0 12px 2px ${accentColor || 'hsl(var(--primary))'}50, 0 2px 8px ${accentColor || 'hsl(var(--primary))'}30`,
-                }}
-              >
-                {/* Collection button at the end of top line */}
-                <button 
-                  onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
-                  className="px-4 py-1.5 text-sm font-semibold rounded-full hover:opacity-90 hover:scale-105"
-                  style={{ 
-                    position: 'absolute',
-                    top: '-14px',
-                    right: '0px',
-                    background: profileSectionTab === 'collection'
-                      ? '#1a1a2e'
-                      : 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
-                    color: profileSectionTab === 'collection' ? '#ffffff' : '#1f2937',
-                    border: '2px solid transparent',
-                    backgroundClip: 'padding-box',
-                  }}
-                >
-                  <span 
-                    className="absolute inset-0 rounded-full pointer-events-none"
-                    style={{
-                      background: 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
-                      padding: '2px',
-                      mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                      maskComposite: 'xor',
-                      WebkitMaskComposite: 'xor',
-                      opacity: profileSectionTab === 'collection' ? 1 : 0,
-                    }}
-                  />
-                  Collection
-                </button>
-              </div>
-              
-              {/* Left vertical line - starts after curved corner with inner glow */}
-              <div 
-                className="absolute top-4 left-0 w-[2px]"
-                style={{
-                  height: '120px',
-                  background: `linear-gradient(180deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 50%, transparent 100%)`,
-                  boxShadow: `0 0 12px 2px ${accentColor || 'hsl(var(--primary))'}50, 2px 0 8px ${accentColor || 'hsl(var(--primary))'}30`,
-                }}
-              />
-              
-              {/* Content aligned with username above */}
-              <div className="pl-8 pt-4" style={{ minHeight: '120px' }}>
+            {/* Profile Info Card - Figma design */}
+            <div 
+              className="mt-4 rounded-2xl max-w-xl"
+              style={{
+                background: `${accentColor || '#00bba7'}0d`,
+                border: `1px solid ${accentColor || '#00bba7'}33`,
+              }}
+            >
+              <div className="p-5">
                 {profileSectionTab === 'stats' ? (
                   <>
                     {/* Stats - Uploads, Followers, Following */}
-                    <div className="flex gap-6 items-center">
+                    <div className="flex gap-8 items-center mb-4">
                       <div className="flex flex-col">
-                        <span className="font-bold text-lg">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                        <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>Uploads</span>
+                        <span className="font-black text-xl text-white">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                        <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>Uploads</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-bold text-lg">{Number(profile._count?.followers || 0)}</span>
-                        <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>Followers</span>
+                        <span className="font-black text-xl text-white">{Number(profile._count?.followers || 0)}</span>
+                        <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>Followers</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-bold text-lg">{Number(profile._count?.following || 0)}</span>
-                        <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>Following</span>
+                        <span className="font-black text-xl text-white">{Number(profile._count?.following || 0)}</span>
+                        <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>Following</span>
                       </div>
                     </div>
 
                     {/* Member since date */}
                     {profile.createdAt && (
-                      <div className="mt-3">
-                        <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>
+                      <div className="mb-3">
+                        <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>
                           Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
                             year: 'numeric', 
                             month: 'long' 
@@ -2198,11 +2103,11 @@ const ProfilePage = () => {
 
                     {/* Bio/description */}
                     {profile.bio && (
-                      <p className="mt-3 text-base text-foreground/90 max-w-xl">{profile.bio}</p>
+                      <p className="text-sm text-slate-300 max-w-md mb-4">{profile.bio}</p>
                     )}
                   </>
                 ) : (
-                  <div className="mt-4">
+                  <div className="mb-4">
                     <div className="flex items-center gap-2">
                       <Hexagon className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>
@@ -2211,6 +2116,20 @@ const ProfilePage = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Collection toggle button */}
+                <button 
+                  onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
+                  className="px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
+                  style={{ 
+                    background: profileSectionTab === 'collection'
+                      ? '#1a1a2e'
+                      : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                    color: profileSectionTab === 'collection' ? '#ffffff' : '#0f172b',
+                  }}
+                >
+                  Collection
+                </button>
               </div>
             </div>
 
