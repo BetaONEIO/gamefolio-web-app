@@ -24,6 +24,11 @@ function generateCodeChallenge(verifier: string): string {
 }
 
 function getBaseUrl(req: Request): string {
+  // In Replit environments, REPLIT_DOMAINS gives the correct public hostname
+  if (process.env.REPLIT_DOMAINS) {
+    const domain = process.env.REPLIT_DOMAINS.split(',')[0].trim();
+    return `https://${domain}`;
+  }
   const proto = req.headers['x-forwarded-proto'] || req.protocol;
   const host = req.headers['x-forwarded-host'] || req.get('host');
   return `${proto}://${host}`;
