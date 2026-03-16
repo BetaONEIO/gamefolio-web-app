@@ -3469,17 +3469,6 @@ const ProfilePage = () => {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-medium mb-2">Member Since</h3>
-                  <p className="text-muted-foreground">
-                    {new Date(profile.createdAt).toLocaleDateString(undefined, {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </p>
-                </div>
-
-                <div>
                   <h3 className="text-lg font-medium mb-2">Social Links</h3>
                   <div className="space-y-2">
                     {profile.youtubeUsername && (
