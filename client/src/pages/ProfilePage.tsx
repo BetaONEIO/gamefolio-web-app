@@ -2591,7 +2591,7 @@ const ProfilePage = () => {
           </div>
           );
         })()
-        )}
+        }
 
         {/* Enhanced Tabs section with rounded container style */}
         <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-2 md:mt-8">
